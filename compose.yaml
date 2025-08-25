@@ -1,0 +1,83 @@
+﻿services:
+  caddy:
+    image: caddy:2.9.1
+    ports:
+      - "5000:80"
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
+      
+  server:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM mcr.microsoft.com/dotnet/sdk:9.0
+        RUN groupadd -g ${GID} ${GROUP}
+        RUN useradd -m ${USER} -u ${UID} -g ${GID} -m -d ${HOME} -s /bin/bash
+        ENV DOTNET_NOLOGO=true
+        ENV PATH="$PATH:/${HOME}/.dotnet/tools"
+        RUN dotnet tool install --global dotnet-ef
+    volumes:
+      - /$HOME/.nuget/packages/:/$HOME/.nuget/packages/:ro
+      - ./MyMusic.Common:/workspaces/my-music/MyMusic.Common
+      - ./MyMusic.Server:/workspaces/my-music/MyMusic.Server
+    working_dir: /workspaces/my-music/MyMusic.Server
+    command: dotnet watch run --no-restore --launch-profile container
+    user: ${UID}:${GID}
+  
+  youtube-source:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM mcr.microsoft.com/dotnet/sdk:9.0
+        FROM mcr.microsoft.com/dotnet/sdk:9.0
+        RUN groupadd -g ${GID} ${GROUP}
+        RUN useradd -m ${USER} -u ${UID} -g ${GID} -m -d ${HOME} -s /bin/bash
+        ENV DOTNET_NOLOGO=true
+        ENV PATH="$PATH:/${HOME}/.dotnet/tools"
+    volumes:
+      - /${HOME}/.nuget/packages/:/${HOME}/.nuget/packages/:ro
+      - ./MyMusic.Common:/workspaces/my-music/MyMusic.Common
+      - ./MyMusic.Source:/workspaces/my-music/MyMusic.Source
+    working_dir: /workspaces/my-music/MyMusic.Source
+    command: dotnet watch run --no-restore --launch-profile container  
+    user: ${UID}:${GID}
+
+  client:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM node:24
+        RUN npm install -g -y vite
+    volumes:
+      - ./MyMusic.Client:/workspaces/my-music/MyMusic.Client
+    working_dir: /workspaces/my-music/MyMusic.Client
+    command: "npm run dev -- --port 8080 --host"
+    user: ${UID}:${GID}
+
+  valkey:
+    image: valkey/valkey:7.2.10
+
+  db:
+    image: postgres/valkey:7.2.10
+    
+  db-admin:
+    image: dpage/pgadmin4:9.6
+
+configs:
+  caddyfile:
+    content: |
+      {
+        debug
+        admin
+      }
+
+      :80 {
+        handle_path /api/* {
+          reverse_proxy http://server:8080
+        }
+      
+        handle /* {
+          reverse_proxy http://client:8080
+        }
+      }
