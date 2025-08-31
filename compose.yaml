@@ -12,19 +12,23 @@
       context: .
       dockerfile_inline: |
         FROM mcr.microsoft.com/dotnet/sdk:9.0
+        RUN apt update && apt install -y libgdiplus
         RUN groupadd -g ${GID} ${GROUP}
         RUN useradd -m ${USER} -u ${UID} -g ${GID} -m -d ${HOME} -s /bin/bash
         ENV DOTNET_NOLOGO=true
         ENV PATH="$PATH:/${HOME}/.dotnet/tools"
+        USER ${UID}:${GID}
         RUN dotnet tool install --global dotnet-ef
     volumes:
       - /$HOME/.nuget/packages/:/$HOME/.nuget/packages/:ro
       - ./MyMusic.Common:/workspaces/my-music/MyMusic.Common
       - ./MyMusic.Server:/workspaces/my-music/MyMusic.Server
+      - ./scripts:/workspaces/my-music/scripts
+      - /$HOME/Music:/$HOME/Music:ro
+      - server-data:/storage
     working_dir: /workspaces/my-music/MyMusic.Server
     command: dotnet watch run --no-restore --launch-profile container
-    user: ${UID}:${GID}
-  
+
   youtube-source:
     build:
       context: .
@@ -59,10 +63,34 @@
     image: valkey/valkey:7.2.10
 
   db:
-    image: postgres/valkey:7.2.10
+    image: postgres:17
+    environment:
+      POSTGRES_DB: my-music
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
     
-  db-admin:
+  pgadmin:
     image: dpage/pgadmin4:9.6
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@localhost.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_DISABLE_POSTFIX: 'True'
+      PGADMIN_LISTEN_PORT: 8080
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+      PGADMIN_CONFIG_ENABLE_PSQL: 'True'
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: 'True'
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 10
+    configs:
+      - source: pgadmin-servers
+        target: /pgadmin4/servers.json
+
+volumes:
+  server-data: {}
+  db-data: {}
 
 configs:
   caddyfile:
@@ -72,12 +100,45 @@ configs:
         admin
       }
 
+      (pgadmin) {
+        reverse_proxy http://pgadmin:8080 {
+          header_up X-Script-Name /pgadmin
+        }
+      }
+
       :80 {
         handle_path /api/* {
           reverse_proxy http://server:8080
         }
+        
+        handle_path /pgadmin  {
+          import pgadmin
+        }
+        handle_path /pgadmin/* { 
+          import pgadmin 
+        }
       
         handle /* {
           reverse_proxy http://client:8080
+        }
+      }
+      
+  pgadmin-servers:
+    content: |
+      {
+        "Servers": {
+          "1": {
+            "Name": "MyMusic",
+            "Group": "Databases",
+            "Port": 5432,
+            "Username": "postgres",
+            "Password": "postgres",
+            "Host": "db",
+            "MaintenanceDB": "postgres",
+            "ConnectionParameters": {
+              "sslmode": "prefer",
+              "connect_timeout": 10
+            }
+          }
         }
       }

@@ -1,6 +1,5 @@
 using System.IO.Abstractions;
 using System.Reflection;
-using DotNext.Threading.Tasks;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Targets;
 

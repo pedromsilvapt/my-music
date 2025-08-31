@@ -71,7 +71,7 @@ public class Scenario
         return new MusicService(FileSystem, Options.Create(new Config
         {
             MusicRepositoryPath = "/data",
-        }), Substitute.For<ILogger>());
+        }), Substitute.For<ILogger<MusicService>>());
     }
 
     #endregion Static Methods

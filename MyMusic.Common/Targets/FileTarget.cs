@@ -1,5 +1,4 @@
 ﻿using System.IO.Abstractions;
-using Microsoft.VisualBasic;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.NamingStrategies;
 
@@ -27,7 +26,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
 
         FileSystem.Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         
-        await using (var fs = FileSystem.FileStream.New(FilePath!, FileMode.OpenOrCreate))
+        await using (var fs = FileSystem.FileStream.New(FilePath!, FileMode.OpenOrCreate, FileAccess.Write))
         {
             await data.CopyToAsync(fs, cancellationToken);
         }
@@ -45,7 +44,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
             throw new Exception("Cannot read from target because FilePath is null.");
         }
 
-        return FileSystem.FileStream.New(FilePath, FileMode.Open);
+        return FileSystem.FileStream.New(FilePath, FileMode.Open, FileAccess.Read);
     }
 
     public async Task SaveMetadata(SongMetadata metadata, CancellationToken cancellationToken = default)

@@ -1,10 +1,6 @@
-﻿using System.IO.Abstractions.TestingHelpers;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Sqlite;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
-using MyMusic.Common.Metadata;
 using MyMusic.Common.Services;
 using MyMusic.Common.Tests.Utilities;
 using NSubstitute;

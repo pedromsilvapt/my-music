@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-
-namespace MyMusic.Common.Entities;
+﻿namespace MyMusic.Common.Entities;
 
 public class Patch
 {

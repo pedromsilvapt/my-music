@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace MyMusic.Common.Services;
 
-public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogger logger)
+public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogger<MusicService> logger)
     : IMusicService
 {
     public const string MusicIgnoreFile = ".musicignore";
@@ -344,19 +344,6 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     if (song is not null)
                     {
-                        // TODO Load devices
-                        // await db.LoadReferencesAsync<Song, SongArtist>(song, token: cancellationToken);
-                        // await db.LoadReferencesAsync<Song, SongGenre>(song, token: cancellationToken);
-                        // await db.LoadReferencesAsync<Song, Album>(song, token: cancellationToken);
-                        // await db.LoadReferencesAsync<Song, Album, Artist>(song, token: cancellationToken);
-                        // await db.LoadReferencesAsync<Song, Artwork>(song, token: cancellationToken);
-                        // var entry = db.Entry(song);
-                        // await entry.Collection(s => s.Artists).LoadAsync(cancellationToken);
-                        // await entry.Collection(s => s.Genres).LoadAsync(cancellationToken);
-                        // await entry.Reference(s => s.Album).LoadAsync(cancellationToken);
-                        // await entry.Reference(s => s.Album.Artist).LoadAsync(cancellationToken);
-                        // await entry.Reference(s => s.Cover).LoadAsync(cancellationToken);
-
                         song = await db.Songs
                             .Include(s => s.Artists)
                             .Include(s => s.Genres)
@@ -527,7 +514,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                         // Timestamps
                         song.CreatedAt = importSongMetadata.CreatedAt;
                         song.ModifiedAt = importSongMetadata.ModifiedAt;
-                        song.AddedAt = DateTime.Now;
+                        song.AddedAt = DateTime.UtcNow;
                         // Repository Id
                         song.OwnerId = userId;
                         song.RepositoryPath = targetFile.FilePath!;

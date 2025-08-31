@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
 
@@ -13,8 +12,8 @@ public class Song
     [MaxLength(256)]
     public required string Label { get; set; }
 
-    public Album? Album { get; set; }
-    public long? AlbumId { get; set; }
+    public Album Album { get; set; } = null!;
+    public long AlbumId { get; set; }
 
     public Artwork? Cover { get; set; }
     public long? CoverId { get; set; }
