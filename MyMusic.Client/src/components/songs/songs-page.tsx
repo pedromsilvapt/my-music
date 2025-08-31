@@ -1,9 +1,10 @@
-import Collection from "../common/collection.tsx";
+import Collection, {type CollectionSchema} from "../common/collection.tsx";
 import {Anchor} from "@mantine/core";
 import {useListSongs} from '../../client/songs.ts';
 import {useEffect} from "react";
 import Artwork from "../common/artwork.tsx";
 import {IconMusic} from "@tabler/icons-react";
+import type {Song} from "../../model";
 
 
 // const elements = [
@@ -31,6 +32,53 @@ import {IconMusic} from "@tabler/icons-react";
 //     },
 // ];
 
+const songsSchema = {
+    key: row => row.id,
+    columns: [
+        {
+            name: 'artwork',
+            displayName: '',
+            render: row => <Artwork id={row.cover} size={32} placeholderIcon={<IconMusic/>}/>,
+        },
+        {
+            name: 'title',
+            displayName: 'Title',
+            render: row => <Anchor>{row.title}</Anchor>,
+        },
+        {
+            name: 'artists',
+            displayName: 'Artists',
+            render: row => row.artists.map(((artist, i) => <>
+                {i > 0 && ', '}
+                <Anchor>{artist.name}</Anchor>
+            </>)),
+        },
+        {
+            name: 'album',
+            displayName: 'Album',
+            render: row => <Anchor>{row.album.name}</Anchor>,
+        },
+        {
+            name: 'genres',
+            displayName: 'Genres',
+            render: row => row.genres.map(((genre, i) => <>
+                {i > 0 && ', '}
+                <Anchor>{genre.name}</Anchor>
+            </>)),
+        },
+        {
+            name: 'year',
+            displayName: 'Year',
+            render: row => row.year,
+        },
+        {
+            name: 'duration',
+            displayName: 'Duration',
+            render: row => row.duration,
+        }
+    ]
+} as CollectionSchema<Song>;
+
 export default function SongsPage() {
     const {data: songs, refetch} = useListSongs();
 
@@ -44,22 +92,7 @@ export default function SongsPage() {
     return <>
         <Collection
             items={elements}
-            columnHeaders={['', 'Title', 'Artists', 'Album', 'Genres', 'Year', 'Duration']}
-            columnCells={[
-                row => <Artwork id={row.cover} size={32} placeholderIcon={<IconMusic/>}/>,
-                row => <Anchor>{row.title}</Anchor>,
-                row => row.artists.map(((artist, i) => <>
-                    {i > 0 && ', '}
-                    <Anchor>{artist.name}</Anchor>
-                </>)),
-                row => <Anchor>{row.album.name}</Anchor>,
-                row => row.genres.map(((genre, i) => <>
-                    {i > 0 && ', '}
-                    <Anchor>{genre.name}</Anchor>
-                </>)),
-                row => row.year,
-                row => row.duration,
-            ]}>
+            schema={songsSchema}>
         </Collection>
     </>;
 }
