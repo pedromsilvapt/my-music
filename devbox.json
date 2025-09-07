@@ -1,0 +1,28 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
+  "packages": [
+    "nodejs@24.5.0",
+    "dotnet-sdk_9@9.0.304",
+    "dotnet-ef@9.0.8"
+  ],
+  "env": {
+    "DEVBOX_COREPACK_ENABLED": "true"
+  },
+  "shell": {
+    "scripts": {
+      "orval": [
+        "cd ./MyMusic.Client/",
+        "npx orval --config orval.config.cjs --tsconfig ./tsconfig.json"
+      ],
+      "db-create-migration": [
+        "dotnet ef migrations add \"$1\" --project MyMusic.Common --startup-project MyMusic.Server"
+      ],
+      "db-drop": [
+        "dotnet ef database drop --project MyMusic.Common --startup-project MyMusic.Server"
+      ],
+      "db-run-migrations": [
+        "dotnet ef database update --project MyMusic.Common --startup-project MyMusic.Server"
+      ]
+    }
+  }
+}

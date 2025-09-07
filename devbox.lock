@@ -1,0 +1,186 @@
+{
+  "lockfile_version": "1",
+  "packages": {
+    "dotnet-ef@9.0.8": {
+      "last_modified": "2025-08-11T23:54:17Z",
+      "resolved": "github:NixOS/nixpkgs/5a983011e0f4b3b286aaa73e011ce32b1449a528#dotnet-ef",
+      "source": "devbox-search",
+      "version": "9.0.8",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/bdn4z10g573l406j79kgrpvi6zq1kvva-dotnet-ef-9.0.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/bdn4z10g573l406j79kgrpvi6zq1kvva-dotnet-ef-9.0.8"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/i88k2xgyzkm06sk2x69pgpbdhns27s1a-dotnet-ef-9.0.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/i88k2xgyzkm06sk2x69pgpbdhns27s1a-dotnet-ef-9.0.8"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/13g0p0b8llmzj90yzwbypd1v8l2fzjzz-dotnet-ef-9.0.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/13g0p0b8llmzj90yzwbypd1v8l2fzjzz-dotnet-ef-9.0.8"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/k7gvgpsnf5j7cx0bzymwk6ay5lzk0nqq-dotnet-ef-9.0.8",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/k7gvgpsnf5j7cx0bzymwk6ay5lzk0nqq-dotnet-ef-9.0.8"
+        }
+      }
+    },
+    "dotnet-sdk_9@9.0.304": {
+      "last_modified": "2025-08-10T04:38:50Z",
+      "resolved": "github:NixOS/nixpkgs/641d909c4a7538f1539da9240dedb1755c907e40#dotnet-sdk_9",
+      "source": "devbox-search",
+      "version": "9.0.304",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/r8h3gzbr0fk2abdpqdcp5aravbn19l2z-dotnet-sdk-wrapped-9.0.304",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/r8h3gzbr0fk2abdpqdcp5aravbn19l2z-dotnet-sdk-wrapped-9.0.304"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/xxqzpsn3ahlfshkq0idyl52rwgkydjyb-dotnet-sdk-wrapped-9.0.304",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/xxqzpsn3ahlfshkq0idyl52rwgkydjyb-dotnet-sdk-wrapped-9.0.304"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/yr5s8y6va4n36kd1f2fqfl6qcilk4rd3-dotnet-sdk-wrapped-9.0.304",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/yr5s8y6va4n36kd1f2fqfl6qcilk4rd3-dotnet-sdk-wrapped-9.0.304"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/xckcy6w50hrwww8qjbl09kgd0mixgjxz-dotnet-sdk-wrapped-9.0.304",
+              "default": true
+            }
+          ],
+          "store_path": "/nix/store/xckcy6w50hrwww8qjbl09kgd0mixgjxz-dotnet-sdk-wrapped-9.0.304"
+        }
+      }
+    },
+    "github:NixOS/nixpkgs/nixpkgs-unstable": {
+      "last_modified": "2025-08-28T02:45:43Z",
+      "resolved": "github:NixOS/nixpkgs/c3e5d9f86b3f5678d0d8c9f0b9f081ab1ccdbe05?lastModified=1756349143&narHash=sha256-65oRt2D57ST5Gsa2Q4WCtpgCmKHEWt4%2BCQ1chWQ3Fos%3D"
+    },
+    "nodejs@24.5.0": {
+      "last_modified": "2025-08-10T04:38:50Z",
+      "plugin_version": "0.0.2",
+      "resolved": "github:NixOS/nixpkgs/641d909c4a7538f1539da9240dedb1755c907e40#nodejs_24",
+      "source": "devbox-search",
+      "version": "24.5.0",
+      "systems": {
+        "aarch64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/b1j05q96hwagn787p2jlgqcjg2nf5x49-nodejs-24.5.0",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/j6ayg4xpqy9xdxgrhpqylzq8v7v07c6r-nodejs-24.5.0-dev"
+            },
+            {
+              "name": "libv8",
+              "path": "/nix/store/3ys6v5s5gvd9snwnl4saynl6av7mz3vy-nodejs-24.5.0-libv8"
+            }
+          ],
+          "store_path": "/nix/store/b1j05q96hwagn787p2jlgqcjg2nf5x49-nodejs-24.5.0"
+        },
+        "aarch64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/1kn0vh4gf3a22arldrw694apq3fhgp15-nodejs-24.5.0",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/i3lqaj3j6znhnzh8ayka6q85r81ppxnw-nodejs-24.5.0-dev"
+            },
+            {
+              "name": "libv8",
+              "path": "/nix/store/jjw6xgmg6qynp336g9igqnzlfbhzxr2i-nodejs-24.5.0-libv8"
+            }
+          ],
+          "store_path": "/nix/store/1kn0vh4gf3a22arldrw694apq3fhgp15-nodejs-24.5.0"
+        },
+        "x86_64-darwin": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/sbcg21wp4bdzyh2542v77sp535kvfbfq-nodejs-24.5.0",
+              "default": true
+            },
+            {
+              "name": "libv8",
+              "path": "/nix/store/75b7iix0pbmxmfnmv90l3q0ll1gc75az-nodejs-24.5.0-libv8"
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/fg7pi9s6m0spci1pfqbny0kxmk832i3r-nodejs-24.5.0-dev"
+            }
+          ],
+          "store_path": "/nix/store/sbcg21wp4bdzyh2542v77sp535kvfbfq-nodejs-24.5.0"
+        },
+        "x86_64-linux": {
+          "outputs": [
+            {
+              "name": "out",
+              "path": "/nix/store/357id3rjy9417k4dkvxxmpgd9bxrwc7l-nodejs-24.5.0",
+              "default": true
+            },
+            {
+              "name": "dev",
+              "path": "/nix/store/0drh8jjq84sji6889l2k3ysmvy7sc9sg-nodejs-24.5.0-dev"
+            },
+            {
+              "name": "libv8",
+              "path": "/nix/store/kdlv4q7sgap0z43cylklhxz1g1q7751b-nodejs-24.5.0-libv8"
+            }
+          ],
+          "store_path": "/nix/store/357id3rjy9417k4dkvxxmpgd9bxrwc7l-nodejs-24.5.0"
+        }
+      }
+    }
+  }
+}
