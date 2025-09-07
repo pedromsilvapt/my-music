@@ -33,7 +33,6 @@ function App() {
                 </Group>
             </AppShell.Header>
             <AppShell.Navbar p="md">
-                
                 <NavLink
                     renderRoot={(props) => <Link to={"/player"} {...props} />}
                     href="/"
@@ -81,7 +80,7 @@ function App() {
                     label="Settings"
                 />
             </AppShell.Navbar>
-            <AppShell.Main>
+            <AppShell.Main style={{ '--parent-height': "calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px) - var(--app-shell-padding) * 2)" }}>
                 <Outlet />
                 <TanStackRouterDevtools />
             </AppShell.Main>
