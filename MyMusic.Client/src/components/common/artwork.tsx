@@ -4,7 +4,7 @@ import { IconPhotoScan } from "@tabler/icons-react";
 
 interface ArtworkProps {
     id: number | null | undefined;
-    size?: number | null | undefined;
+    size?: number | undefined;
     placeholderIcon?: React.ReactNode | null | undefined; 
 }
 
@@ -25,7 +25,7 @@ export default function Artwork(props: ArtworkProps) {
     
     return <Image
         radius="sm"
-        h={32}
-        w={32}
+        h={size}
+        w={size}
         src={url} />;
 }
