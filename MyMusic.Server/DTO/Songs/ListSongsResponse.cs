@@ -16,6 +16,8 @@ public record ListSongsResponse
         public required IEnumerable<Genre> Genres { get; set; }
         public required int? Year { get; set; }
         public required string Duration { get; set; }
+        public required bool IsFavorite { get; set; }
+        public required bool IsExplicit { get; set; }
 
         public static Song FromEntity(Entities.Song song)
         {
@@ -33,6 +35,8 @@ public record ListSongsResponse
                 Genres = genres,
                 Year = song.Year,
                 Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
+                IsFavorite = false,
+                IsExplicit = song.Explicit
             };
         }
     }

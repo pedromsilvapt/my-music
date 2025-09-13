@@ -9,17 +9,19 @@ import type {Album} from "./album";
 import type {Artist} from "./artist";
 import type {Genre} from "./genre";
 
-export interface Song {
-	id: number;
-	/** @nullable */
-	cover: number | null;
-	title: string;
-	artists: Artist[];
-	album: Album;
-	genres: Genre[];
-	/** @nullable */
-	year: number | null;
-	duration: string;
+export interface PlaylistSong {
+    rank: number;
+    order: number;
+    id: number;
+    /** @nullable */
+    cover: number | null;
+    title: string;
+    artists: Artist[];
+    album: Album;
+    genres: Genre[];
+    /** @nullable */
+    year: number | null;
+    duration: string;
     isFavorite: boolean;
     isExplicit: boolean;
 }

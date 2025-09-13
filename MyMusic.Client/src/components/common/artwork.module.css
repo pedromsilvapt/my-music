@@ -1,0 +1,10 @@
+.overlay {
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity 0.25s ease-in-out;
+    border-radius: var(--mantine-radius-sm);
+
+    @mixin hover {
+        opacity: 1;
+    }
+}

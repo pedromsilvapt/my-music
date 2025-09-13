@@ -1,31 +1,54 @@
-import {Image, ThemeIcon} from "@mantine/core";
+import {Box, Center, Image, Overlay, ThemeIcon} from "@mantine/core";
+import type {MouseEvent} from "react";
 import * as React from "react";
-import { IconPhotoScan } from "@tabler/icons-react";
+import {IconPhotoScan, IconPlayerPlayFilled} from "@tabler/icons-react";
+import styles from './artwork.module.css';
 
 interface ArtworkProps {
     id: number | null | undefined;
     size?: number | undefined;
-    placeholderIcon?: React.ReactNode | null | undefined; 
+    placeholderIcon?: React.ReactNode | null | undefined;
+    onClick?: (ev: MouseEvent) => void | null;
 }
 
 export default function Artwork(props: ArtworkProps) {
-    const {id, size, placeholderIcon} = props;
-    
+    let {id, size, placeholderIcon} = props;
+
+    size ??= 32;
+
+    let innerElement: React.ReactNode;
+
     if (id == null) {
-        return <ThemeIcon color="gray" size={32}>
-            {placeholderIcon ?? <IconPhotoScan />}
+        innerElement = <ThemeIcon color="gray" size={size}>
+            {placeholderIcon ?? <IconPhotoScan/>}
         </ThemeIcon>;
+    } else {
+        let url = `/api/artwork/${id}?size=${size}`;
+
+        innerElement = <Image
+            radius="sm"
+            h={size}
+            w={size}
+            src={url}/>;
     }
-    
-    let url = `/api/artwork/${id}`;
-    
-    if (size != null) {
-        url += '?size=' + size;
+
+    const onClick = props.onClick;
+
+    if (!onClick) {
+        return innerElement;
     }
-    
-    return <Image
-        radius="sm"
-        h={size}
-        w={size}
-        src={url} />;
+
+    return <Box pos="relative">
+        {innerElement}
+        <Overlay
+            className={styles.overlay}
+            color="#000"
+            backgroundOpacity={0.35}
+            onClick={ev => onClick(ev)}
+        >
+            <Center maw="100%" h="100%">
+                <IconPlayerPlayFilled color="white" size={size * 0.6}/>
+            </Center>
+        </Overlay>
+    </Box>;
 }

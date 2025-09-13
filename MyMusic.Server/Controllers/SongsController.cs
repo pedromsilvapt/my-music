@@ -1,4 +1,6 @@
+using System.IO.Abstractions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Services;
@@ -7,13 +9,13 @@ using MyMusic.Server.DTO.Songs;
 namespace MyMusic.Server.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("songs")]
 public class SongsController(ILogger<SongsController> logger) : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
 
     [HttpGet(Name = "ListSongs")]
-    public async Task<ListSongsResponse> Get(MusicDbContext context, CancellationToken cancellationToken)
+    public async Task<ListSongsResponse> List(MusicDbContext context, CancellationToken cancellationToken)
     {
         var songs = await context.Songs
             .Include(s => s.Album)
@@ -32,7 +34,22 @@ public class SongsController(ILogger<SongsController> logger) : ControllerBase
         };
     }
 
-    [HttpPost("/Songs/Import", Name = "ImportSongs")]
+    [HttpGet("{id}/download", Name = "DownloadSong")]
+    public async Task<IActionResult> Download(MusicDbContext context, IFileSystem fileSystem, long id,
+        CancellationToken cancellationToken)
+    {
+        var songs = await context.Songs
+            .SingleAsync(s => s.Id == id, cancellationToken);
+
+        var fileStream = fileSystem.File.OpenRead(songs.RepositoryPath);
+
+        new FileExtensionContentTypeProvider().TryGetContentType(songs.RepositoryPath, out var contentType);
+
+        return File(fileStream, contentType ?? "audio/mpeg", enableRangeProcessing: true,
+            fileDownloadName: fileSystem.Path.GetFileName(songs.RepositoryPath));
+    }
+
+    [HttpPost("/songs/import", Name = "ImportSongs")]
     public async Task<object> Import(
         [FromForm] int userId,
         [FromForm] string sourceFolder,

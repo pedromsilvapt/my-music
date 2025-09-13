@@ -11,22 +11,27 @@ import {
 } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
-import {TanStackRouterDevtools} from "@tanstack/react-router-devtools";
+import Player from "./player/player.tsx";
+import {usePlayerContext} from "../contexts/player-context.tsx";
 
 function App() {
     const [mobileOpened, {toggle: toggleMobile}] = useDisclosure();
     const [desktopOpened, {toggle: toggleDesktop}] = useDisclosure(true);
+    const playerState = usePlayerContext(state => state.current.type);
+
+    const footerVisible = playerState != 'EMPTY';
 
     return (
         <AppShell
             header={{height: 60}}
             navbar={{width: 300, breakpoint: 'sm', collapsed: {mobile: !mobileOpened, desktop: !desktopOpened},}}
+            footer={{height: footerVisible ? 90 : 0}}
             padding="md"
         >
             <AppShell.Header>
                 <Group h="100%" px="md">
-                    <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
-                    <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" />
+                    <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm"/>
+                    <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm"/>
                     <Group justify="space-between" style={{flex: 1}}>
                         MyMusic
                     </Group>
@@ -37,53 +42,57 @@ function App() {
                     renderRoot={(props) => <Link to={"/player"} {...props} />}
                     href="/"
                     key="player"
-                    leftSection={<IconPlayerPlay stroke={2} />}
+                    leftSection={<IconPlayerPlay stroke={2}/>}
                     label="Now Playing"
                 />
-                
-                <Divider my="md" />
-                
+
+                <Divider my="md"/>
+
                 <NavLink
                     renderRoot={(props) => <Link to={"/"} {...props} />}
                     key="home"
-                    leftSection={<IconHome stroke={2} />}
+                    leftSection={<IconHome stroke={2}/>}
                     label="Home"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/songs"} {...props} />}
                     href="/songs"
-                    leftSection={<IconMusic stroke={2} />}
+                    leftSection={<IconMusic stroke={2}/>}
                     label="Songs"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/albums"} {...props} />}
                     key="albums"
-                    leftSection={<IconDisc stroke={2} />}
+                    leftSection={<IconDisc stroke={2}/>}
                     label="Albums"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/artists"} {...props} />}
                     key="artists"
-                    leftSection={<IconUsers stroke={2} />}
+                    leftSection={<IconUsers stroke={2}/>}
                     label="Artists"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/playlists"} {...props} />}
                     key="playlists"
-                    leftSection={<IconPlaylist stroke={2} />}
+                    leftSection={<IconPlaylist stroke={2}/>}
                     label="Playlists"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/settings"} {...props} />}
                     key="settings"
-                    leftSection={<IconSettings stroke={2} />}
+                    leftSection={<IconSettings stroke={2}/>}
                     label="Settings"
                 />
             </AppShell.Navbar>
-            <AppShell.Main style={{ '--parent-height': "calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px) - var(--app-shell-padding) * 2)" }}>
-                <Outlet />
-                <TanStackRouterDevtools />
+            <AppShell.Main
+                style={{'--parent-height': "calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px) - var(--app-shell-padding) * 2)"}}>
+                <Outlet/>
+                {/*<TanStackRouterDevtools />*/}
             </AppShell.Main>
+            {footerVisible && <AppShell.Footer>
+                <Player/>
+            </AppShell.Footer>}
         </AppShell>
     );
 }

@@ -5,24 +5,24 @@
  * OpenAPI spec version: 1.0.0
  */
 
-import { faker } from "@faker-js/faker";
+import {faker} from "@faker-js/faker";
 import type {
-	DataTag,
-	DefinedInitialDataOptions,
-	DefinedUseQueryResult,
-	MutationFunction,
-	QueryClient,
-	QueryFunction,
-	QueryKey,
-	UndefinedInitialDataOptions,
-	UseMutationOptions,
-	UseMutationResult,
-	UseQueryOptions,
-	UseQueryResult,
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    MutationFunction,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
+    UseQueryOptions,
+    UseQueryResult,
 } from "@tanstack/react-query";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { delay, HttpResponse, http } from "msw";
-import type { ImportSongsBody, ListSongsResponse } from "../model";
+import {useMutation, useQuery} from "@tanstack/react-query";
+import {delay, http, HttpResponse} from "msw";
+import type {ImportSongsBody, ListSongsResponse} from "../model";
 
 export type listSongsResponse200 = {
 	data: ListSongsResponse;
@@ -36,7 +36,7 @@ export type listSongsResponse = listSongsResponseComposite & {
 };
 
 export const getListSongsUrl = () => {
-	return `/api/Songs`;
+    return `/api/songs`;
 };
 
 export const listSongs = async (
@@ -58,7 +58,7 @@ export const listSongs = async (
 };
 
 export const getListSongsQueryKey = () => {
-	return [`/api/Songs`] as const;
+    return [`/api/songs`] as const;
 };
 
 export const getListSongsQueryOptions = <
@@ -175,6 +175,170 @@ export function useListSongs<
 	return query;
 }
 
+export type downloadSongResponse200 = {
+    data: null;
+    status: 200;
+};
+
+export type downloadSongResponseComposite = downloadSongResponse200;
+
+export type downloadSongResponse = downloadSongResponseComposite & {
+    headers: Headers;
+};
+
+export const getDownloadSongUrl = (id: number) => {
+    return `/api/songs/${id}/download`;
+};
+
+export const downloadSong = async (
+    id: number,
+    options?: RequestInit,
+): Promise<downloadSongResponse> => {
+    const res = await fetch(getDownloadSongUrl(id), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+    const data: downloadSongResponse["data"] = body ? JSON.parse(body) : {};
+
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as downloadSongResponse;
+};
+
+export const getDownloadSongQueryKey = (id?: number) => {
+    return [`/api/songs/${id}/download`] as const;
+};
+
+export const getDownloadSongQueryOptions = <
+    TData = Awaited<ReturnType<typeof downloadSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getDownloadSongQueryKey(id);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadSong>>> = ({
+                                                                                  signal,
+                                                                              }) => downloadSong(id, {signal, ...fetchOptions});
+
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!id,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof downloadSong>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadSongQueryResult = NonNullable<
+    Awaited<ReturnType<typeof downloadSong>>
+>;
+export type DownloadSongQueryError = unknown;
+
+export function useDownloadSong<
+    TData = Awaited<ReturnType<typeof downloadSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof downloadSong>>,
+                    TError,
+                    Awaited<ReturnType<typeof downloadSong>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useDownloadSong<
+    TData = Awaited<ReturnType<typeof downloadSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof downloadSong>>,
+                    TError,
+                    Awaited<ReturnType<typeof downloadSong>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useDownloadSong<
+    TData = Awaited<ReturnType<typeof downloadSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useDownloadSong<
+    TData = Awaited<ReturnType<typeof downloadSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getDownloadSongQueryOptions(id, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    query.queryKey = queryOptions.queryKey;
+
+    return query;
+}
+
 export type importSongsResponse200 = {
 	data: null;
 	status: 200;
@@ -187,7 +351,7 @@ export type importSongsResponse = importSongsResponseComposite & {
 };
 
 export const getImportSongsUrl = () => {
-	return `/api/Songs/Import`;
+    return `/api/songs/import`;
 };
 
 export const importSongs = async (
@@ -349,6 +513,8 @@ export const getListSongsResponseMock = (
 			null,
 		]),
 		duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        isFavorite: faker.datatype.boolean(),
+        isExplicit: faker.datatype.boolean(),
 	})),
 	...overrideResponse,
 });
@@ -360,7 +526,7 @@ export const getListSongsMockHandler = (
 				info: Parameters<Parameters<typeof http.get>[1]>[0],
 		  ) => Promise<ListSongsResponse> | ListSongsResponse),
 ) => {
-	return http.get("*/Songs", async (info) => {
+    return http.get("*/songs", async (info) => {
 		await delay(1000);
 
 		return new HttpResponse(
@@ -374,6 +540,22 @@ export const getListSongsMockHandler = (
 	});
 };
 
+export const getDownloadSongMockHandler = (
+    overrideResponse?:
+        | null
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<null> | null),
+) => {
+    return http.get("*/songs/:id/download", async (info) => {
+        await delay(1000);
+        if (typeof overrideResponse === "function") {
+            await overrideResponse(info);
+        }
+        return new HttpResponse(null, {status: 200});
+    });
+};
+
 export const getImportSongsMockHandler = (
 	overrideResponse?:
 		| null
@@ -381,7 +563,7 @@ export const getImportSongsMockHandler = (
 				info: Parameters<Parameters<typeof http.post>[1]>[0],
 		  ) => Promise<null> | null),
 ) => {
-	return http.post("*/Songs/Import", async (info) => {
+    return http.post("*/songs/import", async (info) => {
 		await delay(1000);
 		if (typeof overrideResponse === "function") {
 			await overrideResponse(info);
@@ -391,5 +573,6 @@ export const getImportSongsMockHandler = (
 };
 export const getSongsMock = () => [
 	getListSongsMockHandler(),
+    getDownloadSongMockHandler(),
 	getImportSongsMockHandler(),
 ];
