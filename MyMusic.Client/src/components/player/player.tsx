@@ -1,22 +1,28 @@
-import WaveSurfer from 'wavesurfer.js';
-import React, {useCallback, useState} from "react";
 import {Center, Divider, Flex, Group} from '@mantine/core';
+import {usePrevious} from "@mantine/hooks";
+import React, {useCallback, useEffect, useState} from "react";
+import WaveSurfer from 'wavesurfer.js';
+import {usePlayerContext} from "../../contexts/player-context.tsx";
 import PlayerControls from "./player-controls.tsx";
 import PlayerInfo from "./player-info.tsx";
 import PlayerTimeline from "./player-timeline.tsx";
 import PlayerVolume from "./player-volume.tsx";
-import {usePlayerContext} from "../../contexts/player-context.tsx";
 
 export default function Player() {
     const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
     const playerStore = usePlayerContext();
-
+    const previousSong = usePrevious(playerStore.current);
+    
     const loadWaveSurfer = useCallback((ws: WaveSurfer) => {
         setWavesurfer(ws);
         ws.setVolume(playerStore.output.volume);
         ws.setMuted(playerStore.output.muted);
 
         playerStore.load(ws.getDuration());
+
+        if (playerStore.current.type === 'LOADED') {
+            ws.setTime(playerStore.current.time);
+        }
 
         if (playerStore.autoplay) {
             ws.play();
@@ -42,6 +48,18 @@ export default function Player() {
         wavesurfer?.setMuted(isMuted);
     }, [wavesurfer]);
 
+    useEffect(() => {
+        if (wavesurfer != null &&
+            previousSong != null &&
+            playerStore.current.type === 'LOADING' &&
+            previousSong.type === 'LOADED' &&
+            playerStore.current.song.id === previousSong.song.id
+        ) {
+            wavesurfer.setTime(0);
+            playerStore.load(previousSong.song.id);
+        }
+    }, [wavesurfer, playerStore.current, previousSong]);
+    
     let controls: React.ReactNode;
 
     if (playerStore.current.type == 'EMPTY') {
