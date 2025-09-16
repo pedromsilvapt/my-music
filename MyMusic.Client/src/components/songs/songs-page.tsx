@@ -1,11 +1,19 @@
-import Collection, {type CollectionSchema} from "../common/collection.tsx";
 import {Anchor, Tooltip} from "@mantine/core";
-import {useListSongs} from '../../client/songs.ts';
+import {
+    IconArrowForward,
+    IconArrowRightDashed,
+    IconHeart,
+    IconHeartFilled,
+    IconMusic,
+    IconPlayerPlayFilled,
+    IconPlaylistAdd
+} from "@tabler/icons-react";
 import {useEffect} from "react";
-import Artwork from "../common/artwork.tsx";
-import {IconMusic} from "@tabler/icons-react";
-import type {Song} from "../../model";
+import {useListSongs} from '../../client/songs.ts';
 import {usePlayerContext} from "../../contexts/player-context.tsx";
+import type {Song} from "../../model";
+import Artwork from "../common/artwork.tsx";
+import Collection, {type CollectionSchema} from "../common/collection/collection.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
 
 export default function SongsPage() {
@@ -19,6 +27,8 @@ export default function SongsPage() {
 
     const songsSchema = {
         key: row => row.id,
+        searchVector: song => `${song.title} - ${song.artists.map(a => a.name).join(', ')} - ${song.album.name}`,
+        
         estimateRowHeight: () => 47 * 2,
         columns: [
             {
@@ -30,6 +40,7 @@ export default function SongsPage() {
                         size={32}
                         placeholderIcon={<IconMusic/>}
                         onClick={ev => {
+                            ev.stopPropagation();
                             if (ev.ctrlKey) {
                                 playerStore.playLast([row]);
                             } else if (ev.shiftKey) {
@@ -86,7 +97,48 @@ export default function SongsPage() {
                 displayName: 'Duration',
                 render: row => row.duration,
             }
-        ]
+        ],
+
+        actions: (elems) => {
+            const allAreFavorites = elems.every(s => s.isFavorite);
+
+            return [
+                {group: "Manage"},
+                {
+                    name: "favorite",
+                    renderIcon: () => allAreFavorites ? <IconHeartFilled/> : <IconHeart/>,
+                    renderLabel: () => allAreFavorites ? "Unfavorite" : "Favorite",
+                    onClick: () => {
+                    },
+                },
+                {
+                    name: "add-to-playlists",
+                    renderIcon: () => <IconPlaylistAdd/>,
+                    renderLabel: () => "Add to Playlists",
+                    onClick: () => {
+                    },
+                },
+                {group: "Queue"},
+                {
+                    name: "play",
+                    renderIcon: () => <IconPlayerPlayFilled/>,
+                    renderLabel: () => "Play",
+                    onClick: (songs: Song[]) => playerStore.play(songs),
+                },
+                {
+                    name: "play-next",
+                    renderIcon: () => <IconArrowRightDashed/>,
+                    renderLabel: () => "Play Next",
+                    onClick: (songs: Song[]) => playerStore.playNext(songs),
+                },
+                {
+                    name: "play-last",
+                    renderIcon: () => <IconArrowForward/>,
+                    renderLabel: () => "Play Last",
+                    onClick: (songs: Song[]) => playerStore.playLast(songs),
+                },
+            ];
+        } 
     } as CollectionSchema<Song>;
 
     const elements = songs?.data?.songs ?? [];
@@ -94,6 +146,7 @@ export default function SongsPage() {
     return <>
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
+                key="songs"
                 items={elements}
                 schema={songsSchema}>
             </Collection>

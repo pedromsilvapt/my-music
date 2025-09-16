@@ -1,0 +1,10 @@
+.toolbar {
+    margin-bottom: var(--mantine-spacing-md);
+}
+
+.selectedActions {
+    background-color: var(--mantine-color-gray-1);
+    color: var(--mantine-color-blue-filled-text);
+    border-radius: var(--mantine-radius-md);
+    padding: calc(var(--mantine-spacing-xs) * 0.4) var(--mantine-spacing-md);
+}

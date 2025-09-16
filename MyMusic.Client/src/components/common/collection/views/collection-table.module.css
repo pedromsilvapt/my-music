@@ -1,0 +1,19 @@
+.row {
+    .rowActions * {
+        opacity: 0;
+    }
+
+    .rowActions.opened * {
+        opacity: 1;
+    }
+
+    &:hover {
+        .rowActions * {
+            opacity: 1;
+        }
+
+        .rowActions.hidden * {
+            opacity: 0;
+        }
+    }
+}
