@@ -4,22 +4,22 @@ namespace MyMusic.Server.DTO.Users;
 
 public record ListUsersResponse
 {
-    public required IEnumerable<User> Users { get; set; }
+    public required IEnumerable<ListUsersItem> Users { get; set; }
+}
 
-    public record User
+public record ListUsersItem
+{
+    public required long Id { get; set; }
+    public required string Username { get; set; }
+    public required string Name { get; set; }
+
+    public static ListUsersItem FromEntity(Entities.User user)
     {
-        public required long Id { get; set; }
-        public required string Username { get; set; }
-        public required string Name { get; set; }
-
-        public static User FromEntity(Entities.User user)
+        return new ListUsersItem
         {
-            return new User
-            {
-                Id = user.Id,
-                Name = user.Name,
-                Username = user.Username,
-            };
-        }
+            Id = user.Id,
+            Name = user.Name,
+            Username = user.Username,
+        };
     }
 }

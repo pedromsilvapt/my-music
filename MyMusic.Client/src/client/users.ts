@@ -5,28 +5,24 @@
  * OpenAPI spec version: 1.0.0
  */
 
-import { faker } from "@faker-js/faker";
+import {faker} from "@faker-js/faker";
 import type {
-	DataTag,
-	DefinedInitialDataOptions,
-	DefinedUseQueryResult,
-	MutationFunction,
-	QueryClient,
-	QueryFunction,
-	QueryKey,
-	UndefinedInitialDataOptions,
-	UseMutationOptions,
-	UseMutationResult,
-	UseQueryOptions,
-	UseQueryResult,
+    DataTag,
+    DefinedInitialDataOptions,
+    DefinedUseQueryResult,
+    MutationFunction,
+    QueryClient,
+    QueryFunction,
+    QueryKey,
+    UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
+    UseQueryOptions,
+    UseQueryResult,
 } from "@tanstack/react-query";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { delay, HttpResponse, http } from "msw";
-import type {
-	CreateUserRequest,
-	CreateUserResponse,
-	ListUsersResponse,
-} from "../model";
+import {useMutation, useQuery} from "@tanstack/react-query";
+import {delay, http, HttpResponse} from "msw";
+import type {CreateUserRequest, CreateUserResponse, ListUsersResponse,} from "../model";
 
 export type listUsersResponse200 = {
 	data: ListUsersResponse;
@@ -302,18 +298,15 @@ export const getListUsersResponseMock = (
 export const getCreateUserResponseMock = (
 	overrideResponse: Partial<CreateUserResponse> = {},
 ): CreateUserResponse => ({
-	user: faker.helpers.arrayElement([
-		{
-			id: faker.number.int({
-				min: undefined,
-				max: undefined,
-				multipleOf: undefined,
-			}),
-			username: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		},
-		undefined,
-	]),
+    user: {
+        id: faker.number.int({
+            min: undefined,
+            max: undefined,
+            multipleOf: undefined,
+        }),
+        username: faker.string.alpha({length: {min: 10, max: 20}}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+    },
 	...overrideResponse,
 });
 

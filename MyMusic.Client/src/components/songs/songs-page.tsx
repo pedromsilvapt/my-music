@@ -11,7 +11,7 @@ import {
 import {useEffect} from "react";
 import {useListSongs} from '../../client/songs.ts';
 import {usePlayerContext} from "../../contexts/player-context.tsx";
-import type {Song} from "../../model";
+import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import Collection, {type CollectionSchema} from "../common/collection/collection.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
@@ -61,7 +61,7 @@ export default function SongsPage() {
                             <Anchor c={"black"}>{row.title}</Anchor>
                         </Tooltip>
                     </ExplicitLabel>,
-                width: '25%',
+                width: '2fr',
             },
             {
                 name: 'artists',
@@ -70,13 +70,13 @@ export default function SongsPage() {
                     {i > 0 && ', '}
                     <Anchor key={artist.id} c={"black"}>{artist.name}</Anchor>
                 </>)),
-                width: '20%',
+                width: '1fr',
             },
             {
                 name: 'album',
                 displayName: 'Album',
                 render: row => <Anchor c={"black"}>{row.album.name}</Anchor>,
-                width: '20%',
+                width: '1fr',
             },
             {
                 name: 'genres',
@@ -85,17 +85,19 @@ export default function SongsPage() {
                     {i > 0 && ', '}
                     <Anchor key={genre.id} c={"black"}>{genre.name}</Anchor>
                 </>)),
-                width: '20%',
+                width: '1fr',
             },
             {
                 name: 'year',
                 displayName: 'Year',
                 render: row => row.year,
+                align: 'center',
             },
             {
                 name: 'duration',
                 displayName: 'Duration',
                 render: row => row.duration,
+                align: 'right',
             }
         ],
 
@@ -123,23 +125,23 @@ export default function SongsPage() {
                     name: "play",
                     renderIcon: () => <IconPlayerPlayFilled/>,
                     renderLabel: () => "Play",
-                    onClick: (songs: Song[]) => playerStore.play(songs),
+                    onClick: (songs: ListSongsItem[]) => playerStore.play(songs),
                 },
                 {
                     name: "play-next",
                     renderIcon: () => <IconArrowRightDashed/>,
                     renderLabel: () => "Play Next",
-                    onClick: (songs: Song[]) => playerStore.playNext(songs),
+                    onClick: (songs: ListSongsItem[]) => playerStore.playNext(songs),
                 },
                 {
                     name: "play-last",
                     renderIcon: () => <IconArrowForward/>,
                     renderLabel: () => "Play Last",
-                    onClick: (songs: Song[]) => playerStore.playLast(songs),
+                    onClick: (songs: ListSongsItem[]) => playerStore.playLast(songs),
                 },
             ];
-        } 
-    } as CollectionSchema<Song>;
+        }
+    } as CollectionSchema<ListSongsItem>;
 
     const elements = songs?.data?.songs ?? [];
 

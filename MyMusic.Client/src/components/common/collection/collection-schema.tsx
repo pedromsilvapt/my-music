@@ -35,4 +35,29 @@ export interface CollectionSchemaColumn<M> {
     sortable?: boolean;
     hidden?: boolean;
     width?: Property.Width<string | number> | undefined;
+    align?: Property.TextAlign | undefined;
+}
+
+export function getColumnWidthPixels(width: unknown): number | null {
+    if (typeof width === 'number') {
+        return width;
+    }
+
+    if (typeof width === 'string' && width.endsWith('px')) {
+        return parseFloat(width.substring(0, width.length - 2));
+    }
+
+    return null;
+}
+
+export function getColumnWidthFractions(width: unknown): number | null {
+    if (typeof width === 'number') {
+        return null;
+    }
+
+    if (typeof width === 'string' && width.endsWith('fr')) {
+        return parseFloat(width.substring(0, width.length - 2));
+    }
+
+    return null;
 }

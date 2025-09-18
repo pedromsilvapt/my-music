@@ -4,12 +4,12 @@ namespace MyMusic.Server.DTO.Playlists;
 
 public record GetPlaylistResponse
 {
-    public required List<PlaylistSong> Songs { get; set; }
+    public required List<GetPlaylistSong> Songs { get; set; }
+}
 
-    public record PlaylistSong : ListSongsResponse.Song
-    {
-        public required double Rank { get; set; }
+public record GetPlaylistSong : ListSongsItem
+{
+    public required double Rank { get; set; }
 
-        public required int Order { get; set; }
-    }
+    public required int Order { get; set; }
 }

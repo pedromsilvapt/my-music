@@ -19,7 +19,7 @@ public class UsersController(ILogger<SongsController> logger) : ControllerBase
 
         return new ListUsersResponse
         {
-            Users = users.Select(ListUsersResponse.User.FromEntity).ToList(),
+            Users = users.Select(ListUsersItem.FromEntity).ToList(),
         };
     }
 
@@ -40,7 +40,7 @@ public class UsersController(ILogger<SongsController> logger) : ControllerBase
 
         return new CreateUserResponse
         {
-            User = ListUsersResponse.User.FromEntity(user),
+            User = CreateUserItem.FromEntity(user),
         };
     }
 }

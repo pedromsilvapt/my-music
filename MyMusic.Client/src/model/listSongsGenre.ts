@@ -5,7 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface Artist {
+export interface ListSongsGenre {
 	id: number;
 	name: string;
 }

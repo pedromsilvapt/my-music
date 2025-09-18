@@ -4,8 +4,8 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
-import type {PlaylistSong} from "./playlistSong";
+import type {GetPlaylistSong} from "./getPlaylistSong";
 
 export interface GetPlaylistResponse {
-    songs: PlaylistSong[];
+    songs: GetPlaylistSong[];
 }

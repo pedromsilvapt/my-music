@@ -4,8 +4,8 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
+import type {ListAlbumsItem} from "./listAlbumsItem";
 
-export interface Album {
-	id: number;
-	name: string;
+export interface ListAlbumsResponse {
+    albums: ListAlbumsItem[];
 }

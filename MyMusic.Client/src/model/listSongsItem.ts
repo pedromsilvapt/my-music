@@ -5,20 +5,18 @@
  * OpenAPI spec version: 1.0.0
  */
 
-import type {Album} from "./album";
-import type {Artist} from "./artist";
-import type {Genre} from "./genre";
+import type {ListSongsAlbum} from "./listSongsAlbum";
+import type {ListSongsArtist} from "./listSongsArtist";
+import type {ListSongsGenre} from "./listSongsGenre";
 
-export interface PlaylistSong {
-    rank: number;
-    order: number;
+export interface ListSongsItem {
     id: number;
     /** @nullable */
     cover: number | null;
     title: string;
-    artists: Artist[];
-    album: Album;
-    genres: Genre[];
+    artists: ListSongsArtist[];
+    album: ListSongsAlbum;
+    genres: ListSongsGenre[];
     /** @nullable */
     year: number | null;
     duration: string;

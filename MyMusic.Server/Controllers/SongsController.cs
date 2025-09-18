@@ -30,7 +30,7 @@ public class SongsController(ILogger<SongsController> logger) : ControllerBase
 
         return new ListSongsResponse
         {
-            Songs = songs.Select(ListSongsResponse.Song.FromEntity).ToList(),
+            Songs = songs.Select(ListSongsItem.FromEntity).ToList(),
         };
     }
 
