@@ -20,10 +20,12 @@ export type PlayerCurrentSongState
     | { 'type': 'LOADED', song: GetPlaylistSong, time: number, duration: number, isPlaying: boolean }
     ;
 
+export type PlayableItem = GetPlaylistSong | ListSongsItem; 
+
 export type PlayerAction = {
-    play: (songs: (GetPlaylistSong | ListSongsItem)[]) => void;
-    playNext: (songs: (GetPlaylistSong | ListSongsItem)[]) => void;
-    playLast: (songs: (GetPlaylistSong | ListSongsItem)[]) => void;
+    play: (songs: PlayableItem[]) => void;
+    playNext: (songs: PlayableItem[]) => void;
+    playLast: (songs: PlayableItem[]) => void;
     goForward: () => void;
     goBackward: () => void;
     goTo: (index: number) => void;
@@ -48,7 +50,7 @@ type QueueAnchor = 'NOW' // Should start playing them right away
  */
 function addToQueue(
     state: PlayerState & PlayerAction,
-    songs: (GetPlaylistSong | ListSongsItem)[],
+    songs: PlayableItem[],
     anchor: QueueAnchor,
 ) {
     // Assume by default we are adding to the end of the queue
@@ -117,7 +119,7 @@ function playAtIndex(
     state.current = {type: 'LOADING', song: nextSong};
 }
 
-function isPlaylistSong(song: GetPlaylistSong | ListSongsItem | null | undefined): song is GetPlaylistSong {
+function isPlaylistSong(song: PlayableItem | null | undefined): song is GetPlaylistSong {
     return song != null && 'order' in song;
 }
 
@@ -130,15 +132,15 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
             volume: 1,
             muted: false,
         },
-        play: (songs: (GetPlaylistSong | ListSongsItem)[]) =>
+        play: (songs: (PlayableItem)[]) =>
             set(state => {
                 addToQueue(state, songs, 'NOW');
             }),
-        playNext: (songs: (GetPlaylistSong | ListSongsItem)[]) =>
+        playNext: (songs: (PlayableItem)[]) =>
             set(state => {
                 addToQueue(state, songs, 'NEXT');
             }),
-        playLast: (songs: (GetPlaylistSong | ListSongsItem)[]) =>
+        playLast: (songs: (PlayableItem)[]) =>
             set(state => {
                 addToQueue(state, songs, 'LAST');
             }),

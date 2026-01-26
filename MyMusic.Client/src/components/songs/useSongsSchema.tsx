@@ -8,15 +8,18 @@ import {
     IconPlayerPlayFilled,
     IconPlaylistAdd
 } from "@tabler/icons-react";
+import {useMemo} from "react";
 import type {PlayerAction, PlayerState} from "../../contexts/player-context.tsx";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
-import { useMemo } from "react";
+import {usePlayHandler} from "../player/usePlayHandler.tsx";
 
 
 export function useSongsSchema(playerStore: PlayerState & PlayerAction): CollectionSchema<ListSongsItem> {
+    const playHandler = usePlayHandler(playerStore);
+    
     return useMemo(() => ({
         key: row => row.id,
         searchVector: song => `${song.title} - ${song.artists.map(a => a.name).join(', ')} - ${song.album.name}`,
@@ -31,16 +34,7 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
                         id={row.cover}
                         size={32}
                         placeholderIcon={<IconMusic/>}
-                        onClick={ev => {
-                            ev.stopPropagation();
-                            if (ev.ctrlKey) {
-                                playerStore.playLast([row]);
-                            } else if (ev.shiftKey) {
-                                playerStore.playNext([row]);
-                            } else {
-                                playerStore.play([row]);
-                            }
-                        }}
+                        onClick={ev => playHandler([row], ev)}
                     />,
                 width: 52,
             },
@@ -139,16 +133,7 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
             id={row.cover}
             size={size}
             placeholderIcon={<IconMusic/>}
-            onClick={ev => {
-                ev.stopPropagation();
-                if (ev.ctrlKey) {
-                    playerStore.playLast([row]);
-                } else if (ev.shiftKey) {
-                    playerStore.playNext([row]);
-                } else {
-                    playerStore.play([row]);
-                }
-            }}
+            onClick={ev => playHandler([row], ev)}
         />,
         renderListTitle: (row, lineClamp) => <ExplicitLabel visible={row.isExplicit}>
             <Tooltip label={row.title} openDelay={500}>
