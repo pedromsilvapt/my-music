@@ -52,7 +52,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const virtualizer = useVirtualizer({
         count: props.items.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: props.schema.estimateRowHeight,
+        estimateSize: props.schema.estimateTableRowHeight,
         overscan: 5,
     });
 
@@ -130,8 +130,10 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
             data-index={virtualRow.index}
             ref={virtualizer.measureElement}
             onClick={() => selectionHandlers.toggle(row)}
-            className={styles.row}
-            style={selection.includes(row) ? {backgroundColor: 'var(--mantine-color-blue-light)'} : {}}
+            className={cls(
+                styles.row,
+                selection.includes(row) && styles.selected,
+            )}
         >
             {columns.map(col =>
                 <Table.Td key={col.name}

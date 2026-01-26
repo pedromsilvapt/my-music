@@ -28,8 +28,8 @@ export default function SongsPage() {
     const songsSchema = {
         key: row => row.id,
         searchVector: song => `${song.title} - ${song.artists.map(a => a.name).join(', ')} - ${song.album.name}`,
-        
-        estimateRowHeight: () => 47 * 2,
+
+        estimateTableRowHeight: () => 47 * 2,
         columns: [
             {
                 name: 'artwork',
@@ -58,7 +58,7 @@ export default function SongsPage() {
                 render: row =>
                     <ExplicitLabel visible={row.isExplicit}>
                         <Tooltip label={row.title} openDelay={500}>
-                            <Anchor c={"black"}>{row.title}</Anchor>
+                            <Anchor lineClamp={1} c={"black"}>{row.title}</Anchor>
                         </Tooltip>
                     </ExplicitLabel>,
                 width: '2fr',
@@ -140,7 +140,30 @@ export default function SongsPage() {
                     onClick: (songs: ListSongsItem[]) => playerStore.playLast(songs),
                 },
             ];
-        }
+        },
+
+        estimateListRowHeight: () => 84,
+        renderListArtwork: (row, size) => <Artwork
+            id={row.cover}
+            size={size}
+            placeholderIcon={<IconMusic/>}
+            onClick={ev => {
+                ev.stopPropagation();
+                if (ev.ctrlKey) {
+                    playerStore.playLast([row]);
+                } else if (ev.shiftKey) {
+                    playerStore.playNext([row]);
+                } else {
+                    playerStore.play([row]);
+                }
+            }}
+        />,
+        renderListTitle: (row, lineClamp) => <ExplicitLabel visible={row.isExplicit}>
+            <Tooltip label={row.title} openDelay={500}>
+                <Anchor lineClamp={lineClamp} c={"black"}>{row.title}</Anchor>
+            </Tooltip>
+        </ExplicitLabel>,
+        renderListSubTitle: (row) => row.album?.name,
     } as CollectionSchema<ListSongsItem>;
 
     const elements = songs?.data?.songs ?? [];

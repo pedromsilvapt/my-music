@@ -1,0 +1,24 @@
+.item {
+    padding: var(--mantine-spacing-xs);
+    border-radius: var(--mantine-radius-md);
+
+    &:hover {
+        background-color: var(--mantine-color-default-hover);
+    }
+
+    &.selected {
+        background-color: var(--mantine-color-blue-light);
+    }
+
+    /* Is invisible when not hovered, or when the selection is not empty */
+
+    .itemActions *, &:hover .itemActions.hidden * {
+        opacity: 0;
+    }
+
+    /* Is visible when the menu is open, or when the item is hovered */
+
+    .itemActions.opened *, &:hover .itemActions * {
+        opacity: 1;
+    }
+}

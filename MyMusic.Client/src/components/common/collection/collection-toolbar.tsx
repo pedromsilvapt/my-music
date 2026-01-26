@@ -1,26 +1,42 @@
 import {ActionIcon, Box, Center, CloseButton, Divider, Group, SegmentedControl, Text, TextInput} from "@mantine/core";
+import {useUncontrolled} from "@mantine/hooks";
 import {IconLayoutGridFilled, IconListDetails, IconSearch, IconSettings, IconTableFilled} from "@tabler/icons-react";
 import CollectionActions from "./collection-actions.tsx";
 import type {CollectionSchemaAction} from "./collection-schema.tsx";
 import styles from './collection-toolbar.module.css';
 
+export type CollectionView = 'table' | 'list' | 'grid';
+
 export interface CollectionToolbarProps<M> {
-    search: string;
-    setSearch: (search: string) => void;
+    search?: string;
+    setSearch?: (search: string) => void;
+    view?: CollectionView;
+    setView?: (view: CollectionView) => void;
     selection: M[];
     onClearSelection: () => void;
     actions: CollectionSchemaAction<M>[];
 }
 
 export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
-    const {search, setSearch} = props;
+    const [search, setSearch] = useUncontrolled({
+        value: props.search,
+        defaultValue: '',
+        onChange: props.setSearch,
+    });
+    const [view, setView] = useUncontrolled({
+        value: props.view,
+        defaultValue: 'table',
+        onChange: props.setView,
+    });
 
     return <Group className={styles.toolbar} justify="space-between" grow={true}>
         <Box>
             <SegmentedControl
+                value={view}
+                onChange={view => setView(view as CollectionView)}
                 data={[
                     {
-                        value: 'table',
+                        value: 'table' satisfies CollectionView,
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconTableFilled size={16}/>
@@ -29,7 +45,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         ),
                     },
                     {
-                        value: 'grid',
+                        value: 'grid' satisfies CollectionView,
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconLayoutGridFilled size={16}/>
@@ -38,7 +54,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         ),
                     },
                     {
-                        value: 'list',
+                        value: 'list' satisfies CollectionView,
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconListDetails size={16}/>

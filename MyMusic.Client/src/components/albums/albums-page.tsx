@@ -18,7 +18,7 @@ export default function AlbumsPage() {
         key: row => row.id,
         searchVector: artist => artist.name,
 
-        estimateRowHeight: () => 47 * 2,
+        estimateTableRowHeight: () => 47 * 2,
         columns: [
             {
                 name: 'artwork',
@@ -58,7 +58,18 @@ export default function AlbumsPage() {
 
         actions: () => {
             return [];
-        }
+        },
+
+        estimateListRowHeight: () => 84,
+        renderListArtwork: (row, size) => <Artwork
+            id={row.cover}
+            size={size}
+            placeholderIcon={<IconUserFilled/>}
+        />,
+        renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
+            <Anchor c={"black"}>{row.name}</Anchor>
+        </Tooltip>,
+        renderListSubTitle: (row) => row.songsCount + ' songs',
     } as CollectionSchema<ListAlbumsItem>;
 
     const elements = albums?.data?.albums ?? [];

@@ -2,7 +2,9 @@ import {Flex} from "@mantine/core";
 import {useDebouncedValue, useSelection} from '@mantine/hooks';
 import {useMemo, useState} from "react";
 import type {CollectionSchema} from "./collection-schema.tsx";
-import CollectionToolbar from "./collection-toolbar.tsx";
+import CollectionToolbar, {type CollectionView} from "./collection-toolbar.tsx";
+import CollectionGrid from "./views/collection-grid.tsx";
+import CollectionList from "./views/collection-list.tsx";
 import CollectionTable from "./views/collection-table.tsx";
 
 export type {CollectionSchema} from "./collection-schema";
@@ -13,7 +15,8 @@ interface CollectionProps<T extends { id: string | number }> {
 }
 
 export default function Collection<T extends { id: string | number }>(props: CollectionProps<T>) {
-    const [search, setSearch] = useState('')
+    const [search, setSearch] = useState('');
+    const [view, setView] = useState<CollectionView>('table');
     const [throttledSearch] = useDebouncedValue(search, 50);
 
     const filteredItems = useMemo(() => {
@@ -37,19 +40,43 @@ export default function Collection<T extends { id: string | number }>(props: Col
         return props.schema.actions?.(selection) ?? [];
     }, [props.schema, selection]);
 
-    return <Flex direction="column" style={{height: `100%`}}>
-        <CollectionToolbar
-            search={search}
-            setSearch={setSearch}
-            selection={selection}
-            onClearSelection={selectionHandlers.resetSelection}
-            actions={actions}/>
+    let viewNode: React.ReactNode;
 
-        <CollectionTable
+    if (view == 'table') {
+        viewNode = <CollectionTable
             schema={props.schema}
             items={filteredItems}
             selection={selection}
             selectionHandlers={selectionHandlers}
-        />
+        />;
+    } else if (view == 'list') {
+        viewNode = <CollectionList
+            schema={props.schema}
+            items={filteredItems}
+            selection={selection}
+            selectionHandlers={selectionHandlers}
+        />;
+    } else if (view === 'grid') {
+        viewNode = <CollectionGrid
+            schema={props.schema}
+            items={filteredItems}
+            selection={selection}
+            selectionHandlers={selectionHandlers}
+        />;
+    } else {
+        throw new Error(`Invalid collection view: ${view}`);
+    }
+    
+    return <Flex direction="column" style={{height: `100%`}}>
+        <CollectionToolbar
+            search={search}
+            setSearch={setSearch}
+            view={view}
+            setView={setView}
+            selection={selection}
+            onClearSelection={selectionHandlers.resetSelection}
+            actions={actions}/>
+
+        {viewNode}
     </Flex>;
 }

@@ -1,24 +1,14 @@
-/*//table {*/
-tbody, thead {
-    //display: grid;
-    //grid-template-rows: auto;
-    //grid-auto-rows: auto;
-    //grid-gap: 1px;
-
-    tr {
-        /*display: contents;*/
-    }
-}
-
 .row {
-    /* Is invisible when not overed, or when the selection is not empty */
+    &.selected {
+        background-color: var(--mantine-color-blue-light);
+    }
 
+    /* Is invisible when not hovered, or when the selection is not empty */
     .rowActions *, &:hover .rowActions.hidden * {
         opacity: 0;
     }
 
     /* Is visible when the menu is open, or when the row is hovered */
-
     .rowActions.opened *, &:hover .rowActions * {
         opacity: 1;
     }

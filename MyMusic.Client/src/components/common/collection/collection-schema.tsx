@@ -6,10 +6,19 @@ export interface CollectionSchema<M> {
 
     //#region Table
 
-    estimateRowHeight: (index: number) => number;
+    estimateTableRowHeight: (index: number) => number;
     columns: CollectionSchemaColumn<M>[];
 
-    //#endregion
+    //#endregion Table
+
+    //#region List
+
+    estimateListRowHeight: (index: number) => number;
+    renderListArtwork: (elem: M, size: number) => React.ReactNode;
+    renderListTitle: (elem: M, lineClamp: number) => React.ReactNode;
+    renderListSubTitle: (elem: M, lineClamp: number) => React.ReactNode;
+    
+    //#endregion List
 
     //#region Search
 
