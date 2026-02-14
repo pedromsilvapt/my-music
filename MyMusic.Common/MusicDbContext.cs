@@ -21,6 +21,8 @@ public class MusicDbContext : DbContext
 
     public DbSet<Genre> Genres { get; set; } = null!;
 
+    public DbSet<PurchasedSong> PurchasedSongs { get; set; } = null!;
+
     public DbSet<Song> Songs { get; set; } = null!;
 
     public DbSet<SongArtist> SongArtists { get; set; } = null!;
@@ -32,6 +34,6 @@ public class MusicDbContext : DbContext
     public DbSet<SongSource> SongSources { get; set; } = null!;
 
     public DbSet<Source> Sources { get; set; } = null!;
-    
+
     public DbSet<User> Users { get; set; } = null!;
 }

@@ -1,7 +1,8 @@
-import {ActionIcon, Menu} from "@mantine/core";
+import {ActionIcon, Group, Menu, Tooltip} from "@mantine/core";
 import {useUncontrolled} from "@mantine/hooks";
 import {IconDotsVertical} from "@tabler/icons-react";
-import type {CollectionSchemaAction} from "./collection-schema.tsx";
+import {useCallback} from "react";
+import type {CollectionSchemaAction, CollectionSchemaActionButton} from "./collection-schema.tsx";
 
 export interface CollectionActionsProps<M> {
     selection: M[];
@@ -17,24 +18,50 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
         onChange: props.setOpened,
     });
 
+    const isPrimary = useCallback((a: CollectionSchemaAction<M>): a is CollectionSchemaActionButton<M> =>
+        !('divider' in a) && !('group' in a) && (a.primary ?? false), []);
+
+    const isSecondary = useCallback((a: CollectionSchemaAction<M>) =>
+        !isPrimary(a), [isPrimary]);
+
+    const primaryActions = props.actions.filter(isPrimary);
+    const secondaryActions = props.actions.filter(isSecondary);
+
     return <>
-        <Menu shadow="md" width={200} opened={opened} onChange={setOpened}>
-            <Menu.Target>
-                <ActionIcon
-                    variant="default"
-                    // size="lg"
-                    aria-label="Actions"
-                    title="Actions"
-                    onClick={ev => ev.stopPropagation()}
-                >
-                    <IconDotsVertical/>
-                </ActionIcon>
-            </Menu.Target>
-            <Menu.Dropdown>
-                {props.actions.map((action, i) => <CollectionActionMenu key={i} action={action}
-                                                                        selection={props.selection}/>)}
-            </Menu.Dropdown>
-        </Menu>
+        <Group gap="xs">
+            {primaryActions.length > 0 && primaryActions.map(action =>
+                <Tooltip label={action.renderLabel()} openDelay={500}>
+                    <ActionIcon
+                        variant="default"
+                        size="lg"
+                        // aria-label={action.renderLabel()}
+                        // title={action.renderLabel()}
+                        onClick={ev => {
+                            ev.stopPropagation();
+                            action.onClick(props.selection);
+                        }}>
+                        {action.renderIcon()}
+                    </ActionIcon>
+                </Tooltip>)}
+
+            {secondaryActions.length > 0 && <Menu shadow="md" width={200} opened={opened} onChange={setOpened}>
+                <Menu.Target>
+                    <ActionIcon
+                        variant="default"
+                        // size="lg"
+                        aria-label="Actions"
+                        title="Actions"
+                        onClick={ev => ev.stopPropagation()}
+                    >
+                        <IconDotsVertical/>
+                    </ActionIcon>
+                </Menu.Target>
+                <Menu.Dropdown>
+                    {secondaryActions.map((action, i) => <CollectionActionMenu key={i} action={action}
+                                                                               selection={props.selection}/>)}
+                </Menu.Dropdown>
+            </Menu>}
+        </Group>
     </>
 }
 

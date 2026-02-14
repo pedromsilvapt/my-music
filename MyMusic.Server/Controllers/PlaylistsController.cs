@@ -6,7 +6,7 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class PlaylistsController
+public class PlaylistsController()
 {
     [HttpGet("{id}", Name = "GetPlaylist")]
     public async Task<GetPlaylistResponse> Get(

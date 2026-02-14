@@ -11,7 +11,7 @@ export interface CollectionGridProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<M>;
+    selectionHandlers: UseSelectionHandlers<React.Key>;
 }
 
 export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
@@ -95,7 +95,7 @@ export interface CollectionGridItemProps<M> {
     schema: CollectionSchema<M>;
     item: M;
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<M>;
+    selectionHandlers: UseSelectionHandlers<React.Key>;
     width: number;
 }
 
@@ -121,7 +121,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
                 ref={virtualizer.measureElement}
                 w={props.width}
                 h={props.width + 54}
-                onClick={() => selectionHandlers.toggle(item)}
+                onClick={() => selectionHandlers.toggle(schema.key(item))}
                 className={cls(
                     styles.item,
                     selection.includes(item) && styles.selected,

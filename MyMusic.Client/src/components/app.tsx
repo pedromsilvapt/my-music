@@ -7,16 +7,19 @@ import {
     IconPlayerPlay,
     IconPlaylist,
     IconSettings,
+    IconShoppingCart,
     IconUsers
 } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
-import Player from "./player/player.tsx";
 import {usePlayerContext} from "../contexts/player-context.tsx";
+import Player from "./player/player.tsx";
+import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
 
 function App() {
     const [mobileOpened, {toggle: toggleMobile}] = useDisclosure();
     const [desktopOpened, {toggle: toggleDesktop}] = useDisclosure(true);
+
     const playerState = usePlayerContext(state => state.current.type);
 
     const footerVisible = playerState != 'EMPTY';
@@ -35,6 +38,7 @@ function App() {
                     <Group justify="space-between" style={{flex: 1}}>
                         MyMusic
                     </Group>
+                    <PurchasesQueueIndicator/>
                 </Group>
             </AppShell.Header>
             <AppShell.Navbar p="md">
@@ -77,6 +81,12 @@ function App() {
                     key="playlists"
                     leftSection={<IconPlaylist stroke={2}/>}
                     label="Playlists"
+                />
+                <NavLink
+                    renderRoot={(props) => <Link to={"/purchases"} {...props} />}
+                    key="purchases"
+                    leftSection={<IconShoppingCart stroke={2}/>}
+                    label="Purchases"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/settings"} {...props} />}

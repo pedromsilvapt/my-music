@@ -12,6 +12,7 @@ public class ArtistSource
     public Source Source { get; set; } = null!;
     public long SourceId { get; set; }
 
-    [MaxLength(256)]
-    public required string ExternalId { get; set; }
+    [MaxLength(256)] public required string ExternalId { get; set; }
+
+    public string? Link { get; set; } = null;
 }

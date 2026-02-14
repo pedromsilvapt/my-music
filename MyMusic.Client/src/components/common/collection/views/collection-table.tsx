@@ -16,11 +16,12 @@ export interface CollectionTableProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<M>;
+    selectionHandlers: UseSelectionHandlers<React.Key>;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const {ref: tableRef, width: tableWidth} = useElementSize();
+    const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     
     const columns = useMemo(() => {
         const columns = props.schema.columns.filter(col => !col.hidden);
@@ -32,14 +33,12 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
 
         // We will force our table to have at least this size
         const totalWidth = Math.max(tableWidth, fixedWidth);
-        const freeWidth = totalWidth - fixedWidth - 30; // NOTE Also remove the size of additional columns (like the actions column)
+        const freeWidth = totalWidth - fixedWidth - 100; // NOTE Also remove the size of additional columns (like the actions column)
 
         const freeFractions = columns
             .map(c => getColumnWidthFractions(c.width))
             .filter(width => width != null)
             .reduce((sum, width) => sum + width, 0);
-
-        console.log(freeWidth, totalWidth, freeFractions);
 
         return columns.map(col => ({
             ...col,
@@ -73,19 +72,19 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         />;
     });
 
-    return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "4000px"}}>
-        <Box style={{height: `${virtualizer.getTotalSize()}px`}}>
+    return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "813px"}}>
+        <Box style={{height: `${virtualizer.getTotalSize() + tableHeaderHeight}px`}}>
             <Table highlightOnHover ref={tableRef} style={{
                 borderCollapse: 'separate',
             }}>
-                <Table.Thead>
+                <Table.Thead ref={tableHeaderRef}>
                     <Table.Tr>
                         {columns.map(col =>
                             <Table.Th style={{width: col.width, textAlign: col.align ?? 'left'}}
                                       key={col.name}>{col.displayName}
                             </Table.Th>
                         )}
-                        <Table.Th key="__actions" style={{width: "30px"}}>{/* Actions Menu */}</Table.Th>
+                        <Table.Th key="__actions" style={{width: "60px"}}>{/* Actions Menu */}</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody style={{
@@ -105,7 +104,7 @@ interface CollectionTableRowProps<M> {
     row: M;
     columns: CollectionSchemaColumn<M>[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<M>;
+    selectionHandlers: UseSelectionHandlers<React.Key>;
 }
 
 function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
@@ -129,7 +128,7 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         <Table.Tr
             data-index={virtualRow.index}
             ref={virtualizer.measureElement}
-            onClick={() => selectionHandlers.toggle(row)}
+            onClick={() => selectionHandlers.toggle(schema.key(row))}
             className={cls(
                 styles.row,
                 selection.includes(row) && styles.selected,

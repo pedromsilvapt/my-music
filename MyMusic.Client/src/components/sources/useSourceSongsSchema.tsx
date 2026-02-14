@@ -1,0 +1,66 @@
+import {Text, Tooltip} from "@mantine/core";
+import {IconBasketDown} from "@tabler/icons-react";
+import {useMemo} from "react";
+import {type SourceSong} from "../../model";
+import {type CollectionSchema} from "../common/collection/collection.tsx";
+import SongAlbum from "../common/fields/song-album.tsx";
+import SongArtists from "../common/fields/song-artists.tsx";
+import SongArtwork from "../common/fields/song-artwork.tsx";
+import SongSubTitle from "../common/fields/song-sub-title.tsx";
+import SongTitle from "../common/fields/song-title.tsx";
+
+export function useSourceSongsSchema(
+    onPurchase: (songs: SourceSong[]) => void,
+) {
+    return useMemo(() => ({
+        key: row => row.id,
+        searchVector: purchase => purchase.title,
+
+        estimateTableRowHeight: () => 47 * 2,
+        columns: [
+            {
+                name: 'artwork',
+                displayName: '',
+                render: row => <SongArtwork url={row.cover?.smallest}/>,
+                width: 52,
+            },
+            {
+                name: 'title',
+                displayName: 'Title',
+                render: row => <SongTitle {...row} />,
+                width: '2fr',
+            },
+            {
+                name: 'artists',
+                displayName: 'Artists',
+                render: row => <SongArtists artists={row.artists}/>,
+                width: '1fr',
+            },
+            {
+                name: 'album',
+                displayName: 'Album',
+                render: row => <SongAlbum name={row.album?.name ?? '(no album)'} link={row.album?.link}/>,
+                width: '1fr',
+            },
+        ],
+
+        actions: () => {
+            return [
+                {
+                    name: "purchase",
+                    renderIcon: () => <IconBasketDown/>,
+                    renderLabel: () => "Purchase",
+                    onClick: (songs) => onPurchase(songs),
+                    primary: true
+                }
+            ];
+        },
+
+        estimateListRowHeight: () => 84,
+        renderListArtwork: (row, size) => <SongArtwork url={row.cover?.normal} size={size}/>,
+        renderListTitle: (row) => <Tooltip label={row.title} openDelay={500}>
+            <Text>{row.title}</Text>
+        </Tooltip>,
+        renderListSubTitle: (row) => <SongSubTitle artists={row.artists} album={row.album} year={row.year} c="gray"/>,
+    }) as CollectionSchema<SourceSong>, [onPurchase]);
+}

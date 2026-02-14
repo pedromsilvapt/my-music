@@ -8,9 +8,9 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class UsersController(ILogger<SongsController> logger) : ControllerBase
+public class UsersController(ILogger<UsersController> logger) : ControllerBase
 {
-    private readonly ILogger<SongsController> _logger = logger;
+    private readonly ILogger<UsersController> _logger = logger;
 
     [HttpGet(Name = "ListUsers")]
     public async Task<ListUsersResponse> Get(MusicDbContext context, CancellationToken cancellationToken)

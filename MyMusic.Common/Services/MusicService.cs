@@ -1,14 +1,14 @@
-﻿using DotNext.Threading;
+﻿using System.IO.Abstractions;
+using System.IO.Hashing;
+using DotNext.Threading;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Targets;
-using System.IO.Hashing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.IO.Abstractions;
-using Microsoft.Extensions.Options;
 
 namespace MyMusic.Common.Services;
 
@@ -324,6 +324,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     {
                         job.AddSkipReason(new DuplicateChecksumSkipReason(importSongMetadata.SourceFilePath,
                             metadata.FullLabel, checksum, checksumAlgorithmName, song.Label, song.Id));
+                        job.AddSongMapping(importSongMetadata, song);
                         continue;
                     }
 
@@ -339,6 +340,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     {
                         job.AddSkipReason(new DuplicateFilePathSkipReason(importSongMetadata.SourceFilePath,
                             metadata.FullLabel, targetFile.FilePath!, song.Label, song.Id));
+                        job.AddSongMapping(importSongMetadata, song);
                         continue;
                     }
 
@@ -437,7 +439,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     }
 
                     #endregion Album
-                    
+
                     // TODO Find a better way to re-use the album artist, if needed
                     await db.SaveChangesAsync(cancellationToken);
 
@@ -512,8 +514,8 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                         song = Activator.CreateInstance<Song>();
 
                         // Timestamps
-                        song.CreatedAt = importSongMetadata.CreatedAt;
-                        song.ModifiedAt = importSongMetadata.ModifiedAt;
+                        song.CreatedAt = importSongMetadata.CreatedAt.ToUniversalTime();
+                        song.ModifiedAt = importSongMetadata.ModifiedAt.ToUniversalTime();
                         song.AddedAt = DateTime.UtcNow;
                         // Repository Id
                         song.OwnerId = userId;
@@ -589,7 +591,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     song.Devices = songDevices;
                     song.Artists = songArtists;
                     // Timestamps
-                    song.ModifiedAt = importSongMetadata.CreatedAt;
+                    song.ModifiedAt = importSongMetadata.CreatedAt.ToUniversalTime();
 
                     //if (existingSong is not null && duplicatesStrategy == DuplicateSongsHandlingStrategy.Overwrite)
                     //{
@@ -624,7 +626,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     {
                         // If the old song had a cover, and the new one doesn't, delete it
                         db.Remove(song.Cover);
-                        
+
                         song.Cover = null;
                     }
 
@@ -632,6 +634,8 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     await db.SaveChangesAsync(cancellationToken);
                     await dbTrans.CommitAsync(cancellationToken);
+
+                    job.AddSongMapping(importSongMetadata, song);
                 }
                 catch (TaskCanceledException)
                 {
@@ -641,6 +645,10 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                 }
                 catch (Exception ex)
                 {
+                    job.AddException(new Exception(
+                        $"Failed to import song {metadata?.FullLabel ?? "(undefined)"} from file {importSongMetadata.SourceFilePath}",
+                        ex));
+
                     Logger.LogError(ex, "Failed to import song {SongLabel} from file {File}",
                         metadata?.FullLabel ?? "(undefined)", importSongMetadata.SourceFilePath);
 
@@ -660,14 +668,14 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     public static string CalculateChecksum(IFileSystem fs, NonCryptographicHashAlgorithm algorithm, string filePath)
     {
         using var file = fs.File.OpenRead(filePath);
-        
+
         return CalculateChecksum(algorithm, file);
     }
 
     public static string CalculateChecksum(NonCryptographicHashAlgorithm algorithm, byte[] bytes)
     {
         using var memory = new MemoryStream(bytes);
-        
+
         return CalculateChecksum(algorithm, memory);
     }
 

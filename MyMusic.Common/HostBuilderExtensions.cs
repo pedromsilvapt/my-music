@@ -11,19 +11,23 @@ public static class HostBuilderExtensions
 {
     public static T UseMyMusicCommon<T>(this T builder) where T : IHostApplicationBuilder
     {
-        builder.Services.AddScoped<IMusicService, MusicService>();
+        builder.Services.AddSingleton<PurchasesQueue>();
         builder.Services.AddScoped<IFileSystem, FileSystem>();
-        
+        builder.Services.AddScoped<IMusicService, MusicService>();
+        builder.Services.AddScoped<ISourcesService, SourcesService>();
+        builder.Services.AddTransient<PurchasesQueue.PurchasesExecutor>();
+        builder.Services.AddTransient<MusicImportJob>();
+
         // Add services to the container.
         builder.Services.AddDbContext<MusicDbContext>((sp, options) =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Postgres");
-    
+
             // TODO Add configuration
             options.UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention();
         });
-        
+
         builder.Services.Configure<Config>(builder.Configuration.GetSection("MyMusic"));
 
         return builder;

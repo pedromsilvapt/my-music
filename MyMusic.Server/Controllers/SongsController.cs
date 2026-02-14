@@ -10,7 +10,7 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("songs")]
-public class SongsController(ILogger<SongsController> logger) : ControllerBase
+public class SongsController(ILogger<SongsController> logger, ICurrentUser currentUser) : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
 
@@ -18,6 +18,7 @@ public class SongsController(ILogger<SongsController> logger) : ControllerBase
     public async Task<ListSongsResponse> List(MusicDbContext context, CancellationToken cancellationToken)
     {
         var songs = await context.Songs
+            .Where(s => s.OwnerId == currentUser.Id)
             .Include(s => s.Album)
             .ThenInclude(a => a.Artist)
             .Include(s => s.Artists)
@@ -39,7 +40,7 @@ public class SongsController(ILogger<SongsController> logger) : ControllerBase
         CancellationToken cancellationToken)
     {
         var songs = await context.Songs
-            .SingleAsync(s => s.Id == id, cancellationToken);
+            .SingleAsync(s => s.Id == id && s.OwnerId == currentUser.Id, cancellationToken);
 
         var fileStream = fileSystem.File.OpenRead(songs.RepositoryPath);
 
@@ -51,15 +52,13 @@ public class SongsController(ILogger<SongsController> logger) : ControllerBase
 
     [HttpPost("/songs/import", Name = "ImportSongs")]
     public async Task<object> Import(
-        [FromForm] int userId,
         [FromForm] string sourceFolder,
         [FromServices] IMusicService musicService,
+        [FromServices] MusicImportJob job,
         [FromServices] MusicDbContext db,
         CancellationToken cancellationToken)
     {
-        var job = new MusicImportJob(_logger);
-
-        await musicService.ImportRepositorySongs(db, job, userId, @sourceFolder,
+        await musicService.ImportRepositorySongs(db, job, currentUser.Id, sourceFolder,
             cancellationToken: cancellationToken);
 
         return new { success = true };

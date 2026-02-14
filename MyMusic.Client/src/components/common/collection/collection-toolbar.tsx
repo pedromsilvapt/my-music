@@ -15,6 +15,10 @@ export interface CollectionToolbarProps<M> {
     selection: M[];
     onClearSelection: () => void;
     actions: CollectionSchemaAction<M>[];
+
+    renderLeftSection?: () => React.ReactNode;
+    renderMiddleSection?: () => React.ReactNode;
+    renderRightSection?: () => React.ReactNode;
 }
 
 export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
@@ -29,8 +33,9 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
         onChange: props.setView,
     });
 
-    return <Group className={styles.toolbar} justify="space-between" grow={true}>
-        <Box>
+    const leftSection = props.renderLeftSection
+        ? props.renderLeftSection()
+        : <Box>
             <SegmentedControl
                 value={view}
                 onChange={view => setView(view as CollectionView)}
@@ -64,12 +69,18 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                     },
                 ]}
             />
-        </Box>
-        <TextInput placeholder="Search..."
-                   leftSection={<IconSearch/>}
-                   value={search}
-                   onChange={e => setSearch(e.currentTarget.value)}/>
-        <Group justify="flex-end">
+        </Box>;
+
+    const middleSection = props.renderMiddleSection
+        ? props.renderMiddleSection()
+        : <TextInput placeholder="Search..."
+                     leftSection={<IconSearch/>}
+                     value={search}
+                     onChange={e => setSearch(e.currentTarget.value)}/>;
+
+    const rightSection = props.renderRightSection
+        ? props.renderRightSection()
+        : <Group justify="flex-end">
             {props.selection.length > 0 &&
                 <>
                     <Group gap={8} className={styles.selectedActions}>
@@ -91,6 +102,11 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
             >
                 <IconSettings/>
             </ActionIcon>
-        </Group>
+        </Group>;
+
+    return <Group className={styles.toolbar} justify="space-between" grow={true}>
+        {leftSection}
+        {middleSection}
+        {rightSection}
     </Group>;
 }

@@ -16,11 +16,14 @@ public class MusicServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var musicService = scenario.CreateMusicService();
-        var job = new MusicImportJob(Substitute.For<ILogger>());
-        
-        MockMusicFile.Create(scenario.FileSystem, "/music/Title A.mp3", "Title A", "Album A", ["Artist A", "Artist B"], ["Genre A", "Genre B"]);
-        MockMusicFile.Create(scenario.FileSystem, "/music/Title B.mp3", "Title B", "Album A", ["Artist A"], ["Genre A", "Genre B"]);
-        MockMusicFile.Create(scenario.FileSystem, "/music/Title C.mp3", "Title C", "Album B", ["Artist C"], ["Genre B"]);
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Title A.mp3", "Title A", "Album A", ["Artist A", "Artist B"],
+            ["Genre A", "Genre B"]);
+        MockMusicFile.Create(scenario.FileSystem, "/music/Title B.mp3", "Title B", "Album A", ["Artist A"],
+            ["Genre A", "Genre B"]);
+        MockMusicFile.Create(scenario.FileSystem, "/music/Title C.mp3", "Title C", "Album B", ["Artist C"],
+            ["Genre B"]);
 
         // Act
         await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
@@ -52,7 +55,7 @@ public class MusicServiceSpecs
             s => s.Artists.Select(a => a.Artist.Name).ShouldBe(["Artist C"], ignoreOrder: true),
             s => s.Genres.Select(g => g.Genre.Name).ShouldBe(["Genre B"], ignoreOrder: true)
         );
-        
+
         // Albums
         scenario.DbContext.Albums
             .Select(a => a.Name)
@@ -70,7 +73,6 @@ public class MusicServiceSpecs
             .Select(a => a.Name)
             .ToList()
             .ShouldBe(["Genre A", "Genre B"], ignoreOrder: true);
-
     }
 
     private static List<Song> LoadSongs(MusicDbContext context)

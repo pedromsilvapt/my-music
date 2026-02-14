@@ -11,16 +11,19 @@ export interface CollectionListProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<M>;
+    selectionHandlers: UseSelectionHandlers<React.Key>;
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
     const parentRef = useRef<HTMLDivElement>(null)
 
+    const gap = 10;
+
     const virtualizer = useVirtualizer({
         count: props.items.length,
         getScrollElement: () => parentRef.current,
         estimateSize: props.schema.estimateListRowHeight,
+        gap: gap,
         overscan: 5,
     });
 
@@ -42,7 +45,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
 
     return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "4000px"}}>
         <Box style={{height: `${virtualizer.getTotalSize()}px`}}>
-            <Stack gap={10} style={{
+            <Stack gap={gap} style={{
                 transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
             }}>
                 {items}
@@ -57,7 +60,7 @@ export interface CollectionListItemProps<M> {
     schema: CollectionSchema<M>;
     item: M;
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<M>;
+    selectionHandlers: UseSelectionHandlers<React.Key>;
 }
 
 export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
@@ -79,7 +82,7 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     return <Box key={schema.key(item)}
                 data-index={virtualItem.index}
                 ref={virtualizer.measureElement}
-                onClick={() => selectionHandlers.toggle(item)}
+                onClick={() => selectionHandlers.toggle(schema.key(item))}
                 className={cls(
                     styles.item,
                     selection.includes(item) && styles.selected,
@@ -88,7 +91,7 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
             {schema.renderListArtwork(item, 64)}
             <Box flex={1}>
                 <Text size="md">{schema.renderListTitle(item, 1)}</Text>
-                <Text size="sm" opacity={0.5}>
+                <Text size="sm">
                     {schema.renderListSubTitle(item, 1)}
                 </Text>
             </Box>

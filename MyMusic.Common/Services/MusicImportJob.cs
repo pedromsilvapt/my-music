@@ -1,19 +1,29 @@
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using MyMusic.Common.Entities;
+using MyMusic.Common.Models;
 
 namespace MyMusic.Common.Services;
 
-public class MusicImportJob(ILogger logger)
+public class MusicImportJob(ILogger<MusicImportJob> logger)
 {
     private readonly List<ImportSkipReason> _skipReasons = [];
-    
+
     private readonly Dictionary<string, string> _fileMapping = [];
+
+    private readonly List<Exception> _exceptions = [];
+
+    private readonly Dictionary<SongImportMetadata, Song> _songMapping = [];
 
     public Guid Guid { get; } = Guid.NewGuid();
 
     public IReadOnlyList<ImportSkipReason> SkipReasons => _skipReasons;
-    
+
     public IReadOnlyDictionary<string, string> FileMapping => _fileMapping;
+
+    public IReadOnlyList<Exception> Exceptions => _exceptions;
+
+    public IReadOnlyDictionary<SongImportMetadata, Song> SongMapping => _songMapping;
 
     public void AddSkipReason(ImportSkipReason skipReason)
     {
@@ -28,7 +38,32 @@ public class MusicImportJob(ILogger logger)
     {
         if (!_fileMapping.TryAdd(sourceFilePath, targetFilePath))
         {
-            logger.LogError("Failed to add mapping for {SourceFilePath} => {TargetFilePath}, key already exists in dictionary.", sourceFilePath, targetFilePath);
+            logger.LogError(
+                "Failed to add mapping for {SourceFilePath} => {TargetFilePath}, key already exists in dictionary.",
+                sourceFilePath, targetFilePath);
+        }
+    }
+
+    public void AddException(Exception exception)
+    {
+        _exceptions.Add(exception);
+    }
+
+    public void AddSongMapping(SongImportMetadata job, Song song)
+    {
+        _songMapping.Add(job, song);
+    }
+
+    public void ThrowIfAnyExceptions()
+    {
+        if (_exceptions.Count == 1)
+        {
+            throw _exceptions[0];
+        }
+
+        if (_exceptions.Count > 1)
+        {
+            throw new AggregateException(_exceptions);
         }
     }
 }

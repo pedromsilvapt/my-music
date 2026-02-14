@@ -30,11 +30,14 @@ export interface CollectionSchema<M> {
 export type CollectionSchemaAction<M> =
     { divider: boolean }
     | { group: string }
-    | {
+    | CollectionSchemaActionButton<M>;
+
+export interface CollectionSchemaActionButton<M> {
     name: string,
     renderIcon: () => React.ReactNode,
     renderLabel: () => React.ReactNode,
     onClick: (elems: M[]) => void, // TODO Event args
+    primary?: boolean;
 }
 
 export interface CollectionSchemaColumn<M> {

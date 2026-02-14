@@ -17,7 +17,7 @@ namespace MyMusic.Common.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "9.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -92,6 +92,14 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("external_id");
 
+                    b.Property<string>("Link")
+                        .HasColumnType("text")
+                        .HasColumnName("link");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric")
+                        .HasColumnName("price");
+
                     b.Property<int>("SongsCount")
                         .HasColumnType("integer")
                         .HasColumnName("songs_count");
@@ -100,18 +108,14 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("source_id");
 
-                    b.Property<int>("SourceId1")
-                        .HasColumnType("integer")
-                        .HasColumnName("source_id1");
-
                     b.HasKey("Id")
                         .HasName("pk_album_sources");
 
                     b.HasIndex("AlbumId")
                         .HasDatabaseName("ix_album_sources_album_id");
 
-                    b.HasIndex("SourceId1")
-                        .HasDatabaseName("ix_album_sources_source_id1");
+                    b.HasIndex("SourceId")
+                        .HasDatabaseName("ix_album_sources_source_id");
 
                     b.ToTable("album_sources", (string)null);
                 });
@@ -185,13 +189,13 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("external_id");
 
+                    b.Property<string>("Link")
+                        .HasColumnType("text")
+                        .HasColumnName("link");
+
                     b.Property<long>("SourceId")
                         .HasColumnType("bigint")
                         .HasColumnName("source_id");
-
-                    b.Property<int>("SourceId1")
-                        .HasColumnType("integer")
-                        .HasColumnName("source_id1");
 
                     b.HasKey("Id")
                         .HasName("pk_artist_sources");
@@ -199,8 +203,8 @@ namespace MyMusic.Common.Migrations
                     b.HasIndex("ArtistId")
                         .HasDatabaseName("ix_artist_sources_artist_id");
 
-                    b.HasIndex("SourceId1")
-                        .HasDatabaseName("ix_artist_sources_source_id1");
+                    b.HasIndex("SourceId")
+                        .HasDatabaseName("ix_artist_sources_source_id");
 
                     b.ToTable("artist_sources", (string)null);
                 });
@@ -309,6 +313,80 @@ namespace MyMusic.Common.Migrations
                         .HasDatabaseName("ix_genres_owner_id_name");
 
                     b.ToTable("genres", (string)null);
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.PurchasedSong", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Cover")
+                        .HasColumnType("text")
+                        .HasColumnName("cover");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("ExternalId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("external_id");
+
+                    b.Property<int>("Progress")
+                        .HasColumnType("integer")
+                        .HasColumnName("progress");
+
+                    b.Property<long?>("SongId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_id");
+
+                    b.Property<long>("SourceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("source_id");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SubTitle")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("sub_title");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("title");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_purchased_songs");
+
+                    b.HasIndex("SongId")
+                        .HasDatabaseName("ix_purchased_songs_song_id");
+
+                    b.HasIndex("SourceId")
+                        .HasDatabaseName("ix_purchased_songs_source_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_purchased_songs_user_id");
+
+                    b.ToTable("purchased_songs", (string)null);
                 });
 
             modelBuilder.Entity("MyMusic.Common.Entities.Song", b =>
@@ -524,18 +602,26 @@ namespace MyMusic.Common.Migrations
 
             modelBuilder.Entity("MyMusic.Common.Entities.SongSource", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("ExternalId")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)")
                         .HasColumnName("external_id");
+
+                    b.Property<string>("Link")
+                        .HasColumnType("text")
+                        .HasColumnName("link");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric")
+                        .HasColumnName("price");
 
                     b.Property<long>("SongId")
                         .HasColumnType("bigint")
@@ -545,30 +631,26 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("source_id");
 
-                    b.Property<int>("SourceId1")
-                        .HasColumnType("integer")
-                        .HasColumnName("source_id1");
-
                     b.HasKey("Id")
                         .HasName("pk_song_sources");
 
                     b.HasIndex("SongId")
                         .HasDatabaseName("ix_song_sources_song_id");
 
-                    b.HasIndex("SourceId1")
-                        .HasDatabaseName("ix_song_sources_source_id1");
+                    b.HasIndex("SourceId")
+                        .HasDatabaseName("ix_song_sources_source_id");
 
                     b.ToTable("song_sources", (string)null);
                 });
 
             modelBuilder.Entity("MyMusic.Common.Entities.Source", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
+                        .HasColumnType("bigint")
                         .HasColumnName("id");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
                     b.Property<string>("Address")
                         .IsRequired()
@@ -664,10 +746,10 @@ namespace MyMusic.Common.Migrations
 
                     b.HasOne("MyMusic.Common.Entities.Source", "Source")
                         .WithMany()
-                        .HasForeignKey("SourceId1")
+                        .HasForeignKey("SourceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_album_sources_sources_source_id1");
+                        .HasConstraintName("fk_album_sources_sources_source_id");
 
                     b.Navigation("Album");
 
@@ -711,10 +793,10 @@ namespace MyMusic.Common.Migrations
 
                     b.HasOne("MyMusic.Common.Entities.Source", "Source")
                         .WithMany()
-                        .HasForeignKey("SourceId1")
+                        .HasForeignKey("SourceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_artist_sources_sources_source_id1");
+                        .HasConstraintName("fk_artist_sources_sources_source_id");
 
                     b.Navigation("Artist");
 
@@ -743,6 +825,34 @@ namespace MyMusic.Common.Migrations
                         .HasConstraintName("fk_genres_users_owner_id");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.PurchasedSong", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.Song", "Song")
+                        .WithMany()
+                        .HasForeignKey("SongId")
+                        .HasConstraintName("fk_purchased_songs_songs_song_id");
+
+                    b.HasOne("MyMusic.Common.Entities.Source", "Source")
+                        .WithMany()
+                        .HasForeignKey("SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_purchased_songs_sources_source_id");
+
+                    b.HasOne("MyMusic.Common.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_purchased_songs_users_user_id");
+
+                    b.Navigation("Song");
+
+                    b.Navigation("Source");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MyMusic.Common.Entities.Song", b =>
@@ -847,10 +957,10 @@ namespace MyMusic.Common.Migrations
 
                     b.HasOne("MyMusic.Common.Entities.Source", "Source")
                         .WithMany()
-                        .HasForeignKey("SourceId1")
+                        .HasForeignKey("SourceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_song_sources_sources_source_id1");
+                        .HasConstraintName("fk_song_sources_sources_source_id");
 
                     b.Navigation("Song");
 

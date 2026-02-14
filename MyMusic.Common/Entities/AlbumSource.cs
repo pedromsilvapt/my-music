@@ -12,8 +12,11 @@ public class AlbumSource
     public Source Source { get; set; } = null!;
     public long SourceId { get; set; }
 
-    [MaxLength(256)]
-    public required string ExternalId { get; set; }
-    
+    [MaxLength(256)] public required string ExternalId { get; set; }
+
     public required int SongsCount { get; set; }
+
+    public string? Link { get; set; } = null;
+
+    public decimal Price { get; set; } = 0;
 }

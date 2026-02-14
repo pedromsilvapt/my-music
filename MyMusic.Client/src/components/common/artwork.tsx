@@ -1,11 +1,12 @@
 import {Box, Center, Image, Overlay, ThemeIcon} from "@mantine/core";
+import {IconPhotoScan, IconPlayerPlayFilled} from "@tabler/icons-react";
 import type {MouseEvent} from "react";
 import * as React from "react";
-import {IconPhotoScan, IconPlayerPlayFilled} from "@tabler/icons-react";
 import styles from './artwork.module.css';
 
 interface ArtworkProps {
-    id: number | null | undefined;
+    id?: number | null | undefined;
+    url?: string | null | undefined;
     size?: number | undefined;
     placeholderIcon?: React.ReactNode | null | undefined;
     onClick?: (ev: MouseEvent) => void | null;
@@ -18,12 +19,12 @@ export default function Artwork(props: ArtworkProps) {
 
     let innerElement: React.ReactNode;
 
-    if (id == null) {
+    if (id == null && props.url == null) {
         innerElement = <ThemeIcon color="gray" size={size}>
             {placeholderIcon ?? <IconPhotoScan/>}
         </ThemeIcon>;
     } else {
-        let url = `/api/artwork/${id}?size=${size}`;
+        let url = props.url ?? `/api/artwork/${id}?size=${size}`;
 
         innerElement = <Image
             radius="sm"

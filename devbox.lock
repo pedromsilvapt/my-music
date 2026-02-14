@@ -1,51 +1,51 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "dotnet-ef@9.0.8": {
-      "last_modified": "2025-08-11T23:54:17Z",
-      "resolved": "github:NixOS/nixpkgs/5a983011e0f4b3b286aaa73e011ce32b1449a528#dotnet-ef",
+    "dotnet-ef@9.0.9": {
+      "last_modified": "2025-11-26T06:22:50Z",
+      "resolved": "github:NixOS/nixpkgs/bb813de6d2241bcb1b5af2d3059f560c66329967#dotnet-ef",
       "source": "devbox-search",
-      "version": "9.0.8",
+      "version": "9.0.9",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/bdn4z10g573l406j79kgrpvi6zq1kvva-dotnet-ef-9.0.8",
+              "path": "/nix/store/zljxr4p46kxx10qgflvq0c77zranck51-dotnet-ef-9.0.9",
               "default": true
             }
           ],
-          "store_path": "/nix/store/bdn4z10g573l406j79kgrpvi6zq1kvva-dotnet-ef-9.0.8"
+          "store_path": "/nix/store/zljxr4p46kxx10qgflvq0c77zranck51-dotnet-ef-9.0.9"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/i88k2xgyzkm06sk2x69pgpbdhns27s1a-dotnet-ef-9.0.8",
+              "path": "/nix/store/l3vimgzjby1lb8068dgcadqh0hbfw5v4-dotnet-ef-9.0.9",
               "default": true
             }
           ],
-          "store_path": "/nix/store/i88k2xgyzkm06sk2x69pgpbdhns27s1a-dotnet-ef-9.0.8"
+          "store_path": "/nix/store/l3vimgzjby1lb8068dgcadqh0hbfw5v4-dotnet-ef-9.0.9"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/13g0p0b8llmzj90yzwbypd1v8l2fzjzz-dotnet-ef-9.0.8",
+              "path": "/nix/store/d96fpiylrv9b1k07fx84f5ria6bla4dv-dotnet-ef-9.0.9",
               "default": true
             }
           ],
-          "store_path": "/nix/store/13g0p0b8llmzj90yzwbypd1v8l2fzjzz-dotnet-ef-9.0.8"
+          "store_path": "/nix/store/d96fpiylrv9b1k07fx84f5ria6bla4dv-dotnet-ef-9.0.9"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/k7gvgpsnf5j7cx0bzymwk6ay5lzk0nqq-dotnet-ef-9.0.8",
+              "path": "/nix/store/b6vz2jmlyng97dr26cpf96xp00vay8rn-dotnet-ef-9.0.9",
               "default": true
             }
           ],
-          "store_path": "/nix/store/k7gvgpsnf5j7cx0bzymwk6ay5lzk0nqq-dotnet-ef-9.0.8"
+          "store_path": "/nix/store/b6vz2jmlyng97dr26cpf96xp00vay8rn-dotnet-ef-9.0.9"
         }
       }
     },

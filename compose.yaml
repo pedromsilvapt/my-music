@@ -3,6 +3,8 @@
     image: caddy:2.9.1
     ports:
       - "5000:80"
+    networks:
+      - my-music
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
@@ -26,27 +28,13 @@
       - ./scripts:/workspaces/my-music/scripts
       - /$HOME/Music:/$HOME/Music:ro
       - server-data:/storage
+    environment:
+      MYMUSIC_HEADER_ID_ENABLED: 1
     working_dir: /workspaces/my-music/MyMusic.Server
     command: dotnet watch run --no-restore --launch-profile container
-
-  youtube-source:
-    build:
-      context: .
-      dockerfile_inline: |
-        FROM mcr.microsoft.com/dotnet/sdk:9.0
-        FROM mcr.microsoft.com/dotnet/sdk:9.0
-        RUN groupadd -g ${GID} ${GROUP}
-        RUN useradd -m ${USER} -u ${UID} -g ${GID} -m -d ${HOME} -s /bin/bash
-        ENV DOTNET_NOLOGO=true
-        ENV PATH="$PATH:/${HOME}/.dotnet/tools"
-    volumes:
-      - /${HOME}/.nuget/packages/:/${HOME}/.nuget/packages/:ro
-      - ./MyMusic.Common:/workspaces/my-music/MyMusic.Common
-      - ./MyMusic.Source:/workspaces/my-music/MyMusic.Source
-    working_dir: /workspaces/my-music/MyMusic.Source
-    command: dotnet watch run --no-restore --launch-profile container  
-    user: ${UID}:${GID}
-
+    networks:
+      - my-music
+  
   client:
     build:
       context: .
@@ -58,10 +46,14 @@
     working_dir: /workspaces/my-music/MyMusic.Client
     command: "npm run dev -- --port 8080 --host"
     user: ${UID}:${GID}
+    networks:
+      - my-music
 
   valkey:
     image: valkey/valkey:7.2.10
-
+    networks:
+      - my-music
+  
   db:
     image: postgres:17
     environment:
@@ -70,7 +62,9 @@
       POSTGRES_PASSWORD: postgres
     volumes:
       - db-data:/var/lib/postgresql/data
-    
+    networks:
+      - my-music
+
   pgadmin:
     image: dpage/pgadmin4:9.6
     environment:
@@ -87,6 +81,8 @@
     configs:
       - source: pgadmin-servers
         target: /pgadmin4/servers.json
+    networks:
+      - my-music
 
 volumes:
   server-data: {}
@@ -107,8 +103,12 @@ configs:
       }
 
       :80 {
+        ${CADDYFILE_SOURCES}
+      
         handle_path /api/* {
-          reverse_proxy http://server:8080
+          reverse_proxy http://server:8080 {
+            header_up X-MyMusic-UserName pedro
+          }
         }
         
         handle_path /pgadmin  {
@@ -141,4 +141,8 @@ configs:
             }
           }
         }
-      }
+      }  
+
+networks:
+  my-music:
+    name: my-music
