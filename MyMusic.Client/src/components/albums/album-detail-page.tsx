@@ -2,7 +2,7 @@ import {Anchor, Box, Flex, Group, Stack, Text} from "@mantine/core";
 import {IconArrowBack, IconDisc} from "@tabler/icons-react";
 import {Link, useParams} from "@tanstack/react-router";
 import {useGetAlbum} from "../../client/albums.ts";
-import {usePlayerContext} from "../../contexts/player-context.tsx";
+import {usePlayerActions} from "../../contexts/player-context.tsx";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -12,8 +12,8 @@ export default function AlbumDetailPage() {
     const {albumId} = useParams({from: '/albums/$albumId'});
     const {data: response} = useGetAlbum(Number(albumId));
     const album = response?.data.album;
-    const playerStore = usePlayerContext();
-    const songsSchema = useSongsSchema(playerStore);
+    const playerActions = usePlayerActions();
+    const songsSchema = useSongsSchema(playerActions);
 
     if (!album) {
         return <Box p="md">Loading...</Box>;

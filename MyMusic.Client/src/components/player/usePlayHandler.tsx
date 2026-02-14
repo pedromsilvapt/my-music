@@ -1,9 +1,9 @@
 import {useCallback} from "react";
-import type {PlayableItem, PlayerAction, PlayerState} from "../../contexts/player-context.tsx";
+import type {PlayableItem, PlayerAction} from "../../contexts/player-context.tsx";
 
 export type PlayHandler = (rows: PlayableItem[], ev: React.MouseEvent<Element, MouseEvent>) => void;
 
-export function usePlayHandler(playerStore: PlayerState & PlayerAction): PlayHandler {
+export function usePlayHandler(playerStore: PlayerAction): PlayHandler {
     return useCallback((rows: PlayableItem[], ev: React.MouseEvent<Element, MouseEvent>) => {
         ev.stopPropagation();
         if (ev.ctrlKey) {

@@ -1,4 +1,4 @@
-import {Anchor} from "@mantine/core";
+import {Anchor, Text} from "@mantine/core";
 import {
     IconArrowForward,
     IconArrowRightDashed,
@@ -7,12 +7,13 @@ import {
     IconHeartFilled,
     IconMusic,
     IconPlayerPlayFilled,
-    IconPlaylistAdd
+    IconPlaylistAdd,
+    IconX
 } from "@tabler/icons-react";
 import {saveAs} from 'file-saver';
 import {useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs.ts";
-import type {PlayerAction, PlayerState} from "../../contexts/player-context.tsx";
+import type {PlayerAction} from "../../contexts/player-context.tsx";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
@@ -23,7 +24,7 @@ import SongSubTitle from "../common/fields/song-sub-title.tsx";
 import SongTitle from "../common/fields/song-title.tsx";
 import {usePlayHandler} from "../player/usePlayHandler.tsx";
 
-export function useSongsSchema(playerStore: PlayerState & PlayerAction): CollectionSchema<ListSongsItem> {
+export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = false, currentSongId: number | null = null): CollectionSchema<ListSongsItem> {
     const playHandler = usePlayHandler(playerStore);
 
     return useMemo(() => ({
@@ -32,6 +33,13 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
+            ...(nowPlaying ? [{
+                name: 'position',
+                displayName: '',
+                render: (row: ListSongsItem & { order?: number }) => <Text c="dimmed">#{(row.order ?? 0) + 1}</Text>,
+                align: 'center',
+                width: 40,
+            }] : []),
             {
                 name: 'artwork',
                 displayName: '',
@@ -41,7 +49,12 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
             {
                 name: 'title',
                 displayName: 'Title',
-                render: row => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}/>,
+                render: row => <SongTitle
+                    title={row.title}
+                    songId={row.id}
+                    isExplicit={row.isExplicit}
+                    isPlaying={nowPlaying && currentSongId === row.id}
+                />,
                 width: '2fr',
                 sortable: true,
             },
@@ -149,7 +162,18 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
                     renderIcon: () => <IconArrowForward/>,
                     renderLabel: () => "Play Last",
                     onClick: (songs: ListSongsItem[]) => playerStore.playLast(songs),
-                }
+                },
+                ...(nowPlaying ? [{
+                    name: "remove-from-queue",
+                    renderIcon: () => <IconX/>,
+                    renderLabel: () => "Remove from Queue",
+                    onClick: (songs: ListSongsItem[]) => {
+                        const indices = songs
+                            .map(s => 'order' in s ? (s as { order: number }).order : -1)
+                            .filter((i): i is number => i >= 0);
+                        playerStore.removeFromQueue(indices);
+                    },
+                }] : [])
             ];
         },
 
@@ -163,5 +187,5 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [playerStore]);
+    }) as CollectionSchema<ListSongsItem>, [playerStore, nowPlaying, currentSongId, playHandler]);
 }

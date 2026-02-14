@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {createContext, useContext, useRef} from 'react';
+import {createContext, useContext, useMemo, useRef} from 'react';
 import {create, type StoreApi, useStore} from 'zustand'
 import {immer} from 'zustand/middleware/immer';
 import type {GetPlaylistSong, ListSongsItem} from "../model";
@@ -26,6 +26,7 @@ export type PlayerAction = {
     play: (songs: PlayableItem[]) => void;
     playNext: (songs: PlayableItem[]) => void;
     playLast: (songs: PlayableItem[]) => void;
+    removeFromQueue: (indices: number[]) => void;
     goForward: () => void;
     goBackward: () => void;
     goTo: (index: number) => void;
@@ -86,14 +87,14 @@ function addToQueue(
             } as GetPlaylistSong;
         }
 
-        return song;
+        return {...song};
     })
 
     state.queue.splice(anchorIndex, 0, ...songsToAdd);
 
     // Update the indexes of all songs on the queue
     for (let i = 0; i < state.queue.length; i++) {
-        state.queue[i].order = i;
+        state.queue[i] = {...state.queue[i], order: i};
     }
 
     if (state.current.type === 'EMPTY' || anchor === 'NOW') {
@@ -143,6 +144,14 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
         playLast: (songs: (PlayableItem)[]) =>
             set(state => {
                 addToQueue(state, songs, 'LAST');
+            }),
+        removeFromQueue: (indices: number[]) =>
+            set(state => {
+                const indexSet = new Set(indices);
+                state.queue = state.queue.filter((_, i) => !indexSet.has(i));
+                for (let i = 0; i < state.queue.length; i++) {
+                    state.queue[i].order = i;
+                }
             }),
         goForward: () =>
             set(state => {
@@ -224,14 +233,48 @@ export default function PlayerProvider({children}: { children: React.ReactNode }
 
 export function usePlayerContext(): PlayerState & PlayerAction;
 export function usePlayerContext<U>(selector: (state: PlayerState & PlayerAction) => U): U;
-export function usePlayerContext<U>(selector?: (state: PlayerState & PlayerAction) => U) {
-    const store = useContext(PlayerContext)
+export function usePlayerContext(selector?: (state: PlayerState & PlayerAction) => unknown): unknown {
+    const store = useContext(PlayerContext);
+    
     if (!store) {
-        throw new Error('Missing StoreProvider')
+        throw new Error('Missing StoreProvider');
     }
-    if (selector != null) {
+
+    if (selector) {
         return useStore(store, selector);
     }
 
     return useStore(store);
+}
+
+export function usePlayerActions(): PlayerAction {
+    const play = usePlayerContext(state => state.play);
+    const playNext = usePlayerContext(state => state.playNext);
+    const playLast = usePlayerContext(state => state.playLast);
+    const removeFromQueue = usePlayerContext(state => state.removeFromQueue);
+    const goForward = usePlayerContext(state => state.goForward);
+    const goBackward = usePlayerContext(state => state.goBackward);
+    const goTo = usePlayerContext(state => state.goTo);
+    const load = usePlayerContext(state => state.load);
+    const setIsPlaying = usePlayerContext(state => state.setIsPlaying);
+    const setVolume = usePlayerContext(state => state.setVolume);
+    const setMuted = usePlayerContext(state => state.setMuted);
+    const setCurrentTime = usePlayerContext(state => state.setCurrentTime);
+    const setIsFavorite = usePlayerContext(state => state.setIsFavorite);
+
+    return useMemo(() => ({
+        play,
+        playNext,
+        playLast,
+        removeFromQueue,
+        goForward,
+        goBackward,
+        goTo,
+        load,
+        setIsPlaying,
+        setVolume,
+        setMuted,
+        setCurrentTime,
+        setIsFavorite,
+    }), [play, playNext, playLast, removeFromQueue, goForward, goBackward, goTo, load, setIsPlaying, setVolume, setMuted, setCurrentTime, setIsFavorite]);
 }
