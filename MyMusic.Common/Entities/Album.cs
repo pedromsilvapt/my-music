@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
@@ -27,4 +27,6 @@ public class Album
     public List<Song> Songs { get; set; } = [];
 
     public required int SongsCount { get; set; }
+
+    public required DateTime CreatedAt { get; set; }
 }

@@ -1,4 +1,4 @@
-﻿using System.IO.Abstractions;
+using System.IO.Abstractions;
 using System.IO.Hashing;
 using DotNext.Threading;
 using Microsoft.EntityFrameworkCore;
@@ -420,7 +420,8 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                         {
                             songAlbumArtist = new Artist
                             {
-                                Name = metadata.Album.Artist.Name, OwnerId = userId, AlbumsCount = 1, SongsCount = 0
+                                Name = metadata.Album.Artist.Name, OwnerId = userId, AlbumsCount = 1, SongsCount = 0,
+                                CreatedAt = DateTime.UtcNow
                             };
 
                             await db.AddAsync(songAlbumArtist, cancellationToken);
@@ -433,7 +434,8 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                         songAlbum = new Album
                         {
-                            Name = metadata.Album.Name, Artist = songAlbumArtist, OwnerId = userId, SongsCount = 1
+                            Name = metadata.Album.Name, Artist = songAlbumArtist, OwnerId = userId, SongsCount = 1,
+                            CreatedAt = DateTime.UtcNow
                         };
                         await db.AddAsync(songAlbum, cancellationToken);
                     }
@@ -454,7 +456,10 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                             if (songArtist is null)
                             {
                                 songArtist = new Artist
-                                    { Name = artist.Name, Owner = user, AlbumsCount = 0, SongsCount = 0 };
+                                {
+                                    Name = artist.Name, Owner = user, AlbumsCount = 0, SongsCount = 0,
+                                    CreatedAt = DateTime.UtcNow
+                                };
 
                                 await db.AddAsync(songArtist, cancellationToken);
                             }

@@ -14,4 +14,5 @@ export interface ListArtistsItem {
     albumsCount: number | null;
     /** @nullable */
     songsCount: number | null;
+    createdAt: string;
 }

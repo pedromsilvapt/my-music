@@ -1,9 +1,9 @@
 import {Anchor, Tooltip} from "@mantine/core";
 import {IconUserFilled} from "@tabler/icons-react";
+import {useMemo} from "react";
 import type {ListAlbumsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
-import { useMemo } from "react";
 
 export function useAlbumsSchema() {
     return useMemo(() => ({
@@ -31,6 +31,7 @@ export function useAlbumsSchema() {
                         <Anchor c={"black"}>{row.name}</Anchor>
                     </Tooltip>,
                 width: '1fr',
+                sortable: true,
             },
             {
                 name: 'year',
@@ -38,13 +39,23 @@ export function useAlbumsSchema() {
                 render: row => row.year,
                 width: '60px',
                 align: 'center',
+                sortable: true,
             },
             {
-                name: 'songs',
+                name: 'songsCount',
                 displayName: 'Songs',
                 render: row => row.songsCount,
                 width: '60px',
                 align: 'center',
+                sortable: true,
+            },
+            {
+                name: 'createdAt',
+                displayName: 'Created At',
+                render: row => row.createdAt,
+                sortable: true,
+                hidden: true,
+                getValue: album => album.createdAt,
             }
         ],
 

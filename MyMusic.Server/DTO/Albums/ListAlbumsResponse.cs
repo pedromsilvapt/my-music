@@ -14,6 +14,7 @@ public record ListAlbumsItem
     public required string Name { get; set; }
     public required int? Year { get; set; }
     public required int? SongsCount { get; set; }
+    public required DateTime CreatedAt { get; set; }
 
     public static ListAlbumsItem FromEntity(Entities.Album album)
     {
@@ -24,6 +25,7 @@ public record ListAlbumsItem
             Name = album.Name,
             Year = album.Year,
             SongsCount = album.SongsCount,
+            CreatedAt = album.CreatedAt,
         };
     }
 }

@@ -14,4 +14,5 @@ export interface ListAlbumsItem {
     year: number | null;
     /** @nullable */
     songsCount: number | null;
+    createdAt: string;
 }
