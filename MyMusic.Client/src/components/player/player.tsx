@@ -10,7 +10,7 @@ import PlayerVolume from "./player-volume.tsx";
 
 export default function Player() {
     const [wavesurfer, setWavesurfer] = useState<WaveSurfer | null>(null);
-    const playerStore = usePlayerContext();
+    const playerStore = usePlayerContext(); // TODO Refactor this into smaller components, each selecting only the state they need from the store to avoid excessive re-renders
     const previousSong = usePrevious(playerStore.current);
     
     const loadWaveSurfer = useCallback((ws: WaveSurfer) => {

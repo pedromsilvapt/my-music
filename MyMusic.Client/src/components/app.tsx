@@ -44,7 +44,7 @@ function App() {
             <AppShell.Navbar p="md">
                 <NavLink
                     renderRoot={(props) => <Link to={"/player"} {...props} />}
-                    href="/"
+                    href="/player"
                     key="player"
                     leftSection={<IconPlayerPlay stroke={2}/>}
                     label="Now Playing"

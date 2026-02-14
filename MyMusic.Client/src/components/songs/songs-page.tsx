@@ -1,16 +1,16 @@
 import {useEffect} from "react";
 import {useListSongs} from '../../client/songs.ts';
-import {usePlayerContext} from "../../contexts/player-context.tsx";
+import {usePlayerActions} from "../../contexts/player-context.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
 
 export default function SongsPage() {
-    const playerStore = usePlayerContext();
+    const playerActions = usePlayerActions();
 
     const {data: songs, refetch} = useListSongs();
 
-    const songsSchema = useSongsSchema(playerStore);
-    
+    const songsSchema = useSongsSchema(playerActions);
+
     useEffect(() => {
         // noinspection JSIgnoredPromiseFromCall
         refetch()

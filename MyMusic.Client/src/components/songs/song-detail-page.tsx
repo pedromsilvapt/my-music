@@ -17,7 +17,7 @@ import {Link, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
 
 import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
-import {usePlayerContext} from "../../contexts/player-context.tsx";
+import {usePlayerActions} from "../../contexts/player-context.tsx";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
 
@@ -25,7 +25,7 @@ export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
     const {data: response} = useGetSong(Number(songId));
     const song = response?.data.song;
-    const playerStore = usePlayerContext();
+    const playerActions = usePlayerActions();
 
     if (!song) {
         return <Box p="md">Loading...</Box>;
@@ -77,15 +77,15 @@ export default function SongDetailPage() {
                         )}
                     </Group>
                     <Group gap="sm">
-                        <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => playerStore.play([song])}>
+                        <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => playerActions.play([song])}>
                             Play
                         </Button>
                         <Group gap="xs">
-                            <ActionIcon variant="outline" size="lg" onClick={() => playerStore.playNext([song])}
+                            <ActionIcon variant="outline" size="lg" onClick={() => playerActions.playNext([song])}
                                         title="Play Next">
                                 <IconArrowRightDashed/>
                             </ActionIcon>
-                            <ActionIcon variant="outline" size="lg" onClick={() => playerStore.playLast([song])}
+                            <ActionIcon variant="outline" size="lg" onClick={() => playerActions.playLast([song])}
                                         title="Play Last">
                                 <IconArrowForward/>
                             </ActionIcon>
