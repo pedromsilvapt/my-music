@@ -20,9 +20,8 @@ import type {
 } from "@tanstack/react-query";
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {HttpResponse, http} from "msw";
-
-import type {ListArtistsResponse} from "../model";
+import {http, HttpResponse} from "msw";
+import type {GetArtistParams, GetArtistResponse, ListArtistsResponse,} from "../model";
 
 export type listArtistsResponse200 = {
     data: ListArtistsResponse;
@@ -185,6 +184,198 @@ export const invalidateListArtists = async (
     return queryClient;
 };
 
+export type getArtistResponse200 = {
+    data: GetArtistResponse;
+    status: 200;
+};
+
+export type getArtistResponseSuccess = getArtistResponse200 & {
+    headers: Headers;
+};
+
+export type getArtistResponse = getArtistResponseSuccess;
+
+export const getGetArtistUrl = (id: number, params?: GetArtistParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/artists/${id}?${stringifiedParams}`
+        : `/api/artists/${id}`;
+};
+
+export const getArtist = async (
+    id: number,
+    params?: GetArtistParams,
+    options?: RequestInit,
+): Promise<getArtistResponse> => {
+    const res = await fetch(getGetArtistUrl(id, params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getArtistResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getArtistResponse;
+};
+
+export const getGetArtistQueryKey = (id: number, params?: GetArtistParams) => {
+    return ["api", "artists", id, ...(params ? [params] : [])] as const;
+};
+
+export const getGetArtistQueryOptions = <
+    TData = Awaited<ReturnType<typeof getArtist>>,
+    TError = unknown,
+>(
+    id: number,
+    params?: GetArtistParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getGetArtistQueryKey(id, params);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArtist>>> = ({
+                                                                               signal,
+                                                                           }) => getArtist(id, params, {signal, ...fetchOptions});
+
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!id,
+        ...queryOptions,
+    } as UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData> & {
+        queryKey: DataTag<QueryKey, TData, TError>;
+    };
+};
+
+export type GetArtistQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getArtist>>
+>;
+export type GetArtistQueryError = unknown;
+
+export function useGetArtist<
+    TData = Awaited<ReturnType<typeof getArtist>>,
+    TError = unknown,
+>(
+    id: number,
+    params: undefined | GetArtistParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtist>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtist>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetArtist<
+    TData = Awaited<ReturnType<typeof getArtist>>,
+    TError = unknown,
+>(
+    id: number,
+    params?: GetArtistParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtist>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtist>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetArtist<
+    TData = Awaited<ReturnType<typeof getArtist>>,
+    TError = unknown,
+>(
+    id: number,
+    params?: GetArtistParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetArtist<
+    TData = Awaited<ReturnType<typeof getArtist>>,
+    TError = unknown,
+>(
+    id: number,
+    params?: GetArtistParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetArtistQueryOptions(id, params, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetArtist = async (
+    queryClient: QueryClient,
+    id: number,
+    params?: GetArtistParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetArtistQueryKey(id, params)},
+        options,
+    );
+
+    return queryClient;
+};
+
 export const getListArtistsResponseMock = (
     overrideResponse: Partial<ListArtistsResponse> = {},
 ): ListArtistsResponse => ({
@@ -215,7 +406,97 @@ export const getListArtistsResponseMock = (
             ]),
             null,
         ]),
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
     })),
+    ...overrideResponse,
+});
+
+export const getGetArtistResponseMock = (
+    overrideResponse: Partial<GetArtistResponse> = {},
+): GetArtistResponse => ({
+    artist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        photo: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            null,
+        ]),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        albumsCount: faker.number.int({min: undefined, max: undefined}),
+        songsCount: faker.number.int({min: undefined, max: undefined}),
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+        albums: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            name: faker.string.alpha({length: {min: 10, max: 20}}),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            songsCount: faker.number.int({min: undefined, max: undefined}),
+            createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            artist: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+        })),
+        songs: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            title: faker.string.alpha({length: {min: 10, max: 20}}),
+            artists: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            album: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            genres: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            duration: faker.string.alpha({length: {min: 10, max: 20}}),
+            isFavorite: faker.datatype.boolean(),
+            isExplicit: faker.datatype.boolean(),
+        })),
+    },
     ...overrideResponse,
 });
 
@@ -242,4 +523,31 @@ export const getListArtistsMockHandler = (
         options,
     );
 };
-export const getArtistsMock = () => [getListArtistsMockHandler()];
+
+export const getGetArtistMockHandler = (
+    overrideResponse?:
+        | GetArtistResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<GetArtistResponse> | GetArtistResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/artists/:id",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetArtistResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+export const getArtistsMock = () => [
+    getListArtistsMockHandler(),
+    getGetArtistMockHandler(),
+];

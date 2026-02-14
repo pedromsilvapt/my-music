@@ -1,10 +1,9 @@
-import {createFileRoute} from '@tanstack/react-router'
-import ArtistsPage from "../components/artists/artists-page.tsx";
+import {createFileRoute, Outlet} from '@tanstack/react-router'
 
 export const Route = createFileRoute('/artists')({
     component: Artists,
 })
 
 function Artists() {
-    return <ArtistsPage/>;
+    return <Outlet/>;
 }

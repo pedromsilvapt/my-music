@@ -24,4 +24,29 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
             Albums = albums.Select(ListAlbumsItem.FromEntity).ToList(),
         };
     }
+
+    [HttpGet("{id:long}", Name = "GetAlbum")]
+    public async Task<GetAlbumResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
+    {
+        var album = await context.Albums
+            .Include(a => a.Artist)
+            .Include(a => a.Songs)
+            .Include(a => a.Songs)
+            .ThenInclude(s => s.Artists)
+            .ThenInclude(sa => sa.Artist)
+            .Include(s => s.Songs)
+            .ThenInclude(s => s.Genres)
+            .ThenInclude(s => s.Genre)
+            .FirstOrDefaultAsync(a => a.Id == id && a.OwnerId == currentUser.Id, cancellationToken);
+
+        if (album == null)
+        {
+            throw new Exception($"Album not found with id {id}");
+        }
+
+        return new GetAlbumResponse
+        {
+            Album = GetAlbumResponseAlbum.FromEntity(album),
+        };
+    }
 }

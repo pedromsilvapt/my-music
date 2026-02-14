@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from "./artistSongFilter";
 export * from "./createPurchaseItem";
 export * from "./createPurchaseResponse";
 export * from "./createSourceData";
@@ -25,9 +26,30 @@ export * from "./deletePurchaseItem";
 export * from "./deletePurchaseResponse";
 export * from "./deleteSourceItem";
 export * from "./deleteSourceResponse";
+export * from "./getAlbumResponse";
+export * from "./getAlbumResponseAlbum";
+export * from "./getAlbumResponseArtist";
+export * from "./getAlbumResponseGenre";
+export * from "./getAlbumResponseSong";
+export * from "./getAlbumResponseSongAlbum";
+export * from "./getArtistParams";
+export * from "./getArtistResponse";
+export * from "./getArtistResponseAlbum";
+export * from "./getArtistResponseAlbumArtist";
+export * from "./getArtistResponseArtist";
+export * from "./getArtistResponseGenre";
+export * from "./getArtistResponseSong";
+export * from "./getArtistResponseSongAlbum";
+export * from "./getArtistResponseSongArtist";
+export * from "./getArtistSongFilter";
 export * from "./getArtworkParams";
 export * from "./getPlaylistResponse";
 export * from "./getPlaylistSong";
+export * from "./getSongResponse";
+export * from "./getSongResponseAlbum";
+export * from "./getSongResponseArtist";
+export * from "./getSongResponseGenre";
+export * from "./getSongResponseSong";
 export * from "./getSourceItem";
 export * from "./getSourceResponse";
 export * from "./getSourceResponse2";

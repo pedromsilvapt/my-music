@@ -20,9 +20,9 @@ import type {
 } from "@tanstack/react-query";
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {HttpResponse, http} from "msw";
+import {http, HttpResponse} from "msw";
 
-import type {ListAlbumsResponse} from "../model";
+import type {GetAlbumResponse, ListAlbumsResponse} from "../model";
 
 export type listAlbumsResponse200 = {
     data: ListAlbumsResponse;
@@ -185,6 +185,175 @@ export const invalidateListAlbums = async (
     return queryClient;
 };
 
+export type getAlbumResponse200 = {
+    data: GetAlbumResponse;
+    status: 200;
+};
+
+export type getAlbumResponseSuccess = getAlbumResponse200 & {
+    headers: Headers;
+};
+
+export type getAlbumResponse = getAlbumResponseSuccess;
+
+export const getGetAlbumUrl = (id: number) => {
+    return `/api/albums/${id}`;
+};
+
+export const getAlbum = async (
+    id: number,
+    options?: RequestInit,
+): Promise<getAlbumResponse> => {
+    const res = await fetch(getGetAlbumUrl(id), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getAlbumResponse["data"] = body ? JSON.parse(body) : {};
+    return {data, status: res.status, headers: res.headers} as getAlbumResponse;
+};
+
+export const getGetAlbumQueryKey = (id: number) => {
+    return ["api", "albums", id] as const;
+};
+
+export const getGetAlbumQueryOptions = <
+    TData = Awaited<ReturnType<typeof getAlbum>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getGetAlbumQueryKey(id);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAlbum>>> = ({
+                                                                              signal,
+                                                                          }) => getAlbum(id, {signal, ...fetchOptions});
+
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!id,
+        ...queryOptions,
+    } as UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData> & {
+        queryKey: DataTag<QueryKey, TData, TError>;
+    };
+};
+
+export type GetAlbumQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getAlbum>>
+>;
+export type GetAlbumQueryError = unknown;
+
+export function useGetAlbum<
+    TData = Awaited<ReturnType<typeof getAlbum>>,
+    TError = unknown,
+>(
+    id: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getAlbum>>,
+                    TError,
+                    Awaited<ReturnType<typeof getAlbum>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAlbum<
+    TData = Awaited<ReturnType<typeof getAlbum>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getAlbum>>,
+                    TError,
+                    Awaited<ReturnType<typeof getAlbum>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAlbum<
+    TData = Awaited<ReturnType<typeof getAlbum>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetAlbum<
+    TData = Awaited<ReturnType<typeof getAlbum>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetAlbumQueryOptions(id, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetAlbum = async (
+    queryClient: QueryClient,
+    id: number,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetAlbumQueryKey(id)},
+        options,
+    );
+
+    return queryClient;
+};
+
 export const getListAlbumsResponseMock = (
     overrideResponse: Partial<ListAlbumsResponse> = {},
 ): ListAlbumsResponse => ({
@@ -215,7 +384,78 @@ export const getListAlbumsResponseMock = (
             ]),
             null,
         ]),
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
     })),
+    ...overrideResponse,
+});
+
+export const getGetAlbumResponseMock = (
+    overrideResponse: Partial<GetAlbumResponse> = {},
+): GetAlbumResponse => ({
+    album: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        cover: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            null,
+        ]),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        year: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            null,
+        ]),
+        artistId: faker.number.int({min: undefined, max: undefined}),
+        artistName: faker.string.alpha({length: {min: 10, max: 20}}),
+        songsCount: faker.number.int({min: undefined, max: undefined}),
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+        songs: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            title: faker.string.alpha({length: {min: 10, max: 20}}),
+            artists: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            album: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            genres: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            duration: faker.string.alpha({length: {min: 10, max: 20}}),
+            isFavorite: faker.datatype.boolean(),
+            isExplicit: faker.datatype.boolean(),
+        })),
+    },
     ...overrideResponse,
 });
 
@@ -242,4 +482,31 @@ export const getListAlbumsMockHandler = (
         options,
     );
 };
-export const getAlbumsMock = () => [getListAlbumsMockHandler()];
+
+export const getGetAlbumMockHandler = (
+    overrideResponse?:
+        | GetAlbumResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<GetAlbumResponse> | GetAlbumResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/albums/:id",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetAlbumResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+export const getAlbumsMock = () => [
+    getListAlbumsMockHandler(),
+    getGetAlbumMockHandler(),
+];

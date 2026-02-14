@@ -1,5 +1,6 @@
 import {Anchor, Tooltip} from "@mantine/core";
 import {IconUserFilled} from "@tabler/icons-react";
+import {Link} from "@tanstack/react-router";
 import {useMemo} from "react";
 import type {ListAlbumsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
@@ -28,7 +29,7 @@ export function useAlbumsSchema() {
                 displayName: 'Name',
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
-                        <Anchor c={"black"}>{row.name}</Anchor>
+                        <Anchor component={Link} to={`/albums/${row.id}`} c={"black"}>{row.name}</Anchor>
                     </Tooltip>,
                 width: '1fr',
                 sortable: true,
@@ -70,7 +71,7 @@ export function useAlbumsSchema() {
             placeholderIcon={<IconUserFilled/>}
         />,
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
-            <Anchor c={"black"}>{row.name}</Anchor>
+            <Anchor component={Link} to={`/albums/${row.id}`} c={"black"}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => row.songsCount + ' songs',
     }) as CollectionSchema<ListAlbumsItem>, []);

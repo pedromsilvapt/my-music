@@ -23,9 +23,8 @@ import type {
 } from "@tanstack/react-query";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-
-import {HttpResponse, http} from "msw";
-import type {ImportSongsBody, ListSongsResponse} from "../model";
+import {http, HttpResponse} from "msw";
+import type {GetSongResponse, ImportSongsBody, ListSongsResponse,} from "../model";
 
 export type listSongsResponse200 = {
 	data: ListSongsResponse;
@@ -182,6 +181,175 @@ export const invalidateListSongs = async (
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
         {queryKey: getListSongsQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type getSongResponse200 = {
+    data: GetSongResponse;
+    status: 200;
+};
+
+export type getSongResponseSuccess = getSongResponse200 & {
+    headers: Headers;
+};
+
+export type getSongResponse = getSongResponseSuccess;
+
+export const getGetSongUrl = (id: number) => {
+    return `/api/songs/${id}`;
+};
+
+export const getSong = async (
+    id: number,
+    options?: RequestInit,
+): Promise<getSongResponse> => {
+    const res = await fetch(getGetSongUrl(id), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getSongResponse["data"] = body ? JSON.parse(body) : {};
+    return {data, status: res.status, headers: res.headers} as getSongResponse;
+};
+
+export const getGetSongQueryKey = (id: number) => {
+    return ["api", "songs", id] as const;
+};
+
+export const getGetSongQueryOptions = <
+    TData = Awaited<ReturnType<typeof getSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getGetSongQueryKey(id);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSong>>> = ({
+                                                                             signal,
+                                                                         }) => getSong(id, {signal, ...fetchOptions});
+
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!id,
+        ...queryOptions,
+    } as UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData> & {
+        queryKey: DataTag<QueryKey, TData, TError>;
+    };
+};
+
+export type GetSongQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getSong>>
+>;
+export type GetSongQueryError = unknown;
+
+export function useGetSong<
+    TData = Awaited<ReturnType<typeof getSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSong>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSong>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSong<
+    TData = Awaited<ReturnType<typeof getSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSong>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSong>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSong<
+    TData = Awaited<ReturnType<typeof getSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetSong<
+    TData = Awaited<ReturnType<typeof getSong>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetSongQueryOptions(id, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetSong = async (
+    queryClient: QueryClient,
+    id: number,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetSongQueryKey(id)},
         options,
     );
 
@@ -527,6 +695,74 @@ export const getListSongsResponseMock = (
 	...overrideResponse,
 });
 
+export const getGetSongResponseMock = (
+    overrideResponse: Partial<GetSongResponse> = {},
+): GetSongResponse => ({
+    song: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        cover: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            null,
+        ]),
+        title: faker.string.alpha({length: {min: 10, max: 20}}),
+        label: faker.string.alpha({length: {min: 10, max: 20}}),
+        artists: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            id: faker.number.int({min: undefined, max: undefined}),
+            name: faker.string.alpha({length: {min: 10, max: 20}}),
+        })),
+        album: {
+            id: faker.number.int({min: undefined, max: undefined}),
+            name: faker.string.alpha({length: {min: 10, max: 20}}),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+        },
+        genres: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            id: faker.number.int({min: undefined, max: undefined}),
+            name: faker.string.alpha({length: {min: 10, max: 20}}),
+        })),
+        year: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            null,
+        ]),
+        duration: faker.string.alpha({length: {min: 10, max: 20}}),
+        isFavorite: faker.datatype.boolean(),
+        isExplicit: faker.datatype.boolean(),
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+        addedAt: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.date.past().toISOString().slice(0, 19) + "Z",
+                null,
+            ]),
+            undefined,
+        ]),
+        lyrics: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+    },
+    ...overrideResponse,
+});
+
 export const getListSongsMockHandler = (
 	overrideResponse?:
 		| ListSongsResponse
@@ -544,6 +780,30 @@ export const getListSongsMockHandler = (
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getListSongsResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getGetSongMockHandler = (
+    overrideResponse?:
+        | GetSongResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<GetSongResponse> | GetSongResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/songs/:id",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetSongResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -592,6 +852,7 @@ export const getImportSongsMockHandler = (
 };
 export const getSongsMock = () => [
 	getListSongsMockHandler(),
+    getGetSongMockHandler(),
     getDownloadSongMockHandler(),
 	getImportSongsMockHandler(),
 ];

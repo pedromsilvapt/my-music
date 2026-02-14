@@ -24,4 +24,35 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
             Artists = artists.Select(ListArtistsItem.FromEntity).ToList(),
         };
     }
+
+    [HttpGet("{id:long}", Name = "GetArtist")]
+    public async Task<GetArtistResponse> Get(long id, [FromQuery] ArtistSongFilter songFilter, MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var artist = await context.Artists
+            .Include(a => a.Albums)
+            .Include(a => a.Songs)
+            .ThenInclude(sa => sa.Song)
+            .ThenInclude(s => s.Artists)
+            .ThenInclude(sa => sa.Artist)
+            .Include(a => a.Songs)
+            .ThenInclude(sa => sa.Song)
+            .ThenInclude(s => s.Album)
+            .ThenInclude(s => s.Artist)
+            .Include(a => a.Songs)
+            .ThenInclude(s => s.Song)
+            .ThenInclude(s => s.Genres)
+            .ThenInclude(s => s.Genre)
+            .FirstOrDefaultAsync(a => a.Id == id && a.OwnerId == currentUser.Id, cancellationToken);
+
+        if (artist == null)
+        {
+            throw new Exception($"Artist not found with id {id}");
+        }
+
+        return new GetArtistResponse
+        {
+            Artist = GetArtistResponseArtist.FromEntity(artist, songFilter),
+        };
+    }
 }
