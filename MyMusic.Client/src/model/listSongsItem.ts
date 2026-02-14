@@ -21,4 +21,7 @@ export interface ListSongsItem {
     duration: string;
     isFavorite: boolean;
     isExplicit: boolean;
+    createdAt: string;
+    /** @nullable */
+    addedAt?: string | null;
 }

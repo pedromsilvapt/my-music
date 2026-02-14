@@ -8,3 +8,16 @@
     border-radius: var(--mantine-radius-md);
     padding: calc(var(--mantine-spacing-xs) * 0.4) var(--mantine-spacing-md);
 }
+
+.dragHandle {
+    cursor: grab;
+}
+
+.dragHandle:active {
+    cursor: grabbing;
+}
+
+.dragging {
+    background-color: var(--mantine-color-gray-1);
+    border-radius: var(--mantine-radius-sm);
+}

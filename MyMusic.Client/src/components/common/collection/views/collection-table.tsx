@@ -1,12 +1,14 @@
-import {Box, Table} from "@mantine/core";
+import {Box, Group, Table} from "@mantine/core";
 import {useElementSize, type UseSelectionHandlers} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
+import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useMemo, useRef, useState} from "react";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {
     type CollectionSchema,
     type CollectionSchemaColumn,
+    type CollectionSortField,
     getColumnWidthFractions,
     getColumnWidthPixels
 } from "../collection-schema.tsx";
@@ -17,6 +19,9 @@ export interface CollectionTableProps<M> {
     items: M[];
     selection: M[];
     selectionHandlers: UseSelectionHandlers<React.Key>;
+    sort?: CollectionSortField<M>[];
+    onSort?: (field: string) => void;
+    sortableFields?: (keyof M & string)[];
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
@@ -79,11 +84,38 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             }}>
                 <Table.Thead ref={tableHeaderRef}>
                     <Table.Tr>
-                        {columns.map(col =>
-                            <Table.Th style={{width: col.width, textAlign: col.align ?? 'left'}}
-                                      key={col.name}>{col.displayName}
-                            </Table.Th>
-                        )}
+                        {columns.map(col => {
+                            const isSortable = col.sortable && props.onSort && props.sortableFields?.includes(col.name as keyof M & string);
+                            const sortIndex = props.sort?.findIndex(s => s.field === col.name);
+                            const isSorted = sortIndex !== undefined && sortIndex >= 0;
+
+                            return (
+                                <Table.Th
+                                    style={{
+                                        width: col.width,
+                                        textAlign: col.align ?? 'left',
+                                        cursor: isSortable ? 'pointer' : 'default'
+                                    }}
+                                    key={col.name}
+                                    onClick={isSortable ? () => props.onSort?.(col.name) : undefined}
+                                >
+                                    <Group gap={4} wrap="nowrap">
+                                        <span>{col.displayName}</span>
+                                        {isSortable && (
+                                            isSorted ? (
+                                                <>
+                                                    <Text size="xs" c="blue" fw="bold">{sortIndex! + 1}</Text>
+                                                    {props.sort![sortIndex!].direction === 'asc' ?
+                                                        <IconArrowUp size={14}/> : <IconArrowDown size={14}/>}
+                                                </>
+                                            ) : (
+                                                <IconSelector size={14} style={{opacity: 0.5}}/>
+                                            )
+                                        )}
+                                    </Group>
+                                </Table.Th>
+                            );
+                        })}
                         <Table.Th key="__actions" style={{width: "60px"}}>{/* Actions Menu */}</Table.Th>
                     </Table.Tr>
                 </Table.Thead>

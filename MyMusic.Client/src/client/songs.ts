@@ -23,7 +23,8 @@ import type {
 } from "@tanstack/react-query";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {http, HttpResponse} from "msw";
+
+import {HttpResponse, http} from "msw";
 import type {ImportSongsBody, ListSongsResponse} from "../model";
 
 export type listSongsResponse200 = {
@@ -514,6 +515,14 @@ export const getListSongsResponseMock = (
 		duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
         isFavorite: faker.datatype.boolean(),
         isExplicit: faker.datatype.boolean(),
+        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+        addedAt: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.date.past().toISOString().slice(0, 19) + "Z",
+                null,
+            ]),
+            undefined,
+        ]),
 	})),
 	...overrideResponse,
 });

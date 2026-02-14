@@ -1,5 +1,15 @@
 import type {Property} from "csstype";
 
+export type SortDirection = 'asc' | 'desc';
+
+export interface CollectionSortField<M> {
+    field: keyof M & string;
+    direction: SortDirection;
+    getValue?: (elem: M) => string | number | null | undefined;
+}
+
+export type CollectionSort<M> = CollectionSortField<M>[];
+
 export interface CollectionSchema<M> {
     key: (elem: M) => React.Key;
     actions?: (elems: M[]) => CollectionSchemaAction<M>[];
@@ -48,6 +58,7 @@ export interface CollectionSchemaColumn<M> {
     hidden?: boolean;
     width?: Property.Width<string | number> | undefined;
     align?: Property.TextAlign | undefined;
+    getValue?: (elem: M) => string | number | null | undefined;
 }
 
 export function getColumnWidthPixels(width: unknown): number | null {

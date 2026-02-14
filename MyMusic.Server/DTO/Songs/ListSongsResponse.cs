@@ -19,6 +19,8 @@ public record ListSongsItem
     public required string Duration { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
+    public required DateTime CreatedAt { get; set; }
+    public DateTime? AddedAt { get; set; }
 
     public static ListSongsItem FromEntity(Entities.Song song)
     {
@@ -37,7 +39,9 @@ public record ListSongsItem
             Year = song.Year,
             Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
             IsFavorite = false,
-            IsExplicit = song.Explicit
+            IsExplicit = song.Explicit,
+            CreatedAt = song.CreatedAt,
+            AddedAt = song.AddedAt
         };
     }
 }

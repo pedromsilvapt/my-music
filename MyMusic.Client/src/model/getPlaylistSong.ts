@@ -23,4 +23,7 @@ export interface GetPlaylistSong {
     duration: string;
     isFavorite: boolean;
     isExplicit: boolean;
+    createdAt: string;
+    /** @nullable */
+    addedAt?: string | null;
 }
