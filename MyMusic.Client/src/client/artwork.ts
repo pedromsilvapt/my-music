@@ -19,8 +19,7 @@ import type {
 } from "@tanstack/react-query";
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-
-import {HttpResponse, http} from "msw";
+import {http, HttpResponse} from "msw";
 import type {GetArtworkParams} from "../model";
 
 export type getArtworkResponse200 = {

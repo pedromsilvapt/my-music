@@ -41,7 +41,7 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
             {
                 name: 'title',
                 displayName: 'Title',
-                render: row => <SongTitle {...row} />,
+                render: row => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}/>,
                 width: '2fr',
                 sortable: true,
             },
@@ -56,7 +56,7 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
             {
                 name: 'album',
                 displayName: 'Album',
-                render: row => <SongAlbum name={row.album.name}/>,
+                render: row => <SongAlbum name={row.album.name} albumId={row.album.id}/>,
                 getValue: song => song.album.name,
                 width: '1fr',
                 sortable: true,
@@ -160,7 +160,8 @@ export function useSongsSchema(playerStore: PlayerState & PlayerAction): Collect
             placeholderIcon={<IconMusic/>}
             onClick={ev => playHandler([row], ev)}
         />,
-        renderListTitle: (row, lineClamp) => <SongTitle {...row} lineClamp={lineClamp}/>,
+        renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
+                                                        lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
     }) as CollectionSchema<ListSongsItem>, [playerStore]);
 }

@@ -27,7 +27,7 @@ export function useSourceSongsSchema(
             {
                 name: 'title',
                 displayName: 'Title',
-                render: row => <SongTitle {...row} />,
+                render: row => <SongTitle title={row.title} isExplicit={row.explicit}/>,
                 width: '2fr',
                 sortable: true,
             },
@@ -42,7 +42,7 @@ export function useSourceSongsSchema(
             {
                 name: 'album',
                 displayName: 'Album',
-                render: row => <SongAlbum name={row.album?.name ?? '(no album)'} link={row.album?.link}/>,
+                render: row => <SongAlbum name={row.album?.name ?? '(no album)'}/>,
                 width: '1fr',
                 sortable: true,
                 getValue: song => song.album?.name,

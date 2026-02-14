@@ -35,6 +35,29 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
         };
     }
 
+    [HttpGet("{id:long}", Name = "GetSong")]
+    public async Task<GetSongResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
+    {
+        var song = await context.Songs
+            .Where(s => s.Id == id && s.OwnerId == currentUser.Id)
+            .Include(s => s.Album)
+            .Include(s => s.Artists)
+            .ThenInclude(a => a.Artist)
+            .Include(s => s.Genres)
+            .ThenInclude(g => g.Genre)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (song == null)
+        {
+            throw new Exception($"Song not found with id {id}");
+        }
+
+        return new GetSongResponse
+        {
+            Song = GetSongResponseSong.FromEntity(song),
+        };
+    }
+
     [HttpGet("{id}/download", Name = "DownloadSong")]
     public async Task<IActionResult> Download(MusicDbContext context, IFileSystem fileSystem, long id,
         CancellationToken cancellationToken)
