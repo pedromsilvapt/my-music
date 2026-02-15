@@ -6,5 +6,5 @@
  */
 
 export type GetArtworkParams = {
-	size?: number;
+    size?: number;
 };

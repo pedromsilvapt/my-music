@@ -73,7 +73,7 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
             fileDownloadName: fileSystem.Path.GetFileName(songs.RepositoryPath));
     }
 
-    [HttpPost("/songs/import", Name = "ImportSongs")]
+    [HttpPost("import", Name = "ImportSongs")]
     public async Task<object> Import(
         [FromForm] string sourceFolder,
         [FromServices] IMusicService musicService,

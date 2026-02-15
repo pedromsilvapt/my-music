@@ -4,8 +4,7 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
-import type {UserData} from "./userData";
 
-export interface CreateUserRequest2 {
-    user: UserData;
+export interface CreatePlaylistRequest {
+    name: string;
 }

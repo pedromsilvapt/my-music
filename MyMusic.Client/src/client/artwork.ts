@@ -24,183 +24,183 @@ import type {GetArtworkParams} from "../model";
 
 export type getArtworkResponse200 = {
     data: void;
-	status: 200;
+    status: 200;
 };
 
 export type getArtworkResponseSuccess = getArtworkResponse200 & {
-	headers: Headers;
+    headers: Headers;
 };
 
 export type getArtworkResponse = getArtworkResponseSuccess;
 
 export const getGetArtworkUrl = (id: number, params?: GetArtworkParams) => {
-	const normalizedParams = new URLSearchParams();
+    const normalizedParams = new URLSearchParams();
 
-	Object.entries(params || {}).forEach(([key, value]) => {
-		if (value !== undefined) {
-			normalizedParams.append(key, value === null ? "null" : value.toString());
-		}
-	});
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
 
-	const stringifiedParams = normalizedParams.toString();
+    const stringifiedParams = normalizedParams.toString();
 
-	return stringifiedParams.length > 0
-		? `/api/Artwork/${id}?${stringifiedParams}`
-		: `/api/Artwork/${id}`;
+    return stringifiedParams.length > 0
+        ? `/api/Artwork/${id}?${stringifiedParams}`
+        : `/api/Artwork/${id}`;
 };
 
 export const getArtwork = async (
-	id: number,
-	params?: GetArtworkParams,
-	options?: RequestInit,
+    id: number,
+    params?: GetArtworkParams,
+    options?: RequestInit,
 ): Promise<getArtworkResponse> => {
-	const res = await fetch(getGetArtworkUrl(id, params), {
-		...options,
-		method: "GET",
-	});
+    const res = await fetch(getGetArtworkUrl(id, params), {
+        ...options,
+        method: "GET",
+    });
 
-	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-	const data: getArtworkResponse["data"] = body ? JSON.parse(body) : {};
-	return {
-		data,
-		status: res.status,
-		headers: res.headers,
-	} as getArtworkResponse;
+    const data: getArtworkResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getArtworkResponse;
 };
 
 export const getGetArtworkQueryKey = (
     id: number,
-	params?: GetArtworkParams,
+    params?: GetArtworkParams,
 ) => {
     return ["api", "Artwork", id, ...(params ? [params] : [])] as const;
 };
 
 export const getGetArtworkQueryOptions = <
-	TData = Awaited<ReturnType<typeof getArtwork>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof getArtwork>>,
+    TError = unknown,
 >(
-	id: number,
-	params?: GetArtworkParams,
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
-		>;
-		fetch?: RequestInit;
-	},
+    id: number,
+    params?: GetArtworkParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
 ) => {
-	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-	const queryKey = queryOptions?.queryKey ?? getGetArtworkQueryKey(id, params);
+    const queryKey = queryOptions?.queryKey ?? getGetArtworkQueryKey(id, params);
 
-	const queryFn: QueryFunction<Awaited<ReturnType<typeof getArtwork>>> = ({
-		signal,
-	}) => getArtwork(id, params, { signal, ...fetchOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getArtwork>>> = ({
+                                                                                signal,
+                                                                            }) => getArtwork(id, params, {signal, ...fetchOptions});
 
-	return {
-		queryKey,
-		queryFn,
-		enabled: !!id,
-		...queryOptions,
-	} as UseQueryOptions<
-		Awaited<ReturnType<typeof getArtwork>>,
-		TError,
-		TData
-	> & { queryKey: DataTag<QueryKey, TData, TError> };
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!id,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof getArtwork>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
 export type GetArtworkQueryResult = NonNullable<
-	Awaited<ReturnType<typeof getArtwork>>
+    Awaited<ReturnType<typeof getArtwork>>
 >;
 export type GetArtworkQueryError = unknown;
 
 export function useGetArtwork<
-	TData = Awaited<ReturnType<typeof getArtwork>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof getArtwork>>,
+    TError = unknown,
 >(
-	id: number,
-	params: undefined | GetArtworkParams,
-	options: {
-		query: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
-		> &
-			Pick<
-				DefinedInitialDataOptions<
-					Awaited<ReturnType<typeof getArtwork>>,
-					TError,
-					Awaited<ReturnType<typeof getArtwork>>
-				>,
-				"initialData"
-			>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    id: number,
+    params: undefined | GetArtworkParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtwork>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtwork>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useGetArtwork<
-	TData = Awaited<ReturnType<typeof getArtwork>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof getArtwork>>,
+    TError = unknown,
 >(
-	id: number,
-	params?: GetArtworkParams,
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
-		> &
-			Pick<
-				UndefinedInitialDataOptions<
-					Awaited<ReturnType<typeof getArtwork>>,
-					TError,
-					Awaited<ReturnType<typeof getArtwork>>
-				>,
-				"initialData"
-			>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    id: number,
+    params?: GetArtworkParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtwork>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtwork>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useGetArtwork<
-	TData = Awaited<ReturnType<typeof getArtwork>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof getArtwork>>,
+    TError = unknown,
 >(
-	id: number,
-	params?: GetArtworkParams,
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
-		>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    id: number,
+    params?: GetArtworkParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 };
 
 export function useGetArtwork<
-	TData = Awaited<ReturnType<typeof getArtwork>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof getArtwork>>,
+    TError = unknown,
 >(
-	id: number,
-	params?: GetArtworkParams,
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
-		>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    id: number,
+    params?: GetArtworkParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getArtwork>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 } {
-	const queryOptions = getGetArtworkQueryOptions(id, params, options);
+    const queryOptions = getGetArtworkQueryOptions(id, params, options);
 
-	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-		TData,
-		TError
-	> & { queryKey: DataTag<QueryKey, TData, TError> };
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
     return {...query, queryKey: queryOptions.queryKey};
 }
@@ -220,10 +220,10 @@ export const invalidateGetArtwork = async (
 };
 
 export const getGetArtworkMockHandler = (
-	overrideResponse?:
+    overrideResponse?:
         | void
-		| ((
-				info: Parameters<Parameters<typeof http.get>[1]>[0],
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
     ) => Promise<void> | void),
     options?: RequestHandlerOptions,
 ) => {

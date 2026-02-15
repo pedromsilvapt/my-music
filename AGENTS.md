@@ -41,12 +41,31 @@ dotnet test --collect:"XPlat Code Coverage"
 ## Database Migrations
 
 ```bash
-# Add migration (run from MyMusic.Common directory)
-dotnet ef migrations add <MigrationName> --project MyMusic.Common
+# Create the migration
+devbox run db-create-migration "<MigrationName>"
 
-# Apply migrations
-dotnet ef database update --project MyMusic.Common
+# Restart the server to apply the migration
+docker restart my-music-server-1
+
+# Wait for the server to restart
+sleep 10s
 ```
+
+## Generate Client API (Orval)
+
+```bash
+# Restart the server to ensure OpenAPI is updated
+docker restart my-music-server-1
+
+# Wait for the server to restart
+sleep 10s
+
+devbox run orval
+```
+
+**Important:** When adding new mutations that should trigger refetch/invalidation of queries, you must add them to the
+`mutationInvalidates` array in `orval.config.cjs`. This ensures TanStack Query automatically invalidates the relevant
+queries after the mutation completes.
 
 ## Code Style Guidelines
 
@@ -119,9 +138,105 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
 ```csharp
 public record ListSongsResponse
 {
-    public required List<ListSongsItem> Songs { get; init; }
+    public required List<ListSongsItem> Songs { get; set; }
 }
 ```
+
+### DTO Patterns
+
+DTOs are organized by resource in `MyMusic.Server/DTO/<Resource>/`. Each response DTO contains nested `Item` classes
+with static `FromEntity` methods for mapping from domain entities.
+
+#### Response DTO Structure
+
+```csharp
+using AgileObjects.AgileMapper;
+using Entities = MyMusic.Common.Entities;
+
+namespace MyMusic.Server.DTO.Playlists;
+
+public record CreatePlaylistResponse
+{
+    public required CreatePlaylistItem Playlist { get; init; }
+}
+
+public record CreatePlaylistItem
+{
+    public required long Id { get; init; }
+    public required string Name { get; init; }
+
+    public static CreatePlaylistItem FromEntity(Entities.Playlist playlist) =>
+        Mapper.Map(playlist).ToANew<CreatePlaylistItem>();
+}
+```
+
+#### Complex Response DTOs (with related entities)
+
+When mapping entities with relationships, use manual mapping to control the output:
+
+```csharp
+using MyMusic.Server.DTO.Songs;
+using Entities = MyMusic.Common.Entities;
+using SongEntity = MyMusic.Common.Entities.Song;
+
+namespace MyMusic.Server.DTO.Playlists;
+
+public record GetPlaylistResponse
+{
+    public required GetPlaylistItem Playlist { get; init; }
+}
+
+public record GetPlaylistItem
+{
+    public required long Id { get; init; }
+    public required string Name { get; init; }
+    public required List<GetPlaylistSong> Songs { get; init; }
+
+    public static GetPlaylistItem FromEntity(Entities.Playlist playlist) =>
+        new GetPlaylistItem
+        {
+            Id = playlist.Id,
+            Name = playlist.Name,
+            Songs = playlist.PlaylistSongs
+                .OrderBy(ps => ps.Order)
+                .Select(ps => GetPlaylistSong.FromEntity(ps.Song, ps.Order, ps.AddedAt))
+                .ToList()
+        };
+}
+
+public record GetPlaylistSong : ListSongsItem
+{
+    public required int Order { get; init; }
+    public DateTime? AddedAtPlaylist { get; init; }
+
+    public static GetPlaylistSong FromEntity(SongEntity song, int order, DateTime addedAt) =>
+        new GetPlaylistSong
+        {
+            Id = song.Id,
+            Cover = song.CoverId,
+            Title = song.Title,
+            Artists = song.Artists.Select(a => ListSongsArtist.FromEntity(a.Artist)).ToList(),
+            Album = ListSongsAlbum.FromEntity(song.Album),
+            Genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList(),
+            Year = song.Year,
+            Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
+            IsFavorite = false,
+            IsExplicit = song.Explicit,
+            CreatedAt = song.CreatedAt,
+            AddedAt = song.AddedAt,
+            Order = order,
+            AddedAtPlaylist = addedAt
+        };
+}
+```
+
+#### Guidelines
+
+- **Use AgileMapper** (`Mapper.Map(entity).ToANew<T>()`) for simple DTOs with direct property mappings
+- **Use manual mapping** when you need to transform, order, or include related entities
+- **Use inheritance** (e.g., `GetPlaylistSong : ListSongsItem`) to reuse common properties
+- **Use aliased imports** (`using Entities = ...`) to avoid ambiguity with domain entities
+- **Inherit from `ListSongsItem`** for song-related nested types to reuse its properties
 
 ### Imports
 
@@ -230,3 +345,9 @@ npm run lint
 # Preview build
 npm run preview
 ```
+
+### Known Issues
+
+The auto-generated files in `src/client/` and `src/model/` may contain TypeScript errors. These are pre-existing issues
+in the Orval-generated code and should be ignored. Focus on fixing TypeScript errors in manually written code under
+`src/routes/`, `src/components/`, and `src/contexts/`.

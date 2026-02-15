@@ -52,6 +52,8 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                         aria-label="Actions"
                         title="Actions"
                         onClick={ev => ev.stopPropagation()}
+                        onMouseDown={ev => ev.stopPropagation()}
+                        onMouseUp={ev => ev.stopPropagation()}
                     >
                         <IconDotsVertical/>
                     </ActionIcon>
@@ -85,6 +87,8 @@ function CollectionActionMenu<M>(props: CollectionActionMenuProps<M>) {
                     ev.stopPropagation();
                     action.onClick(props.selection);
                 }}
+                onMouseDown={ev => ev.stopPropagation()}
+                onMouseUp={ev => ev.stopPropagation()}
             >
                 {action.renderLabel()}
             </Menu.Item>

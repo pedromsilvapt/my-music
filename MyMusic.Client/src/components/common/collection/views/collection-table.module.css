@@ -6,10 +6,12 @@
     /* Is invisible when not hovered, or when the selection is not empty */
     .rowActions *, &:hover .rowActions.hidden * {
         opacity: 0;
+        pointer-events: none;
     }
 
     /* Is visible when the menu is open, or when the row is hovered */
     .rowActions.opened *, &:hover .rowActions * {
         opacity: 1;
+        pointer-events: auto;
     }
 }

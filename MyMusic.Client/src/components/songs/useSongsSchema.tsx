@@ -13,6 +13,7 @@ import {
 import {saveAs} from 'file-saver';
 import {useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs.ts";
+import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import type {PlayerAction} from "../../contexts/player-context.tsx";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
@@ -26,6 +27,7 @@ import {usePlayHandler} from "../player/usePlayHandler.tsx";
 
 export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = false, currentSongId: number | null = null): CollectionSchema<ListSongsItem> {
     const playHandler = usePlayHandler(playerStore, nowPlaying);
+    const {open: openManagePlaylists} = useManagePlaylistsContext();
 
     return useMemo(() => ({
         key: row => row.id,
@@ -128,10 +130,11 @@ export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = 
                     },
                 },
                 {
-                    name: "add-to-playlists",
+                    name: "manage-playlists",
                     renderIcon: () => <IconPlaylistAdd/>,
-                    renderLabel: () => "Add to Playlists",
-                    onClick: () => {
+                    renderLabel: () => "Manage Playlists",
+                    onClick: (songs: ListSongsItem[]) => {
+                        openManagePlaylists(songs.map(s => s.id));
                     },
                 },
                 {
@@ -187,5 +190,5 @@ export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = 
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [playerStore, nowPlaying, currentSongId, playHandler]);
+    }) as CollectionSchema<ListSongsItem>, [playerStore, nowPlaying, currentSongId, playHandler, openManagePlaylists]);
 }

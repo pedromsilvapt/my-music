@@ -27,36 +27,36 @@ import {http, HttpResponse} from "msw";
 import type {CreateUserRequest, CreateUserResponse, ListUsersResponse,} from "../model";
 
 export type listUsersResponse200 = {
-	data: ListUsersResponse;
-	status: 200;
+    data: ListUsersResponse;
+    status: 200;
 };
 
 export type listUsersResponseSuccess = listUsersResponse200 & {
-	headers: Headers;
+    headers: Headers;
 };
 
 export type listUsersResponse = listUsersResponseSuccess;
 
 export const getListUsersUrl = () => {
-	return `/api/Users`;
+    return `/api/Users`;
 };
 
 export const listUsers = async (
-	options?: RequestInit,
+    options?: RequestInit,
 ): Promise<listUsersResponse> => {
-	const res = await fetch(getListUsersUrl(), {
-		...options,
-		method: "GET",
-	});
+    const res = await fetch(getListUsersUrl(), {
+        ...options,
+        method: "GET",
+    });
 
-	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-	const data: listUsersResponse["data"] = body ? JSON.parse(body) : {};
-	return {
-		data,
-		status: res.status,
-		headers: res.headers,
-	} as listUsersResponse;
+    const data: listUsersResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as listUsersResponse;
 };
 
 export const getListUsersQueryKey = () => {
@@ -64,113 +64,113 @@ export const getListUsersQueryKey = () => {
 };
 
 export const getListUsersQueryOptions = <
-	TData = Awaited<ReturnType<typeof listUsers>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof listUsers>>,
+    TError = unknown,
 >(options?: {
-	query?: Partial<
-		UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
-	>;
-	fetch?: RequestInit;
+    query?: Partial<
+        UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
+    >;
+    fetch?: RequestInit;
 }) => {
-	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-	const queryKey = queryOptions?.queryKey ?? getListUsersQueryKey();
+    const queryKey = queryOptions?.queryKey ?? getListUsersQueryKey();
 
-	const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({
-		signal,
-	}) => listUsers({ signal, ...fetchOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({
+                                                                               signal,
+                                                                           }) => listUsers({signal, ...fetchOptions});
 
-	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
-		Awaited<ReturnType<typeof listUsers>>,
-		TError,
-		TData
-	> & { queryKey: DataTag<QueryKey, TData, TError> };
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof listUsers>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
 export type ListUsersQueryResult = NonNullable<
-	Awaited<ReturnType<typeof listUsers>>
+    Awaited<ReturnType<typeof listUsers>>
 >;
 export type ListUsersQueryError = unknown;
 
 export function useListUsers<
-	TData = Awaited<ReturnType<typeof listUsers>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof listUsers>>,
+    TError = unknown,
 >(
-	options: {
-		query: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
-		> &
-			Pick<
-				DefinedInitialDataOptions<
-					Awaited<ReturnType<typeof listUsers>>,
-					TError,
-					Awaited<ReturnType<typeof listUsers>>
-				>,
-				"initialData"
-			>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof listUsers>>,
+                    TError,
+                    Awaited<ReturnType<typeof listUsers>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useListUsers<
-	TData = Awaited<ReturnType<typeof listUsers>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof listUsers>>,
+    TError = unknown,
 >(
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
-		> &
-			Pick<
-				UndefinedInitialDataOptions<
-					Awaited<ReturnType<typeof listUsers>>,
-					TError,
-					Awaited<ReturnType<typeof listUsers>>
-				>,
-				"initialData"
-			>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof listUsers>>,
+                    TError,
+                    Awaited<ReturnType<typeof listUsers>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 };
 export function useListUsers<
-	TData = Awaited<ReturnType<typeof listUsers>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof listUsers>>,
+    TError = unknown,
 >(
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
-		>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 };
 
 export function useListUsers<
-	TData = Awaited<ReturnType<typeof listUsers>>,
-	TError = unknown,
+    TData = Awaited<ReturnType<typeof listUsers>>,
+    TError = unknown,
 >(
-	options?: {
-		query?: Partial<
-			UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
-		>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & {
-	queryKey: DataTag<QueryKey, TData, TError>;
+    queryKey: DataTag<QueryKey, TData, TError>;
 } {
-	const queryOptions = getListUsersQueryOptions(options);
+    const queryOptions = getListUsersQueryOptions(options);
 
-	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
-		TData,
-		TError
-	> & { queryKey: DataTag<QueryKey, TData, TError> };
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
 
     return {...query, queryKey: queryOptions.queryKey};
 }
@@ -188,136 +188,136 @@ export const invalidateListUsers = async (
 };
 
 export type createUserResponse200 = {
-	data: CreateUserResponse;
-	status: 200;
+    data: CreateUserResponse;
+    status: 200;
 };
 
 export type createUserResponseSuccess = createUserResponse200 & {
-	headers: Headers;
+    headers: Headers;
 };
 
 export type createUserResponse = createUserResponseSuccess;
 
 export const getCreateUserUrl = () => {
-	return `/api/Users`;
+    return `/api/Users`;
 };
 
 export const createUser = async (
-	createUserRequest: CreateUserRequest,
-	options?: RequestInit,
+    createUserRequest: CreateUserRequest,
+    options?: RequestInit,
 ): Promise<createUserResponse> => {
-	const res = await fetch(getCreateUserUrl(), {
-		...options,
-		method: "POST",
-		headers: { "Content-Type": "application/json", ...options?.headers },
-		body: JSON.stringify(createUserRequest),
-	});
+    const res = await fetch(getCreateUserUrl(), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(createUserRequest),
+    });
 
-	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-	const data: createUserResponse["data"] = body ? JSON.parse(body) : {};
-	return {
-		data,
-		status: res.status,
-		headers: res.headers,
-	} as createUserResponse;
+    const data: createUserResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as createUserResponse;
 };
 
 export const getCreateUserMutationOptions = <
-	TError = unknown,
-	TContext = unknown,
+    TError = unknown,
+    TContext = unknown,
 >(options?: {
-	mutation?: UseMutationOptions<
-		Awaited<ReturnType<typeof createUser>>,
-		TError,
-		{ data: CreateUserRequest },
-		TContext
-	>;
-	fetch?: RequestInit;
+    mutation?: UseMutationOptions<
+        Awaited<ReturnType<typeof createUser>>,
+        TError,
+        { data: CreateUserRequest },
+        TContext
+    >;
+    fetch?: RequestInit;
 }): UseMutationOptions<
-	Awaited<ReturnType<typeof createUser>>,
-	TError,
-	{ data: CreateUserRequest },
-	TContext
+    Awaited<ReturnType<typeof createUser>>,
+    TError,
+    { data: CreateUserRequest },
+    TContext
 > => {
-	const mutationKey = ["createUser"];
-	const { mutation: mutationOptions, fetch: fetchOptions } = options
-		? options.mutation &&
-			"mutationKey" in options.mutation &&
-			options.mutation.mutationKey
-			? options
-			: { ...options, mutation: { ...options.mutation, mutationKey } }
-		: { mutation: { mutationKey }, fetch: undefined };
+    const mutationKey = ["createUser"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
 
-	const mutationFn: MutationFunction<
-		Awaited<ReturnType<typeof createUser>>,
-		{ data: CreateUserRequest }
-	> = (props) => {
-		const { data } = props ?? {};
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createUser>>,
+        { data: CreateUserRequest }
+    > = (props) => {
+        const {data} = props ?? {};
 
-		return createUser(data, fetchOptions);
-	};
+        return createUser(data, fetchOptions);
+    };
 
-	return { mutationFn, ...mutationOptions };
+    return {mutationFn, ...mutationOptions};
 };
 
 export type CreateUserMutationResult = NonNullable<
-	Awaited<ReturnType<typeof createUser>>
+    Awaited<ReturnType<typeof createUser>>
 >;
 export type CreateUserMutationBody = CreateUserRequest;
 export type CreateUserMutationError = unknown;
 
 export const useCreateUser = <TError = unknown, TContext = unknown>(
-	options?: {
-		mutation?: UseMutationOptions<
-			Awaited<ReturnType<typeof createUser>>,
-			TError,
-			{ data: CreateUserRequest },
-			TContext
-		>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createUser>>,
+            TError,
+            { data: CreateUserRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
 ): UseMutationResult<
-	Awaited<ReturnType<typeof createUser>>,
-	TError,
-	{ data: CreateUserRequest },
-	TContext
+    Awaited<ReturnType<typeof createUser>>,
+    TError,
+    { data: CreateUserRequest },
+    TContext
 > => {
     return useMutation(getCreateUserMutationOptions(options), queryClient);
 };
 
 export const getListUsersResponseMock = (
-	overrideResponse: Partial<ListUsersResponse> = {},
+    overrideResponse: Partial<ListUsersResponse> = {},
 ): ListUsersResponse => ({
-	users: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
+    users: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
         id: faker.number.int({min: undefined, max: undefined}),
-		username: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-	})),
-	...overrideResponse,
+        username: faker.string.alpha({length: {min: 10, max: 20}}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+    })),
+    ...overrideResponse,
 });
 
 export const getCreateUserResponseMock = (
-	overrideResponse: Partial<CreateUserResponse> = {},
+    overrideResponse: Partial<CreateUserResponse> = {},
 ): CreateUserResponse => ({
     user: {
         id: faker.number.int({min: undefined, max: undefined}),
         username: faker.string.alpha({length: {min: 10, max: 20}}),
         name: faker.string.alpha({length: {min: 10, max: 20}}),
     },
-	...overrideResponse,
+    ...overrideResponse,
 });
 
 export const getListUsersMockHandler = (
-	overrideResponse?:
-		| ListUsersResponse
-		| ((
-				info: Parameters<Parameters<typeof http.get>[1]>[0],
-		  ) => Promise<ListUsersResponse> | ListUsersResponse),
+    overrideResponse?:
+        | ListUsersResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<ListUsersResponse> | ListUsersResponse),
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
@@ -337,11 +337,11 @@ export const getListUsersMockHandler = (
 };
 
 export const getCreateUserMockHandler = (
-	overrideResponse?:
-		| CreateUserResponse
-		| ((
-				info: Parameters<Parameters<typeof http.post>[1]>[0],
-		  ) => Promise<CreateUserResponse> | CreateUserResponse),
+    overrideResponse?:
+        | CreateUserResponse
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<CreateUserResponse> | CreateUserResponse),
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
@@ -360,6 +360,6 @@ export const getCreateUserMockHandler = (
     );
 };
 export const getUsersMock = () => [
-	getListUsersMockHandler(),
-	getCreateUserMockHandler(),
+    getListUsersMockHandler(),
+    getCreateUserMockHandler(),
 ];

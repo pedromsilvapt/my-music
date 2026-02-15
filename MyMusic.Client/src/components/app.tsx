@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
+import ManagePlaylistsProvider from "../contexts/manage-playlists-context.tsx";
 import {usePlayerContext} from "../contexts/player-context.tsx";
 import Player from "./player/player.tsx";
 import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
@@ -97,7 +98,9 @@ function App() {
             </AppShell.Navbar>
             <AppShell.Main
                 style={{'--parent-height': "calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px) - var(--app-shell-padding) * 2)"}}>
-                <Outlet/>
+                <ManagePlaylistsProvider>
+                    <Outlet/>
+                </ManagePlaylistsProvider>
                 {/*<TanStackRouterDevtools />*/}
             </AppShell.Main>
             {footerVisible && <AppShell.Footer>

@@ -4,8 +4,8 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
-import type {CreateUserItem} from "./createUserItem";
 
-export interface CreateUserResponse2 {
-    user: CreateUserItem;
+export interface CreatePlaylistItem {
+    id: number;
+    name: string;
 }

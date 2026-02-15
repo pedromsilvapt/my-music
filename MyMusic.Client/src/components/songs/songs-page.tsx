@@ -1,15 +1,22 @@
 import {useEffect} from "react";
 import {useListSongs} from '../../client/songs.ts';
+import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {usePlayerActions} from "../../contexts/player-context.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
 
 export default function SongsPage() {
     const playerActions = usePlayerActions();
+    const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
 
     const {data: songs, refetch} = useListSongs();
 
     const songsSchema = useSongsSchema(playerActions);
+
+    useEffect(() => {
+        registerRefetch('songs', refetch);
+        return () => unregisterRefetch('songs');
+    }, [registerRefetch, unregisterRefetch, refetch]);
 
     useEffect(() => {
         // noinspection JSIgnoredPromiseFromCall
@@ -18,7 +25,7 @@ export default function SongsPage() {
 
     const elements = songs?.data?.songs ?? [];
 
-    return <>
+    return (
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key="songs"
@@ -26,5 +33,5 @@ export default function SongsPage() {
                 schema={songsSchema}>
             </Collection>
         </div>
-    </>;
+    );
 }

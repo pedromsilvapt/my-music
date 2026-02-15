@@ -11,19 +11,306 @@ import type {
     DefinedInitialDataOptions,
     DefinedUseQueryResult,
     InvalidateOptions,
+    MutationFunction,
     QueryClient,
     QueryFunction,
     QueryKey,
     UndefinedInitialDataOptions,
+    UseMutationOptions,
+    UseMutationResult,
     UseQueryOptions,
     UseQueryResult,
 } from "@tanstack/react-query";
-import {useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
 import {http, HttpResponse} from "msw";
+import type {
+    AddSongsToPlaylistRequest,
+    CreatePlaylistRequest,
+    CreatePlaylistResponse,
+    GetPlaylistResponse,
+    ListPlaylistsResponse,
+    ManagePlaylistSongsRequest,
+    UpdatePlaylistRequest,
+    UpdatePlaylistResponse,
+} from "../model";
 
-import type {GetPlaylistResponse} from "../model";
+export type listPlaylistsResponse200 = {
+    data: ListPlaylistsResponse;
+    status: 200;
+};
 
+export type listPlaylistsResponseSuccess = listPlaylistsResponse200 & {
+    headers: Headers;
+};
+
+export type listPlaylistsResponse = listPlaylistsResponseSuccess;
+
+export const getListPlaylistsUrl = () => {
+    return `/api/playlists`;
+};
+
+export const listPlaylists = async (
+    options?: RequestInit,
+): Promise<listPlaylistsResponse> => {
+    const res = await fetch(getListPlaylistsUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: listPlaylistsResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as listPlaylistsResponse;
+};
+
+export const getListPlaylistsQueryKey = () => {
+    return ["api", "playlists"] as const;
+};
+
+export const getListPlaylistsQueryOptions = <
+    TData = Awaited<ReturnType<typeof listPlaylists>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<Awaited<ReturnType<typeof listPlaylists>>, TError, TData>
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getListPlaylistsQueryKey();
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlaylists>>> = ({
+                                                                                   signal,
+                                                                               }) => listPlaylists({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof listPlaylists>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPlaylistsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof listPlaylists>>
+>;
+export type ListPlaylistsQueryError = unknown;
+
+export function useListPlaylists<
+    TData = Awaited<ReturnType<typeof listPlaylists>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listPlaylists>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof listPlaylists>>,
+                    TError,
+                    Awaited<ReturnType<typeof listPlaylists>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListPlaylists<
+    TData = Awaited<ReturnType<typeof listPlaylists>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listPlaylists>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof listPlaylists>>,
+                    TError,
+                    Awaited<ReturnType<typeof listPlaylists>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListPlaylists<
+    TData = Awaited<ReturnType<typeof listPlaylists>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listPlaylists>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useListPlaylists<
+    TData = Awaited<ReturnType<typeof listPlaylists>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listPlaylists>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getListPlaylistsQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateListPlaylists = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getListPlaylistsQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type createPlaylistResponse200 = {
+    data: CreatePlaylistResponse;
+    status: 200;
+};
+
+export type createPlaylistResponseSuccess = createPlaylistResponse200 & {
+    headers: Headers;
+};
+
+export type createPlaylistResponse = createPlaylistResponseSuccess;
+
+export const getCreatePlaylistUrl = () => {
+    return `/api/playlists`;
+};
+
+export const createPlaylist = async (
+    createPlaylistRequest: CreatePlaylistRequest,
+    options?: RequestInit,
+): Promise<createPlaylistResponse> => {
+    const res = await fetch(getCreatePlaylistUrl(), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(createPlaylistRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: createPlaylistResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as createPlaylistResponse;
+};
+
+export const getCreatePlaylistMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createPlaylist>>,
+            TError,
+            { data: CreatePlaylistRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof createPlaylist>>,
+    TError,
+    { data: CreatePlaylistRequest },
+    TContext
+> => {
+    const mutationKey = ["createPlaylist"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof createPlaylist>>,
+        { data: CreatePlaylistRequest }
+    > = (props) => {
+        const {data} = props ?? {};
+
+        return createPlaylist(data, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof createPlaylist>>,
+        variables: { data: CreatePlaylistRequest },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListPlaylistsQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type CreatePlaylistMutationResult = NonNullable<
+    Awaited<ReturnType<typeof createPlaylist>>
+>;
+export type CreatePlaylistMutationBody = CreatePlaylistRequest;
+export type CreatePlaylistMutationError = unknown;
+
+export const useCreatePlaylist = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof createPlaylist>>,
+            TError,
+            { data: CreatePlaylistRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof createPlaylist>>,
+    TError,
+    { data: CreatePlaylistRequest },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getCreatePlaylistMutationOptions(queryClient ?? backupQueryClient, options),
+        queryClient,
+    );
+};
 export type getPlaylistResponse200 = {
     data: GetPlaylistResponse;
     status: 200;
@@ -36,7 +323,7 @@ export type getPlaylistResponseSuccess = getPlaylistResponse200 & {
 export type getPlaylistResponse = getPlaylistResponseSuccess;
 
 export const getGetPlaylistUrl = (id: number) => {
-    return `/api/Playlists/${id}`;
+    return `/api/playlists/${id}`;
 };
 
 export const getPlaylist = async (
@@ -59,7 +346,7 @@ export const getPlaylist = async (
 };
 
 export const getGetPlaylistQueryKey = (id: number) => {
-    return ["api", "Playlists", id] as const;
+    return ["api", "playlists", id] as const;
 };
 
 export const getGetPlaylistQueryOptions = <
@@ -199,58 +486,597 @@ export const invalidateGetPlaylist = async (
     return queryClient;
 };
 
-export const getGetPlaylistResponseMock = (
-    overrideResponse: Partial<GetPlaylistResponse> = {},
-): GetPlaylistResponse => ({
-    songs: Array.from(
+export type updatePlaylistResponse200 = {
+    data: UpdatePlaylistResponse;
+    status: 200;
+};
+
+export type updatePlaylistResponseSuccess = updatePlaylistResponse200 & {
+    headers: Headers;
+};
+
+export type updatePlaylistResponse = updatePlaylistResponseSuccess;
+
+export const getUpdatePlaylistUrl = (id: number) => {
+    return `/api/playlists/${id}`;
+};
+
+export const updatePlaylist = async (
+    id: number,
+    updatePlaylistRequest: UpdatePlaylistRequest,
+    options?: RequestInit,
+): Promise<updatePlaylistResponse> => {
+    const res = await fetch(getUpdatePlaylistUrl(id), {
+        ...options,
+        method: "PUT",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(updatePlaylistRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: updatePlaylistResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as updatePlaylistResponse;
+};
+
+export const getUpdatePlaylistMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
+        Awaited<ReturnType<typeof updatePlaylist>>,
+        TError,
+        { id: number; data: UpdatePlaylistRequest },
+        TContext
+    >;
+    fetch?: RequestInit;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof updatePlaylist>>,
+    TError,
+    { id: number; data: UpdatePlaylistRequest },
+    TContext
+> => {
+    const mutationKey = ["updatePlaylist"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof updatePlaylist>>,
+        { id: number; data: UpdatePlaylistRequest }
+    > = (props) => {
+        const {id, data} = props ?? {};
+
+        return updatePlaylist(id, data, fetchOptions);
+    };
+
+    return {mutationFn, ...mutationOptions};
+};
+
+export type UpdatePlaylistMutationResult = NonNullable<
+    Awaited<ReturnType<typeof updatePlaylist>>
+>;
+export type UpdatePlaylistMutationBody = UpdatePlaylistRequest;
+export type UpdatePlaylistMutationError = unknown;
+
+export const useUpdatePlaylist = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof updatePlaylist>>,
+            TError,
+            { id: number; data: UpdatePlaylistRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof updatePlaylist>>,
+    TError,
+    { id: number; data: UpdatePlaylistRequest },
+    TContext
+> => {
+    return useMutation(getUpdatePlaylistMutationOptions(options), queryClient);
+};
+export type deletePlaylistResponse200 = {
+    data: void;
+    status: 200;
+};
+
+export type deletePlaylistResponseSuccess = deletePlaylistResponse200 & {
+    headers: Headers;
+};
+
+export type deletePlaylistResponse = deletePlaylistResponseSuccess;
+
+export const getDeletePlaylistUrl = (id: number) => {
+    return `/api/playlists/${id}`;
+};
+
+export const deletePlaylist = async (
+    id: number,
+    options?: RequestInit,
+): Promise<deletePlaylistResponse> => {
+    const res = await fetch(getDeletePlaylistUrl(id), {
+        ...options,
+        method: "DELETE",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: deletePlaylistResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as deletePlaylistResponse;
+};
+
+export const getDeletePlaylistMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof deletePlaylist>>,
+            TError,
+            { id: number },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof deletePlaylist>>,
+    TError,
+    { id: number },
+    TContext
+> => {
+    const mutationKey = ["deletePlaylist"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof deletePlaylist>>,
+        { id: number }
+    > = (props) => {
+        const {id} = props ?? {};
+
+        return deletePlaylist(id, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof deletePlaylist>>,
+        variables: { id: number },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListPlaylistsQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type DeletePlaylistMutationResult = NonNullable<
+    Awaited<ReturnType<typeof deletePlaylist>>
+>;
+
+export type DeletePlaylistMutationError = unknown;
+
+export const useDeletePlaylist = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof deletePlaylist>>,
+            TError,
+            { id: number },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof deletePlaylist>>,
+    TError,
+    { id: number },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getDeletePlaylistMutationOptions(queryClient ?? backupQueryClient, options),
+        queryClient,
+    );
+};
+export type addSongsToPlaylistResponse200 = {
+    data: GetPlaylistResponse;
+    status: 200;
+};
+
+export type addSongsToPlaylistResponseSuccess =
+    addSongsToPlaylistResponse200 & {
+    headers: Headers;
+};
+
+export type addSongsToPlaylistResponse = addSongsToPlaylistResponseSuccess;
+
+export const getAddSongsToPlaylistUrl = (id: number) => {
+    return `/api/playlists/${id}/songs`;
+};
+
+export const addSongsToPlaylist = async (
+    id: number,
+    addSongsToPlaylistRequest: AddSongsToPlaylistRequest,
+    options?: RequestInit,
+): Promise<addSongsToPlaylistResponse> => {
+    const res = await fetch(getAddSongsToPlaylistUrl(id), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(addSongsToPlaylistRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: addSongsToPlaylistResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as addSongsToPlaylistResponse;
+};
+
+export const getAddSongsToPlaylistMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof addSongsToPlaylist>>,
+            TError,
+            { id: number; data: AddSongsToPlaylistRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof addSongsToPlaylist>>,
+    TError,
+    { id: number; data: AddSongsToPlaylistRequest },
+    TContext
+> => {
+    const mutationKey = ["addSongsToPlaylist"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof addSongsToPlaylist>>,
+        { id: number; data: AddSongsToPlaylistRequest }
+    > = (props) => {
+        const {id, data} = props ?? {};
+
+        return addSongsToPlaylist(id, data, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof addSongsToPlaylist>>,
+        variables: { id: number; data: AddSongsToPlaylistRequest },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListPlaylistsQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetPlaylistQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type AddSongsToPlaylistMutationResult = NonNullable<
+    Awaited<ReturnType<typeof addSongsToPlaylist>>
+>;
+export type AddSongsToPlaylistMutationBody = AddSongsToPlaylistRequest;
+export type AddSongsToPlaylistMutationError = unknown;
+
+export const useAddSongsToPlaylist = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof addSongsToPlaylist>>,
+            TError,
+            { id: number; data: AddSongsToPlaylistRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof addSongsToPlaylist>>,
+    TError,
+    { id: number; data: AddSongsToPlaylistRequest },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getAddSongsToPlaylistMutationOptions(
+            queryClient ?? backupQueryClient,
+            options,
+        ),
+        queryClient,
+    );
+};
+export type removeSongFromPlaylistResponse200 = {
+    data: GetPlaylistResponse;
+    status: 200;
+};
+
+export type removeSongFromPlaylistResponseSuccess =
+    removeSongFromPlaylistResponse200 & {
+    headers: Headers;
+};
+
+export type removeSongFromPlaylistResponse =
+    removeSongFromPlaylistResponseSuccess;
+
+export const getRemoveSongFromPlaylistUrl = (id: number, songId: number) => {
+    return `/api/playlists/${id}/songs/${songId}`;
+};
+
+export const removeSongFromPlaylist = async (
+    id: number,
+    songId: number,
+    options?: RequestInit,
+): Promise<removeSongFromPlaylistResponse> => {
+    const res = await fetch(getRemoveSongFromPlaylistUrl(id, songId), {
+        ...options,
+        method: "DELETE",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: removeSongFromPlaylistResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as removeSongFromPlaylistResponse;
+};
+
+export const getRemoveSongFromPlaylistMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof removeSongFromPlaylist>>,
+            TError,
+            { id: number; songId: number },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof removeSongFromPlaylist>>,
+    TError,
+    { id: number; songId: number },
+    TContext
+> => {
+    const mutationKey = ["removeSongFromPlaylist"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof removeSongFromPlaylist>>,
+        { id: number; songId: number }
+    > = (props) => {
+        const {id, songId} = props ?? {};
+
+        return removeSongFromPlaylist(id, songId, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof removeSongFromPlaylist>>,
+        variables: { id: number; songId: number },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListPlaylistsQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetPlaylistQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type RemoveSongFromPlaylistMutationResult = NonNullable<
+    Awaited<ReturnType<typeof removeSongFromPlaylist>>
+>;
+
+export type RemoveSongFromPlaylistMutationError = unknown;
+
+export const useRemoveSongFromPlaylist = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof removeSongFromPlaylist>>,
+            TError,
+            { id: number; songId: number },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof removeSongFromPlaylist>>,
+    TError,
+    { id: number; songId: number },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getRemoveSongFromPlaylistMutationOptions(
+            queryClient ?? backupQueryClient,
+            options,
+        ),
+        queryClient,
+    );
+};
+export type managePlaylistSongsResponse200 = {
+    data: void;
+    status: 200;
+};
+
+export type managePlaylistSongsResponseSuccess =
+    managePlaylistSongsResponse200 & {
+    headers: Headers;
+};
+
+export type managePlaylistSongsResponse = managePlaylistSongsResponseSuccess;
+
+export const getManagePlaylistSongsUrl = () => {
+    return `/api/playlists/manage-songs`;
+};
+
+export const managePlaylistSongs = async (
+    managePlaylistSongsRequest: ManagePlaylistSongsRequest,
+    options?: RequestInit,
+): Promise<managePlaylistSongsResponse> => {
+    const res = await fetch(getManagePlaylistSongsUrl(), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(managePlaylistSongsRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: managePlaylistSongsResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as managePlaylistSongsResponse;
+};
+
+export const getManagePlaylistSongsMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof managePlaylistSongs>>,
+            TError,
+            { data: ManagePlaylistSongsRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof managePlaylistSongs>>,
+    TError,
+    { data: ManagePlaylistSongsRequest },
+    TContext
+> => {
+    const mutationKey = ["managePlaylistSongs"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof managePlaylistSongs>>,
+        { data: ManagePlaylistSongsRequest }
+    > = (props) => {
+        const {data} = props ?? {};
+
+        return managePlaylistSongs(data, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof managePlaylistSongs>>,
+        variables: { data: ManagePlaylistSongsRequest },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListPlaylistsQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetPlaylistQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type ManagePlaylistSongsMutationResult = NonNullable<
+    Awaited<ReturnType<typeof managePlaylistSongs>>
+>;
+export type ManagePlaylistSongsMutationBody = ManagePlaylistSongsRequest;
+export type ManagePlaylistSongsMutationError = unknown;
+
+export const useManagePlaylistSongs = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof managePlaylistSongs>>,
+            TError,
+            { data: ManagePlaylistSongsRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof managePlaylistSongs>>,
+    TError,
+    { data: ManagePlaylistSongsRequest },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getManagePlaylistSongsMutationOptions(
+            queryClient ?? backupQueryClient,
+            options,
+        ),
+        queryClient,
+    );
+};
+
+export const getListPlaylistsResponseMock = (
+    overrideResponse: Partial<ListPlaylistsResponse> = {},
+): ListPlaylistsResponse => ({
+    playlists: Array.from(
         {length: faker.number.int({min: 1, max: 10})},
         (_, i) => i + 1,
     ).map(() => ({
-        rank: faker.number.float({
-            min: undefined,
-            max: undefined,
-            fractionDigits: 2,
-        }),
-        order: faker.number.int({min: undefined, max: undefined}),
         id: faker.number.int({min: undefined, max: undefined}),
-        cover: faker.helpers.arrayElement([
-            faker.helpers.arrayElement([
-                faker.number.int({min: undefined, max: undefined}),
-                null,
-            ]),
-            null,
-        ]),
-        title: faker.string.alpha({length: {min: 10, max: 20}}),
-        artists: Array.from(
-            {length: faker.number.int({min: 1, max: 10})},
-            (_, i) => i + 1,
-        ).map(() => ({
-            id: faker.number.int({min: undefined, max: undefined}),
-            name: faker.string.alpha({length: {min: 10, max: 20}}),
-        })),
-        album: {
-            id: faker.number.int({min: undefined, max: undefined}),
-            name: faker.string.alpha({length: {min: 10, max: 20}}),
-        },
-        genres: Array.from(
-            {length: faker.number.int({min: 1, max: 10})},
-            (_, i) => i + 1,
-        ).map(() => ({
-            id: faker.number.int({min: undefined, max: undefined}),
-            name: faker.string.alpha({length: {min: 10, max: 20}}),
-        })),
-        year: faker.helpers.arrayElement([
-            faker.helpers.arrayElement([
-                faker.number.int({min: undefined, max: undefined}),
-                null,
-            ]),
-            null,
-        ]),
-        duration: faker.string.alpha({length: {min: 10, max: 20}}),
-        isFavorite: faker.datatype.boolean(),
-        isExplicit: faker.datatype.boolean(),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        songCount: faker.number.int({min: undefined, max: undefined}),
         createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-        addedAt: faker.helpers.arrayElement([
+        modifiedAt: faker.helpers.arrayElement([
             faker.helpers.arrayElement([
                 faker.date.past().toISOString().slice(0, 19) + "Z",
                 null,
@@ -261,6 +1087,278 @@ export const getGetPlaylistResponseMock = (
     ...overrideResponse,
 });
 
+export const getCreatePlaylistResponseMock = (
+    overrideResponse: Partial<CreatePlaylistResponse> = {},
+): CreatePlaylistResponse => ({
+    playlist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+    },
+    ...overrideResponse,
+});
+
+export const getGetPlaylistResponseMock = (
+    overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+    playlist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        songs: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            order: faker.number.int({min: undefined, max: undefined}),
+            addedAtPlaylist: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            title: faker.string.alpha({length: {min: 10, max: 20}}),
+            artists: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            album: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            genres: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            duration: faker.string.alpha({length: {min: 10, max: 20}}),
+            isFavorite: faker.datatype.boolean(),
+            isExplicit: faker.datatype.boolean(),
+            createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            addedAt: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+        })),
+    },
+    ...overrideResponse,
+});
+
+export const getUpdatePlaylistResponseMock = (
+    overrideResponse: Partial<UpdatePlaylistResponse> = {},
+): UpdatePlaylistResponse => ({
+    playlist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+    },
+    ...overrideResponse,
+});
+
+export const getAddSongsToPlaylistResponseMock = (
+    overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+    playlist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        songs: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            order: faker.number.int({min: undefined, max: undefined}),
+            addedAtPlaylist: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            title: faker.string.alpha({length: {min: 10, max: 20}}),
+            artists: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            album: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            genres: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            duration: faker.string.alpha({length: {min: 10, max: 20}}),
+            isFavorite: faker.datatype.boolean(),
+            isExplicit: faker.datatype.boolean(),
+            createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            addedAt: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+        })),
+    },
+    ...overrideResponse,
+});
+
+export const getRemoveSongFromPlaylistResponseMock = (
+    overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+    playlist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        songs: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            order: faker.number.int({min: undefined, max: undefined}),
+            addedAtPlaylist: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            title: faker.string.alpha({length: {min: 10, max: 20}}),
+            artists: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            album: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            genres: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            duration: faker.string.alpha({length: {min: 10, max: 20}}),
+            isFavorite: faker.datatype.boolean(),
+            isExplicit: faker.datatype.boolean(),
+            createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            addedAt: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+        })),
+    },
+    ...overrideResponse,
+});
+
+export const getListPlaylistsMockHandler = (
+    overrideResponse?:
+        | ListPlaylistsResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<ListPlaylistsResponse> | ListPlaylistsResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/playlists",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getListPlaylistsResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getCreatePlaylistMockHandler = (
+    overrideResponse?:
+        | CreatePlaylistResponse
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<CreatePlaylistResponse> | CreatePlaylistResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.post(
+        "*/playlists",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getCreatePlaylistResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
 export const getGetPlaylistMockHandler = (
     overrideResponse?:
         | GetPlaylistResponse
@@ -270,7 +1368,7 @@ export const getGetPlaylistMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/Playlists/:id",
+        "*/playlists/:id",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
@@ -284,4 +1382,125 @@ export const getGetPlaylistMockHandler = (
         options,
     );
 };
-export const getPlaylistsMock = () => [getGetPlaylistMockHandler()];
+
+export const getUpdatePlaylistMockHandler = (
+    overrideResponse?:
+        | UpdatePlaylistResponse
+        | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+    ) => Promise<UpdatePlaylistResponse> | UpdatePlaylistResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.put(
+        "*/playlists/:id",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getUpdatePlaylistResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getDeletePlaylistMockHandler = (
+    overrideResponse?:
+        | void
+        | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0],
+    ) => Promise<void> | void),
+    options?: RequestHandlerOptions,
+) => {
+    return http.delete(
+        "*/playlists/:id",
+        async (info) => {
+            if (typeof overrideResponse === "function") {
+                await overrideResponse(info);
+            }
+            return new HttpResponse(null, {status: 200});
+        },
+        options,
+    );
+};
+
+export const getAddSongsToPlaylistMockHandler = (
+    overrideResponse?:
+        | GetPlaylistResponse
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.post(
+        "*/playlists/:id/songs",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getAddSongsToPlaylistResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getRemoveSongFromPlaylistMockHandler = (
+    overrideResponse?:
+        | GetPlaylistResponse
+        | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0],
+    ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.delete(
+        "*/playlists/:id/songs/:songId",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getRemoveSongFromPlaylistResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getManagePlaylistSongsMockHandler = (
+    overrideResponse?:
+        | void
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<void> | void),
+    options?: RequestHandlerOptions,
+) => {
+    return http.post(
+        "*/playlists/manage-songs",
+        async (info) => {
+            if (typeof overrideResponse === "function") {
+                await overrideResponse(info);
+            }
+            return new HttpResponse(null, {status: 200});
+        },
+        options,
+    );
+};
+export const getPlaylistsMock = () => [
+    getListPlaylistsMockHandler(),
+    getCreatePlaylistMockHandler(),
+    getGetPlaylistMockHandler(),
+    getUpdatePlaylistMockHandler(),
+    getDeletePlaylistMockHandler(),
+    getAddSongsToPlaylistMockHandler(),
+    getRemoveSongFromPlaylistMockHandler(),
+    getManagePlaylistSongsMockHandler(),
+];

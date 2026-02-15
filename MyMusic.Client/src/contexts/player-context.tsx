@@ -85,7 +85,7 @@ function addToQueue(
             return {
                 ...song,
                 order: anchorIndex + i,
-                rank: 0, // TODO Calculate rank
+                addedAtPlaylist: new Date().toISOString(),
             } as GetPlaylistSong;
         }
 
@@ -151,7 +151,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
             set(state => {
                 const indexSet = new Set(indices);
 
-                let currentSongId: string | null = null;
+                let currentSongId: number | null = null;
                 let currentSongOrder = -1;
 
                 if (state.current.type === 'LOADED' || state.current.type === 'LOADING') {
@@ -178,7 +178,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
                     } else {
                         state.current = {type: 'EMPTY'};
                     }
-                } else if (currentSongId) {
+                } else if (currentSongId && (state.current.type === 'LOADED' || state.current.type === 'LOADING')) {
                     const newIndex = state.queue.findIndex(s => s.id === currentSongId);
                     if (newIndex !== -1) {
                         state.current.song = state.queue[newIndex];
@@ -187,7 +187,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
             }),
         reorderQueue: (fromIndex: number, toIndex: number) =>
             set(state => {
-                let currentSongId: string | null = null;
+                let currentSongId: number | null = null;
 
                 if (state.current.type === 'LOADED' || state.current.type === 'LOADING') {
                     currentSongId = state.current.song.id;
@@ -199,7 +199,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
                     state.queue[i].order = i;
                 }
 
-                if (currentSongId) {
+                if (currentSongId && (state.current.type === 'LOADED' || state.current.type === 'LOADING')) {
                     const newIndex = state.queue.findIndex(s => s.id === currentSongId);
                     if (newIndex !== -1) {
                         state.current.song = state.queue[newIndex];
@@ -210,7 +210,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
             set(state => {
                 if (reorders.length === 0) return;
 
-                let currentSongId: string | null = null;
+                let currentSongId: number | null = null;
 
                 if (state.current.type === 'LOADED' || state.current.type === 'LOADING') {
                     currentSongId = state.current.song.id;
@@ -221,7 +221,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
                 const itemsToMove: GetPlaylistSong[] = [];
                 let indexOffset = 0;
 
-                for (const {fromIndex, toIndex} of sortedReorders) {
+                for (const {fromIndex} of sortedReorders) {
                     const adjustedFromIndex = fromIndex - indexOffset;
                     const [moved] = state.queue.splice(adjustedFromIndex, 1);
                     itemsToMove.push(moved);
@@ -240,7 +240,7 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
                     state.queue[i].order = i;
                 }
 
-                if (currentSongId) {
+                if (currentSongId && (state.current.type === 'LOADED' || state.current.type === 'LOADING')) {
                     const newIndex = state.queue.findIndex(s => s.id === currentSongId);
                     if (newIndex !== -1) {
                         state.current.song = state.queue[newIndex];
