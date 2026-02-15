@@ -21,6 +21,9 @@ interface CollectionProps<T extends { id: string | number }> {
     initialView?: CollectionView,
     toolbar?: (props: CollectionToolbarProps<T>) => React.ReactNode | null | undefined;
     isFetching?: boolean | null | undefined;
+    sortable?: boolean;
+    onReorder?: (fromIndex: number, toIndex: number) => void;
+    onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
 }
 
 export default function Collection<T extends { id: string | number }>(props: CollectionProps<T>) {
@@ -157,6 +160,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             selectionHandlers={customSelectionHandlers}
             sort={sort}
             onSort={handleSort}
+            sortable={props.sortable}
+            onReorder={props.onReorder}
+            onReorderBatch={props.onReorderBatch}
         />;
     } else if (view == 'list') {
         viewNode = <CollectionList
@@ -164,6 +170,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             items={filteredAndSortedItems}
             selection={selection}
             selectionHandlers={customSelectionHandlers}
+            sortable={props.sortable}
+            onReorder={props.onReorder}
+            onReorderBatch={props.onReorderBatch}
         />;
     } else if (view === 'grid') {
         viewNode = <CollectionGrid
@@ -171,6 +180,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             items={filteredAndSortedItems}
             selection={selection}
             selectionHandlers={customSelectionHandlers}
+            sortable={props.sortable}
+            onReorder={props.onReorder}
+            onReorderBatch={props.onReorderBatch}
         />;
     } else {
         throw new Error(`Invalid collection view: ${view}`);

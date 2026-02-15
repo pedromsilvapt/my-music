@@ -15,12 +15,23 @@ export default function NowPlayingPage() {
         return current ? queue.indexOf(current) : -1;
     }, [queue, current]);
 
+    const handleReorder = (fromIndex: number, toIndex: number) => {
+        playerActions.reorderQueue(fromIndex, toIndex);
+    };
+
+    const handleReorderBatch = (reorders: { fromIndex: number; toIndex: number }[]) => {
+        playerActions.reorderQueueBatch(reorders);
+    };
+
     return (
         <Stack gap="md">
             <Text size="xl" fw={700}>Now Playing ({currentSongIndex + 1}/{queue.length} songs)</Text>
             <Collection
                 items={queue}
                 schema={songsSchema}
+                sortable={true}
+                onReorder={handleReorder}
+                onReorderBatch={handleReorderBatch}
             />
         </Stack>
     );

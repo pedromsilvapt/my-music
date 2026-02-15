@@ -1,8 +1,21 @@
+import {
+    closestCenter,
+    DndContext,
+    type DragEndEvent,
+    DragOverlay,
+    type DragStartEvent,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
+import {SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-kit/sortable";
+import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, Table, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
-import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
-import {useMemo, useRef, useState} from "react";
+import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
+import {useCallback, useMemo, useRef, useState} from "react";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {
@@ -23,12 +36,26 @@ export interface CollectionTableProps<M> {
     sort?: CollectionSortField<M>[];
     onSort?: (field: string) => void;
     sortableFields?: (keyof M & string)[];
+    sortable?: boolean;
+    onReorder?: (fromIndex: number, toIndex: number) => void;
+    onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
-    
+    const [activeId, setActiveId] = useState<string | number | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor),
+    );
+
     const columns = useMemo(() => {
         const columns = props.schema.columns.filter(col => !col.hidden);
 
@@ -37,9 +64,8 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             .filter(width => width != null)
             .reduce((sum, width) => sum + width, 0);
 
-        // We will force our table to have at least this size
         const totalWidth = Math.max(tableWidth, fixedWidth);
-        const freeWidth = totalWidth - fixedWidth - 100; // NOTE Also remove the size of additional columns (like the actions column)
+        const freeWidth = totalWidth - fixedWidth - 100;
 
         const freeFractions = columns
             .map(c => getColumnWidthFractions(c.width))
@@ -63,11 +89,74 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
 
     const virtualRows = virtualizer.getVirtualItems();
 
+    const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
+
+    const selectedIds = useMemo(() =>
+            new Set(props.selection.map(item => props.schema.key(item))),
+        [props.selection, props.schema.key]
+    );
+
+    const draggedItem = activeId != null ? props.items.find(item => props.schema.key(item) === activeId) : null;
+    const isDraggingMultiple = selectedIds.has(activeId as React.Key) && selectedIds.size > 1;
+
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id);
+        setIsDragging(true);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const {active, over} = event;
+
+        if (over && active.id !== over.id) {
+            const fromIndex = props.items.findIndex(item => props.schema.key(item) === active.id);
+            let toIndex = props.items.findIndex(item => props.schema.key(item) === over.id);
+
+            if (fromIndex !== -1 && toIndex !== -1) {
+                const selectedKeys = Array.from(selectedIds);
+
+                if (selectedKeys.length > 1) {
+                    const selectedIndices = selectedKeys
+                        .map(key => props.items.findIndex(item => props.schema.key(item) === key))
+                        .filter(i => i !== -1)
+                        .sort((a, b) => a - b);
+
+                    const selectedCount = selectedIndices.length;
+
+                    if (fromIndex < toIndex) {
+                        toIndex = toIndex - selectedCount + 1;
+                    }
+
+                    const reorders: { fromIndex: number; toIndex: number }[] = [];
+                    for (let i = 0; i < selectedCount; i++) {
+                        const moveFromIndex = selectedIndices[i];
+                        const moveToIndex = toIndex + i;
+                        if (moveFromIndex !== moveToIndex) {
+                            reorders.push({fromIndex: moveFromIndex, toIndex: moveToIndex});
+                        }
+                    }
+
+                    if (reorders.length > 0) {
+                        props.onReorderBatch?.(reorders);
+                    }
+                } else {
+                    props.onReorder?.(fromIndex, toIndex);
+                }
+            }
+        }
+
+        setActiveId(null);
+        setTimeout(() => setIsDragging(false), 0);
+    };
+
     const rows = virtualRows.map((virtualRow) => {
         const row = props.items[virtualRow.index];
+        const itemId = props.schema.key(row);
+        const isSelected = selectedIds.has(itemId);
+        const isDragOverlay = activeId === itemId;
+        const isCollapsed = isDragging && isSelected && !isDragOverlay;
 
         return <CollectionTableRow
-            key={props.schema.key(row)}
+            key={itemId}
             virtualRow={virtualRow}
             virtualizer={virtualizer}
             schema={props.schema}
@@ -75,10 +164,15 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             columns={columns}
             selection={props.selection}
             selectionHandlers={props.selectionHandlers}
+            sortable={props.sortable}
+            isSelected={isSelected}
+            isDragOverlay={isDragOverlay}
+            isCollapsed={isCollapsed}
+            isDraggingActive={isDragging}
         />;
     });
 
-    return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "813px"}}>
+    const tableContent = (
         <Box style={{height: `${virtualizer.getTotalSize() + tableHeaderHeight}px`}}>
             <Table highlightOnHover ref={tableRef} style={{
                 borderCollapse: 'separate',
@@ -120,13 +214,72 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                         <Table.Th key="__actions" style={{width: "60px"}}>{/* Actions Menu */}</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
-                <Table.Tbody style={{
-                    transform: `translateY(${virtualRows[0]?.start ?? 0}px)`
-                }}>
-                    {rows}
-                </Table.Tbody>
+                {props.sortable ? (
+                    <SortableContext
+                        items={itemIds}
+                        strategy={verticalListSortingStrategy}
+                    >
+                        <Table.Tbody style={{
+                            transform: `translateY(${virtualRows[0]?.start ?? 0}px)`
+                        }}>
+                            {rows}
+                        </Table.Tbody>
+                    </SortableContext>
+                ) : (
+                    <Table.Tbody style={{
+                        transform: `translateY(${virtualRows[0]?.start ?? 0}px)`
+                    }}>
+                        {rows}
+                    </Table.Tbody>
+                )}
             </Table>
         </Box>
+    );
+
+    if (props.sortable) {
+        return (
+            <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+            >
+                <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "813px"}}>
+                    {tableContent}
+                </Box>
+                <DragOverlay>
+                    {draggedItem && !isDraggingMultiple && (
+                        <Box style={{
+                            display: 'table-row',
+                            opacity: 0.8,
+                            backgroundColor: 'var(--mantine-color-gray-0)',
+                            borderRadius: 4,
+                        }}>
+                            {columns.map(col => (
+                                <Box key={col.name} style={{
+                                    display: 'table-cell',
+                                    padding: '8px 12px',
+                                    textAlign: col.align ?? 'left',
+                                    borderBottom: '1px solid var(--table-border-color)',
+                                }}>
+                                    {col.render(draggedItem)}
+                                </Box>
+                            ))}
+                            <Box style={{display: 'table-cell', width: '60px'}}/>
+                        </Box>
+                    )}
+                    {isDraggingMultiple && (
+                        <Box bg="blue.1" p="xs" style={{borderRadius: 4}}>
+                            Dragging {selectedIds.size} items
+                        </Box>
+                    )}
+                </DragOverlay>
+            </DndContext>
+        );
+    }
+
+    return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "813px"}}>
+        {tableContent}
     </Box>;
 }
 
@@ -138,6 +291,11 @@ interface CollectionTableRowProps<M> {
     columns: CollectionSchemaColumn<M>[];
     selection: M[];
     selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    sortable?: boolean;
+    isSelected?: boolean;
+    isDragOverlay?: boolean;
+    isCollapsed?: boolean;
+    isDraggingActive?: boolean;
 }
 
 function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
@@ -148,28 +306,74 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         row,
         columns,
         selection,
-        selectionHandlers
+        selectionHandlers,
+        sortable,
+        isSelected,
+        isDragOverlay,
+        isCollapsed,
+        isDraggingActive,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({
+        id: schema.key(row) as string,
+        disabled: !sortable,
+    });
+
+    const style: React.CSSProperties = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        height: isCollapsed ? 0 : undefined,
+        overflow: isCollapsed ? 'hidden' : undefined,
+        marginTop: isCollapsed ? 0 : undefined,
+        marginBottom: isCollapsed ? 0 : undefined,
+        paddingTop: isCollapsed ? 0 : undefined,
+        paddingBottom: isCollapsed ? 0 : undefined,
+    };
 
     const rowActions = useMemo(() => {
         return schema.actions?.([row]) ?? [];
     }, [schema, row]);
 
+    const rowRef = useCallback((node: HTMLTableRowElement | null) => {
+        setNodeRef(node);
+        virtualizer.measureElement(node);
+    }, [setNodeRef, virtualizer]);
+
+    const handleMouseDown = (event: React.MouseEvent) => {
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
+            event.preventDefault();
+        }
+    };
+
+    const handleMouseUp = (event: React.MouseEvent) => {
+        if (!isDraggingActive) {
+            selectionHandlers.toggle(schema.key(row), event);
+        }
+    };
+
     return (
         <Table.Tr
+            ref={rowRef}
+            style={sortable ? style : undefined}
             data-index={virtualRow.index}
-            ref={virtualizer.measureElement}
-            onMouseDown={(event) => {
-                if (event.shiftKey || event.ctrlKey || event.metaKey) {
-                    event.preventDefault();
-                }
-                selectionHandlers.toggle(schema.key(row), event);
-            }}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            {...(sortable ? attributes : {})}
+            {...(sortable && !isDragOverlay ? listeners : {})}
             className={cls(
                 styles.row,
-                selection.includes(row) && styles.selected,
+                isSelected && styles.selected,
+                isDragOverlay && styles.selected,
             )}
         >
             {columns.map(col =>
@@ -214,8 +418,6 @@ export function getActualColumnWidth(width: unknown, freeWidth: number, freeFrac
 
     if (fractions != null) {
         if (freeFractions === 0) {
-            // Should never happen: if `freeFractions === 0`, it should mean that all `fixedWidth != null` as well, so we should never reach here
-            // If we do, it is a bug in whatever function is calling this one
             throw new Error(`Invalid state: no free fractions for column widths, but this column does not have a fixed size!`);
         }
 

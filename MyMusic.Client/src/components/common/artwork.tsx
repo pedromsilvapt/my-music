@@ -13,9 +13,8 @@ interface ArtworkProps {
 }
 
 export default function Artwork(props: ArtworkProps) {
-    let {id, size, placeholderIcon} = props;
-
-    size ??= 32;
+    const {id, placeholderIcon} = props;
+    const size = props.size ?? 32;
 
     let innerElement: React.ReactNode;
 
