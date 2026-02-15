@@ -7,5 +7,5 @@
 import type {UserData} from "./userData";
 
 export interface CreateUserRequest {
-	user: UserData;
+    user: UserData;
 }

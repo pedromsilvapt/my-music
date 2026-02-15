@@ -6,6 +6,6 @@
  */
 
 export interface UserData {
-	username: string;
-	name: string;
+    username: string;
+    name: string;
 }

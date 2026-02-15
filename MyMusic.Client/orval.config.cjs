@@ -19,6 +19,14 @@ module.exports = {
                             onMutations: ['deletePurchase', 'deleteManyPurchases', 'createPurchase', 'requeuePurchase'],
                             invalidates: ['listPurchases'],
                         },
+                        {
+                            onMutations: ['deletePlaylist', 'createPlaylist', 'addSongsToPlaylist', 'removeSongFromPlaylist', 'managePlaylistSongs'],
+                            invalidates: ['listPlaylists'],
+                        },
+                        {
+                            onMutations: ['addSongsToPlaylist', 'removeSongFromPlaylist', 'managePlaylistSongs'],
+                            invalidates: ['getPlaylist'],
+                        },
                     ],
                 }
             }

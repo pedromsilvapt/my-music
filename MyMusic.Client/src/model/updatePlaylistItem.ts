@@ -4,8 +4,8 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
-import type {ListSongsItem} from "./listSongsItem";
 
-export interface ListSongsResponse2 {
-    songs: ListSongsItem[];
+export interface UpdatePlaylistItem {
+    id: number;
+    name: string;
 }

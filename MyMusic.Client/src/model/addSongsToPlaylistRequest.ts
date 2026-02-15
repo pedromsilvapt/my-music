@@ -4,8 +4,7 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
-import type {GetSourceItem} from "./getSourceItem";
 
-export interface GetSourceResponse2 {
-    source: GetSourceItem;
+export interface AddSongsToPlaylistRequest {
+    songIds: number[];
 }

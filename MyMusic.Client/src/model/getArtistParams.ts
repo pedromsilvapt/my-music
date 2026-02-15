@@ -4,8 +4,8 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
-import type {GetArtistSongFilter} from "./getArtistSongFilter";
+import type {ArtistSongFilter} from "./artistSongFilter";
 
 export type GetArtistParams = {
-    songFilter?: GetArtistSongFilter;
+    songFilter?: ArtistSongFilter;
 };

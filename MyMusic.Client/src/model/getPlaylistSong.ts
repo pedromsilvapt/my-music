@@ -9,8 +9,9 @@ import type {ListSongsArtist} from "./listSongsArtist";
 import type {ListSongsGenre} from "./listSongsGenre";
 
 export interface GetPlaylistSong {
-    rank: number;
     order: number;
+    /** @nullable */
+    addedAtPlaylist?: string | null;
     id: number;
     /** @nullable */
     cover: number | null;

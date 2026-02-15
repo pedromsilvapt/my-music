@@ -21,6 +21,10 @@ public class MusicDbContext : DbContext
 
     public DbSet<Genre> Genres { get; set; } = null!;
 
+    public DbSet<Playlist> Playlists { get; set; } = null!;
+
+    public DbSet<PlaylistSong> PlaylistSongs { get; set; } = null!;
+
     public DbSet<PurchasedSong> PurchasedSongs { get; set; } = null!;
 
     public DbSet<Song> Songs { get; set; } = null!;

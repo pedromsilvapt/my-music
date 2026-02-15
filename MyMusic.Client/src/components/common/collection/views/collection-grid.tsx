@@ -343,7 +343,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
                     isDropdownOpen && styles.opened,
                     selection.length > 0 && styles.hidden
                 )}>
-                    <CollectionActions selection={selection} actions={itemActions} opened={isDropdownOpen}
+                    <CollectionActions selection={[item]} actions={itemActions} opened={isDropdownOpen}
                                        setOpened={setIsDropdownOpen}/>
                 </Box>
             </Group>

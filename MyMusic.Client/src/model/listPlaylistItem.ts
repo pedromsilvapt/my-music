@@ -5,7 +5,11 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ListSongsGenre {
+export interface ListPlaylistItem {
     id: number;
     name: string;
+    songCount: number;
+    createdAt: string;
+    /** @nullable */
+    modifiedAt?: string | null;
 }

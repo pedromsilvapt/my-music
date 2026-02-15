@@ -4,10 +4,10 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
+import type {GetPlaylistSong} from "./getPlaylistSong";
 
-export interface CreateSourceData2 {
-    icon: string;
+export interface GetPlaylistItem {
+    id: number;
     name: string;
-    address: string;
-    isPaid: boolean;
+    songs: GetPlaylistSong[];
 }
