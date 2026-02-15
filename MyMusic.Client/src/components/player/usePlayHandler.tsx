@@ -3,15 +3,18 @@ import type {PlayableItem, PlayerAction} from "../../contexts/player-context.tsx
 
 export type PlayHandler = (rows: PlayableItem[], ev: React.MouseEvent<Element, MouseEvent>) => void;
 
-export function usePlayHandler(playerStore: PlayerAction): PlayHandler {
+export function usePlayHandler(playerActions: PlayerAction, nowPlaying: boolean): PlayHandler {
     return useCallback((rows: PlayableItem[], ev: React.MouseEvent<Element, MouseEvent>) => {
         ev.stopPropagation();
-        if (ev.ctrlKey) {
-            playerStore.playLast(rows);
+
+        if (nowPlaying && rows.length == 1 && 'order' in rows[0]) {
+            playerActions.goTo(rows[0].order);
+        } else if (ev.ctrlKey) {
+            playerActions.playLast(rows);
         } else if (ev.shiftKey) {
-            playerStore.playNext(rows);
+            playerActions.playNext(rows);
         } else {
-            playerStore.play(rows);
+            playerActions.play(rows);
         }
-    }, [playerStore]);
+    }, [playerActions]);
 }

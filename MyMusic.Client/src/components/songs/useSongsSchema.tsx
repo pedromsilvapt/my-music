@@ -25,7 +25,7 @@ import SongTitle from "../common/fields/song-title.tsx";
 import {usePlayHandler} from "../player/usePlayHandler.tsx";
 
 export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = false, currentSongId: number | null = null): CollectionSchema<ListSongsItem> {
-    const playHandler = usePlayHandler(playerStore);
+    const playHandler = usePlayHandler(playerStore, nowPlaying);
 
     return useMemo(() => ({
         key: row => row.id,

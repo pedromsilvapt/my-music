@@ -1,5 +1,5 @@
-import {Box, Group, Table} from "@mantine/core";
-import {useElementSize, type UseSelectionHandlers} from "@mantine/hooks";
+import {Box, Group, Table, Text} from "@mantine/core";
+import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useMemo, useRef, useState} from "react";
@@ -12,13 +12,14 @@ import {
     getColumnWidthFractions,
     getColumnWidthPixels
 } from "../collection-schema.tsx";
+import type {CollectionSelectionHandlers} from "../collection.tsx";
 import styles from './collection-table.module.css';
 
 export interface CollectionTableProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<React.Key>;
+    selectionHandlers: CollectionSelectionHandlers<React.Key>;
     sort?: CollectionSortField<M>[];
     onSort?: (field: string) => void;
     sortableFields?: (keyof M & string)[];
@@ -136,7 +137,7 @@ interface CollectionTableRowProps<M> {
     row: M;
     columns: CollectionSchemaColumn<M>[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<React.Key>;
+    selectionHandlers: CollectionSelectionHandlers<React.Key>;
 }
 
 function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
@@ -160,7 +161,12 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         <Table.Tr
             data-index={virtualRow.index}
             ref={virtualizer.measureElement}
-            onClick={() => selectionHandlers.toggle(schema.key(row))}
+            onMouseDown={(event) => {
+                if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                    event.preventDefault();
+                }
+                selectionHandlers.toggle(schema.key(row), event);
+            }}
             className={cls(
                 styles.row,
                 selection.includes(row) && styles.selected,

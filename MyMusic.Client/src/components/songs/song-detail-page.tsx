@@ -110,16 +110,13 @@ export default function SongDetailPage() {
                 </Stack>
             </Flex>
 
-            {song.lyrics ? (
-                <Box>
-                    <Text size="lg" fw={600} mb="sm">Lyrics</Text>
-                    <Text style={{whiteSpace: 'pre-wrap'}}>{song.lyrics}</Text>
-                </Box>
-            ) : (
-                <Alert color="gray" title="Lyrics not found">
-                    Lyrics are not available for this song.
-                </Alert>
-            )}
+            <Box>
+                <Text size="lg" fw={600} mb="sm">Lyrics</Text>
+                {song.lyrics
+                    ? <Text style={{whiteSpace: 'pre-wrap'}}>{song.lyrics}</Text>
+                    : <Alert color="gray" title="Lyrics not found on this song"/>
+                }
+            </Box>
         </Stack>
     );
 }

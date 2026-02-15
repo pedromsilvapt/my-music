@@ -1,17 +1,18 @@
 import {Box, Group, SimpleGrid, Stack, Text} from "@mantine/core";
-import {useElementSize, type UseSelectionHandlers} from "@mantine/hooks";
+import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {useMemo, useState} from "react";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {type CollectionSchema} from "../collection-schema.tsx";
+import type {CollectionSelectionHandlers} from "../collection.tsx";
 import styles from './collection-grid.module.css';
 
 export interface CollectionGridProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<React.Key>;
+    selectionHandlers: CollectionSelectionHandlers<React.Key>;
 }
 
 export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
@@ -95,7 +96,7 @@ export interface CollectionGridItemProps<M> {
     schema: CollectionSchema<M>;
     item: M;
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<React.Key>;
+    selectionHandlers: CollectionSelectionHandlers<React.Key>;
     width: number;
 }
 
@@ -121,7 +122,12 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
                 ref={virtualizer.measureElement}
                 w={props.width}
                 h={props.width + 54}
-                onClick={() => selectionHandlers.toggle(schema.key(item))}
+                onMouseDown={(event) => {
+                    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                    }
+                    selectionHandlers.toggle(schema.key(item), event);
+                }}
                 className={cls(
                     styles.item,
                     selection.includes(item) && styles.selected,

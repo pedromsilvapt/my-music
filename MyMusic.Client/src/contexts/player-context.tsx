@@ -67,11 +67,11 @@ function addToQueue(
 
     // If we are trying to add any songs that already belong to the queue, we need to remove them from their 
     // current positions on said queue
-    const songsFromQueue = new Set(songs.filter(isPlaylistSong).map(s => s.order));
+    const songsFromQueue = new Set(songs.filter(isPlaylistSong).map(s => s.id));
 
     if (songsFromQueue.size > 0) {
         // Make an exception for the currently playing playlist song, we won't remove that one
-        state.queue = state.queue.filter((_, i) => i != anchorIndex - 1 && !songsFromQueue.has(i));
+        state.queue = state.queue.filter((s, i) => i != anchorIndex - 1 && !songsFromQueue.has(s.id));
 
         // In case we removed any songs from the playlist before the currently playing song,
         // we need to adjust its "position" back by that amount
