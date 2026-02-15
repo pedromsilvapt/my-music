@@ -27,6 +27,8 @@ export type PlayerAction = {
     playNext: (songs: PlayableItem[]) => void;
     playLast: (songs: PlayableItem[]) => void;
     removeFromQueue: (indices: number[]) => void;
+    reorderQueue: (fromIndex: number, toIndex: number) => void;
+    reorderQueueBatch: (reorders: { fromIndex: number; toIndex: number }[]) => void;
     goForward: () => void;
     goBackward: () => void;
     goTo: (index: number) => void;
@@ -148,9 +150,101 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
         removeFromQueue: (indices: number[]) =>
             set(state => {
                 const indexSet = new Set(indices);
+
+                let currentSongId: string | null = null;
+                let currentSongOrder = -1;
+
+                if (state.current.type === 'LOADED' || state.current.type === 'LOADING') {
+                    currentSongId = state.current.song.id;
+                    currentSongOrder = state.current.song.order;
+                }
+
+                const isCurrentSongRemoved = currentSongOrder >= 0 && indexSet.has(currentSongOrder);
+                
                 state.queue = state.queue.filter((_, i) => !indexSet.has(i));
                 for (let i = 0; i < state.queue.length; i++) {
                     state.queue[i].order = i;
+                }
+
+                if (isCurrentSongRemoved) {
+                    if (state.queue.length > 0) {
+                        let nextIndex = currentSongOrder;
+                        if (nextIndex >= state.queue.length) {
+                            nextIndex = state.queue.length - 1;
+                        }
+                        const nextSong = state.queue[nextIndex];
+                        state.autoplay = true;
+                        state.current = {type: 'LOADING', song: nextSong};
+                    } else {
+                        state.current = {type: 'EMPTY'};
+                    }
+                } else if (currentSongId) {
+                    const newIndex = state.queue.findIndex(s => s.id === currentSongId);
+                    if (newIndex !== -1) {
+                        state.current.song = state.queue[newIndex];
+                    }
+                }
+            }),
+        reorderQueue: (fromIndex: number, toIndex: number) =>
+            set(state => {
+                let currentSongId: string | null = null;
+
+                if (state.current.type === 'LOADED' || state.current.type === 'LOADING') {
+                    currentSongId = state.current.song.id;
+                }
+
+                const [moved] = state.queue.splice(fromIndex, 1);
+                state.queue.splice(toIndex, 0, moved);
+                for (let i = 0; i < state.queue.length; i++) {
+                    state.queue[i].order = i;
+                }
+
+                if (currentSongId) {
+                    const newIndex = state.queue.findIndex(s => s.id === currentSongId);
+                    if (newIndex !== -1) {
+                        state.current.song = state.queue[newIndex];
+                    }
+                }
+            }),
+        reorderQueueBatch: (reorders: { fromIndex: number; toIndex: number }[]) =>
+            set(state => {
+                if (reorders.length === 0) return;
+
+                let currentSongId: string | null = null;
+
+                if (state.current.type === 'LOADED' || state.current.type === 'LOADING') {
+                    currentSongId = state.current.song.id;
+                }
+
+                const sortedReorders = [...reorders].sort((a, b) => a.fromIndex - b.fromIndex);
+
+                const itemsToMove: GetPlaylistSong[] = [];
+                let indexOffset = 0;
+
+                for (const {fromIndex, toIndex} of sortedReorders) {
+                    const adjustedFromIndex = fromIndex - indexOffset;
+                    const [moved] = state.queue.splice(adjustedFromIndex, 1);
+                    itemsToMove.push(moved);
+                    indexOffset++;
+                }
+
+                const sortedByTarget = [...reorders].sort((a, b) => a.toIndex - b.toIndex);
+                let insertIndex = sortedByTarget[0].toIndex;
+
+                for (const item of itemsToMove) {
+                    state.queue.splice(insertIndex, 0, item);
+                    insertIndex++;
+                }
+
+                for (let i = 0; i < state.queue.length; i++) {
+                    state.queue[i].order = i;
+                }
+
+                if (currentSongId) {
+                    const newIndex = state.queue.findIndex(s => s.id === currentSongId);
+                    if (newIndex !== -1) {
+                        state.current.song = state.queue[newIndex];
+                    }
                 }
             }),
         goForward: () =>
@@ -252,6 +346,8 @@ export function usePlayerActions(): PlayerAction {
     const playNext = usePlayerContext(state => state.playNext);
     const playLast = usePlayerContext(state => state.playLast);
     const removeFromQueue = usePlayerContext(state => state.removeFromQueue);
+    const reorderQueue = usePlayerContext(state => state.reorderQueue);
+    const reorderQueueBatch = usePlayerContext(state => state.reorderQueueBatch);
     const goForward = usePlayerContext(state => state.goForward);
     const goBackward = usePlayerContext(state => state.goBackward);
     const goTo = usePlayerContext(state => state.goTo);
@@ -267,6 +363,8 @@ export function usePlayerActions(): PlayerAction {
         playNext,
         playLast,
         removeFromQueue,
+        reorderQueue,
+        reorderQueueBatch,
         goForward,
         goBackward,
         goTo,
@@ -276,5 +374,5 @@ export function usePlayerActions(): PlayerAction {
         setMuted,
         setCurrentTime,
         setIsFavorite,
-    }), [play, playNext, playLast, removeFromQueue, goForward, goBackward, goTo, load, setIsPlaying, setVolume, setMuted, setCurrentTime, setIsFavorite]);
+    }), [play, playNext, playLast, removeFromQueue, reorderQueue, reorderQueueBatch, goForward, goBackward, goTo, load, setIsPlaying, setVolume, setMuted, setCurrentTime, setIsFavorite]);
 }
