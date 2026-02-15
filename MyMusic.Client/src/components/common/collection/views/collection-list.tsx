@@ -1,17 +1,17 @@
 import {Box, Group, Stack, Text} from "@mantine/core";
-import {type UseSelectionHandlers} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {useMemo, useRef, useState} from "react";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {type CollectionSchema} from "../collection-schema.tsx";
+import type {CollectionSelectionHandlers} from "../collection.tsx";
 import styles from './collection-list.module.css';
 
 export interface CollectionListProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<React.Key>;
+    selectionHandlers: CollectionSelectionHandlers<React.Key>;
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
@@ -60,7 +60,7 @@ export interface CollectionListItemProps<M> {
     schema: CollectionSchema<M>;
     item: M;
     selection: M[];
-    selectionHandlers: UseSelectionHandlers<React.Key>;
+    selectionHandlers: CollectionSelectionHandlers<React.Key>;
 }
 
 export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
@@ -82,7 +82,12 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     return <Box key={schema.key(item)}
                 data-index={virtualItem.index}
                 ref={virtualizer.measureElement}
-                onClick={() => selectionHandlers.toggle(schema.key(item))}
+                onMouseDown={(event) => {
+                    if (event.shiftKey || event.ctrlKey || event.metaKey) {
+                        event.preventDefault();
+                    }
+                    selectionHandlers.toggle(schema.key(item), event);
+                }}
                 className={cls(
                     styles.item,
                     selection.includes(item) && styles.selected,

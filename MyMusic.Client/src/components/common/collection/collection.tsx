@@ -1,6 +1,7 @@
 import {Box, Flex, LoadingOverlay} from "@mantine/core";
-import {useDebouncedValue, useSelection} from '@mantine/hooks';
-import {useMemo, useState} from "react";
+import {useDebouncedValue, useSelection, type UseSelectionHandlers} from '@mantine/hooks';
+import type React from "react";
+import {useCallback, useMemo, useState} from "react";
 import {sortBy} from "../../../utils/sort-by.tsx";
 import type {CollectionSchema, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
@@ -9,6 +10,10 @@ import CollectionList from "./views/collection-list.tsx";
 import CollectionTable from "./views/collection-table.tsx";
 
 export type {CollectionSchema, CollectionSort, CollectionSortField, SortDirection} from "./collection-schema";
+
+export type CollectionSelectionHandlers<T> = Omit<UseSelectionHandlers<T>, 'toggle'> & {
+    toggle: (toggled: T, event?: React.MouseEvent) => void;
+};
 
 interface CollectionProps<T extends { id: string | number }> {
     items: T[],
@@ -23,6 +28,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const [view, setView] = useState<CollectionView>(props.initialView ?? 'table');
     const [throttledSearch] = useDebouncedValue(search, 50);
     const [sort, setSort] = useState<CollectionSort<T>>([]);
+    const [lastSelectedKey, setLastSelectedKey] = useState<React.Key | null>(null);
 
     const sortableFields = useMemo(() => {
         return props.schema.columns
@@ -90,6 +96,48 @@ export default function Collection<T extends { id: string | number }>(props: Col
         resetSelectionOnDataChange: false,
     });
 
+    const handleItemClick = useCallback((clickedKey: React.Key, event: React.MouseEvent) => {
+        const isCtrlPressed = event.ctrlKey || event.metaKey;
+        const isShiftPressed = event.shiftKey;
+
+        if (isShiftPressed && lastSelectedKey !== null) {
+            const itemsList = filteredAndSortedItems.map(item => props.schema.key(item));
+            const lastIndex = itemsList.indexOf(lastSelectedKey);
+            const clickedIndex = itemsList.indexOf(clickedKey);
+
+            if (lastIndex !== -1 && clickedIndex !== -1) {
+                const start = Math.min(lastIndex, clickedIndex);
+                const end = Math.max(lastIndex, clickedIndex);
+                const rangeKeys = itemsList.slice(start, end + 1);
+
+                const currentlySelected = new Set(selectionKeys);
+                const allInRangeSelected = rangeKeys.every(key => currentlySelected.has(key));
+
+                if (allInRangeSelected) {
+                    selectionHandlers.setSelection(selectionKeys.filter(key => !rangeKeys.includes(key)));
+                } else {
+                    const newSelection = new Set([...selectionKeys, ...rangeKeys]);
+                    selectionHandlers.setSelection(Array.from(newSelection));
+                }
+            }
+        } else if (isCtrlPressed) {
+            selectionHandlers.toggle(clickedKey);
+        } else {
+            if (selectionKeys.length === 1 && selectionKeys[0] === clickedKey) {
+                selectionHandlers.resetSelection();
+            } else {
+                selectionHandlers.setSelection([clickedKey]);
+            }
+        }
+
+        setLastSelectedKey(clickedKey);
+    }, [filteredAndSortedItems, lastSelectedKey, props.schema.key, selectionKeys, selectionHandlers]);
+
+    const customSelectionHandlers = useMemo(() => ({
+        ...selectionHandlers,
+        toggle: handleItemClick,
+    }) as CollectionSelectionHandlers<React.Key>, [selectionHandlers, handleItemClick]);
+
     const selection = useMemo(() => {
         return props.items.filter((item) => selectionKeys.includes(props.schema.key(item)));
     }, [props.items, selectionKeys]);
@@ -106,7 +154,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             schema={props.schema}
             items={filteredAndSortedItems}
             selection={selection}
-            selectionHandlers={selectionHandlers}
+            selectionHandlers={customSelectionHandlers}
             sort={sort}
             onSort={handleSort}
         />;
@@ -115,14 +163,14 @@ export default function Collection<T extends { id: string | number }>(props: Col
             schema={props.schema}
             items={filteredAndSortedItems}
             selection={selection}
-            selectionHandlers={selectionHandlers}
+            selectionHandlers={customSelectionHandlers}
         />;
     } else if (view === 'grid') {
         viewNode = <CollectionGrid
             schema={props.schema}
             items={filteredAndSortedItems}
             selection={selection}
-            selectionHandlers={selectionHandlers}
+            selectionHandlers={customSelectionHandlers}
         />;
     } else {
         throw new Error(`Invalid collection view: ${view}`);
