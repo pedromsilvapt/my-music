@@ -1,7 +1,10 @@
 import {Box, Center, Image, Overlay, ThemeIcon} from "@mantine/core";
-import {IconPhotoScan, IconPlayerPlayFilled} from "@tabler/icons-react";
+import {IconPhotoScan, IconPlayerPlayFilled, IconZoomIn} from "@tabler/icons-react";
+import {useContextMenu} from "mantine-contextmenu";
 import type {MouseEvent} from "react";
 import * as React from "react";
+import {useState} from "react";
+import ArtworkLightbox from "./artwork-lightbox.tsx";
 import styles from './artwork.module.css';
 
 interface ArtworkProps {
@@ -10,20 +13,37 @@ interface ArtworkProps {
     size?: number | undefined;
     placeholderIcon?: React.ReactNode | null | undefined;
     onClick?: (ev: MouseEvent) => void | null;
+    enablePreview?: boolean;
 }
 
 export default function Artwork(props: ArtworkProps) {
-    const {id, placeholderIcon} = props;
+    const {id, placeholderIcon, enablePreview = true} = props;
     const size = props.size ?? 32;
+    const [lightboxOpened, setLightboxOpened] = useState(false);
+    const {showContextMenu} = useContextMenu();
+
+    const hasArtwork = id != null || props.url != null;
+
+    const getFullSizeUrl = () => {
+        if (props.url != null) {
+            return props.url;
+        }
+        if (id != null) {
+            return `/api/artwork/${id}`;
+        }
+        return null;
+    };
+
+    const fullSizeUrl = getFullSizeUrl();
 
     let innerElement: React.ReactNode;
 
-    if (id == null && props.url == null) {
+    if (!hasArtwork) {
         innerElement = <ThemeIcon color="gray" size={size}>
             {placeholderIcon ?? <IconPhotoScan/>}
         </ThemeIcon>;
     } else {
-        let url = props.url ?? `/api/artwork/${id}?size=${size}`;
+        const url = props.url ?? `/api/artwork/${id}?size=${size}`;
 
         innerElement = <Image
             radius="sm"
@@ -34,21 +54,76 @@ export default function Artwork(props: ArtworkProps) {
 
     const onClick = props.onClick;
 
-    if (!onClick) {
-        return innerElement;
+    if (!hasArtwork || !enablePreview) {
+        if (!onClick) {
+            return innerElement;
+        }
+        return <Box pos="relative">
+            {innerElement}
+            <Overlay
+                className={styles.overlay}
+                color="#000"
+                backgroundOpacity={0.35}
+                onClick={ev => onClick(ev)}
+            >
+                <Center maw="100%" h="100%">
+                    <IconPlayerPlayFilled color="white" size={size * 0.6}/>
+                </Center>
+            </Overlay>
+        </Box>;
     }
 
-    return <Box pos="relative">
-        {innerElement}
-        <Overlay
-            className={styles.overlay}
-            color="#000"
-            backgroundOpacity={0.35}
-            onClick={ev => onClick(ev)}
+    if (!onClick) {
+        return <>
+            <Box
+                pos="relative"
+                style={{cursor: "pointer"}}
+                onClick={() => setLightboxOpened(true)}
+            >
+                {innerElement}
+            </Box>
+            {fullSizeUrl && (
+                <ArtworkLightbox
+                    opened={lightboxOpened}
+                    onClose={() => setLightboxOpened(false)}
+                    src={fullSizeUrl}
+                />
+            )}
+        </>;
+    }
+
+    const handleContextMenu = showContextMenu([
+        {
+            key: "preview",
+            icon: <IconZoomIn size={16}/>,
+            title: "Preview",
+            onClick: () => setLightboxOpened(true)
+        }
+    ]);
+
+    return <>
+        <Box
+            pos="relative"
+            onContextMenu={handleContextMenu}
         >
-            <Center maw="100%" h="100%">
-                <IconPlayerPlayFilled color="white" size={size * 0.6}/>
-            </Center>
-        </Overlay>
-    </Box>;
+            {innerElement}
+            <Overlay
+                className={styles.overlay}
+                color="#000"
+                backgroundOpacity={0.35}
+                onClick={ev => onClick(ev)}
+            >
+                <Center maw="100%" h="100%">
+                    <IconPlayerPlayFilled color="white" size={size * 0.6}/>
+                </Center>
+            </Overlay>
+        </Box>
+        {fullSizeUrl && (
+            <ArtworkLightbox
+                opened={lightboxOpened}
+                onClose={() => setLightboxOpened(false)}
+                src={fullSizeUrl}
+            />
+        )}
+    </>;
 }
