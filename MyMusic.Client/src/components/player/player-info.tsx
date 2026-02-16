@@ -2,6 +2,8 @@ import {ActionIcon, Box, Group, Text} from '@mantine/core';
 import Artwork from "../common/artwork.tsx";
 import {IconDotsVertical, IconHeart, IconHeartFilled, IconMusic, IconPlaylistAdd} from "@tabler/icons-react";
 import ExplicitLabel from "../common/explicit-label.tsx";
+import {useToggleFavorite} from "../../hooks/use-favorites.ts";
+import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 
 export interface PlayerInfoProps {
     title: string;
@@ -10,11 +12,21 @@ export interface PlayerInfoProps {
     year: number | null | undefined;
     artwork: number | null;
     isFavorite: boolean;
-    setIsFavorite: (isFavorite: boolean) => void;
+    setIsFavorite: (isFavorite: boolean, songId?: number) => void;
     isExplicit: boolean;
+    id: number;
 }
 
 export default function PlayerInfo(props: PlayerInfoProps) {
+    const toggleFavorite = useToggleFavorite({
+        mutation: {
+            onSuccess: (data) => {
+                props.setIsFavorite(data.data.isFavorite, props.id);
+            }
+        }
+    });
+    const {open: openManagePlaylists} = useManagePlaylistsContext();
+
     return <>
         <Group>
             <Group gap="sm">
@@ -34,7 +46,7 @@ export default function PlayerInfo(props: PlayerInfoProps) {
                     size="lg"
                     aria-label={props.isFavorite ? "Favorite" : "Unfavorite"}
                     title={props.isFavorite ? "Favorite" : "Unfavorite"}
-                    onClick={() => props.setIsFavorite(!props.isFavorite)}
+                    onClick={() => toggleFavorite.mutate({id: props.id})}
                 >
                     {props.isFavorite ? <IconHeartFilled/> : <IconHeart/>}
                 </ActionIcon>
@@ -43,6 +55,7 @@ export default function PlayerInfo(props: PlayerInfoProps) {
                     size="lg"
                     aria-label="Add to Playlists"
                     title="Add to Playlists"
+                    onClick={() => openManagePlaylists([props.id])}
                 >
                     <IconPlaylistAdd/>
                 </ActionIcon>

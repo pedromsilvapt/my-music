@@ -27,6 +27,10 @@ module.exports = {
                             onMutations: ['addSongsToPlaylist', 'removeSongFromPlaylist', 'managePlaylistSongs'],
                             invalidates: ['getPlaylist'],
                         },
+                        {
+                            onMutations: ['toggleSongFavorite', 'toggleFavorites'],
+                            invalidates: ['listSongs', 'getSong'],
+                        },
                     ],
                 }
             }

@@ -2,7 +2,6 @@ import {Box, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
 import {IconArrowBack, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
-import {usePlayerActions} from "../../contexts/player-context.tsx";
 import type {ListAlbumsItem, ListSongsItem} from "../../model";
 import {GetArtistSongFilter} from "../../model";
 import {useAlbumsSchema} from "../albums/useAlbumsSchema.tsx";
@@ -16,9 +15,8 @@ export default function ArtistDetailPage() {
     const navigate = useNavigate({from: '/artists/$artistId'});
     const searchParams = search as Record<string, unknown>;
     const songFilter = (searchParams.songFilter as string)?.toLowerCase() ?? 'all';
-    const playerActions = usePlayerActions();
     const albumsSchema = useAlbumsSchema();
-    const songsSchema = useSongsSchema(playerActions);
+    const songsSchema = useSongsSchema();
 
     const {data: response} = useGetArtist(Number(artistId), {songFilter: songFilter === 'own' ? GetArtistSongFilter.Own : songFilter === 'other' ? GetArtistSongFilter.Other : GetArtistSongFilter.All});
     const artist = response?.data.artist;

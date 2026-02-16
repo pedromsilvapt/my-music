@@ -9,7 +9,7 @@ export default function NowPlayingPage() {
     const queue = usePlayerContext(state => state.queue);
     const current = useCurrentSong();
 
-    const songsSchema = useSongsSchema(playerActions, true, current?.id);
+    const songsSchema = useSongsSchema(true);
 
     const currentSongIndex = useMemo(() => {
         return current ? queue.indexOf(current) : -1;

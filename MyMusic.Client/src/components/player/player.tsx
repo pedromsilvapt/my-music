@@ -99,6 +99,7 @@ export default function Player() {
                     isExplicit={playerStore.current.song.isExplicit}
                     isFavorite={playerStore.current.song.isFavorite}
                     setIsFavorite={playerStore.setIsFavorite}
+                    id={playerStore.current.song.id}
                 />
             </Group>
 

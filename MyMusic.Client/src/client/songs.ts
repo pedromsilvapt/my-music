@@ -21,10 +21,18 @@ import type {
     UseQueryOptions,
     UseQueryResult,
 } from "@tanstack/react-query";
-import {useMutation, useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {http, HttpResponse} from "msw";
-import type {GetSongResponse, ImportSongsBody, ListSongsResponse,} from "../model";
+
+import {HttpResponse, http} from "msw";
+import type {
+    GetSongResponse,
+    ImportSongsBody,
+    ListSongsResponse,
+    ToggleFavoriteResponse,
+    ToggleFavoritesRequest,
+    ToggleFavoritesResponse,
+} from "../model";
 
 export type listSongsResponse200 = {
     data: ListSongsResponse;
@@ -638,6 +646,243 @@ export const useImportSongs = <TError = unknown, TContext = unknown>(
 > => {
     return useMutation(getImportSongsMutationOptions(options), queryClient);
 };
+export type toggleSongFavoriteResponse200 = {
+    data: ToggleFavoriteResponse;
+    status: 200;
+};
+
+export type toggleSongFavoriteResponseSuccess =
+    toggleSongFavoriteResponse200 & {
+    headers: Headers;
+};
+
+export type toggleSongFavoriteResponse = toggleSongFavoriteResponseSuccess;
+
+export const getToggleSongFavoriteUrl = (id: number) => {
+    return `/api/songs/${id}/favorite`;
+};
+
+export const toggleSongFavorite = async (
+    id: number,
+    options?: RequestInit,
+): Promise<toggleSongFavoriteResponse> => {
+    const res = await fetch(getToggleSongFavoriteUrl(id), {
+        ...options,
+        method: "POST",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: toggleSongFavoriteResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as toggleSongFavoriteResponse;
+};
+
+export const getToggleSongFavoriteMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof toggleSongFavorite>>,
+            TError,
+            { id: number },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof toggleSongFavorite>>,
+    TError,
+    { id: number },
+    TContext
+> => {
+    const mutationKey = ["toggleSongFavorite"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof toggleSongFavorite>>,
+        { id: number }
+    > = (props) => {
+        const {id} = props ?? {};
+
+        return toggleSongFavorite(id, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof toggleSongFavorite>>,
+        variables: { id: number },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListSongsQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetSongQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type ToggleSongFavoriteMutationResult = NonNullable<
+    Awaited<ReturnType<typeof toggleSongFavorite>>
+>;
+
+export type ToggleSongFavoriteMutationError = unknown;
+
+export const useToggleSongFavorite = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof toggleSongFavorite>>,
+            TError,
+            { id: number },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof toggleSongFavorite>>,
+    TError,
+    { id: number },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getToggleSongFavoriteMutationOptions(
+            queryClient ?? backupQueryClient,
+            options,
+        ),
+        queryClient,
+    );
+};
+export type toggleFavoritesResponse200 = {
+    data: ToggleFavoritesResponse;
+    status: 200;
+};
+
+export type toggleFavoritesResponseSuccess = toggleFavoritesResponse200 & {
+    headers: Headers;
+};
+
+export type toggleFavoritesResponse = toggleFavoritesResponseSuccess;
+
+export const getToggleFavoritesUrl = () => {
+    return `/api/songs/favorites`;
+};
+
+export const toggleFavorites = async (
+    toggleFavoritesRequest: ToggleFavoritesRequest,
+    options?: RequestInit,
+): Promise<toggleFavoritesResponse> => {
+    const res = await fetch(getToggleFavoritesUrl(), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(toggleFavoritesRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: toggleFavoritesResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as toggleFavoritesResponse;
+};
+
+export const getToggleFavoritesMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof toggleFavorites>>,
+            TError,
+            { data: ToggleFavoritesRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof toggleFavorites>>,
+    TError,
+    { data: ToggleFavoritesRequest },
+    TContext
+> => {
+    const mutationKey = ["toggleFavorites"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof toggleFavorites>>,
+        { data: ToggleFavoritesRequest }
+    > = (props) => {
+        const {data} = props ?? {};
+
+        return toggleFavorites(data, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof toggleFavorites>>,
+        variables: { data: ToggleFavoritesRequest },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getListSongsQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetSongQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type ToggleFavoritesMutationResult = NonNullable<
+    Awaited<ReturnType<typeof toggleFavorites>>
+>;
+export type ToggleFavoritesMutationBody = ToggleFavoritesRequest;
+export type ToggleFavoritesMutationError = unknown;
+
+export const useToggleFavorites = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof toggleFavorites>>,
+            TError,
+            { data: ToggleFavoritesRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof toggleFavorites>>,
+    TError,
+    { data: ToggleFavoritesRequest },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getToggleFavoritesMutationOptions(
+            queryClient ?? backupQueryClient,
+            options,
+        ),
+        queryClient,
+    );
+};
 
 export const getListSongsResponseMock = (
     overrideResponse: Partial<ListSongsResponse> = {},
@@ -763,6 +1008,26 @@ export const getGetSongResponseMock = (
     ...overrideResponse,
 });
 
+export const getToggleSongFavoriteResponseMock = (
+    overrideResponse: Partial<ToggleFavoriteResponse> = {},
+): ToggleFavoriteResponse => ({
+    isFavorite: faker.datatype.boolean(),
+    ...overrideResponse,
+});
+
+export const getToggleFavoritesResponseMock = (
+    overrideResponse: Partial<ToggleFavoritesResponse> = {},
+): ToggleFavoritesResponse => ({
+    songs: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        id: faker.number.int({min: undefined, max: undefined}),
+        isFavorite: faker.datatype.boolean(),
+    })),
+    ...overrideResponse,
+});
+
 export const getListSongsMockHandler = (
     overrideResponse?:
         | ListSongsResponse
@@ -850,9 +1115,59 @@ export const getImportSongsMockHandler = (
         options,
     );
 };
+
+export const getToggleSongFavoriteMockHandler = (
+    overrideResponse?:
+        | ToggleFavoriteResponse
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<ToggleFavoriteResponse> | ToggleFavoriteResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.post(
+        "*/songs/:id/favorite",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getToggleSongFavoriteResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getToggleFavoritesMockHandler = (
+    overrideResponse?:
+        | ToggleFavoritesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<ToggleFavoritesResponse> | ToggleFavoritesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.post(
+        "*/songs/favorites",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getToggleFavoritesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getSongsMock = () => [
     getListSongsMockHandler(),
     getGetSongMockHandler(),
     getDownloadSongMockHandler(),
     getImportSongsMockHandler(),
+    getToggleSongFavoriteMockHandler(),
+    getToggleFavoritesMockHandler(),
 ];

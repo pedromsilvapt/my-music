@@ -1,17 +1,15 @@
 import {useEffect} from "react";
 import {useListSongs} from '../../client/songs.ts';
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
-import {usePlayerActions} from "../../contexts/player-context.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
 
 export default function SongsPage() {
-    const playerActions = usePlayerActions();
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
 
     const {data: songs, refetch} = useListSongs();
 
-    const songsSchema = useSongsSchema(playerActions);
+    const songsSchema = useSongsSchema();
 
     useEffect(() => {
         registerRefetch('songs', refetch);

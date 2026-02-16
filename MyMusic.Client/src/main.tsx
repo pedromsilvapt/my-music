@@ -5,6 +5,7 @@ import {ContextMenuProvider} from 'mantine-contextmenu';
 import './index.css'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
+import ManagePlaylistsProvider from "./contexts/manage-playlists-context.tsx";
 import PlayerProvider from "./contexts/player-context.tsx";
 
 // Import the generated route tree
@@ -32,7 +33,9 @@ createRoot(document.getElementById('root')!).render(
             <MantineProvider>
                 <ContextMenuProvider>
                     <PlayerProvider>
-                        <RouterProvider router={router}/>
+                        <ManagePlaylistsProvider>
+                            <RouterProvider router={router}/>
+                        </ManagePlaylistsProvider>
                     </PlayerProvider>
                 </ContextMenuProvider>
             </MantineProvider>

@@ -37,7 +37,7 @@ export type PlayerAction = {
     setVolume: (volume: number) => void;
     setMuted: (muted: boolean) => void;
     setCurrentTime: (currentTime: number) => void;
-    setIsFavorite: (isFavorite: boolean) => void;
+    setIsFavorite: (isFavorite: boolean, songId?: number) => void;
 }
 
 // Where should the tracks be placed on the queue
@@ -298,10 +298,16 @@ function createPlayerStore(): StoreApi<PlayerState & PlayerAction> {
                     state.current.time = currentTime;
                 }
             }),
-        setIsFavorite: (isFavorite: boolean) =>
+        setIsFavorite: (isFavorite: boolean, songId?: number) =>
             set(state => {
-                if (state.current.type === 'LOADED') {
+                if (state.current.type === 'LOADED' && (!songId || state.current.song.id === songId)) {
                     state.current.song.isFavorite = isFavorite;
+                }
+                if (songId) {
+                    const songInQueue = state.queue.find(s => s.id === songId);
+                    if (songInQueue) {
+                        songInQueue.isFavorite = isFavorite;
+                    }
                 }
             }),
     })));
