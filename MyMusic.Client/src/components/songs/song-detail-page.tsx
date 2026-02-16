@@ -17,6 +17,7 @@ import {Link, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
 
 import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
+import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {usePlayerActions} from "../../contexts/player-context.tsx";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
@@ -26,6 +27,7 @@ export default function SongDetailPage() {
     const {data: response} = useGetSong(Number(songId));
     const song = response?.data.song;
     const playerActions = usePlayerActions();
+    const toggleFavorite = useToggleFavorite();
 
     if (!song) {
         return <Box p="md">Loading...</Box>;
@@ -93,6 +95,7 @@ export default function SongDetailPage() {
                         <Button
                             leftSection={song.isFavorite ? <IconHeartFilled/> : <IconHeart/>}
                             variant={song.isFavorite ? "filled" : "default"}
+                            onClick={() => toggleFavorite.mutate({id: song.id})}
                         >
                             {song.isFavorite ? "Unfavorite" : "Favorite"}
                         </Button>

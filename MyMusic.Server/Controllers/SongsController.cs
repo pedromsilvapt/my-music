@@ -86,4 +86,54 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
 
         return new { success = true };
     }
+
+    [HttpPost("{id:long}/favorite", Name = "ToggleSongFavorite")]
+    public async Task<ToggleFavoriteResponse> ToggleFavorite(long id, MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var song = await context.Songs
+            .Where(s => s.Id == id && s.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (song == null)
+        {
+            throw new Exception($"Song not found with id {id}");
+        }
+
+        song.IsFavorite = !song.IsFavorite;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new ToggleFavoriteResponse
+        {
+            IsFavorite = song.IsFavorite
+        };
+    }
+
+    [HttpPost("favorites", Name = "ToggleFavorites")]
+    public async Task<ToggleFavoritesResponse> ToggleFavorites([FromBody] ToggleFavoritesRequest request,
+        MusicDbContext context, CancellationToken cancellationToken)
+    {
+        var songs = await context.Songs
+            .Where(s => request.Ids.Contains(s.Id) && s.OwnerId == currentUser.Id)
+            .ToListAsync(cancellationToken);
+
+        var songDict = songs.ToDictionary(s => s.Id);
+        var result = new List<ToggleFavoriteItem>();
+
+        foreach (var id in request.Ids)
+        {
+            if (songDict.TryGetValue(id, out var song))
+            {
+                song.IsFavorite = !song.IsFavorite;
+                result.Add(new ToggleFavoriteItem { Id = id, IsFavorite = song.IsFavorite });
+            }
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new ToggleFavoritesResponse
+        {
+            Songs = result
+        };
+    }
 }

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace MyMusic.Common.Entities;
 
@@ -6,11 +6,9 @@ public class Song
 {
     public long Id { get; set; }
 
-    [MaxLength(256)]
-    public required string Title { get; set; }
+    [MaxLength(256)] public required string Title { get; set; }
 
-    [MaxLength(256)]
-    public required string Label { get; set; }
+    [MaxLength(256)] public required string Label { get; set; }
 
     public Album Album { get; set; } = null!;
     public long AlbumId { get; set; }
@@ -19,9 +17,8 @@ public class Song
     public long? CoverId { get; set; }
 
     public int? Year { get; set; }
-    
-    [MaxLength(65536)]
-    public string? Lyrics { get; set; }
+
+    [MaxLength(65536)] public string? Lyrics { get; set; }
 
     public bool Explicit { get; set; }
 
@@ -36,14 +33,13 @@ public class Song
 
     public decimal? Rating { get; set; }
 
-    [MaxLength(1024)]
-    public required string RepositoryPath { get; set; }
+    public bool IsFavorite { get; set; }
 
-    [MaxLength(88)]
-    public required string Checksum { get; set; }
+    [MaxLength(1024)] public required string RepositoryPath { get; set; }
 
-    [MaxLength(64)]
-    public required string ChecksumAlgorithm { get; set; }
+    [MaxLength(88)] public required string Checksum { get; set; }
+
+    [MaxLength(64)] public required string ChecksumAlgorithm { get; set; }
 
     public required DateTime? AddedAt { get; set; }
 

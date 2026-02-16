@@ -37,7 +37,7 @@ public record GetSongResponseSong
             Genres = song.Genres.Select(GetSongResponseGenre.FromEntity).ToList(),
             Year = song.Year,
             Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
-            IsFavorite = false,
+            IsFavorite = song.IsFavorite,
             IsExplicit = song.Explicit,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,

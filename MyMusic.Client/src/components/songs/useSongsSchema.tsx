@@ -13,8 +13,9 @@ import {
 import {saveAs} from 'file-saver';
 import {useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs.ts";
+import {useToggleFavorites} from "../../hooks/use-favorites.ts";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
-import type {PlayerAction} from "../../contexts/player-context.tsx";
+import {usePlayerActions} from "../../contexts/player-context.tsx";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
@@ -23,10 +24,22 @@ import SongArtists from "../common/fields/song-artists.tsx";
 import SongArtwork from "../common/fields/song-artwork.tsx";
 import SongSubTitle from "../common/fields/song-sub-title.tsx";
 import SongTitle from "../common/fields/song-title.tsx";
+import {useCurrentSong} from "../player/now-playing-page.tsx";
 import {usePlayHandler} from "../player/usePlayHandler.tsx";
 
-export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = false, currentSongId: number | null = null): CollectionSchema<ListSongsItem> {
-    const playHandler = usePlayHandler(playerStore, nowPlaying);
+export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongsItem> {
+    const playerActions = usePlayerActions();
+    const currentSongId = useCurrentSong()?.id;
+    const toggleFavorites = useToggleFavorites({
+        mutation: {
+            onSuccess: (data) => {
+                for (const song of data.data.songs) {
+                    playerActions.setIsFavorite(song.isFavorite, song.id);
+                }
+            }
+        }
+    });
+    const playHandler = usePlayHandler(playerActions, nowPlaying);
     const {open: openManagePlaylists} = useManagePlaylistsContext();
 
     return useMemo(() => ({
@@ -126,7 +139,8 @@ export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = 
                     name: "favorite",
                     renderIcon: () => allAreFavorites ? <IconHeartFilled/> : <IconHeart/>,
                     renderLabel: () => allAreFavorites ? "Unfavorite" : "Favorite",
-                    onClick: () => {
+                    onClick: (songs: ListSongsItem[]) => {
+                        toggleFavorites.mutate({data: {ids: songs.map(s => s.id)}});
                     },
                 },
                 {
@@ -152,19 +166,19 @@ export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = 
                     name: "play",
                     renderIcon: () => <IconPlayerPlayFilled/>,
                     renderLabel: () => "Play",
-                    onClick: (songs: ListSongsItem[]) => playerStore.play(songs),
+                    onClick: (songs: ListSongsItem[]) => playerActions.play(songs),
                 },
                 {
                     name: "play-next",
                     renderIcon: () => <IconArrowRightDashed/>,
                     renderLabel: () => "Play Next",
-                    onClick: (songs: ListSongsItem[]) => playerStore.playNext(songs),
+                    onClick: (songs: ListSongsItem[]) => playerActions.playNext(songs),
                 },
                 {
                     name: "play-last",
                     renderIcon: () => <IconArrowForward/>,
                     renderLabel: () => "Play Last",
-                    onClick: (songs: ListSongsItem[]) => playerStore.playLast(songs),
+                    onClick: (songs: ListSongsItem[]) => playerActions.playLast(songs),
                 },
                 ...(nowPlaying ? [{
                     name: "remove-from-queue",
@@ -174,7 +188,7 @@ export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = 
                         const indices = songs
                             .map(s => 'order' in s ? (s as { order: number }).order : -1)
                             .filter((i): i is number => i >= 0);
-                        playerStore.removeFromQueue(indices);
+                        playerActions.removeFromQueue(indices);
                     },
                 }] : [])
             ];
@@ -190,5 +204,5 @@ export function useSongsSchema(playerStore: PlayerAction, nowPlaying: boolean = 
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [playerStore, nowPlaying, currentSongId, playHandler, openManagePlaylists]);
+    }) as CollectionSchema<ListSongsItem>, [playerActions, nowPlaying, currentSongId, playHandler, openManagePlaylists, toggleFavorites]);
 }
