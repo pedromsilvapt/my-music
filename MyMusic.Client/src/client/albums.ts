@@ -20,7 +20,7 @@ import type {
 } from "@tanstack/react-query";
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {HttpResponse, http} from "msw";
+import {http, HttpResponse} from "msw";
 
 import type {GetAlbumResponse, ListAlbumsResponse} from "../model";
 

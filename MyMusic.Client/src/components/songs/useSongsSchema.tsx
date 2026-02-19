@@ -2,6 +2,7 @@ import {Anchor, Text} from "@mantine/core";
 import {
     IconArrowForward,
     IconArrowRightDashed,
+    IconDevicesCog,
     IconDownload,
     IconHeart,
     IconHeartFilled,
@@ -13,9 +14,10 @@ import {
 import {saveAs} from 'file-saver';
 import {useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs.ts";
-import {useToggleFavorites} from "../../hooks/use-favorites.ts";
+import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {usePlayerActions} from "../../contexts/player-context.tsx";
+import {useToggleFavorites} from "../../hooks/use-favorites.ts";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
@@ -41,6 +43,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
     });
     const playHandler = usePlayHandler(playerActions, nowPlaying);
     const {open: openManagePlaylists} = useManagePlaylistsContext();
+    const {open: openManageDevices} = useManageDevicesContext();
 
     return useMemo(() => ({
         key: row => row.id,
@@ -152,6 +155,14 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     },
                 },
                 {
+                    name: "manage-devices",
+                    renderIcon: () => <IconDevicesCog/>,
+                    renderLabel: () => "Manage Devices",
+                    onClick: (songs: ListSongsItem[]) => {
+                        openManageDevices(songs.map(s => s.id));
+                    },
+                },
+                {
                     name: 'download',
                     renderIcon: () => <IconDownload/>,
                     renderLabel: () => "Download",
@@ -204,5 +215,5 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [playerActions, nowPlaying, currentSongId, playHandler, openManagePlaylists, toggleFavorites]);
+    }) as CollectionSchema<ListSongsItem>, [playerActions, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites]);
 }

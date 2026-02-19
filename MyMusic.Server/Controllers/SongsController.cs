@@ -2,7 +2,11 @@ using System.IO.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using MyMusic.Common;
+using MyMusic.Common.Entities;
+using MyMusic.Common.Metadata;
+using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Songs;
 
@@ -10,7 +14,8 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("songs")]
-public class SongsController(ILogger<SongsController> logger, ICurrentUser currentUser) : ControllerBase
+public class SongsController(ILogger<SongsController> logger, ICurrentUser currentUser, IOptions<Config> config)
+    : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
 
@@ -45,6 +50,8 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
             .ThenInclude(a => a.Artist)
             .Include(s => s.Genres)
             .ThenInclude(g => g.Genre)
+            .Include(s => s.Devices)
+            .ThenInclude(sd => sd.Device)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (song == null)
@@ -105,7 +112,7 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
 
         return new ToggleFavoriteResponse
         {
-            IsFavorite = song.IsFavorite
+            IsFavorite = song.IsFavorite,
         };
     }
 
@@ -133,7 +140,119 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
 
         return new ToggleFavoritesResponse
         {
-            Songs = result
+            Songs = result,
         };
+    }
+
+    [HttpGet("{id:long}/devices", Name = "GetSongDevices")]
+    public async Task<GetSongDevicesResponse> GetDevices(long id, MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var devices = await context.Devices
+            .Where(d => d.OwnerId == currentUser.Id)
+            .ToListAsync(cancellationToken);
+
+        var songDevices = await context.SongDevices
+            .Where(sd => sd.SongId == id && sd.Device.OwnerId == currentUser.Id)
+            .ToListAsync(cancellationToken);
+
+        var songDeviceDict = songDevices.ToDictionary(sd => sd.DeviceId);
+
+        var items = devices.Select(d =>
+        {
+            songDeviceDict.TryGetValue(d.Id, out var sd);
+            return new SongDeviceItem
+            {
+                DeviceId = d.Id,
+                DeviceName = d.Name,
+                DeviceIcon = d.Icon,
+                DeviceColor = d.Color,
+                Path = sd?.DevicePath,
+                SyncAction = sd?.SyncAction?.ToString(),
+            };
+        }).ToList();
+
+        return new GetSongDevicesResponse { Devices = items };
+    }
+
+    [HttpPut("devices", Name = "UpdateSongDevices")]
+    public async Task<UpdateSongDevicesResponse> UpdateDevices(
+        [FromBody] UpdateSongDevicesRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var songs = await context.Songs
+            .Where(s => request.SongIds.Contains(s.Id) && s.OwnerId == currentUser.Id)
+            .Include(s => s.Album)
+            .ThenInclude(a => a!.Artist)
+            .Include(s => s.Artists)
+            .ThenInclude(a => a.Artist)
+            .Include(s => s.Genres)
+            .ThenInclude(g => g.Genre)
+            .ToListAsync(cancellationToken);
+
+        if (songs.Count == 0)
+        {
+            throw new Exception("No songs found");
+        }
+
+        var deviceIds = request.Updates.Select(u => u.DeviceId).Distinct().ToList();
+        var devices = await context.Devices
+            .Where(d => deviceIds.Contains(d.Id) && d.OwnerId == currentUser.Id)
+            .ToDictionaryAsync(d => d.Id, cancellationToken);
+
+        foreach (var update in request.Updates)
+        {
+            if (!devices.TryGetValue(update.DeviceId, out var device))
+            {
+                continue;
+            }
+
+            var namingStrategy = new TemplateNamingStrategy(
+                device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
+
+            var existingSongDevices = await context.SongDevices
+                .Where(sd => request.SongIds.Contains(sd.SongId) && sd.DeviceId == update.DeviceId)
+                .ToListAsync(cancellationToken);
+
+            var existingDict = existingSongDevices.ToDictionary(sd => sd.SongId);
+
+            foreach (var song in songs)
+            {
+                var hasExisting = existingDict.TryGetValue(song.Id, out var existing);
+
+                if (update.Include && !hasExisting)
+                {
+                    var metadata = EntityConverter.ToSong(song);
+                    var newSongDevice = new SongDevice
+                    {
+                        SongId = song.Id,
+                        DeviceId = update.DeviceId,
+                        DevicePath = namingStrategy.Generate(metadata),
+                        SyncAction = SongSyncAction.Download,
+                        AddedAt = DateTime.UtcNow,
+                    };
+                    context.SongDevices.Add(newSongDevice);
+                }
+                else if (!update.Include && hasExisting)
+                {
+                    if (existing!.SyncAction == SongSyncAction.Download)
+                    {
+                        context.SongDevices.Remove(existing);
+                    }
+                    else
+                    {
+                        existing.SyncAction = SongSyncAction.Remove;
+                    }
+                }
+                else if (update.Include && hasExisting && existing!.SyncAction == SongSyncAction.Remove)
+                {
+                    existing.SyncAction = null;
+                }
+            }
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+        return new UpdateSongDevicesResponse { Success = true };
     }
 }

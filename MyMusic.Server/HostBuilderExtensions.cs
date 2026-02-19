@@ -1,4 +1,6 @@
+using System.IO.Abstractions;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Services;
@@ -23,6 +25,7 @@ public static class HostBuilderExtensions
             o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.AddControllers();
         builder.Services.AddHttpContextAccessor();
+        builder.Services.AddSingleton<IFileSystem, FileSystem>();
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
         builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
@@ -36,12 +39,13 @@ public static class HostBuilderExtensions
     {
         var environment = app.Services.GetRequiredService<IWebHostEnvironment>();
 
+        app.UseExceptionHandler("/error");
+
         // Configure the HTTP request pipeline.
         if (environment.IsDevelopment())
         {
             var serverConfig = app.Services.GetRequiredService<IOptions<ServerConfig>>().Value;
 
-            app.UseDeveloperExceptionPage();
             app.MapOpenApi();
             app.MapScalarApiReference(opts =>
             {
@@ -54,6 +58,14 @@ public static class HostBuilderExtensions
             });
         }
 
+        app.Map("/error", (HttpContext context) =>
+        {
+            var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+            return Results.Problem(
+                detail: exception?.Message,
+                statusCode: 500,
+                title: "An error occurred");
+        });
 
         app.UseAuthorization();
 

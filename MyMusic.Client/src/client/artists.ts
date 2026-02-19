@@ -20,13 +20,8 @@ import type {
 } from "@tanstack/react-query";
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-
-import {HttpResponse, http} from "msw";
-import type {
-    GetArtistParams,
-    GetArtistResponse,
-    ListArtistsResponse,
-} from "../model";
+import {http, HttpResponse} from "msw";
+import type {GetArtistParams, GetArtistResponse, ListArtistsResponse,} from "../model";
 
 export type listArtistsResponse200 = {
     data: ListArtistsResponse;

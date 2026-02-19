@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
@@ -14,12 +14,13 @@ public class SongDevice
     public Device Device { get; set; } = null!;
     public long DeviceId { get; set; }
 
-    [MaxLength(1024)]
-    public required string DevicePath { get; set; }
-    
+    [MaxLength(1024)] public required string DevicePath { get; set; }
+
     public SongSyncAction? SyncAction { get; set; }
 
     public DateTime AddedAt { get; set; }
+
+    public DateTime LastSyncedModifiedAt { get; set; }
 }
 
 public enum SongSyncAction
