@@ -8,17 +8,16 @@ public class Device
 {
     public long Id { get; set; }
 
-    [MaxLength(256)]
-    public required string Name { get; set; }
+    [MaxLength(256)] public required string Name { get; set; }
 
     public required User Owner { get; set; }
     public long OwnerId { get; set; }
-    
-    [MaxLength(50)]
-    public string? Icon { get; set; }
 
-    [MaxLength(20)]
-    public string? Color { get; set; }
+    [MaxLength(50)] public string? Icon { get; set; }
+
+    [MaxLength(20)] public string? Color { get; set; }
+
+    [MaxLength(512)] public string? NamingTemplate { get; set; }
 
     public DateTime? LastSyncAt { get; set; }
 

@@ -31,6 +31,10 @@ module.exports = {
                             onMutations: ['toggleSongFavorite', 'toggleFavorites'],
                             invalidates: ['listSongs', 'getSong'],
                         },
+                        {
+                            onMutations: ['deleteApiDevicesDeviceId', 'postApiDevices', 'putApiDevicesDeviceId'],
+                            invalidates: ['getApiDevices'],
+                        },
                     ],
                 }
             }

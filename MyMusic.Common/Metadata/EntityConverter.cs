@@ -1,4 +1,4 @@
-﻿using MyMusic.Common.Entities;
+using MyMusic.Common.Entities;
 
 namespace MyMusic.Common.Metadata;
 
@@ -12,7 +12,7 @@ public static class EntityConverter
         {
             Artists = song.Artists?.Select(sa => ToArtist(sa.Artist))?.ToList(),
             Album = ToAlbum(song, song.Album),
-            Genres = song.Genres.Select(g => g.Genre.Name).ToList(),
+            Genres = song.Genres?.Select(g => g.Genre.Name).ToList() ?? [],
             Explicit = song.Explicit,
             Duration = song.Duration,
             Track = song.Track,
@@ -34,10 +34,10 @@ public static class EntityConverter
         }
 
         album.Id = musicAlbum.Id.ToString();
-        album.Name = album.Name;
+        album.Name = musicAlbum.Name;
 
         album.Artist = ToArtist(musicAlbum.Artist);
-        
+
         return album;
     }
 
@@ -63,7 +63,6 @@ public static class EntityConverter
     #region From Metadata
 
     // TODO
-    
-    #endregion From Metadata
 
+    #endregion From Metadata
 }

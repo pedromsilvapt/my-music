@@ -6,6 +6,7 @@
  */
 import type {GetSongResponseAlbum} from "./getSongResponseAlbum";
 import type {GetSongResponseArtist} from "./getSongResponseArtist";
+import type {GetSongResponseDevice} from "./getSongResponseDevice";
 import type {GetSongResponseGenre} from "./getSongResponseGenre";
 
 export interface GetSongResponseSong {
@@ -17,6 +18,7 @@ export interface GetSongResponseSong {
     artists: GetSongResponseArtist[];
     album: GetSongResponseAlbum;
     genres: GetSongResponseGenre[];
+    devices: GetSongResponseDevice[];
     /** @nullable */
     year: number | null;
     duration: string;

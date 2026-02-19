@@ -3,6 +3,7 @@ import {
     IconArrowBack,
     IconArrowForward,
     IconArrowRightDashed,
+    IconDevicesCog,
     IconDisc,
     IconDownload,
     IconHeart,
@@ -17,10 +18,13 @@ import {Link, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
 
 import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
-import {useToggleFavorite} from "../../hooks/use-favorites.ts";
+import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
+import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {usePlayerActions} from "../../contexts/player-context.tsx";
+import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
+import DeviceBadge from "../devices/device-badge.tsx";
 
 export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
@@ -28,6 +32,8 @@ export default function SongDetailPage() {
     const song = response?.data.song;
     const playerActions = usePlayerActions();
     const toggleFavorite = useToggleFavorite();
+    const {open: openManagePlaylists} = useManagePlaylistsContext();
+    const {open: openManageDevices} = useManageDevicesContext();
 
     if (!song) {
         return <Box p="md">Loading...</Box>;
@@ -78,6 +84,21 @@ export default function SongDetailPage() {
                             <Text size="sm" c="dimmed">No genres</Text>
                         )}
                     </Group>
+                    <Group gap="xs">
+                        {song.devices.length > 0 ? (
+                            song.devices.map(device => (
+                                <DeviceBadge
+                                    key={device.id}
+                                    name={device.name}
+                                    icon={device.icon}
+                                    color={device.color}
+                                    syncAction={device.syncAction}
+                                />
+                            ))
+                        ) : (
+                            <Text size="sm" c="dimmed">No devices</Text>
+                        )}
+                    </Group>
                     <Group gap="sm">
                         <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => playerActions.play([song])}>
                             Play
@@ -99,8 +120,19 @@ export default function SongDetailPage() {
                         >
                             {song.isFavorite ? "Unfavorite" : "Favorite"}
                         </Button>
-                        <Button leftSection={<IconPlaylistAdd/>} variant="default">
-                            Add to Playlist
+                        <Button
+                            leftSection={<IconPlaylistAdd/>}
+                            variant="default"
+                            onClick={() => openManagePlaylists([song.id])}
+                        >
+                            Manage Playlists
+                        </Button>
+                        <Button
+                            leftSection={<IconDevicesCog/>}
+                            variant="default"
+                            onClick={() => openManageDevices([song.id])}
+                        >
+                            Manage Devices
                         </Button>
                         <Button
                             leftSection={<IconDownload/>}

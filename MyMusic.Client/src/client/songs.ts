@@ -23,15 +23,17 @@ import type {
 } from "@tanstack/react-query";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-
-import {HttpResponse, http} from "msw";
+import {http, HttpResponse} from "msw";
 import type {
+    GetSongDevicesResponse,
     GetSongResponse,
     ImportSongsBody,
     ListSongsResponse,
     ToggleFavoriteResponse,
     ToggleFavoritesRequest,
     ToggleFavoritesResponse,
+    UpdateSongDevicesRequest,
+    UpdateSongDevicesResponse,
 } from "../model";
 
 export type listSongsResponse200 = {
@@ -883,6 +885,280 @@ export const useToggleFavorites = <TError = unknown, TContext = unknown>(
         queryClient,
     );
 };
+export type getSongDevicesResponse200 = {
+    data: GetSongDevicesResponse;
+    status: 200;
+};
+
+export type getSongDevicesResponseSuccess = getSongDevicesResponse200 & {
+    headers: Headers;
+};
+
+export type getSongDevicesResponse = getSongDevicesResponseSuccess;
+
+export const getGetSongDevicesUrl = (id: number) => {
+    return `/api/songs/${id}/devices`;
+};
+
+export const getSongDevices = async (
+    id: number,
+    options?: RequestInit,
+): Promise<getSongDevicesResponse> => {
+    const res = await fetch(getGetSongDevicesUrl(id), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getSongDevicesResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getSongDevicesResponse;
+};
+
+export const getGetSongDevicesQueryKey = (id: number) => {
+    return ["api", "songs", id, "devices"] as const;
+};
+
+export const getGetSongDevicesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getSongDevices>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getGetSongDevicesQueryKey(id);
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSongDevices>>> = ({
+                                                                                    signal,
+                                                                                }) => getSongDevices(id, {signal, ...fetchOptions});
+
+    return {
+        queryKey,
+        queryFn,
+        enabled: !!id,
+        ...queryOptions,
+    } as UseQueryOptions<
+        Awaited<ReturnType<typeof getSongDevices>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSongDevicesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getSongDevices>>
+>;
+export type GetSongDevicesQueryError = unknown;
+
+export function useGetSongDevices<
+    TData = Awaited<ReturnType<typeof getSongDevices>>,
+    TError = unknown,
+>(
+    id: number,
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSongDevices>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSongDevices>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSongDevices<
+    TData = Awaited<ReturnType<typeof getSongDevices>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSongDevices>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSongDevices>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSongDevices<
+    TData = Awaited<ReturnType<typeof getSongDevices>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetSongDevices<
+    TData = Awaited<ReturnType<typeof getSongDevices>>,
+    TError = unknown,
+>(
+    id: number,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetSongDevicesQueryOptions(id, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetSongDevices = async (
+    queryClient: QueryClient,
+    id: number,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetSongDevicesQueryKey(id)},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type updateSongDevicesResponse200 = {
+    data: UpdateSongDevicesResponse;
+    status: 200;
+};
+
+export type updateSongDevicesResponseSuccess = updateSongDevicesResponse200 & {
+    headers: Headers;
+};
+
+export type updateSongDevicesResponse = updateSongDevicesResponseSuccess;
+
+export const getUpdateSongDevicesUrl = () => {
+    return `/api/songs/devices`;
+};
+
+export const updateSongDevices = async (
+    updateSongDevicesRequest: UpdateSongDevicesRequest,
+    options?: RequestInit,
+): Promise<updateSongDevicesResponse> => {
+    const res = await fetch(getUpdateSongDevicesUrl(), {
+        ...options,
+        method: "PUT",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(updateSongDevicesRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: updateSongDevicesResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as updateSongDevicesResponse;
+};
+
+export const getUpdateSongDevicesMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(options?: {
+    mutation?: UseMutationOptions<
+        Awaited<ReturnType<typeof updateSongDevices>>,
+        TError,
+        { data: UpdateSongDevicesRequest },
+        TContext
+    >;
+    fetch?: RequestInit;
+}): UseMutationOptions<
+    Awaited<ReturnType<typeof updateSongDevices>>,
+    TError,
+    { data: UpdateSongDevicesRequest },
+    TContext
+> => {
+    const mutationKey = ["updateSongDevices"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof updateSongDevices>>,
+        { data: UpdateSongDevicesRequest }
+    > = (props) => {
+        const {data} = props ?? {};
+
+        return updateSongDevices(data, fetchOptions);
+    };
+
+    return {mutationFn, ...mutationOptions};
+};
+
+export type UpdateSongDevicesMutationResult = NonNullable<
+    Awaited<ReturnType<typeof updateSongDevices>>
+>;
+export type UpdateSongDevicesMutationBody = UpdateSongDevicesRequest;
+export type UpdateSongDevicesMutationError = unknown;
+
+export const useUpdateSongDevices = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof updateSongDevices>>,
+            TError,
+            { data: UpdateSongDevicesRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof updateSongDevices>>,
+    TError,
+    { data: UpdateSongDevicesRequest },
+    TContext
+> => {
+    return useMutation(getUpdateSongDevicesMutationOptions(options), queryClient);
+};
 
 export const getListSongsResponseMock = (
     overrideResponse: Partial<ListSongsResponse> = {},
@@ -979,6 +1255,34 @@ export const getGetSongResponseMock = (
             id: faker.number.int({min: undefined, max: undefined}),
             name: faker.string.alpha({length: {min: 10, max: 20}}),
         })),
+        devices: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            id: faker.number.int({min: undefined, max: undefined}),
+            name: faker.string.alpha({length: {min: 10, max: 20}}),
+            icon: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.string.alpha({length: {min: 10, max: 20}}),
+                    null,
+                ]),
+                undefined,
+            ]),
+            color: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.string.alpha({length: {min: 10, max: 20}}),
+                    null,
+                ]),
+                undefined,
+            ]),
+            syncAction: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.string.alpha({length: {min: 10, max: 20}}),
+                    null,
+                ]),
+                undefined,
+            ]),
+        })),
         year: faker.helpers.arrayElement([
             faker.helpers.arrayElement([
                 faker.number.int({min: undefined, max: undefined}),
@@ -1025,6 +1329,54 @@ export const getToggleFavoritesResponseMock = (
         id: faker.number.int({min: undefined, max: undefined}),
         isFavorite: faker.datatype.boolean(),
     })),
+    ...overrideResponse,
+});
+
+export const getGetSongDevicesResponseMock = (
+    overrideResponse: Partial<GetSongDevicesResponse> = {},
+): GetSongDevicesResponse => ({
+    devices: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        deviceId: faker.number.int({min: undefined, max: undefined}),
+        deviceName: faker.string.alpha({length: {min: 10, max: 20}}),
+        deviceIcon: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+        deviceColor: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+        path: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+        syncAction: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+    })),
+    ...overrideResponse,
+});
+
+export const getUpdateSongDevicesResponseMock = (
+    overrideResponse: Partial<UpdateSongDevicesResponse> = {},
+): UpdateSongDevicesResponse => ({
+    success: faker.datatype.boolean(),
     ...overrideResponse,
 });
 
@@ -1163,6 +1515,54 @@ export const getToggleFavoritesMockHandler = (
         options,
     );
 };
+
+export const getGetSongDevicesMockHandler = (
+    overrideResponse?:
+        | GetSongDevicesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<GetSongDevicesResponse> | GetSongDevicesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/songs/:id/devices",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetSongDevicesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getUpdateSongDevicesMockHandler = (
+    overrideResponse?:
+        | UpdateSongDevicesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+    ) => Promise<UpdateSongDevicesResponse> | UpdateSongDevicesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.put(
+        "*/songs/devices",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getUpdateSongDevicesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getSongsMock = () => [
     getListSongsMockHandler(),
     getGetSongMockHandler(),
@@ -1170,4 +1570,6 @@ export const getSongsMock = () => [
     getImportSongsMockHandler(),
     getToggleSongFavoriteMockHandler(),
     getToggleFavoritesMockHandler(),
+    getGetSongDevicesMockHandler(),
+    getUpdateSongDevicesMockHandler(),
 ];

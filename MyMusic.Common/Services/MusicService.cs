@@ -16,22 +16,26 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     : IMusicService
 {
     public const string MusicIgnoreFile = ".musicignore";
+
+    /// <summary>
+    ///     Repository management actions involve creating, updating, or removing songs from the repository, as well as adding,
+    ///     updating or removing existing songs from a repository.
+    ///     To prevent concurrent edits (which may result in duplicated songs or strange things like that) we have this lock
+    ///     acting as a mutex.
+    ///     Ideally we could only lock operations for the specific repository we are working with, but for now, we will not
+    ///     delve into that extra complexity.
+    /// </summary>
+    private readonly AsyncReaderWriterLock _repositoryManagementLock = new();
+
     public ILogger Logger { get; set; } = logger;
 
     public IFileSystem FileSystem { get; set; } = fileSystem;
     public Config Config { get; set; } = config.Value;
 
-    /// <summary>
-    /// Repository management actions involve creating, updating, or removing songs from the repository, as well as adding, updating or removing existing songs from a repository.
-    /// To prevent concurrent edits (which may result in duplicated songs or strange things like that) we have this lock acting as a mutex.
-    /// Ideally we could only lock operations for the specific repository we are working with, but for now, we will not delve into that extra complexity.
-    /// </summary>
-    private readonly AsyncReaderWriterLock _repositoryManagementLock = new AsyncReaderWriterLock();
-
     #region Device
 
     /// <summary>
-    /// Creates a new music device, associated with the given repositoryId.
+    ///     Creates a new music device, associated with the given repositoryId.
     /// </summary>
     /// <param name="db"></param>
     /// <param name="name"></param>
@@ -41,7 +45,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     public async Task<Device> CreateDevice(MusicDbContext db, string name, long ownerId,
         CancellationToken cancellationToken = default)
     {
-        var user = await db.Users.FindAsync([ownerId], cancellationToken: cancellationToken);
+        var user = await db.Users.FindAsync([ownerId], cancellationToken);
 
         if (user == null)
         {
@@ -61,7 +65,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     }
 
     /// <summary>
-    /// Adds a music to a device (if it is not added already)
+    ///     Adds a music to a device (if it is not added already)
     /// </summary>
     /// <param name="db"></param>
     /// <param name="deviceId"></param>
@@ -72,10 +76,18 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     public async Task AddSongsToDevice(MusicDbContext db, long deviceId, Song song,
         CancellationToken cancellationToken = default)
     {
+        var device = await db.Devices.FindAsync([deviceId], cancellationToken);
+
+        if (device == null)
+        {
+            throw new Exception($"Device not found with id {deviceId}");
+        }
+
         var songDevice = await db.SongDevices.FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == song.Id,
             cancellationToken);
 
-        var namingStrategy = new ArtistAlbumNamingStrategy();
+        var namingStrategy = new TemplateNamingStrategy(
+            device.NamingTemplate ?? Config.DefaultNamingTemplate);
 
         if (songDevice == null)
         {
@@ -100,7 +112,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     }
 
     /// <summary>
-    /// Removes a music from a device (if it is added already)
+    ///     Removes a music from a device (if it is added already)
     /// </summary>
     /// <param name="db"></param>
     /// <param name="deviceId"></param>
@@ -126,7 +138,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     #region Synchronization
 
     /// <summary>
-    /// Returns a dictionary with the list of songs matching the checksums provided in the list.
+    ///     Returns a dictionary with the list of songs matching the checksums provided in the list.
     /// </summary>
     /// <param name="db"></param>
     /// <param name="userId"></param>
@@ -148,7 +160,6 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     }
 
     /// <summary>
-    /// 
     /// </summary>
     /// <param name="db"></param>
     /// <param name="job"></param>
@@ -209,7 +220,6 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     }
 
     /// <summary>
-    /// 
     /// </summary>
     /// <param name="db"></param>
     /// <param name="job"></param>
@@ -421,7 +431,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                             songAlbumArtist = new Artist
                             {
                                 Name = metadata.Album.Artist.Name, OwnerId = userId, AlbumsCount = 1, SongsCount = 0,
-                                CreatedAt = DateTime.UtcNow
+                                CreatedAt = DateTime.UtcNow,
                             };
 
                             await db.AddAsync(songAlbumArtist, cancellationToken);
@@ -435,7 +445,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                         songAlbum = new Album
                         {
                             Name = metadata.Album.Name, Artist = songAlbumArtist, OwnerId = userId, SongsCount = 1,
-                            CreatedAt = DateTime.UtcNow
+                            CreatedAt = DateTime.UtcNow,
                         };
                         await db.AddAsync(songAlbum, cancellationToken);
                     }
@@ -458,7 +468,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                                 songArtist = new Artist
                                 {
                                     Name = artist.Name, Owner = user, AlbumsCount = 0, SongsCount = 0,
-                                    CreatedAt = DateTime.UtcNow
+                                    CreatedAt = DateTime.UtcNow,
                                 };
 
                                 await db.AddAsync(songArtist, cancellationToken);
@@ -505,7 +515,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     await using (var sourceStream = sourceFile.Read())
                     {
-                        await targetFile.Save(sourceStream, metadata, cancellationToken: cancellationToken);
+                        await targetFile.Save(sourceStream, metadata, cancellationToken);
                     }
 
                     job.AddFileMapping(sourceFile.FilePath!, targetFile.FilePath!);
@@ -665,10 +675,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
         Logger.LogDebug("  >> Lock released");
     }
 
-    public static NonCryptographicHashAlgorithm CreateChecksumAlgorithm()
-    {
-        return new XxHash128();
-    }
+    public static NonCryptographicHashAlgorithm CreateChecksumAlgorithm() => new XxHash128();
 
     public static string CalculateChecksum(IFileSystem fs, NonCryptographicHashAlgorithm algorithm, string filePath)
     {
@@ -699,17 +706,17 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 public enum DuplicateSongsHandlingStrategy
 {
     /// <summary>
-    /// Do not import the song if it already exists in the repository (same checksum or same file path)
+    ///     Do not import the song if it already exists in the repository (same checksum or same file path)
     /// </summary>
     Skip,
 
     /// <summary>
-    /// Do not import the song if it already exists in the repository as an exact match (same checksum)
+    ///     Do not import the song if it already exists in the repository as an exact match (same checksum)
     /// </summary>
     SkipIdentical,
 
     /// <summary>
-    /// Replace the existing song, if it already exists in the repository (same checksum or same file path)
+    ///     Replace the existing song, if it already exists in the repository (same checksum or same file path)
     /// </summary>
     Overwrite,
 }

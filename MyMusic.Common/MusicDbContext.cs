@@ -40,4 +40,8 @@ public class MusicDbContext : DbContext
     public DbSet<Source> Sources { get; set; } = null!;
 
     public DbSet<User> Users { get; set; } = null!;
+
+    public DbSet<DeviceSyncSession> DeviceSyncSessions { get; set; } = null!;
+
+    public DbSet<DeviceSyncSessionRecord> DeviceSyncSessionRecords { get; set; } = null!;
 }

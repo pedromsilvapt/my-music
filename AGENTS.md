@@ -144,8 +144,39 @@ public record ListSongsResponse
 
 ### DTO Patterns
 
-DTOs are organized by resource in `MyMusic.Server/DTO/<Resource>/`. Each response DTO contains nested `Item` classes
-with static `FromEntity` methods for mapping from domain entities.
+DTOs are organized by resource in `MyMusic.Server/DTO/<Resource>/`.
+
+#### File Organization Rules
+
+1. **Request DTOs** → Separate file per request
+    - `CreatePlaylistRequest.cs`
+    - `UpdatePlaylistRequest.cs`
+
+2. **Response DTOs** → Separate file per response
+    - `CreatePlaylistResponse.cs` - may contain nested `*Item` classes used only in this response
+    - `GetPlaylistResponse.cs` - may contain nested `*Item` classes used only in this response
+
+3. **Shared Data DTOs** → Defined in `Shared.cs` if used across multiple requests/responses
+    - `SyncFileInfoItem` used in both `SyncCheckRequest` and `SyncCheckResponse`
+
+#### Example: Devices Resource
+
+```
+DTO/Devices/
+  CreateDeviceRequest.cs       # Request only
+  CreateDeviceResponse.cs       # Response + CreateDeviceItem (nested)
+  ListDevicesResponse.cs        # Response + ListDeviceItem (nested)
+```
+
+#### Example: Sync Resource
+
+```
+DTO/Sync/
+  Shared.cs                    # SyncFileInfoItem (shared data)
+  SyncCheckRequest.cs          # Request (references Shared)
+  SyncCheckResponse.cs         # Response (references Shared)
+  SyncUploadResponse.cs        # Response only
+```
 
 #### Response DTO Structure
 

@@ -482,4 +482,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# MyMusic CLI config
+MyMusic.CLI/appsettings.development.json
+
+
 MyMusic.Server/pedro

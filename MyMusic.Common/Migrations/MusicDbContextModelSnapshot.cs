@@ -280,6 +280,11 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("name");
 
+                    b.Property<string>("NamingTemplate")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("naming_template");
+
                     b.Property<long>("OwnerId")
                         .HasColumnType("bigint")
                         .HasColumnName("owner_id");
@@ -292,6 +297,99 @@ namespace MyMusic.Common.Migrations
                         .HasDatabaseName("ix_devices_owner_id_name");
 
                     b.ToTable("devices", (string)null);
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.DeviceSyncSession", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<long>("DeviceId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("device_id");
+
+                    b.Property<bool>("IsDryRun")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_dry_run");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_sync_sessions");
+
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("ix_device_sync_sessions_device_id");
+
+                    b.ToTable("device_sync_sessions", (string)null);
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.DeviceSyncSessionRecord", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer")
+                        .HasColumnName("action");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("FilePath")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("file_path");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("SessionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("session_id");
+
+                    b.Property<long?>("SongId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_id");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer")
+                        .HasColumnName("source");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_sync_session_records");
+
+                    b.HasIndex("SessionId", "FilePath")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_sync_session_records_session_id_file_path");
+
+                    b.ToTable("device_sync_session_records", (string)null);
                 });
 
             modelBuilder.Entity("MyMusic.Common.Entities.Genre", b =>
@@ -634,6 +732,10 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("character varying(1024)")
                         .HasColumnName("device_path");
 
+                    b.Property<DateTime>("LastSyncedModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_synced_modified_at");
+
                     b.Property<long>("SongId")
                         .HasColumnType("bigint")
                         .HasColumnName("song_id");
@@ -900,6 +1002,30 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.DeviceSyncSession", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.Device", "Device")
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_sync_sessions_devices_device_id");
+
+                    b.Navigation("Device");
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.DeviceSyncSessionRecord", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.DeviceSyncSession", "Session")
+                        .WithMany("Records")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_sync_session_records_device_sync_sessions_session_id");
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.Genre", b =>
                 {
                     b.HasOne("MyMusic.Common.Entities.User", "Owner")
@@ -1104,6 +1230,11 @@ namespace MyMusic.Common.Migrations
             modelBuilder.Entity("MyMusic.Common.Entities.Device", b =>
                 {
                     b.Navigation("Songs");
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.DeviceSyncSession", b =>
+                {
+                    b.Navigation("Records");
                 });
 
             modelBuilder.Entity("MyMusic.Common.Entities.Genre", b =>

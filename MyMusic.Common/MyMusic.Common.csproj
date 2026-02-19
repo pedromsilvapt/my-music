@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
@@ -26,6 +26,7 @@
         <PackageReference Include="System.Drawing.Common" Version="5.0.2"/>
         <PackageReference Include="System.IO.Hashing" Version="9.0.0"/>
         <PackageReference Include="DotNext.Threading" Version="4.15.2"/>
+        <PackageReference Include="Scriban" Version="6.2.1"/>
         <PackageReference Include="TestableIO.System.IO.Abstractions" Version="22.0.15"/>
         <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="22.0.15"/>
     </ItemGroup>
