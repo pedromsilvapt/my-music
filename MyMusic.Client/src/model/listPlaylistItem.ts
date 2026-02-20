@@ -4,10 +4,12 @@
  * MyMusic.Server | v1
  * OpenAPI spec version: 1.0.0
  */
+import type {PlaylistType} from "./playlistType";
 
 export interface ListPlaylistItem {
     id: number;
     name: string;
+    type: PlaylistType;
     songCount: number;
     createdAt: string;
     /** @nullable */

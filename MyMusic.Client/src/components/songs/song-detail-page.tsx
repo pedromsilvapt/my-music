@@ -20,7 +20,7 @@ import {saveAs} from 'file-saver';
 import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
-import {usePlayerActions} from "../../contexts/player-context.tsx";
+import {useQueueMutations} from "../../contexts/player-context.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
@@ -30,7 +30,7 @@ export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
     const {data: response} = useGetSong(Number(songId));
     const song = response?.data.song;
-    const playerActions = usePlayerActions();
+    const {play, playNext, playLast} = useQueueMutations();
     const toggleFavorite = useToggleFavorite();
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
@@ -100,15 +100,15 @@ export default function SongDetailPage() {
                         )}
                     </Group>
                     <Group gap="sm">
-                        <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => playerActions.play([song])}>
+                        <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => play([song])}>
                             Play
                         </Button>
                         <Group gap="xs">
-                            <ActionIcon variant="outline" size="lg" onClick={() => playerActions.playNext([song])}
+                            <ActionIcon variant="outline" size="lg" onClick={() => playNext([song])}
                                         title="Play Next">
                                 <IconArrowRightDashed/>
                             </ActionIcon>
-                            <ActionIcon variant="outline" size="lg" onClick={() => playerActions.playLast([song])}
+                            <ActionIcon variant="outline" size="lg" onClick={() => playLast([song])}
                                         title="Play Last">
                                 <IconArrowForward/>
                             </ActionIcon>

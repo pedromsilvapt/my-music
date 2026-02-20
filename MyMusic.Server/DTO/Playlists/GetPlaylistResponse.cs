@@ -1,5 +1,5 @@
+using MyMusic.Common.Entities;
 using MyMusic.Server.DTO.Songs;
-using Entities = MyMusic.Common.Entities;
 using SongEntity = MyMusic.Common.Entities.Song;
 
 namespace MyMusic.Server.DTO.Playlists;
@@ -13,17 +13,21 @@ public record GetPlaylistItem
 {
     public required long Id { get; init; }
     public required string Name { get; init; }
+    public required PlaylistType Type { get; init; }
+    public long? CurrentSongId { get; init; }
     public required List<GetPlaylistSong> Songs { get; init; }
 
-    public static GetPlaylistItem FromEntity(Entities.Playlist playlist) =>
-        new GetPlaylistItem
+    public static GetPlaylistItem FromEntity(Playlist playlist) =>
+        new()
         {
             Id = playlist.Id,
             Name = playlist.Name,
+            Type = playlist.Type,
+            CurrentSongId = playlist.CurrentSongId,
             Songs = playlist.PlaylistSongs
                 .OrderBy(ps => ps.Order)
                 .Select(ps => GetPlaylistSong.FromEntity(ps.Song, ps.Order, ps.AddedAt))
-                .ToList()
+                .ToList(),
         };
 }
 
@@ -33,7 +37,7 @@ public record GetPlaylistSong : ListSongsItem
     public DateTime? AddedAtPlaylist { get; init; }
 
     public static GetPlaylistSong FromEntity(SongEntity song, int order, DateTime addedAt) =>
-        new GetPlaylistSong
+        new()
         {
             Id = song.Id,
             Cover = song.CoverId,
@@ -48,6 +52,6 @@ public record GetPlaylistSong : ListSongsItem
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,
             Order = order,
-            AddedAtPlaylist = addedAt
+            AddedAtPlaylist = addedAt,
         };
 }

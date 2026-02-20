@@ -2,6 +2,7 @@ import {Button, Group, Modal, ScrollArea, SegmentedControl, Stack, Text} from "@
 import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
 import {useListPlaylists, useManagePlaylistSongs} from "../../client/playlists.ts";
+import {ZINDEX_MODAL} from "../../consts.ts";
 import type {ListPlaylistItem, PlaylistAction, PlaylistSongAction} from "../../model";
 
 type PlaylistSelection = "none" | "add" | "remove";
@@ -84,7 +85,7 @@ export default function ManagePlaylistsDialog({
     };
 
     return (
-        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Playlists" centered>
+        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Playlists" centered zIndex={ZINDEX_MODAL}>
             <Stack>
                 <Text size="sm" c="dimmed">
                     Managing {songIds.length} song{songIds.length !== 1 ? "s" : ""}

@@ -13,35 +13,38 @@ import {
 } from "@tabler/icons-react";
 import {saveAs} from 'file-saver';
 import {useMemo} from "react";
-import {getDownloadSongUrl} from "../../client/songs.ts";
-import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
-import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
-import {usePlayerActions} from "../../contexts/player-context.tsx";
-import {useToggleFavorites} from "../../hooks/use-favorites.ts";
+import {getDownloadSongUrl} from "../../client/songs";
+import {useManageDevicesContext} from "../../contexts/manage-devices-context";
+import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
+import {useCurrentSongId, useQueue, useQueueMutations} from "../../contexts/player-context";
+import {useToggleFavorites} from "../../hooks/use-favorites";
 import type {ListSongsItem} from "../../model";
-import Artwork from "../common/artwork.tsx";
-import type {CollectionSchema} from "../common/collection/collection.tsx";
-import SongAlbum from "../common/fields/song-album.tsx";
-import SongArtists from "../common/fields/song-artists.tsx";
-import SongArtwork from "../common/fields/song-artwork.tsx";
-import SongSubTitle from "../common/fields/song-sub-title.tsx";
-import SongTitle from "../common/fields/song-title.tsx";
-import {useCurrentSong} from "../player/now-playing-page.tsx";
-import {usePlayHandler} from "../player/usePlayHandler.tsx";
+import {usePlaybackStoreApi} from "../../stores/playback-store";
+import Artwork from "../common/artwork";
+import type {CollectionSchema} from "../common/collection/collection";
+import SongAlbum from "../common/fields/song-album";
+import SongArtists from "../common/fields/song-artists";
+import SongArtwork from "../common/fields/song-artwork";
+import SongSubTitle from "../common/fields/song-sub-title";
+import SongTitle from "../common/fields/song-title";
+import {usePlayHandler} from "../player/usePlayHandler";
 
 export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongsItem> {
-    const playerActions = usePlayerActions();
-    const currentSongId = useCurrentSong()?.id;
+    const {play, playNext, playLast, removeByIndices} = useQueueMutations();
+    const playbackStore = usePlaybackStoreApi();
+    const currentSongId = useCurrentSongId();
+    const {currentSongId: queueCurrentSongId} = useQueue();
+
     const toggleFavorites = useToggleFavorites({
         mutation: {
             onSuccess: (data) => {
                 for (const song of data.data.songs) {
-                    playerActions.setIsFavorite(song.isFavorite, song.id);
+                    playbackStore.getState().setIsFavorite(song.isFavorite, song.id);
                 }
             }
         }
     });
-    const playHandler = usePlayHandler(playerActions, nowPlaying);
+    const playHandler = usePlayHandler(nowPlaying);
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
 
@@ -177,19 +180,19 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: "play",
                     renderIcon: () => <IconPlayerPlayFilled/>,
                     renderLabel: () => "Play",
-                    onClick: (songs: ListSongsItem[]) => playerActions.play(songs),
+                    onClick: (songs: ListSongsItem[]) => play(songs),
                 },
                 {
                     name: "play-next",
                     renderIcon: () => <IconArrowRightDashed/>,
                     renderLabel: () => "Play Next",
-                    onClick: (songs: ListSongsItem[]) => playerActions.playNext(songs),
+                    onClick: (songs: ListSongsItem[]) => playNext(songs),
                 },
                 {
                     name: "play-last",
                     renderIcon: () => <IconArrowForward/>,
                     renderLabel: () => "Play Last",
-                    onClick: (songs: ListSongsItem[]) => playerActions.playLast(songs),
+                    onClick: (songs: ListSongsItem[]) => playLast(songs),
                 },
                 ...(nowPlaying ? [{
                     name: "remove-from-queue",
@@ -199,7 +202,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                         const indices = songs
                             .map(s => 'order' in s ? (s as { order: number }).order : -1)
                             .filter((i): i is number => i >= 0);
-                        playerActions.removeFromQueue(indices);
+                        removeByIndices(indices, queueCurrentSongId);
                     },
                 }] : [])
             ];
@@ -215,5 +218,5 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [playerActions, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites]);
+    }) as CollectionSchema<ListSongsItem>, [play, playNext, playLast, removeByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId]);
 }

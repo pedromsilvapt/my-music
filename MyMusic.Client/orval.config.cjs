@@ -28,6 +28,14 @@ module.exports = {
                             invalidates: ['getPlaylist'],
                         },
                         {
+                            onMutations: ['replaceQueue', 'addToQueue', 'removeFromQueue', 'reorderQueue', 'setQueueCurrentSong'],
+                            invalidates: ['getQueue'],
+                        },
+                        {
+                            onMutations: ['addToFavorites', 'removeFromFavorites'],
+                            invalidates: ['getFavorites'],
+                        },
+                        {
                             onMutations: ['toggleSongFavorite', 'toggleFavorites'],
                             invalidates: ['listSongs', 'getSong'],
                         },

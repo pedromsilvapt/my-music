@@ -2,25 +2,27 @@ import {Box, Flex, Text, useMantineTheme} from '@mantine/core';
 import WavesurferPlayer from "@wavesurfer/react";
 import {useCallback, useMemo} from "react";
 import WaveSurfer from "wavesurfer.js";
+import {useWavesurferRef} from "./wavesurfer-context";
 
 export interface PlayerTimelineProps {
     song: string;
-    setWavesurfer: (ws: WaveSurfer) => void;
-    setIsPlaying: (isPlaying: boolean) => void;
     time: number;
-    setTime: (time: number) => void;
-    // TODO Remove this and treat is solely as internal state?
     duration: number;
+    setTime: (time: number) => void;
+    setIsPlaying: (isPlaying: boolean) => void;
+    onLoad: (duration: number) => void;
     onFinish: () => void;
 }
 
 export default function PlayerTimeline(props: PlayerTimelineProps) {
     const theme = useMantineTheme();
+    const wavesurferRef = useWavesurferRef();
 
     const onReady = useCallback((ws: WaveSurfer) => {
-        props.setWavesurfer(ws);
+        wavesurferRef.current = ws;
+        props.onLoad(ws.getDuration());
         props.setIsPlaying(false);
-    }, [props.setWavesurfer, props.setIsPlaying]);
+    }, [wavesurferRef, props.onLoad, props.setIsPlaying]);
 
     const onTimeUpdate = useCallback((_: WaveSurfer, time: number) => {
         props.setTime(time);

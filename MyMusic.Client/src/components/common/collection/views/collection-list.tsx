@@ -13,11 +13,14 @@ import {SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-ki
 import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, Stack, Text} from "@mantine/core";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
+import {useContextMenu} from "mantine-contextmenu";
 import {useCallback, useMemo, useRef, useState} from "react";
+import {DRAG_ACTIVATION_DISTANCE, LIST_ARTWORK_SIZE, LIST_GAP, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
+import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
-import {type CollectionSchema} from "../collection-schema.tsx";
-import type {CollectionSelectionHandlers} from "../collection.tsx";
+import {type CollectionSchema, type CollectionSchemaAction} from "../collection-schema.tsx";
+import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-list.module.css';
 
 export interface CollectionListProps<M> {
@@ -28,6 +31,8 @@ export interface CollectionListProps<M> {
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
+    setItemElementRef?: ItemElementRefCallback<M>;
+    actions: CollectionSchemaAction<M>[];
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
@@ -38,20 +43,18 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8,
+                distance: DRAG_ACTIVATION_DISTANCE,
             },
         }),
         useSensor(KeyboardSensor),
     );
 
-    const gap = 10;
-
     const virtualizer = useVirtualizer({
         count: props.items.length,
         getScrollElement: () => parentRef.current,
         estimateSize: props.schema.estimateListRowHeight,
-        gap: gap,
-        overscan: 5,
+        gap: LIST_GAP,
+        overscan: VIRTUALIZER_OVERSCAN,
     });
 
     const virtualItems = virtualizer.getVirtualItems();
@@ -132,6 +135,8 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
             isDragOverlay={isDragOverlay}
             isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
+            setItemElementRef={props.setItemElementRef}
+            actions={props.actions}
         />;
     });
 
@@ -142,14 +147,14 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                     items={itemIds}
                     strategy={verticalListSortingStrategy}
                 >
-                    <Stack gap={gap} style={{
+                    <Stack gap={LIST_GAP} style={{
                         transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
                     }}>
                         {items}
                     </Stack>
                 </SortableContext>
             ) : (
-                <Stack gap={gap} style={{
+                <Stack gap={LIST_GAP} style={{
                     transform: `translateY(${virtualItems[0]?.start ?? 0}px)`
                 }}>
                     {items}
@@ -176,7 +181,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                                 {props.items.find(item => props.schema.key(item) === activeId) &&
                                     props.schema.renderListArtwork(
                                         props.items.find(item => props.schema.key(item) === activeId)!,
-                                        64
+                                        LIST_ARTWORK_SIZE
                                     )
                                 }
                                 <Box flex={1}>
@@ -209,6 +214,8 @@ export interface CollectionListItemProps<M> {
     isDragOverlay?: boolean;
     isCollapsed?: boolean;
     isDraggingActive?: boolean;
+    setItemElementRef?: ItemElementRefCallback<M>;
+    actions: CollectionSchemaAction<M>[];
 }
 
 export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
@@ -224,9 +231,12 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
         isDragOverlay,
         isCollapsed,
         isDraggingActive,
+        setItemElementRef,
+        actions,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const {showContextMenu} = useContextMenu();
 
     const {
         attributes,
@@ -259,7 +269,10 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     const itemRef = useCallback((node: HTMLDivElement | null) => {
         setNodeRef(node);
         virtualizer.measureElement(node);
-    }, [setNodeRef, virtualizer]);
+        if (isSelected && node) {
+            setItemElementRef?.(item, node);
+        }
+    }, [setNodeRef, virtualizer, isSelected, setItemElementRef, item]);
 
     const handleMouseDown = (event: React.MouseEvent) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -268,26 +281,52 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
+        if (isInteractiveElement(event.target)) {
+            return;
+        }
         if (!isDraggingActive) {
             selectionHandlers.toggle(schema.key(item), event);
         }
     };
 
+    const handleContextMenu = (event: React.MouseEvent) => {
+        if (isInteractiveElement(event.target)) {
+            return;
+        }
+        const contextActions = isSelected ? actions : itemActions;
+        const contextSelection = isSelected ? selection : [item];
+
+        showContextMenu(
+            contextActions
+                .filter((a): a is CollectionSchemaAction<M> & { onClick: (elems: M[]) => void } =>
+                    !('divider' in a) && !('group' in a)
+                )
+                .map(action => ({
+                    key: action.name,
+                    icon: action.renderIcon(),
+                    title: action.renderLabel(),
+                    onClick: () => action.onClick(contextSelection),
+                }))
+        )(event);
+    };
+
     return <Box
         ref={itemRef}
         data-index={virtualItem.index}
+        data-sortable-item={sortable || undefined}
         style={sortable ? style : undefined}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
+        onContextMenu={handleContextMenu}
         {...(sortable ? attributes : {})}
         {...(sortable && !isDragOverlay ? listeners : {})}
-                className={cls(
-                    styles.item,
-                    isSelected && styles.selected,
-                    isDragOverlay && styles.selected,
-                )}>
+        className={cls(
+            styles.item,
+            isSelected && styles.selected,
+            isDragOverlay && styles.selected,
+        )}>
         <Group gap="sm">
-            {schema.renderListArtwork(item, 64)}
+            {schema.renderListArtwork(item, LIST_ARTWORK_SIZE)}
             <Box flex={1}>
                 <Text size="md">{schema.renderListTitle(item, 1)}</Text>
                 <Text size="sm">

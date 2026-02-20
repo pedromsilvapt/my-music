@@ -1,4 +1,4 @@
-import {Text} from "@mantine/core";
+import {Code, Text} from "@mantine/core";
 import {modals} from "@mantine/modals";
 import {notifications} from "@mantine/notifications";
 import {IconTrash} from "@tabler/icons-react";
@@ -81,7 +81,7 @@ export function useDevicesSchema() {
             {
                 name: 'namingTemplate',
                 displayName: 'Naming Template',
-                render: row => <Text size="sm" c="dimmed">{row.namingTemplate ?? 'Default'}</Text>,
+                render: row => <Code>{row.namingTemplate ?? 'Default'}</Code>,
                 width: '2fr',
             },
         ],

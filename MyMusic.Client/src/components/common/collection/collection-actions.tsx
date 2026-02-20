@@ -36,8 +36,8 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                         size="lg"
                         // aria-label={action.renderLabel()}
                         // title={action.renderLabel()}
-                        onClick={ev => {
-                            ev.stopPropagation();
+                        onClick={_ev => {
+                            // ev.stopPropagation();
                             action.onClick(props.selection);
                         }}>
                         {action.renderIcon()}
@@ -51,9 +51,9 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                         // size="lg"
                         aria-label="Actions"
                         title="Actions"
-                        onClick={ev => ev.stopPropagation()}
-                        onMouseDown={ev => ev.stopPropagation()}
-                        onMouseUp={ev => ev.stopPropagation()}
+                        // onClick={ev => ev.stopPropagation()}
+                        // onMouseDown={ev => ev.stopPropagation()}
+                        // onMouseUp={ev => ev.stopPropagation()}
                     >
                         <IconDotsVertical/>
                     </ActionIcon>

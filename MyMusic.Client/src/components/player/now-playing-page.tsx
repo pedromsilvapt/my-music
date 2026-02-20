@@ -1,26 +1,26 @@
 import {Stack, Text} from "@mantine/core";
 import {useMemo} from "react";
-import {usePlayerActions, usePlayerContext} from "../../contexts/player-context.tsx";
-import Collection from "../common/collection/collection.tsx";
-import {useSongsSchema} from "../songs/useSongsSchema.tsx";
+import {useCurrentSong, useQueue, useQueueMutations} from "../../contexts/player-context";
+import Collection from "../common/collection/collection";
+import {useSongsSchema} from "../songs/useSongsSchema";
 
 export default function NowPlayingPage() {
-    const playerActions = usePlayerActions();
-    const queue = usePlayerContext(state => state.queue);
+    const {reorder, reorderBatch} = useQueueMutations();
+    const {queue} = useQueue();
     const current = useCurrentSong();
 
     const songsSchema = useSongsSchema(true);
 
     const currentSongIndex = useMemo(() => {
-        return current ? queue.indexOf(current) : -1;
+        return current ? queue.findIndex(s => s.id === current.id) : -1;
     }, [queue, current]);
 
     const handleReorder = (fromIndex: number, toIndex: number) => {
-        playerActions.reorderQueue(fromIndex, toIndex);
+        reorder(fromIndex, toIndex);
     };
 
     const handleReorderBatch = (reorders: { fromIndex: number; toIndex: number }[]) => {
-        playerActions.reorderQueueBatch(reorders);
+        reorderBatch(reorders);
     };
 
     return (
@@ -35,8 +35,4 @@ export default function NowPlayingPage() {
             />
         </Stack>
     );
-}
-
-export function useCurrentSong() {
-    return usePlayerContext(state => state.current.type === 'LOADING' || state.current.type === 'LOADED' ? state.current.song : null);
 }

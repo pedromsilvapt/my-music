@@ -1,11 +1,12 @@
 import {useListPurchases} from "../../client/purchases.ts";
+import {PURCHASE_REFETCH_INTERVAL_MS} from "../../consts.ts";
 import type {ListPurchasesItem} from "../../model";
 
 export default function usePurchasedSongsQuery() {
     return useListPurchases({
         query: {
             refetchInterval: (query) =>
-                arePurchasesActive(query.state.data?.data?.purchases ?? []) ? 1000 : false
+                arePurchasesActive(query.state.data?.data?.purchases ?? []) ? PURCHASE_REFETCH_INTERVAL_MS : false
         }
     });
 }

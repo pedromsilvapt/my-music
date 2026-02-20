@@ -1,8 +1,9 @@
-import {Button, Group, Modal, ScrollArea, Stack, Switch, Text} from "@mantine/core";
+import {Button, Code, Group, Modal, ScrollArea, Stack, Switch, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useGetSongDevices, useUpdateSongDevices} from "../../client/songs.ts";
+import {ZINDEX_MODAL} from "../../consts.ts";
 import type {SongDeviceItem} from "../../model";
 import DeviceBadge from "./device-badge.tsx";
 
@@ -98,7 +99,7 @@ export default function ManageDevicesDialog({
     const isMultiple = songIds.length > 1;
 
     return (
-        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Devices" centered>
+        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Devices" centered zIndex={ZINDEX_MODAL}>
             <Stack>
                 <Text size="sm" c="dimmed">
                     {isMultiple
@@ -150,7 +151,7 @@ function DeviceRow({device, switchState, onChange}: DeviceRowProps) {
                     showTooltip={false}
                 />
                 {device.path && (
-                    <Text size="xs" c="dimmed">{device.path}</Text>
+                    <Code>{device.path}</Code>
                 )}
             </Group>
             <Switch

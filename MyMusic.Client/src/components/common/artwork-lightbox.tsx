@@ -1,6 +1,7 @@
 import {Box, Overlay, Portal} from "@mantine/core";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {RemoveScroll} from "react-remove-scroll";
+import {ZINDEX_LIGHTBOX, ZINDEX_MODAL} from "../../consts.ts";
 
 interface ArtworkLightboxProps {
     opened: boolean;
@@ -181,7 +182,7 @@ export default function ArtworkLightbox(props: ArtworkLightboxProps) {
                     backgroundOpacity={0.55}
                     fixed
                     onClick={handleClose}
-                    style={{zIndex: 1000}}
+                    style={{zIndex: ZINDEX_MODAL}}
                 />
                 <Box
                     style={{
@@ -193,7 +194,7 @@ export default function ArtworkLightbox(props: ArtworkLightboxProps) {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        zIndex: 1001,
+                        zIndex: ZINDEX_LIGHTBOX,
                         pointerEvents: "none"
                     }}
                 >

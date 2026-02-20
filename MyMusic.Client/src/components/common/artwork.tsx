@@ -4,6 +4,7 @@ import {useContextMenu} from "mantine-contextmenu";
 import type {MouseEvent} from "react";
 import * as React from "react";
 import {useState} from "react";
+import {DEFAULT_ARTWORK_SIZE} from "../../consts.ts";
 import ArtworkLightbox from "./artwork-lightbox.tsx";
 import styles from './artwork.module.css';
 
@@ -18,7 +19,7 @@ interface ArtworkProps {
 
 export default function Artwork(props: ArtworkProps) {
     const {id, placeholderIcon, enablePreview = true} = props;
-    const size = props.size ?? 32;
+    const size = props.size ?? DEFAULT_ARTWORK_SIZE;
     const [lightboxOpened, setLightboxOpened] = useState(false);
     const {showContextMenu} = useContextMenu();
 

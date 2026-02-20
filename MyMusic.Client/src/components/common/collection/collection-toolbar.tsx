@@ -14,8 +14,6 @@ import {
     Box,
     Button,
     Center,
-    CloseButton,
-    Divider,
     Group,
     Menu,
     Popover,
@@ -37,8 +35,8 @@ import {
     IconX
 } from "@tabler/icons-react";
 import {useMemo} from "react";
-import CollectionActions from "./collection-actions.tsx";
-import type {CollectionSchemaAction, CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
+import {ZINDEX_MODAL} from "../../../consts.ts";
+import type {CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
 import styles from './collection-toolbar.module.css';
 
 export type CollectionView = 'table' | 'list' | 'grid';
@@ -48,9 +46,6 @@ export interface CollectionToolbarProps<M> {
     setSearch?: (search: string) => void;
     view?: CollectionView;
     setView?: (view: CollectionView) => void;
-    selection: M[];
-    onClearSelection: () => void;
-    actions: CollectionSchemaAction<M>[];
 
     sort?: CollectionSortField<M>[];
     onSort?: (field: string) => void;
@@ -126,7 +121,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
             transform: CSS.Transform.toString(transform),
             transition,
             opacity: isDragging ? 0.5 : 1,
-            zIndex: isDragging ? 1000 : 'auto',
+            zIndex: isDragging ? ZINDEX_MODAL : 'auto',
         };
 
         return (
@@ -217,19 +212,6 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
     const rightSection = props.renderRightSection
         ? props.renderRightSection()
         : <Group justify="flex-end">
-            {props.selection.length > 0 &&
-                <>
-                    <Group gap={8} className={styles.selectedActions}>
-                        <CloseButton onClick={() => props.onClearSelection()}/>
-
-                        <Text span c="blue" fw="bold" inherit>{props.selection.length} Selected</Text>
-
-                        <CollectionActions actions={props.actions} selection={props.selection}/>
-                    </Group>
-                    <Divider orientation="vertical" style={{marginTop: 5, marginBottom: 5}}/>
-                </>
-            }
-
             <Popover
                 opened={popoverOpened}
                 onChange={(opened) => opened ? openPopover() : closePopover()}
