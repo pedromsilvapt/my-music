@@ -434,6 +434,10 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<long?>("CurrentSongId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("current_song_id");
+
                     b.Property<DateTime>("ModifiedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("modified_at");
@@ -448,8 +452,15 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("owner_id");
 
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
                     b.HasKey("Id")
                         .HasName("pk_playlists");
+
+                    b.HasIndex("CurrentSongId")
+                        .HasDatabaseName("ix_playlists_current_song_id");
 
                     b.HasIndex("OwnerId")
                         .HasDatabaseName("ix_playlists_owner_id");
@@ -1040,12 +1051,19 @@ namespace MyMusic.Common.Migrations
 
             modelBuilder.Entity("MyMusic.Common.Entities.Playlist", b =>
                 {
+                    b.HasOne("MyMusic.Common.Entities.Song", "CurrentSong")
+                        .WithMany()
+                        .HasForeignKey("CurrentSongId")
+                        .HasConstraintName("fk_playlists_songs_current_song_id");
+
                     b.HasOne("MyMusic.Common.Entities.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_playlists_users_owner_id");
+
+                    b.Navigation("CurrentSong");
 
                     b.Navigation("Owner");
                 });

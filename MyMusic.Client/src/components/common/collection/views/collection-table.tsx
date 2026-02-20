@@ -15,17 +15,21 @@ import {Box, Group, Table, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
+import {useContextMenu} from "mantine-contextmenu";
 import {useCallback, useMemo, useRef, useState} from "react";
+import {DRAG_ACTIVATION_DISTANCE, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
+import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {
     type CollectionSchema,
+    type CollectionSchemaAction,
     type CollectionSchemaColumn,
     type CollectionSortField,
     getColumnWidthFractions,
     getColumnWidthPixels
 } from "../collection-schema.tsx";
-import type {CollectionSelectionHandlers} from "../collection.tsx";
+import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-table.module.css';
 
 export interface CollectionTableProps<M> {
@@ -39,6 +43,8 @@ export interface CollectionTableProps<M> {
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
+    setItemElementRef?: ItemElementRefCallback<M>;
+    actions: CollectionSchemaAction<M>[];
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
@@ -50,7 +56,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8,
+                distance: DRAG_ACTIVATION_DISTANCE,
             },
         }),
         useSensor(KeyboardSensor),
@@ -84,7 +90,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         count: props.items.length,
         getScrollElement: () => parentRef.current,
         estimateSize: props.schema.estimateTableRowHeight,
-        overscan: 5,
+        overscan: VIRTUALIZER_OVERSCAN,
     });
 
     const virtualRows = virtualizer.getVirtualItems();
@@ -169,6 +175,8 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             isDragOverlay={isDragOverlay}
             isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
+            setItemElementRef={props.setItemElementRef}
+            actions={props.actions}
         />;
     });
 
@@ -296,6 +304,8 @@ interface CollectionTableRowProps<M> {
     isDragOverlay?: boolean;
     isCollapsed?: boolean;
     isDraggingActive?: boolean;
+    setItemElementRef?: ItemElementRefCallback<M>;
+    actions: CollectionSchemaAction<M>[];
 }
 
 function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
@@ -312,9 +322,12 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         isDragOverlay,
         isCollapsed,
         isDraggingActive,
+        setItemElementRef,
+        actions,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const {showContextMenu} = useContextMenu();
 
     const {
         attributes,
@@ -347,7 +360,10 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
     const rowRef = useCallback((node: HTMLTableRowElement | null) => {
         setNodeRef(node);
         virtualizer.measureElement(node);
-    }, [setNodeRef, virtualizer]);
+        if (isSelected && node) {
+            setItemElementRef?.(row, node);
+        }
+    }, [setNodeRef, virtualizer, isSelected, setItemElementRef, row]);
 
     const handleMouseDown = (event: React.MouseEvent) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -356,9 +372,33 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
+        if (isInteractiveElement(event.target)) {
+            return;
+        }
         if (!isDraggingActive) {
             selectionHandlers.toggle(schema.key(row), event);
         }
+    };
+
+    const handleContextMenu = (event: React.MouseEvent) => {
+        if (isInteractiveElement(event.target)) {
+            return;
+        }
+        const contextActions = isSelected ? actions : rowActions;
+        const contextSelection = isSelected ? selection : [row];
+
+        showContextMenu(
+            contextActions
+                .filter((a): a is CollectionSchemaAction<M> & { onClick: (elems: M[]) => void } =>
+                    !('divider' in a) && !('group' in a)
+                )
+                .map(action => ({
+                    key: action.name,
+                    icon: action.renderIcon(),
+                    title: action.renderLabel(),
+                    onClick: () => action.onClick(contextSelection),
+                }))
+        )(event);
     };
 
     return (
@@ -366,8 +406,10 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
             ref={rowRef}
             style={sortable ? style : undefined}
             data-index={virtualRow.index}
+            data-sortable-item={sortable || undefined}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
+            onContextMenu={handleContextMenu}
             {...(sortable ? attributes : {})}
             {...(sortable && !isDragOverlay ? listeners : {})}
             className={cls(

@@ -1,10 +1,12 @@
 import {Box, Flex, LoadingOverlay} from "@mantine/core";
 import {useDebouncedValue, useSelection, type UseSelectionHandlers} from '@mantine/hooks';
 import type React from "react";
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import {SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
 import {sortBy} from "../../../utils/sort-by.tsx";
 import type {CollectionSchema, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
+import SelectionFloatingBar from "./selection-floating-bar.tsx";
 import CollectionGrid from "./views/collection-grid.tsx";
 import CollectionList from "./views/collection-list.tsx";
 import CollectionTable from "./views/collection-table.tsx";
@@ -14,6 +16,8 @@ export type {CollectionSchema, CollectionSort, CollectionSortField, SortDirectio
 export type CollectionSelectionHandlers<T> = Omit<UseSelectionHandlers<T>, 'toggle'> & {
     toggle: (toggled: T, event?: React.MouseEvent) => void;
 };
+
+export type ItemElementRefCallback<M> = (item: M, element: HTMLElement | null) => void;
 
 interface CollectionProps<T extends { id: string | number }> {
     items: T[],
@@ -29,9 +33,16 @@ interface CollectionProps<T extends { id: string | number }> {
 export default function Collection<T extends { id: string | number }>(props: CollectionProps<T>) {
     const [search, setSearch] = useState('');
     const [view, setView] = useState<CollectionView>(props.initialView ?? 'table');
-    const [throttledSearch] = useDebouncedValue(search, 50);
+    const [throttledSearch] = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
     const [sort, setSort] = useState<CollectionSort<T>>([]);
     const [lastSelectedKey, setLastSelectedKey] = useState<React.Key | null>(null);
+    const [lastSelectedElement, setLastSelectedElement] = useState<HTMLElement | null>(null);
+
+    const setItemElementRef = useCallback((_item: T, element: HTMLElement | null) => {
+        if (element) {
+            setLastSelectedElement(element);
+        }
+    }, []);
 
     const sortableFields = useMemo(() => {
         return props.schema.columns
@@ -145,6 +156,11 @@ export default function Collection<T extends { id: string | number }>(props: Col
         return props.items.filter((item) => selectionKeys.includes(props.schema.key(item)));
     }, [props.items, selectionKeys]);
 
+    useEffect(() => {
+        if (selection.length === 0) {
+            setLastSelectedElement(null);
+        }
+    }, [selection.length]);
 
     const actions = useMemo(() => {
         return props.schema.actions?.(selection) ?? [];
@@ -163,6 +179,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             sortable={props.sortable}
             onReorder={props.onReorder}
             onReorderBatch={props.onReorderBatch}
+            setItemElementRef={setItemElementRef}
+            actions={actions}
         />;
     } else if (view == 'list') {
         viewNode = <CollectionList
@@ -173,6 +191,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             sortable={props.sortable}
             onReorder={props.onReorder}
             onReorderBatch={props.onReorderBatch}
+            setItemElementRef={setItemElementRef}
+            actions={actions}
         />;
     } else if (view === 'grid') {
         viewNode = <CollectionGrid
@@ -183,6 +203,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             sortable={props.sortable}
             onReorder={props.onReorder}
             onReorderBatch={props.onReorderBatch}
+            setItemElementRef={setItemElementRef}
+            actions={actions}
         />;
     } else {
         throw new Error(`Invalid collection view: ${view}`);
@@ -196,9 +218,6 @@ export default function Collection<T extends { id: string | number }>(props: Col
             setSearch: setSearch,
             view: view,
             setView: setView,
-            selection: selection,
-            onClearSelection: selectionHandlers.resetSelection,
-            actions: actions,
             sort: sort,
             onSort: handleSort,
             onSortRemove: handleSortRemove,
@@ -208,8 +227,16 @@ export default function Collection<T extends { id: string | number }>(props: Col
         })}
 
         <Box pos="relative">
-            <LoadingOverlay visible={props.isFetching ?? false} zIndex={1000} overlayProps={{radius: "sm", blur: 2}}/>
+            <LoadingOverlay visible={props.isFetching ?? false} zIndex={ZINDEX_MODAL}
+                            overlayProps={{radius: "sm", blur: 2}}/>
             {viewNode}
         </Box>
+
+        <SelectionFloatingBar
+            selection={selection}
+            actions={actions}
+            anchorElement={lastSelectedElement}
+            onClearSelection={selectionHandlers.resetSelection}
+        />
     </Flex>;
 }

@@ -2,6 +2,7 @@ import {ActionIcon, Center, Drawer, type MantineColor, RingProgress} from "@mant
 import {useDisclosure} from "@mantine/hooks";
 import {IconAlertTriangleFilled, IconCheck, IconLoader, IconPlayerPauseFilled,} from "@tabler/icons-react";
 import {useMemo} from "react";
+import {ZINDEX_DRAWER, ZINDEX_MODAL} from "../../consts.ts";
 import PurchasesQueue from "./purchases-queue.tsx";
 import usePurchasedSongsQuery from "./usePurchasedSongsQuery.tsx";
 
@@ -31,7 +32,8 @@ export default function PurchasesQueueIndicator(_props: PurchasesQueueIndicatorP
     const sections = usePurchasesQueueIndicatorSections(counts, total);
 
     return <>
-        <Drawer opened={opened} onClose={close} size="xl" title="Purchases Queue">
+        <Drawer opened={opened} onClose={close} size="xl" title="Purchases Queue" zIndex={ZINDEX_DRAWER}
+                overlayProps={{zIndex: ZINDEX_MODAL}}>
             <PurchasesQueue/>
         </Drawer>
 

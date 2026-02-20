@@ -1,5 +1,6 @@
 import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {getToggleSongFavoriteMutationOptions, getToggleFavoritesMutationOptions} from "../client/songs.ts";
+import {getGetFavoritesQueryKey} from "../client/playlists";
+import {getToggleFavoritesMutationOptions, getToggleSongFavoriteMutationOptions} from "../client/songs.ts";
 
 export function useToggleFavorite(options?: {
     mutation?: {
@@ -13,7 +14,7 @@ export function useToggleFavorite(options?: {
             mutation: {
                 onSuccess: (data: { data: { isFavorite: boolean } }) => {
                     queryClient.invalidateQueries({queryKey: ['api', 'songs']});
-                    queryClient.invalidateQueries({queryKey: ['api', 'playlists']});
+                    queryClient.invalidateQueries({queryKey: getGetFavoritesQueryKey()});
                     options?.mutation?.onSuccess?.(data);
                 }
             }
@@ -30,11 +31,11 @@ export function useToggleFavorites(options?: {
     const queryClient = useQueryClient();
 
     return useMutation(
-        getToggleFavoritesMutationOptions({
+        getToggleFavoritesMutationOptions(queryClient, {
             mutation: {
                 onSuccess: (data: { data: { songs: Array<{ id: number; isFavorite: boolean }> } }) => {
                     queryClient.invalidateQueries({queryKey: ['api', 'songs']});
-                    queryClient.invalidateQueries({queryKey: ['api', 'playlists']});
+                    queryClient.invalidateQueries({queryKey: getGetFavoritesQueryKey()});
                     options?.mutation?.onSuccess?.(data);
                 }
             }

@@ -5,9 +5,13 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {GetPlaylistSong} from "./getPlaylistSong";
+import type {PlaylistType} from "./playlistType";
 
 export interface GetPlaylistItem {
     id: number;
     name: string;
+    type: PlaylistType;
+    /** @nullable */
+    currentSongId?: number | null;
     songs: GetPlaylistSong[];
 }

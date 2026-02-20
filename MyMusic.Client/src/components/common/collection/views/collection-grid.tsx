@@ -14,11 +14,14 @@ import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, SimpleGrid, Stack, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
+import {useContextMenu} from "mantine-contextmenu";
 import {useCallback, useMemo, useState} from "react";
+import {DRAG_ACTIVATION_DISTANCE, GRID_ELEM_SIZE, GRID_GAP, GRID_ROW_HEIGHT} from "../../../../consts.ts";
+import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
-import {type CollectionSchema} from "../collection-schema.tsx";
-import type {CollectionSelectionHandlers} from "../collection.tsx";
+import {type CollectionSchema, type CollectionSchemaAction} from "../collection-schema.tsx";
+import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-grid.module.css';
 
 export interface CollectionGridProps<M> {
@@ -29,17 +32,16 @@ export interface CollectionGridProps<M> {
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
+    setItemElementRef?: ItemElementRefCallback<M>;
+    actions: CollectionSchemaAction<M>[];
 }
 
 export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
     const {ref: parentRef, width: tableWidth} = useElementSize<HTMLDivElement>();
 
-    const elemSize = 226;
-    const gap = 12;
-
     const lanes = useMemo(() => {
-        return Math.max(1, Math.floor((tableWidth + gap) / (elemSize + gap)));
-    }, [elemSize, gap, tableWidth]);
+        return Math.max(1, Math.floor((tableWidth + GRID_GAP) / (GRID_ELEM_SIZE + GRID_GAP)));
+    }, [tableWidth]);
 
     return <CollectionGridInternal {...props}
         // We must separate this into two components
@@ -52,8 +54,8 @@ export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
                                    lanes={lanes}
                                    parentRef={parentRef}
                                    tableWidth={tableWidth}
-                                   elemSize={elemSize}
-                                   gap={gap}/>
+                                   elemSize={GRID_ELEM_SIZE}
+                                   gap={GRID_GAP}/>
 }
 
 interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
@@ -72,7 +74,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8,
+                distance: DRAG_ACTIVATION_DISTANCE,
             },
         }),
         useSensor(KeyboardSensor),
@@ -81,7 +83,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     const virtualizer = useVirtualizer({
         count: props.items.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: () => 280, // TODO props.schema.estimateListRowHeight,
+        estimateSize: () => GRID_ROW_HEIGHT,
         overscan: 0,
         lanes: lanes,
         horizontal: false,
@@ -166,6 +168,8 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             isDragOverlay={isDragOverlay}
             isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
+            setItemElementRef={props.setItemElementRef}
+            actions={props.actions}
         />;
     });
 
@@ -248,6 +252,8 @@ export interface CollectionGridItemProps<M> {
     isDragOverlay?: boolean;
     isCollapsed?: boolean;
     isDraggingActive?: boolean;
+    setItemElementRef?: ItemElementRefCallback<M>;
+    actions: CollectionSchemaAction<M>[];
 }
 
 export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
@@ -263,9 +269,12 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         isDragOverlay,
         isCollapsed,
         isDraggingActive,
+        setItemElementRef,
+        actions,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const {showContextMenu} = useContextMenu();
 
     const {
         attributes,
@@ -298,7 +307,10 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
     const itemRef = useCallback((node: HTMLDivElement | null) => {
         setNodeRef(node);
         virtualizer.measureElement(node);
-    }, [setNodeRef, virtualizer]);
+        if (isSelected && node) {
+            setItemElementRef?.(item, node);
+        }
+    }, [setNodeRef, virtualizer, isSelected, setItemElementRef, item]);
 
     const handleMouseDown = (event: React.MouseEvent) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -307,28 +319,54 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
+        if (isInteractiveElement(event.target)) {
+            return;
+        }
         if (!isDraggingActive) {
             selectionHandlers.toggle(schema.key(item), event);
         }
+    };
+
+    const handleContextMenu = (event: React.MouseEvent) => {
+        if (isInteractiveElement(event.target)) {
+            return;
+        }
+        const contextActions = isSelected ? actions : itemActions;
+        const contextSelection = isSelected ? selection : [item];
+
+        showContextMenu(
+            contextActions
+                .filter((a): a is CollectionSchemaAction<M> & { onClick: (elems: M[]) => void } =>
+                    !('divider' in a) && !('group' in a)
+                )
+                .map(action => ({
+                    key: action.name,
+                    icon: action.renderIcon(),
+                    title: action.renderLabel(),
+                    onClick: () => action.onClick(contextSelection),
+                }))
+        )(event);
     };
 
     return <Box
         ref={itemRef}
         data-index={virtualItem.index}
         data-lane={virtualItem.lane}
+        data-sortable-item={sortable || undefined}
         style={sortable ? {...style, width: props.width, height: props.width + 54} : {
             width: props.width,
             height: props.width + 54
         }}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
+        onContextMenu={handleContextMenu}
         {...(sortable ? attributes : {})}
         {...(sortable && !isDragOverlay ? listeners : {})}
-                className={cls(
-                    styles.item,
-                    isSelected && styles.selected,
-                    isDragOverlay && styles.selected,
-                )}>
+        className={cls(
+            styles.item,
+            isSelected && styles.selected,
+            isDragOverlay && styles.selected,
+        )}>
         <Stack gap="sm">
             {schema.renderListArtwork(item, props.width - 20)}
             <Group>

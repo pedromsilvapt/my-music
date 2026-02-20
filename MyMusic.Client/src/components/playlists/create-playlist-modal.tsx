@@ -1,6 +1,7 @@
 import {Button, Group, Modal, Stack, TextInput} from "@mantine/core";
 import {useState} from "react";
 import {useCreatePlaylist} from "../../client/playlists.ts";
+import {ZINDEX_MODAL} from "../../consts.ts";
 
 interface CreatePlaylistModalProps {
     opened: boolean;
@@ -28,7 +29,7 @@ export default function CreatePlaylistModal({opened, onClose, onSuccess}: Create
     };
 
     return (
-        <Modal opened={opened} onClose={onClose} title="Create Playlist" centered>
+        <Modal opened={opened} onClose={onClose} title="Create Playlist" centered zIndex={ZINDEX_MODAL}>
             <Stack>
                 <TextInput
                     label="Playlist Name"

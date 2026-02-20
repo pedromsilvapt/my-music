@@ -3,6 +3,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useCallback, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
 import {useSearchSongs} from "../../client/sources.ts";
+import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import Collection from "../common/collection/collection.tsx";
 import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
@@ -13,7 +14,7 @@ export default function SourcesSearch() {
 
     const [search, setSearch] = useState('');
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
-    const [debouncedSearch] = useDebouncedValue(search, 500);
+    const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
 
     const {data: data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {
         query: {

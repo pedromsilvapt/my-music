@@ -13,7 +13,8 @@ import {
 } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
-import {usePlayerContext} from "../contexts/player-context.tsx";
+import {useIsPlayerActive} from "../contexts/player-context.tsx";
+import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
 import Player from "./player/player.tsx";
 import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
 
@@ -21,9 +22,8 @@ function App() {
     const [mobileOpened, {toggle: toggleMobile}] = useDisclosure();
     const [desktopOpened, {toggle: toggleDesktop}] = useDisclosure(true);
 
-    const playerState = usePlayerContext(state => state.current.type);
-
-    const footerVisible = playerState != 'EMPTY';
+    usePlayerQueueInitializer();
+    const footerVisible = useIsPlayerActive();
 
     return (
         <AppShell
@@ -106,7 +106,7 @@ function App() {
                 style={{'--parent-height': "calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px) - var(--app-shell-padding) * 2)"}}>
                 <Outlet/>
 
-                {/*<TanStackRouterDevtools />*/}
+                {/*<TanStackRouterDevtools/>*/}
             </AppShell.Main>
             {footerVisible && <AppShell.Footer>
                 <Player/>

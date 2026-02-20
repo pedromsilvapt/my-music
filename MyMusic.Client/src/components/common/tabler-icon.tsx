@@ -1,5 +1,6 @@
 import type {IconProps} from "@tabler/icons-react";
 import {useEffect, useState} from "react"
+import {DEFAULT_ICON_SIZE, DEFAULT_ICON_STROKE} from "../../consts.ts";
 
 const getIconPath = (iconName: string) => `../../../node_modules/@tabler/icons-react/dist/esm/icons/${iconName}.mjs`;
 const iconModules = import.meta.glob(`../../../node_modules/@tabler/icons-react/dist/esm/icons/*.mjs`)
@@ -11,8 +12,8 @@ export interface TablerIconProps extends IconProps {
 export default function TablerIcon({
                                        icon,
                                        color = "gray",
-                                       size = 24,
-                                       stroke = 2,
+                                       size = DEFAULT_ICON_SIZE,
+                                       stroke = DEFAULT_ICON_STROKE,
                                    }: TablerIconProps) {
     const [Icon, setIcon] = useState<any>(null)
 

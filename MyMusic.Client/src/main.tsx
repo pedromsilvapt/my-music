@@ -9,13 +9,13 @@ import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
 import ManageDevicesProvider from "./contexts/manage-devices-context.tsx";
 import ManagePlaylistsProvider from "./contexts/manage-playlists-context.tsx";
-import PlayerProvider from "./contexts/player-context.tsx";
+import {PlayerProvider} from "./contexts/player-context.tsx";
 
 // Import the generated route tree
 import {routeTree} from './routeTree.gen'
 
 // Create a new router instance
-const router = createRouter({ routeTree })
+const router = createRouter({routeTree})
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {
