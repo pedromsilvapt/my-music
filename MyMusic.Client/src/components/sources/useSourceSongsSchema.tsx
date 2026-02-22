@@ -31,7 +31,7 @@ export function useSourceSongsSchema(
             {
                 name: 'title',
                 displayName: 'Title',
-                render: row => <SongTitle title={row.title} isExplicit={row.explicit}/>,
+                render: row => <SongTitle title={row.title} link={row.link} isExplicit={row.explicit}/>,
                 width: '2fr',
                 sortable: true,
             },
@@ -46,7 +46,7 @@ export function useSourceSongsSchema(
             {
                 name: 'album',
                 displayName: 'Album',
-                render: row => <SongAlbum name={row.album?.name ?? '(no album)'}/>,
+                render: row => <SongAlbum name={row.album?.name ?? '(no album)'} link={row.album?.link}/>,
                 width: '1fr',
                 sortable: true,
                 getValue: song => song.album?.name,
@@ -91,6 +91,10 @@ export function useSourceSongsSchema(
         renderListTitle: (row) => <Tooltip label={row.title} openDelay={500}>
             <Text>{row.title}</Text>
         </Tooltip>,
-        renderListSubTitle: (row) => <SongSubTitle artists={row.artists} album={row.album} year={row.year} c="gray"/>,
+        renderListSubTitle: (row) => <SongSubTitle artists={row.artists} album={row.album ? {
+            name: row.album.name,
+            albumId: row.album.id,
+            link: row.album.link
+        } : undefined} year={row.year} c="gray"/>,
     }) as CollectionSchema<SourceSong>, [onPurchase, filterMetadata]);
 }
