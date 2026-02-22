@@ -67,7 +67,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
         onChange: props.setView,
     });
 
-    const [popoverOpened, {open: openPopover, close: closePopover}] = useDisclosure(false);
+    const [popoverOpened, {open: openPopover, close: closePopover, toggle: togglePopover}] = useDisclosure(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -227,7 +227,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         size="lg"
                         aria-label="Customize"
                         title="Customize"
-                        onClick={openPopover}
+                        onClick={togglePopover}
                     >
                         <IconSettings/>
                     </ActionIcon>
