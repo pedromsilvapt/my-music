@@ -1,6 +1,5 @@
-import {Box, Center, SegmentedControl, TextInput} from "@mantine/core";
+import {Box, Center, SegmentedControl} from "@mantine/core";
 import {useUncontrolled} from "@mantine/hooks";
-import {IconSearch} from '@tabler/icons-react'
 import {useEffect, useMemo} from "react";
 import {useListSources} from "../../client/sources.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
@@ -13,11 +12,6 @@ export interface SourcesSearchToolbarProps extends CollectionToolbarProps<Source
 }
 
 export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
-    const [search, setSearch] = useUncontrolled({
-        value: props.search,
-        defaultValue: '',
-        onChange: props.setSearch,
-    });
     const [source, setSource] = useUncontrolled<ListSourcesItem | null | undefined>({
         value: props.source,
         onChange: props.setSource,
@@ -32,36 +26,31 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
         label: (
             <Center style={{gap: 10}}>
                 <TablerIcon icon={source.icon} size={16}/>
-                {/*<IconBrandYoutubeFilled size={16}/>*/}
                 <span>{source.name}</span>
             </Center>
         )
     })), [sources]);
 
-    // Auto-select first source
     useEffect(() => {
         if (source == null && sources.length > 0) {
             setSource(sources[0]);
         }
-    }, [source, sources]);
+    }, [source, sources, setSource]);
 
-    // className={styles.toolbar}
-    return <CollectionToolbar {...props}
-                              renderLeftSection={() => <Box>
-                                  <SegmentedControl
-                                      value={source?.id?.toString()}
-                                      onChange={source => setSource(sources.find(s => s.id.toString() == source))}
-                                      data={sourcesOptions}
-                                  />
-                              </Box>}
-                              renderMiddleSection={() => <TextInput placeholder="Search..."
-                                                                    leftSection={<IconSearch/>}
-                                                                    value={search}
-                                                                    onChange={e => setSearch(e.currentTarget.value)}/>}
-    />;
-    // return <Group justify="space-between" grow={true}>
-    //    
-    //    
-    //     <Box></Box>
-    // </Group>;
+    return (
+        <CollectionToolbar
+            {...props}
+            filterMode="server"
+            searchPlaceholder="Search songs..."
+            renderLeftSection={() => (
+                <Box>
+                    <SegmentedControl
+                        value={source?.id?.toString()}
+                        onChange={sourceId => setSource(sources.find(s => s.id.toString() === sourceId))}
+                        data={sourcesOptions}
+                    />
+                </Box>
+            )}
+        />
+    );
 }

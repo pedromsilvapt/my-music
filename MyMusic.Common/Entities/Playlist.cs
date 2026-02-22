@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EntityFrameworkCore.Projectables;
 
 namespace MyMusic.Common.Entities;
 
@@ -21,4 +22,10 @@ public class Playlist
     public DateTime ModifiedAt { get; set; }
 
     public required List<PlaylistSong> PlaylistSongs { get; set; }
+
+    [Projectable] public int SongCount => PlaylistSongs.Count;
+
+    [Projectable] public int TotalDurationSeconds => PlaylistSongs.Sum(ps => (int)ps.Song.Duration.TotalSeconds);
+
+    [Projectable] public string SearchableText => Name ?? "";
 }

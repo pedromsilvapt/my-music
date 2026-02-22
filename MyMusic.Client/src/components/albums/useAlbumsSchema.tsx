@@ -1,15 +1,29 @@
 import {Anchor, Tooltip} from "@mantine/core";
 import {IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
-import {useMemo} from "react";
+import {useCallback, useMemo} from "react";
 import type {ListAlbumsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
+import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 
 export function useAlbumsSchema() {
+    const {data: filterMetadata} = useFilterMetadata('albums');
+
+    const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
+        const params = new URLSearchParams({field, limit: "15"});
+        if (searchTerm) params.set("search", searchTerm);
+        const response = await fetch(`/api/albums/filter-values?${params}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.values as string[];
+    }, []);
+
     return useMemo(() => ({
         key: row => row.id,
         searchVector: artist => artist.name,
+        filterMetadata,
+        fetchFilterValues,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -74,5 +88,5 @@ export function useAlbumsSchema() {
             <Anchor component={Link} to={`/albums/${row.id}`} c={"black"}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => row.songsCount + ' songs',
-    }) as CollectionSchema<ListAlbumsItem>, []);
+    }) as CollectionSchema<ListAlbumsItem>, [filterMetadata, fetchFilterValues]);
 }

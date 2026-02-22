@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
+using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Playlists;
 
 namespace MyMusic.Server.Controllers;
@@ -15,7 +17,9 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
     public async Task<ListPlaylistsResponse> List(
         MusicDbContext context,
         CancellationToken cancellationToken,
-        [FromQuery] bool includeSystem = false)
+        [FromQuery] bool includeSystem = false,
+        [FromQuery] string? search = null,
+        [FromQuery] string? filter = null)
     {
         var query = context.Playlists
             .Where(p => p.OwnerId == currentUser.Id);
@@ -23,6 +27,18 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         if (!includeSystem)
         {
             query = query.Where(p => p.Type == PlaylistType.Playlist);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = FuzzySearchHelper.ApplyFuzzySearch(query, search, p => p.SearchableText);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var filterRequest = FilterDslParser.Parse(filter);
+            var filterExpression = DynamicFilterBuilder.BuildFilter<Playlist>(filterRequest);
+            query = query.Where(filterExpression);
         }
 
         var playlists = await query
@@ -559,5 +575,100 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             .ThenInclude(sg => sg.Genre)
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    [HttpGet("filter-metadata", Name = "GetPlaylistFilterMetadata")]
+    public FilterMetadataResponse GetFilterMetadata() =>
+        new()
+        {
+            Fields =
+            [
+                new FilterFieldMetadata
+                {
+                    Name = "name",
+                    Type = "string",
+                    Description = "Playlist name",
+                    SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "type",
+                    Type = "string",
+                    Description = "Playlist type (Playlist, Queue, Favorites)",
+                    SupportedOperators = ["eq", "neq"],
+                    Values = ["Playlist", "Queue", "Favorites"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "createdAt",
+                    Type = "date",
+                    Description = "Date created",
+                    SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "isNull", "isNotNull"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "modifiedAt",
+                    Type = "date",
+                    Description = "Date last modified",
+                    SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "isNull", "isNotNull"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "songCount",
+                    Type = "number",
+                    Description = "Number of songs",
+                    IsComputed = true,
+                    SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "totalDurationSeconds",
+                    Type = "number",
+                    Description = "Total duration in seconds",
+                    IsComputed = true,
+                    SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "searchableText",
+                    Type = "string",
+                    Description = "Combined searchable text",
+                    IsComputed = true,
+                    SupportedOperators = ["contains"],
+                },
+            ],
+            Operators = FilterMetadataHelper.GetOperatorMetadata(),
+        };
+
+    [HttpGet("filter-values", Name = "GetPlaylistFilterValues")]
+    public async Task<FilterValuesResponse> GetFilterValues(
+        [FromQuery] string field,
+        MusicDbContext context,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = field switch
+        {
+            "name" => context.Playlists
+                .Where(p => p.OwnerId == currentUser.Id)
+                .Select(p => p.Name)
+                .Distinct(),
+            _ => Enumerable.Empty<string>().AsQueryable(),
+        };
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(v => v.ToLower().Contains(searchLower));
+        }
+
+        var values = await query
+            .OrderBy(v => v)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new FilterValuesResponse { Values = values };
     }
 }

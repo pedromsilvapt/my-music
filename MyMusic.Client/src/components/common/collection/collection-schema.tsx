@@ -1,4 +1,5 @@
 import type {Property} from "csstype";
+import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -10,9 +11,13 @@ export interface CollectionSortField<M> {
 
 export type CollectionSort<M> = CollectionSortField<M>[];
 
+export type CollectionFilterMode = 'client' | 'server' | 'none';
+
 export interface CollectionSchema<M> {
     key: (elem: M) => React.Key;
     actions?: (elems: M[]) => CollectionSchemaAction<M>[];
+    filterMetadata?: FilterMetadataResponse;
+    fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
 
     //#region Table
 
@@ -27,7 +32,7 @@ export interface CollectionSchema<M> {
     renderListArtwork: (elem: M, size: number) => React.ReactNode;
     renderListTitle: (elem: M, lineClamp: number) => React.ReactNode;
     renderListSubTitle: (elem: M, lineClamp: number) => React.ReactNode;
-    
+
     //#endregion List
 
     //#region Search

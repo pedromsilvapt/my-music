@@ -8,13 +8,17 @@ import SongArtists from "../common/fields/song-artists.tsx";
 import SongArtwork from "../common/fields/song-artwork.tsx";
 import SongSubTitle from "../common/fields/song-sub-title.tsx";
 import SongTitle from "../common/fields/song-title.tsx";
+import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 
 export function useSourceSongsSchema(
     onPurchase: (songs: SourceSong[]) => void,
 ) {
+    const {data: filterMetadata} = useFilterMetadata('sources');
+
     return useMemo(() => ({
         key: row => row.id,
         searchVector: purchase => purchase.title,
+        filterMetadata,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -88,5 +92,5 @@ export function useSourceSongsSchema(
             <Text>{row.title}</Text>
         </Tooltip>,
         renderListSubTitle: (row) => <SongSubTitle artists={row.artists} album={row.album} year={row.year} c="gray"/>,
-    }) as CollectionSchema<SourceSong>, [onPurchase]);
+    }) as CollectionSchema<SourceSong>, [onPurchase, filterMetadata]);
 }

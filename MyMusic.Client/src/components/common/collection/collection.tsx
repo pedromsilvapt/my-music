@@ -4,14 +4,16 @@ import type React from "react";
 import {useCallback, useEffect, useMemo, useState} from "react";
 import {SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
 import {sortBy} from "../../../utils/sort-by.tsx";
-import type {CollectionSchema, CollectionSort} from "./collection-schema.tsx";
+import type {CollectionFilterMode, CollectionSchema, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
 import SelectionFloatingBar from "./selection-floating-bar.tsx";
 import CollectionGrid from "./views/collection-grid.tsx";
 import CollectionList from "./views/collection-list.tsx";
 import CollectionTable from "./views/collection-table.tsx";
 
-export type {CollectionSchema, CollectionSort, CollectionSortField, SortDirection} from "./collection-schema";
+export type {
+    CollectionSchema, CollectionSort, CollectionSortField, SortDirection, CollectionFilterMode
+} from "./collection-schema";
 
 export type CollectionSelectionHandlers<T> = Omit<UseSelectionHandlers<T>, 'toggle'> & {
     toggle: (toggled: T, event?: React.MouseEvent) => void;
@@ -28,12 +30,20 @@ interface CollectionProps<T extends { id: string | number }> {
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
+    filterMode?: CollectionFilterMode;
+    serverSearch?: string;
+    serverFilter?: string;
+    onServerFilterChange?: (search: string, filter: string) => void;
+    searchPlaceholder?: string;
 }
 
 export default function Collection<T extends { id: string | number }>(props: CollectionProps<T>) {
-    const [search, setSearch] = useState('');
+    const filterMode = props.filterMode ?? 'client';
+
+    const [clientSearch, setClientSearch] = useState('');
+    const [clientFilter, setClientFilter] = useState('');
     const [view, setView] = useState<CollectionView>(props.initialView ?? 'table');
-    const [throttledSearch] = useDebouncedValue(search, SEARCH_DEBOUNCE_MS);
+    const [throttledSearch] = useDebouncedValue(clientSearch, SEARCH_DEBOUNCE_MS);
     const [sort, setSort] = useState<CollectionSort<T>>([]);
     const [lastSelectedKey, setLastSelectedKey] = useState<React.Key | null>(null);
     const [lastSelectedElement, setLastSelectedElement] = useState<HTMLElement | null>(null);
@@ -87,14 +97,31 @@ export default function Collection<T extends { id: string | number }>(props: Col
         });
     };
 
+    const evaluateClientFilter = useCallback((item: T, filterDsl: string): boolean => {
+        if (!filterDsl.trim()) return true;
+
+        try {
+            const tokens = tokenizeFilter(filterDsl);
+            return evaluateTokens(item, tokens, props.schema);
+        } catch {
+            return true;
+        }
+    }, [props.schema]);
+
     const filteredAndSortedItems = useMemo(() => {
         let items = props.items;
 
-        if ((throttledSearch.trim()) != '') {
-            const searchLowerCase = throttledSearch.toLowerCase();
-            items = items.filter((item) => {
-                return props.schema.searchVector(item).toLowerCase().includes(searchLowerCase);
-            });
+        if (filterMode === 'client') {
+            if (throttledSearch.trim() !== '') {
+                const searchLowerCase = throttledSearch.toLowerCase();
+                items = items.filter((item) => {
+                    return props.schema.searchVector(item).toLowerCase().includes(searchLowerCase);
+                });
+            }
+
+            if (clientFilter.trim() !== '') {
+                items = items.filter((item) => evaluateClientFilter(item, clientFilter));
+            }
         }
 
         if (sort.length > 0) {
@@ -102,7 +129,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
         }
 
         return items;
-    }, [props.items, throttledSearch, sort]);
+    }, [props.items, throttledSearch, clientFilter, sort, filterMode, evaluateClientFilter, props.schema]);
 
     const [selectionKeys, selectionHandlers] = useSelection({
         data: props.items.map(item => props.schema.key(item)),
@@ -154,7 +181,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const selection = useMemo(() => {
         return props.items.filter((item) => selectionKeys.includes(props.schema.key(item)));
-    }, [props.items, selectionKeys]);
+    }, [props.items, selectionKeys, props.schema]);
 
     useEffect(() => {
         if (selection.length === 0) {
@@ -168,7 +195,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     let viewNode: React.ReactNode;
 
-    if (view == 'table') {
+    if (view === 'table') {
         viewNode = <CollectionTable
             schema={props.schema}
             items={filteredAndSortedItems}
@@ -182,7 +209,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             setItemElementRef={setItemElementRef}
             actions={actions}
         />;
-    } else if (view == 'list') {
+    } else if (view === 'list') {
         viewNode = <CollectionList
             schema={props.schema}
             items={filteredAndSortedItems}
@@ -210,12 +237,44 @@ export default function Collection<T extends { id: string | number }>(props: Col
         throw new Error(`Invalid collection view: ${view}`);
     }
 
+    const handleSearchChange = useCallback((value: string) => {
+        if (filterMode === 'client') {
+            setClientSearch(value);
+        } else if (filterMode === 'server') {
+            props.onServerFilterChange?.(value, props.serverFilter ?? '');
+        }
+    }, [filterMode, props]);
+
+    const handleFilterChange = useCallback((value: string) => {
+        if (filterMode === 'client') {
+            setClientFilter(value);
+        } else if (filterMode === 'server') {
+            props.onServerFilterChange?.(props.serverSearch ?? '', value);
+        }
+    }, [filterMode, props]);
+
+    const handleApplyFilter = useCallback((filterValue: string) => {
+        if (filterMode === 'client') {
+            setClientFilter(filterValue);
+        } else if (filterMode === 'server') {
+            props.onServerFilterChange?.(props.serverSearch ?? '', filterValue);
+        }
+    }, [filterMode, props]);
+
+    const currentSearch = filterMode === 'server' ? (props.serverSearch ?? '') : clientSearch;
+    const currentFilter = filterMode === 'server' ? (props.serverFilter ?? '') : clientFilter;
+
     const toolbar = props.toolbar ?? (p => <CollectionToolbar {...p} />);
 
     return <Flex direction="column" style={{height: `100%`}}>
         {toolbar({
-            search: search,
-            setSearch: setSearch,
+            search: currentSearch,
+            setSearch: handleSearchChange,
+            filter: currentFilter,
+            setFilter: handleFilterChange,
+            onApplyFilter: handleApplyFilter,
+            filterMode: filterMode,
+            searchPlaceholder: props.searchPlaceholder,
             view: view,
             setView: setView,
             sort: sort,
@@ -224,6 +283,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderSort: handleReorderSort,
             sortableFields: sortableFields,
             columns: props.schema.columns,
+            filterMetadata: props.schema.filterMetadata,
+            fetchFilterValues: props.schema.fetchFilterValues,
         })}
 
         <Box pos="relative">
@@ -239,4 +300,123 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onClearSelection={selectionHandlers.resetSelection}
         />
     </Flex>;
+}
+
+interface FilterToken {
+    type: 'field' | 'operator' | 'value' | 'combinator';
+    value: string;
+}
+
+function tokenizeFilter(dsl: string): FilterToken[] {
+    const tokens: FilterToken[] = [];
+    const regex = /(\w+(?:\.\w+)*)|("[^"]*")|(\d+)|(and|or)|([=<>!~]+)/gi;
+    let match: RegExpExecArray | null;
+
+    match = regex.exec(dsl);
+    while (match !== null) {
+        if (match[1] && !['and', 'or'].includes(match[1].toLowerCase())) {
+            tokens.push({type: 'field', value: match[1]});
+        } else if (match[2]) {
+            tokens.push({type: 'value', value: match[2].slice(1, -1)});
+        } else if (match[3]) {
+            tokens.push({type: 'value', value: match[3]});
+        } else if (match[4]) {
+            tokens.push({type: 'combinator', value: match[4].toLowerCase()});
+        } else if (match[5]) {
+            tokens.push({type: 'operator', value: match[5]});
+        }
+        match = regex.exec(dsl);
+    }
+
+    return tokens;
+}
+
+function evaluateTokens<T>(item: T, tokens: FilterToken[], schema: CollectionSchema<T>): boolean {
+    if (tokens.length === 0) return true;
+
+    let result = true;
+    let currentCombinator: 'and' | 'or' = 'and';
+
+    for (let i = 0; i < tokens.length; i += 3) {
+        const fieldToken = tokens[i];
+        const operatorToken = tokens[i + 1];
+        const valueToken = tokens[i + 2];
+
+        if (!fieldToken || !operatorToken || !valueToken) continue;
+        if (fieldToken.type === 'combinator') {
+            currentCombinator = fieldToken.value as 'and' | 'or';
+            i -= 2;
+            continue;
+        }
+
+        const fieldValue = getFieldValue(item, fieldToken.value, schema);
+        const conditionResult = evaluateCondition(fieldValue, operatorToken.value, valueToken.value);
+
+        if (currentCombinator === 'and') {
+            result = result && conditionResult;
+        } else {
+            result = result || conditionResult;
+        }
+
+        const nextToken = tokens[i + 3];
+        if (nextToken?.type === 'combinator') {
+            currentCombinator = nextToken.value as 'and' | 'or';
+            i++;
+        }
+    }
+
+    return result;
+}
+
+function getFieldValue<T>(item: T, fieldPath: string, schema: CollectionSchema<T>): unknown {
+    const searchVector = schema.searchVector(item).toLowerCase();
+
+    if (fieldPath.toLowerCase().includes('searchabletext') || fieldPath.toLowerCase() === 'search') {
+        return searchVector;
+    }
+
+    const parts = fieldPath.split('.');
+    let value: unknown = item;
+
+    for (const part of parts) {
+        if (value && typeof value === 'object') {
+            value = (value as Record<string, unknown>)[part];
+        } else {
+            return undefined;
+        }
+    }
+
+    return value;
+}
+
+function evaluateCondition(fieldValue: unknown, operator: string, compareValue: string): boolean {
+    const compareNum = parseFloat(compareValue);
+    const compareStr = compareValue.toLowerCase();
+    const fieldStr = String(fieldValue ?? '').toLowerCase();
+
+    switch (operator) {
+        case '=':
+        case '==':
+            return fieldStr === compareStr || (typeof fieldValue === 'number' && fieldValue === compareNum);
+        case '!=':
+        case '<>':
+            return fieldStr !== compareStr && (typeof fieldValue !== 'number' || fieldValue !== compareNum);
+        case '>':
+            return typeof fieldValue === 'number' && fieldValue > compareNum;
+        case '>=':
+            return typeof fieldValue === 'number' && fieldValue >= compareNum;
+        case '<':
+            return typeof fieldValue === 'number' && fieldValue < compareNum;
+        case '<=':
+            return typeof fieldValue === 'number' && fieldValue <= compareNum;
+        case '~':
+        case 'contains':
+            return fieldStr.includes(compareStr);
+        case 'startsWith':
+            return fieldStr.startsWith(compareStr);
+        case 'endsWith':
+            return fieldStr.endsWith(compareStr);
+        default:
+            return true;
+    }
 }

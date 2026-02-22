@@ -25,7 +25,8 @@ public static class HostBuilderExtensions
 
             // TODO Add configuration
             options.UseNpgsql(connectionString)
-                .UseSnakeCaseNamingConvention();
+                .UseSnakeCaseNamingConvention()
+                .UseProjectables();
         });
 
         builder.Services.Configure<Config>(builder.Configuration.GetSection("MyMusic"));

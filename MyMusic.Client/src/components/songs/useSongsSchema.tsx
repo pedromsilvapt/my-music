@@ -12,7 +12,7 @@ import {
     IconX
 } from "@tabler/icons-react";
 import {saveAs} from 'file-saver';
-import {useMemo} from "react";
+import {useCallback, useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
@@ -27,6 +27,7 @@ import SongArtists from "../common/fields/song-artists";
 import SongArtwork from "../common/fields/song-artwork";
 import SongSubTitle from "../common/fields/song-sub-title";
 import SongTitle from "../common/fields/song-title";
+import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {usePlayHandler} from "../player/usePlayHandler";
 
 export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongsItem> {
@@ -47,10 +48,22 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
     const playHandler = usePlayHandler(nowPlaying);
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
+    const {data: filterMetadata} = useFilterMetadata('songs');
+
+    const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
+        const params = new URLSearchParams({field, limit: "15"});
+        if (searchTerm) params.set("search", searchTerm);
+        const response = await fetch(`/api/songs/filter-values?${params}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.values as string[];
+    }, []);
 
     return useMemo(() => ({
         key: row => row.id,
         searchVector: song => `${song.title} - ${song.artists.map(a => a.name).join(', ')} - ${song.album.name}`,
+        filterMetadata,
+        fetchFilterValues,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -218,5 +231,5 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [play, playNext, playLast, removeByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId]);
+    }) as CollectionSchema<ListSongsItem>, [play, playNext, playLast, removeByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues]);
 }

@@ -9,19 +9,7 @@ import {
 } from "@dnd-kit/core";
 import {SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-kit/sortable";
 import {CSS} from "@dnd-kit/utilities";
-import {
-    ActionIcon,
-    Box,
-    Button,
-    Center,
-    Group,
-    Menu,
-    Popover,
-    SegmentedControl,
-    Stack,
-    Text,
-    TextInput
-} from "@mantine/core";
+import {ActionIcon, Box, Button, Center, Group, Menu, Popover, SegmentedControl, Stack, Text} from "@mantine/core";
 import {useDisclosure, useUncontrolled} from "@mantine/hooks";
 import {
     IconArrowDown,
@@ -29,14 +17,15 @@ import {
     IconGripVertical,
     IconLayoutGridFilled,
     IconListDetails,
-    IconSearch,
     IconSettings,
     IconTableFilled,
     IconX
 } from "@tabler/icons-react";
 import {useMemo} from "react";
 import {ZINDEX_MODAL} from "../../../consts.ts";
-import type {CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
+import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
+import {CollectionFilterBar} from "./collection-filter-bar.tsx";
+import type {CollectionFilterMode, CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
 import styles from './collection-toolbar.module.css';
 
 export type CollectionView = 'table' | 'list' | 'grid';
@@ -44,6 +33,13 @@ export type CollectionView = 'table' | 'list' | 'grid';
 export interface CollectionToolbarProps<M> {
     search?: string;
     setSearch?: (search: string) => void;
+    filter?: string;
+    setFilter?: (filter: string) => void;
+    onApplyFilter?: (filterValue: string) => void;
+    filterMode?: CollectionFilterMode;
+    filterMetadata?: FilterMetadataResponse;
+    fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
+    searchPlaceholder?: string;
     view?: CollectionView;
     setView?: (view: CollectionView) => void;
 
@@ -204,10 +200,17 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
 
     const middleSection = props.renderMiddleSection
         ? props.renderMiddleSection()
-        : <TextInput placeholder="Search..."
-                     leftSection={<IconSearch/>}
-                     value={search}
-                     onChange={e => setSearch(e.currentTarget.value)}/>;
+        : <CollectionFilterBar
+            searchValue={search}
+            onSearchChange={(value) => setSearch(value)}
+            filterValue={props.filter ?? ''}
+            onFilterChange={(value) => props.setFilter?.(value)}
+            onApply={(filterValue) => props.onApplyFilter?.(filterValue)}
+            filterMode={props.filterMode ?? 'client'}
+            placeholder={props.searchPlaceholder}
+            filterMetadata={props.filterMetadata}
+            fetchFilterValues={props.fetchFilterValues}
+        />;
 
     const rightSection = props.renderRightSection
         ? props.renderRightSection()

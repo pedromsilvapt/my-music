@@ -29,6 +29,9 @@ import type {
     AddToQueueRequest,
     CreatePlaylistRequest,
     CreatePlaylistResponse,
+    FilterMetadataResponse,
+    FilterValuesResponse,
+    GetPlaylistFilterValuesParams,
     GetPlaylistResponse,
     ListPlaylistsParams,
     ListPlaylistsResponse,
@@ -2228,6 +2231,408 @@ export const useRemoveFromFavorites = <TError = unknown, TContext = unknown>(
         queryClient,
     );
 };
+export type getPlaylistFilterMetadataResponse200 = {
+    data: FilterMetadataResponse;
+    status: 200;
+};
+
+export type getPlaylistFilterMetadataResponseSuccess =
+    getPlaylistFilterMetadataResponse200 & {
+    headers: Headers;
+};
+
+export type getPlaylistFilterMetadataResponse =
+    getPlaylistFilterMetadataResponseSuccess;
+
+export const getGetPlaylistFilterMetadataUrl = () => {
+    return `/api/playlists/filter-metadata`;
+};
+
+export const getPlaylistFilterMetadata = async (
+    options?: RequestInit,
+): Promise<getPlaylistFilterMetadataResponse> => {
+    const res = await fetch(getGetPlaylistFilterMetadataUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getPlaylistFilterMetadataResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getPlaylistFilterMetadataResponse;
+};
+
+export const getGetPlaylistFilterMetadataQueryKey = () => {
+    return ["api", "playlists", "filter-metadata"] as const;
+};
+
+export const getGetPlaylistFilterMetadataQueryOptions = <
+    TData = Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<
+            Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+            TError,
+            TData
+        >
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetPlaylistFilterMetadataQueryKey();
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getPlaylistFilterMetadata>>
+    > = ({signal}) => getPlaylistFilterMetadata({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPlaylistFilterMetadataQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getPlaylistFilterMetadata>>
+>;
+export type GetPlaylistFilterMetadataQueryError = unknown;
+
+export function useGetPlaylistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getPlaylistFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPlaylistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getPlaylistFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPlaylistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetPlaylistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetPlaylistFilterMetadataQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetPlaylistFilterMetadata = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetPlaylistFilterMetadataQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type getPlaylistFilterValuesResponse200 = {
+    data: FilterValuesResponse;
+    status: 200;
+};
+
+export type getPlaylistFilterValuesResponseSuccess =
+    getPlaylistFilterValuesResponse200 & {
+    headers: Headers;
+};
+
+export type getPlaylistFilterValuesResponse =
+    getPlaylistFilterValuesResponseSuccess;
+
+export const getGetPlaylistFilterValuesUrl = (
+    params?: GetPlaylistFilterValuesParams,
+) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/playlists/filter-values?${stringifiedParams}`
+        : `/api/playlists/filter-values`;
+};
+
+export const getPlaylistFilterValues = async (
+    params?: GetPlaylistFilterValuesParams,
+    options?: RequestInit,
+): Promise<getPlaylistFilterValuesResponse> => {
+    const res = await fetch(getGetPlaylistFilterValuesUrl(params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getPlaylistFilterValuesResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getPlaylistFilterValuesResponse;
+};
+
+export const getGetPlaylistFilterValuesQueryKey = (
+    params?: GetPlaylistFilterValuesParams,
+) => {
+    return [
+        "api",
+        "playlists",
+        "filter-values",
+        ...(params ? [params] : []),
+    ] as const;
+};
+
+export const getGetPlaylistFilterValuesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetPlaylistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetPlaylistFilterValuesQueryKey(params);
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getPlaylistFilterValues>>
+    > = ({signal}) =>
+        getPlaylistFilterValues(params, {signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPlaylistFilterValuesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getPlaylistFilterValues>>
+>;
+export type GetPlaylistFilterValuesQueryError = unknown;
+
+export function useGetPlaylistFilterValues<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+    TError = unknown,
+>(
+    params: undefined | GetPlaylistFilterValuesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getPlaylistFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPlaylistFilterValues<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetPlaylistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getPlaylistFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetPlaylistFilterValues<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetPlaylistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetPlaylistFilterValues<
+    TData = Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetPlaylistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getPlaylistFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetPlaylistFilterValuesQueryOptions(params, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetPlaylistFilterValues = async (
+    queryClient: QueryClient,
+    params?: GetPlaylistFilterValuesParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetPlaylistFilterValuesQueryKey(params)},
+        options,
+    );
+
+    return queryClient;
+};
 
 export const getListPlaylistsResponseMock = (
     overrideResponse: Partial<ListPlaylistsResponse> = {},
@@ -3184,6 +3589,72 @@ export const getRemoveFromFavoritesResponseMock = (
     ...overrideResponse,
 });
 
+export const getGetPlaylistFilterMetadataResponseMock = (
+    overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+    fields: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        type: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        supportedOperators: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+        isComputed: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        isCollection: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        nestedFields: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({})),
+            undefined,
+        ]),
+        values: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+            undefined,
+        ]),
+        supportsDynamicValues: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+    })),
+    operators: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        displayName: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        applicableTypes: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    })),
+    ...overrideResponse,
+});
+
+export const getGetPlaylistFilterValuesResponseMock = (
+    overrideResponse: Partial<FilterValuesResponse> = {},
+): FilterValuesResponse => ({
+    values: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    ...overrideResponse,
+});
+
 export const getListPlaylistsMockHandler = (
     overrideResponse?:
         | ListPlaylistsResponse
@@ -3583,6 +4054,54 @@ export const getRemoveFromFavoritesMockHandler = (
         options,
     );
 };
+
+export const getGetPlaylistFilterMetadataMockHandler = (
+    overrideResponse?:
+        | FilterMetadataResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterMetadataResponse> | FilterMetadataResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/playlists/filter-metadata",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetPlaylistFilterMetadataResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getGetPlaylistFilterValuesMockHandler = (
+    overrideResponse?:
+        | FilterValuesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterValuesResponse> | FilterValuesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/playlists/filter-values",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetPlaylistFilterValuesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getPlaylistsMock = () => [
     getListPlaylistsMockHandler(),
     getCreatePlaylistMockHandler(),
@@ -3601,4 +4120,6 @@ export const getPlaylistsMock = () => [
     getGetFavoritesMockHandler(),
     getAddToFavoritesMockHandler(),
     getRemoveFromFavoritesMockHandler(),
+    getGetPlaylistFilterMetadataMockHandler(),
+    getGetPlaylistFilterValuesMockHandler(),
 ];

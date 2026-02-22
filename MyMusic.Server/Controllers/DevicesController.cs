@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Filters;
 using MyMusic.Common.Models;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Devices;
+using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Sync;
 
 namespace MyMusic.Server.Controllers;
@@ -32,11 +34,27 @@ public class DevicesController(
     private readonly IMusicService _musicService = musicService;
 
     [HttpGet]
-    public async Task<ListDevicesResponse> List(CancellationToken cancellationToken)
+    public async Task<ListDevicesResponse> List(
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] string? filter = null)
     {
-        var devices = await _context.Devices
-            .Where(d => d.OwnerId == _currentUser.Id)
-            .ToListAsync(cancellationToken);
+        var query = _context.Devices
+            .Where(d => d.OwnerId == _currentUser.Id);
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = FuzzySearchHelper.ApplyFuzzySearch(query, search, d => d.SearchableText);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var filterRequest = FilterDslParser.Parse(filter);
+            var filterExpression = DynamicFilterBuilder.BuildFilter<Device>(filterRequest);
+            query = query.Where(filterExpression);
+        }
+
+        var devices = await query.ToListAsync(cancellationToken);
 
         var songCounts = await _context.SongDevices
             .GroupBy(sd => sd.DeviceId)
@@ -608,10 +626,112 @@ public class DevicesController(
     private static string FormatLogMessage(string template, object[] args)
     {
         if (args == null || args.Length == 0)
+        {
             return template;
+        }
 
         var index = 0;
         var formattedTemplate = Regex.Replace(template, @"\{(\w+)\}", _ => $"{{{index++}}}");
         return string.Format(formattedTemplate, args);
+    }
+
+    [HttpGet("filter-metadata")]
+    public FilterMetadataResponse GetFilterMetadata() =>
+        new()
+        {
+            Fields =
+            [
+                new FilterFieldMetadata
+                {
+                    Name = "name",
+                    Type = "string",
+                    Description = "Device name",
+                    SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "icon",
+                    Type = "string",
+                    Description = "Device icon",
+                    SupportedOperators = ["eq", "neq", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "color",
+                    Type = "string",
+                    Description = "Device color",
+                    SupportedOperators = ["eq", "neq", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "lastSyncAt",
+                    Type = "date",
+                    Description = "Last sync date",
+                    SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "isNull", "isNotNull"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "songCount",
+                    Type = "number",
+                    Description = "Number of songs",
+                    IsComputed = true,
+                    SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "searchableText",
+                    Type = "string",
+                    Description = "Combined searchable text",
+                    IsComputed = true,
+                    SupportedOperators = ["contains"],
+                },
+            ],
+            Operators = FilterMetadataHelper.GetOperatorMetadata(),
+        };
+
+    [HttpGet("filter-values")]
+    public async Task<FilterValuesResponse> GetFilterValues(
+        [FromQuery] string field,
+        MusicDbContext context,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = field switch
+        {
+            "name" => context.Devices
+                .Where(d => d.OwnerId == currentUser.Id)
+                .Select(d => d.Name)
+                .Distinct(),
+            "icon" => context.Devices
+                .Where(d => d.OwnerId == currentUser.Id)
+                .Select(d => d.Icon)
+                .Where(v => v != null)
+                .Cast<string>()
+                .Distinct(),
+            "color" => context.Devices
+                .Where(d => d.OwnerId == currentUser.Id)
+                .Select(d => d.Color)
+                .Where(v => v != null)
+                .Cast<string>()
+                .Distinct(),
+            _ => Enumerable.Empty<string>().AsQueryable(),
+        };
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(v => v.ToLower().Contains(searchLower));
+        }
+
+        var values = await query
+            .OrderBy(v => v)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new FilterValuesResponse { Values = values };
     }
 }

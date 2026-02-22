@@ -6,10 +6,12 @@ import {useCallback, useMemo} from "react";
 import {useDeleteApiDevicesDeviceId} from "../../client/devices.ts";
 import type {ListDeviceItem} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
+import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import DeviceBadge from "./device-badge.tsx";
 
 export function useDevicesSchema() {
     const deleteDevice = useDeleteApiDevicesDeviceId();
+    const {data: filterMetadata} = useFilterMetadata('devices');
 
     const handleDelete = useCallback((devices: ListDeviceItem[]) => {
         modals.openConfirmModal({
@@ -51,9 +53,20 @@ export function useDevicesSchema() {
         });
     }, [deleteDevice]);
 
+    const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
+        const params = new URLSearchParams({field, limit: "15"});
+        if (searchTerm) params.set("search", searchTerm);
+        const response = await fetch(`/api/devices/filter-values?${params}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.values as string[];
+    }, []);
+
     return useMemo(() => ({
         key: row => row.id,
         searchVector: device => device.name,
+        filterMetadata,
+        fetchFilterValues,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -105,5 +118,5 @@ export function useDevicesSchema() {
         />,
         renderListTitle: (row) => <Text fw={500}>{row.name}</Text>,
         renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
-    }) as CollectionSchema<ListDeviceItem>, [handleDelete]);
+    }) as CollectionSchema<ListDeviceItem>, [handleDelete, filterMetadata, fetchFilterValues]);
 }

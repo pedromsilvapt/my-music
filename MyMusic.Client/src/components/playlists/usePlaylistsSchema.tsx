@@ -1,18 +1,31 @@
 import {Anchor, Text, Tooltip} from "@mantine/core";
 import {IconPlaylist, IconTrash} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
-import {useMemo} from "react";
+import {useCallback, useMemo} from "react";
 import {useDeletePlaylist} from "../../client/playlists.ts";
 import type {ListPlaylistItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
+import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 
 export function usePlaylistsSchema() {
     const deletePlaylist = useDeletePlaylist();
+    const {data: filterMetadata} = useFilterMetadata('playlists');
+
+    const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
+        const params = new URLSearchParams({field, limit: "15"});
+        if (searchTerm) params.set("search", searchTerm);
+        const response = await fetch(`/api/playlists/filter-values?${params}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.values as string[];
+    }, []);
 
     return useMemo(() => ({
         key: row => row.id,
         searchVector: playlist => playlist.name,
+        filterMetadata,
+        fetchFilterValues,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -89,5 +102,5 @@ export function usePlaylistsSchema() {
             <Anchor component={Link} to={`/playlists/${row.id}`} c={"black"}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
-    }) as CollectionSchema<ListPlaylistItem>, [deletePlaylist]);
+    }) as CollectionSchema<ListPlaylistItem>, [deletePlaylist, filterMetadata, fetchFilterValues]);
 }
