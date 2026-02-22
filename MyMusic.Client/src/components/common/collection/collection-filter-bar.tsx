@@ -75,7 +75,7 @@ export function CollectionFilterBar({
                         onSearchChange(e.target.value);
                     }
                 }}
-                style={{flex: 1, maxWidth: 300}}
+                style={{flex: 1}}
                 styles={{
                     input: {
                         backgroundColor: "var(--mantine-color-gray-0)",
@@ -99,18 +99,6 @@ export function CollectionFilterBar({
 
             {filterMode !== 'none' && (
                 <Group gap="xs">
-                    {hasFilter && (
-                        <Tooltip label="Clear filter">
-                            <ActionIcon
-                                variant="subtle"
-                                color="gray"
-                                onClick={handleClearFilter}
-                            >
-                                <IconX size={16}/>
-                            </ActionIcon>
-                        </Tooltip>
-                    )}
-
                     <Popover
                         opened={showAdvanced}
                         onChange={setShowAdvanced}
@@ -127,7 +115,7 @@ export function CollectionFilterBar({
                                     color={hasFilter ? "blue" : "gray"}
                                     size="sm"
                                 >
-                                    {hasFilter ? "Filtered" : "Advanced"}
+                                    Filters
                                 </Button>
                             </Tooltip>
                         </Popover.Target>

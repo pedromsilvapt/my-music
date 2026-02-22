@@ -18,7 +18,8 @@ export default function SongSubTitle(props: SongSubTitleProps) {
     }
 
     if (props.album != null) {
-        segments.push(<SongAlbum c={props.c} {...props.album} />);
+        segments.push(<SongAlbum c={props.c} name={props.album.name} albumId={props.album.albumId}
+                                 link={props.album.link}/>);
     }
 
     if (props.year) {

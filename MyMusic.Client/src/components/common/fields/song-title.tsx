@@ -6,16 +6,24 @@ import ExplicitLabel from "../explicit-label.tsx";
 export interface SongTitleProps {
     title: string;
     songId?: number | string;
+    link?: string | null;
     isExplicit?: boolean | undefined | null;
     lineClamp?: number;
     isPlaying?: boolean;
 }
 
 export default function SongTitle(props: SongTitleProps) {
-    const content = props.songId
-        ? <Anchor component={Link} to={`/songs/${props.songId}`} lineClamp={props.lineClamp}
-                  c={"black"}>{props.title}</Anchor>
-        : <Anchor lineClamp={props.lineClamp} c={"black"}>{props.title}</Anchor>;
+    let content: React.ReactNode;
+
+    if (props.link) {
+        content = <Anchor href={props.link} target="_blank" rel="noopener noreferrer" lineClamp={props.lineClamp}
+                          c={"black"}>{props.title}</Anchor>;
+    } else if (props.songId) {
+        content = <Anchor component={Link} to={`/songs/${props.songId}`} lineClamp={props.lineClamp}
+                          c={"black"}>{props.title}</Anchor>;
+    } else {
+        content = <Anchor lineClamp={props.lineClamp} c={"black"}>{props.title}</Anchor>;
+    }
 
     return <ExplicitLabel visible={props.isExplicit ?? false}>
         {props.isPlaying &&
