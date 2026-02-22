@@ -140,6 +140,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const handleItemClick = useCallback((clickedKey: React.Key, event: React.MouseEvent) => {
         const isCtrlPressed = event.ctrlKey || event.metaKey;
         const isShiftPressed = event.shiftKey;
+        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
 
         if (isShiftPressed && lastSelectedKey !== null) {
             const itemsList = filteredAndSortedItems.map(item => props.schema.key(item));
@@ -161,7 +162,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
                     selectionHandlers.setSelection(Array.from(newSelection));
                 }
             }
-        } else if (isCtrlPressed) {
+        } else if (isCtrlPressed || isTouchDevice) {
             selectionHandlers.toggle(clickedKey);
         } else {
             if (selectionKeys.length === 1 && selectionKeys[0] === clickedKey) {
