@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EntityFrameworkCore.Projectables;
 using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
@@ -22,4 +23,8 @@ public class Device
     public DateTime? LastSyncAt { get; set; }
 
     public List<SongDevice> Songs { get; set; } = [];
+
+    [Projectable] public int SongCount => Songs.Count;
+
+    [Projectable] public string SearchableText => Name ?? "";
 }

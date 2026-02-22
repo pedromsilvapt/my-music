@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EntityFrameworkCore.Projectables;
 using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
@@ -29,4 +30,8 @@ public class Album
     public required int SongsCount { get; set; }
 
     public required DateTime CreatedAt { get; set; }
+
+    [Projectable] public string SearchableText => (Name ?? "") + " " + (Artist.Name ?? "");
+
+    [Projectable] public int TotalDurationSeconds => Songs.Sum(s => (int)s.Duration.TotalSeconds);
 }

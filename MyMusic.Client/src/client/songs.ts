@@ -25,9 +25,13 @@ import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
 import {http, HttpResponse} from "msw";
 import type {
+    FilterMetadataResponse,
+    FilterValuesResponse,
     GetSongDevicesResponse,
+    GetSongFilterValuesParams,
     GetSongResponse,
     ImportSongsBody,
+    ListSongsParams,
     ListSongsResponse,
     ToggleFavoriteResponse,
     ToggleFavoritesRequest,
@@ -47,14 +51,27 @@ export type listSongsResponseSuccess = listSongsResponse200 & {
 
 export type listSongsResponse = listSongsResponseSuccess;
 
-export const getListSongsUrl = () => {
-    return `/api/songs`;
+export const getListSongsUrl = (params?: ListSongsParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/songs?${stringifiedParams}`
+        : `/api/songs`;
 };
 
 export const listSongs = async (
+    params?: ListSongsParams,
     options?: RequestInit,
 ): Promise<listSongsResponse> => {
-    const res = await fetch(getListSongsUrl(), {
+    const res = await fetch(getListSongsUrl(params), {
         ...options,
         method: "GET",
     });
@@ -69,26 +86,29 @@ export const listSongs = async (
     } as listSongsResponse;
 };
 
-export const getListSongsQueryKey = () => {
-    return ["api", "songs"] as const;
+export const getListSongsQueryKey = (params?: ListSongsParams) => {
+    return ["api", "songs", ...(params ? [params] : [])] as const;
 };
 
 export const getListSongsQueryOptions = <
     TData = Awaited<ReturnType<typeof listSongs>>,
     TError = unknown,
->(options?: {
-    query?: Partial<
-        UseQueryOptions<Awaited<ReturnType<typeof listSongs>>, TError, TData>
-    >;
-    fetch?: RequestInit;
-}) => {
+>(
+    params?: ListSongsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listSongs>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-    const queryKey = queryOptions?.queryKey ?? getListSongsQueryKey();
+    const queryKey = queryOptions?.queryKey ?? getListSongsQueryKey(params);
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listSongs>>> = ({
                                                                                signal,
-                                                                           }) => listSongs({signal, ...fetchOptions});
+                                                                           }) => listSongs(params, {signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
         Awaited<ReturnType<typeof listSongs>>,
@@ -106,6 +126,7 @@ export function useListSongs<
     TData = Awaited<ReturnType<typeof listSongs>>,
     TError = unknown,
 >(
+    params: undefined | ListSongsParams,
     options: {
         query: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listSongs>>, TError, TData>
@@ -128,6 +149,7 @@ export function useListSongs<
     TData = Awaited<ReturnType<typeof listSongs>>,
     TError = unknown,
 >(
+    params?: ListSongsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listSongs>>, TError, TData>
@@ -150,6 +172,7 @@ export function useListSongs<
     TData = Awaited<ReturnType<typeof listSongs>>,
     TError = unknown,
 >(
+    params?: ListSongsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listSongs>>, TError, TData>
@@ -165,6 +188,7 @@ export function useListSongs<
     TData = Awaited<ReturnType<typeof listSongs>>,
     TError = unknown,
 >(
+    params?: ListSongsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listSongs>>, TError, TData>
@@ -175,7 +199,7 @@ export function useListSongs<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getListSongsQueryOptions(options);
+    const queryOptions = getListSongsQueryOptions(params, options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -187,10 +211,11 @@ export function useListSongs<
 
 export const invalidateListSongs = async (
     queryClient: QueryClient,
+    params?: ListSongsParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getListSongsQueryKey()},
+        {queryKey: getListSongsQueryKey(params)},
         options,
     );
 
@@ -1159,6 +1184,405 @@ export const useUpdateSongDevices = <TError = unknown, TContext = unknown>(
 > => {
     return useMutation(getUpdateSongDevicesMutationOptions(options), queryClient);
 };
+export type getSongFilterMetadataResponse200 = {
+    data: FilterMetadataResponse;
+    status: 200;
+};
+
+export type getSongFilterMetadataResponseSuccess =
+    getSongFilterMetadataResponse200 & {
+    headers: Headers;
+};
+
+export type getSongFilterMetadataResponse =
+    getSongFilterMetadataResponseSuccess;
+
+export const getGetSongFilterMetadataUrl = () => {
+    return `/api/songs/filter-metadata`;
+};
+
+export const getSongFilterMetadata = async (
+    options?: RequestInit,
+): Promise<getSongFilterMetadataResponse> => {
+    const res = await fetch(getGetSongFilterMetadataUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getSongFilterMetadataResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getSongFilterMetadataResponse;
+};
+
+export const getGetSongFilterMetadataQueryKey = () => {
+    return ["api", "songs", "filter-metadata"] as const;
+};
+
+export const getGetSongFilterMetadataQueryOptions = <
+    TData = Awaited<ReturnType<typeof getSongFilterMetadata>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<
+            Awaited<ReturnType<typeof getSongFilterMetadata>>,
+            TError,
+            TData
+        >
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getGetSongFilterMetadataQueryKey();
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getSongFilterMetadata>>
+    > = ({signal}) => getSongFilterMetadata({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getSongFilterMetadata>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSongFilterMetadataQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getSongFilterMetadata>>
+>;
+export type GetSongFilterMetadataQueryError = unknown;
+
+export function useGetSongFilterMetadata<
+    TData = Awaited<ReturnType<typeof getSongFilterMetadata>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSongFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSongFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSongFilterMetadata<
+    TData = Awaited<ReturnType<typeof getSongFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSongFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSongFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSongFilterMetadata<
+    TData = Awaited<ReturnType<typeof getSongFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetSongFilterMetadata<
+    TData = Awaited<ReturnType<typeof getSongFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetSongFilterMetadataQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetSongFilterMetadata = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetSongFilterMetadataQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type getSongFilterValuesResponse200 = {
+    data: FilterValuesResponse;
+    status: 200;
+};
+
+export type getSongFilterValuesResponseSuccess =
+    getSongFilterValuesResponse200 & {
+    headers: Headers;
+};
+
+export type getSongFilterValuesResponse = getSongFilterValuesResponseSuccess;
+
+export const getGetSongFilterValuesUrl = (
+    params?: GetSongFilterValuesParams,
+) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/songs/filter-values?${stringifiedParams}`
+        : `/api/songs/filter-values`;
+};
+
+export const getSongFilterValues = async (
+    params?: GetSongFilterValuesParams,
+    options?: RequestInit,
+): Promise<getSongFilterValuesResponse> => {
+    const res = await fetch(getGetSongFilterValuesUrl(params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getSongFilterValuesResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getSongFilterValuesResponse;
+};
+
+export const getGetSongFilterValuesQueryKey = (
+    params?: GetSongFilterValuesParams,
+) => {
+    return [
+        "api",
+        "songs",
+        "filter-values",
+        ...(params ? [params] : []),
+    ] as const;
+};
+
+export const getGetSongFilterValuesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getSongFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetSongFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetSongFilterValuesQueryKey(params);
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getSongFilterValues>>
+    > = ({signal}) => getSongFilterValues(params, {signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getSongFilterValues>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSongFilterValuesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getSongFilterValues>>
+>;
+export type GetSongFilterValuesQueryError = unknown;
+
+export function useGetSongFilterValues<
+    TData = Awaited<ReturnType<typeof getSongFilterValues>>,
+    TError = unknown,
+>(
+    params: undefined | GetSongFilterValuesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSongFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSongFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSongFilterValues<
+    TData = Awaited<ReturnType<typeof getSongFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetSongFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getSongFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getSongFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSongFilterValues<
+    TData = Awaited<ReturnType<typeof getSongFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetSongFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetSongFilterValues<
+    TData = Awaited<ReturnType<typeof getSongFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetSongFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getSongFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetSongFilterValuesQueryOptions(params, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetSongFilterValues = async (
+    queryClient: QueryClient,
+    params?: GetSongFilterValuesParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetSongFilterValuesQueryKey(params)},
+        options,
+    );
+
+    return queryClient;
+};
 
 export const getListSongsResponseMock = (
     overrideResponse: Partial<ListSongsResponse> = {},
@@ -1380,6 +1804,72 @@ export const getUpdateSongDevicesResponseMock = (
     ...overrideResponse,
 });
 
+export const getGetSongFilterMetadataResponseMock = (
+    overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+    fields: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        type: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        supportedOperators: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+        isComputed: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        isCollection: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        nestedFields: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({})),
+            undefined,
+        ]),
+        values: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+            undefined,
+        ]),
+        supportsDynamicValues: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+    })),
+    operators: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        displayName: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        applicableTypes: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    })),
+    ...overrideResponse,
+});
+
+export const getGetSongFilterValuesResponseMock = (
+    overrideResponse: Partial<FilterValuesResponse> = {},
+): FilterValuesResponse => ({
+    values: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    ...overrideResponse,
+});
+
 export const getListSongsMockHandler = (
     overrideResponse?:
         | ListSongsResponse
@@ -1563,6 +2053,54 @@ export const getUpdateSongDevicesMockHandler = (
         options,
     );
 };
+
+export const getGetSongFilterMetadataMockHandler = (
+    overrideResponse?:
+        | FilterMetadataResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterMetadataResponse> | FilterMetadataResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/songs/filter-metadata",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetSongFilterMetadataResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getGetSongFilterValuesMockHandler = (
+    overrideResponse?:
+        | FilterValuesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterValuesResponse> | FilterValuesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/songs/filter-values",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetSongFilterValuesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getSongsMock = () => [
     getListSongsMockHandler(),
     getGetSongMockHandler(),
@@ -1572,4 +2110,6 @@ export const getSongsMock = () => [
     getToggleFavoritesMockHandler(),
     getGetSongDevicesMockHandler(),
     getUpdateSongDevicesMockHandler(),
+    getGetSongFilterMetadataMockHandler(),
+    getGetSongFilterValuesMockHandler(),
 ];

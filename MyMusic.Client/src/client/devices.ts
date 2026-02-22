@@ -29,8 +29,12 @@ import type {
     AcknowledgeActionResponse,
     CreateDeviceRequest,
     CreateDeviceResponse,
+    FilterMetadataResponse,
+    FilterValuesResponse,
     GetApiDevicesDeviceIdSessionsParams,
     GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    GetApiDevicesFilterValuesParams,
+    GetApiDevicesParams,
     GetPendingActionsResponse,
     ListDevicesResponse,
     ListSyncRecordsResponse,
@@ -60,14 +64,27 @@ export type getApiDevicesResponseSuccess = getApiDevicesResponse200 & {
 
 export type getApiDevicesResponse = getApiDevicesResponseSuccess;
 
-export const getGetApiDevicesUrl = () => {
-    return `/api/api/devices`;
+export const getGetApiDevicesUrl = (params?: GetApiDevicesParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/api/devices?${stringifiedParams}`
+        : `/api/api/devices`;
 };
 
 export const getApiDevices = async (
+    params?: GetApiDevicesParams,
     options?: RequestInit,
 ): Promise<getApiDevicesResponse> => {
-    const res = await fetch(getGetApiDevicesUrl(), {
+    const res = await fetch(getGetApiDevicesUrl(params), {
         ...options,
         method: "GET",
     });
@@ -82,26 +99,29 @@ export const getApiDevices = async (
     } as getApiDevicesResponse;
 };
 
-export const getGetApiDevicesQueryKey = () => {
-    return ["api", "api", "devices"] as const;
+export const getGetApiDevicesQueryKey = (params?: GetApiDevicesParams) => {
+    return ["api", "api", "devices", ...(params ? [params] : [])] as const;
 };
 
 export const getGetApiDevicesQueryOptions = <
     TData = Awaited<ReturnType<typeof getApiDevices>>,
     TError = unknown,
->(options?: {
-    query?: Partial<
-        UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
-    >;
-    fetch?: RequestInit;
-}) => {
+>(
+    params?: GetApiDevicesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-    const queryKey = queryOptions?.queryKey ?? getGetApiDevicesQueryKey();
+    const queryKey = queryOptions?.queryKey ?? getGetApiDevicesQueryKey(params);
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiDevices>>> = ({
                                                                                    signal,
-                                                                               }) => getApiDevices({signal, ...fetchOptions});
+                                                                               }) => getApiDevices(params, {signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
         Awaited<ReturnType<typeof getApiDevices>>,
@@ -119,6 +139,7 @@ export function useGetApiDevices<
     TData = Awaited<ReturnType<typeof getApiDevices>>,
     TError = unknown,
 >(
+    params: undefined | GetApiDevicesParams,
     options: {
         query: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
@@ -141,6 +162,7 @@ export function useGetApiDevices<
     TData = Awaited<ReturnType<typeof getApiDevices>>,
     TError = unknown,
 >(
+    params?: GetApiDevicesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
@@ -163,6 +185,7 @@ export function useGetApiDevices<
     TData = Awaited<ReturnType<typeof getApiDevices>>,
     TError = unknown,
 >(
+    params?: GetApiDevicesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
@@ -178,6 +201,7 @@ export function useGetApiDevices<
     TData = Awaited<ReturnType<typeof getApiDevices>>,
     TError = unknown,
 >(
+    params?: GetApiDevicesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
@@ -188,7 +212,7 @@ export function useGetApiDevices<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getGetApiDevicesQueryOptions(options);
+    const queryOptions = getGetApiDevicesQueryOptions(params, options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -200,10 +224,11 @@ export function useGetApiDevices<
 
 export const invalidateGetApiDevices = async (
     queryClient: QueryClient,
+    params?: GetApiDevicesParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getGetApiDevicesQueryKey()},
+        {queryKey: getGetApiDevicesQueryKey(params)},
         options,
     );
 
@@ -2049,6 +2074,412 @@ export const usePostApiDevicesDeviceIdSyncUpload = <
         queryClient,
     );
 };
+export type getApiDevicesFilterMetadataResponse200 = {
+    data: FilterMetadataResponse;
+    status: 200;
+};
+
+export type getApiDevicesFilterMetadataResponseSuccess =
+    getApiDevicesFilterMetadataResponse200 & {
+    headers: Headers;
+};
+
+export type getApiDevicesFilterMetadataResponse =
+    getApiDevicesFilterMetadataResponseSuccess;
+
+export const getGetApiDevicesFilterMetadataUrl = () => {
+    return `/api/api/devices/filter-metadata`;
+};
+
+export const getApiDevicesFilterMetadata = async (
+    options?: RequestInit,
+): Promise<getApiDevicesFilterMetadataResponse> => {
+    const res = await fetch(getGetApiDevicesFilterMetadataUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getApiDevicesFilterMetadataResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getApiDevicesFilterMetadataResponse;
+};
+
+export const getGetApiDevicesFilterMetadataQueryKey = () => {
+    return ["api", "api", "devices", "filter-metadata"] as const;
+};
+
+export const getGetApiDevicesFilterMetadataQueryOptions = <
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<
+            Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+            TError,
+            TData
+        >
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetApiDevicesFilterMetadataQueryKey();
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+    > = ({signal}) => getApiDevicesFilterMetadata({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetApiDevicesFilterMetadataQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+>;
+export type GetApiDevicesFilterMetadataQueryError = unknown;
+
+export function useGetApiDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetApiDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetApiDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetApiDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetApiDevicesFilterMetadataQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetApiDevicesFilterMetadata = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetApiDevicesFilterMetadataQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type getApiDevicesFilterValuesResponse200 = {
+    data: FilterValuesResponse;
+    status: 200;
+};
+
+export type getApiDevicesFilterValuesResponseSuccess =
+    getApiDevicesFilterValuesResponse200 & {
+    headers: Headers;
+};
+
+export type getApiDevicesFilterValuesResponse =
+    getApiDevicesFilterValuesResponseSuccess;
+
+export const getGetApiDevicesFilterValuesUrl = (
+    params?: GetApiDevicesFilterValuesParams,
+) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/api/devices/filter-values?${stringifiedParams}`
+        : `/api/api/devices/filter-values`;
+};
+
+export const getApiDevicesFilterValues = async (
+    params?: GetApiDevicesFilterValuesParams,
+    options?: RequestInit,
+): Promise<getApiDevicesFilterValuesResponse> => {
+    const res = await fetch(getGetApiDevicesFilterValuesUrl(params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getApiDevicesFilterValuesResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getApiDevicesFilterValuesResponse;
+};
+
+export const getGetApiDevicesFilterValuesQueryKey = (
+    params?: GetApiDevicesFilterValuesParams,
+) => {
+    return [
+        "api",
+        "api",
+        "devices",
+        "filter-values",
+        ...(params ? [params] : []),
+    ] as const;
+};
+
+export const getGetApiDevicesFilterValuesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetApiDevicesFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetApiDevicesFilterValuesQueryKey(params);
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+    > = ({signal}) =>
+        getApiDevicesFilterValues(params, {signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetApiDevicesFilterValuesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+>;
+export type GetApiDevicesFilterValuesQueryError = unknown;
+
+export function useGetApiDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+    TError = unknown,
+>(
+    params: undefined | GetApiDevicesFilterValuesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetApiDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetApiDevicesFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetApiDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetApiDevicesFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetApiDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetApiDevicesFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetApiDevicesFilterValuesQueryOptions(
+        params,
+        options,
+    );
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetApiDevicesFilterValues = async (
+    queryClient: QueryClient,
+    params?: GetApiDevicesFilterValuesParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetApiDevicesFilterValuesQueryKey(params)},
+        options,
+    );
+
+    return queryClient;
+};
 
 export const getGetApiDevicesResponseMock = (
     overrideResponse: Partial<ListDevicesResponse> = {},
@@ -2297,6 +2728,72 @@ export const getPostApiDevicesDeviceIdSyncUploadResponseMock = (
         ]),
         undefined,
     ]),
+    ...overrideResponse,
+});
+
+export const getGetApiDevicesFilterMetadataResponseMock = (
+    overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+    fields: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        type: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        supportedOperators: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+        isComputed: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        isCollection: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        nestedFields: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({})),
+            undefined,
+        ]),
+        values: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+            undefined,
+        ]),
+        supportsDynamicValues: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+    })),
+    operators: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        displayName: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        applicableTypes: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    })),
+    ...overrideResponse,
+});
+
+export const getGetApiDevicesFilterValuesResponseMock = (
+    overrideResponse: Partial<FilterValuesResponse> = {},
+): FilterValuesResponse => ({
+    values: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
     ...overrideResponse,
 });
 
@@ -2607,6 +3104,54 @@ export const getPostApiDevicesDeviceIdSyncUploadMockHandler = (
         options,
     );
 };
+
+export const getGetApiDevicesFilterMetadataMockHandler = (
+    overrideResponse?:
+        | FilterMetadataResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterMetadataResponse> | FilterMetadataResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/api/devices/filter-metadata",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetApiDevicesFilterMetadataResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getGetApiDevicesFilterValuesMockHandler = (
+    overrideResponse?:
+        | FilterValuesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterValuesResponse> | FilterValuesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/api/devices/filter-values",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetApiDevicesFilterValuesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getDevicesMock = () => [
     getGetApiDevicesMockHandler(),
     getPostApiDevicesMockHandler(),
@@ -2621,4 +3166,6 @@ export const getDevicesMock = () => [
     getPostApiDevicesDeviceIdSyncAcknowledgeMockHandler(),
     getPostApiDevicesDeviceIdSyncCheckMockHandler(),
     getPostApiDevicesDeviceIdSyncUploadMockHandler(),
+    getGetApiDevicesFilterMetadataMockHandler(),
+    getGetApiDevicesFilterValuesMockHandler(),
 ];

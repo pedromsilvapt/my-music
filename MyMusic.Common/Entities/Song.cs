@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EntityFrameworkCore.Projectables;
 
 namespace MyMusic.Common.Entities;
 
@@ -54,4 +55,22 @@ public class Song
     public required List<SongDevice> Devices { get; set; }
 
     public required List<SongSource> Sources { get; set; } = [];
+
+    public List<PlaylistSong> PlaylistSongs { get; set; } = [];
+
+    [Projectable] public int DurationSeconds => (int)Duration.TotalSeconds;
+
+    [Projectable]
+    public string DurationCategory =>
+        Duration.TotalMinutes < 3 ? "Short" : Duration.TotalMinutes < 6 ? "Medium" : "Long";
+
+    [Projectable] public bool HasLyrics => Lyrics != null && Lyrics != "";
+
+    [Projectable] public int DaysSinceAdded => (int)(DateTime.UtcNow - (AddedAt ?? CreatedAt)).TotalDays;
+
+    [Projectable] public int ArtistCount => Artists.Count;
+
+    [Projectable] public int GenreCount => Genres.Count;
+
+    [Projectable] public string SearchableText => (Title ?? "") + " " + (Album.Name ?? "") + " " + (Label ?? "");
 }

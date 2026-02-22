@@ -21,7 +21,15 @@ import type {
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
 import {http, HttpResponse} from "msw";
-import type {GetArtistParams, GetArtistResponse, ListArtistsResponse,} from "../model";
+import type {
+    FilterMetadataResponse,
+    FilterValuesResponse,
+    GetArtistFilterValuesParams,
+    GetArtistParams,
+    GetArtistResponse,
+    ListArtistsParams,
+    ListArtistsResponse,
+} from "../model";
 
 export type listArtistsResponse200 = {
     data: ListArtistsResponse;
@@ -34,14 +42,27 @@ export type listArtistsResponseSuccess = listArtistsResponse200 & {
 
 export type listArtistsResponse = listArtistsResponseSuccess;
 
-export const getListArtistsUrl = () => {
-    return `/api/artists`;
+export const getListArtistsUrl = (params?: ListArtistsParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/artists?${stringifiedParams}`
+        : `/api/artists`;
 };
 
 export const listArtists = async (
+    params?: ListArtistsParams,
     options?: RequestInit,
 ): Promise<listArtistsResponse> => {
-    const res = await fetch(getListArtistsUrl(), {
+    const res = await fetch(getListArtistsUrl(params), {
         ...options,
         method: "GET",
     });
@@ -56,26 +77,29 @@ export const listArtists = async (
     } as listArtistsResponse;
 };
 
-export const getListArtistsQueryKey = () => {
-    return ["api", "artists"] as const;
+export const getListArtistsQueryKey = (params?: ListArtistsParams) => {
+    return ["api", "artists", ...(params ? [params] : [])] as const;
 };
 
 export const getListArtistsQueryOptions = <
     TData = Awaited<ReturnType<typeof listArtists>>,
     TError = unknown,
->(options?: {
-    query?: Partial<
-        UseQueryOptions<Awaited<ReturnType<typeof listArtists>>, TError, TData>
-    >;
-    fetch?: RequestInit;
-}) => {
+>(
+    params?: ListArtistsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listArtists>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-    const queryKey = queryOptions?.queryKey ?? getListArtistsQueryKey();
+    const queryKey = queryOptions?.queryKey ?? getListArtistsQueryKey(params);
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listArtists>>> = ({
                                                                                  signal,
-                                                                             }) => listArtists({signal, ...fetchOptions});
+                                                                             }) => listArtists(params, {signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
         Awaited<ReturnType<typeof listArtists>>,
@@ -93,6 +117,7 @@ export function useListArtists<
     TData = Awaited<ReturnType<typeof listArtists>>,
     TError = unknown,
 >(
+    params: undefined | ListArtistsParams,
     options: {
         query: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listArtists>>, TError, TData>
@@ -115,6 +140,7 @@ export function useListArtists<
     TData = Awaited<ReturnType<typeof listArtists>>,
     TError = unknown,
 >(
+    params?: ListArtistsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listArtists>>, TError, TData>
@@ -137,6 +163,7 @@ export function useListArtists<
     TData = Awaited<ReturnType<typeof listArtists>>,
     TError = unknown,
 >(
+    params?: ListArtistsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listArtists>>, TError, TData>
@@ -152,6 +179,7 @@ export function useListArtists<
     TData = Awaited<ReturnType<typeof listArtists>>,
     TError = unknown,
 >(
+    params?: ListArtistsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listArtists>>, TError, TData>
@@ -162,7 +190,7 @@ export function useListArtists<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getListArtistsQueryOptions(options);
+    const queryOptions = getListArtistsQueryOptions(params, options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -174,10 +202,11 @@ export function useListArtists<
 
 export const invalidateListArtists = async (
     queryClient: QueryClient,
+    params?: ListArtistsParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getListArtistsQueryKey()},
+        {queryKey: getListArtistsQueryKey(params)},
         options,
     );
 
@@ -376,6 +405,409 @@ export const invalidateGetArtist = async (
     return queryClient;
 };
 
+export type getArtistFilterMetadataResponse200 = {
+    data: FilterMetadataResponse;
+    status: 200;
+};
+
+export type getArtistFilterMetadataResponseSuccess =
+    getArtistFilterMetadataResponse200 & {
+    headers: Headers;
+};
+
+export type getArtistFilterMetadataResponse =
+    getArtistFilterMetadataResponseSuccess;
+
+export const getGetArtistFilterMetadataUrl = () => {
+    return `/api/artists/filter-metadata`;
+};
+
+export const getArtistFilterMetadata = async (
+    options?: RequestInit,
+): Promise<getArtistFilterMetadataResponse> => {
+    const res = await fetch(getGetArtistFilterMetadataUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getArtistFilterMetadataResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getArtistFilterMetadataResponse;
+};
+
+export const getGetArtistFilterMetadataQueryKey = () => {
+    return ["api", "artists", "filter-metadata"] as const;
+};
+
+export const getGetArtistFilterMetadataQueryOptions = <
+    TData = Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<
+            Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+            TError,
+            TData
+        >
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetArtistFilterMetadataQueryKey();
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getArtistFilterMetadata>>
+    > = ({signal}) => getArtistFilterMetadata({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetArtistFilterMetadataQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getArtistFilterMetadata>>
+>;
+export type GetArtistFilterMetadataQueryError = unknown;
+
+export function useGetArtistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtistFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetArtistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtistFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetArtistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetArtistFilterMetadata<
+    TData = Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetArtistFilterMetadataQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetArtistFilterMetadata = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetArtistFilterMetadataQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type getArtistFilterValuesResponse200 = {
+    data: FilterValuesResponse;
+    status: 200;
+};
+
+export type getArtistFilterValuesResponseSuccess =
+    getArtistFilterValuesResponse200 & {
+    headers: Headers;
+};
+
+export type getArtistFilterValuesResponse =
+    getArtistFilterValuesResponseSuccess;
+
+export const getGetArtistFilterValuesUrl = (
+    params?: GetArtistFilterValuesParams,
+) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/artists/filter-values?${stringifiedParams}`
+        : `/api/artists/filter-values`;
+};
+
+export const getArtistFilterValues = async (
+    params?: GetArtistFilterValuesParams,
+    options?: RequestInit,
+): Promise<getArtistFilterValuesResponse> => {
+    const res = await fetch(getGetArtistFilterValuesUrl(params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getArtistFilterValuesResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getArtistFilterValuesResponse;
+};
+
+export const getGetArtistFilterValuesQueryKey = (
+    params?: GetArtistFilterValuesParams,
+) => {
+    return [
+        "api",
+        "artists",
+        "filter-values",
+        ...(params ? [params] : []),
+    ] as const;
+};
+
+export const getGetArtistFilterValuesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getArtistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetArtistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetArtistFilterValuesQueryKey(params);
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getArtistFilterValues>>
+    > = ({signal}) =>
+        getArtistFilterValues(params, {signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getArtistFilterValues>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetArtistFilterValuesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getArtistFilterValues>>
+>;
+export type GetArtistFilterValuesQueryError = unknown;
+
+export function useGetArtistFilterValues<
+    TData = Awaited<ReturnType<typeof getArtistFilterValues>>,
+    TError = unknown,
+>(
+    params: undefined | GetArtistFilterValuesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtistFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtistFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetArtistFilterValues<
+    TData = Awaited<ReturnType<typeof getArtistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetArtistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getArtistFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getArtistFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetArtistFilterValues<
+    TData = Awaited<ReturnType<typeof getArtistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetArtistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetArtistFilterValues<
+    TData = Awaited<ReturnType<typeof getArtistFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetArtistFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getArtistFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetArtistFilterValuesQueryOptions(params, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetArtistFilterValues = async (
+    queryClient: QueryClient,
+    params?: GetArtistFilterValuesParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetArtistFilterValuesQueryKey(params)},
+        options,
+    );
+
+    return queryClient;
+};
+
 export const getListArtistsResponseMock = (
     overrideResponse: Partial<ListArtistsResponse> = {},
 ): ListArtistsResponse => ({
@@ -500,6 +932,72 @@ export const getGetArtistResponseMock = (
     ...overrideResponse,
 });
 
+export const getGetArtistFilterMetadataResponseMock = (
+    overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+    fields: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        type: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        supportedOperators: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+        isComputed: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        isCollection: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        nestedFields: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({})),
+            undefined,
+        ]),
+        values: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+            undefined,
+        ]),
+        supportsDynamicValues: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+    })),
+    operators: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        displayName: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        applicableTypes: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    })),
+    ...overrideResponse,
+});
+
+export const getGetArtistFilterValuesResponseMock = (
+    overrideResponse: Partial<FilterValuesResponse> = {},
+): FilterValuesResponse => ({
+    values: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    ...overrideResponse,
+});
+
 export const getListArtistsMockHandler = (
     overrideResponse?:
         | ListArtistsResponse
@@ -547,7 +1045,57 @@ export const getGetArtistMockHandler = (
         options,
     );
 };
+
+export const getGetArtistFilterMetadataMockHandler = (
+    overrideResponse?:
+        | FilterMetadataResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterMetadataResponse> | FilterMetadataResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/artists/filter-metadata",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetArtistFilterMetadataResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getGetArtistFilterValuesMockHandler = (
+    overrideResponse?:
+        | FilterValuesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterValuesResponse> | FilterValuesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/artists/filter-values",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetArtistFilterValuesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getArtistsMock = () => [
     getListArtistsMockHandler(),
     getGetArtistMockHandler(),
+    getGetArtistFilterMetadataMockHandler(),
+    getGetArtistFilterValuesMockHandler(),
 ];

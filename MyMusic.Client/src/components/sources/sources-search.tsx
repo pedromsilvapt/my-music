@@ -13,12 +13,17 @@ export default function SourcesSearch() {
     const queryClient = useQueryClient()
 
     const [search, setSearch] = useState('');
+    const [filter, setFilter] = useState('');
+    const [appliedFilter, setAppliedFilter] = useState('');
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
 
     const {data: data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {
         query: {
             placeholderData: prev => prev
+        },
+        fetch: {
+            filter: appliedFilter
         }
     });
 
@@ -35,7 +40,7 @@ export default function SourcesSearch() {
             songId: s.id,
             sourceId: source!.id
         })))
-    }, [createPurchase]);
+    }, [createPurchase, source]);
 
     const sourceSongsSchema = useSourceSongsSchema(onPurchase);
 
@@ -48,8 +53,21 @@ export default function SourcesSearch() {
                 items={elements}
                 schema={sourceSongsSchema}
                 isFetching={isFetching}
-                toolbar={p => (<SourcesSearchToolbar {...p} source={source} setSource={setSource} search={search}
-                                                     setSearch={setSearch}/>)}
+                toolbar={p => (
+                    <SourcesSearchToolbar
+                        {...p}
+                        source={source}
+                        setSource={setSource}
+                        search={search}
+                        setSearch={setSearch}
+                        filter={filter}
+                        setFilter={setFilter}
+                        onApplyFilter={(filterValue) => {
+                            setFilter(filterValue);
+                            setAppliedFilter(filterValue);
+                        }}
+                    />
+                )}
             >
             </Collection>
         </div>

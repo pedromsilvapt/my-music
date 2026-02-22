@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
 using MyMusic.Common.Sources;
+using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Sources;
 
 namespace MyMusic.Server.Controllers;
@@ -38,7 +40,7 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
         CancellationToken cancellationToken = default
     )
     {
-        var source = await db.Sources.FindAsync([id], cancellationToken: cancellationToken);
+        var source = await db.Sources.FindAsync([id], cancellationToken);
 
         if (source is null)
         {
@@ -81,7 +83,7 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
         [FromBody] UpdateSourceRequest body,
         CancellationToken cancellationToken)
     {
-        var source = await db.Sources.FindAsync([id], cancellationToken: cancellationToken);
+        var source = await db.Sources.FindAsync([id], cancellationToken);
 
         if (source is null)
         {
@@ -106,7 +108,7 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
         [FromRoute] long id,
         CancellationToken cancellationToken)
     {
-        var source = await db.Sources.FindAsync([id], cancellationToken: cancellationToken);
+        var source = await db.Sources.FindAsync([id], cancellationToken);
 
         if (source is null)
         {
@@ -129,13 +131,106 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
     #region Songs
 
     [HttpGet("{id}/songs/search/{query}", Name = "Search Songs")]
-    public async Task<ActionResult<List<SourceSong>>> SearchSongsAsync(long id,
-        string query, CancellationToken cancellationToken = default)
+    public async Task<ActionResult<List<SourceSong>>> SearchSongsAsync(
+        long id,
+        string query,
+        CancellationToken cancellationToken = default,
+        [FromQuery] string? filter = null)
     {
         var source = await sourcesService.GetSourceClientAsync(id, cancellationToken);
+        var results = await source.SearchSongsAsync(query, cancellationToken);
 
-        return await source.SearchSongsAsync(query, cancellationToken);
+        results = InMemoryFilterBuilder.ApplyFuzzySearch(
+            results,
+            query,
+            s => s.SearchableText).ToList();
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var filterRequest = FilterDslParser.Parse(filter);
+            results = InMemoryFilterBuilder.ApplyFilter(results, filterRequest).ToList();
+        }
+
+        return results;
     }
+
+    [HttpGet("songs/filter-metadata", Name = "GetSourceSongFilterMetadata")]
+    public ActionResult<FilterMetadataResponse> GetSourceSongFilterMetadata() =>
+        Ok(new FilterMetadataResponse
+        {
+            Fields = GetSourceSongFieldMetadata(),
+            Operators = FilterMetadataHelper.GetOperatorMetadata(),
+        });
+
+    private static List<FilterFieldMetadata> GetSourceSongFieldMetadata() =>
+    [
+        new()
+        {
+            Name = "title", Type = "string", Description = "Song title",
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+        },
+        new()
+        {
+            Name = "year", Type = "number", Description = "Release year",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between", "in", "notIn"],
+        },
+        new()
+        {
+            Name = "explicit", Type = "boolean", Description = "Has explicit content",
+            SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
+        },
+        new()
+        {
+            Name = "size", Type = "number", Description = "File size in bytes",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between"],
+        },
+        new()
+        {
+            Name = "track", Type = "number", Description = "Track number",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+        },
+        new()
+        {
+            Name = "price", Type = "number", Description = "Price",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between"],
+        },
+        new()
+        {
+            Name = "durationSeconds", Type = "number", Description = "Duration in seconds", IsComputed = true,
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between"],
+        },
+        new()
+        {
+            Name = "durationCategory", Type = "string",
+            Description = "Duration category (Short: <3min, Medium: 3-6min, Long: >6min)", IsComputed = true,
+            SupportedOperators = ["eq", "neq", "in", "notIn"], Values = ["Short", "Medium", "Long"],
+        },
+        new()
+        {
+            Name = "hasLyrics", Type = "boolean", Description = "Has lyrics", IsComputed = true,
+            SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
+        },
+        new()
+        {
+            Name = "artistCount", Type = "number", Description = "Number of artists", IsComputed = true,
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+        },
+        new()
+        {
+            Name = "genreCount", Type = "number", Description = "Number of genres", IsComputed = true,
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+        },
+        new()
+        {
+            Name = "album.name", Type = "string", Description = "Album name",
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+        },
+        new()
+        {
+            Name = "album.year", Type = "number", Description = "Album release year",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte"],
+        },
+    ];
 
     [HttpGet("{id}/songs/{songId}", Name = "Get Song")]
     public async Task<ActionResult<SourceSong>> GetSongAsync(long id, string songId,
@@ -148,10 +243,8 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
 
     [HttpGet("{id}/songs/purchase/{songId}", Name = "Purchase Song")]
     public async Task<ActionResult<Stream>> PurchaseSongAsync(long id, string songId,
-        CancellationToken cancellationToken = default)
-    {
-        return NotFound();
-    }
+        CancellationToken cancellationToken = default) =>
+        NotFound();
 
     #endregion Songs
 
@@ -159,10 +252,8 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
 
     [HttpGet("{id}/albums/search/{query}", Name = "Search Albums")]
     public async Task<ActionResult<List<SourceAlbum>>> SearchAlbumsAsync(long id,
-        string query, CancellationToken cancellationToken = default)
-    {
-        return NotFound();
-    }
+        string query, CancellationToken cancellationToken = default) =>
+        NotFound();
 
     #endregion Albums
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EntityFrameworkCore.Projectables;
 
 namespace MyMusic.Common.Entities;
 
@@ -29,4 +30,6 @@ public class Artist
     public required int AlbumsCount { get; set; }
 
     public required DateTime CreatedAt { get; set; }
+
+    [Projectable] public string SearchableText => Name ?? "";
 }

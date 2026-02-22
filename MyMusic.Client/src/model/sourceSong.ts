@@ -28,4 +28,12 @@ export interface SourceSong {
     /** @nullable */
     link?: string | null;
     price?: number;
+    /** @nullable */
+    searchableText?: string | null;
+    durationSeconds?: number;
+    /** @nullable */
+    durationCategory?: string | null;
+    hasLyrics?: boolean;
+    artistCount?: number;
+    genreCount?: number;
 }

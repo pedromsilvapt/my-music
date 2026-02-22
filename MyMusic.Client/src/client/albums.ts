@@ -21,8 +21,14 @@ import type {
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
 import {http, HttpResponse} from "msw";
-
-import type {GetAlbumResponse, ListAlbumsResponse} from "../model";
+import type {
+    FilterMetadataResponse,
+    FilterValuesResponse,
+    GetAlbumFilterValuesParams,
+    GetAlbumResponse,
+    ListAlbumsParams,
+    ListAlbumsResponse,
+} from "../model";
 
 export type listAlbumsResponse200 = {
     data: ListAlbumsResponse;
@@ -35,14 +41,27 @@ export type listAlbumsResponseSuccess = listAlbumsResponse200 & {
 
 export type listAlbumsResponse = listAlbumsResponseSuccess;
 
-export const getListAlbumsUrl = () => {
-    return `/api/albums`;
+export const getListAlbumsUrl = (params?: ListAlbumsParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/albums?${stringifiedParams}`
+        : `/api/albums`;
 };
 
 export const listAlbums = async (
+    params?: ListAlbumsParams,
     options?: RequestInit,
 ): Promise<listAlbumsResponse> => {
-    const res = await fetch(getListAlbumsUrl(), {
+    const res = await fetch(getListAlbumsUrl(params), {
         ...options,
         method: "GET",
     });
@@ -57,26 +76,29 @@ export const listAlbums = async (
     } as listAlbumsResponse;
 };
 
-export const getListAlbumsQueryKey = () => {
-    return ["api", "albums"] as const;
+export const getListAlbumsQueryKey = (params?: ListAlbumsParams) => {
+    return ["api", "albums", ...(params ? [params] : [])] as const;
 };
 
 export const getListAlbumsQueryOptions = <
     TData = Awaited<ReturnType<typeof listAlbums>>,
     TError = unknown,
->(options?: {
-    query?: Partial<
-        UseQueryOptions<Awaited<ReturnType<typeof listAlbums>>, TError, TData>
-    >;
-    fetch?: RequestInit;
-}) => {
+>(
+    params?: ListAlbumsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof listAlbums>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+) => {
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-    const queryKey = queryOptions?.queryKey ?? getListAlbumsQueryKey();
+    const queryKey = queryOptions?.queryKey ?? getListAlbumsQueryKey(params);
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof listAlbums>>> = ({
                                                                                 signal,
-                                                                            }) => listAlbums({signal, ...fetchOptions});
+                                                                            }) => listAlbums(params, {signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
         Awaited<ReturnType<typeof listAlbums>>,
@@ -94,6 +116,7 @@ export function useListAlbums<
     TData = Awaited<ReturnType<typeof listAlbums>>,
     TError = unknown,
 >(
+    params: undefined | ListAlbumsParams,
     options: {
         query: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listAlbums>>, TError, TData>
@@ -116,6 +139,7 @@ export function useListAlbums<
     TData = Awaited<ReturnType<typeof listAlbums>>,
     TError = unknown,
 >(
+    params?: ListAlbumsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listAlbums>>, TError, TData>
@@ -138,6 +162,7 @@ export function useListAlbums<
     TData = Awaited<ReturnType<typeof listAlbums>>,
     TError = unknown,
 >(
+    params?: ListAlbumsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listAlbums>>, TError, TData>
@@ -153,6 +178,7 @@ export function useListAlbums<
     TData = Awaited<ReturnType<typeof listAlbums>>,
     TError = unknown,
 >(
+    params?: ListAlbumsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<Awaited<ReturnType<typeof listAlbums>>, TError, TData>
@@ -163,7 +189,7 @@ export function useListAlbums<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getListAlbumsQueryOptions(options);
+    const queryOptions = getListAlbumsQueryOptions(params, options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -175,10 +201,11 @@ export function useListAlbums<
 
 export const invalidateListAlbums = async (
     queryClient: QueryClient,
+    params?: ListAlbumsParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getListAlbumsQueryKey()},
+        {queryKey: getListAlbumsQueryKey(params)},
         options,
     );
 
@@ -354,6 +381,407 @@ export const invalidateGetAlbum = async (
     return queryClient;
 };
 
+export type getAlbumFilterMetadataResponse200 = {
+    data: FilterMetadataResponse;
+    status: 200;
+};
+
+export type getAlbumFilterMetadataResponseSuccess =
+    getAlbumFilterMetadataResponse200 & {
+    headers: Headers;
+};
+
+export type getAlbumFilterMetadataResponse =
+    getAlbumFilterMetadataResponseSuccess;
+
+export const getGetAlbumFilterMetadataUrl = () => {
+    return `/api/albums/filter-metadata`;
+};
+
+export const getAlbumFilterMetadata = async (
+    options?: RequestInit,
+): Promise<getAlbumFilterMetadataResponse> => {
+    const res = await fetch(getGetAlbumFilterMetadataUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getAlbumFilterMetadataResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getAlbumFilterMetadataResponse;
+};
+
+export const getGetAlbumFilterMetadataQueryKey = () => {
+    return ["api", "albums", "filter-metadata"] as const;
+};
+
+export const getGetAlbumFilterMetadataQueryOptions = <
+    TData = Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<
+            Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+            TError,
+            TData
+        >
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetAlbumFilterMetadataQueryKey();
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getAlbumFilterMetadata>>
+    > = ({signal}) => getAlbumFilterMetadata({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAlbumFilterMetadataQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getAlbumFilterMetadata>>
+>;
+export type GetAlbumFilterMetadataQueryError = unknown;
+
+export function useGetAlbumFilterMetadata<
+    TData = Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getAlbumFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAlbumFilterMetadata<
+    TData = Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+                    TError,
+                    Awaited<ReturnType<typeof getAlbumFilterMetadata>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAlbumFilterMetadata<
+    TData = Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetAlbumFilterMetadata<
+    TData = Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterMetadata>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetAlbumFilterMetadataQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetAlbumFilterMetadata = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetAlbumFilterMetadataQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type getAlbumFilterValuesResponse200 = {
+    data: FilterValuesResponse;
+    status: 200;
+};
+
+export type getAlbumFilterValuesResponseSuccess =
+    getAlbumFilterValuesResponse200 & {
+    headers: Headers;
+};
+
+export type getAlbumFilterValuesResponse = getAlbumFilterValuesResponseSuccess;
+
+export const getGetAlbumFilterValuesUrl = (
+    params?: GetAlbumFilterValuesParams,
+) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/albums/filter-values?${stringifiedParams}`
+        : `/api/albums/filter-values`;
+};
+
+export const getAlbumFilterValues = async (
+    params?: GetAlbumFilterValuesParams,
+    options?: RequestInit,
+): Promise<getAlbumFilterValuesResponse> => {
+    const res = await fetch(getGetAlbumFilterValuesUrl(params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getAlbumFilterValuesResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getAlbumFilterValuesResponse;
+};
+
+export const getGetAlbumFilterValuesQueryKey = (
+    params?: GetAlbumFilterValuesParams,
+) => {
+    return [
+        "api",
+        "albums",
+        "filter-values",
+        ...(params ? [params] : []),
+    ] as const;
+};
+
+export const getGetAlbumFilterValuesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getAlbumFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetAlbumFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getGetAlbumFilterValuesQueryKey(params);
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof getAlbumFilterValues>>
+    > = ({signal}) => getAlbumFilterValues(params, {signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getAlbumFilterValues>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAlbumFilterValuesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getAlbumFilterValues>>
+>;
+export type GetAlbumFilterValuesQueryError = unknown;
+
+export function useGetAlbumFilterValues<
+    TData = Awaited<ReturnType<typeof getAlbumFilterValues>>,
+    TError = unknown,
+>(
+    params: undefined | GetAlbumFilterValuesParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getAlbumFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAlbumFilterValues<
+    TData = Awaited<ReturnType<typeof getAlbumFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetAlbumFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                    TError,
+                    Awaited<ReturnType<typeof getAlbumFilterValues>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAlbumFilterValues<
+    TData = Awaited<ReturnType<typeof getAlbumFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetAlbumFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetAlbumFilterValues<
+    TData = Awaited<ReturnType<typeof getAlbumFilterValues>>,
+    TError = unknown,
+>(
+    params?: GetAlbumFilterValuesParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof getAlbumFilterValues>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetAlbumFilterValuesQueryOptions(params, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetAlbumFilterValues = async (
+    queryClient: QueryClient,
+    params?: GetAlbumFilterValuesParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetAlbumFilterValuesQueryKey(params)},
+        options,
+    );
+
+    return queryClient;
+};
+
 export const getListAlbumsResponseMock = (
     overrideResponse: Partial<ListAlbumsResponse> = {},
 ): ListAlbumsResponse => ({
@@ -459,6 +887,72 @@ export const getGetAlbumResponseMock = (
     ...overrideResponse,
 });
 
+export const getGetAlbumFilterMetadataResponseMock = (
+    overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+    fields: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        type: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        supportedOperators: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+        isComputed: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        isCollection: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+        nestedFields: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({})),
+            undefined,
+        ]),
+        values: faker.helpers.arrayElement([
+            Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+            undefined,
+        ]),
+        supportsDynamicValues: faker.helpers.arrayElement([
+            faker.datatype.boolean(),
+            undefined,
+        ]),
+    })),
+    operators: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        displayName: faker.string.alpha({length: {min: 10, max: 20}}),
+        description: faker.string.alpha({length: {min: 10, max: 20}}),
+        applicableTypes: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    })),
+    ...overrideResponse,
+});
+
+export const getGetAlbumFilterValuesResponseMock = (
+    overrideResponse: Partial<FilterValuesResponse> = {},
+): FilterValuesResponse => ({
+    values: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => faker.string.alpha({length: {min: 10, max: 20}})),
+    ...overrideResponse,
+});
+
 export const getListAlbumsMockHandler = (
     overrideResponse?:
         | ListAlbumsResponse
@@ -506,7 +1000,57 @@ export const getGetAlbumMockHandler = (
         options,
     );
 };
+
+export const getGetAlbumFilterMetadataMockHandler = (
+    overrideResponse?:
+        | FilterMetadataResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterMetadataResponse> | FilterMetadataResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/albums/filter-metadata",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetAlbumFilterMetadataResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getGetAlbumFilterValuesMockHandler = (
+    overrideResponse?:
+        | FilterValuesResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<FilterValuesResponse> | FilterValuesResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/albums/filter-values",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetAlbumFilterValuesResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getAlbumsMock = () => [
     getListAlbumsMockHandler(),
     getGetAlbumMockHandler(),
+    getGetAlbumFilterMetadataMockHandler(),
+    getGetAlbumFilterValuesMockHandler(),
 ];

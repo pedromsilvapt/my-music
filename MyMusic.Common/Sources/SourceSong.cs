@@ -29,4 +29,23 @@ public class SourceSong
     public string? Link { get; set; } = null;
 
     public decimal Price { get; set; } = 0;
+
+    public string SearchableText =>
+        (Title ?? "") + " " +
+        (Album?.Name ?? "") + " " +
+        string.Join(" ", Artists?.Select(a => a.Name) ?? []) + " " +
+        string.Join(" ", Genres ?? []);
+
+    public int DurationSeconds => (int)Duration.TotalSeconds;
+
+    public string DurationCategory => Duration.TotalSeconds switch
+    {
+        < 180 => "Short",
+        < 360 => "Medium",
+        _ => "Long",
+    };
+
+    public bool HasLyrics => !string.IsNullOrEmpty(Lyrics);
+    public int ArtistCount => Artists?.Count ?? 0;
+    public int GenreCount => Genres?.Count ?? 0;
 }
