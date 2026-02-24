@@ -2,7 +2,7 @@ import {useDebouncedValue} from "@mantine/hooks";
 import {useQueryClient} from "@tanstack/react-query";
 import {useCallback, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
-import {useSearchSongs} from "../../client/sources.ts";
+import {type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import Collection from "../common/collection/collection.tsx";
@@ -18,12 +18,9 @@ export default function SourcesSearch() {
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
 
-    const {data: data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {
+    const {data: data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
         query: {
-            placeholderData: prev => prev
-        },
-        fetch: {
-            filter: appliedFilter
+            placeholderData: (prev) => prev as searchSongsResponse | undefined
         }
     });
 

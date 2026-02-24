@@ -11,6 +11,7 @@ public record GetSongResponseSong
 {
     public required long Id { get; set; }
     public required long? Cover { get; set; }
+    public GetSongResponseCover? CoverDetails { get; set; }
     public required string Title { get; set; }
     public required string Label { get; set; }
     public required List<GetSongResponseArtist> Artists { get; set; }
@@ -24,12 +25,16 @@ public record GetSongResponseSong
     public required DateTime CreatedAt { get; set; }
     public DateTime? AddedAt { get; set; }
     public string? Lyrics { get; set; }
+    public decimal? Rating { get; set; }
+    public string? RepositoryPath { get; set; }
+    public int? Track { get; set; }
 
     public static GetSongResponseSong FromEntity(Entities.Song song) =>
         new()
         {
             Id = song.Id,
             Cover = song.CoverId,
+            CoverDetails = song.Cover != null ? GetSongResponseCover.FromEntity(song.Cover) : null,
             Title = song.Title,
             Label = song.Label,
             Artists = song.Artists.Select(GetSongResponseArtist.FromEntity).ToList(),
@@ -43,6 +48,26 @@ public record GetSongResponseSong
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,
             Lyrics = song.Lyrics,
+            Rating = song.Rating,
+            RepositoryPath = song.RepositoryPath,
+            Track = song.Track,
+        };
+}
+
+public record GetSongResponseCover
+{
+    public required long Id { get; set; }
+    public required int Width { get; set; }
+    public required int Height { get; set; }
+    public required string MimeType { get; set; }
+
+    public static GetSongResponseCover FromEntity(Entities.Artwork artwork) =>
+        new()
+        {
+            Id = artwork.Id,
+            Width = artwork.Width,
+            Height = artwork.Height,
+            MimeType = artwork.MimeType,
         };
 }
 
@@ -64,6 +89,7 @@ public record GetSongResponseAlbum
     public required long Id { get; set; }
     public required string Name { get; set; }
     public required int? Year { get; set; }
+    public GetSongResponseAlbumArtist? Artist { get; set; }
 
     public static GetSongResponseAlbum FromEntity(Entities.Album album) =>
         new()
@@ -71,6 +97,20 @@ public record GetSongResponseAlbum
             Id = album.Id,
             Name = album.Name,
             Year = album.Year,
+            Artist = album.Artist != null ? GetSongResponseAlbumArtist.FromEntity(album.Artist) : null,
+        };
+}
+
+public record GetSongResponseAlbumArtist
+{
+    public required long Id { get; set; }
+    public required string Name { get; set; }
+
+    public static GetSongResponseAlbumArtist FromEntity(Entities.Artist artist) =>
+        new()
+        {
+            Id = artist.Id,
+            Name = artist.Name,
         };
 }
 

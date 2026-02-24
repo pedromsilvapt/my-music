@@ -1,6 +1,7 @@
 import {AppShell, Burger, Divider, Group, NavLink} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {
+    IconClipboardCheck,
     IconDevices,
     IconDisc,
     IconHome,
@@ -88,6 +89,12 @@ function App() {
                     key="devices"
                     leftSection={<IconDevices stroke={2}/>}
                     label="Devices"
+                />
+                <NavLink
+                    renderRoot={(props) => <Link to={"/audits"} {...props} />}
+                    key="audits"
+                    leftSection={<IconClipboardCheck stroke={2}/>}
+                    label="Audits"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/purchases"} {...props} />}

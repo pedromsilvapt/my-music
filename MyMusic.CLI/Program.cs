@@ -23,6 +23,7 @@ var app = new CommandApp(new TypeRegistrar(services));
 app.Configure(config =>
 {
     config.AddCommand<SyncCommand>("sync");
+    config.AddCommand<InitCommand>("init");
     config.AddBranch("history", history =>
     {
         history.AddCommand<HistoryListCommand>("ls");
@@ -44,7 +45,7 @@ static void ConfigureConfiguration(IServiceCollection services, string[] args)
 
     var configurationBuilder = new ConfigurationBuilder()
         .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", false, true)
+        .AddJsonFile("appsettings.json", true, true)
         .AddJsonFile($"appsettings.{environment.ToLower()}.json", true, true)
         .AddJsonFile(userConfigPath, true, true)
         .AddEnvironmentVariables();
@@ -90,6 +91,7 @@ static void ConfigureServices(IServiceCollection services, string[] args)
     services.AddSingleton<IFileScanner, FileScanner>();
 
     services.AddTransient<SyncCommand>();
+    services.AddTransient<InitCommand>();
     services.AddTransient<HistoryShowCommand>();
     services.AddTransient<HistoryListCommand>();
 

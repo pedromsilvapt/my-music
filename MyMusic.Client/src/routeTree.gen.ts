@@ -18,10 +18,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SongsIndexRouteImport } from './routes/songs.index'
 import { Route as PlaylistsIndexRouteImport } from './routes/playlists.index'
 import { Route as DevicesIndexRouteImport } from './routes/devices.index'
+import { Route as AuditsIndexRouteImport } from './routes/audits.index'
 import { Route as ArtistsIndexRouteImport } from './routes/artists.index'
 import { Route as AlbumsIndexRouteImport } from './routes/albums.index'
 import { Route as SongsSongIdRouteImport } from './routes/songs.$songId'
 import { Route as PlaylistsPlaylistIdRouteImport } from './routes/playlists.$playlistId'
+import { Route as AuditsAuditIdRouteImport } from './routes/audits.$auditId'
 import { Route as ArtistsArtistIdRouteImport } from './routes/artists.$artistId'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums.$albumId'
 
@@ -70,6 +72,11 @@ const DevicesIndexRoute = DevicesIndexRouteImport.update({
   path: '/devices/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditsIndexRoute = AuditsIndexRouteImport.update({
+  id: '/audits/',
+  path: '/audits/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ArtistsIndexRoute = ArtistsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -88,6 +95,11 @@ const SongsSongIdRoute = SongsSongIdRouteImport.update({
 const PlaylistsPlaylistIdRoute = PlaylistsPlaylistIdRouteImport.update({
   id: '/playlists/$playlistId',
   path: '/playlists/$playlistId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditsAuditIdRoute = AuditsAuditIdRouteImport.update({
+  id: '/audits/$auditId',
+  path: '/audits/$auditId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ArtistsArtistIdRoute = ArtistsArtistIdRouteImport.update({
@@ -110,10 +122,12 @@ export interface FileRoutesByFullPath {
   '/songs': typeof SongsRouteWithChildren
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/artists/$artistId': typeof ArtistsArtistIdRoute
+  '/audits/$auditId': typeof AuditsAuditIdRoute
   '/playlists/$playlistId': typeof PlaylistsPlaylistIdRoute
   '/songs/$songId': typeof SongsSongIdRoute
   '/albums/': typeof AlbumsIndexRoute
   '/artists/': typeof ArtistsIndexRoute
+  '/audits/': typeof AuditsIndexRoute
   '/devices/': typeof DevicesIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
@@ -124,10 +138,12 @@ export interface FileRoutesByTo {
   '/purchases': typeof PurchasesRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/artists/$artistId': typeof ArtistsArtistIdRoute
+  '/audits/$auditId': typeof AuditsAuditIdRoute
   '/playlists/$playlistId': typeof PlaylistsPlaylistIdRoute
   '/songs/$songId': typeof SongsSongIdRoute
   '/albums': typeof AlbumsIndexRoute
   '/artists': typeof ArtistsIndexRoute
+  '/audits': typeof AuditsIndexRoute
   '/devices': typeof DevicesIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
   '/songs': typeof SongsIndexRoute
@@ -142,10 +158,12 @@ export interface FileRoutesById {
   '/songs': typeof SongsRouteWithChildren
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/artists/$artistId': typeof ArtistsArtistIdRoute
+  '/audits/$auditId': typeof AuditsAuditIdRoute
   '/playlists/$playlistId': typeof PlaylistsPlaylistIdRoute
   '/songs/$songId': typeof SongsSongIdRoute
   '/albums/': typeof AlbumsIndexRoute
   '/artists/': typeof ArtistsIndexRoute
+  '/audits/': typeof AuditsIndexRoute
   '/devices/': typeof DevicesIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
@@ -161,10 +179,12 @@ export interface FileRouteTypes {
     | '/songs'
     | '/albums/$albumId'
     | '/artists/$artistId'
+    | '/audits/$auditId'
     | '/playlists/$playlistId'
     | '/songs/$songId'
     | '/albums/'
     | '/artists/'
+    | '/audits/'
     | '/devices/'
     | '/playlists/'
     | '/songs/'
@@ -175,10 +195,12 @@ export interface FileRouteTypes {
     | '/purchases'
     | '/albums/$albumId'
     | '/artists/$artistId'
+    | '/audits/$auditId'
     | '/playlists/$playlistId'
     | '/songs/$songId'
     | '/albums'
     | '/artists'
+    | '/audits'
     | '/devices'
     | '/playlists'
     | '/songs'
@@ -192,10 +214,12 @@ export interface FileRouteTypes {
     | '/songs'
     | '/albums/$albumId'
     | '/artists/$artistId'
+    | '/audits/$auditId'
     | '/playlists/$playlistId'
     | '/songs/$songId'
     | '/albums/'
     | '/artists/'
+    | '/audits/'
     | '/devices/'
     | '/playlists/'
     | '/songs/'
@@ -208,7 +232,9 @@ export interface RootRouteChildren {
   PlayerRoute: typeof PlayerRoute
   PurchasesRoute: typeof PurchasesRoute
   SongsRoute: typeof SongsRouteWithChildren
+  AuditsAuditIdRoute: typeof AuditsAuditIdRoute
   PlaylistsPlaylistIdRoute: typeof PlaylistsPlaylistIdRoute
+  AuditsIndexRoute: typeof AuditsIndexRoute
   DevicesIndexRoute: typeof DevicesIndexRoute
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
 }
@@ -278,6 +304,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevicesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audits/': {
+      id: '/audits/'
+      path: '/audits'
+      fullPath: '/audits/'
+      preLoaderRoute: typeof AuditsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/artists/': {
       id: '/artists/'
       path: '/'
@@ -304,6 +337,13 @@ declare module '@tanstack/react-router' {
       path: '/playlists/$playlistId'
       fullPath: '/playlists/$playlistId'
       preLoaderRoute: typeof PlaylistsPlaylistIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audits/$auditId': {
+      id: '/audits/$auditId'
+      path: '/audits/$auditId'
+      fullPath: '/audits/$auditId'
+      preLoaderRoute: typeof AuditsAuditIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/artists/$artistId': {
@@ -368,7 +408,9 @@ const rootRouteChildren: RootRouteChildren = {
   PlayerRoute: PlayerRoute,
   PurchasesRoute: PurchasesRoute,
   SongsRoute: SongsRouteWithChildren,
+  AuditsAuditIdRoute: AuditsAuditIdRoute,
   PlaylistsPlaylistIdRoute: PlaylistsPlaylistIdRoute,
+  AuditsIndexRoute: AuditsIndexRoute,
   DevicesIndexRoute: DevicesIndexRoute,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
 }

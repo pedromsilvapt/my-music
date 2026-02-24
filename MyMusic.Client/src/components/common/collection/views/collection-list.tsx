@@ -19,7 +19,11 @@ import {DRAG_ACTIVATION_DISTANCE, LIST_ARTWORK_SIZE, LIST_GAP, VIRTUALIZER_OVERS
 import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
-import {type CollectionSchema, type CollectionSchemaAction} from "../collection-schema.tsx";
+import {
+    type CollectionSchema,
+    type CollectionSchemaAction,
+    type CollectionSchemaActionButton
+} from "../collection-schema.tsx";
 import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-list.module.css';
 
@@ -298,7 +302,7 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
 
         showContextMenu(
             contextActions
-                .filter((a): a is CollectionSchemaAction<M> & { onClick: (elems: M[]) => void } =>
+                .filter((a): a is CollectionSchemaActionButton<M> =>
                     !('divider' in a) && !('group' in a)
                 )
                 .map(action => ({

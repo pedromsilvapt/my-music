@@ -1,0 +1,105 @@
+VERSION 0.8
+FROM mcr.microsoft.com/dotnet/sdk:9.0
+
+WORKDIR /app/MyMusic
+
+ARG --global projects = "MyMusic.CLI"
+ARG --global VERSION = "0.0.0"
+
+install:
+    FOR proj IN $projects
+        RUN mkdir -p ./$proj/
+
+        COPY ./$proj.csproj ./$proj/
+
+        RUN dotnet restore ./$proj/$proj.csproj
+    END
+
+build:
+    FROM +install
+
+    ARG configuration='Release'
+
+    FOR proj IN $projects
+        RUN mkdir -p ./$proj/
+
+        COPY . ./$proj/
+    END
+
+    RUN dotnet publish ./MyMusic.CLI \
+        --configuration $configuration \
+        -r linux-x64 \
+        --self-contained true \
+        -p:PublishSingleFile=true \
+        -p:EnableCompressionInSingleFile=true \
+        -p:PublishReadyToRun=true \
+        -p:TieredCompilationQuickJit=true \
+        -o publish
+
+    SAVE ARTIFACT publish publish
+
+package:
+    RUN apt-get update && apt-get install -y ruby ruby-dev build-essential && \
+        rm -rf /var/lib/apt/lists/*
+
+    RUN gem install fpm
+
+    RUN mkdir -p /app/.pkgroot/usr/local/bin /app/.pkgroot/usr/share/my-music
+
+    # Copy the application files
+    COPY +build/publish /app/.pkgroot/usr/share/my-music
+    RUN chmod 755 /app/.pkgroot/usr/share/my-music/my-music
+
+    # Create the binary link
+    RUN ln -s /usr/share/my-music/my-music /app/.pkgroot/usr/local/bin/my-music
+
+    RUN fpm -s dir -t deb \
+        --name mymusic-cli \
+        --version ${VERSION} \
+        --description "MyMusic command line interface" \
+        --maintainer "pemiolsi@gmail.com" \
+        --category utils \
+        --architecture amd64 \
+        --chdir /app/.pkgroot \
+        .
+
+    RUN dpkg-deb -c mymusic-cli_${VERSION}_amd64.deb
+
+    SAVE ARTIFACT mymusic-cli_${VERSION}_amd64.deb
+
+package-test:
+    FROM debian:13
+
+    COPY +package/* .
+
+    RUN dpkg -i mymusic-cli_${VERSION}_amd64.deb
+
+    # Set environment vairable to avoid issue and avoid installing the localization libs here
+    # https://learn.microsoft.com/en-us/dotnet/core/runtime-config/globalization#invariant-mode
+    RUN DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+        my-music --help
+
+docker:
+    FROM mcr.microsoft.com/dotnet/aspnet:9.0
+    WORKDIR /app
+
+    ARG REGISTRY='gitea.home'
+    ARG IMAGE='silvas/my-music'
+    ARG TAG='dev'
+
+    RUN apt-get update && apt-get install -y libgdiplus curl && \
+        rm -rf /var/lib/apt/lists/*
+
+    COPY +build/publish ./bin
+
+    ENV DOTNET_NOLOGO=true
+    ENV ASPNETCORE_URLS=http://+:8080
+
+    WORKDIR /app/bin
+    ENTRYPOINT ["dotnet", "MyMusic.Server.dll"]
+    EXPOSE 8080
+
+    HEALTHCHECK CMD curl -f "http://localhost:8080/ping" || exit 1
+
+    SAVE IMAGE $IMAGE:$TAG
+    SAVE IMAGE --push --insecure $REGISTRY/$IMAGE:$TAG
