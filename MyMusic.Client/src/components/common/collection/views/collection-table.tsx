@@ -24,6 +24,7 @@ import CollectionActions from "../collection-actions.tsx";
 import {
     type CollectionSchema,
     type CollectionSchemaAction,
+    type CollectionSchemaActionButton,
     type CollectionSchemaColumn,
     type CollectionSortField,
     getColumnWidthFractions,
@@ -389,7 +390,7 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
 
         showContextMenu(
             contextActions
-                .filter((a): a is CollectionSchemaAction<M> & { onClick: (elems: M[]) => void } =>
+                .filter((a): a is CollectionSchemaActionButton<M> =>
                     !('divider' in a) && !('group' in a)
                 )
                 .map(action => ({

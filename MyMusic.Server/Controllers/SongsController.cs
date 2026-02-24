@@ -16,10 +16,15 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("songs")]
-public class SongsController(ILogger<SongsController> logger, ICurrentUser currentUser, IOptions<Config> config)
+public class SongsController(
+    ILogger<SongsController> logger,
+    ICurrentUser currentUser,
+    IOptions<Config> config,
+    ISongUpdateService songUpdateService)
     : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
+    private readonly ISongUpdateService _songUpdateService = songUpdateService;
 
     [HttpGet(Name = "ListSongs")]
     public async Task<ListSongsResponse> List(
@@ -345,6 +350,146 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
         return new FilterValuesResponse { Values = values };
     }
 
+    [HttpPut("{id:long}", Name = "UpdateSong")]
+    public async Task<UpdateSongResponse> Update(
+        long id,
+        [FromBody] UpdateSongRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        if (id != request.SongId)
+        {
+            throw new Exception("Song ID in URL does not match request body");
+        }
+
+        var update = MapToModel(request);
+        var result = await _songUpdateService.UpdateSong(context, id, update, cancellationToken);
+
+        return new UpdateSongResponse { Song = MapToDto(result) };
+    }
+
+    [HttpPut(Name = "BatchUpdateSongs")]
+    public async Task<BatchUpdateSongsResponse> BatchUpdate(
+        [FromBody] BatchUpdateSongsRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var results = new List<BatchUpdateSongResult>();
+        var update = MapPatchToModel(request.Patch);
+
+        foreach (var songId in request.SongIds)
+        {
+            var result = await _songUpdateService.BatchUpdateSong(context, songId, update, cancellationToken);
+            results.Add(new BatchUpdateSongResult
+            {
+                Id = result.Id,
+                Success = result.Success,
+                Error = result.Error,
+                Song = result.Song != null ? MapToDto(result.Song) : null,
+            });
+        }
+
+        return new BatchUpdateSongsResponse { Songs = results };
+    }
+
+    [HttpGet("autocomplete/albums", Name = "AutocompleteAlbums")]
+    public async Task<AutocompleteAlbumsResponse> AutocompleteAlbums(
+        MusicDbContext context,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = context.Albums
+            .Where(a => a.OwnerId == currentUser.Id)
+            .Include(a => a.Artist)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(a => a.Name.ToLower().Contains(searchLower));
+        }
+
+        var albums = await query
+            .OrderBy(a => a.Name)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new AutocompleteAlbumsResponse
+        {
+            Albums = albums.Select(a => new AutocompleteAlbumItem
+            {
+                Id = a.Id,
+                Name = a.Name,
+                ArtistName = a.Artist?.Name,
+            }).ToList(),
+        };
+    }
+
+    [HttpGet("autocomplete/artists", Name = "AutocompleteArtists")]
+    public async Task<AutocompleteArtistsResponse> AutocompleteArtists(
+        MusicDbContext context,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = context.Artists
+            .Where(a => a.OwnerId == currentUser.Id)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(a => a.Name.ToLower().Contains(searchLower));
+        }
+
+        var artists = await query
+            .OrderBy(a => a.Name)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new AutocompleteArtistsResponse
+        {
+            Artists = artists.Select(a => new AutocompleteArtistItem
+            {
+                Id = a.Id,
+                Name = a.Name,
+            }).ToList(),
+        };
+    }
+
+    [HttpGet("autocomplete/genres", Name = "AutocompleteGenres")]
+    public async Task<AutocompleteGenresResponse> AutocompleteGenres(
+        MusicDbContext context,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = context.Genres
+            .Where(g => g.OwnerId == currentUser.Id)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(g => g.Name.ToLower().Contains(searchLower));
+        }
+
+        var genres = await query
+            .OrderBy(g => g.Name)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new AutocompleteGenresResponse
+        {
+            Genres = genres.Select(g => new AutocompleteGenreItem
+            {
+                Id = g.Id,
+                Name = g.Name,
+            }).ToList(),
+        };
+    }
+
     private static List<FilterFieldMetadata> GetSongFieldMetadata() =>
     [
         new()
@@ -532,5 +677,81 @@ public class SongsController(ILogger<SongsController> logger, ICurrentUser curre
         }
 
         return mappings;
+    }
+
+    private static SongUpdateModel MapToModel(UpdateSongRequest request) =>
+        new()
+        {
+            Title = request.Title,
+            AlbumId = request.AlbumId,
+            AlbumName = request.AlbumName,
+            AlbumArtistId = request.AlbumArtistId,
+            AlbumArtistName = request.AlbumArtistName,
+            ArtistIds = request.ArtistIds,
+            ArtistNames = request.ArtistNames,
+            GenreIds = request.GenreIds,
+            GenreNames = request.GenreNames,
+            Year = request.Year,
+            Lyrics = request.Lyrics,
+            Rating = request.Rating,
+            Explicit = request.Explicit,
+            Cover = request.Cover,
+        };
+
+    private static SongUpdateModel MapPatchToModel(SongPatch patch) =>
+        new()
+        {
+            Title = patch.Title,
+            AlbumId = patch.AlbumId,
+            AlbumName = patch.AlbumName,
+            AlbumArtistId = patch.AlbumArtistId,
+            AlbumArtistName = patch.AlbumArtistName,
+            ArtistIds = patch.ArtistIds,
+            ArtistNames = patch.ArtistNames,
+            GenreIds = patch.GenreIds,
+            GenreNames = patch.GenreNames,
+            Year = patch.Year,
+            Lyrics = patch.Lyrics,
+            Rating = patch.Rating,
+            Explicit = patch.Explicit,
+            Cover = patch.Cover,
+        };
+
+    private static UpdateSongItem MapToDto(SongUpdateResult result)
+    {
+        return new UpdateSongItem
+        {
+            Id = result.Id,
+            Title = result.Title,
+            Label = result.Label,
+            Cover = result.Cover,
+            Year = result.Year,
+            Lyrics = result.Lyrics,
+            Rating = result.Rating,
+            Explicit = result.Explicit,
+            RepositoryPath = result.RepositoryPath,
+            Artists = result.Artists.Select(a => new UpdateSongArtist
+            {
+                Id = a.Id,
+                Name = a.Name,
+            }).ToList(),
+            Album = new UpdateSongAlbum
+            {
+                Id = result.Album.Id,
+                Name = result.Album.Name,
+                Artist = result.Album.Artist != null
+                    ? new UpdateSongAlbumArtist
+                    {
+                        Id = result.Album.Artist.Id,
+                        Name = result.Album.Artist.Name,
+                    }
+                    : null,
+            },
+            Genres = result.Genres.Select(g => new UpdateSongGenre
+            {
+                Id = g.Id,
+                Name = g.Name,
+            }).ToList(),
+        };
     }
 }

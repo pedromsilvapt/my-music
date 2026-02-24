@@ -1,0 +1,37 @@
+VERSION 0.8
+FROM node:24
+
+WORKDIR /app/MyMusic
+
+install:
+    COPY package*.json package.json
+
+    RUN npm install
+
+build:
+    FROM +install
+
+    COPY . .
+
+    RUN npm run build
+
+    SAVE ARTIFACT ./dist publish
+
+docker:
+    FROM nginx:alpine
+
+    ARG REGISTRY='gitea.home'
+    ARG IMAGE='silvas/my-music-ui'
+    ARG TAG='dev'
+
+    COPY +build/publish ./usr/share/nginx/html
+
+    RUN sed -i 's/listen 80/listen 8080/' /etc/nginx/conf.d/default.conf
+
+    ENTRYPOINT ["nginx", "-g", "daemon off;"]
+    EXPOSE 8080
+
+    HEALTHCHECK CMD curl -f "http://localhost:8080" || exit 1
+
+    SAVE IMAGE $IMAGE:$TAG
+    SAVE IMAGE --push --insecure $REGISTRY/$IMAGE:$TAG

@@ -244,7 +244,8 @@ function ensureProviderRegistered(monaco: Monaco) {
 
     monaco.languages.registerCompletionItemProvider("filter-dsl", {
         triggerCharacters: ['"', ' '],
-        provideCompletionItems: async (model, position) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        provideCompletionItems: async (model: any, position: any) => {
             const context = editorContexts.get(model.uri.toString());
             if (!context?.metadata) return {suggestions: []};
 

@@ -20,7 +20,11 @@ import {DRAG_ACTIVATION_DISTANCE, GRID_ELEM_SIZE, GRID_GAP, GRID_ROW_HEIGHT} fro
 import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
-import {type CollectionSchema, type CollectionSchemaAction} from "../collection-schema.tsx";
+import {
+    type CollectionSchema,
+    type CollectionSchemaAction,
+    type CollectionSchemaActionButton
+} from "../collection-schema.tsx";
 import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-grid.module.css';
 
@@ -336,7 +340,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
 
         showContextMenu(
             contextActions
-                .filter((a): a is CollectionSchemaAction<M> & { onClick: (elems: M[]) => void } =>
+                .filter((a): a is CollectionSchemaActionButton<M> =>
                     !('divider' in a) && !('group' in a)
                 )
                 .map(action => ({

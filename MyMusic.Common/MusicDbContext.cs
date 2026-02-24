@@ -44,4 +44,6 @@ public class MusicDbContext : DbContext
     public DbSet<DeviceSyncSession> DeviceSyncSessions { get; set; } = null!;
 
     public DbSet<DeviceSyncSessionRecord> DeviceSyncSessionRecords { get; set; } = null!;
+
+    public DbSet<AuditNonConformity> AuditNonConformities { get; set; } = null!;
 }

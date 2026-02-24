@@ -251,6 +251,53 @@ namespace MyMusic.Common.Migrations
                     b.ToTable("artworks", (string)null);
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.AuditNonConformity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("AuditRuleId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("audit_rule_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("HasWaiver")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_waiver");
+
+                    b.Property<long>("OwnerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("owner_id");
+
+                    b.Property<long>("SongId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_id");
+
+                    b.Property<string>("WaiverReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("waiver_reason");
+
+                    b.HasKey("Id")
+                        .HasName("pk_audit_non_conformities");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_audit_non_conformities_owner_id");
+
+                    b.HasIndex("SongId", "AuditRuleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_audit_non_conformities_song_id_audit_rule_id");
+
+                    b.ToTable("audit_non_conformities", (string)null);
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.Device", b =>
                 {
                     b.Property<long>("Id")
@@ -1001,6 +1048,27 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Source");
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.AuditNonConformity", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_audit_non_conformities_users_owner_id");
+
+                    b.HasOne("MyMusic.Common.Entities.Song", "Song")
+                        .WithMany()
+                        .HasForeignKey("SongId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_audit_non_conformities_songs_song_id");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Song");
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.Device", b =>
                 {
                     b.HasOne("MyMusic.Common.Entities.User", "Owner")
@@ -1078,7 +1146,7 @@ namespace MyMusic.Common.Migrations
                         .HasConstraintName("fk_playlist_songs_playlists_playlist_id");
 
                     b.HasOne("MyMusic.Common.Entities.Song", "Song")
-                        .WithMany()
+                        .WithMany("PlaylistSongs")
                         .HasForeignKey("SongId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
@@ -1272,6 +1340,8 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Devices");
 
                     b.Navigation("Genres");
+
+                    b.Navigation("PlaylistSongs");
 
                     b.Navigation("Sources");
                 });
