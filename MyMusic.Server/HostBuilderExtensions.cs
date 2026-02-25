@@ -14,6 +14,8 @@ public static class HostBuilderExtensions
 {
     public static T UseMyMusicServer<T>(this T builder) where T : IHostApplicationBuilder
     {
+        builder.Configuration.AddEnvironmentVariables("MYMUSIC_");
+
         builder.Logging.AddSimpleConsole(c => c.SingleLine = true);
         // builder.Services.ConfigureHttpJsonOptions(opts =>
         // {

@@ -44,6 +44,9 @@ docker:
 
     COPY +build/publish ./bin
 
+    COPY MyMusic.Server/scripts /usr/local/bin
+    RUN chmod +x /usr/local/bin/mymusic-create-user.sh
+
     ENV DOTNET_NOLOGO=true
     ENV ASPNETCORE_URLS=http://+:8080
 
