@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using NSubstitute;
 
@@ -69,6 +70,13 @@ public class Scenario
         {
             MusicRepositoryPath = "/data",
         }), Substitute.For<ILogger<MusicService>>());
+
+    public SeedService CreateSeedService(string? seedPath = null) =>
+        new(FileSystem, DbContext, Options.Create(new Config 
+        { 
+            MusicRepositoryPath = "/data",
+            SeedPath = seedPath,
+        }), Substitute.For<ILogger<SeedService>>());
 
     #endregion Static Methods
 }

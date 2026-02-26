@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
 
@@ -30,6 +31,8 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAuditRule, NonJpegCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, NonSquareCoverAuditRule>();
 
+        builder.Services.AddScoped<ISeedService, SeedService>();
+
         // Add services to the container.
         builder.Services.AddDbContext<MusicDbContext>((sp, options) =>
         {
@@ -52,6 +55,9 @@ public static class HostBuilderExtensions
         using var serviceScope = app.Services.GetRequiredService<IServiceScopeFactory>().CreateScope();
         var context = serviceScope.ServiceProvider.GetRequiredService<MusicDbContext>();
         context.Database.Migrate();
+
+        var seedService = serviceScope.ServiceProvider.GetRequiredService<ISeedService>();
+        seedService.SeedAsync().GetAwaiter().GetResult();
 
         return app;
     }
