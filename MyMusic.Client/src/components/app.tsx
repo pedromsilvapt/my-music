@@ -13,6 +13,7 @@ import {
     IconUsers
 } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
+import '@mantine/notifications/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
 import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";

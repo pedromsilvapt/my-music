@@ -1,6 +1,7 @@
 import {useDebouncedValue} from "@mantine/hooks";
+import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
-import {useCallback, useState} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
 import {type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
@@ -18,11 +19,24 @@ export default function SourcesSearch() {
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
 
-    const {data: data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
+    const {data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
         query: {
             placeholderData: (prev) => prev as searchSongsResponse | undefined
         }
     });
+
+    const hasError = data && data.status >= 400;
+
+    useEffect(() => {
+        if (hasError) {
+            notifications.show({
+                title: "Error",
+                message: "Failed to search songs. Please try again.",
+                color: "red",
+            });
+            console.error("Search songs error:", data);
+        }
+    }, [hasError, data]);
 
     const createPurchase = useCreatePurchase({
         mutation: {
@@ -41,7 +55,7 @@ export default function SourcesSearch() {
 
     const sourceSongsSchema = useSourceSongsSchema(onPurchase);
 
-    const elements = data?.data ?? [];
+    const elements = hasError ? [] : (data?.data ?? []);
 
     return <>
         <div style={{height: 'var(--parent-height)'}}>
