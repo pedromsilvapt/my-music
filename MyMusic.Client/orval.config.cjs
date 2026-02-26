@@ -57,6 +57,10 @@ module.exports = {
                             onMutations: ['deleteApiDevicesDeviceId', 'postApiDevices', 'putApiDevicesDeviceId'],
                             invalidates: ['getApiDevices'],
                         },
+                        {
+                            onMutations: ['updateCurrentUser'],
+                            invalidates: ['getCurrentUser'],
+                        },
                     ],
                 }
             }

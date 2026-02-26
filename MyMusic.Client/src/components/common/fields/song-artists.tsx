@@ -1,5 +1,6 @@
 import {Anchor, type DefaultMantineColor, Text, Tooltip} from "@mantine/core";
 import {Link} from "@tanstack/react-router";
+import {TEXT_COLOR} from "../../../utils/colors.ts";
 import {sepBy} from "../sep-by.tsx";
 
 export interface SongArtistsProps {
@@ -18,20 +19,20 @@ export default function SongArtists(props: SongArtistsProps) {
         if (artist.link) {
             content = (
                 <Anchor href={artist.link} target="_blank" rel="noopener noreferrer" key={artist.id ?? i}
-                        c={props.c ?? 'black'} inherit>
+                        c={props.c ?? TEXT_COLOR} inherit>
                     {artist.name}
                 </Anchor>
             );
         } else if (artist.id) {
             content = (
-                <Anchor component={Link} to={`/artists/${artist.id}`} key={artist.id ?? i} c={props.c ?? 'black'}
+                <Anchor component={Link} to={`/artists/${artist.id}`} key={artist.id ?? i} c={props.c ?? TEXT_COLOR}
                         inherit>
                     {artist.name}
                 </Anchor>
             );
         } else {
             content = (
-                <Anchor key={artist.id ?? i} c={props.c ?? 'black'} inherit>
+                <Anchor key={artist.id ?? i} c={props.c ?? TEXT_COLOR} inherit>
                     {artist.name}
                 </Anchor>
             );

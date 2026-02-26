@@ -22,10 +22,16 @@ import type {
     UseQueryOptions,
     UseQueryResult,
 } from "@tanstack/react-query";
-import {useMutation, useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
 import {http, HttpResponse} from "msw";
-import type {CreateUserRequest, CreateUserResponse, ListUsersResponse,} from "../model";
+import type {
+    CreateUserRequest,
+    CreateUserResponse,
+    GetUserResponse,
+    ListUsersResponse,
+    UpdateUserRequest,
+} from "../model";
 
 export type listUsersResponse200 = {
     data: ListUsersResponse;
@@ -39,7 +45,7 @@ export type listUsersResponseSuccess = listUsersResponse200 & {
 export type listUsersResponse = listUsersResponseSuccess;
 
 export const getListUsersUrl = () => {
-    return `/api/Users`;
+    return `/api/users`;
 };
 
 export const listUsers = async (
@@ -61,7 +67,7 @@ export const listUsers = async (
 };
 
 export const getListUsersQueryKey = () => {
-    return ["api", "Users"] as const;
+    return ["api", "users"] as const;
 };
 
 export const getListUsersQueryOptions = <
@@ -200,7 +206,7 @@ export type createUserResponseSuccess = createUserResponse200 & {
 export type createUserResponse = createUserResponseSuccess;
 
 export const getCreateUserUrl = () => {
-    return `/api/Users`;
+    return `/api/users`;
 };
 
 export const createUser = async (
@@ -287,6 +293,285 @@ export const useCreateUser = <TError = unknown, TContext = unknown>(
 > => {
     return useMutation(getCreateUserMutationOptions(options), queryClient);
 };
+export type getCurrentUserResponse200 = {
+    data: GetUserResponse;
+    status: 200;
+};
+
+export type getCurrentUserResponseSuccess = getCurrentUserResponse200 & {
+    headers: Headers;
+};
+
+export type getCurrentUserResponse = getCurrentUserResponseSuccess;
+
+export const getGetCurrentUserUrl = () => {
+    return `/api/users/me`;
+};
+
+export const getCurrentUser = async (
+    options?: RequestInit,
+): Promise<getCurrentUserResponse> => {
+    const res = await fetch(getGetCurrentUserUrl(), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: getCurrentUserResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as getCurrentUserResponse;
+};
+
+export const getGetCurrentUserQueryKey = () => {
+    return ["api", "users", "me"] as const;
+};
+
+export const getGetCurrentUserQueryOptions = <
+    TData = Awaited<ReturnType<typeof getCurrentUser>>,
+    TError = unknown,
+>(options?: {
+    query?: Partial<
+        UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
+    >;
+    fetch?: RequestInit;
+}) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey = queryOptions?.queryKey ?? getGetCurrentUserQueryKey();
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentUser>>> = ({
+                                                                                    signal,
+                                                                                }) => getCurrentUser({signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof getCurrentUser>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCurrentUserQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getCurrentUser>>
+>;
+export type GetCurrentUserQueryError = unknown;
+
+export function useGetCurrentUser<
+    TData = Awaited<ReturnType<typeof getCurrentUser>>,
+    TError = unknown,
+>(
+    options: {
+        query: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getCurrentUser>>,
+                    TError,
+                    Awaited<ReturnType<typeof getCurrentUser>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCurrentUser<
+    TData = Awaited<ReturnType<typeof getCurrentUser>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof getCurrentUser>>,
+                    TError,
+                    Awaited<ReturnType<typeof getCurrentUser>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetCurrentUser<
+    TData = Awaited<ReturnType<typeof getCurrentUser>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetCurrentUser<
+    TData = Awaited<ReturnType<typeof getCurrentUser>>,
+    TError = unknown,
+>(
+    options?: {
+        query?: Partial<
+            UseQueryOptions<Awaited<ReturnType<typeof getCurrentUser>>, TError, TData>
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getGetCurrentUserQueryOptions(options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateGetCurrentUser = async (
+    queryClient: QueryClient,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getGetCurrentUserQueryKey()},
+        options,
+    );
+
+    return queryClient;
+};
+
+export type updateCurrentUserResponse200 = {
+    data: GetUserResponse;
+    status: 200;
+};
+
+export type updateCurrentUserResponseSuccess = updateCurrentUserResponse200 & {
+    headers: Headers;
+};
+
+export type updateCurrentUserResponse = updateCurrentUserResponseSuccess;
+
+export const getUpdateCurrentUserUrl = () => {
+    return `/api/users/me`;
+};
+
+export const updateCurrentUser = async (
+    updateUserRequest: UpdateUserRequest,
+    options?: RequestInit,
+): Promise<updateCurrentUserResponse> => {
+    const res = await fetch(getUpdateCurrentUserUrl(), {
+        ...options,
+        method: "PATCH",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(updateUserRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: updateCurrentUserResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as updateCurrentUserResponse;
+};
+
+export const getUpdateCurrentUserMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof updateCurrentUser>>,
+            TError,
+            { data: UpdateUserRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof updateCurrentUser>>,
+    TError,
+    { data: UpdateUserRequest },
+    TContext
+> => {
+    const mutationKey = ["updateCurrentUser"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof updateCurrentUser>>,
+        { data: UpdateUserRequest }
+    > = (props) => {
+        const {data} = props ?? {};
+
+        return updateCurrentUser(data, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof updateCurrentUser>>,
+        variables: { data: UpdateUserRequest },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getGetCurrentUserQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type UpdateCurrentUserMutationResult = NonNullable<
+    Awaited<ReturnType<typeof updateCurrentUser>>
+>;
+export type UpdateCurrentUserMutationBody = UpdateUserRequest;
+export type UpdateCurrentUserMutationError = unknown;
+
+export const useUpdateCurrentUser = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof updateCurrentUser>>,
+            TError,
+            { data: UpdateUserRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof updateCurrentUser>>,
+    TError,
+    { data: UpdateUserRequest },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getUpdateCurrentUserMutationOptions(
+            queryClient ?? backupQueryClient,
+            options,
+        ),
+        queryClient,
+    );
+};
 
 export const getListUsersResponseMock = (
     overrideResponse: Partial<ListUsersResponse> = {},
@@ -298,6 +583,7 @@ export const getListUsersResponseMock = (
         id: faker.number.int({min: undefined, max: undefined}),
         username: faker.string.alpha({length: {min: 10, max: 20}}),
         name: faker.string.alpha({length: {min: 10, max: 20}}),
+        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
     })),
     ...overrideResponse,
 });
@@ -309,6 +595,31 @@ export const getCreateUserResponseMock = (
         id: faker.number.int({min: undefined, max: undefined}),
         username: faker.string.alpha({length: {min: 10, max: 20}}),
         name: faker.string.alpha({length: {min: 10, max: 20}}),
+        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+    },
+    ...overrideResponse,
+});
+
+export const getGetCurrentUserResponseMock = (
+    overrideResponse: Partial<GetUserResponse> = {},
+): GetUserResponse => ({
+    user: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        username: faker.string.alpha({length: {min: 10, max: 20}}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+    },
+    ...overrideResponse,
+});
+
+export const getUpdateCurrentUserResponseMock = (
+    overrideResponse: Partial<GetUserResponse> = {},
+): GetUserResponse => ({
+    user: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        username: faker.string.alpha({length: {min: 10, max: 20}}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
     },
     ...overrideResponse,
 });
@@ -322,7 +633,7 @@ export const getListUsersMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/Users",
+        "*/users",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
@@ -346,7 +657,7 @@ export const getCreateUserMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/Users",
+        "*/users",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
@@ -360,7 +671,57 @@ export const getCreateUserMockHandler = (
         options,
     );
 };
+
+export const getGetCurrentUserMockHandler = (
+    overrideResponse?:
+        | GetUserResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<GetUserResponse> | GetUserResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/users/me",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getGetCurrentUserResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
+export const getUpdateCurrentUserMockHandler = (
+    overrideResponse?:
+        | GetUserResponse
+        | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+    ) => Promise<GetUserResponse> | GetUserResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.patch(
+        "*/users/me",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getUpdateCurrentUserResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
 export const getUsersMock = () => [
     getListUsersMockHandler(),
     getCreateUserMockHandler(),
+    getGetCurrentUserMockHandler(),
+    getUpdateCurrentUserMockHandler(),
 ];

@@ -2,13 +2,16 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Users;
 
 namespace MyMusic.Server.Controllers;
 
 [ApiController]
-[Route("[controller]")]
-public class UsersController(ILogger<UsersController> logger) : ControllerBase
+[Route("users")]
+public class UsersController(
+    ILogger<UsersController> logger,
+    ICurrentUser currentUser) : ControllerBase
 {
     private readonly ILogger<UsersController> _logger = logger;
 
@@ -21,6 +24,54 @@ public class UsersController(ILogger<UsersController> logger) : ControllerBase
         {
             Users = users.Select(ListUsersItem.FromEntity).ToList(),
         };
+    }
+
+    [HttpGet("me", Name = "GetCurrentUser")]
+    public async Task<ActionResult<GetUserResponse>> GetCurrentUser(
+        [FromServices] MusicDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var user = await db.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new GetUserResponse
+        {
+            User = GetUserItem.FromEntity(user),
+        });
+    }
+
+    [HttpPatch("me", Name = "UpdateCurrentUser")]
+    public async Task<ActionResult<GetUserResponse>> UpdateCurrentUser(
+        [FromServices] MusicDbContext db,
+        [FromBody] UpdateUserRequest body,
+        CancellationToken cancellationToken)
+    {
+        var user = await db.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        if (body.ColorScheme != null)
+        {
+            var validSchemes = new[] { "light", "dark", "auto" };
+            if (!validSchemes.Contains(body.ColorScheme))
+            {
+                return BadRequest("Invalid colorScheme. Must be 'light', 'dark', or 'auto'.");
+            }
+
+            user.ColorScheme = body.ColorScheme;
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return Ok(new GetUserResponse
+        {
+            User = GetUserItem.FromEntity(user),
+        });
     }
 
     [HttpPost(Name = "CreateUser")]

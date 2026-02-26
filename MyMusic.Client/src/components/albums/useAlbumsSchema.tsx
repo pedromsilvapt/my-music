@@ -3,6 +3,7 @@ import {IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import type {ListAlbumsItem} from "../../model";
+import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
@@ -43,7 +44,7 @@ export function useAlbumsSchema() {
                 displayName: 'Name',
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
-                        <Anchor component={Link} to={`/albums/${row.id}`} c={"black"}>{row.name}</Anchor>
+                        <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
                     </Tooltip>,
                 width: '1fr',
                 sortable: true,
@@ -85,7 +86,7 @@ export function useAlbumsSchema() {
             placeholderIcon={<IconUserFilled/>}
         />,
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
-            <Anchor component={Link} to={`/albums/${row.id}`} c={"black"}>{row.name}</Anchor>
+            <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => row.songsCount + ' songs',
     }) as CollectionSchema<ListAlbumsItem>, [filterMetadata, fetchFilterValues]);

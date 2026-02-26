@@ -5,10 +5,8 @@
  MyMusic.Server | v1
  OpenAPI spec version: 1.0.0
  */
-import type {IFormFile} from "./iFormFile";
-
 export type PostApiDevicesDeviceIdSyncUploadBody = {
-    file?: IFormFile;
+    file?: Blob;
 } & {
     path?: string;
 } & {

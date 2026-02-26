@@ -1,6 +1,7 @@
 import {Anchor, Tooltip} from "@mantine/core";
 import {IconPlayerPlayFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
+import {TEXT_COLOR} from "../../../utils/colors.ts";
 import ExplicitLabel from "../explicit-label.tsx";
 
 export interface SongTitleProps {
@@ -17,12 +18,12 @@ export default function SongTitle(props: SongTitleProps) {
 
     if (props.link) {
         content = <Anchor href={props.link} target="_blank" rel="noopener noreferrer" lineClamp={props.lineClamp}
-                          c={"black"}>{props.title}</Anchor>;
+                          c={TEXT_COLOR}>{props.title}</Anchor>;
     } else if (props.songId) {
         content = <Anchor component={Link} to={`/songs/${props.songId}`} lineClamp={props.lineClamp}
-                          c={"black"}>{props.title}</Anchor>;
+                          c={TEXT_COLOR}>{props.title}</Anchor>;
     } else {
-        content = <Anchor lineClamp={props.lineClamp} c={"black"}>{props.title}</Anchor>;
+        content = <Anchor lineClamp={props.lineClamp} c={TEXT_COLOR}>{props.title}</Anchor>;
     }
 
     return <ExplicitLabel visible={props.isExplicit ?? false}>

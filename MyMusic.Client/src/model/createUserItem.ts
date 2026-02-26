@@ -9,4 +9,5 @@ export interface CreateUserItem {
     id: number;
     username: string;
     name: string;
+    colorScheme: string;
 }

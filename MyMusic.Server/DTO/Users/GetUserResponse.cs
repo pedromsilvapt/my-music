@@ -2,24 +2,26 @@ using Entities = MyMusic.Common.Entities;
 
 namespace MyMusic.Server.DTO.Users;
 
-public record ListUsersResponse
+public record GetUserResponse
 {
-    public required IEnumerable<ListUsersItem> Users { get; set; }
+    public required GetUserItem User { get; set; }
 }
 
-public record ListUsersItem
+public record GetUserItem
 {
     public required long Id { get; set; }
     public required string Username { get; set; }
     public required string Name { get; set; }
     public required string ColorScheme { get; set; }
 
-    public static ListUsersItem FromEntity(Entities.User user) =>
-        new()
+    public static GetUserItem FromEntity(Entities.User user)
+    {
+        return new GetUserItem
         {
             Id = user.Id,
             Name = user.Name,
             Username = user.Username,
             ColorScheme = user.ColorScheme,
         };
+    }
 }

@@ -4,6 +4,7 @@ import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import {useDeletePlaylist} from "../../client/playlists.ts";
 import type {ListPlaylistItem} from "../../model";
+import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
@@ -45,7 +46,7 @@ export function usePlaylistsSchema() {
                 displayName: 'Name',
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
-                        <Anchor component={Link} to={`/playlists/${row.id}`} c={"black"}>{row.name}</Anchor>
+                        <Anchor component={Link} to={`/playlists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
                     </Tooltip>,
                 width: '2fr',
                 sortable: true,
@@ -99,7 +100,7 @@ export function usePlaylistsSchema() {
             placeholderIcon={<IconPlaylist/>}
         />,
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
-            <Anchor component={Link} to={`/playlists/${row.id}`} c={"black"}>{row.name}</Anchor>
+            <Anchor component={Link} to={`/playlists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
     }) as CollectionSchema<ListPlaylistItem>, [deletePlaylist, filterMetadata, fetchFilterValues]);

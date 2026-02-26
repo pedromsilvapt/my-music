@@ -20,6 +20,7 @@ import {useCurrentSongId, useQueue, useQueueMutations} from "../../contexts/play
 import {useToggleFavorites} from "../../hooks/use-favorites";
 import type {ListSongsItem} from "../../model";
 import {usePlaybackStoreApi} from "../../stores/playback-store";
+import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork";
 import type {CollectionSchema} from "../common/collection/collection";
 import SongAlbum from "../common/fields/song-album";
@@ -113,7 +114,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                 displayName: 'Genres',
                 render: row => row.genres.map(((genre, i) => <>
                     {i > 0 && ', '}
-                    <Anchor key={genre.id} c={"black"}>{genre.name}</Anchor>
+                    <Anchor key={genre.id} c={TEXT_COLOR}>{genre.name}</Anchor>
                 </>)),
                 width: '1fr',
             },

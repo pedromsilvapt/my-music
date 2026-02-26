@@ -3,6 +3,7 @@ import {IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import type {ListArtistsItem} from "../../model";
+import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
@@ -44,7 +45,7 @@ export function useArtistsSchema() {
                 displayName: 'Name',
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
-                        <Anchor component={Link} to={`/artists/${row.id}`} c={"black"}>{row.name}</Anchor>
+                        <Anchor component={Link} to={`/artists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
                     </Tooltip>,
                 width: '1fr',
                 sortable: true,
@@ -86,7 +87,7 @@ export function useArtistsSchema() {
             placeholderIcon={<IconUserFilled/>}
         />,
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
-            <Anchor component={Link} to={`/artists/${row.id}`} c={"black"}>{row.name}</Anchor>
+            <Anchor component={Link} to={`/artists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => row.albumsCount + ' albums',
     }) as CollectionSchema<ListArtistsItem>, [filterMetadata, fetchFilterValues]);

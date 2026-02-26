@@ -17,6 +17,7 @@ import '@mantine/notifications/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
 import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
+import ThemeToggle from "./common/theme-toggle.tsx";
 import Player from "./player/player.tsx";
 import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
 
@@ -41,6 +42,7 @@ function App() {
                     <Group justify="space-between" style={{flex: 1}}>
                         MyMusic
                     </Group>
+                    <ThemeToggle/>
                     <PurchasesQueueIndicator/>
                 </Group>
             </AppShell.Header>

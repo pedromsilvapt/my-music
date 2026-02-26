@@ -1,5 +1,6 @@
 import {Anchor, type DefaultMantineColor, Tooltip} from "@mantine/core";
 import {Link} from "@tanstack/react-router";
+import {TEXT_COLOR} from "../../../utils/colors.ts";
 
 export interface SongAlbumProps {
     name: string;
@@ -13,19 +14,19 @@ export default function SongAlbum(props: SongAlbumProps) {
 
     if (props.link) {
         content = (
-            <Anchor href={props.link} target="_blank" rel="noopener noreferrer" c={props.c ?? 'black'}>
+            <Anchor href={props.link} target="_blank" rel="noopener noreferrer" c={props.c ?? TEXT_COLOR}>
                 {props.name}
             </Anchor>
         );
     } else if (props.albumId) {
         content = (
-            <Anchor component={Link} to={`/albums/${props.albumId}`} c={props.c ?? 'black'}>
+            <Anchor component={Link} to={`/albums/${props.albumId}`} c={props.c ?? TEXT_COLOR}>
                 {props.name}
             </Anchor>
         );
     } else {
         content = (
-            <Anchor c={props.c ?? 'black'}>
+            <Anchor c={props.c ?? TEXT_COLOR}>
                 {props.name}
             </Anchor>
         );

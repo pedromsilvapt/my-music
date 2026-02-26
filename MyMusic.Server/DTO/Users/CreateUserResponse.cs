@@ -9,13 +9,12 @@ public record CreateUserResponse
 
 public record CreateUserItem : ListUsersItem
 {
-    public new static CreateUserItem FromEntity(Entities.User user)
-    {
-        return new CreateUserItem
+    public new static CreateUserItem FromEntity(Entities.User user) =>
+        new()
         {
             Id = user.Id,
             Name = user.Name,
             Username = user.Username,
+            ColorScheme = user.ColorScheme,
         };
-    }
 }
