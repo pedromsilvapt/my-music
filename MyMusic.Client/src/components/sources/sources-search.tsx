@@ -61,6 +61,7 @@ export default function SourcesSearch() {
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key="songs"
+                stateKey="sources-search"
                 items={elements}
                 schema={sourceSongsSchema}
                 isFetching={isFetching}

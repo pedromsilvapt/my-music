@@ -8,4 +8,5 @@ export {
 
 export type {
     CollectionState,
+    ScrollPosition,
 } from '../stores/collection-store';

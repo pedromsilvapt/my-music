@@ -16,8 +16,9 @@ import {useElementSize} from "@mantine/hooks";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {useContextMenu} from "mantine-contextmenu";
-import {useCallback, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
+import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
@@ -46,6 +47,9 @@ export interface CollectionTableProps<M> {
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
     setItemElementRef?: ItemElementRefCallback<M>;
     actions: CollectionSchemaAction<M>[];
+    initialScrollPosition?: ScrollPosition;
+    onScrollPositionChange?: (position: ScrollPosition) => void;
+    height: number;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
@@ -96,12 +100,44 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
 
     const virtualRows = virtualizer.getVirtualItems();
 
-    const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
+    const hasRestoredScrollRef = useRef(false);
+
+    useEffect(() => {
+        if (props.initialScrollPosition != null && !hasRestoredScrollRef.current && props.items.length > 0) {
+            hasRestoredScrollRef.current = true;
+            requestAnimationFrame(() => {
+                virtualizer.scrollToIndex(props.initialScrollPosition!.index, {align: 'start'});
+                const scrollElement = parentRef.current;
+                if (scrollElement) {
+                    scrollElement.scrollTop += props.initialScrollPosition!.offset;
+                }
+            });
+        }
+    }, [props.initialScrollPosition, props.items.length, virtualizer]);
+
+    useEffect(() => {
+        const scrollElement = parentRef.current;
+        if (!scrollElement || !props.onScrollPositionChange) return;
+
+        const handleScroll = () => {
+            const virtualItems = virtualizer.getVirtualItems();
+            if (virtualItems.length > 0) {
+                const firstItem = virtualItems[0];
+                const offset = scrollElement.scrollTop - firstItem.start;
+                props.onScrollPositionChange?.({index: firstItem.index, offset});
+            }
+        };
+
+        scrollElement.addEventListener('scroll', handleScroll, {passive: true});
+        return () => scrollElement.removeEventListener('scroll', handleScroll);
+    }, [props.onScrollPositionChange, virtualizer]);
 
     const selectedIds = useMemo(() =>
             new Set(props.selection.map(item => props.schema.key(item))),
         [props.selection, props.schema.key]
     );
+
+    const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
 
     const draggedItem = activeId != null ? props.items.find(item => props.schema.key(item) === activeId) : null;
     const isDraggingMultiple = selectedIds.has(activeId as React.Key) && selectedIds.size > 1;
@@ -182,7 +218,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     });
 
     const tableContent = (
-        <Box style={{height: `${virtualizer.getTotalSize() + tableHeaderHeight}px`}}>
+        <Box style={{height: `${Math.max(props.height, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
             <Table highlightOnHover ref={tableRef} style={{
                 borderCollapse: 'separate',
             }}>
@@ -253,7 +289,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "813px"}}>
+                <Box ref={parentRef} style={{height: props.height, overflowY: "auto"}}>
                     {tableContent}
                 </Box>
                 <DragOverlay>
@@ -287,7 +323,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         );
     }
 
-    return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "813px"}}>
+    return <Box ref={parentRef} style={{height: props.height, overflowY: "auto"}}>
         {tableContent}
     </Box>;
 }

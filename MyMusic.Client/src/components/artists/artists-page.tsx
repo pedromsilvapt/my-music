@@ -42,6 +42,7 @@ export default function ArtistsPage() {
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key="artists"
+                stateKey="artists"
                 items={elements}
                 schema={artistsSchema}
                 filterMode="server"

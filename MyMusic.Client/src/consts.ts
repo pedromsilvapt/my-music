@@ -8,6 +8,8 @@ export const API_SEARCH_DEBOUNCE_MS = 500;
 
 export const FILTER_DEBOUNCE_MS = 300;
 
+export const SCROLL_DEBOUNCE_MS = 300;
+
 export const PURCHASE_REFETCH_INTERVAL_MS = 1000;
 
 export const GRID_ELEM_SIZE = 226;

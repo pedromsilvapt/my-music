@@ -6,12 +6,17 @@ import {useShallow} from 'zustand/react/shallow';
 import type {CollectionView} from '../components/common/collection/collection-toolbar.tsx';
 import type {CollectionSort} from '../components/common/collection/collection.tsx';
 
+export interface ScrollPosition {
+    index: number;
+    offset: number;
+}
+
 export interface CollectionState<T = unknown> {
     view: CollectionView;
     sort: CollectionSort<T>;
     clientSearch: string;
     clientFilter: string;
-    scrollOffset: number;
+    scrollPosition: ScrollPosition | null;
 }
 
 type CollectionStoreState = {
@@ -24,7 +29,7 @@ type CollectionStoreActions = {
     setCollectionSort: (key: string, sort: CollectionSort<unknown>) => void;
     setCollectionClientSearch: (key: string, search: string) => void;
     setCollectionClientFilter: (key: string, filter: string) => void;
-    setCollectionScrollOffset: (key: string, offset: number) => void;
+    setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => void;
     clearCollectionState: (key: string) => void;
 };
 
@@ -35,7 +40,7 @@ const DEFAULT_COLLECTION_STATE: CollectionState = {
     sort: [],
     clientSearch: '',
     clientFilter: '',
-    scrollOffset: 0,
+    scrollPosition: null,
 };
 
 function createCollectionStore(): StoreApi<CollectionStore> {
@@ -78,12 +83,12 @@ function createCollectionStore(): StoreApi<CollectionStore> {
                     state.collections[key].clientFilter = filter;
                 });
             },
-            setCollectionScrollOffset: (key: string, offset: number) => {
+            setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => {
                 set((state) => {
                     if (!state.collections[key]) {
                         state.collections[key] = {...DEFAULT_COLLECTION_STATE};
                     }
-                    state.collections[key].scrollOffset = offset;
+                    state.collections[key].scrollPosition = position;
                 });
             },
             clearCollectionState: (key: string) => {

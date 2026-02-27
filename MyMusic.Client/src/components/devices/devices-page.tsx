@@ -38,6 +38,7 @@ export default function DevicesPage() {
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key="devices"
+                stateKey="devices"
                 items={elements}
                 schema={devicesSchema}
                 filterMode="server"

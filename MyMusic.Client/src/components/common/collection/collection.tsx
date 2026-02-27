@@ -1,8 +1,10 @@
 import {Box, Flex, LoadingOverlay} from "@mantine/core";
-import {useDebouncedValue, useSelection, type UseSelectionHandlers} from '@mantine/hooks';
+import {useDebouncedValue, useElementSize, useSelection, type UseSelectionHandlers} from '@mantine/hooks';
 import type React from "react";
-import {useCallback, useEffect, useMemo, useState} from "react";
-import {SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {SCROLL_DEBOUNCE_MS, SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
+import type {ScrollPosition} from "../../../contexts/collection-context.tsx";
+import {useCollectionActions} from "../../../contexts/collection-context.tsx";
 import {sortBy} from "../../../utils/sort-by.tsx";
 import type {CollectionFilterMode, CollectionSchema, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
@@ -25,6 +27,7 @@ interface CollectionProps<T extends { id: string | number }> {
     items: T[],
     schema: CollectionSchema<T>,
     initialView?: CollectionView,
+    stateKey?: string,
     toolbar?: (props: CollectionToolbarProps<T>) => React.ReactNode | null | undefined;
     isFetching?: boolean | null | undefined;
     sortable?: boolean;
@@ -37,16 +40,82 @@ interface CollectionProps<T extends { id: string | number }> {
     searchPlaceholder?: string;
 }
 
+const MIN_VIEW_HEIGHT = 200;
+
 export default function Collection<T extends { id: string | number }>(props: CollectionProps<T>) {
     const filterMode = props.filterMode ?? 'client';
+    const stateKey = props.stateKey;
 
-    const [clientSearch, setClientSearch] = useState('');
-    const [clientFilter, setClientFilter] = useState('');
-    const [view, setView] = useState<CollectionView>(props.initialView ?? 'table');
+    const {ref: containerRef, height: containerHeight} = useElementSize<HTMLDivElement>();
+    const {ref: toolbarRef, height: toolbarHeight} = useElementSize<HTMLDivElement>();
+
+    const viewHeight = Math.max(MIN_VIEW_HEIGHT, containerHeight - toolbarHeight);
+
+    const {
+        getCollectionState,
+        setCollectionView,
+        setCollectionSort,
+        setCollectionClientSearch,
+        setCollectionClientFilter,
+        setCollectionScrollPosition
+    } =
+        useCollectionActions(state => ({
+            getCollectionState: state.getCollectionState,
+            setCollectionView: state.setCollectionView,
+            setCollectionSort: state.setCollectionSort,
+            setCollectionClientSearch: state.setCollectionClientSearch,
+            setCollectionClientFilter: state.setCollectionClientFilter,
+            setCollectionScrollPosition: state.setCollectionScrollPosition,
+        }));
+
+    const storeState = stateKey ? getCollectionState(stateKey) : null;
+    const initialView = props.initialView ?? 'table';
+
+    const [clientSearch, setClientSearch] = useState(storeState?.clientSearch ?? '');
+    const [clientFilter, setClientFilter] = useState(storeState?.clientFilter ?? '');
+    const [view, setView] = useState<CollectionView>(storeState?.view ?? initialView);
+    const [sort, setSort] = useState<CollectionSort<T>>((storeState?.sort as CollectionSort<T>) ?? []);
+    const [scrollPosition, setScrollPosition] = useState<ScrollPosition | null>(storeState?.scrollPosition ?? null);
+
     const [throttledSearch] = useDebouncedValue(clientSearch, SEARCH_DEBOUNCE_MS);
-    const [sort, setSort] = useState<CollectionSort<T>>([]);
+    const [debouncedScrollPosition] = useDebouncedValue(scrollPosition, SCROLL_DEBOUNCE_MS);
     const [lastSelectedKey, setLastSelectedKey] = useState<React.Key | null>(null);
     const [lastSelectedElement, setLastSelectedElement] = useState<HTMLElement | null>(null);
+
+    const initialScrollPositionRef = useRef<ScrollPosition | null>(null);
+    if (initialScrollPositionRef.current === null && storeState?.scrollPosition != null) {
+        initialScrollPositionRef.current = storeState.scrollPosition;
+    }
+
+    useEffect(() => {
+        if (stateKey) {
+            setCollectionView(stateKey, view);
+        }
+    }, [stateKey, view, setCollectionView]);
+
+    useEffect(() => {
+        if (stateKey) {
+            setCollectionSort(stateKey, sort as CollectionSort<unknown>);
+        }
+    }, [stateKey, sort, setCollectionSort]);
+
+    useEffect(() => {
+        if (stateKey) {
+            setCollectionClientSearch(stateKey, clientSearch);
+        }
+    }, [stateKey, clientSearch, setCollectionClientSearch]);
+
+    useEffect(() => {
+        if (stateKey) {
+            setCollectionClientFilter(stateKey, clientFilter);
+        }
+    }, [stateKey, clientFilter, setCollectionClientFilter]);
+
+    useEffect(() => {
+        if (stateKey && debouncedScrollPosition != null && debouncedScrollPosition !== storeState?.scrollPosition) {
+            setCollectionScrollPosition(stateKey, debouncedScrollPosition);
+        }
+    }, [stateKey, debouncedScrollPosition, setCollectionScrollPosition, storeState?.scrollPosition]);
 
     const setItemElementRef = useCallback((_item: T, element: HTMLElement | null) => {
         if (element) {
@@ -173,7 +242,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
         }
 
         setLastSelectedKey(clickedKey);
-    }, [filteredAndSortedItems, lastSelectedKey, props.schema.key, selectionKeys, selectionHandlers]);
+    }, [filteredAndSortedItems, lastSelectedKey, props.schema, selectionKeys, selectionHandlers]);
 
     const customSelectionHandlers = useMemo(() => ({
         ...selectionHandlers,
@@ -194,6 +263,10 @@ export default function Collection<T extends { id: string | number }>(props: Col
         return props.schema.actions?.(selection) ?? [];
     }, [props.schema, selection]);
 
+    const handleScrollPositionChange = useCallback((position: ScrollPosition) => {
+        setScrollPosition(position);
+    }, []);
+
     let viewNode: React.ReactNode;
 
     if (view === 'table') {
@@ -209,6 +282,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderBatch={props.onReorderBatch}
             setItemElementRef={setItemElementRef}
             actions={actions}
+            initialScrollPosition={initialScrollPositionRef.current ?? undefined}
+            onScrollPositionChange={handleScrollPositionChange}
+            height={viewHeight}
         />;
     } else if (view === 'list') {
         viewNode = <CollectionList
@@ -221,6 +297,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderBatch={props.onReorderBatch}
             setItemElementRef={setItemElementRef}
             actions={actions}
+            initialScrollPosition={initialScrollPositionRef.current ?? undefined}
+            onScrollPositionChange={handleScrollPositionChange}
+            height={viewHeight}
         />;
     } else if (view === 'grid') {
         viewNode = <CollectionGrid
@@ -233,6 +312,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderBatch={props.onReorderBatch}
             setItemElementRef={setItemElementRef}
             actions={actions}
+            initialScrollPosition={initialScrollPositionRef.current ?? undefined}
+            onScrollPositionChange={handleScrollPositionChange}
+            height={viewHeight}
         />;
     } else {
         throw new Error(`Invalid collection view: ${view}`);
@@ -267,28 +349,30 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const toolbar = props.toolbar ?? (p => <CollectionToolbar {...p} />);
 
-    return <Flex direction="column" style={{height: `100%`}}>
-        {toolbar({
-            search: currentSearch,
-            setSearch: handleSearchChange,
-            filter: currentFilter,
-            setFilter: handleFilterChange,
-            onApplyFilter: handleApplyFilter,
-            filterMode: filterMode,
-            searchPlaceholder: props.searchPlaceholder,
-            view: view,
-            setView: setView,
-            sort: sort,
-            onSort: handleSort,
-            onSortRemove: handleSortRemove,
-            onReorderSort: handleReorderSort,
-            sortableFields: sortableFields,
-            columns: props.schema.columns,
-            filterMetadata: props.schema.filterMetadata,
-            fetchFilterValues: props.schema.fetchFilterValues,
-        })}
+    return <Flex ref={containerRef} direction="column" style={{height: `100%`}}>
+        <Box ref={toolbarRef}>
+            {toolbar({
+                search: currentSearch,
+                setSearch: handleSearchChange,
+                filter: currentFilter,
+                setFilter: handleFilterChange,
+                onApplyFilter: handleApplyFilter,
+                filterMode: filterMode,
+                searchPlaceholder: props.searchPlaceholder,
+                view: view,
+                setView: setView,
+                sort: sort,
+                onSort: handleSort,
+                onSortRemove: handleSortRemove,
+                onReorderSort: handleReorderSort,
+                sortableFields: sortableFields,
+                columns: props.schema.columns,
+                filterMetadata: props.schema.filterMetadata,
+                fetchFilterValues: props.schema.fetchFilterValues,
+            })}
+        </Box>
 
-        <Box pos="relative">
+        <Box pos="relative" flex={1} style={{minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
             <LoadingOverlay visible={props.isFetching ?? false} zIndex={ZINDEX_MODAL}
                             overlayProps={{radius: "sm", blur: 2}}/>
             {viewNode}

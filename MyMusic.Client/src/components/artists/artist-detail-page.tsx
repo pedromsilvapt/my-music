@@ -56,6 +56,7 @@ export default function ArtistDetailPage() {
                 <Text size="lg" fw={600} mb="sm">Albums</Text>
                 <Collection
                     initialView="grid"
+                    stateKey="artist-albums"
                     items={albums}
                     schema={albumsSchema}
                 />
@@ -78,6 +79,7 @@ export default function ArtistDetailPage() {
                     />
                 </Group>
                 <Collection
+                    stateKey="artist-songs"
                     items={songs}
                     schema={songsSchema}
                 />

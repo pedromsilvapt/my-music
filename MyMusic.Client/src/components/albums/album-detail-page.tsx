@@ -46,6 +46,7 @@ export default function AlbumDetailPage() {
 
             <Box>
                 <Collection
+                    stateKey="album-detail"
                     items={songs}
                     schema={songsSchema}
                 />

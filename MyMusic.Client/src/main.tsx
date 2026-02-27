@@ -7,6 +7,7 @@ import {ContextMenuProvider} from 'mantine-contextmenu';
 import './index.css'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
+import {CollectionStoreProvider} from "./contexts/collection-context.tsx";
 import ManageDevicesProvider from "./contexts/manage-devices-context.tsx";
 import ManagePlaylistsProvider from "./contexts/manage-playlists-context.tsx";
 import {PlayerProvider} from "./contexts/player-context.tsx";
@@ -40,7 +41,9 @@ createRoot(document.getElementById('root')!).render(
                         <PlayerProvider>
                             <ManagePlaylistsProvider>
                                 <ManageDevicesProvider>
-                                    <RouterProvider router={router}/>
+                                    <CollectionStoreProvider>
+                                        <RouterProvider router={router}/>
+                                    </CollectionStoreProvider>
                                 </ManageDevicesProvider>
                             </ManagePlaylistsProvider>
                         </PlayerProvider>

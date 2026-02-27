@@ -130,6 +130,7 @@ export default function AuditDetailPage() {
 
             <div style={{flex: 1, minHeight: 0}}>
                 <Collection
+                    stateKey="audit-detail"
                     items={nonConformities}
                     schema={schema}
                     filterMode="client"

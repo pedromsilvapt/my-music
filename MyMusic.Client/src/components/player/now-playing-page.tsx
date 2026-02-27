@@ -24,9 +24,10 @@ export default function NowPlayingPage() {
     };
 
     return (
-        <Stack gap="md">
+        <Stack gap="md" style={{height: 'var(--parent-height)'}}>
             <Text size="xl" fw={700}>Now Playing ({currentSongIndex + 1}/{queue.length} songs)</Text>
             <Collection
+                stateKey="now-playing"
                 items={queue}
                 schema={songsSchema}
                 sortable={true}

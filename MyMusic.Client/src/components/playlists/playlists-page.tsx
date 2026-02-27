@@ -62,6 +62,7 @@ export default function PlaylistsPage() {
                     items={elements}
                     schema={playlistsSchema}
                     initialView="grid"
+                    stateKey="playlists"
                     filterMode="server"
                     serverSearch={appliedSearch}
                     serverFilter={appliedFilter}

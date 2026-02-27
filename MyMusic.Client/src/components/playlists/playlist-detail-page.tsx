@@ -22,6 +22,7 @@ export default function PlaylistDetailPage() {
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key={`playlist-${id}`}
+                stateKey="playlist-detail"
                 items={elements}
                 schema={songsSchema}>
             </Collection>

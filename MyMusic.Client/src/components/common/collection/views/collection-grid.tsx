@@ -15,8 +15,9 @@ import {Box, Group, SimpleGrid, Stack, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {useContextMenu} from "mantine-contextmenu";
-import {useCallback, useMemo, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, GRID_ELEM_SIZE, GRID_GAP, GRID_ROW_HEIGHT} from "../../../../consts.ts";
+import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
@@ -38,6 +39,9 @@ export interface CollectionGridProps<M> {
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
     setItemElementRef?: ItemElementRefCallback<M>;
     actions: CollectionSchemaAction<M>[];
+    initialScrollPosition?: ScrollPosition;
+    onScrollPositionChange?: (position: ScrollPosition) => void;
+    height: number;
 }
 
 export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
@@ -94,6 +98,38 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     });
 
     const virtualItems = virtualizer.getVirtualItems();
+
+    const hasRestoredScrollRef = useRef(false);
+
+    useEffect(() => {
+        if (props.initialScrollPosition != null && !hasRestoredScrollRef.current && props.items.length > 0) {
+            hasRestoredScrollRef.current = true;
+            requestAnimationFrame(() => {
+                virtualizer.scrollToIndex(props.initialScrollPosition!.index, {align: 'start'});
+                const scrollElement = parentRef.current;
+                if (scrollElement) {
+                    scrollElement.scrollTop += props.initialScrollPosition!.offset;
+                }
+            });
+        }
+    }, [props.initialScrollPosition, props.items.length, virtualizer, parentRef]);
+
+    useEffect(() => {
+        const scrollElement = parentRef.current;
+        if (!scrollElement || !props.onScrollPositionChange) return;
+
+        const handleScroll = () => {
+            const items = virtualizer.getVirtualItems();
+            if (items.length > 0) {
+                const firstItem = items[0];
+                const offset = scrollElement.scrollTop - firstItem.start;
+                props.onScrollPositionChange?.({index: firstItem.index, offset});
+            }
+        };
+
+        scrollElement.addEventListener('scroll', handleScroll, {passive: true});
+        return () => scrollElement.removeEventListener('scroll', handleScroll);
+    }, [props.onScrollPositionChange, virtualizer, parentRef]);
 
     const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
 
@@ -178,7 +214,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     });
 
     const gridContent = (
-        <Box style={{height: `${virtualizer.getTotalSize()}px`}}>
+        <Box style={{height: `${Math.max(props.height, virtualizer.getTotalSize())}px`}}>
             {props.sortable ? (
                 <SortableContext
                     items={itemIds}
@@ -208,7 +244,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={{width: "100%", maxHeight: "4000px", overflowY: "auto"}}>
+                <Box ref={parentRef} style={{width: "100%", height: props.height, overflowY: "auto"}}>
                     {gridContent}
                 </Box>
                 <DragOverlay>
@@ -237,7 +273,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     }
 
     return (
-        <Box ref={parentRef} style={{width: "100%", maxHeight: "4000px", overflowY: "auto"}}>
+        <Box ref={parentRef} style={{width: "100%", height: props.height, overflowY: "auto"}}>
             {gridContent}
         </Box>
     );

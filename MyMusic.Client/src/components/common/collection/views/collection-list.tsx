@@ -14,8 +14,9 @@ import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, Stack, Text} from "@mantine/core";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import {useContextMenu} from "mantine-contextmenu";
-import {useCallback, useMemo, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, LIST_ARTWORK_SIZE, LIST_GAP, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
+import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
@@ -37,6 +38,9 @@ export interface CollectionListProps<M> {
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
     setItemElementRef?: ItemElementRefCallback<M>;
     actions: CollectionSchemaAction<M>[];
+    initialScrollPosition?: ScrollPosition;
+    onScrollPositionChange?: (position: ScrollPosition) => void;
+    height: number;
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
@@ -62,6 +66,38 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
     });
 
     const virtualItems = virtualizer.getVirtualItems();
+
+    const hasRestoredScrollRef = useRef(false);
+
+    useEffect(() => {
+        if (props.initialScrollPosition != null && !hasRestoredScrollRef.current && props.items.length > 0) {
+            hasRestoredScrollRef.current = true;
+            requestAnimationFrame(() => {
+                virtualizer.scrollToIndex(props.initialScrollPosition!.index, {align: 'start'});
+                const scrollElement = parentRef.current;
+                if (scrollElement) {
+                    scrollElement.scrollTop += props.initialScrollPosition!.offset;
+                }
+            });
+        }
+    }, [props.initialScrollPosition, props.items.length, virtualizer]);
+
+    useEffect(() => {
+        const scrollElement = parentRef.current;
+        if (!scrollElement || !props.onScrollPositionChange) return;
+
+        const handleScroll = () => {
+            const items = virtualizer.getVirtualItems();
+            if (items.length > 0) {
+                const firstItem = items[0];
+                const offset = scrollElement.scrollTop - firstItem.start;
+                props.onScrollPositionChange?.({index: firstItem.index, offset});
+            }
+        };
+
+        scrollElement.addEventListener('scroll', handleScroll, {passive: true});
+        return () => scrollElement.removeEventListener('scroll', handleScroll);
+    }, [props.onScrollPositionChange, virtualizer]);
 
     const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
 
@@ -145,7 +181,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
     });
 
     const listContent = (
-        <Box style={{height: `${virtualizer.getTotalSize()}px`}}>
+        <Box style={{height: `${Math.max(props.height, virtualizer.getTotalSize())}px`}}>
             {props.sortable ? (
                 <SortableContext
                     items={itemIds}
@@ -175,7 +211,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "4000px"}}>
+                <Box ref={parentRef} style={{height: props.height, overflowY: "auto"}}>
                     {listContent}
                 </Box>
                 <DragOverlay>
@@ -201,7 +237,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
         );
     }
 
-    return <Box ref={parentRef} flex={1} style={{overflowY: "auto", maxHeight: "4000px"}}>
+    return <Box ref={parentRef} style={{height: props.height, overflowY: "auto"}}>
         {listContent}
     </Box>;
 }

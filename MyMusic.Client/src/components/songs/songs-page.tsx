@@ -46,6 +46,7 @@ export default function SongsPage() {
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key="songs"
+                stateKey="songs"
                 items={elements}
                 schema={songsSchema}
                 filterMode="server"

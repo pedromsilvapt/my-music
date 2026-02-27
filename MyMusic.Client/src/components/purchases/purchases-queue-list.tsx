@@ -42,6 +42,7 @@ export default function PurchasesQueueList({
 
     return <Collection
         key="artists"
+        stateKey="purchases-queue"
         items={purchases}
         schema={purchasesSchema}
         initialView="list"

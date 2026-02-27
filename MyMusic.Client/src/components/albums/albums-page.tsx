@@ -42,6 +42,7 @@ export default function AlbumsPage() {
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
                 key="albums"
+                stateKey="albums"
                 items={elements}
                 schema={albumsSchema}
                 filterMode="server"
