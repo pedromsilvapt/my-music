@@ -1,6 +1,7 @@
 import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSongsResponse} from "../../model";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
@@ -10,7 +11,7 @@ export default function SongsPage() {
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
-    const {data: songs, refetch} = useQuery({
+    const songsQuery = useQuery({
         queryKey: ["songs", appliedSearch, appliedFilter],
         queryFn: async (): Promise<ListSongsResponse> => {
             const params = new URLSearchParams();
@@ -28,12 +29,14 @@ export default function SongsPage() {
         },
     });
 
+    const songs = useQueryData(songsQuery, "Failed to fetch songs") ?? {songs: []};
+
     const songsSchema = useSongsSchema();
 
     useEffect(() => {
-        registerRefetch('songs', refetch);
+        registerRefetch('songs', songsQuery.refetch);
         return () => unregisterRefetch('songs');
-    }, [registerRefetch, unregisterRefetch, refetch]);
+    }, [registerRefetch, unregisterRefetch, songsQuery.refetch]);
 
     const handleFilterChange = (search: string, filter: string) => {
         setAppliedSearch(search);

@@ -1,10 +1,10 @@
 import {useDebouncedValue} from "@mantine/hooks";
-import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
 import {type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import Collection from "../common/collection/collection.tsx";
 import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
@@ -19,24 +19,16 @@ export default function SourcesSearch() {
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
 
-    const {data, isFetching} = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
+    const searchSongsQuery = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
         query: {
             placeholderData: (prev) => prev as searchSongsResponse | undefined
         }
     });
 
-    const hasError = data && data.status >= 400;
-
-    useEffect(() => {
-        if (hasError) {
-            notifications.show({
-                title: "Error",
-                message: "Failed to search songs. Please try again.",
-                color: "red",
-            });
-            console.error("Search songs error:", data);
-        }
-    }, [hasError, data]);
+    const searchSongsResponse = useQueryData(
+        searchSongsQuery,
+        "Failed to search songs"
+    ) ?? {data: []};
 
     const createPurchase = useCreatePurchase({
         mutation: {
@@ -55,7 +47,7 @@ export default function SourcesSearch() {
 
     const sourceSongsSchema = useSourceSongsSchema(onPurchase);
 
-    const elements = hasError ? [] : (data?.data ?? []);
+    const elements = searchSongsResponse?.data ?? [];
 
     return <>
         <div style={{height: 'var(--parent-height)'}}>
@@ -64,7 +56,7 @@ export default function SourcesSearch() {
                 stateKey="sources-search"
                 items={elements}
                 schema={sourceSongsSchema}
-                isFetching={isFetching}
+                isFetching={searchSongsQuery.isFetching}
                 toolbar={p => (
                     <SourcesSearchToolbar
                         {...p}

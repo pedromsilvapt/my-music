@@ -2,6 +2,7 @@ import {Box, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
 import {IconArrowBack, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListAlbumsItem, ListSongsItem} from "../../model";
 import {GetArtistSongFilter} from "../../model";
 import {useAlbumsSchema} from "../albums/useAlbumsSchema.tsx";
@@ -18,8 +19,11 @@ export default function ArtistDetailPage() {
     const albumsSchema = useAlbumsSchema();
     const songsSchema = useSongsSchema();
 
-    const {data: response} = useGetArtist(Number(artistId), {songFilter: songFilter === 'own' ? GetArtistSongFilter.Own : songFilter === 'other' ? GetArtistSongFilter.Other : GetArtistSongFilter.All});
-    const artist = response?.data.artist;
+    const artistQuery = useGetArtist(Number(artistId), {
+        songFilter: songFilter === 'own' ? GetArtistSongFilter.Own : songFilter === 'other' ? GetArtistSongFilter.Other : GetArtistSongFilter.All
+    });
+    const artistResponse = useQueryData(artistQuery, "Failed to fetch artist");
+    const artist = artistResponse?.data.artist ?? null;
 
     if (!artist) {
         return <Box p="md">Loading...</Box>;

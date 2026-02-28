@@ -1,5 +1,6 @@
 import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import {useArtistsSchema} from "./useArtistsSchema.tsx";
 
@@ -7,7 +8,7 @@ export default function ArtistsPage() {
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
-    const {data, refetch} = useQuery({
+    const artistsQuery = useQuery({
         queryKey: ["artists", appliedSearch, appliedFilter],
         queryFn: async () => {
             const params = new URLSearchParams();
@@ -25,18 +26,20 @@ export default function ArtistsPage() {
         },
     });
 
+    const artists = useQueryData(artistsQuery, "Failed to fetch artists") ?? {artists: []};
+
     const artistsSchema = useArtistsSchema();
 
     useEffect(() => {
-        void refetch();
-    }, [refetch]);
+        void artistsQuery.refetch();
+    }, [artistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setAppliedSearch(newSearch);
         setAppliedFilter(newFilter);
     };
 
-    const elements = data?.artists ?? [];
+    const elements = artists?.artists ?? [];
 
     return (
         <div style={{height: 'var(--parent-height)'}}>

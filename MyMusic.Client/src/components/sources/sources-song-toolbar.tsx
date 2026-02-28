@@ -2,6 +2,7 @@ import {Box, Center, SegmentedControl} from "@mantine/core";
 import {useUncontrolled} from "@mantine/hooks";
 import {useEffect, useMemo} from "react";
 import {useListSources} from "../../client/sources.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import CollectionToolbar, {type CollectionToolbarProps} from "../common/collection/collection-toolbar.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
@@ -17,9 +18,11 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
         onChange: props.setSource,
     });
 
-    const {data: sourcesData} = useListSources();
+    const sourcesQuery = useListSources();
 
-    const sources = sourcesData?.data.sources ?? [];
+    const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
+
+    const sources = sourcesResponse?.data.sources ?? [];
 
     const sourcesOptions = useMemo(() => sources.map(source => ({
         value: '' + source.id,

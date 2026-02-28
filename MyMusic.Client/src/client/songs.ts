@@ -32,6 +32,8 @@ import type {
     AutocompleteArtistsResponse,
     AutocompleteGenresParams,
     AutocompleteGenresResponse,
+    AutocompleteSongsParams,
+    AutocompleteSongsResponse,
     BatchUpdateSongsRequest,
     BatchUpdateSongsResponse,
     FilterMetadataResponse,
@@ -2043,6 +2045,217 @@ export const invalidateAutocompleteAlbums = async (
     return queryClient;
 };
 
+export type autocompleteSongsResponse200 = {
+    data: AutocompleteSongsResponse;
+    status: 200;
+};
+
+export type autocompleteSongsResponseSuccess = autocompleteSongsResponse200 & {
+    headers: Headers;
+};
+
+export type autocompleteSongsResponse = autocompleteSongsResponseSuccess;
+
+export const getAutocompleteSongsUrl = (params?: AutocompleteSongsParams) => {
+    const normalizedParams = new URLSearchParams();
+
+    Object.entries(params || {}).forEach(([key, value]) => {
+        if (value !== undefined) {
+            normalizedParams.append(key, value === null ? "null" : value.toString());
+        }
+    });
+
+    const stringifiedParams = normalizedParams.toString();
+
+    return stringifiedParams.length > 0
+        ? `/api/songs/autocomplete/songs?${stringifiedParams}`
+        : `/api/songs/autocomplete/songs`;
+};
+
+export const autocompleteSongs = async (
+    params?: AutocompleteSongsParams,
+    options?: RequestInit,
+): Promise<autocompleteSongsResponse> => {
+    const res = await fetch(getAutocompleteSongsUrl(params), {
+        ...options,
+        method: "GET",
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: autocompleteSongsResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as autocompleteSongsResponse;
+};
+
+export const getAutocompleteSongsQueryKey = (
+    params?: AutocompleteSongsParams,
+) => {
+    return [
+        "api",
+        "songs",
+        "autocomplete",
+        "songs",
+        ...(params ? [params] : []),
+    ] as const;
+};
+
+export const getAutocompleteSongsQueryOptions = <
+    TData = Awaited<ReturnType<typeof autocompleteSongs>>,
+    TError = unknown,
+>(
+    params?: AutocompleteSongsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof autocompleteSongs>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+) => {
+    const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+    const queryKey =
+        queryOptions?.queryKey ?? getAutocompleteSongsQueryKey(params);
+
+    const queryFn: QueryFunction<
+        Awaited<ReturnType<typeof autocompleteSongs>>
+    > = ({signal}) => autocompleteSongs(params, {signal, ...fetchOptions});
+
+    return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
+        Awaited<ReturnType<typeof autocompleteSongs>>,
+        TError,
+        TData
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type AutocompleteSongsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof autocompleteSongs>>
+>;
+export type AutocompleteSongsQueryError = unknown;
+
+export function useAutocompleteSongs<
+    TData = Awaited<ReturnType<typeof autocompleteSongs>>,
+    TError = unknown,
+>(
+    params: undefined | AutocompleteSongsParams,
+    options: {
+        query: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof autocompleteSongs>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                DefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof autocompleteSongs>>,
+                    TError,
+                    Awaited<ReturnType<typeof autocompleteSongs>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useAutocompleteSongs<
+    TData = Awaited<ReturnType<typeof autocompleteSongs>>,
+    TError = unknown,
+>(
+    params?: AutocompleteSongsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof autocompleteSongs>>,
+                TError,
+                TData
+            >
+        > &
+            Pick<
+                UndefinedInitialDataOptions<
+                    Awaited<ReturnType<typeof autocompleteSongs>>,
+                    TError,
+                    Awaited<ReturnType<typeof autocompleteSongs>>
+                >,
+                "initialData"
+            >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useAutocompleteSongs<
+    TData = Awaited<ReturnType<typeof autocompleteSongs>>,
+    TError = unknown,
+>(
+    params?: AutocompleteSongsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof autocompleteSongs>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useAutocompleteSongs<
+    TData = Awaited<ReturnType<typeof autocompleteSongs>>,
+    TError = unknown,
+>(
+    params?: AutocompleteSongsParams,
+    options?: {
+        query?: Partial<
+            UseQueryOptions<
+                Awaited<ReturnType<typeof autocompleteSongs>>,
+                TError,
+                TData
+            >
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+} {
+    const queryOptions = getAutocompleteSongsQueryOptions(params, options);
+
+    const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+        TData,
+        TError
+    > & { queryKey: DataTag<QueryKey, TData, TError> };
+
+    return {...query, queryKey: queryOptions.queryKey};
+}
+
+export const invalidateAutocompleteSongs = async (
+    queryClient: QueryClient,
+    params?: AutocompleteSongsParams,
+    options?: InvalidateOptions,
+): Promise<QueryClient> => {
+    await queryClient.invalidateQueries(
+        {queryKey: getAutocompleteSongsQueryKey(params)},
+        options,
+    );
+
+    return queryClient;
+};
+
 export type autocompleteArtistsResponse200 = {
     data: AutocompleteArtistsResponse;
     status: 200;
@@ -2914,6 +3127,40 @@ export const getAutocompleteAlbumsResponseMock = (
     ...overrideResponse,
 });
 
+export const getAutocompleteSongsResponseMock = (
+    overrideResponse: Partial<AutocompleteSongsResponse> = {},
+): AutocompleteSongsResponse => ({
+    songs: Array.from(
+        {length: faker.number.int({min: 1, max: 10})},
+        (_, i) => i + 1,
+    ).map(() => ({
+        id: faker.number.int({min: undefined, max: undefined}),
+        title: faker.string.alpha({length: {min: 10, max: 20}}),
+        albumName: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+        coverId: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            undefined,
+        ]),
+        artistName: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.string.alpha({length: {min: 10, max: 20}}),
+                null,
+            ]),
+            undefined,
+        ]),
+    })),
+    ...overrideResponse,
+});
+
 export const getAutocompleteArtistsResponseMock = (
     overrideResponse: Partial<AutocompleteArtistsResponse> = {},
 ): AutocompleteArtistsResponse => ({
@@ -3244,6 +3491,30 @@ export const getAutocompleteAlbumsMockHandler = (
     );
 };
 
+export const getAutocompleteSongsMockHandler = (
+    overrideResponse?:
+        | AutocompleteSongsResponse
+        | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+    ) => Promise<AutocompleteSongsResponse> | AutocompleteSongsResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.get(
+        "*/songs/autocomplete/songs",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getAutocompleteSongsResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
 export const getAutocompleteArtistsMockHandler = (
     overrideResponse?:
         | AutocompleteArtistsResponse
@@ -3305,6 +3576,7 @@ export const getSongsMock = () => [
     getGetSongFilterMetadataMockHandler(),
     getGetSongFilterValuesMockHandler(),
     getAutocompleteAlbumsMockHandler(),
+    getAutocompleteSongsMockHandler(),
     getAutocompleteArtistsMockHandler(),
     getAutocompleteGenresMockHandler(),
 ];

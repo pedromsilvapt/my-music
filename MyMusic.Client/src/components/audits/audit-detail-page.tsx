@@ -11,6 +11,7 @@ import {
     useScanAuditRule
 } from "../../client/audits.ts";
 import {getSong} from "../../client/songs.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {GetSongResponseSong} from "../../model";
 import Collection from "../common/collection/collection.tsx";
 import SongEditorModal from "../songs/song-editor-modal.tsx";
@@ -22,8 +23,16 @@ export default function AuditDetailPage() {
     const id = parseInt(auditId, 10);
     const queryClient = useQueryClient();
 
-    const {data: ruleData} = useGetAuditRule(id);
-    const {data: nonConformitiesData, refetch: refetchNonConformities} = useListAuditNonConformities(id);
+    const ruleQuery = useGetAuditRule(id);
+    const nonConformitiesQuery = useListAuditNonConformities(id);
+
+    const ruleResponse = useQueryData(ruleQuery, "Failed to fetch audit rule");
+    const nonConformitiesResponse = useQueryData(
+        nonConformitiesQuery,
+        "Failed to fetch non conformities"
+    ) ?? {data: {nonConformities: [], total: 0}};
+
+    const refetchNonConformities = nonConformitiesQuery.refetch;
 
     const scanMutation = useScanAuditRule();
     const batchSetWaiverMutation = useBatchSetAuditWaiver();
@@ -35,8 +44,8 @@ export default function AuditDetailPage() {
     const [editorOpened, setEditorOpened] = useState(false);
     const [songsToEdit, setSongsToEdit] = useState<GetSongResponseSong[]>([]);
 
-    const rule = ruleData?.data?.rule;
-    const nonConformities = nonConformitiesData?.data?.nonConformities ?? [];
+    const rule = ruleResponse?.data?.rule;
+    const nonConformities = nonConformitiesResponse?.data?.nonConformities ?? [];
 
     useEffect(() => {
         void refetchNonConformities();

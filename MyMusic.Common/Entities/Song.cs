@@ -36,6 +36,8 @@ public class Song
 
     public bool IsFavorite { get; set; }
 
+    public int PlayCount { get; set; }
+
     [MaxLength(1024)] public required string RepositoryPath { get; set; }
 
     [MaxLength(88)] public required string Checksum { get; set; }

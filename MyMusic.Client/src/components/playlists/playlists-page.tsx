@@ -2,6 +2,7 @@ import {Button, Group, Title} from "@mantine/core";
 import {IconPlus} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import CreatePlaylistModal from "./create-playlist-modal.tsx";
 import {usePlaylistsSchema} from "./usePlaylistsSchema.tsx";
@@ -11,7 +12,7 @@ export default function PlaylistsPage() {
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
-    const {data, refetch} = useQuery({
+    const playlistsQuery = useQuery({
         queryKey: ["playlists", appliedSearch, appliedFilter],
         queryFn: async () => {
             const params = new URLSearchParams();
@@ -29,18 +30,20 @@ export default function PlaylistsPage() {
         },
     });
 
+    const playlists = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {playlists: []};
+
     const playlistsSchema = usePlaylistsSchema();
 
     useEffect(() => {
-        void refetch();
-    }, [refetch]);
+        void playlistsQuery.refetch();
+    }, [playlistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setAppliedSearch(newSearch);
         setAppliedFilter(newFilter);
     };
 
-    const elements = data?.playlists ?? [];
+    const elements = playlists?.playlists ?? [];
 
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
@@ -54,7 +57,7 @@ export default function PlaylistsPage() {
             <CreatePlaylistModal
                 opened={opened}
                 onClose={() => setOpened(false)}
-                onSuccess={() => refetch()}
+                onSuccess={() => playlistsQuery.refetch()}
             />
 
             <div style={{flex: 1, minHeight: 0}}>

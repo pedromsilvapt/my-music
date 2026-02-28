@@ -1,5 +1,6 @@
 import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import {useDevicesSchema} from "./useDevicesSchema.tsx";
 
@@ -7,7 +8,7 @@ export default function DevicesPage() {
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
-    const {data} = useQuery({
+    const devicesQuery = useQuery({
         queryKey: ["devices", appliedSearch, appliedFilter],
         queryFn: async () => {
             const params = new URLSearchParams();
@@ -25,6 +26,8 @@ export default function DevicesPage() {
         },
     });
 
+    const devices = useQueryData(devicesQuery, "Failed to fetch devices") ?? {devices: []};
+
     const devicesSchema = useDevicesSchema();
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
@@ -32,7 +35,7 @@ export default function DevicesPage() {
         setAppliedFilter(newFilter);
     };
 
-    const elements = data?.devices ?? [];
+    const elements = devices?.devices ?? [];
 
     return (
         <div style={{height: 'var(--parent-height)'}}>

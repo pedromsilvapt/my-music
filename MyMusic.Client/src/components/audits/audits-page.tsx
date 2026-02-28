@@ -2,11 +2,17 @@ import {Badge, Group, Paper, Text, Title} from "@mantine/core";
 import {IconClipboardCheck} from '@tabler/icons-react';
 import {Link} from "@tanstack/react-router";
 import {useListAuditRules} from "../../client/audits.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 
 export default function AuditsPage() {
-    const {data} = useListAuditRules();
+    const auditRulesQuery = useListAuditRules();
 
-    const rules = data?.data?.rules ?? [];
+    const auditRulesResponse = useQueryData(
+        auditRulesQuery,
+        "Failed to fetch audit rules"
+    ) ?? {data: {rules: []}};
+
+    const rules = auditRulesResponse?.data?.rules ?? [];
 
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>

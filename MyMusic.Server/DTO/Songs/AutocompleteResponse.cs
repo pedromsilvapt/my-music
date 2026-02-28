@@ -33,3 +33,17 @@ public record AutocompleteGenreItem
     public required long Id { get; set; }
     public required string Name { get; set; }
 }
+
+public record AutocompleteSongsResponse
+{
+    public required List<AutocompleteSongItem> Songs { get; set; }
+}
+
+public record AutocompleteSongItem
+{
+    public required long Id { get; set; }
+    public required string Title { get; set; }
+    public string? AlbumName { get; set; }
+    public long? CoverId { get; set; }
+    public string? ArtistName { get; set; }
+}

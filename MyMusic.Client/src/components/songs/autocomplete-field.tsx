@@ -1,10 +1,17 @@
-import {Autocomplete, Checkbox, Group, Loader, Text} from "@mantine/core";
-import {useCallback, useEffect, useState} from "react";
+import {Autocomplete, type AutocompleteProps, Checkbox, Group, Loader, Text} from "@mantine/core";
+import {useDebouncedValue} from "@mantine/hooks";
+import {IconDisc} from "@tabler/icons-react";
+import {useCallback, useEffect, useMemo, useState} from "react";
+import Artwork from "../common/artwork";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export interface AutocompleteItem {
     id: number;
     name: string;
     subtitle?: string;
+    coverId?: number | null;
+    artistName?: string | null;
 }
 
 interface AutocompleteFieldProps {
@@ -19,6 +26,7 @@ interface AutocompleteFieldProps {
     originalValue?: AutocompleteItem | null;
     isChecked?: boolean;
     onCheckChange?: (checked: boolean) => void;
+    showArtwork?: boolean;
 }
 
 export default function AutocompleteField({
@@ -33,6 +41,7 @@ export default function AutocompleteField({
                                               originalValue,
                                               isChecked = true,
                                               onCheckChange,
+                                              showArtwork = false,
                                           }: AutocompleteFieldProps) {
     const [query, setQuery] = useState(value?.name || "");
     const [items, setItems] = useState<AutocompleteItem[]>([]);
@@ -56,15 +65,24 @@ export default function AutocompleteField({
         }
     }, [onSearch]);
 
+    const [debouncedQuery] = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+
     useEffect(() => {
-        const timer = setTimeout(() => {
-            handleSearch(query);
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [query, handleSearch]);
+        handleSearch(debouncedQuery);
+    }, [debouncedQuery, handleSearch]);
 
     const hasChanged = diffMode && originalValue && value &&
         (originalValue.id !== value?.id || originalValue.name !== value?.name);
+
+    const itemsRecord = useMemo(() => {
+        const record: Record<string, AutocompleteItem> = {};
+        for (const item of items) {
+            record[item.name] = item;
+        }
+        return record;
+    }, [items]);
+
+    const data = useMemo(() => items.map(item => item.name), [items]);
 
     const handleBlur = () => {
         if (query === "") {
@@ -77,6 +95,25 @@ export default function AutocompleteField({
                 onChange(query);
             }
         }
+    };
+
+    const renderOption: AutocompleteProps['renderOption'] = ({option}) => {
+        const item = itemsRecord[option.value];
+        return (
+            <Group gap="sm" wrap="nowrap">
+                <Artwork
+                    id={item.coverId ?? item.id}
+                    size={32}
+                    placeholderIcon={<IconDisc size={16}/>}
+                />
+                <div>
+                    <Text size="sm">{item.name}</Text>
+                    {item.artistName && (
+                        <Text size="xs" c="dimmed">{item.artistName}</Text>
+                    )}
+                </div>
+            </Group>
+        );
     };
 
     return (
@@ -105,11 +142,12 @@ export default function AutocompleteField({
                     }
                 }}
                 comboboxProps={{withinPortal: false}}
-                data={items.map(item => item.name)}
+                data={data}
                 disabled={disabled || (diffMode && !isChecked)}
                 error={error}
                 rightSection={loading ? <Loader size={16}/> : null}
                 limit={15}
+                renderOption={showArtwork ? renderOption : undefined}
                 styles={hasChanged ? {
                     input: {
                         borderColor: 'var(--mantine-color-green-6)',

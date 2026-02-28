@@ -24,6 +24,7 @@ import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueueMutations} from "../../contexts/player-context.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
 import DeviceBadge from "../devices/device-badge.tsx";
@@ -31,8 +32,9 @@ import SongEditorModal from "./song-editor-modal.tsx";
 
 export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
-    const {data: response} = useGetSong(Number(songId));
-    const song = response?.data.song;
+    const songQuery = useGetSong(Number(songId));
+    const songResponse = useQueryData(songQuery, "Failed to fetch song");
+    const song = songResponse?.data.song ?? null;
     const {play, playNext, playLast} = useQueueMutations();
     const toggleFavorite = useToggleFavorite();
     const {open: openManagePlaylists} = useManagePlaylistsContext();

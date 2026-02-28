@@ -3,6 +3,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
 import {useListPlaylists, useManagePlaylistSongs} from "../../client/playlists.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListPlaylistItem, PlaylistAction, PlaylistSongAction} from "../../model";
 
 type PlaylistSelection = "none" | "add" | "remove";
@@ -20,8 +21,10 @@ export default function ManagePlaylistsDialog({
                                                   songIds,
                                                   onSuccess
                                               }: ManagePlaylistsDialogProps) {
-    const {data: playlistsData} = useListPlaylists();
-    const playlists = playlistsData?.data?.playlists ?? [];
+    const playlistsQuery = useListPlaylists();
+    const playlistsResponse = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {data: {playlists: []}};
+
+    const playlists = playlistsResponse?.data?.playlists ?? [];
 
     const queryClient = useQueryClient();
     const [selections, setSelections] = useState<Map<number, PlaylistSelection>>(new Map());

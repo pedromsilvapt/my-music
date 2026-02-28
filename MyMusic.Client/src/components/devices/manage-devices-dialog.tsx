@@ -4,6 +4,7 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useGetSongDevices, useUpdateSongDevices} from "../../client/songs.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {SongDeviceItem} from "../../model";
 import DeviceBadge from "./device-badge.tsx";
 
@@ -22,8 +23,10 @@ export default function ManageDevicesDialog({
                                                 songIds,
                                                 onSuccess
                                             }: ManageDevicesDialogProps) {
-    const {data: devicesData} = useGetSongDevices(songIds[0]!, {query: {enabled: opened && songIds.length > 0}});
-    const devices = devicesData?.data?.devices ?? [];
+    const devicesQuery = useGetSongDevices(songIds[0]!, {query: {enabled: opened && songIds.length > 0}});
+    const devicesResponse = useQueryData(devicesQuery, "Failed to fetch devices") ?? {data: {devices: []}};
+
+    const devices = devicesResponse?.data?.devices ?? [];
 
     const queryClient = useQueryClient();
 

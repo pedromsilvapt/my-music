@@ -25,6 +25,8 @@ public class MusicDbContext : DbContext
 
     public DbSet<PlaylistSong> PlaylistSongs { get; set; } = null!;
 
+    public DbSet<PlayHistory> PlayHistories { get; set; } = null!;
+
     public DbSet<PurchasedSong> PurchasedSongs { get; set; } = null!;
 
     public DbSet<Song> Songs { get; set; } = null!;

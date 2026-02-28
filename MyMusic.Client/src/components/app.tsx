@@ -4,6 +4,7 @@ import {
     IconClipboardCheck,
     IconDevices,
     IconDisc,
+    IconHistory,
     IconHome,
     IconMusic,
     IconPlayerPlay,
@@ -13,8 +14,7 @@ import {
     IconUser,
     IconUsers
 } from '@tabler/icons-react';
-import '@mantine/core/styles.css';
-import '@mantine/notifications/styles.css';
+import './styles';
 import {Link, Outlet} from "@tanstack/react-router";
 import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
@@ -101,6 +101,12 @@ function App() {
                     key="devices"
                     leftSection={<IconDevices stroke={2}/>}
                     label="Devices"
+                />
+                <NavLink
+                    renderRoot={(props) => <Link to={"/history"} {...props} />}
+                    key="history"
+                    leftSection={<IconHistory stroke={2}/>}
+                    label="History"
                 />
                 <NavLink
                     renderRoot={(props) => <Link to={"/audits"} {...props} />}

@@ -428,8 +428,70 @@ When working with the player context (`src/contexts/player-context.tsx`), always
 
 This ensures proper reactivity and prevents unnecessary component re-renders.
 
+### Zustand Store Usage Guidelines
+
+When using Zustand stores with selectors, **always wrap your selector function with `useShallow`** to prevent
+unnecessary re-renders:
+
+```typescript
+import {useShallow} from 'zustand/react/shallow';
+
+// Good - useShallow prevents re-renders when selector returns a new object
+const {time, duration} = usePlaybackStore(
+    useShallow((state) => {
+        if (state.current.type === 'LOADED') {
+            return {time: state.current.time, duration: state.current.duration};
+        }
+        return {time: 0, duration: 0};
+    })
+);
+
+// Bad - returning complex objects without useShallow causes infinite re-renders
+const {time, duration} = usePlaybackStore((state) => {
+    return {time: state.current.time, duration: state.current.duration}; // new object every render!
+});
+```
+
+**Why?** Zustand compares selectors by reference. When your selector returns a new object/array on every render, React
+thinks the state changed every render, causing infinite update loops. `useShallow` performs a shallow equality check
+instead.
+
 ### Known Issues
 
 The auto-generated files in `src/client/` and `src/model/` may contain TypeScript errors. These are pre-existing issues
 in the Orval-generated code and should be ignored. Focus on fixing TypeScript errors in manually written code under
 `src/routes/`, `src/components/`, `src/contexts/`, and `src/hooks/`.
+
+### Mantine Styles
+
+All Mantine package styles should be imported in `src/components/styles.ts`. When adding a new @mantine package that
+requires styles (e.g., `@mantine/dates`), add the import there instead of in individual components.
+
+### Debouncing Pattern
+
+When implementing search, filter, or other input-based functionality that requires debouncing, **always
+use `useDebouncedValue` from `@mantine/hooks`** instead of manual `useEffect` + `setTimeout` patterns:
+
+```typescript
+import {useDebouncedValue} from "@mantine/hooks";
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+// Good - useDebouncedValue handles cleanup automatically
+const [debouncedSearch] = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+
+useEffect(() => {
+    performSearch(debouncedSearch);
+}, [debouncedSearch]);
+
+// Bad - manual setTimeout requires manual cleanup
+useEffect(() => {
+    const timer = setTimeout(() => {
+        performSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+}, [searchQuery]);
+```
+
+The Mantine hook is cleaner, avoids potential memory leaks from forgotten cleanup, and is consistent with existing
+codebase patterns.

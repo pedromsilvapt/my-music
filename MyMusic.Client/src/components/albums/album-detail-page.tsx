@@ -2,6 +2,7 @@ import {Anchor, Box, Flex, Group, Stack, Text} from "@mantine/core";
 import {IconArrowBack, IconDisc} from "@tabler/icons-react";
 import {Link, useParams} from "@tanstack/react-router";
 import {useGetAlbum} from "../../client/albums.ts";
+import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSongsItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -9,8 +10,9 @@ import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 
 export default function AlbumDetailPage() {
     const {albumId} = useParams({from: '/albums/$albumId'});
-    const {data: response} = useGetAlbum(Number(albumId));
-    const album = response?.data.album;
+    const albumQuery = useGetAlbum(Number(albumId));
+    const albumResponse = useQueryData(albumQuery, "Failed to fetch album");
+    const album = albumResponse?.data.album ?? null;
     const songsSchema = useSongsSchema();
 
     if (!album) {

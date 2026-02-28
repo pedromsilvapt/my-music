@@ -426,6 +426,45 @@ public class SongsController(
         };
     }
 
+    [HttpGet("autocomplete/songs", Name = "AutocompleteSongs")]
+    public async Task<AutocompleteSongsResponse> AutocompleteSongs(
+        MusicDbContext context,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = context.Songs
+            .Where(s => s.OwnerId == currentUser.Id)
+            .Include(s => s.Album)
+            .Include(s => s.Artists)
+            .ThenInclude(a => a.Artist)
+            .AsQueryable();
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(s =>
+                s.Title.ToLower().Contains(searchLower) || s.Album.Name.ToLower().Contains(searchLower));
+        }
+
+        var songs = await query
+            .OrderBy(s => s.Title)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new AutocompleteSongsResponse
+        {
+            Songs = songs.Select(s => new AutocompleteSongItem
+            {
+                Id = s.Id,
+                Title = s.Title,
+                AlbumName = s.Album.Name,
+                CoverId = s.CoverId,
+                ArtistName = s.Artists.FirstOrDefault()?.Artist?.Name,
+            }).ToList(),
+        };
+    }
+
     [HttpGet("autocomplete/artists", Name = "AutocompleteArtists")]
     public async Task<AutocompleteArtistsResponse> AutocompleteArtists(
         MusicDbContext context,
