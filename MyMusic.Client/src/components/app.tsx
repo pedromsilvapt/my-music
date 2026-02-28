@@ -1,4 +1,4 @@
-import {AppShell, Burger, Divider, Group, NavLink} from "@mantine/core";
+import {AppShell, Avatar, Burger, Divider, Group, NavLink, Text} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {
     IconClipboardCheck,
@@ -10,6 +10,7 @@ import {
     IconPlaylist,
     IconSettings,
     IconShoppingCart,
+    IconUser,
     IconUsers
 } from '@tabler/icons-react';
 import '@mantine/core/styles.css';
@@ -17,6 +18,7 @@ import '@mantine/notifications/styles.css';
 import {Link, Outlet} from "@tanstack/react-router";
 import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
+import {useUserPreferences} from "../hooks/use-user-preferences";
 import ThemeToggle from "./common/theme-toggle.tsx";
 import Player from "./player/player.tsx";
 import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
@@ -27,6 +29,7 @@ function App() {
 
     usePlayerQueueInitializer();
     const footerVisible = useIsPlayerActive();
+    const {user} = useUserPreferences();
 
     return (
         <AppShell
@@ -41,6 +44,12 @@ function App() {
                     <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm"/>
                     <Group justify="space-between" style={{flex: 1}}>
                         MyMusic
+                    </Group>
+                    <Group gap="xs">
+                        <Text size="sm" visibleFrom="sm">{user.name}</Text>
+                        <Avatar color="blue" radius="xl" size="sm">
+                            <IconUser size={16}/>
+                        </Avatar>
                     </Group>
                     <ThemeToggle/>
                     <PurchasesQueueIndicator/>

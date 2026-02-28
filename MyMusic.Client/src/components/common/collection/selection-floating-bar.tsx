@@ -1,5 +1,5 @@
-import {autoUpdate, computePosition, flip, offset, shift} from '@floating-ui/dom';
-import {CloseButton, Group, Paper, Text, Transition} from "@mantine/core";
+import {computePosition, flip, offset, shift} from '@floating-ui/dom';
+import {CloseButton, Group, Paper, Portal, Text, Transition} from "@mantine/core";
 import {useLayoutEffect, useRef, useState} from "react";
 import {ZINDEX_FLOATING_BAR} from "../../../consts.ts";
 import CollectionActions from "./collection-actions.tsx";
@@ -84,15 +84,6 @@ export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps
         };
 
         update();
-
-        if (showAtAnchor && anchorElement) {
-            const cleanup = autoUpdate(
-                {getBoundingClientRect: () => anchorElement.getBoundingClientRect()} as Element,
-                floatingRef.current,
-                update
-            );
-            return cleanup;
-        }
     }, [anchorElement, containerRef.current, showAtAnchor, showAtContainer]);
 
     if (!canShow) {
@@ -106,21 +97,22 @@ export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps
             duration={200}
         >
             {(transitionStyles) => (
-                <Paper
-                    ref={floatingRef}
-                    style={{
-                        position: 'fixed',
-                        left: position.x,
-                        top: position.y,
-                        zIndex: ZINDEX_FLOATING_BAR,
-                        ...transitionStyles,
-                    }}
-                    shadow="lg"
-                    px="sm"
-                    py="xs"
-                    radius="md"
-                    withBorder
-                >
+                <Portal>
+                    <Paper
+                        ref={floatingRef}
+                        style={{
+                            position: 'fixed',
+                            left: position.x,
+                            top: position.y,
+                            zIndex: ZINDEX_FLOATING_BAR,
+                            ...transitionStyles,
+                        }}
+                        shadow="lg"
+                        px="sm"
+                        py="xs"
+                        radius="md"
+                        withBorder
+                    >
                     <Group gap="sm">
                         <CloseButton
                             size="sm"
@@ -136,6 +128,7 @@ export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps
                         />
                     </Group>
                 </Paper>
+                </Portal>
             )}
         </Transition>
     );
