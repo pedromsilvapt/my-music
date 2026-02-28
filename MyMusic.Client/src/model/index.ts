@@ -146,6 +146,7 @@ export * from "./scanAuditRuleResponse";
 export * from "./searchSongsParams";
 export * from "./setCurrentSongRequest";
 export * from "./setWaiverRequest";
+export * from "./shuffleQueueRequest";
 export * from "./songDeviceItem";
 export * from "./songDeviceUpdateItem";
 export * from "./songPatch";

@@ -9,28 +9,65 @@ export interface SelectionFloatingBarProps<M> {
     selection: M[];
     actions: CollectionSchemaAction<M>[];
     anchorElement: HTMLElement | null;
+    containerRef: React.RefObject<HTMLElement | null>;
     onClearSelection: () => void;
 }
 
+const isElementInViewport = (el: HTMLElement) => {
+    const rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+    );
+};
+
 export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps<M>) {
-    const {selection, actions, anchorElement, onClearSelection} = props;
+    const {selection, actions, anchorElement, containerRef, onClearSelection} = props;
     const floatingRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({x: 0, y: 0, placement: 'bottom-start' as string});
 
+    const showAtAnchor = anchorElement && isElementInViewport(anchorElement);
+    const containerElement = containerRef.current;
+    const showAtContainer = containerElement && !showAtAnchor;
+    const canShow = selection.length > 0 && (showAtAnchor || showAtContainer);
+
     useLayoutEffect(() => {
-        if (!anchorElement || !floatingRef.current) {
+        if (!floatingRef.current) {
             return;
         }
 
-        const virtualEl = {
-            getBoundingClientRect: () => anchorElement.getBoundingClientRect(),
-        };
+        const containerEl = containerRef.current;
 
         const update = async () => {
             if (!floatingRef.current) return;
 
+            let virtualEl: { getBoundingClientRect: () => DOMRect };
+            let placement: 'top' | 'bottom' = 'bottom';
+
+            if (showAtAnchor && anchorElement) {
+                virtualEl = {
+                    getBoundingClientRect: () => anchorElement.getBoundingClientRect(),
+                };
+                placement = 'bottom';
+            } else if (showAtContainer && containerEl) {
+                const rect = containerEl.getBoundingClientRect();
+                virtualEl = {
+                    getBoundingClientRect: () => new DOMRect(
+                        rect.left + rect.width / 2 - 100,
+                        rect.bottom - 50,
+                        200,
+                        50
+                    ),
+                };
+                placement = 'top';
+            } else {
+                return;
+            }
+
             const result = await computePosition(virtualEl as Element, floatingRef.current, {
-                placement: 'bottom',
+                placement,
                 middleware: [
                     offset(8),
                     flip({
@@ -48,16 +85,23 @@ export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps
 
         update();
 
-        return autoUpdate(virtualEl as Element, floatingRef.current, update);
-    }, [anchorElement]);
+        if (showAtAnchor && anchorElement) {
+            const cleanup = autoUpdate(
+                {getBoundingClientRect: () => anchorElement.getBoundingClientRect()} as Element,
+                floatingRef.current,
+                update
+            );
+            return cleanup;
+        }
+    }, [anchorElement, containerRef.current, showAtAnchor, showAtContainer]);
 
-    if (selection.length === 0 || !anchorElement) {
+    if (!canShow) {
         return null;
     }
 
     return (
         <Transition
-            mounted={selection.length > 0 && anchorElement != null}
+            mounted={canShow}
             transition="slide-up"
             duration={200}
         >

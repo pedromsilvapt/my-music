@@ -36,8 +36,7 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                         size="lg"
                         // aria-label={action.renderLabel()}
                         // title={action.renderLabel()}
-                        onClick={_ev => {
-                            // ev.stopPropagation();
+                        onClick={() => {
                             action.onClick(props.selection);
                         }}>
                         {action.renderIcon()}

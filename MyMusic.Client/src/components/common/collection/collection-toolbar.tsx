@@ -9,7 +9,7 @@ import {
 } from "@dnd-kit/core";
 import {SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-kit/sortable";
 import {CSS} from "@dnd-kit/utilities";
-import {ActionIcon, Box, Button, Center, Group, Menu, Popover, SegmentedControl, Stack, Text} from "@mantine/core";
+import {ActionIcon, Button, Center, Group, Menu, Popover, SegmentedControl, Stack, Text} from "@mantine/core";
 import {useDisclosure, useUncontrolled} from "@mantine/hooks";
 import {
     IconArrowDown,
@@ -17,6 +17,7 @@ import {
     IconGripVertical,
     IconLayoutGridFilled,
     IconListDetails,
+    IconSelectAll,
     IconSettings,
     IconTableFilled,
     IconX
@@ -49,6 +50,11 @@ export interface CollectionToolbarProps<M> {
     onReorderSort?: (fromIndex: number, toIndex: number) => void;
     sortableFields?: (keyof M & string)[];
     columns?: CollectionSchemaColumn<M>[];
+
+    selectionCount?: number;
+    totalItems?: number;
+    onSelectAll?: () => void;
+    onClearSelection?: () => void;
 
     renderLeftSection?: () => React.ReactNode;
     renderMiddleSection?: () => React.ReactNode;
@@ -160,9 +166,12 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
         );
     };
 
+    const hasSelectAll = props.onSelectAll && props.totalItems !== undefined;
+    const showSelectAll = hasSelectAll && (props.selectionCount ?? 0) < (props.totalItems ?? 0);
+
     const leftSection = props.renderLeftSection
         ? props.renderLeftSection()
-        : <Box>
+        : <Group gap="xs" wrap="nowrap">
             <SegmentedControl
                 value={view}
                 onChange={view => setView(view as CollectionView)}
@@ -196,7 +205,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                     },
                 ]}
             />
-        </Box>;
+        </Group>;
 
     const middleSection = props.renderMiddleSection
         ? props.renderMiddleSection()
@@ -215,6 +224,17 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
     const rightSection = props.renderRightSection
         ? props.renderRightSection()
         : <Group justify="flex-end">
+            {showSelectAll && (
+                <ActionIcon
+                    variant="default"
+                    size="lg"
+                    aria-label="Select all"
+                    title="Select all"
+                    onClick={props.onSelectAll}
+                >
+                    <IconSelectAll/>
+                </ActionIcon>
+            )}
             <Popover
                 opened={popoverOpened}
                 onChange={(opened) => opened ? openPopover() : closePopover()}

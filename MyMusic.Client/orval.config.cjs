@@ -38,7 +38,7 @@ module.exports = {
                             invalidates: ['getPlaylist'],
                         },
                         {
-                            onMutations: ['replaceQueue', 'addToQueue', 'removeFromQueue', 'reorderQueue', 'setQueueCurrentSong'],
+                            onMutations: ['replaceQueue', 'addToQueue', 'removeFromQueue', 'reorderQueue', 'shuffleQueue', 'setQueueCurrentSong'],
                             invalidates: ['getQueue'],
                         },
                         {

@@ -48,6 +48,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const {ref: containerRef, height: containerHeight} = useElementSize<HTMLDivElement>();
     const {ref: toolbarRef, height: toolbarHeight} = useElementSize<HTMLDivElement>();
+    const collectionContainerRef = useRef<HTMLDivElement>(null);
 
     const viewHeight = Math.max(MIN_VIEW_HEIGHT, containerHeight - toolbarHeight);
 
@@ -253,6 +254,11 @@ export default function Collection<T extends { id: string | number }>(props: Col
         return props.items.filter((item) => selectionKeys.includes(props.schema.key(item)));
     }, [props.items, selectionKeys, props.schema]);
 
+    const handleSelectAll = useCallback(() => {
+        const allKeys = filteredAndSortedItems.map(item => props.schema.key(item));
+        selectionHandlers.setSelection(allKeys);
+    }, [filteredAndSortedItems, props.schema, selectionHandlers]);
+
     useEffect(() => {
         if (selection.length === 0) {
             setLastSelectedElement(null);
@@ -369,10 +375,15 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 columns: props.schema.columns,
                 filterMetadata: props.schema.filterMetadata,
                 fetchFilterValues: props.schema.fetchFilterValues,
+                selectionCount: selection.length,
+                totalItems: filteredAndSortedItems.length,
+                onSelectAll: handleSelectAll,
+                onClearSelection: selectionHandlers.resetSelection,
             })}
         </Box>
 
-        <Box pos="relative" flex={1} style={{minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
+        <Box ref={collectionContainerRef} pos="relative" flex={1}
+             style={{minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
             <LoadingOverlay visible={props.isFetching ?? false} zIndex={ZINDEX_MODAL}
                             overlayProps={{radius: "sm", blur: 2}}/>
             {viewNode}
@@ -382,6 +393,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             selection={selection}
             actions={actions}
             anchorElement={lastSelectedElement}
+            containerRef={collectionContainerRef}
             onClearSelection={selectionHandlers.resetSelection}
         />
     </Flex>;

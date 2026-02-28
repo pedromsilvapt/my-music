@@ -490,6 +490,57 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         return await GetQueue(context, cancellationToken);
     }
 
+    [HttpPost("queue/shuffle", Name = "ShuffleQueue")]
+    public async Task<GetPlaylistResponse> ShuffleQueue(
+        [FromBody] ShuffleQueueRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
+
+        if (request.Indices.Count < 2)
+        {
+            return await GetQueue(context, cancellationToken);
+        }
+
+        var songsByOrder = playlist.PlaylistSongs.ToDictionary(ps => ps.Order);
+        var songsAtIndices = request.Indices
+            .Where(i => songsByOrder.ContainsKey(i))
+            .Select(i => songsByOrder[i])
+            .ToList();
+
+        if (songsAtIndices.Count < 2)
+        {
+            return await GetQueue(context, cancellationToken);
+        }
+
+        var orders = songsAtIndices.Select(s => s.Order).ToList();
+        Shuffle(orders);
+
+        for (var i = 0; i < songsAtIndices.Count; i++)
+        {
+            songsAtIndices[i].Order = orders[i];
+        }
+
+        playlist.ModifiedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return await GetQueue(context, cancellationToken);
+    }
+
+    private static void Shuffle<T>(IList<T> list)
+    {
+        var random = Random.Shared;
+        var n = list.Count;
+        while (n > 1)
+        {
+            n--;
+            var k = random.Next(n + 1);
+            (list[k], list[n]) = (list[n], list[k]);
+        }
+    }
+
     [HttpGet("favorites", Name = "GetFavorites")]
     public async Task<GetPlaylistResponse> GetFavorites(
         MusicDbContext context,

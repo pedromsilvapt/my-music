@@ -41,6 +41,7 @@ import type {
     ReorderQueueRequest,
     ReplaceQueueRequest,
     SetCurrentSongRequest,
+    ShuffleQueueRequest,
     UpdatePlaylistRequest,
     UpdatePlaylistResponse,
 } from "../model";
@@ -1837,6 +1838,121 @@ export const useReorderQueue = <TError = unknown, TContext = unknown>(
         queryClient,
     );
 };
+export type shuffleQueueResponse200 = {
+    data: GetPlaylistResponse;
+    status: 200;
+};
+
+export type shuffleQueueResponseSuccess = shuffleQueueResponse200 & {
+    headers: Headers;
+};
+
+export type shuffleQueueResponse = shuffleQueueResponseSuccess;
+
+export const getShuffleQueueUrl = () => {
+    return `/api/playlists/queue/shuffle`;
+};
+
+export const shuffleQueue = async (
+    shuffleQueueRequest: ShuffleQueueRequest,
+    options?: RequestInit,
+): Promise<shuffleQueueResponse> => {
+    const res = await fetch(getShuffleQueueUrl(), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(shuffleQueueRequest),
+    });
+
+    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+    const data: shuffleQueueResponse["data"] = body ? JSON.parse(body) : {};
+    return {
+        data,
+        status: res.status,
+        headers: res.headers,
+    } as shuffleQueueResponse;
+};
+
+export const getShuffleQueueMutationOptions = <
+    TError = unknown,
+    TContext = unknown,
+>(
+    queryClient: QueryClient,
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof shuffleQueue>>,
+            TError,
+            { data: ShuffleQueueRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+): UseMutationOptions<
+    Awaited<ReturnType<typeof shuffleQueue>>,
+    TError,
+    { data: ShuffleQueueRequest },
+    TContext
+> => {
+    const mutationKey = ["shuffleQueue"];
+    const {mutation: mutationOptions, fetch: fetchOptions} = options
+        ? options.mutation &&
+        "mutationKey" in options.mutation &&
+        options.mutation.mutationKey
+            ? options
+            : {...options, mutation: {...options.mutation, mutationKey}}
+        : {mutation: {mutationKey}, fetch: undefined};
+
+    const mutationFn: MutationFunction<
+        Awaited<ReturnType<typeof shuffleQueue>>,
+        { data: ShuffleQueueRequest }
+    > = (props) => {
+        const {data} = props ?? {};
+
+        return shuffleQueue(data, fetchOptions);
+    };
+
+    const onSuccess = (
+        data: Awaited<ReturnType<typeof shuffleQueue>>,
+        variables: { data: ShuffleQueueRequest },
+        context: TContext,
+    ) => {
+        queryClient.invalidateQueries({queryKey: getGetQueueQueryKey()});
+        mutationOptions?.onSuccess?.(data, variables, context);
+    };
+
+    return {mutationFn, onSuccess, ...mutationOptions};
+};
+
+export type ShuffleQueueMutationResult = NonNullable<
+    Awaited<ReturnType<typeof shuffleQueue>>
+>;
+export type ShuffleQueueMutationBody = ShuffleQueueRequest;
+export type ShuffleQueueMutationError = unknown;
+
+export const useShuffleQueue = <TError = unknown, TContext = unknown>(
+    options?: {
+        mutation?: UseMutationOptions<
+            Awaited<ReturnType<typeof shuffleQueue>>,
+            TError,
+            { data: ShuffleQueueRequest },
+            TContext
+        >;
+        fetch?: RequestInit;
+    },
+    queryClient?: QueryClient,
+): UseMutationResult<
+    Awaited<ReturnType<typeof shuffleQueue>>,
+    TError,
+    { data: ShuffleQueueRequest },
+    TContext
+> => {
+    const backupQueryClient = useQueryClient();
+    return useMutation(
+        getShuffleQueueMutationOptions(queryClient ?? backupQueryClient, options),
+        queryClient,
+    );
+};
 export type getFavoritesResponse200 = {
     data: GetPlaylistResponse;
     status: 200;
@@ -3362,6 +3478,82 @@ export const getReorderQueueResponseMock = (
     ...overrideResponse,
 });
 
+export const getShuffleQueueResponseMock = (
+    overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+    playlist: {
+        id: faker.number.int({min: undefined, max: undefined}),
+        name: faker.string.alpha({length: {min: 10, max: 20}}),
+        type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+        currentSongId: faker.helpers.arrayElement([
+            faker.helpers.arrayElement([
+                faker.number.int({min: undefined, max: undefined}),
+                null,
+            ]),
+            undefined,
+        ]),
+        songs: Array.from(
+            {length: faker.number.int({min: 1, max: 10})},
+            (_, i) => i + 1,
+        ).map(() => ({
+            order: faker.number.int({min: undefined, max: undefined}),
+            addedAtPlaylist: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+            id: faker.number.int({min: undefined, max: undefined}),
+            cover: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            title: faker.string.alpha({length: {min: 10, max: 20}}),
+            artists: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            album: {
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            genres: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int({min: undefined, max: undefined}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            year: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.number.int({min: undefined, max: undefined}),
+                    null,
+                ]),
+                null,
+            ]),
+            duration: faker.string.alpha({length: {min: 10, max: 20}}),
+            isFavorite: faker.datatype.boolean(),
+            isExplicit: faker.datatype.boolean(),
+            createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            addedAt: faker.helpers.arrayElement([
+                faker.helpers.arrayElement([
+                    faker.date.past().toISOString().slice(0, 19) + "Z",
+                    null,
+                ]),
+                undefined,
+            ]),
+        })),
+    },
+    ...overrideResponse,
+});
+
 export const getGetFavoritesResponseMock = (
     overrideResponse: Partial<GetPlaylistResponse> = {},
 ): GetPlaylistResponse => ({
@@ -3991,6 +4183,30 @@ export const getReorderQueueMockHandler = (
     );
 };
 
+export const getShuffleQueueMockHandler = (
+    overrideResponse?:
+        | GetPlaylistResponse
+        | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+    ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+    options?: RequestHandlerOptions,
+) => {
+    return http.post(
+        "*/playlists/queue/shuffle",
+        async (info) => {
+            return new HttpResponse(
+                overrideResponse !== undefined
+                    ? typeof overrideResponse === "function"
+                        ? await overrideResponse(info)
+                        : overrideResponse
+                    : getShuffleQueueResponseMock(),
+                {status: 200, headers: {"Content-Type": "text/plain"}},
+            );
+        },
+        options,
+    );
+};
+
 export const getGetFavoritesMockHandler = (
     overrideResponse?:
         | GetPlaylistResponse
@@ -4125,6 +4341,7 @@ export const getPlaylistsMock = () => [
     getAddToQueueMockHandler(),
     getRemoveFromQueueMockHandler(),
     getReorderQueueMockHandler(),
+    getShuffleQueueMockHandler(),
     getGetFavoritesMockHandler(),
     getAddToFavoritesMockHandler(),
     getRemoveFromFavoritesMockHandler(),

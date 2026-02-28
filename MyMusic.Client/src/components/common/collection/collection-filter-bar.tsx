@@ -76,11 +76,6 @@ export function CollectionFilterBar({
                     }
                 }}
                 style={{flex: 1}}
-                styles={{
-                    input: {
-                        backgroundColor: "var(--mantine-color-gray-0)",
-                    },
-                }}
                 rightSection={
                     localSearch ? (
                         <ActionIcon

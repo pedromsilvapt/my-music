@@ -3,7 +3,7 @@
 }
 
 .selectedActions {
-    background-color: var(--mantine-color-gray-1);
+    background-color: var(--mantine-color-default);
     color: var(--mantine-color-blue-filled-text);
     border-radius: var(--mantine-radius-md);
     padding: calc(var(--mantine-spacing-xs) * 0.4) var(--mantine-spacing-md);

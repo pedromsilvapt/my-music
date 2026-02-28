@@ -8,6 +8,7 @@ import {
     useReorderQueue,
     useReplaceQueue,
     useSetQueueCurrentSong,
+    useShuffleQueue,
 } from '../client/playlists';
 import type {GetPlaylistSong, ListSongsItem} from '../model';
 import {AddToQueuePosition} from '../model';
@@ -49,6 +50,7 @@ export function useQueueMutations() {
     const removeFromQueue = useRemoveFromQueue({});
     const reorderQueue = useReorderQueue({});
     const setCurrentSong = useSetQueueCurrentSong({});
+    const shuffleQueue = useShuffleQueue({});
 
     const setLoadingSong = useCallback((song: GetPlaylistSong) => {
         setLoadingSongAction(song, true);
@@ -136,6 +138,11 @@ export function useQueueMutations() {
         setCurrentSong.mutate({data: {currentSongId: songId}});
     }, [setCurrentSong]);
 
+    const shuffleByIndices = useCallback((indices: number[]) => {
+        if (indices.length < 2) return;
+        shuffleQueue.mutate({data: {indices}});
+    }, [shuffleQueue]);
+
     return {
         play,
         playNext,
@@ -144,5 +151,6 @@ export function useQueueMutations() {
         reorder,
         reorderBatch,
         updateCurrentSong,
+        shuffleByIndices,
     };
 }

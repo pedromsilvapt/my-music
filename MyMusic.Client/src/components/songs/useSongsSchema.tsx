@@ -2,6 +2,7 @@ import {Anchor, Text} from "@mantine/core";
 import {
     IconArrowForward,
     IconArrowRightDashed,
+    IconArrowsShuffle,
     IconDevicesCog,
     IconDownload,
     IconHeart,
@@ -21,6 +22,7 @@ import {useToggleFavorites} from "../../hooks/use-favorites";
 import type {ListSongsItem} from "../../model";
 import {usePlaybackStoreApi} from "../../stores/playback-store";
 import {TEXT_COLOR} from "../../utils/colors.ts";
+import {isGetPlaylistSong} from "../../utils/type-guards";
 import Artwork from "../common/artwork";
 import type {CollectionSchema} from "../common/collection/collection";
 import SongAlbum from "../common/fields/song-album";
@@ -32,7 +34,7 @@ import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {usePlayHandler} from "../player/usePlayHandler";
 
 export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongsItem> {
-    const {play, playNext, playLast, removeByIndices} = useQueueMutations();
+    const {play, playNext, playLast, removeByIndices, shuffleByIndices} = useQueueMutations();
     const playbackStore = usePlaybackStoreApi();
     const currentSongId = useCurrentSongId();
     const {currentSongId: queueCurrentSongId} = useQueue();
@@ -208,17 +210,30 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     renderLabel: () => "Play Last",
                     onClick: (songs: ListSongsItem[]) => playLast(songs),
                 },
-                ...(nowPlaying ? [{
-                    name: "remove-from-queue",
-                    renderIcon: () => <IconX/>,
-                    renderLabel: () => "Remove from Queue",
-                    onClick: (songs: ListSongsItem[]) => {
-                        const indices = songs
-                            .map(s => 'order' in s ? (s as { order: number }).order : -1)
-                            .filter((i): i is number => i >= 0);
-                        removeByIndices(indices, queueCurrentSongId);
+                ...(nowPlaying ? [
+                    {
+                        name: "shuffle",
+                        renderIcon: () => <IconArrowsShuffle/>,
+                        renderLabel: () => "Shuffle",
+                        onClick: (songs: ListSongsItem[]) => {
+                            const indices = songs
+                                .map(s => isGetPlaylistSong(s) ? s.order : -1)
+                                .filter((i): i is number => i >= 0);
+                            shuffleByIndices(indices);
+                        },
                     },
-                }] : [])
+                    {
+                        name: "remove-from-queue",
+                        renderIcon: () => <IconX/>,
+                        renderLabel: () => "Remove from Queue",
+                        onClick: (songs: ListSongsItem[]) => {
+                            const indices = songs
+                                .map(s => isGetPlaylistSong(s) ? s.order : -1)
+                                .filter((i): i is number => i >= 0);
+                            removeByIndices(indices, queueCurrentSongId);
+                        },
+                    }
+                ] : [])
             ];
         },
 
@@ -232,5 +247,5 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [play, playNext, playLast, removeByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues]);
+    }) as CollectionSchema<ListSongsItem>, [play, playNext, playLast, removeByIndices, shuffleByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues]);
 }
