@@ -8,7 +8,7 @@
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
-      
+  
   server:
     build:
       context: .
@@ -83,10 +83,22 @@
         target: /pgadmin4/servers.json
     networks:
       - my-music
+  
+  dozzle:
+    image: amir20/dozzle:latest
+    environment:
+      DOZZLE_MODE: server
+      DOZZLE_BASE: /dozzle
+      DOZZLE_FILTER: label=com.docker.compose.project=my-music-sources
+      DOZZLE_NO_ANALYTICS: 1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - my-music
 
 volumes:
-  server-data: {}
-  db-data: {}
+  server-data: { }
+  db-data: { }
 
 configs:
   caddyfile:
@@ -101,6 +113,10 @@ configs:
           header_up X-Script-Name /pgadmin
         }
       }
+      
+      (dozzle) {
+        reverse_proxy http://dozzle:8080
+      }
 
       :80 {
         ${CADDYFILE_SOURCES}
@@ -110,7 +126,7 @@ configs:
             header_up X-MyMusic-UserName pedro
           }
         }
-        
+      
         handle_path /pgadmin  {
           import pgadmin
         }
@@ -118,11 +134,18 @@ configs:
           import pgadmin 
         }
       
+        handle /dozzle  {
+          import dozzle
+        }
+        handle /dozzle/* { 
+          import dozzle 
+        }
+      
         handle /* {
           reverse_proxy http://client:8080
         }
       }
-      
+  
   pgadmin-servers:
     content: |
       {
