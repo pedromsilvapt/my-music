@@ -58,6 +58,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
         setCollectionSort,
         setCollectionClientSearch,
         setCollectionClientFilter,
+        setCollectionServerSearch,
+        setCollectionServerFilter,
         setCollectionScrollPosition
     } =
         useCollectionActions(state => ({
@@ -66,14 +68,26 @@ export default function Collection<T extends { id: string | number }>(props: Col
             setCollectionSort: state.setCollectionSort,
             setCollectionClientSearch: state.setCollectionClientSearch,
             setCollectionClientFilter: state.setCollectionClientFilter,
+            setCollectionServerSearch: state.setCollectionServerSearch,
+            setCollectionServerFilter: state.setCollectionServerFilter,
             setCollectionScrollPosition: state.setCollectionScrollPosition,
         }));
 
     const storeState = stateKey ? getCollectionState(stateKey) : null;
     const initialView = props.initialView ?? 'table';
 
-    const [clientSearch, setClientSearch] = useState(storeState?.clientSearch ?? '');
-    const [clientFilter, setClientFilter] = useState(storeState?.clientFilter ?? '');
+    const [clientSearch, setClientSearch] = useState(() => {
+        if (filterMode === 'server' && stateKey) {
+            return storeState?.serverSearch ?? '';
+        }
+        return storeState?.clientSearch ?? '';
+    });
+    const [clientFilter, setClientFilter] = useState(() => {
+        if (filterMode === 'server' && stateKey) {
+            return storeState?.serverFilter ?? '';
+        }
+        return storeState?.clientFilter ?? '';
+    });
     const [view, setView] = useState<CollectionView>(storeState?.view ?? initialView);
     const [sort, setSort] = useState<CollectionSort<T>>((storeState?.sort as CollectionSort<T>) ?? []);
     const [scrollPosition, setScrollPosition] = useState<ScrollPosition | null>(storeState?.scrollPosition ?? null);
@@ -111,6 +125,18 @@ export default function Collection<T extends { id: string | number }>(props: Col
             setCollectionClientFilter(stateKey, clientFilter);
         }
     }, [stateKey, clientFilter, setCollectionClientFilter]);
+
+    useEffect(() => {
+        if (stateKey && filterMode === 'server') {
+            setCollectionServerSearch(stateKey, clientSearch);
+        }
+    }, [stateKey, clientSearch, filterMode, setCollectionServerSearch]);
+
+    useEffect(() => {
+        if (stateKey && filterMode === 'server') {
+            setCollectionServerFilter(stateKey, clientFilter);
+        }
+    }, [stateKey, clientFilter, filterMode, setCollectionServerFilter]);
 
     useEffect(() => {
         if (stateKey && debouncedScrollPosition != null && debouncedScrollPosition !== storeState?.scrollPosition) {

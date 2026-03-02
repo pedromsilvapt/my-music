@@ -54,8 +54,8 @@ module.exports = {
                             invalidates: ['listSongs', 'getSong'],
                         },
                         {
-                            onMutations: ['deleteApiDevicesDeviceId', 'postApiDevices', 'putApiDevicesDeviceId'],
-                            invalidates: ['getApiDevices'],
+                            onMutations: ['deleteDevicesDeviceId', 'postDevices', 'putDevicesDeviceId'],
+                            invalidates: ['getDevices'],
                         },
                         {
                             onMutations: ['updateCurrentUser'],

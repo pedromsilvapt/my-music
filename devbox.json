@@ -30,6 +30,10 @@
       "bump-cli": [
         "cd ./MyMusic.Client/",
         "npx dotnet-bump $1 ../MyMusic.CLI/MyMusic.CLI.csproj"
+      ],
+      "start:android": [
+        "cd ./MyMusic.Mobile",
+        "npx expo run:android"
       ]
     }
   }

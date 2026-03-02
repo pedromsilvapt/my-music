@@ -32,15 +32,15 @@ import type {
     CreateDeviceResponse,
     FilterMetadataResponse,
     FilterValuesResponse,
-    GetApiDevicesDeviceIdSessionsParams,
-    GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
-    GetApiDevicesFilterValuesParams,
-    GetApiDevicesParams,
+    GetDevicesDeviceIdSessionsParams,
+    GetDevicesDeviceIdSessionsSessionIdRecordsParams,
+    GetDevicesFilterValuesParams,
+    GetDevicesParams,
     GetPendingActionsResponse,
     ListDevicesResponse,
     ListSyncRecordsResponse,
     ListSyncSessionsResponse,
-    PostApiDevicesDeviceIdSyncUploadBody,
+    PostDevicesDeviceIdSyncUploadBody,
     SyncCheckRequest,
     SyncCheckResponse,
     SyncCompleteResponse,
@@ -54,18 +54,18 @@ import type {
 } from "../model";
 import {SyncRecordAction, SyncRecordSource, SyncSessionStatus,} from "../model";
 
-export type getApiDevicesResponse200 = {
+export type getDevicesResponse200 = {
     data: ListDevicesResponse;
     status: 200;
 };
 
-export type getApiDevicesResponseSuccess = getApiDevicesResponse200 & {
+export type getDevicesResponseSuccess = getDevicesResponse200 & {
     headers: Headers;
 };
 
-export type getApiDevicesResponse = getApiDevicesResponseSuccess;
+export type getDevicesResponse = getDevicesResponseSuccess;
 
-export const getGetApiDevicesUrl = (params?: GetApiDevicesParams) => {
+export const getGetDevicesUrl = (params?: GetDevicesParams) => {
     const normalizedParams = new URLSearchParams();
 
     Object.entries(params || {}).forEach(([key, value]) => {
@@ -77,79 +77,79 @@ export const getGetApiDevicesUrl = (params?: GetApiDevicesParams) => {
     const stringifiedParams = normalizedParams.toString();
 
     return stringifiedParams.length > 0
-        ? `/api/api/devices?${stringifiedParams}`
-        : `/api/api/devices`;
+        ? `/api/devices?${stringifiedParams}`
+        : `/api/devices`;
 };
 
-export const getApiDevices = async (
-    params?: GetApiDevicesParams,
+export const getDevices = async (
+    params?: GetDevicesParams,
     options?: RequestInit,
-): Promise<getApiDevicesResponse> => {
-    const res = await fetch(getGetApiDevicesUrl(params), {
+): Promise<getDevicesResponse> => {
+    const res = await fetch(getGetDevicesUrl(params), {
         ...options,
         method: "GET",
     });
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: getApiDevicesResponse["data"] = body ? JSON.parse(body) : {};
+    const data: getDevicesResponse["data"] = body ? JSON.parse(body) : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as getApiDevicesResponse;
+    } as getDevicesResponse;
 };
 
-export const getGetApiDevicesQueryKey = (params?: GetApiDevicesParams) => {
-    return ["api", "api", "devices", ...(params ? [params] : [])] as const;
+export const getGetDevicesQueryKey = (params?: GetDevicesParams) => {
+    return ["api", "devices", ...(params ? [params] : [])] as const;
 };
 
-export const getGetApiDevicesQueryOptions = <
-    TData = Awaited<ReturnType<typeof getApiDevices>>,
+export const getGetDevicesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getDevices>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesParams,
+    params?: GetDevicesParams,
     options?: {
         query?: Partial<
-            UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
+            UseQueryOptions<Awaited<ReturnType<typeof getDevices>>, TError, TData>
         >;
         fetch?: RequestInit;
     },
 ) => {
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-    const queryKey = queryOptions?.queryKey ?? getGetApiDevicesQueryKey(params);
+    const queryKey = queryOptions?.queryKey ?? getGetDevicesQueryKey(params);
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiDevices>>> = ({
-                                                                                   signal,
-                                                                               }) => getApiDevices(params, {signal, ...fetchOptions});
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDevices>>> = ({
+                                                                                signal,
+                                                                            }) => getDevices(params, {signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
-        Awaited<ReturnType<typeof getApiDevices>>,
+        Awaited<ReturnType<typeof getDevices>>,
         TError,
         TData
     > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetApiDevicesQueryResult = NonNullable<
-    Awaited<ReturnType<typeof getApiDevices>>
+export type GetDevicesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getDevices>>
 >;
-export type GetApiDevicesQueryError = unknown;
+export type GetDevicesQueryError = unknown;
 
-export function useGetApiDevices<
-    TData = Awaited<ReturnType<typeof getApiDevices>>,
+export function useGetDevices<
+    TData = Awaited<ReturnType<typeof getDevices>>,
     TError = unknown,
 >(
-    params: undefined | GetApiDevicesParams,
+    params: undefined | GetDevicesParams,
     options: {
         query: Partial<
-            UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
+            UseQueryOptions<Awaited<ReturnType<typeof getDevices>>, TError, TData>
         > &
             Pick<
                 DefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevices>>,
+                    Awaited<ReturnType<typeof getDevices>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevices>>
+                    Awaited<ReturnType<typeof getDevices>>
                 >,
                 "initialData"
             >;
@@ -159,20 +159,20 @@ export function useGetApiDevices<
 ): DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevices<
-    TData = Awaited<ReturnType<typeof getApiDevices>>,
+export function useGetDevices<
+    TData = Awaited<ReturnType<typeof getDevices>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesParams,
+    params?: GetDevicesParams,
     options?: {
         query?: Partial<
-            UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
+            UseQueryOptions<Awaited<ReturnType<typeof getDevices>>, TError, TData>
         > &
             Pick<
                 UndefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevices>>,
+                    Awaited<ReturnType<typeof getDevices>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevices>>
+                    Awaited<ReturnType<typeof getDevices>>
                 >,
                 "initialData"
             >;
@@ -182,14 +182,14 @@ export function useGetApiDevices<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevices<
-    TData = Awaited<ReturnType<typeof getApiDevices>>,
+export function useGetDevices<
+    TData = Awaited<ReturnType<typeof getDevices>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesParams,
+    params?: GetDevicesParams,
     options?: {
         query?: Partial<
-            UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
+            UseQueryOptions<Awaited<ReturnType<typeof getDevices>>, TError, TData>
         >;
         fetch?: RequestInit;
     },
@@ -198,14 +198,14 @@ export function useGetApiDevices<
     queryKey: DataTag<QueryKey, TData, TError>;
 };
 
-export function useGetApiDevices<
-    TData = Awaited<ReturnType<typeof getApiDevices>>,
+export function useGetDevices<
+    TData = Awaited<ReturnType<typeof getDevices>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesParams,
+    params?: GetDevicesParams,
     options?: {
         query?: Partial<
-            UseQueryOptions<Awaited<ReturnType<typeof getApiDevices>>, TError, TData>
+            UseQueryOptions<Awaited<ReturnType<typeof getDevices>>, TError, TData>
         >;
         fetch?: RequestInit;
     },
@@ -213,7 +213,7 @@ export function useGetApiDevices<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getGetApiDevicesQueryOptions(params, options);
+    const queryOptions = getGetDevicesQueryOptions(params, options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -223,39 +223,39 @@ export function useGetApiDevices<
     return {...query, queryKey: queryOptions.queryKey};
 }
 
-export const invalidateGetApiDevices = async (
+export const invalidateGetDevices = async (
     queryClient: QueryClient,
-    params?: GetApiDevicesParams,
+    params?: GetDevicesParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getGetApiDevicesQueryKey(params)},
+        {queryKey: getGetDevicesQueryKey(params)},
         options,
     );
 
     return queryClient;
 };
 
-export type postApiDevicesResponse200 = {
+export type postDevicesResponse200 = {
     data: CreateDeviceResponse;
     status: 200;
 };
 
-export type postApiDevicesResponseSuccess = postApiDevicesResponse200 & {
+export type postDevicesResponseSuccess = postDevicesResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesResponse = postApiDevicesResponseSuccess;
+export type postDevicesResponse = postDevicesResponseSuccess;
 
-export const getPostApiDevicesUrl = () => {
-    return `/api/api/devices`;
+export const getPostDevicesUrl = () => {
+    return `/api/devices`;
 };
 
-export const postApiDevices = async (
+export const postDevices = async (
     createDeviceRequest: CreateDeviceRequest,
     options?: RequestInit,
-): Promise<postApiDevicesResponse> => {
-    const res = await fetch(getPostApiDevicesUrl(), {
+): Promise<postDevicesResponse> => {
+    const res = await fetch(getPostDevicesUrl(), {
         ...options,
         method: "POST",
         headers: {"Content-Type": "application/json", ...options?.headers},
@@ -264,22 +264,22 @@ export const postApiDevices = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesResponse["data"] = body ? JSON.parse(body) : {};
+    const data: postDevicesResponse["data"] = body ? JSON.parse(body) : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesResponse;
+    } as postDevicesResponse;
 };
 
-export const getPostApiDevicesMutationOptions = <
+export const getPostDevicesMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(
     queryClient: QueryClient,
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevices>>,
+            Awaited<ReturnType<typeof postDevices>>,
             TError,
             { data: CreateDeviceRequest },
             TContext
@@ -287,12 +287,12 @@ export const getPostApiDevicesMutationOptions = <
         fetch?: RequestInit;
     },
 ): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevices>>,
+    Awaited<ReturnType<typeof postDevices>>,
     TError,
     { data: CreateDeviceRequest },
     TContext
 > => {
-    const mutationKey = ["postApiDevices"];
+    const mutationKey = ["postDevices"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -302,36 +302,36 @@ export const getPostApiDevicesMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevices>>,
+        Awaited<ReturnType<typeof postDevices>>,
         { data: CreateDeviceRequest }
     > = (props) => {
         const {data} = props ?? {};
 
-        return postApiDevices(data, fetchOptions);
+        return postDevices(data, fetchOptions);
     };
 
     const onSuccess = (
-        data: Awaited<ReturnType<typeof postApiDevices>>,
+        data: Awaited<ReturnType<typeof postDevices>>,
         variables: { data: CreateDeviceRequest },
         context: TContext,
     ) => {
-        queryClient.invalidateQueries({queryKey: getGetApiDevicesQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetDevicesQueryKey()});
         mutationOptions?.onSuccess?.(data, variables, context);
     };
 
     return {mutationFn, onSuccess, ...mutationOptions};
 };
 
-export type PostApiDevicesMutationResult = NonNullable<
-    Awaited<ReturnType<typeof postApiDevices>>
+export type PostDevicesMutationResult = NonNullable<
+    Awaited<ReturnType<typeof postDevices>>
 >;
-export type PostApiDevicesMutationBody = CreateDeviceRequest;
-export type PostApiDevicesMutationError = unknown;
+export type PostDevicesMutationBody = CreateDeviceRequest;
+export type PostDevicesMutationError = unknown;
 
-export const usePostApiDevices = <TError = unknown, TContext = unknown>(
+export const usePostDevices = <TError = unknown, TContext = unknown>(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevices>>,
+            Awaited<ReturnType<typeof postDevices>>,
             TError,
             { data: CreateDeviceRequest },
             TContext
@@ -340,40 +340,39 @@ export const usePostApiDevices = <TError = unknown, TContext = unknown>(
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevices>>,
+    Awaited<ReturnType<typeof postDevices>>,
     TError,
     { data: CreateDeviceRequest },
     TContext
 > => {
     const backupQueryClient = useQueryClient();
     return useMutation(
-        getPostApiDevicesMutationOptions(queryClient ?? backupQueryClient, options),
+        getPostDevicesMutationOptions(queryClient ?? backupQueryClient, options),
         queryClient,
     );
 };
-export type putApiDevicesDeviceIdResponse200 = {
+export type putDevicesDeviceIdResponse200 = {
     data: UpdateDeviceResponse;
     status: 200;
 };
 
-export type putApiDevicesDeviceIdResponseSuccess =
-    putApiDevicesDeviceIdResponse200 & {
+export type putDevicesDeviceIdResponseSuccess =
+    putDevicesDeviceIdResponse200 & {
     headers: Headers;
 };
 
-export type putApiDevicesDeviceIdResponse =
-    putApiDevicesDeviceIdResponseSuccess;
+export type putDevicesDeviceIdResponse = putDevicesDeviceIdResponseSuccess;
 
-export const getPutApiDevicesDeviceIdUrl = (deviceId: number) => {
-    return `/api/api/devices/${deviceId}`;
+export const getPutDevicesDeviceIdUrl = (deviceId: number) => {
+    return `/api/devices/${deviceId}`;
 };
 
-export const putApiDevicesDeviceId = async (
+export const putDevicesDeviceId = async (
     deviceId: number,
     updateDeviceRequest: UpdateDeviceRequest,
     options?: RequestInit,
-): Promise<putApiDevicesDeviceIdResponse> => {
-    const res = await fetch(getPutApiDevicesDeviceIdUrl(deviceId), {
+): Promise<putDevicesDeviceIdResponse> => {
+    const res = await fetch(getPutDevicesDeviceIdUrl(deviceId), {
         ...options,
         method: "PUT",
         headers: {"Content-Type": "application/json", ...options?.headers},
@@ -382,24 +381,22 @@ export const putApiDevicesDeviceId = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: putApiDevicesDeviceIdResponse["data"] = body
-        ? JSON.parse(body)
-        : {};
+    const data: putDevicesDeviceIdResponse["data"] = body ? JSON.parse(body) : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as putApiDevicesDeviceIdResponse;
+    } as putDevicesDeviceIdResponse;
 };
 
-export const getPutApiDevicesDeviceIdMutationOptions = <
+export const getPutDevicesDeviceIdMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(
     queryClient: QueryClient,
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof putApiDevicesDeviceId>>,
+            Awaited<ReturnType<typeof putDevicesDeviceId>>,
             TError,
             { deviceId: number; data: UpdateDeviceRequest },
             TContext
@@ -407,12 +404,12 @@ export const getPutApiDevicesDeviceIdMutationOptions = <
         fetch?: RequestInit;
     },
 ): UseMutationOptions<
-    Awaited<ReturnType<typeof putApiDevicesDeviceId>>,
+    Awaited<ReturnType<typeof putDevicesDeviceId>>,
     TError,
     { deviceId: number; data: UpdateDeviceRequest },
     TContext
 > => {
-    const mutationKey = ["putApiDevicesDeviceId"];
+    const mutationKey = ["putDevicesDeviceId"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -422,36 +419,36 @@ export const getPutApiDevicesDeviceIdMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof putApiDevicesDeviceId>>,
+        Awaited<ReturnType<typeof putDevicesDeviceId>>,
         { deviceId: number; data: UpdateDeviceRequest }
     > = (props) => {
         const {deviceId, data} = props ?? {};
 
-        return putApiDevicesDeviceId(deviceId, data, fetchOptions);
+        return putDevicesDeviceId(deviceId, data, fetchOptions);
     };
 
     const onSuccess = (
-        data: Awaited<ReturnType<typeof putApiDevicesDeviceId>>,
+        data: Awaited<ReturnType<typeof putDevicesDeviceId>>,
         variables: { deviceId: number; data: UpdateDeviceRequest },
         context: TContext,
     ) => {
-        queryClient.invalidateQueries({queryKey: getGetApiDevicesQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetDevicesQueryKey()});
         mutationOptions?.onSuccess?.(data, variables, context);
     };
 
     return {mutationFn, onSuccess, ...mutationOptions};
 };
 
-export type PutApiDevicesDeviceIdMutationResult = NonNullable<
-    Awaited<ReturnType<typeof putApiDevicesDeviceId>>
+export type PutDevicesDeviceIdMutationResult = NonNullable<
+    Awaited<ReturnType<typeof putDevicesDeviceId>>
 >;
-export type PutApiDevicesDeviceIdMutationBody = UpdateDeviceRequest;
-export type PutApiDevicesDeviceIdMutationError = unknown;
+export type PutDevicesDeviceIdMutationBody = UpdateDeviceRequest;
+export type PutDevicesDeviceIdMutationError = unknown;
 
-export const usePutApiDevicesDeviceId = <TError = unknown, TContext = unknown>(
+export const usePutDevicesDeviceId = <TError = unknown, TContext = unknown>(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof putApiDevicesDeviceId>>,
+            Awaited<ReturnType<typeof putDevicesDeviceId>>,
             TError,
             { deviceId: number; data: UpdateDeviceRequest },
             TContext
@@ -460,66 +457,66 @@ export const usePutApiDevicesDeviceId = <TError = unknown, TContext = unknown>(
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof putApiDevicesDeviceId>>,
+    Awaited<ReturnType<typeof putDevicesDeviceId>>,
     TError,
     { deviceId: number; data: UpdateDeviceRequest },
     TContext
 > => {
     const backupQueryClient = useQueryClient();
     return useMutation(
-        getPutApiDevicesDeviceIdMutationOptions(
+        getPutDevicesDeviceIdMutationOptions(
             queryClient ?? backupQueryClient,
             options,
         ),
         queryClient,
     );
 };
-export type deleteApiDevicesDeviceIdResponse200 = {
+export type deleteDevicesDeviceIdResponse200 = {
     data: void;
     status: 200;
 };
 
-export type deleteApiDevicesDeviceIdResponseSuccess =
-    deleteApiDevicesDeviceIdResponse200 & {
+export type deleteDevicesDeviceIdResponseSuccess =
+    deleteDevicesDeviceIdResponse200 & {
     headers: Headers;
 };
 
-export type deleteApiDevicesDeviceIdResponse =
-    deleteApiDevicesDeviceIdResponseSuccess;
+export type deleteDevicesDeviceIdResponse =
+    deleteDevicesDeviceIdResponseSuccess;
 
-export const getDeleteApiDevicesDeviceIdUrl = (deviceId: number) => {
-    return `/api/api/devices/${deviceId}`;
+export const getDeleteDevicesDeviceIdUrl = (deviceId: number) => {
+    return `/api/devices/${deviceId}`;
 };
 
-export const deleteApiDevicesDeviceId = async (
+export const deleteDevicesDeviceId = async (
     deviceId: number,
     options?: RequestInit,
-): Promise<deleteApiDevicesDeviceIdResponse> => {
-    const res = await fetch(getDeleteApiDevicesDeviceIdUrl(deviceId), {
+): Promise<deleteDevicesDeviceIdResponse> => {
+    const res = await fetch(getDeleteDevicesDeviceIdUrl(deviceId), {
         ...options,
         method: "DELETE",
     });
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: deleteApiDevicesDeviceIdResponse["data"] = body
+    const data: deleteDevicesDeviceIdResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as deleteApiDevicesDeviceIdResponse;
+    } as deleteDevicesDeviceIdResponse;
 };
 
-export const getDeleteApiDevicesDeviceIdMutationOptions = <
+export const getDeleteDevicesDeviceIdMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(
     queryClient: QueryClient,
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>,
+            Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
             TError,
             { deviceId: number },
             TContext
@@ -527,12 +524,12 @@ export const getDeleteApiDevicesDeviceIdMutationOptions = <
         fetch?: RequestInit;
     },
 ): UseMutationOptions<
-    Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>,
+    Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
     TError,
     { deviceId: number },
     TContext
 > => {
-    const mutationKey = ["deleteApiDevicesDeviceId"];
+    const mutationKey = ["deleteDevicesDeviceId"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -542,39 +539,36 @@ export const getDeleteApiDevicesDeviceIdMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>,
+        Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
         { deviceId: number }
     > = (props) => {
         const {deviceId} = props ?? {};
 
-        return deleteApiDevicesDeviceId(deviceId, fetchOptions);
+        return deleteDevicesDeviceId(deviceId, fetchOptions);
     };
 
     const onSuccess = (
-        data: Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>,
+        data: Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
         variables: { deviceId: number },
         context: TContext,
     ) => {
-        queryClient.invalidateQueries({queryKey: getGetApiDevicesQueryKey()});
+        queryClient.invalidateQueries({queryKey: getGetDevicesQueryKey()});
         mutationOptions?.onSuccess?.(data, variables, context);
     };
 
     return {mutationFn, onSuccess, ...mutationOptions};
 };
 
-export type DeleteApiDevicesDeviceIdMutationResult = NonNullable<
-    Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>
+export type DeleteDevicesDeviceIdMutationResult = NonNullable<
+    Awaited<ReturnType<typeof deleteDevicesDeviceId>>
 >;
 
-export type DeleteApiDevicesDeviceIdMutationError = unknown;
+export type DeleteDevicesDeviceIdMutationError = unknown;
 
-export const useDeleteApiDevicesDeviceId = <
-    TError = unknown,
-    TContext = unknown,
->(
+export const useDeleteDevicesDeviceId = <TError = unknown, TContext = unknown>(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>,
+            Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
             TError,
             { deviceId: number },
             TContext
@@ -583,36 +577,36 @@ export const useDeleteApiDevicesDeviceId = <
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof deleteApiDevicesDeviceId>>,
+    Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
     TError,
     { deviceId: number },
     TContext
 > => {
     const backupQueryClient = useQueryClient();
     return useMutation(
-        getDeleteApiDevicesDeviceIdMutationOptions(
+        getDeleteDevicesDeviceIdMutationOptions(
             queryClient ?? backupQueryClient,
             options,
         ),
         queryClient,
     );
 };
-export type getApiDevicesDeviceIdSessionsResponse200 = {
+export type getDevicesDeviceIdSessionsResponse200 = {
     data: ListSyncSessionsResponse;
     status: 200;
 };
 
-export type getApiDevicesDeviceIdSessionsResponseSuccess =
-    getApiDevicesDeviceIdSessionsResponse200 & {
+export type getDevicesDeviceIdSessionsResponseSuccess =
+    getDevicesDeviceIdSessionsResponse200 & {
     headers: Headers;
 };
 
-export type getApiDevicesDeviceIdSessionsResponse =
-    getApiDevicesDeviceIdSessionsResponseSuccess;
+export type getDevicesDeviceIdSessionsResponse =
+    getDevicesDeviceIdSessionsResponseSuccess;
 
-export const getGetApiDevicesDeviceIdSessionsUrl = (
+export const getGetDevicesDeviceIdSessionsUrl = (
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
 ) => {
     const normalizedParams = new URLSearchParams();
 
@@ -625,41 +619,37 @@ export const getGetApiDevicesDeviceIdSessionsUrl = (
     const stringifiedParams = normalizedParams.toString();
 
     return stringifiedParams.length > 0
-        ? `/api/api/devices/${deviceId}/sessions?${stringifiedParams}`
-        : `/api/api/devices/${deviceId}/sessions`;
+        ? `/api/devices/${deviceId}/sessions?${stringifiedParams}`
+        : `/api/devices/${deviceId}/sessions`;
 };
 
-export const getApiDevicesDeviceIdSessions = async (
+export const getDevicesDeviceIdSessions = async (
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
     options?: RequestInit,
-): Promise<getApiDevicesDeviceIdSessionsResponse> => {
-    const res = await fetch(
-        getGetApiDevicesDeviceIdSessionsUrl(deviceId, params),
-        {
-            ...options,
-            method: "GET",
-        },
-    );
+): Promise<getDevicesDeviceIdSessionsResponse> => {
+    const res = await fetch(getGetDevicesDeviceIdSessionsUrl(deviceId, params), {
+        ...options,
+        method: "GET",
+    });
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: getApiDevicesDeviceIdSessionsResponse["data"] = body
+    const data: getDevicesDeviceIdSessionsResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as getApiDevicesDeviceIdSessionsResponse;
+    } as getDevicesDeviceIdSessionsResponse;
 };
 
-export const getGetApiDevicesDeviceIdSessionsQueryKey = (
+export const getGetDevicesDeviceIdSessionsQueryKey = (
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
 ) => {
     return [
-        "api",
         "api",
         "devices",
         deviceId,
@@ -668,16 +658,16 @@ export const getGetApiDevicesDeviceIdSessionsQueryKey = (
     ] as const;
 };
 
-export const getGetApiDevicesDeviceIdSessionsQueryOptions = <
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+export const getGetDevicesDeviceIdSessionsQueryOptions = <
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
     TError = unknown,
 >(
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                 TError,
                 TData
             >
@@ -689,15 +679,12 @@ export const getGetApiDevicesDeviceIdSessionsQueryOptions = <
 
     const queryKey =
         queryOptions?.queryKey ??
-        getGetApiDevicesDeviceIdSessionsQueryKey(deviceId, params);
+        getGetDevicesDeviceIdSessionsQueryKey(deviceId, params);
 
     const queryFn: QueryFunction<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>
+        Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>
     > = ({signal}) =>
-        getApiDevicesDeviceIdSessions(deviceId, params, {
-            signal,
-            ...fetchOptions,
-        });
+        getDevicesDeviceIdSessions(deviceId, params, {signal, ...fetchOptions});
 
     return {
         queryKey,
@@ -705,36 +692,36 @@ export const getGetApiDevicesDeviceIdSessionsQueryOptions = <
         enabled: !!deviceId,
         ...queryOptions,
     } as UseQueryOptions<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+        Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
         TError,
         TData
     > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetApiDevicesDeviceIdSessionsQueryResult = NonNullable<
-    Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>
+export type GetDevicesDeviceIdSessionsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>
 >;
-export type GetApiDevicesDeviceIdSessionsQueryError = unknown;
+export type GetDevicesDeviceIdSessionsQueryError = unknown;
 
-export function useGetApiDevicesDeviceIdSessions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+export function useGetDevicesDeviceIdSessions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
     TError = unknown,
 >(
     deviceId: number,
-    params: undefined | GetApiDevicesDeviceIdSessionsParams,
+    params: undefined | GetDevicesDeviceIdSessionsParams,
     options: {
         query: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 DefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>
                 >,
                 "initialData"
             >;
@@ -744,25 +731,25 @@ export function useGetApiDevicesDeviceIdSessions<
 ): DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesDeviceIdSessions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+export function useGetDevicesDeviceIdSessions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
     TError = unknown,
 >(
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 UndefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>
                 >,
                 "initialData"
             >;
@@ -772,16 +759,16 @@ export function useGetApiDevicesDeviceIdSessions<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesDeviceIdSessions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+export function useGetDevicesDeviceIdSessions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
     TError = unknown,
 >(
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                 TError,
                 TData
             >
@@ -793,16 +780,16 @@ export function useGetApiDevicesDeviceIdSessions<
     queryKey: DataTag<QueryKey, TData, TError>;
 };
 
-export function useGetApiDevicesDeviceIdSessions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+export function useGetDevicesDeviceIdSessions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
     TError = unknown,
 >(
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSessions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>,
                 TError,
                 TData
             >
@@ -813,7 +800,7 @@ export function useGetApiDevicesDeviceIdSessions<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getGetApiDevicesDeviceIdSessionsQueryOptions(
+    const queryOptions = getGetDevicesDeviceIdSessionsQueryOptions(
         deviceId,
         params,
         options,
@@ -827,37 +814,37 @@ export function useGetApiDevicesDeviceIdSessions<
     return {...query, queryKey: queryOptions.queryKey};
 }
 
-export const invalidateGetApiDevicesDeviceIdSessions = async (
+export const invalidateGetDevicesDeviceIdSessions = async (
     queryClient: QueryClient,
     deviceId: number,
-    params?: GetApiDevicesDeviceIdSessionsParams,
+    params?: GetDevicesDeviceIdSessionsParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getGetApiDevicesDeviceIdSessionsQueryKey(deviceId, params)},
+        {queryKey: getGetDevicesDeviceIdSessionsQueryKey(deviceId, params)},
         options,
     );
 
     return queryClient;
 };
 
-export type getApiDevicesDeviceIdSessionsSessionIdRecordsResponse200 = {
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponse200 = {
     data: ListSyncRecordsResponse;
     status: 200;
 };
 
-export type getApiDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess =
-    getApiDevicesDeviceIdSessionsSessionIdRecordsResponse200 & {
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess =
+    getDevicesDeviceIdSessionsSessionIdRecordsResponse200 & {
     headers: Headers;
 };
 
-export type getApiDevicesDeviceIdSessionsSessionIdRecordsResponse =
-    getApiDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess;
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponse =
+    getDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess;
 
-export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsUrl = (
+export const getGetDevicesDeviceIdSessionsSessionIdRecordsUrl = (
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
 ) => {
     const normalizedParams = new URLSearchParams();
 
@@ -870,18 +857,18 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsUrl = (
     const stringifiedParams = normalizedParams.toString();
 
     return stringifiedParams.length > 0
-        ? `/api/api/devices/${deviceId}/sessions/${sessionId}/records?${stringifiedParams}`
-        : `/api/api/devices/${deviceId}/sessions/${sessionId}/records`;
+        ? `/api/devices/${deviceId}/sessions/${sessionId}/records?${stringifiedParams}`
+        : `/api/devices/${deviceId}/sessions/${sessionId}/records`;
 };
 
-export const getApiDevicesDeviceIdSessionsSessionIdRecords = async (
+export const getDevicesDeviceIdSessionsSessionIdRecords = async (
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options?: RequestInit,
-): Promise<getApiDevicesDeviceIdSessionsSessionIdRecordsResponse> => {
+): Promise<getDevicesDeviceIdSessionsSessionIdRecordsResponse> => {
     const res = await fetch(
-        getGetApiDevicesDeviceIdSessionsSessionIdRecordsUrl(
+        getGetDevicesDeviceIdSessionsSessionIdRecordsUrl(
             deviceId,
             sessionId,
             params,
@@ -894,22 +881,22 @@ export const getApiDevicesDeviceIdSessionsSessionIdRecords = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: getApiDevicesDeviceIdSessionsSessionIdRecordsResponse["data"] =
-        body ? JSON.parse(body) : {};
+    const data: getDevicesDeviceIdSessionsSessionIdRecordsResponse["data"] = body
+        ? JSON.parse(body)
+        : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as getApiDevicesDeviceIdSessionsSessionIdRecordsResponse;
+    } as getDevicesDeviceIdSessionsSessionIdRecordsResponse;
 };
 
-export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryKey = (
+export const getGetDevicesDeviceIdSessionsSessionIdRecordsQueryKey = (
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
 ) => {
     return [
-        "api",
         "api",
         "devices",
         deviceId,
@@ -920,21 +907,19 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryKey = (
     ] as const;
 };
 
-export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryOptions = <
+export const getGetDevicesDeviceIdSessionsSessionIdRecordsQueryOptions = <
     TData = Awaited<
-        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
     >,
     TError = unknown,
 >(
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<
-                    ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                >,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>,
                 TError,
                 TData
             >
@@ -946,16 +931,16 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryOptions = <
 
     const queryKey =
         queryOptions?.queryKey ??
-        getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryKey(
+        getGetDevicesDeviceIdSessionsSessionIdRecordsQueryKey(
             deviceId,
             sessionId,
             params,
         );
 
     const queryFn: QueryFunction<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>>
+        Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>
     > = ({signal}) =>
-        getApiDevicesDeviceIdSessionsSessionIdRecords(deviceId, sessionId, params, {
+        getDevicesDeviceIdSessionsSessionIdRecords(deviceId, sessionId, params, {
             signal,
             ...fetchOptions,
         });
@@ -966,33 +951,30 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryOptions = <
         enabled: !!(deviceId && sessionId),
         ...queryOptions,
     } as UseQueryOptions<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>>,
+        Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>,
         TError,
         TData
     > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetApiDevicesDeviceIdSessionsSessionIdRecordsQueryResult =
-    NonNullable<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>>
-    >;
-export type GetApiDevicesDeviceIdSessionsSessionIdRecordsQueryError = unknown;
+export type GetDevicesDeviceIdSessionsSessionIdRecordsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>
+>;
+export type GetDevicesDeviceIdSessionsSessionIdRecordsQueryError = unknown;
 
-export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
+export function useGetDevicesDeviceIdSessionsSessionIdRecords<
     TData = Awaited<
-        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
     >,
     TError = unknown,
 >(
     deviceId: number,
     sessionId: number,
-    params: undefined | GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params: undefined | GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options: {
         query: Partial<
             UseQueryOptions<
-                Awaited<
-                    ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                >,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>,
                 TError,
                 TData
             >
@@ -1000,12 +982,10 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
             Pick<
                 DefinedInitialDataOptions<
                     Awaited<
-                        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+                        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
                     >,
                     TError,
-                    Awaited<
-                        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                    >
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>
                 >,
                 "initialData"
             >;
@@ -1015,21 +995,19 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
 ): DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
+export function useGetDevicesDeviceIdSessionsSessionIdRecords<
     TData = Awaited<
-        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
     >,
     TError = unknown,
 >(
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<
-                    ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                >,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>,
                 TError,
                 TData
             >
@@ -1037,12 +1015,10 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
             Pick<
                 UndefinedInitialDataOptions<
                     Awaited<
-                        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+                        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
                     >,
                     TError,
-                    Awaited<
-                        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                    >
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>
                 >,
                 "initialData"
             >;
@@ -1052,21 +1028,19 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
+export function useGetDevicesDeviceIdSessionsSessionIdRecords<
     TData = Awaited<
-        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
     >,
     TError = unknown,
 >(
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<
-                    ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                >,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>,
                 TError,
                 TData
             >
@@ -1078,21 +1052,19 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
     queryKey: DataTag<QueryKey, TData, TError>;
 };
 
-export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
+export function useGetDevicesDeviceIdSessionsSessionIdRecords<
     TData = Awaited<
-        ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
+        ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>
     >,
     TError = unknown,
 >(
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<
-                    ReturnType<typeof getApiDevicesDeviceIdSessionsSessionIdRecords>
-                >,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>,
                 TError,
                 TData
             >
@@ -1104,7 +1076,7 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
     const queryOptions =
-        getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryOptions(
+        getGetDevicesDeviceIdSessionsSessionIdRecordsQueryOptions(
             deviceId,
             sessionId,
             params,
@@ -1119,16 +1091,16 @@ export function useGetApiDevicesDeviceIdSessionsSessionIdRecords<
     return {...query, queryKey: queryOptions.queryKey};
 }
 
-export const invalidateGetApiDevicesDeviceIdSessionsSessionIdRecords = async (
+export const invalidateGetDevicesDeviceIdSessionsSessionIdRecords = async (
     queryClient: QueryClient,
     deviceId: number,
     sessionId: number,
-    params?: GetApiDevicesDeviceIdSessionsSessionIdRecordsParams,
+    params?: GetDevicesDeviceIdSessionsSessionIdRecordsParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
         {
-            queryKey: getGetApiDevicesDeviceIdSessionsSessionIdRecordsQueryKey(
+            queryKey: getGetDevicesDeviceIdSessionsSessionIdRecordsQueryKey(
                 deviceId,
                 sessionId,
                 params,
@@ -1140,29 +1112,29 @@ export const invalidateGetApiDevicesDeviceIdSessionsSessionIdRecords = async (
     return queryClient;
 };
 
-export type postApiDevicesDeviceIdSyncStartResponse200 = {
+export type postDevicesDeviceIdSyncStartResponse200 = {
     data: SyncStartResponse;
     status: 200;
 };
 
-export type postApiDevicesDeviceIdSyncStartResponseSuccess =
-    postApiDevicesDeviceIdSyncStartResponse200 & {
+export type postDevicesDeviceIdSyncStartResponseSuccess =
+    postDevicesDeviceIdSyncStartResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesDeviceIdSyncStartResponse =
-    postApiDevicesDeviceIdSyncStartResponseSuccess;
+export type postDevicesDeviceIdSyncStartResponse =
+    postDevicesDeviceIdSyncStartResponseSuccess;
 
-export const getPostApiDevicesDeviceIdSyncStartUrl = (deviceId: number) => {
-    return `/api/api/devices/${deviceId}/sync/start`;
+export const getPostDevicesDeviceIdSyncStartUrl = (deviceId: number) => {
+    return `/api/devices/${deviceId}/sync/start`;
 };
 
-export const postApiDevicesDeviceIdSyncStart = async (
+export const postDevicesDeviceIdSyncStart = async (
     deviceId: number,
     syncStartRequestNull: SyncStartRequest | null,
     options?: RequestInit,
-): Promise<postApiDevicesDeviceIdSyncStartResponse> => {
-    const res = await fetch(getPostApiDevicesDeviceIdSyncStartUrl(deviceId), {
+): Promise<postDevicesDeviceIdSyncStartResponse> => {
+    const res = await fetch(getPostDevicesDeviceIdSyncStartUrl(deviceId), {
         ...options,
         method: "POST",
         headers: {"Content-Type": "application/json", ...options?.headers},
@@ -1171,34 +1143,34 @@ export const postApiDevicesDeviceIdSyncStart = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesDeviceIdSyncStartResponse["data"] = body
+    const data: postDevicesDeviceIdSyncStartResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesDeviceIdSyncStartResponse;
+    } as postDevicesDeviceIdSyncStartResponse;
 };
 
-export const getPostApiDevicesDeviceIdSyncStartMutationOptions = <
+export const getPostDevicesDeviceIdSyncStartMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncStart>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncStart>>,
         TError,
         { deviceId: number; data: SyncStartRequest | null },
         TContext
     >;
     fetch?: RequestInit;
 }): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncStart>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncStart>>,
     TError,
     { deviceId: number; data: SyncStartRequest | null },
     TContext
 > => {
-    const mutationKey = ["postApiDevicesDeviceIdSyncStart"];
+    const mutationKey = ["postDevicesDeviceIdSyncStart"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -1208,31 +1180,30 @@ export const getPostApiDevicesDeviceIdSyncStartMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncStart>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncStart>>,
         { deviceId: number; data: SyncStartRequest | null }
     > = (props) => {
         const {deviceId, data} = props ?? {};
 
-        return postApiDevicesDeviceIdSyncStart(deviceId, data, fetchOptions);
+        return postDevicesDeviceIdSyncStart(deviceId, data, fetchOptions);
     };
 
     return {mutationFn, ...mutationOptions};
 };
 
-export type PostApiDevicesDeviceIdSyncStartMutationResult = NonNullable<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncStart>>
+export type PostDevicesDeviceIdSyncStartMutationResult = NonNullable<
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncStart>>
 >;
-export type PostApiDevicesDeviceIdSyncStartMutationBody =
-    SyncStartRequest | null;
-export type PostApiDevicesDeviceIdSyncStartMutationError = unknown;
+export type PostDevicesDeviceIdSyncStartMutationBody = SyncStartRequest | null;
+export type PostDevicesDeviceIdSyncStartMutationError = unknown;
 
-export const usePostApiDevicesDeviceIdSyncStart = <
+export const usePostDevicesDeviceIdSyncStart = <
     TError = unknown,
     TContext = unknown,
 >(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncStart>>,
+            Awaited<ReturnType<typeof postDevicesDeviceIdSyncStart>>,
             TError,
             { deviceId: number; data: SyncStartRequest | null },
             TContext
@@ -1241,44 +1212,44 @@ export const usePostApiDevicesDeviceIdSyncStart = <
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncStart>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncStart>>,
     TError,
     { deviceId: number; data: SyncStartRequest | null },
     TContext
 > => {
     return useMutation(
-        getPostApiDevicesDeviceIdSyncStartMutationOptions(options),
+        getPostDevicesDeviceIdSyncStartMutationOptions(options),
         queryClient,
     );
 };
-export type postApiDevicesDeviceIdSyncSessionIdRecordsResponse200 = {
+export type postDevicesDeviceIdSyncSessionIdRecordsResponse200 = {
     data: SyncRecordsResponse;
     status: 200;
 };
 
-export type postApiDevicesDeviceIdSyncSessionIdRecordsResponseSuccess =
-    postApiDevicesDeviceIdSyncSessionIdRecordsResponse200 & {
+export type postDevicesDeviceIdSyncSessionIdRecordsResponseSuccess =
+    postDevicesDeviceIdSyncSessionIdRecordsResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesDeviceIdSyncSessionIdRecordsResponse =
-    postApiDevicesDeviceIdSyncSessionIdRecordsResponseSuccess;
+export type postDevicesDeviceIdSyncSessionIdRecordsResponse =
+    postDevicesDeviceIdSyncSessionIdRecordsResponseSuccess;
 
-export const getPostApiDevicesDeviceIdSyncSessionIdRecordsUrl = (
+export const getPostDevicesDeviceIdSyncSessionIdRecordsUrl = (
     deviceId: number,
     sessionId: number,
 ) => {
-    return `/api/api/devices/${deviceId}/sync/${sessionId}/records`;
+    return `/api/devices/${deviceId}/sync/${sessionId}/records`;
 };
 
-export const postApiDevicesDeviceIdSyncSessionIdRecords = async (
+export const postDevicesDeviceIdSyncSessionIdRecords = async (
     deviceId: number,
     sessionId: number,
     syncRecordsRequest: SyncRecordsRequest,
     options?: RequestInit,
-): Promise<postApiDevicesDeviceIdSyncSessionIdRecordsResponse> => {
+): Promise<postDevicesDeviceIdSyncSessionIdRecordsResponse> => {
     const res = await fetch(
-        getPostApiDevicesDeviceIdSyncSessionIdRecordsUrl(deviceId, sessionId),
+        getPostDevicesDeviceIdSyncSessionIdRecordsUrl(deviceId, sessionId),
         {
             ...options,
             method: "POST",
@@ -1289,34 +1260,34 @@ export const postApiDevicesDeviceIdSyncSessionIdRecords = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesDeviceIdSyncSessionIdRecordsResponse["data"] = body
+    const data: postDevicesDeviceIdSyncSessionIdRecordsResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesDeviceIdSyncSessionIdRecordsResponse;
+    } as postDevicesDeviceIdSyncSessionIdRecordsResponse;
 };
 
-export const getPostApiDevicesDeviceIdSyncSessionIdRecordsMutationOptions = <
+export const getPostDevicesDeviceIdSyncSessionIdRecordsMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdRecords>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdRecords>>,
         TError,
         { deviceId: number; sessionId: number; data: SyncRecordsRequest },
         TContext
     >;
     fetch?: RequestInit;
 }): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdRecords>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdRecords>>,
     TError,
     { deviceId: number; sessionId: number; data: SyncRecordsRequest },
     TContext
 > => {
-    const mutationKey = ["postApiDevicesDeviceIdSyncSessionIdRecords"];
+    const mutationKey = ["postDevicesDeviceIdSyncSessionIdRecords"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -1326,12 +1297,12 @@ export const getPostApiDevicesDeviceIdSyncSessionIdRecordsMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdRecords>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdRecords>>,
         { deviceId: number; sessionId: number; data: SyncRecordsRequest }
     > = (props) => {
         const {deviceId, sessionId, data} = props ?? {};
 
-        return postApiDevicesDeviceIdSyncSessionIdRecords(
+        return postDevicesDeviceIdSyncSessionIdRecords(
             deviceId,
             sessionId,
             data,
@@ -1342,21 +1313,20 @@ export const getPostApiDevicesDeviceIdSyncSessionIdRecordsMutationOptions = <
     return {mutationFn, ...mutationOptions};
 };
 
-export type PostApiDevicesDeviceIdSyncSessionIdRecordsMutationResult =
-    NonNullable<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdRecords>>
-    >;
-export type PostApiDevicesDeviceIdSyncSessionIdRecordsMutationBody =
+export type PostDevicesDeviceIdSyncSessionIdRecordsMutationResult = NonNullable<
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdRecords>>
+>;
+export type PostDevicesDeviceIdSyncSessionIdRecordsMutationBody =
     SyncRecordsRequest;
-export type PostApiDevicesDeviceIdSyncSessionIdRecordsMutationError = unknown;
+export type PostDevicesDeviceIdSyncSessionIdRecordsMutationError = unknown;
 
-export const usePostApiDevicesDeviceIdSyncSessionIdRecords = <
+export const usePostDevicesDeviceIdSyncSessionIdRecords = <
     TError = unknown,
     TContext = unknown,
 >(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdRecords>>,
+            Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdRecords>>,
             TError,
             { deviceId: number; sessionId: number; data: SyncRecordsRequest },
             TContext
@@ -1365,43 +1335,43 @@ export const usePostApiDevicesDeviceIdSyncSessionIdRecords = <
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdRecords>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdRecords>>,
     TError,
     { deviceId: number; sessionId: number; data: SyncRecordsRequest },
     TContext
 > => {
     return useMutation(
-        getPostApiDevicesDeviceIdSyncSessionIdRecordsMutationOptions(options),
+        getPostDevicesDeviceIdSyncSessionIdRecordsMutationOptions(options),
         queryClient,
     );
 };
-export type postApiDevicesDeviceIdSyncSessionIdCompleteResponse200 = {
+export type postDevicesDeviceIdSyncSessionIdCompleteResponse200 = {
     data: SyncCompleteResponse;
     status: 200;
 };
 
-export type postApiDevicesDeviceIdSyncSessionIdCompleteResponseSuccess =
-    postApiDevicesDeviceIdSyncSessionIdCompleteResponse200 & {
+export type postDevicesDeviceIdSyncSessionIdCompleteResponseSuccess =
+    postDevicesDeviceIdSyncSessionIdCompleteResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesDeviceIdSyncSessionIdCompleteResponse =
-    postApiDevicesDeviceIdSyncSessionIdCompleteResponseSuccess;
+export type postDevicesDeviceIdSyncSessionIdCompleteResponse =
+    postDevicesDeviceIdSyncSessionIdCompleteResponseSuccess;
 
-export const getPostApiDevicesDeviceIdSyncSessionIdCompleteUrl = (
+export const getPostDevicesDeviceIdSyncSessionIdCompleteUrl = (
     deviceId: number,
     sessionId: number,
 ) => {
-    return `/api/api/devices/${deviceId}/sync/${sessionId}/complete`;
+    return `/api/devices/${deviceId}/sync/${sessionId}/complete`;
 };
 
-export const postApiDevicesDeviceIdSyncSessionIdComplete = async (
+export const postDevicesDeviceIdSyncSessionIdComplete = async (
     deviceId: number,
     sessionId: number,
     options?: RequestInit,
-): Promise<postApiDevicesDeviceIdSyncSessionIdCompleteResponse> => {
+): Promise<postDevicesDeviceIdSyncSessionIdCompleteResponse> => {
     const res = await fetch(
-        getPostApiDevicesDeviceIdSyncSessionIdCompleteUrl(deviceId, sessionId),
+        getPostDevicesDeviceIdSyncSessionIdCompleteUrl(deviceId, sessionId),
         {
             ...options,
             method: "POST",
@@ -1410,34 +1380,34 @@ export const postApiDevicesDeviceIdSyncSessionIdComplete = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesDeviceIdSyncSessionIdCompleteResponse["data"] = body
+    const data: postDevicesDeviceIdSyncSessionIdCompleteResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesDeviceIdSyncSessionIdCompleteResponse;
+    } as postDevicesDeviceIdSyncSessionIdCompleteResponse;
 };
 
-export const getPostApiDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <
+export const getPostDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdComplete>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
         TError,
         { deviceId: number; sessionId: number },
         TContext
     >;
     fetch?: RequestInit;
 }): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdComplete>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
     TError,
     { deviceId: number; sessionId: number },
     TContext
 > => {
-    const mutationKey = ["postApiDevicesDeviceIdSyncSessionIdComplete"];
+    const mutationKey = ["postDevicesDeviceIdSyncSessionIdComplete"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -1447,12 +1417,12 @@ export const getPostApiDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdComplete>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
         { deviceId: number; sessionId: number }
     > = (props) => {
         const {deviceId, sessionId} = props ?? {};
 
-        return postApiDevicesDeviceIdSyncSessionIdComplete(
+        return postDevicesDeviceIdSyncSessionIdComplete(
             deviceId,
             sessionId,
             fetchOptions,
@@ -1462,20 +1432,20 @@ export const getPostApiDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <
     return {mutationFn, ...mutationOptions};
 };
 
-export type PostApiDevicesDeviceIdSyncSessionIdCompleteMutationResult =
+export type PostDevicesDeviceIdSyncSessionIdCompleteMutationResult =
     NonNullable<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdComplete>>
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>
     >;
 
-export type PostApiDevicesDeviceIdSyncSessionIdCompleteMutationError = unknown;
+export type PostDevicesDeviceIdSyncSessionIdCompleteMutationError = unknown;
 
-export const usePostApiDevicesDeviceIdSyncSessionIdComplete = <
+export const usePostDevicesDeviceIdSyncSessionIdComplete = <
     TError = unknown,
     TContext = unknown,
 >(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdComplete>>,
+            Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
             TError,
             { deviceId: number; sessionId: number },
             TContext
@@ -1484,41 +1454,41 @@ export const usePostApiDevicesDeviceIdSyncSessionIdComplete = <
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncSessionIdComplete>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
     TError,
     { deviceId: number; sessionId: number },
     TContext
 > => {
     return useMutation(
-        getPostApiDevicesDeviceIdSyncSessionIdCompleteMutationOptions(options),
+        getPostDevicesDeviceIdSyncSessionIdCompleteMutationOptions(options),
         queryClient,
     );
 };
-export type getApiDevicesDeviceIdSyncPendingActionsResponse200 = {
+export type getDevicesDeviceIdSyncPendingActionsResponse200 = {
     data: GetPendingActionsResponse;
     status: 200;
 };
 
-export type getApiDevicesDeviceIdSyncPendingActionsResponseSuccess =
-    getApiDevicesDeviceIdSyncPendingActionsResponse200 & {
+export type getDevicesDeviceIdSyncPendingActionsResponseSuccess =
+    getDevicesDeviceIdSyncPendingActionsResponse200 & {
     headers: Headers;
 };
 
-export type getApiDevicesDeviceIdSyncPendingActionsResponse =
-    getApiDevicesDeviceIdSyncPendingActionsResponseSuccess;
+export type getDevicesDeviceIdSyncPendingActionsResponse =
+    getDevicesDeviceIdSyncPendingActionsResponseSuccess;
 
-export const getGetApiDevicesDeviceIdSyncPendingActionsUrl = (
+export const getGetDevicesDeviceIdSyncPendingActionsUrl = (
     deviceId: number,
 ) => {
-    return `/api/api/devices/${deviceId}/sync/pending-actions`;
+    return `/api/devices/${deviceId}/sync/pending-actions`;
 };
 
-export const getApiDevicesDeviceIdSyncPendingActions = async (
+export const getDevicesDeviceIdSyncPendingActions = async (
     deviceId: number,
     options?: RequestInit,
-): Promise<getApiDevicesDeviceIdSyncPendingActionsResponse> => {
+): Promise<getDevicesDeviceIdSyncPendingActionsResponse> => {
     const res = await fetch(
-        getGetApiDevicesDeviceIdSyncPendingActionsUrl(deviceId),
+        getGetDevicesDeviceIdSyncPendingActionsUrl(deviceId),
         {
             ...options,
             method: "GET",
@@ -1527,38 +1497,31 @@ export const getApiDevicesDeviceIdSyncPendingActions = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: getApiDevicesDeviceIdSyncPendingActionsResponse["data"] = body
+    const data: getDevicesDeviceIdSyncPendingActionsResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as getApiDevicesDeviceIdSyncPendingActionsResponse;
+    } as getDevicesDeviceIdSyncPendingActionsResponse;
 };
 
-export const getGetApiDevicesDeviceIdSyncPendingActionsQueryKey = (
+export const getGetDevicesDeviceIdSyncPendingActionsQueryKey = (
     deviceId: number,
 ) => {
-    return [
-        "api",
-        "api",
-        "devices",
-        deviceId,
-        "sync",
-        "pending-actions",
-    ] as const;
+    return ["api", "devices", deviceId, "sync", "pending-actions"] as const;
 };
 
-export const getGetApiDevicesDeviceIdSyncPendingActionsQueryOptions = <
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+export const getGetDevicesDeviceIdSyncPendingActionsQueryOptions = <
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
     TError = unknown,
 >(
     deviceId: number,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                 TError,
                 TData
             >
@@ -1570,15 +1533,12 @@ export const getGetApiDevicesDeviceIdSyncPendingActionsQueryOptions = <
 
     const queryKey =
         queryOptions?.queryKey ??
-        getGetApiDevicesDeviceIdSyncPendingActionsQueryKey(deviceId);
+        getGetDevicesDeviceIdSyncPendingActionsQueryKey(deviceId);
 
     const queryFn: QueryFunction<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>
+        Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>
     > = ({signal}) =>
-        getApiDevicesDeviceIdSyncPendingActions(deviceId, {
-            signal,
-            ...fetchOptions,
-        });
+        getDevicesDeviceIdSyncPendingActions(deviceId, {signal, ...fetchOptions});
 
     return {
         queryKey,
@@ -1586,35 +1546,35 @@ export const getGetApiDevicesDeviceIdSyncPendingActionsQueryOptions = <
         enabled: !!deviceId,
         ...queryOptions,
     } as UseQueryOptions<
-        Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+        Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
         TError,
         TData
     > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetApiDevicesDeviceIdSyncPendingActionsQueryResult = NonNullable<
-    Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>
+export type GetDevicesDeviceIdSyncPendingActionsQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>
 >;
-export type GetApiDevicesDeviceIdSyncPendingActionsQueryError = unknown;
+export type GetDevicesDeviceIdSyncPendingActionsQueryError = unknown;
 
-export function useGetApiDevicesDeviceIdSyncPendingActions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+export function useGetDevicesDeviceIdSyncPendingActions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
     TError = unknown,
 >(
     deviceId: number,
     options: {
         query: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 DefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>
                 >,
                 "initialData"
             >;
@@ -1624,24 +1584,24 @@ export function useGetApiDevicesDeviceIdSyncPendingActions<
 ): DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesDeviceIdSyncPendingActions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+export function useGetDevicesDeviceIdSyncPendingActions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
     TError = unknown,
 >(
     deviceId: number,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 UndefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>
+                    Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>
                 >,
                 "initialData"
             >;
@@ -1651,15 +1611,15 @@ export function useGetApiDevicesDeviceIdSyncPendingActions<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesDeviceIdSyncPendingActions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+export function useGetDevicesDeviceIdSyncPendingActions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
     TError = unknown,
 >(
     deviceId: number,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                 TError,
                 TData
             >
@@ -1671,15 +1631,15 @@ export function useGetApiDevicesDeviceIdSyncPendingActions<
     queryKey: DataTag<QueryKey, TData, TError>;
 };
 
-export function useGetApiDevicesDeviceIdSyncPendingActions<
-    TData = Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+export function useGetDevicesDeviceIdSyncPendingActions<
+    TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
     TError = unknown,
 >(
     deviceId: number,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesDeviceIdSyncPendingActions>>,
+                Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>,
                 TError,
                 TData
             >
@@ -1690,7 +1650,7 @@ export function useGetApiDevicesDeviceIdSyncPendingActions<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getGetApiDevicesDeviceIdSyncPendingActionsQueryOptions(
+    const queryOptions = getGetDevicesDeviceIdSyncPendingActionsQueryOptions(
         deviceId,
         options,
     );
@@ -1703,83 +1663,78 @@ export function useGetApiDevicesDeviceIdSyncPendingActions<
     return {...query, queryKey: queryOptions.queryKey};
 }
 
-export const invalidateGetApiDevicesDeviceIdSyncPendingActions = async (
+export const invalidateGetDevicesDeviceIdSyncPendingActions = async (
     queryClient: QueryClient,
     deviceId: number,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getGetApiDevicesDeviceIdSyncPendingActionsQueryKey(deviceId)},
+        {queryKey: getGetDevicesDeviceIdSyncPendingActionsQueryKey(deviceId)},
         options,
     );
 
     return queryClient;
 };
 
-export type postApiDevicesDeviceIdSyncAcknowledgeResponse200 = {
+export type postDevicesDeviceIdSyncAcknowledgeResponse200 = {
     data: AcknowledgeActionResponse;
     status: 200;
 };
 
-export type postApiDevicesDeviceIdSyncAcknowledgeResponseSuccess =
-    postApiDevicesDeviceIdSyncAcknowledgeResponse200 & {
+export type postDevicesDeviceIdSyncAcknowledgeResponseSuccess =
+    postDevicesDeviceIdSyncAcknowledgeResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesDeviceIdSyncAcknowledgeResponse =
-    postApiDevicesDeviceIdSyncAcknowledgeResponseSuccess;
+export type postDevicesDeviceIdSyncAcknowledgeResponse =
+    postDevicesDeviceIdSyncAcknowledgeResponseSuccess;
 
-export const getPostApiDevicesDeviceIdSyncAcknowledgeUrl = (
-    deviceId: number,
-) => {
-    return `/api/api/devices/${deviceId}/sync/acknowledge`;
+export const getPostDevicesDeviceIdSyncAcknowledgeUrl = (deviceId: number) => {
+    return `/api/devices/${deviceId}/sync/acknowledge`;
 };
 
-export const postApiDevicesDeviceIdSyncAcknowledge = async (
+export const postDevicesDeviceIdSyncAcknowledge = async (
     deviceId: number,
     acknowledgeActionRequest: AcknowledgeActionRequest,
     options?: RequestInit,
-): Promise<postApiDevicesDeviceIdSyncAcknowledgeResponse> => {
-    const res = await fetch(
-        getPostApiDevicesDeviceIdSyncAcknowledgeUrl(deviceId),
-        {
-            ...options,
-            method: "POST",
-            headers: {"Content-Type": "application/json", ...options?.headers},
-            body: JSON.stringify(acknowledgeActionRequest),
-        },
-    );
+): Promise<postDevicesDeviceIdSyncAcknowledgeResponse> => {
+    const res = await fetch(getPostDevicesDeviceIdSyncAcknowledgeUrl(deviceId), {
+        ...options,
+        method: "POST",
+        headers: {"Content-Type": "application/json", ...options?.headers},
+        body: JSON.stringify(acknowledgeActionRequest),
+    });
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesDeviceIdSyncAcknowledgeResponse["data"] = body
+    const data: postDevicesDeviceIdSyncAcknowledgeResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesDeviceIdSyncAcknowledgeResponse;
+    } as postDevicesDeviceIdSyncAcknowledgeResponse;
 };
 
-export const getPostApiDevicesDeviceIdSyncAcknowledgeMutationOptions = <
+export const getPostDevicesDeviceIdSyncAcknowledgeMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncAcknowledge>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncAcknowledge>>,
         TError,
         { deviceId: number; data: AcknowledgeActionRequest },
         TContext
     >;
     fetch?: RequestInit;
 }): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncAcknowledge>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncAcknowledge>>,
     TError,
     { deviceId: number; data: AcknowledgeActionRequest },
     TContext
 > => {
-    const mutationKey = ["postApiDevicesDeviceIdSyncAcknowledge"];
+    const mutationKey = ["postDevicesDeviceIdSyncAcknowledge"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -1789,31 +1744,31 @@ export const getPostApiDevicesDeviceIdSyncAcknowledgeMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncAcknowledge>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncAcknowledge>>,
         { deviceId: number; data: AcknowledgeActionRequest }
     > = (props) => {
         const {deviceId, data} = props ?? {};
 
-        return postApiDevicesDeviceIdSyncAcknowledge(deviceId, data, fetchOptions);
+        return postDevicesDeviceIdSyncAcknowledge(deviceId, data, fetchOptions);
     };
 
     return {mutationFn, ...mutationOptions};
 };
 
-export type PostApiDevicesDeviceIdSyncAcknowledgeMutationResult = NonNullable<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncAcknowledge>>
+export type PostDevicesDeviceIdSyncAcknowledgeMutationResult = NonNullable<
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncAcknowledge>>
 >;
-export type PostApiDevicesDeviceIdSyncAcknowledgeMutationBody =
+export type PostDevicesDeviceIdSyncAcknowledgeMutationBody =
     AcknowledgeActionRequest;
-export type PostApiDevicesDeviceIdSyncAcknowledgeMutationError = unknown;
+export type PostDevicesDeviceIdSyncAcknowledgeMutationError = unknown;
 
-export const usePostApiDevicesDeviceIdSyncAcknowledge = <
+export const usePostDevicesDeviceIdSyncAcknowledge = <
     TError = unknown,
     TContext = unknown,
 >(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncAcknowledge>>,
+            Awaited<ReturnType<typeof postDevicesDeviceIdSyncAcknowledge>>,
             TError,
             { deviceId: number; data: AcknowledgeActionRequest },
             TContext
@@ -1822,39 +1777,39 @@ export const usePostApiDevicesDeviceIdSyncAcknowledge = <
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncAcknowledge>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncAcknowledge>>,
     TError,
     { deviceId: number; data: AcknowledgeActionRequest },
     TContext
 > => {
     return useMutation(
-        getPostApiDevicesDeviceIdSyncAcknowledgeMutationOptions(options),
+        getPostDevicesDeviceIdSyncAcknowledgeMutationOptions(options),
         queryClient,
     );
 };
-export type postApiDevicesDeviceIdSyncCheckResponse200 = {
+export type postDevicesDeviceIdSyncCheckResponse200 = {
     data: SyncCheckResponse;
     status: 200;
 };
 
-export type postApiDevicesDeviceIdSyncCheckResponseSuccess =
-    postApiDevicesDeviceIdSyncCheckResponse200 & {
+export type postDevicesDeviceIdSyncCheckResponseSuccess =
+    postDevicesDeviceIdSyncCheckResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesDeviceIdSyncCheckResponse =
-    postApiDevicesDeviceIdSyncCheckResponseSuccess;
+export type postDevicesDeviceIdSyncCheckResponse =
+    postDevicesDeviceIdSyncCheckResponseSuccess;
 
-export const getPostApiDevicesDeviceIdSyncCheckUrl = (deviceId: number) => {
-    return `/api/api/devices/${deviceId}/sync/check`;
+export const getPostDevicesDeviceIdSyncCheckUrl = (deviceId: number) => {
+    return `/api/devices/${deviceId}/sync/check`;
 };
 
-export const postApiDevicesDeviceIdSyncCheck = async (
+export const postDevicesDeviceIdSyncCheck = async (
     deviceId: number,
     syncCheckRequest: SyncCheckRequest,
     options?: RequestInit,
-): Promise<postApiDevicesDeviceIdSyncCheckResponse> => {
-    const res = await fetch(getPostApiDevicesDeviceIdSyncCheckUrl(deviceId), {
+): Promise<postDevicesDeviceIdSyncCheckResponse> => {
+    const res = await fetch(getPostDevicesDeviceIdSyncCheckUrl(deviceId), {
         ...options,
         method: "POST",
         headers: {"Content-Type": "application/json", ...options?.headers},
@@ -1863,34 +1818,34 @@ export const postApiDevicesDeviceIdSyncCheck = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesDeviceIdSyncCheckResponse["data"] = body
+    const data: postDevicesDeviceIdSyncCheckResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesDeviceIdSyncCheckResponse;
+    } as postDevicesDeviceIdSyncCheckResponse;
 };
 
-export const getPostApiDevicesDeviceIdSyncCheckMutationOptions = <
+export const getPostDevicesDeviceIdSyncCheckMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncCheck>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncCheck>>,
         TError,
         { deviceId: number; data: SyncCheckRequest },
         TContext
     >;
     fetch?: RequestInit;
 }): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncCheck>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncCheck>>,
     TError,
     { deviceId: number; data: SyncCheckRequest },
     TContext
 > => {
-    const mutationKey = ["postApiDevicesDeviceIdSyncCheck"];
+    const mutationKey = ["postDevicesDeviceIdSyncCheck"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -1900,30 +1855,30 @@ export const getPostApiDevicesDeviceIdSyncCheckMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncCheck>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncCheck>>,
         { deviceId: number; data: SyncCheckRequest }
     > = (props) => {
         const {deviceId, data} = props ?? {};
 
-        return postApiDevicesDeviceIdSyncCheck(deviceId, data, fetchOptions);
+        return postDevicesDeviceIdSyncCheck(deviceId, data, fetchOptions);
     };
 
     return {mutationFn, ...mutationOptions};
 };
 
-export type PostApiDevicesDeviceIdSyncCheckMutationResult = NonNullable<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncCheck>>
+export type PostDevicesDeviceIdSyncCheckMutationResult = NonNullable<
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncCheck>>
 >;
-export type PostApiDevicesDeviceIdSyncCheckMutationBody = SyncCheckRequest;
-export type PostApiDevicesDeviceIdSyncCheckMutationError = unknown;
+export type PostDevicesDeviceIdSyncCheckMutationBody = SyncCheckRequest;
+export type PostDevicesDeviceIdSyncCheckMutationError = unknown;
 
-export const usePostApiDevicesDeviceIdSyncCheck = <
+export const usePostDevicesDeviceIdSyncCheck = <
     TError = unknown,
     TContext = unknown,
 >(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncCheck>>,
+            Awaited<ReturnType<typeof postDevicesDeviceIdSyncCheck>>,
             TError,
             { deviceId: number; data: SyncCheckRequest },
             TContext
@@ -1932,62 +1887,56 @@ export const usePostApiDevicesDeviceIdSyncCheck = <
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncCheck>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncCheck>>,
     TError,
     { deviceId: number; data: SyncCheckRequest },
     TContext
 > => {
     return useMutation(
-        getPostApiDevicesDeviceIdSyncCheckMutationOptions(options),
+        getPostDevicesDeviceIdSyncCheckMutationOptions(options),
         queryClient,
     );
 };
-export type postApiDevicesDeviceIdSyncUploadResponse200 = {
+export type postDevicesDeviceIdSyncUploadResponse200 = {
     data: SyncUploadResponse;
     status: 200;
 };
 
-export type postApiDevicesDeviceIdSyncUploadResponseSuccess =
-    postApiDevicesDeviceIdSyncUploadResponse200 & {
+export type postDevicesDeviceIdSyncUploadResponseSuccess =
+    postDevicesDeviceIdSyncUploadResponse200 & {
     headers: Headers;
 };
 
-export type postApiDevicesDeviceIdSyncUploadResponse =
-    postApiDevicesDeviceIdSyncUploadResponseSuccess;
+export type postDevicesDeviceIdSyncUploadResponse =
+    postDevicesDeviceIdSyncUploadResponseSuccess;
 
-export const getPostApiDevicesDeviceIdSyncUploadUrl = (deviceId: number) => {
-    return `/api/api/devices/${deviceId}/sync/upload`;
+export const getPostDevicesDeviceIdSyncUploadUrl = (deviceId: number) => {
+    return `/api/devices/${deviceId}/sync/upload`;
 };
 
-export const postApiDevicesDeviceIdSyncUpload = async (
+export const postDevicesDeviceIdSyncUpload = async (
     deviceId: number,
-    postApiDevicesDeviceIdSyncUploadBody: PostApiDevicesDeviceIdSyncUploadBody,
+    postDevicesDeviceIdSyncUploadBody: PostDevicesDeviceIdSyncUploadBody,
     options?: RequestInit,
-): Promise<postApiDevicesDeviceIdSyncUploadResponse> => {
+): Promise<postDevicesDeviceIdSyncUploadResponse> => {
     const formData = new FormData();
-    if (postApiDevicesDeviceIdSyncUploadBody.file !== undefined) {
-        formData.append(`file`, postApiDevicesDeviceIdSyncUploadBody.file);
+    if (postDevicesDeviceIdSyncUploadBody.file !== undefined) {
+        formData.append(`file`, postDevicesDeviceIdSyncUploadBody.file);
     }
 
-    if (postApiDevicesDeviceIdSyncUploadBody.path !== undefined) {
-        formData.append(`path`, postApiDevicesDeviceIdSyncUploadBody.path);
+    if (postDevicesDeviceIdSyncUploadBody.path !== undefined) {
+        formData.append(`path`, postDevicesDeviceIdSyncUploadBody.path);
     }
 
-    if (postApiDevicesDeviceIdSyncUploadBody.modifiedAt !== undefined) {
-        formData.append(
-            `modifiedAt`,
-            postApiDevicesDeviceIdSyncUploadBody.modifiedAt,
-        );
+    if (postDevicesDeviceIdSyncUploadBody.modifiedAt !== undefined) {
+        formData.append(`modifiedAt`, postDevicesDeviceIdSyncUploadBody.modifiedAt);
     }
 
-    if (postApiDevicesDeviceIdSyncUploadBody.createdAt !== undefined) {
-        formData.append(
-            `createdAt`,
-            postApiDevicesDeviceIdSyncUploadBody.createdAt,
-        );
+    if (postDevicesDeviceIdSyncUploadBody.createdAt !== undefined) {
+        formData.append(`createdAt`, postDevicesDeviceIdSyncUploadBody.createdAt);
     }
 
-    const res = await fetch(getPostApiDevicesDeviceIdSyncUploadUrl(deviceId), {
+    const res = await fetch(getPostDevicesDeviceIdSyncUploadUrl(deviceId), {
         ...options,
         method: "POST",
         body: formData,
@@ -1995,34 +1944,34 @@ export const postApiDevicesDeviceIdSyncUpload = async (
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: postApiDevicesDeviceIdSyncUploadResponse["data"] = body
+    const data: postDevicesDeviceIdSyncUploadResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as postApiDevicesDeviceIdSyncUploadResponse;
+    } as postDevicesDeviceIdSyncUploadResponse;
 };
 
-export const getPostApiDevicesDeviceIdSyncUploadMutationOptions = <
+export const getPostDevicesDeviceIdSyncUploadMutationOptions = <
     TError = unknown,
     TContext = unknown,
 >(options?: {
     mutation?: UseMutationOptions<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncUpload>>,
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncUpload>>,
         TError,
-        { deviceId: number; data: PostApiDevicesDeviceIdSyncUploadBody },
+        { deviceId: number; data: PostDevicesDeviceIdSyncUploadBody },
         TContext
     >;
     fetch?: RequestInit;
 }): UseMutationOptions<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncUpload>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncUpload>>,
     TError,
-    { deviceId: number; data: PostApiDevicesDeviceIdSyncUploadBody },
+    { deviceId: number; data: PostDevicesDeviceIdSyncUploadBody },
     TContext
 > => {
-    const mutationKey = ["postApiDevicesDeviceIdSyncUpload"];
+    const mutationKey = ["postDevicesDeviceIdSyncUpload"];
     const {mutation: mutationOptions, fetch: fetchOptions} = options
         ? options.mutation &&
         "mutationKey" in options.mutation &&
@@ -2032,97 +1981,97 @@ export const getPostApiDevicesDeviceIdSyncUploadMutationOptions = <
         : {mutation: {mutationKey}, fetch: undefined};
 
     const mutationFn: MutationFunction<
-        Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncUpload>>,
-        { deviceId: number; data: PostApiDevicesDeviceIdSyncUploadBody }
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncUpload>>,
+        { deviceId: number; data: PostDevicesDeviceIdSyncUploadBody }
     > = (props) => {
         const {deviceId, data} = props ?? {};
 
-        return postApiDevicesDeviceIdSyncUpload(deviceId, data, fetchOptions);
+        return postDevicesDeviceIdSyncUpload(deviceId, data, fetchOptions);
     };
 
     return {mutationFn, ...mutationOptions};
 };
 
-export type PostApiDevicesDeviceIdSyncUploadMutationResult = NonNullable<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncUpload>>
+export type PostDevicesDeviceIdSyncUploadMutationResult = NonNullable<
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncUpload>>
 >;
-export type PostApiDevicesDeviceIdSyncUploadMutationBody =
-    PostApiDevicesDeviceIdSyncUploadBody;
-export type PostApiDevicesDeviceIdSyncUploadMutationError = unknown;
+export type PostDevicesDeviceIdSyncUploadMutationBody =
+    PostDevicesDeviceIdSyncUploadBody;
+export type PostDevicesDeviceIdSyncUploadMutationError = unknown;
 
-export const usePostApiDevicesDeviceIdSyncUpload = <
+export const usePostDevicesDeviceIdSyncUpload = <
     TError = unknown,
     TContext = unknown,
 >(
     options?: {
         mutation?: UseMutationOptions<
-            Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncUpload>>,
+            Awaited<ReturnType<typeof postDevicesDeviceIdSyncUpload>>,
             TError,
-            { deviceId: number; data: PostApiDevicesDeviceIdSyncUploadBody },
+            { deviceId: number; data: PostDevicesDeviceIdSyncUploadBody },
             TContext
         >;
         fetch?: RequestInit;
     },
     queryClient?: QueryClient,
 ): UseMutationResult<
-    Awaited<ReturnType<typeof postApiDevicesDeviceIdSyncUpload>>,
+    Awaited<ReturnType<typeof postDevicesDeviceIdSyncUpload>>,
     TError,
-    { deviceId: number; data: PostApiDevicesDeviceIdSyncUploadBody },
+    { deviceId: number; data: PostDevicesDeviceIdSyncUploadBody },
     TContext
 > => {
     return useMutation(
-        getPostApiDevicesDeviceIdSyncUploadMutationOptions(options),
+        getPostDevicesDeviceIdSyncUploadMutationOptions(options),
         queryClient,
     );
 };
-export type getApiDevicesFilterMetadataResponse200 = {
+export type getDevicesFilterMetadataResponse200 = {
     data: FilterMetadataResponse;
     status: 200;
 };
 
-export type getApiDevicesFilterMetadataResponseSuccess =
-    getApiDevicesFilterMetadataResponse200 & {
+export type getDevicesFilterMetadataResponseSuccess =
+    getDevicesFilterMetadataResponse200 & {
     headers: Headers;
 };
 
-export type getApiDevicesFilterMetadataResponse =
-    getApiDevicesFilterMetadataResponseSuccess;
+export type getDevicesFilterMetadataResponse =
+    getDevicesFilterMetadataResponseSuccess;
 
-export const getGetApiDevicesFilterMetadataUrl = () => {
-    return `/api/api/devices/filter-metadata`;
+export const getGetDevicesFilterMetadataUrl = () => {
+    return `/api/devices/filter-metadata`;
 };
 
-export const getApiDevicesFilterMetadata = async (
+export const getDevicesFilterMetadata = async (
     options?: RequestInit,
-): Promise<getApiDevicesFilterMetadataResponse> => {
-    const res = await fetch(getGetApiDevicesFilterMetadataUrl(), {
+): Promise<getDevicesFilterMetadataResponse> => {
+    const res = await fetch(getGetDevicesFilterMetadataUrl(), {
         ...options,
         method: "GET",
     });
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: getApiDevicesFilterMetadataResponse["data"] = body
+    const data: getDevicesFilterMetadataResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as getApiDevicesFilterMetadataResponse;
+    } as getDevicesFilterMetadataResponse;
 };
 
-export const getGetApiDevicesFilterMetadataQueryKey = () => {
-    return ["api", "api", "devices", "filter-metadata"] as const;
+export const getGetDevicesFilterMetadataQueryKey = () => {
+    return ["api", "devices", "filter-metadata"] as const;
 };
 
-export const getGetApiDevicesFilterMetadataQueryOptions = <
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+export const getGetDevicesFilterMetadataQueryOptions = <
+    TData = Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
     TError = unknown,
 >(options?: {
     query?: Partial<
         UseQueryOptions<
-            Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+            Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
             TError,
             TData
         >
@@ -2132,41 +2081,41 @@ export const getGetApiDevicesFilterMetadataQueryOptions = <
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
     const queryKey =
-        queryOptions?.queryKey ?? getGetApiDevicesFilterMetadataQueryKey();
+        queryOptions?.queryKey ?? getGetDevicesFilterMetadataQueryKey();
 
     const queryFn: QueryFunction<
-        Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
-    > = ({signal}) => getApiDevicesFilterMetadata({signal, ...fetchOptions});
+        Awaited<ReturnType<typeof getDevicesFilterMetadata>>
+    > = ({signal}) => getDevicesFilterMetadata({signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
-        Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+        Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
         TError,
         TData
     > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetApiDevicesFilterMetadataQueryResult = NonNullable<
-    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+export type GetDevicesFilterMetadataQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getDevicesFilterMetadata>>
 >;
-export type GetApiDevicesFilterMetadataQueryError = unknown;
+export type GetDevicesFilterMetadataQueryError = unknown;
 
-export function useGetApiDevicesFilterMetadata<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+export function useGetDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
     TError = unknown,
 >(
     options: {
         query: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 DefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                    Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+                    Awaited<ReturnType<typeof getDevicesFilterMetadata>>
                 >,
                 "initialData"
             >;
@@ -2176,23 +2125,23 @@ export function useGetApiDevicesFilterMetadata<
 ): DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesFilterMetadata<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+export function useGetDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
     TError = unknown,
 >(
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 UndefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                    Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>
+                    Awaited<ReturnType<typeof getDevicesFilterMetadata>>
                 >,
                 "initialData"
             >;
@@ -2202,14 +2151,14 @@ export function useGetApiDevicesFilterMetadata<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesFilterMetadata<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+export function useGetDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
     TError = unknown,
 >(
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
                 TError,
                 TData
             >
@@ -2221,14 +2170,14 @@ export function useGetApiDevicesFilterMetadata<
     queryKey: DataTag<QueryKey, TData, TError>;
 };
 
-export function useGetApiDevicesFilterMetadata<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+export function useGetDevicesFilterMetadata<
+    TData = Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
     TError = unknown,
 >(
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterMetadata>>,
+                Awaited<ReturnType<typeof getDevicesFilterMetadata>>,
                 TError,
                 TData
             >
@@ -2239,7 +2188,7 @@ export function useGetApiDevicesFilterMetadata<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getGetApiDevicesFilterMetadataQueryOptions(options);
+    const queryOptions = getGetDevicesFilterMetadataQueryOptions(options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -2249,33 +2198,33 @@ export function useGetApiDevicesFilterMetadata<
     return {...query, queryKey: queryOptions.queryKey};
 }
 
-export const invalidateGetApiDevicesFilterMetadata = async (
+export const invalidateGetDevicesFilterMetadata = async (
     queryClient: QueryClient,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getGetApiDevicesFilterMetadataQueryKey()},
+        {queryKey: getGetDevicesFilterMetadataQueryKey()},
         options,
     );
 
     return queryClient;
 };
 
-export type getApiDevicesFilterValuesResponse200 = {
+export type getDevicesFilterValuesResponse200 = {
     data: FilterValuesResponse;
     status: 200;
 };
 
-export type getApiDevicesFilterValuesResponseSuccess =
-    getApiDevicesFilterValuesResponse200 & {
+export type getDevicesFilterValuesResponseSuccess =
+    getDevicesFilterValuesResponse200 & {
     headers: Headers;
 };
 
-export type getApiDevicesFilterValuesResponse =
-    getApiDevicesFilterValuesResponseSuccess;
+export type getDevicesFilterValuesResponse =
+    getDevicesFilterValuesResponseSuccess;
 
-export const getGetApiDevicesFilterValuesUrl = (
-    params?: GetApiDevicesFilterValuesParams,
+export const getGetDevicesFilterValuesUrl = (
+    params?: GetDevicesFilterValuesParams,
 ) => {
     const normalizedParams = new URLSearchParams();
 
@@ -2288,36 +2237,35 @@ export const getGetApiDevicesFilterValuesUrl = (
     const stringifiedParams = normalizedParams.toString();
 
     return stringifiedParams.length > 0
-        ? `/api/api/devices/filter-values?${stringifiedParams}`
-        : `/api/api/devices/filter-values`;
+        ? `/api/devices/filter-values?${stringifiedParams}`
+        : `/api/devices/filter-values`;
 };
 
-export const getApiDevicesFilterValues = async (
-    params?: GetApiDevicesFilterValuesParams,
+export const getDevicesFilterValues = async (
+    params?: GetDevicesFilterValuesParams,
     options?: RequestInit,
-): Promise<getApiDevicesFilterValuesResponse> => {
-    const res = await fetch(getGetApiDevicesFilterValuesUrl(params), {
+): Promise<getDevicesFilterValuesResponse> => {
+    const res = await fetch(getGetDevicesFilterValuesUrl(params), {
         ...options,
         method: "GET",
     });
 
     const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
-    const data: getApiDevicesFilterValuesResponse["data"] = body
+    const data: getDevicesFilterValuesResponse["data"] = body
         ? JSON.parse(body)
         : {};
     return {
         data,
         status: res.status,
         headers: res.headers,
-    } as getApiDevicesFilterValuesResponse;
+    } as getDevicesFilterValuesResponse;
 };
 
-export const getGetApiDevicesFilterValuesQueryKey = (
-    params?: GetApiDevicesFilterValuesParams,
+export const getGetDevicesFilterValuesQueryKey = (
+    params?: GetDevicesFilterValuesParams,
 ) => {
     return [
-        "api",
         "api",
         "devices",
         "filter-values",
@@ -2325,15 +2273,15 @@ export const getGetApiDevicesFilterValuesQueryKey = (
     ] as const;
 };
 
-export const getGetApiDevicesFilterValuesQueryOptions = <
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+export const getGetDevicesFilterValuesQueryOptions = <
+    TData = Awaited<ReturnType<typeof getDevicesFilterValues>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesFilterValuesParams,
+    params?: GetDevicesFilterValuesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                Awaited<ReturnType<typeof getDevicesFilterValues>>,
                 TError,
                 TData
             >
@@ -2344,43 +2292,43 @@ export const getGetApiDevicesFilterValuesQueryOptions = <
     const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
     const queryKey =
-        queryOptions?.queryKey ?? getGetApiDevicesFilterValuesQueryKey(params);
+        queryOptions?.queryKey ?? getGetDevicesFilterValuesQueryKey(params);
 
     const queryFn: QueryFunction<
-        Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+        Awaited<ReturnType<typeof getDevicesFilterValues>>
     > = ({signal}) =>
-        getApiDevicesFilterValues(params, {signal, ...fetchOptions});
+        getDevicesFilterValues(params, {signal, ...fetchOptions});
 
     return {queryKey, queryFn, ...queryOptions} as UseQueryOptions<
-        Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+        Awaited<ReturnType<typeof getDevicesFilterValues>>,
         TError,
         TData
     > & { queryKey: DataTag<QueryKey, TData, TError> };
 };
 
-export type GetApiDevicesFilterValuesQueryResult = NonNullable<
-    Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+export type GetDevicesFilterValuesQueryResult = NonNullable<
+    Awaited<ReturnType<typeof getDevicesFilterValues>>
 >;
-export type GetApiDevicesFilterValuesQueryError = unknown;
+export type GetDevicesFilterValuesQueryError = unknown;
 
-export function useGetApiDevicesFilterValues<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+export function useGetDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getDevicesFilterValues>>,
     TError = unknown,
 >(
-    params: undefined | GetApiDevicesFilterValuesParams,
+    params: undefined | GetDevicesFilterValuesParams,
     options: {
         query: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                Awaited<ReturnType<typeof getDevicesFilterValues>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 DefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                    Awaited<ReturnType<typeof getDevicesFilterValues>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+                    Awaited<ReturnType<typeof getDevicesFilterValues>>
                 >,
                 "initialData"
             >;
@@ -2390,24 +2338,24 @@ export function useGetApiDevicesFilterValues<
 ): DefinedUseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesFilterValues<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+export function useGetDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getDevicesFilterValues>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesFilterValuesParams,
+    params?: GetDevicesFilterValuesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                Awaited<ReturnType<typeof getDevicesFilterValues>>,
                 TError,
                 TData
             >
         > &
             Pick<
                 UndefinedInitialDataOptions<
-                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                    Awaited<ReturnType<typeof getDevicesFilterValues>>,
                     TError,
-                    Awaited<ReturnType<typeof getApiDevicesFilterValues>>
+                    Awaited<ReturnType<typeof getDevicesFilterValues>>
                 >,
                 "initialData"
             >;
@@ -2417,15 +2365,15 @@ export function useGetApiDevicesFilterValues<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 };
-export function useGetApiDevicesFilterValues<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+export function useGetDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getDevicesFilterValues>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesFilterValuesParams,
+    params?: GetDevicesFilterValuesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                Awaited<ReturnType<typeof getDevicesFilterValues>>,
                 TError,
                 TData
             >
@@ -2437,15 +2385,15 @@ export function useGetApiDevicesFilterValues<
     queryKey: DataTag<QueryKey, TData, TError>;
 };
 
-export function useGetApiDevicesFilterValues<
-    TData = Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+export function useGetDevicesFilterValues<
+    TData = Awaited<ReturnType<typeof getDevicesFilterValues>>,
     TError = unknown,
 >(
-    params?: GetApiDevicesFilterValuesParams,
+    params?: GetDevicesFilterValuesParams,
     options?: {
         query?: Partial<
             UseQueryOptions<
-                Awaited<ReturnType<typeof getApiDevicesFilterValues>>,
+                Awaited<ReturnType<typeof getDevicesFilterValues>>,
                 TError,
                 TData
             >
@@ -2456,10 +2404,7 @@ export function useGetApiDevicesFilterValues<
 ): UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
 } {
-    const queryOptions = getGetApiDevicesFilterValuesQueryOptions(
-        params,
-        options,
-    );
+    const queryOptions = getGetDevicesFilterValuesQueryOptions(params, options);
 
     const query = useQuery(queryOptions, queryClient) as UseQueryResult<
         TData,
@@ -2469,20 +2414,20 @@ export function useGetApiDevicesFilterValues<
     return {...query, queryKey: queryOptions.queryKey};
 }
 
-export const invalidateGetApiDevicesFilterValues = async (
+export const invalidateGetDevicesFilterValues = async (
     queryClient: QueryClient,
-    params?: GetApiDevicesFilterValuesParams,
+    params?: GetDevicesFilterValuesParams,
     options?: InvalidateOptions,
 ): Promise<QueryClient> => {
     await queryClient.invalidateQueries(
-        {queryKey: getGetApiDevicesFilterValuesQueryKey(params)},
+        {queryKey: getGetDevicesFilterValuesQueryKey(params)},
         options,
     );
 
     return queryClient;
 };
 
-export const getGetApiDevicesResponseMock = (
+export const getGetDevicesResponseMock = (
     overrideResponse: Partial<ListDevicesResponse> = {},
 ): ListDevicesResponse => ({
     devices: Array.from(
@@ -2517,7 +2462,7 @@ export const getGetApiDevicesResponseMock = (
     ...overrideResponse,
 });
 
-export const getPostApiDevicesResponseMock = (
+export const getPostDevicesResponseMock = (
     overrideResponse: Partial<CreateDeviceResponse> = {},
 ): CreateDeviceResponse => ({
     device: {
@@ -2548,7 +2493,7 @@ export const getPostApiDevicesResponseMock = (
     ...overrideResponse,
 });
 
-export const getPutApiDevicesDeviceIdResponseMock = (
+export const getPutDevicesDeviceIdResponseMock = (
     overrideResponse: Partial<UpdateDeviceResponse> = {},
 ): UpdateDeviceResponse => ({
     device: {
@@ -2579,7 +2524,7 @@ export const getPutApiDevicesDeviceIdResponseMock = (
     ...overrideResponse,
 });
 
-export const getGetApiDevicesDeviceIdSessionsResponseMock = (
+export const getGetDevicesDeviceIdSessionsResponseMock = (
     overrideResponse: Partial<ListSyncSessionsResponse> = {},
 ): ListSyncSessionsResponse => ({
     sessions: Array.from(
@@ -2607,7 +2552,7 @@ export const getGetApiDevicesDeviceIdSessionsResponseMock = (
     ...overrideResponse,
 });
 
-export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
+export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
     overrideResponse: Partial<ListSyncRecordsResponse> = {},
 ): ListSyncRecordsResponse => ({
     records: Array.from(
@@ -2646,21 +2591,21 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
     ...overrideResponse,
 });
 
-export const getPostApiDevicesDeviceIdSyncStartResponseMock = (
+export const getPostDevicesDeviceIdSyncStartResponseMock = (
     overrideResponse: Partial<SyncStartResponse> = {},
 ): SyncStartResponse => ({
     sessionId: faker.number.int({min: undefined, max: undefined}),
     ...overrideResponse,
 });
 
-export const getPostApiDevicesDeviceIdSyncSessionIdRecordsResponseMock = (
+export const getPostDevicesDeviceIdSyncSessionIdRecordsResponseMock = (
     overrideResponse: Partial<SyncRecordsResponse> = {},
 ): SyncRecordsResponse => ({
     success: faker.datatype.boolean(),
     ...overrideResponse,
 });
 
-export const getPostApiDevicesDeviceIdSyncSessionIdCompleteResponseMock = (
+export const getPostDevicesDeviceIdSyncSessionIdCompleteResponseMock = (
     overrideResponse: Partial<SyncCompleteResponse> = {},
 ): SyncCompleteResponse => ({
     createdCount: faker.number.int({min: undefined, max: undefined}),
@@ -2672,7 +2617,7 @@ export const getPostApiDevicesDeviceIdSyncSessionIdCompleteResponseMock = (
     ...overrideResponse,
 });
 
-export const getGetApiDevicesDeviceIdSyncPendingActionsResponseMock = (
+export const getGetDevicesDeviceIdSyncPendingActionsResponseMock = (
     overrideResponse: Partial<GetPendingActionsResponse> = {},
 ): GetPendingActionsResponse => ({
     actions: Array.from(
@@ -2686,14 +2631,14 @@ export const getGetApiDevicesDeviceIdSyncPendingActionsResponseMock = (
     ...overrideResponse,
 });
 
-export const getPostApiDevicesDeviceIdSyncAcknowledgeResponseMock = (
+export const getPostDevicesDeviceIdSyncAcknowledgeResponseMock = (
     overrideResponse: Partial<AcknowledgeActionResponse> = {},
 ): AcknowledgeActionResponse => ({
     success: faker.datatype.boolean(),
     ...overrideResponse,
 });
 
-export const getPostApiDevicesDeviceIdSyncCheckResponseMock = (
+export const getPostDevicesDeviceIdSyncCheckResponseMock = (
     overrideResponse: Partial<SyncCheckResponse> = {},
 ): SyncCheckResponse => ({
     toCreate: Array.from(
@@ -2718,7 +2663,7 @@ export const getPostApiDevicesDeviceIdSyncCheckResponseMock = (
     ...overrideResponse,
 });
 
-export const getPostApiDevicesDeviceIdSyncUploadResponseMock = (
+export const getPostDevicesDeviceIdSyncUploadResponseMock = (
     overrideResponse: Partial<SyncUploadResponse> = {},
 ): SyncUploadResponse => ({
     success: faker.datatype.boolean(),
@@ -2732,7 +2677,7 @@ export const getPostApiDevicesDeviceIdSyncUploadResponseMock = (
     ...overrideResponse,
 });
 
-export const getGetApiDevicesFilterMetadataResponseMock = (
+export const getGetDevicesFilterMetadataResponseMock = (
     overrideResponse: Partial<FilterMetadataResponse> = {},
 ): FilterMetadataResponse => ({
     fields: Array.from(
@@ -2795,7 +2740,7 @@ export const getGetApiDevicesFilterMetadataResponseMock = (
     ...overrideResponse,
 });
 
-export const getGetApiDevicesFilterValuesResponseMock = (
+export const getGetDevicesFilterValuesResponseMock = (
     overrideResponse: Partial<FilterValuesResponse> = {},
 ): FilterValuesResponse => ({
     values: Array.from(
@@ -2805,7 +2750,7 @@ export const getGetApiDevicesFilterValuesResponseMock = (
     ...overrideResponse,
 });
 
-export const getGetApiDevicesMockHandler = (
+export const getGetDevicesMockHandler = (
     overrideResponse?:
         | ListDevicesResponse
         | ((
@@ -2814,14 +2759,14 @@ export const getGetApiDevicesMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/api/devices",
+        "*/devices",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getGetApiDevicesResponseMock(),
+                    : getGetDevicesResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2829,7 +2774,7 @@ export const getGetApiDevicesMockHandler = (
     );
 };
 
-export const getPostApiDevicesMockHandler = (
+export const getPostDevicesMockHandler = (
     overrideResponse?:
         | CreateDeviceResponse
         | ((
@@ -2838,14 +2783,14 @@ export const getPostApiDevicesMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices",
+        "*/devices",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesResponseMock(),
+                    : getPostDevicesResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2853,7 +2798,7 @@ export const getPostApiDevicesMockHandler = (
     );
 };
 
-export const getPutApiDevicesDeviceIdMockHandler = (
+export const getPutDevicesDeviceIdMockHandler = (
     overrideResponse?:
         | UpdateDeviceResponse
         | ((
@@ -2862,14 +2807,14 @@ export const getPutApiDevicesDeviceIdMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.put(
-        "*/api/devices/:deviceId",
+        "*/devices/:deviceId",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPutApiDevicesDeviceIdResponseMock(),
+                    : getPutDevicesDeviceIdResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2877,7 +2822,7 @@ export const getPutApiDevicesDeviceIdMockHandler = (
     );
 };
 
-export const getDeleteApiDevicesDeviceIdMockHandler = (
+export const getDeleteDevicesDeviceIdMockHandler = (
     overrideResponse?:
         | void
         | ((
@@ -2886,7 +2831,7 @@ export const getDeleteApiDevicesDeviceIdMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.delete(
-        "*/api/devices/:deviceId",
+        "*/devices/:deviceId",
         async (info) => {
             if (typeof overrideResponse === "function") {
                 await overrideResponse(info);
@@ -2897,7 +2842,7 @@ export const getDeleteApiDevicesDeviceIdMockHandler = (
     );
 };
 
-export const getGetApiDevicesDeviceIdSessionsMockHandler = (
+export const getGetDevicesDeviceIdSessionsMockHandler = (
     overrideResponse?:
         | ListSyncSessionsResponse
         | ((
@@ -2906,14 +2851,14 @@ export const getGetApiDevicesDeviceIdSessionsMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/api/devices/:deviceId/sessions",
+        "*/devices/:deviceId/sessions",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getGetApiDevicesDeviceIdSessionsResponseMock(),
+                    : getGetDevicesDeviceIdSessionsResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2921,7 +2866,7 @@ export const getGetApiDevicesDeviceIdSessionsMockHandler = (
     );
 };
 
-export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsMockHandler = (
+export const getGetDevicesDeviceIdSessionsSessionIdRecordsMockHandler = (
     overrideResponse?:
         | ListSyncRecordsResponse
         | ((
@@ -2930,14 +2875,14 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/api/devices/:deviceId/sessions/:sessionId/records",
+        "*/devices/:deviceId/sessions/:sessionId/records",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getGetApiDevicesDeviceIdSessionsSessionIdRecordsResponseMock(),
+                    : getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2945,7 +2890,7 @@ export const getGetApiDevicesDeviceIdSessionsSessionIdRecordsMockHandler = (
     );
 };
 
-export const getPostApiDevicesDeviceIdSyncStartMockHandler = (
+export const getPostDevicesDeviceIdSyncStartMockHandler = (
     overrideResponse?:
         | SyncStartResponse
         | ((
@@ -2954,14 +2899,14 @@ export const getPostApiDevicesDeviceIdSyncStartMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices/:deviceId/sync/start",
+        "*/devices/:deviceId/sync/start",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesDeviceIdSyncStartResponseMock(),
+                    : getPostDevicesDeviceIdSyncStartResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2969,7 +2914,7 @@ export const getPostApiDevicesDeviceIdSyncStartMockHandler = (
     );
 };
 
-export const getPostApiDevicesDeviceIdSyncSessionIdRecordsMockHandler = (
+export const getPostDevicesDeviceIdSyncSessionIdRecordsMockHandler = (
     overrideResponse?:
         | SyncRecordsResponse
         | ((
@@ -2978,14 +2923,14 @@ export const getPostApiDevicesDeviceIdSyncSessionIdRecordsMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices/:deviceId/sync/:sessionId/records",
+        "*/devices/:deviceId/sync/:sessionId/records",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesDeviceIdSyncSessionIdRecordsResponseMock(),
+                    : getPostDevicesDeviceIdSyncSessionIdRecordsResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -2993,7 +2938,7 @@ export const getPostApiDevicesDeviceIdSyncSessionIdRecordsMockHandler = (
     );
 };
 
-export const getPostApiDevicesDeviceIdSyncSessionIdCompleteMockHandler = (
+export const getPostDevicesDeviceIdSyncSessionIdCompleteMockHandler = (
     overrideResponse?:
         | SyncCompleteResponse
         | ((
@@ -3002,14 +2947,14 @@ export const getPostApiDevicesDeviceIdSyncSessionIdCompleteMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices/:deviceId/sync/:sessionId/complete",
+        "*/devices/:deviceId/sync/:sessionId/complete",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesDeviceIdSyncSessionIdCompleteResponseMock(),
+                    : getPostDevicesDeviceIdSyncSessionIdCompleteResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3017,7 +2962,7 @@ export const getPostApiDevicesDeviceIdSyncSessionIdCompleteMockHandler = (
     );
 };
 
-export const getGetApiDevicesDeviceIdSyncPendingActionsMockHandler = (
+export const getGetDevicesDeviceIdSyncPendingActionsMockHandler = (
     overrideResponse?:
         | GetPendingActionsResponse
         | ((
@@ -3026,14 +2971,14 @@ export const getGetApiDevicesDeviceIdSyncPendingActionsMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/api/devices/:deviceId/sync/pending-actions",
+        "*/devices/:deviceId/sync/pending-actions",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getGetApiDevicesDeviceIdSyncPendingActionsResponseMock(),
+                    : getGetDevicesDeviceIdSyncPendingActionsResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3041,7 +2986,7 @@ export const getGetApiDevicesDeviceIdSyncPendingActionsMockHandler = (
     );
 };
 
-export const getPostApiDevicesDeviceIdSyncAcknowledgeMockHandler = (
+export const getPostDevicesDeviceIdSyncAcknowledgeMockHandler = (
     overrideResponse?:
         | AcknowledgeActionResponse
         | ((
@@ -3050,14 +2995,14 @@ export const getPostApiDevicesDeviceIdSyncAcknowledgeMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices/:deviceId/sync/acknowledge",
+        "*/devices/:deviceId/sync/acknowledge",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesDeviceIdSyncAcknowledgeResponseMock(),
+                    : getPostDevicesDeviceIdSyncAcknowledgeResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3065,7 +3010,7 @@ export const getPostApiDevicesDeviceIdSyncAcknowledgeMockHandler = (
     );
 };
 
-export const getPostApiDevicesDeviceIdSyncCheckMockHandler = (
+export const getPostDevicesDeviceIdSyncCheckMockHandler = (
     overrideResponse?:
         | SyncCheckResponse
         | ((
@@ -3074,14 +3019,14 @@ export const getPostApiDevicesDeviceIdSyncCheckMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices/:deviceId/sync/check",
+        "*/devices/:deviceId/sync/check",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesDeviceIdSyncCheckResponseMock(),
+                    : getPostDevicesDeviceIdSyncCheckResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3089,7 +3034,7 @@ export const getPostApiDevicesDeviceIdSyncCheckMockHandler = (
     );
 };
 
-export const getPostApiDevicesDeviceIdSyncUploadMockHandler = (
+export const getPostDevicesDeviceIdSyncUploadMockHandler = (
     overrideResponse?:
         | SyncUploadResponse
         | ((
@@ -3098,14 +3043,14 @@ export const getPostApiDevicesDeviceIdSyncUploadMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.post(
-        "*/api/devices/:deviceId/sync/upload",
+        "*/devices/:deviceId/sync/upload",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getPostApiDevicesDeviceIdSyncUploadResponseMock(),
+                    : getPostDevicesDeviceIdSyncUploadResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3113,7 +3058,7 @@ export const getPostApiDevicesDeviceIdSyncUploadMockHandler = (
     );
 };
 
-export const getGetApiDevicesFilterMetadataMockHandler = (
+export const getGetDevicesFilterMetadataMockHandler = (
     overrideResponse?:
         | FilterMetadataResponse
         | ((
@@ -3122,14 +3067,14 @@ export const getGetApiDevicesFilterMetadataMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/api/devices/filter-metadata",
+        "*/devices/filter-metadata",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getGetApiDevicesFilterMetadataResponseMock(),
+                    : getGetDevicesFilterMetadataResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3137,7 +3082,7 @@ export const getGetApiDevicesFilterMetadataMockHandler = (
     );
 };
 
-export const getGetApiDevicesFilterValuesMockHandler = (
+export const getGetDevicesFilterValuesMockHandler = (
     overrideResponse?:
         | FilterValuesResponse
         | ((
@@ -3146,14 +3091,14 @@ export const getGetApiDevicesFilterValuesMockHandler = (
     options?: RequestHandlerOptions,
 ) => {
     return http.get(
-        "*/api/devices/filter-values",
+        "*/devices/filter-values",
         async (info) => {
             return new HttpResponse(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
-                    : getGetApiDevicesFilterValuesResponseMock(),
+                    : getGetDevicesFilterValuesResponseMock(),
                 {status: 200, headers: {"Content-Type": "text/plain"}},
             );
         },
@@ -3161,19 +3106,19 @@ export const getGetApiDevicesFilterValuesMockHandler = (
     );
 };
 export const getDevicesMock = () => [
-    getGetApiDevicesMockHandler(),
-    getPostApiDevicesMockHandler(),
-    getPutApiDevicesDeviceIdMockHandler(),
-    getDeleteApiDevicesDeviceIdMockHandler(),
-    getGetApiDevicesDeviceIdSessionsMockHandler(),
-    getGetApiDevicesDeviceIdSessionsSessionIdRecordsMockHandler(),
-    getPostApiDevicesDeviceIdSyncStartMockHandler(),
-    getPostApiDevicesDeviceIdSyncSessionIdRecordsMockHandler(),
-    getPostApiDevicesDeviceIdSyncSessionIdCompleteMockHandler(),
-    getGetApiDevicesDeviceIdSyncPendingActionsMockHandler(),
-    getPostApiDevicesDeviceIdSyncAcknowledgeMockHandler(),
-    getPostApiDevicesDeviceIdSyncCheckMockHandler(),
-    getPostApiDevicesDeviceIdSyncUploadMockHandler(),
-    getGetApiDevicesFilterMetadataMockHandler(),
-    getGetApiDevicesFilterValuesMockHandler(),
+    getGetDevicesMockHandler(),
+    getPostDevicesMockHandler(),
+    getPutDevicesDeviceIdMockHandler(),
+    getDeleteDevicesDeviceIdMockHandler(),
+    getGetDevicesDeviceIdSessionsMockHandler(),
+    getGetDevicesDeviceIdSessionsSessionIdRecordsMockHandler(),
+    getPostDevicesDeviceIdSyncStartMockHandler(),
+    getPostDevicesDeviceIdSyncSessionIdRecordsMockHandler(),
+    getPostDevicesDeviceIdSyncSessionIdCompleteMockHandler(),
+    getGetDevicesDeviceIdSyncPendingActionsMockHandler(),
+    getPostDevicesDeviceIdSyncAcknowledgeMockHandler(),
+    getPostDevicesDeviceIdSyncCheckMockHandler(),
+    getPostDevicesDeviceIdSyncUploadMockHandler(),
+    getGetDevicesFilterMetadataMockHandler(),
+    getGetDevicesFilterValuesMockHandler(),
 ];

@@ -49,9 +49,11 @@ public class SyncService(
         var files = await fileScanner.ScanAsync(repositoryPath, options.Value.Repository, ct);
         logger.LogInformation("Found {Count} music files", files.Count);
 
-        var startResponse = await client.StartSyncAsync(deviceId.Value, new SyncStartRequest { DryRun = dryRun }, ct);
+        var startResponse = await client.StartSyncAsync(deviceId.Value,
+            new SyncStartRequest { DryRun = dryRun, RepositoryPath = repositoryPath }, ct);
         var sessionId = startResponse.SessionId;
-        logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun})", sessionId, dryRun);
+        logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun}, RepositoryPath: {RepositoryPath})",
+            sessionId, dryRun, repositoryPath);
 
         var totalFiles = files.Count;
         var processedFiles = 0;

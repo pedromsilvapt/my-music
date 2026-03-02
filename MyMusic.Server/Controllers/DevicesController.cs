@@ -15,7 +15,7 @@ using MyMusic.Server.DTO.Sync;
 namespace MyMusic.Server.Controllers;
 
 [ApiController]
-[Route("api/devices")]
+[Route("devices")]
 public class DevicesController(
     ILogger<DevicesController> logger,
     ICurrentUser currentUser,
@@ -25,22 +25,14 @@ public class DevicesController(
     ILogger<MusicImportJob> importJobLogger,
     IFileSystem fileSystem) : ControllerBase
 {
-    private readonly IConfiguration _configuration = configuration;
-    private readonly MusicDbContext _context = context;
-    private readonly ICurrentUser _currentUser = currentUser;
-    private readonly IFileSystem _fileSystem = fileSystem;
-    private readonly ILogger<MusicImportJob> _importJobLogger = importJobLogger;
-    private readonly ILogger<DevicesController> _logger = logger;
-    private readonly IMusicService _musicService = musicService;
-
     [HttpGet]
     public async Task<ListDevicesResponse> List(
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
         [FromQuery] string? filter = null)
     {
-        var query = _context.Devices
-            .Where(d => d.OwnerId == _currentUser.Id);
+        var query = context.Devices
+            .Where(d => d.OwnerId == currentUser.Id);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -56,7 +48,7 @@ public class DevicesController(
 
         var devices = await query.ToListAsync(cancellationToken);
 
-        var songCounts = await _context.SongDevices
+        var songCounts = await context.SongDevices
             .GroupBy(sd => sd.DeviceId)
             .Select(g => new { DeviceId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.DeviceId, x => x.Count, cancellationToken);
@@ -71,7 +63,7 @@ public class DevicesController(
     public async Task<CreateDeviceResponse> Create([FromBody] CreateDeviceRequest request,
         CancellationToken cancellationToken)
     {
-        var user = await _context.Users.FindAsync([_currentUser.Id], cancellationToken)
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken)
                    ?? throw new Exception("User not found");
 
         var device = new Device
@@ -80,15 +72,15 @@ public class DevicesController(
             Icon = request.Icon,
             Color = request.Color,
             NamingTemplate = request.NamingTemplate,
-            OwnerId = _currentUser.Id,
+            OwnerId = currentUser.Id,
             Owner = user,
         };
 
-        _context.Devices.Add(device);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Devices.Add(device);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Created device {DeviceName} with ID {DeviceId} for user {UserId}",
-            device.Name, device.Id, _currentUser.Id);
+        logger.LogInformation("Created device {DeviceName} with ID {DeviceId} for user {UserId}",
+            device.Name, device.Id, currentUser.Id);
 
         return new CreateDeviceResponse
         {
@@ -100,8 +92,8 @@ public class DevicesController(
     public async Task<UpdateDeviceResponse> Update(long deviceId, [FromBody] UpdateDeviceRequest request,
         CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -113,9 +105,9 @@ public class DevicesController(
         device.Color = request.Color;
         device.NamingTemplate = request.NamingTemplate;
 
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Updated device {DeviceId} for user {UserId}", deviceId, _currentUser.Id);
+        logger.LogInformation("Updated device {DeviceId} for user {UserId}", deviceId, currentUser.Id);
 
         return new UpdateDeviceResponse
         {
@@ -133,8 +125,8 @@ public class DevicesController(
     [HttpDelete("{deviceId:long}")]
     public async Task<IActionResult> Delete(long deviceId, CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -142,28 +134,28 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var songDevices = await _context.SongDevices
+        var songDevices = await context.SongDevices
             .Where(sd => sd.DeviceId == deviceId)
             .ToListAsync(cancellationToken);
-        _context.SongDevices.RemoveRange(songDevices);
+        context.SongDevices.RemoveRange(songDevices);
 
-        var sessions = await _context.DeviceSyncSessions
+        var sessions = await context.DeviceSyncSessions
             .Where(s => s.DeviceId == deviceId)
             .ToListAsync(cancellationToken);
         foreach (var session in sessions)
         {
-            var records = await _context.DeviceSyncSessionRecords
+            var records = await context.DeviceSyncSessionRecords
                 .Where(r => r.SessionId == session.Id)
                 .ToListAsync(cancellationToken);
-            _context.DeviceSyncSessionRecords.RemoveRange(records);
+            context.DeviceSyncSessionRecords.RemoveRange(records);
         }
 
-        _context.DeviceSyncSessions.RemoveRange(sessions);
+        context.DeviceSyncSessions.RemoveRange(sessions);
 
-        _context.Devices.Remove(device);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.Devices.Remove(device);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Deleted device {DeviceId} for user {UserId}", deviceId, _currentUser.Id);
+        logger.LogInformation("Deleted device {DeviceId} for user {UserId}", deviceId, currentUser.Id);
 
         return NoContent();
     }
@@ -174,8 +166,8 @@ public class DevicesController(
         [FromQuery] int count = 5,
         CancellationToken cancellationToken = default)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -183,7 +175,7 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var sessions = await _context.DeviceSyncSessions
+        var sessions = await context.DeviceSyncSessions
             .Include(s => s.Records)
             .Where(s => s.DeviceId == deviceId)
             .OrderByDescending(s => s.StartedAt)
@@ -204,8 +196,8 @@ public class DevicesController(
         [FromQuery] string? source = null,
         CancellationToken cancellationToken = default)
     {
-        var session = await _context.DeviceSyncSessions
-            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == _currentUser.Id)
+        var session = await context.DeviceSyncSessions
+            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (session == null)
@@ -213,7 +205,7 @@ public class DevicesController(
             throw new Exception($"Sync session not found with id {sessionId}");
         }
 
-        var query = _context.DeviceSyncSessions
+        var query = context.DeviceSyncSessions
             .Where(s => s.Id == sessionId)
             .SelectMany(s => s.Records);
 
@@ -245,8 +237,8 @@ public class DevicesController(
     public async Task<SyncStartResponse> StartSync(long deviceId, [FromBody] SyncStartRequest? request,
         CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -260,13 +252,15 @@ public class DevicesController(
             StartedAt = DateTime.UtcNow,
             Status = SyncSessionStatus.InProgress,
             IsDryRun = request?.DryRun ?? false,
+            RepositoryPath = request?.RepositoryPath,
         };
 
-        _context.DeviceSyncSessions.Add(session);
-        await _context.SaveChangesAsync(cancellationToken);
+        context.DeviceSyncSessions.Add(session);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun})",
-            session.Id, deviceId, session.IsDryRun);
+        logger.LogInformation(
+            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, RepositoryPath: {RepositoryPath})",
+            session.Id, deviceId, session.IsDryRun, session.RepositoryPath);
 
         return new SyncStartResponse { SessionId = session.Id };
     }
@@ -275,8 +269,8 @@ public class DevicesController(
     public async Task<SyncRecordsResponse> RecordChunk(long deviceId, long sessionId,
         [FromBody] SyncRecordsRequest request, CancellationToken cancellationToken)
     {
-        var session = await _context.DeviceSyncSessions
-            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == _currentUser.Id)
+        var session = await context.DeviceSyncSessions
+            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (session == null)
@@ -289,22 +283,50 @@ public class DevicesController(
             throw new Exception($"Sync session {sessionId} is not in progress (status: {session.Status})");
         }
 
-        var records = request.Records.Select(r => new DeviceSyncSessionRecord
+        var newRecordsCount = 0;
+        var updatedRecordsCount = 0;
+
+        foreach (var r in request.Records)
         {
-            SessionId = sessionId,
-            FilePath = r.FilePath,
-            Action = Enum.Parse<SyncRecordAction>(r.Action),
-            SongId = r.SongId,
-            ErrorMessage = r.ErrorMessage,
-            Reason = r.Reason,
-            Source = string.IsNullOrEmpty(r.Source) ? SyncRecordSource.Device : Enum.Parse<SyncRecordSource>(r.Source),
-            ProcessedAt = DateTime.UtcNow,
-        }).ToList();
+            var existingRecord = await context.DeviceSyncSessionRecords
+                .FirstOrDefaultAsync(rec => rec.SessionId == sessionId && rec.FilePath == r.FilePath,
+                    cancellationToken);
 
-        _context.DeviceSyncSessionRecords.AddRange(records);
-        await _context.SaveChangesAsync(cancellationToken);
+            if (existingRecord != null)
+            {
+                existingRecord.Action = Enum.Parse<SyncRecordAction>(r.Action);
+                existingRecord.SongId = r.SongId;
+                existingRecord.ErrorMessage = r.ErrorMessage;
+                existingRecord.Reason = r.Reason;
+                existingRecord.Source = string.IsNullOrEmpty(r.Source)
+                    ? SyncRecordSource.Device
+                    : Enum.Parse<SyncRecordSource>(r.Source);
+                existingRecord.ProcessedAt = DateTime.UtcNow;
+                updatedRecordsCount++;
+            }
+            else
+            {
+                context.DeviceSyncSessionRecords.Add(new DeviceSyncSessionRecord
+                {
+                    SessionId = sessionId,
+                    FilePath = r.FilePath,
+                    Action = Enum.Parse<SyncRecordAction>(r.Action),
+                    SongId = r.SongId,
+                    ErrorMessage = r.ErrorMessage,
+                    Reason = r.Reason,
+                    Source = string.IsNullOrEmpty(r.Source)
+                        ? SyncRecordSource.Device
+                        : Enum.Parse<SyncRecordSource>(r.Source),
+                    ProcessedAt = DateTime.UtcNow,
+                });
+                newRecordsCount++;
+            }
+        }
 
-        _logger.LogInformation("Recorded {Count} records for session {SessionId}", records.Count, sessionId);
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Recorded {NewCount} new and {UpdatedCount} updated records for session {SessionId}",
+            newRecordsCount, updatedRecordsCount, sessionId);
 
         return new SyncRecordsResponse { Success = true };
     }
@@ -313,8 +335,8 @@ public class DevicesController(
     public async Task<SyncCompleteResponse> CompleteSync(long deviceId, long sessionId,
         CancellationToken cancellationToken)
     {
-        var session = await _context.DeviceSyncSessions
-            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == _currentUser.Id)
+        var session = await context.DeviceSyncSessions
+            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (session == null)
@@ -327,7 +349,7 @@ public class DevicesController(
             throw new Exception($"Sync session {sessionId} is not in progress (status: {session.Status})");
         }
 
-        var records = await _context.DeviceSyncSessionRecords
+        var records = await context.DeviceSyncSessionRecords
             .Where(r => r.SessionId == sessionId)
             .ToListAsync(cancellationToken);
 
@@ -346,7 +368,7 @@ public class DevicesController(
             .Select(r => r.FilePath)
             .ToHashSet();
 
-        var orphanedSongDevices = await _context.SongDevices
+        var orphanedSongDevices = await context.SongDevices
             .Where(sd => sd.DeviceId == deviceId
                          && sd.SyncAction == null
                          && !validFilePaths.Contains(sd.DevicePath))
@@ -356,14 +378,14 @@ public class DevicesController(
 
         if (!session.IsDryRun)
         {
-            _context.SongDevices.RemoveRange(orphanedSongDevices);
+            context.SongDevices.RemoveRange(orphanedSongDevices);
         }
 
         session.CompletedAt = DateTime.UtcNow;
         session.Status = SyncSessionStatus.Completed;
-        await _context.SaveChangesAsync(cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Completed sync session {SessionId}: Created={Created}, Updated={Updated}, Skipped={Skipped}, Downloaded={Downloaded}, Removed={Removed}, Error={Error}",
             sessionId, createdCount, updatedCount, skippedCount, downloadedCount,
             removedCount + removedFromSessionCount, errorCount);
@@ -382,8 +404,8 @@ public class DevicesController(
     [HttpGet("{deviceId:long}/sync/pending-actions")]
     public async Task<GetPendingActionsResponse> GetPendingActions(long deviceId, CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -391,7 +413,7 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var pendingActions = await _context.SongDevices
+        var pendingActions = await context.SongDevices
             .Include(sd => sd.Song)
             .Where(sd => sd.DeviceId == deviceId && sd.SyncAction != null && sd.SyncAction != SongSyncAction.Upload)
             .Select(sd => new PendingActionItem
@@ -402,7 +424,7 @@ public class DevicesController(
             })
             .ToListAsync(cancellationToken);
 
-        _logger.LogInformation("Found {Count} pending actions for device {DeviceId}", pendingActions.Count, deviceId);
+        logger.LogInformation("Found {Count} pending actions for device {DeviceId}", pendingActions.Count, deviceId);
 
         return new GetPendingActionsResponse
         {
@@ -414,8 +436,8 @@ public class DevicesController(
     public async Task<AcknowledgeActionResponse> AcknowledgeAction(long deviceId,
         [FromBody] AcknowledgeActionRequest request, CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -423,7 +445,7 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var songDevice = await _context.SongDevices
+        var songDevice = await context.SongDevices
             .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == request.SongId, cancellationToken);
 
         if (songDevice == null)
@@ -431,10 +453,18 @@ public class DevicesController(
             throw new Exception($"SongDevice not found for device {deviceId} and song {request.SongId}");
         }
 
-        songDevice.SyncAction = null;
-        await _context.SaveChangesAsync(cancellationToken);
+        if (songDevice.SyncAction == SongSyncAction.Remove)
+        {
+            context.SongDevices.Remove(songDevice);
+        }
+        else
+        {
+            songDevice.SyncAction = null;
+        }
 
-        _logger.LogInformation("Acknowledged action for song {SongId} on device {DeviceId}", request.SongId, deviceId);
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Acknowledged action for song {SongId} on device {DeviceId}", request.SongId, deviceId);
 
         return new AcknowledgeActionResponse { Success = true };
     }
@@ -443,8 +473,8 @@ public class DevicesController(
     public async Task<SyncCheckResponse> CheckSync(long deviceId, [FromBody] SyncCheckRequest request,
         CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -452,7 +482,7 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var existingSongDevices = await _context.SongDevices
+        var existingSongDevices = await context.SongDevices
             .Where(sd => sd.DeviceId == deviceId)
             .ToListAsync(cancellationToken);
 
@@ -496,7 +526,7 @@ public class DevicesController(
             }
         }
 
-        _logger.LogInformation(
+        logger.LogInformation(
             "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update",
             deviceId, toCreate.Count, toUpdate.Count);
 
@@ -516,8 +546,8 @@ public class DevicesController(
         [FromForm] string createdAt,
         CancellationToken cancellationToken)
     {
-        var device = await _context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == _currentUser.Id)
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (device == null)
@@ -525,16 +555,16 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var repositoryPath = _configuration["MyMusic:MusicRepositoryPath"]
+        var repositoryPath = configuration["MyMusic:MusicRepositoryPath"]
                              ?? throw new Exception("MusicRepositoryPath not configured");
 
-        var tempPath = _fileSystem.Path.Combine(_fileSystem.Path.GetTempPath(), $"mymusic_import_{Guid.NewGuid()}");
-        _fileSystem.Directory.CreateDirectory(tempPath);
+        var tempPath = fileSystem.Path.Combine(fileSystem.Path.GetTempPath(), $"mymusic_import_{Guid.NewGuid()}");
+        fileSystem.Directory.CreateDirectory(tempPath);
 
         try
         {
-            var tempFilePath = _fileSystem.Path.Combine(tempPath, _fileSystem.Path.GetFileName(path));
-            await using (var stream = _fileSystem.FileStream.New(tempFilePath, FileMode.Create))
+            var tempFilePath = fileSystem.Path.Combine(tempPath, fileSystem.Path.GetFileName(path));
+            await using (var stream = fileSystem.FileStream.New(tempFilePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream, cancellationToken);
             }
@@ -544,12 +574,12 @@ public class DevicesController(
 
             var songImportMetadata = new SongImportMetadata(tempFilePath, createdAtDateTime, modifiedAtDateTime);
 
-            var job = new MusicImportJob(_importJobLogger);
+            var job = new MusicImportJob(importJobLogger);
 
-            await _musicService.ImportRepositorySongs(
-                _context,
+            await musicService.ImportRepositorySongs(
+                context,
                 job,
-                _currentUser.Id,
+                currentUser.Id,
                 new[] { songImportMetadata },
                 new[] { deviceId },
                 DuplicateSongsHandlingStrategy.Overwrite,
@@ -582,7 +612,7 @@ public class DevicesController(
                 throw new Exception(string.Join("; ", errorParts));
             }
 
-            var existingSongDevice = await _context.SongDevices
+            var existingSongDevice = await context.SongDevices
                 .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == path, cancellationToken);
 
             if (existingSongDevice != null)
@@ -599,13 +629,13 @@ public class DevicesController(
                     AddedAt = createdAtDateTime,
                     LastSyncedModifiedAt = DateTime.UtcNow,
                 };
-                _context.SongDevices.Add(songDevice);
+                context.SongDevices.Add(songDevice);
             }
 
             device.LastSyncAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync(cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
 
-            _logger.LogInformation("Uploaded file {Path} to device {DeviceId}, song ID: {SongId}",
+            logger.LogInformation("Uploaded file {Path} to device {DeviceId}, song ID: {SongId}",
                 path, deviceId, importedSong.Id);
 
             return new SyncUploadResponse
@@ -616,9 +646,9 @@ public class DevicesController(
         }
         finally
         {
-            if (_fileSystem.Directory.Exists(tempPath))
+            if (fileSystem.Directory.Exists(tempPath))
             {
-                _fileSystem.Directory.Delete(tempPath, true);
+                fileSystem.Directory.Delete(tempPath, true);
             }
         }
     }

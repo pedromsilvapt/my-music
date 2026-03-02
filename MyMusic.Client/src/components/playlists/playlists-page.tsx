@@ -3,14 +3,18 @@ import {IconPlus} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useQueryData} from "../../hooks/use-query-data.ts";
+import {useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import CreatePlaylistModal from "./create-playlist-modal.tsx";
 import {usePlaylistsSchema} from "./usePlaylistsSchema.tsx";
 
+const PLAYLISTS_STATE_KEY = "playlists";
+
 export default function PlaylistsPage() {
     const [opened, setOpened] = useState(false);
-    const [appliedSearch, setAppliedSearch] = useState("");
-    const [appliedFilter, setAppliedFilter] = useState("");
+    const collectionState = useCollectionStateByKey(PLAYLISTS_STATE_KEY);
+    const appliedSearch = collectionState.serverSearch;
+    const appliedFilter = collectionState.serverFilter;
 
     const playlistsQuery = useQuery({
         queryKey: ["playlists", appliedSearch, appliedFilter],
@@ -38,9 +42,7 @@ export default function PlaylistsPage() {
         void playlistsQuery.refetch();
     }, [playlistsQuery.refetch]);
 
-    const handleFilterChange = (newSearch: string, newFilter: string) => {
-        setAppliedSearch(newSearch);
-        setAppliedFilter(newFilter);
+    const handleFilterChange = () => {
     };
 
     const elements = playlists?.playlists ?? [];
@@ -65,7 +67,7 @@ export default function PlaylistsPage() {
                     items={elements}
                     schema={playlistsSchema}
                     initialView="grid"
-                    stateKey="playlists"
+                    stateKey={PLAYLISTS_STATE_KEY}
                     filterMode="server"
                     serverSearch={appliedSearch}
                     serverFilter={appliedFilter}

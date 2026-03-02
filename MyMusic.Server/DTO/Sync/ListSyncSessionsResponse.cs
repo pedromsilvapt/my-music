@@ -20,6 +20,7 @@ public record SyncSessionItem
     public required int DownloadedCount { get; init; }
     public required int RemovedCount { get; init; }
     public required int ErrorCount { get; init; }
+    public string? RepositoryPath { get; init; }
 
     public static SyncSessionItem FromEntity(DeviceSyncSession session)
     {
@@ -36,6 +37,7 @@ public record SyncSessionItem
             DownloadedCount = session.Records.Count(r => r.Action == SyncRecordAction.Downloaded),
             RemovedCount = session.Records.Count(r => r.Action == SyncRecordAction.Removed),
             ErrorCount = session.Records.Count(r => r.Action == SyncRecordAction.Error),
+            RepositoryPath = session.RepositoryPath,
         };
     }
 }

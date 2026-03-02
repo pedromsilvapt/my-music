@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "MyMusic",
+    "slug": "MyMusic.Mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "mymusic",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mymusic.app",
+      "infoPlist": {
+        "NSAppleMusicUsageDescription": "MyMusic needs access to your music library to sync files.",
+        "NSPhotoLibraryUsageDescription": "MyMusic needs access to your photo library for album artwork."
+      }
+    },
+    "android": {
+      "package": "com.mymusic.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "MyMusic needs access to your photos.",
+          "savePhotosPermission": "MyMusic saves photos.",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,15 +1,19 @@
 import {useQuery} from "@tanstack/react-query";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSongsResponse} from "../../model";
+import {useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
 
+const SONGS_STATE_KEY = "songs";
+
 export default function SongsPage() {
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
-    const [appliedSearch, setAppliedSearch] = useState("");
-    const [appliedFilter, setAppliedFilter] = useState("");
+    const collectionState = useCollectionStateByKey(SONGS_STATE_KEY);
+    const appliedSearch = collectionState.serverSearch;
+    const appliedFilter = collectionState.serverFilter;
 
     const songsQuery = useQuery({
         queryKey: ["songs", appliedSearch, appliedFilter],
@@ -38,9 +42,7 @@ export default function SongsPage() {
         return () => unregisterRefetch('songs');
     }, [registerRefetch, unregisterRefetch, songsQuery.refetch]);
 
-    const handleFilterChange = (search: string, filter: string) => {
-        setAppliedSearch(search);
-        setAppliedFilter(filter);
+    const handleFilterChange = () => {
     };
 
     const elements = songs?.songs ?? [];
@@ -48,8 +50,8 @@ export default function SongsPage() {
     return (
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
-                key="songs"
-                stateKey="songs"
+                key={SONGS_STATE_KEY}
+                stateKey={SONGS_STATE_KEY}
                 items={elements}
                 schema={songsSchema}
                 filterMode="server"

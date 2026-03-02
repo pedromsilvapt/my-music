@@ -16,6 +16,8 @@ export interface CollectionState<T = unknown> {
     sort: CollectionSort<T>;
     clientSearch: string;
     clientFilter: string;
+    serverSearch: string;
+    serverFilter: string;
     scrollPosition: ScrollPosition | null;
 }
 
@@ -29,6 +31,8 @@ type CollectionStoreActions = {
     setCollectionSort: (key: string, sort: CollectionSort<unknown>) => void;
     setCollectionClientSearch: (key: string, search: string) => void;
     setCollectionClientFilter: (key: string, filter: string) => void;
+    setCollectionServerSearch: (key: string, search: string) => void;
+    setCollectionServerFilter: (key: string, filter: string) => void;
     setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => void;
     clearCollectionState: (key: string) => void;
 };
@@ -40,6 +44,8 @@ const DEFAULT_COLLECTION_STATE: CollectionState = {
     sort: [],
     clientSearch: '',
     clientFilter: '',
+    serverSearch: '',
+    serverFilter: '',
     scrollPosition: null,
 };
 
@@ -81,6 +87,22 @@ function createCollectionStore(): StoreApi<CollectionStore> {
                         state.collections[key] = {...DEFAULT_COLLECTION_STATE};
                     }
                     state.collections[key].clientFilter = filter;
+                });
+            },
+            setCollectionServerSearch: (key: string, search: string) => {
+                set((state) => {
+                    if (!state.collections[key]) {
+                        state.collections[key] = {...DEFAULT_COLLECTION_STATE};
+                    }
+                    state.collections[key].serverSearch = search;
+                });
+            },
+            setCollectionServerFilter: (key: string, filter: string) => {
+                set((state) => {
+                    if (!state.collections[key]) {
+                        state.collections[key] = {...DEFAULT_COLLECTION_STATE};
+                    }
+                    state.collections[key].serverFilter = filter;
                 });
             },
             setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => {

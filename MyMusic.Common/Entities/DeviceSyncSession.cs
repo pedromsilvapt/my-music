@@ -15,6 +15,8 @@ public class DeviceSyncSession
 
     public bool IsDryRun { get; set; }
 
+    public string? RepositoryPath { get; set; }
+
     public List<DeviceSyncSessionRecord> Records { get; set; } = [];
 }
 

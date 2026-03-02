@@ -5,7 +5,7 @@ using MyMusic.Common;
 namespace MyMusic.Server.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("artwork")]
 public class ArtworkController
 {
     [HttpGet("/Artwork/{id}", Name = "GetArtwork")]
@@ -17,7 +17,7 @@ public class ArtworkController
         CancellationToken cancellationToken = default
     )
     {
-        var artwork = await db.Artworks.SingleOrDefaultAsync(a => a.Id == id, cancellationToken: cancellationToken);
+        var artwork = await db.Artworks.SingleOrDefaultAsync(a => a.Id == id, cancellationToken);
 
         if (artwork is null)
         {

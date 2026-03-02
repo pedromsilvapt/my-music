@@ -1,12 +1,16 @@
 import {useQuery} from "@tanstack/react-query";
-import {useEffect, useState} from "react";
+import {useEffect} from "react";
 import {useQueryData} from "../../hooks/use-query-data.ts";
+import {useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useAlbumsSchema} from "./useAlbumsSchema.tsx";
 
+const ALBUMS_STATE_KEY = "albums";
+
 export default function AlbumsPage() {
-    const [appliedSearch, setAppliedSearch] = useState("");
-    const [appliedFilter, setAppliedFilter] = useState("");
+    const collectionState = useCollectionStateByKey(ALBUMS_STATE_KEY);
+    const appliedSearch = collectionState.serverSearch;
+    const appliedFilter = collectionState.serverFilter;
 
     const albumsQuery = useQuery({
         queryKey: ["albums", appliedSearch, appliedFilter],
@@ -34,9 +38,7 @@ export default function AlbumsPage() {
         void albumsQuery.refetch();
     }, [albumsQuery.refetch]);
 
-    const handleFilterChange = (newSearch: string, newFilter: string) => {
-        setAppliedSearch(newSearch);
-        setAppliedFilter(newFilter);
+    const handleFilterChange = () => {
     };
 
     const elements = albums?.albums ?? [];
@@ -44,8 +46,8 @@ export default function AlbumsPage() {
     return (
         <div style={{height: 'var(--parent-height)'}}>
             <Collection
-                key="albums"
-                stateKey="albums"
+                key={ALBUMS_STATE_KEY}
+                stateKey={ALBUMS_STATE_KEY}
                 items={elements}
                 schema={albumsSchema}
                 filterMode="server"

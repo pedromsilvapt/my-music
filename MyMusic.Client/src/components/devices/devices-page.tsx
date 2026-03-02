@@ -1,6 +1,7 @@
-import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
+import {useGetDevices} from "../../client/devices.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
+import type {GetDevicesParams} from "../../model";
 import Collection from "../common/collection/collection.tsx";
 import {useDevicesSchema} from "./useDevicesSchema.tsx";
 
@@ -8,25 +9,14 @@ export default function DevicesPage() {
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
-    const devicesQuery = useQuery({
-        queryKey: ["devices", appliedSearch, appliedFilter],
-        queryFn: async () => {
-            const params = new URLSearchParams();
-            if (appliedSearch) params.set("search", appliedSearch);
-            if (appliedFilter) params.set("filter", appliedFilter);
+    const params: GetDevicesParams | undefined =
+        appliedSearch || appliedFilter
+            ? {search: appliedSearch || undefined, filter: appliedFilter || undefined}
+            : undefined;
 
-            const url = `/api/api/devices${params.toString() ? `?${params.toString()}` : ""}`;
-            const response = await fetch(url);
+    const devicesQuery = useGetDevices(params);
 
-            if (!response.ok) {
-                throw new Error("Failed to fetch devices");
-            }
-
-            return response.json();
-        },
-    });
-
-    const devices = useQueryData(devicesQuery, "Failed to fetch devices") ?? {devices: []};
+    const devices = useQueryData(devicesQuery, "Failed to fetch devices");
 
     const devicesSchema = useDevicesSchema();
 
@@ -35,7 +25,7 @@ export default function DevicesPage() {
         setAppliedFilter(newFilter);
     };
 
-    const elements = devices?.devices ?? [];
+    const elements = devices?.data?.devices ?? [];
 
     return (
         <div style={{height: 'var(--parent-height)'}}>

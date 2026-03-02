@@ -3,6 +3,7 @@ namespace MyMusic.Server.DTO.Sync;
 public record SyncStartRequest
 {
     public bool DryRun { get; init; }
+    public string? RepositoryPath { get; init; }
 }
 
 public record SyncStartResponse

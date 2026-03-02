@@ -367,6 +367,10 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_dry_run");
 
+                    b.Property<string>("RepositoryPath")
+                        .HasColumnType("text")
+                        .HasColumnName("repository_path");
+
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("started_at");

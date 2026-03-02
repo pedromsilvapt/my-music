@@ -1,0 +1,77 @@
+VERSION 0.8
+
+ARG --global ANDROID_SDK_VERSION=11076708
+ARG --global NODE_VERSION=24
+ARG --global JAVA_VERSION=21
+
+FROM node:${NODE_VERSION}-trixie
+
+builder:
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+        wget \
+        unzip \
+        openjdk-${JAVA_VERSION}-jdk \
+        && rm -rf /var/lib/apt/lists/*
+
+    ENV JAVA_HOME=/usr/lib/jvm/java-${JAVA_VERSION}-openjdk-amd64
+    ENV ANDROID_HOME=/opt/android-sdk
+    ENV PATH=${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools
+
+    RUN mkdir -p ${ANDROID_HOME} && \
+        cd /tmp && \
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_VERSION}_latest.zip -O cmdline-tools.zip && \
+        unzip -q cmdline-tools.zip && \
+        mkdir -p ${ANDROID_HOME}/cmdline-tools && \
+        mv cmdline-tools ${ANDROID_HOME}/cmdline-tools/latest && \
+        rm cmdline-tools.zip
+
+    RUN yes | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+    RUN ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager \
+        "platforms;android-35" \
+        "build-tools;35.0.0" \
+        "platform-tools"
+
+    RUN npm install -g expo-cli
+
+build:
+    FROM +builder
+
+    ARG BUILD_TYPE=release
+    ARG APK_ABI=both
+
+    WORKDIR /app
+
+    COPY package*.json ./
+    RUN npm install
+
+    COPY . .
+
+    RUN npx expo prebuild --platform android --clean
+
+    RUN mkdir -p /app/android/gradle/wrapper && \
+        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-bin.zip" >> /app/android/gradle/wrapper/gradle-wrapper.properties
+
+    WORKDIR /app/android
+
+    RUN if [ "$APK_ABI" = "both" ]; then \
+            echo "ndk.abiFilters=arm64-v8a armeabi-v7a" >> gradle.properties; \
+        elif [ -n "$APK_ABI" ]; then \
+            ABI_FILTERS=$(echo "$APK_ABI" | tr ',' ' '); \
+            echo "ndk.abiFilters=$ABI_FILTERS" >> gradle.properties; \
+        fi
+
+    RUN if [ "$BUILD_TYPE" = "debug" ]; then \
+            ./gradlew assembleDebug; \
+        else \
+            ./gradlew assembleRelease; \
+        fi
+
+    SAVE ARTIFACT /app/android/app/build/outputs/apk/${BUILD_TYPE}/app-${BUILD_TYPE}.apk
+
+package:
+    FROM scratch
+
+    ARG BUILD_TYPE=release
+
+    COPY +build/app/android/app/build/outputs/apk/${BUILD_TYPE}/app-${BUILD_TYPE}.apk /app/MyMusic-Mobile.apk
+    SAVE ARTIFACT /app/MyMusic-Mobile.apk

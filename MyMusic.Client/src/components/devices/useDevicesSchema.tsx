@@ -3,14 +3,14 @@ import {modals} from "@mantine/modals";
 import {notifications} from "@mantine/notifications";
 import {IconTrash} from "@tabler/icons-react";
 import {useCallback, useMemo} from "react";
-import {useDeleteApiDevicesDeviceId} from "../../client/devices.ts";
+import {useDeleteDevicesDeviceId} from "../../client/devices.ts";
 import type {ListDeviceItem} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
+import TablerIcon from "../common/tabler-icon.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
-import DeviceBadge from "./device-badge.tsx";
 
 export function useDevicesSchema() {
-    const deleteDevice = useDeleteApiDevicesDeviceId();
+    const deleteDevice = useDeleteDevicesDeviceId();
     const {data: filterMetadata} = useFilterMetadata('devices');
 
     const handleDelete = useCallback((devices: ListDeviceItem[]) => {
@@ -73,8 +73,9 @@ export function useDevicesSchema() {
             {
                 name: 'icon',
                 displayName: '',
-                render: row => <DeviceBadge name={row.name} icon={row.icon} color={row.color} showTooltip={false}/>,
-                width: 120,
+                render: row => <TablerIcon icon={row.icon} defaultIcon="IconDeviceDesktop" size={20}
+                                           color={row.color || 'gray'}/>,
+                width: 60,
             },
             {
                 name: 'name',
@@ -112,10 +113,7 @@ export function useDevicesSchema() {
         },
 
         estimateListRowHeight: () => 84,
-        renderListArtwork: () => <DeviceBadge
-            name=""
-            icon="IconDevices"
-        />,
+        renderListArtwork: () => <TablerIcon icon="IconDevices" size={40} color="gray"/>,
         renderListTitle: (row) => <Text fw={500}>{row.name}</Text>,
         renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
     }) as CollectionSchema<ListDeviceItem>, [handleDelete, filterMetadata, fetchFilterValues]);
