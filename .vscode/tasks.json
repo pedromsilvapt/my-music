@@ -1,0 +1,65 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend",
+      "type": "shell",
+      "command": "dotnet watch --project MyMusic.Server/MyMusic.Server.csproj",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Frontend",
+      "type": "shell",
+      "command": "cd MyMusic.Client && pnpm dev",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "DB",
+      "type": "shell",
+      "command": "docker-compose up db",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Caddy",
+      "type": "shell",
+      "command": "docker-compose up caddy",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "OpenCode",
+      "type": "shell",
+      "command": "opencode web",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}

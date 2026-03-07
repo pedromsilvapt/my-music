@@ -1,28 +1,28 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="AsyncKeyedLock" Version="8.0.1"/>
-        <PackageReference Include="EFCore.NamingConventions" Version="9.0.0"/>
+        <PackageReference Include="EFCore.NamingConventions" Version="10.0.1"/>
         <PackageReference Include="EntityFrameworkCore.Projectables" Version="5.0.2"/>
         <PackageReference Include="EntityFrameworkCore.Projectables.Abstractions" Version="5.0.2"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.12"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.12">
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.12">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.3">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.12"/>
-        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.12"/>
-        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.3"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0"/>
         <PackageReference Include="Refit" Version="9.0.2"/>
         <PackageReference Include="taglib-sharp-netstandard2.0" Version="2.1.0"/>
         <PackageReference Include="System.Drawing.Common" Version="5.0.2"/>
@@ -31,11 +31,5 @@
         <PackageReference Include="Scriban" Version="6.2.1"/>
         <PackageReference Include="TestableIO.System.IO.Abstractions" Version="22.0.15"/>
         <PackageReference Include="TestableIO.System.IO.Abstractions.Wrappers" Version="22.0.15"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Reference Include="Microsoft.Extensions.Hosting.Abstractions">
-            <HintPath>..\..\..\..\..\..\usr\share\dotnet\shared\Microsoft.AspNetCore.App\9.0.7\Microsoft.Extensions.Hosting.Abstractions.dll</HintPath>
-        </Reference>
     </ItemGroup>
 </Project>

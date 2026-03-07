@@ -1,0 +1,53 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[csharp]": {
+    "editor.defaultFormatter": "ms-dotnettools.csharp"
+  },
+  "dotnet.defaultSolution": "MyMusic.sln",
+  "sqltools.connections": [
+    {
+      "name": "PostgreSQL",
+      "driver": "PostgreSQL",
+      "server": "localhost",
+      "port": 5432,
+      "database": "watchlist",
+      "username": "watchlist",
+      "password": "watchlist_password"
+    }
+  ],
+  "VsCodeTaskButtons.showCounter": false,
+  "VsCodeTaskButtons.tasks": [
+    {
+      "label": "OpenCode",
+      "alignment": "left",
+      "task": "OpenCode",
+      "tooltip": "Start OpenCode Web Server"
+    },
+    {
+      "label": "DB",
+      "alignment": "left",
+      "task": "DB",
+      "tooltip": "Start PostgreSQL database",
+      "description": "Start the PostgreSQL database"
+    },
+    {
+      "label": "Caddy",
+      "alignment": "left",
+      "task": "Caddy",
+      "tooltip": "Start Caddy reverse proxy",
+      "description": "Start Caddy reverse proxy"
+    },
+    {
+      "label": "Frontend",
+      "task": "Frontend",
+      "tooltip": "Start React frontend with Vite",
+      "description": "Start the React frontend with Vite dev server"
+    },
+    {
+      "label": "Backend",
+      "task": "Backend",
+      "tooltip": "Start .NET backend with hot reload",
+      "description": "Start the .NET backend with dotnet watch"
+    }
+  ]
+}
