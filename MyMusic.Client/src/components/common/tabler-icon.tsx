@@ -8,7 +8,7 @@ const iconModules = import.meta.glob(`../../../node_modules/@tabler/icons-react/
 const FALLBACK_ICON = "IconHelpSquareFilled";
 
 export interface TablerIconProps extends IconProps {
-    icon: string;
+    icon: string | null | undefined;
     defaultIcon?: string;
 }
 
@@ -24,7 +24,7 @@ export default function TablerIcon({
     useEffect(() => {
         let mounted = true;
 
-        const iconPath = getIconPath(icon);
+        const iconPath = getIconPath(icon ?? '');
         const module = iconModules[iconPath];
 
         if (module) {
