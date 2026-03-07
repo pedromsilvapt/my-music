@@ -80,7 +80,7 @@ public interface IMyMusicClient
         [Body] AcknowledgeActionRequest request,
         CancellationToken ct = default);
 
-    [Get("/songs/{songId}/download")]
+    [Get("/api/songs/{songId}/download")]
     Task<Stream> DownloadSongAsync(
         long songId,
         CancellationToken ct = default);

@@ -129,10 +129,35 @@ public class InitCommand : Command<InitCommand.Settings>
         return overwrite == "Yes";
     }
 
-    private static string PromptBaseUrl(string? cliValue, string? defaultValue) =>
-        cliValue ?? AnsiConsole.Ask<string>(
+    private static string PromptBaseUrl(string? cliValue, string? defaultValue)
+    {
+        var rawValue = cliValue ?? AnsiConsole.Ask<string>(
             "Server address:",
-            defaultValue ?? "http://localhost:5000/api");
+            defaultValue ?? "http://localhost:5000");
+
+        return NormalizeServerUrl(rawValue);
+    }
+
+    private static string NormalizeServerUrl(string url)
+    {
+        var trimmed = url.TrimEnd();
+
+        if (trimmed.EndsWith("/api/", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalized = trimmed.Substring(0, trimmed.Length - 5);
+            AnsiConsole.MarkupLine("[yellow]Notice: The /api/ suffix is not needed and has been removed.[/]");
+            return normalized;
+        }
+
+        if (trimmed.EndsWith("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalized = trimmed.Substring(0, trimmed.Length - 4);
+            AnsiConsole.MarkupLine("[yellow]Notice: The /api suffix is not needed and has been removed.[/]");
+            return normalized;
+        }
+
+        return trimmed;
+    }
 
     private static string PromptUserName(string? cliValue, string? defaultValue) =>
         cliValue ?? AnsiConsole.Prompt(
