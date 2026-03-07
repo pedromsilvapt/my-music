@@ -1,0 +1,91 @@
+{
+  "name": "MyMusic Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "initializeCommand": "docker network inspect my-music-dev-network > /dev/null || docker network create my-music-dev-network --attachable",
+  "runArgs": [
+    "--network=my-music-dev-network",
+    "--hostname=my-music-devcontainer"
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {}
+  },
+  "postCreateCommand": "dotnet restore && cd MyMusic.Client && pnpm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "formulahendry.auto-rename-tag",
+        "ms-azuretools.vscode-docker",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg",
+        "spencerwmiles.vscode-task-buttons"
+      ],
+      "settings": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[csharp]": {
+          "editor.defaultFormatter": "ms-dotnettools.csharp"
+        }
+      }
+    }
+  },
+  "mounts": [
+    {
+      "source": "mymusic-dev-dind",
+      "target": "/var/lib/docker",
+      "type": "volume"
+    },
+    {
+      "source": "mymusic-dev-data",
+      "target": "/app/data",
+      "type": "volume"
+    },
+    {
+      "source": "${localEnv:HOME}/.local/share/opencode/auth.json",
+      "target": "/home/vscode/.local/share/opencode/auth.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:HOME}/.config/opencode",
+      "target": "/home/vscode/.config/opencode",
+      "type": "bind"
+    },
+    {
+      "source": "${localWorkspaceFolder}/.devcontainer/opencode.json",
+      "target": "/home/vscode/.config/opencode/opencode.json",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:HOME}/.local/share/opencode",
+      "target": "/home/vscode/.local/share/opencode",
+      "type": "bind"
+    },
+    {
+      "source": "${localEnv:HOME}/.local/state/opencode",
+      "target": "/home/vscode/.local/state/opencode",
+      "type": "bind"
+    }
+  ],
+  "forwardPorts": [80, 4096],
+  "portsAttributes": {
+    "80": {
+      "label": "HTTP",
+      "onAutoForward": "silent"
+    },
+    "4096": {
+      "label": "Open Code",
+      "onAutoForward": "silent"
+    }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" }
+  // "runServices": ["postgres"],
+  // "dockerComposeFile": "../docker-compose.yml",
+  // "service": "devcontainer",
+  // "workspaceFolder": "/workspace"
+}

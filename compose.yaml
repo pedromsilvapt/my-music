@@ -1,89 +1,90 @@
 ﻿services:
   caddy:
-    image: caddy:2.9.1
-    ports:
-      - "5000:80"
-    networks:
-      - my-music
+    image: caddy:2
+    restart: unless-stopped
+    network_mode: host
     configs:
       - source: caddyfile
         target: /etc/caddy/Caddyfile
-  
-  server:
-    build:
-      context: .
-      dockerfile_inline: |
-        FROM mcr.microsoft.com/dotnet/sdk:9.0
-        RUN apt update && apt install -y libgdiplus
-        RUN groupadd -g ${GID} ${GROUP}
-        RUN useradd -m ${USER} -u ${UID} -g ${GID} -m -d ${HOME} -s /bin/bash
-        ENV DOTNET_NOLOGO=true
-        ENV PATH="$PATH:/${HOME}/.dotnet/tools"
-        USER ${UID}:${GID}
-        RUN dotnet tool install --global dotnet-ef
-    volumes:
-      - /$HOME/.nuget/packages/:/$HOME/.nuget/packages/:ro
-      - ./MyMusic.Common:/workspaces/my-music/MyMusic.Common
-      - ./MyMusic.Server:/workspaces/my-music/MyMusic.Server
-      - ./scripts:/workspaces/my-music/scripts
-      - /$HOME/Music:/$HOME/Music:ro
-      - server-data:/storage
-    environment:
-      MYMUSIC_HEADER_ID_ENABLED: 1
-    working_dir: /workspaces/my-music/MyMusic.Server
-    command: dotnet watch run --no-restore --launch-profile container
-    networks:
-      - my-music
-  
-  client:
-    build:
-      context: .
-      dockerfile_inline: |
-        FROM node:24
-        RUN npm install -g -y vite
-    volumes:
-      - ./MyMusic.Client:/workspaces/my-music/MyMusic.Client
-    working_dir: /workspaces/my-music/MyMusic.Client
-    command: "npm run dev -- --port 8080 --host"
-    user: ${UID}:${GID}
-    networks:
-      - my-music
 
-  valkey:
-    image: valkey/valkey:7.2.10
-    networks:
-      - my-music
-  
+  # server:
+  #   build:
+  #     context: .
+  #     dockerfile_inline: |
+  #       FROM mcr.microsoft.com/dotnet/sdk:9.0
+  #       RUN apt update && apt install -y libgdiplus
+  #       RUN groupadd -g ${GID} ${GROUP}
+  #       RUN useradd -m ${USER} -u ${UID} -g ${GID} -m -d ${HOME} -s /bin/bash
+  #       ENV DOTNET_NOLOGO=true
+  #       ENV PATH="$PATH:/${HOME}/.dotnet/tools"
+  #       USER ${UID}:${GID}
+  #       RUN dotnet tool install --global dotnet-ef
+  #   volumes:
+  #     - /$HOME/.nuget/packages/:/$HOME/.nuget/packages/:ro
+  #     - ./MyMusic.Common:/workspaces/my-music/MyMusic.Common
+  #     - ./MyMusic.Server:/workspaces/my-music/MyMusic.Server
+  #     - ./scripts:/workspaces/my-music/scripts
+  #     - /$HOME/Music:/$HOME/Music:ro
+  #     - server-data:/storage
+  #   environment:
+  #     MYMUSIC_HEADER_ID_ENABLED: 1
+  #   working_dir: /workspaces/my-music/MyMusic.Server
+  #   command: dotnet watch run --no-restore --launch-profile container
+  #   networks:
+  #     - my-music
+
+  # client:
+  #   build:
+  #     context: .
+  #     dockerfile_inline: |
+  #       FROM node:24
+  #       RUN npm install -g -y vite
+  #   volumes:
+  #     - ./MyMusic.Client:/workspaces/my-music/MyMusic.Client
+  #   working_dir: /workspaces/my-music/MyMusic.Client
+  #   command: "npm run dev -- --port 8080 --host"
+  #   user: ${UID}:${GID}
+  #   networks:
+  #     - my-music
+
+  # valkey:
+  #   image: valkey/valkey:7.2.10
+  #   networks:
+  #     - my-music
+
   db:
     image: postgres:17
     environment:
       POSTGRES_DB: my-music
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
-    networks:
-      - my-music
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U watchlist -d watchlist"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   pgadmin:
     image: dpage/pgadmin4:9.6
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@localhost.com
       PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
-      PGADMIN_DISABLE_POSTFIX: 'True'
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_DISABLE_POSTFIX: "True"
       PGADMIN_LISTEN_PORT: 8080
       PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
-      PGADMIN_CONFIG_ENABLE_PSQL: 'True'
-      PGADMIN_REPLACE_SERVERS_ON_STARTUP: 'True'
+      PGADMIN_CONFIG_ENABLE_PSQL: "True"
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
       PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 10
     configs:
       - source: pgadmin-servers
         target: /pgadmin4/servers.json
-    networks:
-      - my-music
-  
+
   dozzle:
     image: amir20/dozzle:latest
     environment:
@@ -93,12 +94,10 @@
       DOZZLE_NO_ANALYTICS: 1
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - my-music
 
 volumes:
-  server-data: { }
-  db-data: { }
+  server-data: {}
+  postgres-data: {}
 
 configs:
   caddyfile:
@@ -113,39 +112,49 @@ configs:
           header_up X-Script-Name /pgadmin
         }
       }
-      
+
       (dozzle) {
         reverse_proxy http://dozzle:8080
       }
 
       :80 {
-        ${CADDYFILE_SOURCES}
-      
         handle_path /api/* {
-          reverse_proxy http://server:8080 {
+          reverse_proxy localhost:5000 {
             header_up X-MyMusic-UserName pedro
           }
         }
-      
-        handle_path /pgadmin  {
-          import pgadmin
-        }
-        handle_path /pgadmin/* { 
-          import pgadmin 
-        }
-      
-        handle /dozzle  {
-          import dozzle
-        }
-        handle /dozzle/* { 
-          import dozzle 
-        }
-      
+
         handle /* {
-          reverse_proxy http://client:8080
+          reverse_proxy localhost:5173
         }
+
+        # ${CADDYFILE_SOURCES}
+
+        # handle_path /api/* {
+        #   reverse_proxy http://server:8080 {
+        #     header_up X-MyMusic-UserName pedro
+        #   }
+        # }
+
+        # handle_path /pgadmin  {
+        #   import pgadmin
+        # }
+        # handle_path /pgadmin/* {
+        #   import pgadmin
+        # }
+
+        # handle /dozzle  {
+        #   import dozzle
+        # }
+        # handle /dozzle/* {
+        #   import dozzle
+        # }
+
+        # handle /* {
+        #   reverse_proxy http://client:8080
+        # }
       }
-  
+
   pgadmin-servers:
     content: |
       {
@@ -164,8 +173,4 @@ configs:
             }
           }
         }
-      }  
-
-networks:
-  my-music:
-    name: my-music
+      }

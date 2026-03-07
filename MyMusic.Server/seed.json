@@ -1,0 +1,20 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "name": "Administrator",
+      "devices": [
+        {
+          "name": "Desktop",
+          "icon": "IconDeviceDesktop",
+          "NamingTemplate": "{{simple_label}}.mp3"
+        },
+        {
+          "name": "Smartphone",
+          "icon": "IconDeviceMobile",
+          "NamingTemplate": "{{simple_label}}.mp3"
+        }
+      ]
+    }
+  ]
+}

@@ -290,6 +290,9 @@ FakesAssemblies/
 # Node.js Tools for Visual Studio
 .ntvs_analysis.dat
 node_modules/
+.pnpm-store/
+dist/
+*.local
 
 # Visual Studio 6 build log
 *.plg
@@ -483,5 +486,9 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# MyMusic CLI config
-MyMusic.CLI/appsettings.development.json
+# Development configs
+**/appsettings.[Dd]evelopment.json
+**/appsettings.Development.json
+
+.devcontainer/certs/*
+!.devcontainer/certs/.gitkeep
