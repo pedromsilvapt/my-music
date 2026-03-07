@@ -3,7 +3,7 @@ import {IconPlus} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import {useCollectionStateByKey} from "../../stores/collection-store.tsx";
+import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import CreatePlaylistModal from "./create-playlist-modal.tsx";
 import {usePlaylistsSchema} from "./usePlaylistsSchema.tsx";
@@ -12,6 +12,10 @@ const PLAYLISTS_STATE_KEY = "playlists";
 
 export default function PlaylistsPage() {
     const [opened, setOpened] = useState(false);
+    const {setCollectionServerSearch, setCollectionServerFilter} = useCollectionActions(state => ({
+        setCollectionServerSearch: state.setCollectionServerSearch,
+        setCollectionServerFilter: state.setCollectionServerFilter,
+    }));
     const collectionState = useCollectionStateByKey(PLAYLISTS_STATE_KEY);
     const appliedSearch = collectionState.serverSearch;
     const appliedFilter = collectionState.serverFilter;
@@ -42,7 +46,9 @@ export default function PlaylistsPage() {
         void playlistsQuery.refetch();
     }, [playlistsQuery.refetch]);
 
-    const handleFilterChange = () => {
+    const handleFilterChange = (newSearch: string, newFilter: string) => {
+        setCollectionServerSearch(PLAYLISTS_STATE_KEY, newSearch);
+        setCollectionServerFilter(PLAYLISTS_STATE_KEY, newFilter);
     };
 
     const elements = playlists?.playlists ?? [];

@@ -3,7 +3,7 @@ import {useEffect} from "react";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSongsResponse} from "../../model";
-import {useCollectionStateByKey} from "../../stores/collection-store.tsx";
+import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
 
@@ -11,6 +11,10 @@ const SONGS_STATE_KEY = "songs";
 
 export default function SongsPage() {
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
+    const {setCollectionServerSearch, setCollectionServerFilter} = useCollectionActions(state => ({
+        setCollectionServerSearch: state.setCollectionServerSearch,
+        setCollectionServerFilter: state.setCollectionServerFilter,
+    }));
     const collectionState = useCollectionStateByKey(SONGS_STATE_KEY);
     const appliedSearch = collectionState.serverSearch;
     const appliedFilter = collectionState.serverFilter;
@@ -42,7 +46,9 @@ export default function SongsPage() {
         return () => unregisterRefetch('songs');
     }, [registerRefetch, unregisterRefetch, songsQuery.refetch]);
 
-    const handleFilterChange = () => {
+    const handleFilterChange = (newSearch: string, newFilter: string) => {
+        setCollectionServerSearch(SONGS_STATE_KEY, newSearch);
+        setCollectionServerFilter(SONGS_STATE_KEY, newFilter);
     };
 
     const elements = songs?.songs ?? [];
