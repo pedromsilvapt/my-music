@@ -46,7 +46,7 @@ export default function PurchasesQueue({}: PurchasesQueueProps) {
     };
 
     return <>
-        <div style={{height: 'var(--parent-height)'}}>
+        <div style={{height: '100%'}}>
             {/*<Collection*/}
             {/*    key="artists"*/}
             {/*    items={elements}*/}

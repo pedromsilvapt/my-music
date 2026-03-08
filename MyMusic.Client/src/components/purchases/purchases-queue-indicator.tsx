@@ -33,7 +33,11 @@ export default function PurchasesQueueIndicator(_props: PurchasesQueueIndicatorP
 
     return <>
         <Drawer opened={opened} onClose={close} size="xl" title="Purchases Queue" zIndex={ZINDEX_DRAWER}
-                overlayProps={{zIndex: ZINDEX_MODAL}}>
+                overlayProps={{zIndex: ZINDEX_MODAL}}
+                  styles={{
+                    content: { display: 'flex', flexDirection: 'column' },
+                    body: { flex: 1, overflow: 'hidden' },
+                }}>
             <PurchasesQueue/>
         </Drawer>
 
