@@ -28,7 +28,6 @@ export const DEFAULT_ARTWORK_SIZE = 32;
 
 export const LIST_ARTWORK_SIZE = 64;
 
-export const ZINDEX_FLOATING_BAR = 300;
 export const ZINDEX_MODAL = 1000;
 export const ZINDEX_DRAWER = 1001;
 export const ZINDEX_LIGHTBOX = 1002;

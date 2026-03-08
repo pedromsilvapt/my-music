@@ -49,6 +49,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const {ref: containerRef, height: containerHeight} = useElementSize<HTMLDivElement>();
     const {ref: toolbarRef, height: toolbarHeight} = useElementSize<HTMLDivElement>();
     const collectionContainerRef = useRef<HTMLDivElement>(null);
+    const floatingBarPortalTargetRef = useRef<HTMLDivElement>(null);
 
     const viewHeight = Math.max(MIN_VIEW_HEIGHT, containerHeight - toolbarHeight);
 
@@ -413,6 +414,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             <LoadingOverlay visible={props.isFetching ?? false} zIndex={ZINDEX_MODAL}
                             overlayProps={{radius: "sm", blur: 2}}/>
             {viewNode}
+            <div ref={floatingBarPortalTargetRef} />
         </Box>
 
         <SelectionFloatingBar
@@ -420,6 +422,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             actions={actions}
             anchorElement={lastSelectedElement}
             containerRef={collectionContainerRef}
+            portalTarget={floatingBarPortalTargetRef}
             onClearSelection={selectionHandlers.resetSelection}
         />
     </Flex>;
