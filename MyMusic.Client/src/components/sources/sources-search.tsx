@@ -1,13 +1,16 @@
+import {Alert, Center} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {useQueryClient} from "@tanstack/react-query";
 import {useCallback, useRef, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
-import {type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
+import {useListSources, type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import Collection from "../common/collection/collection.tsx";
+import {IconAlertCircle} from "@tabler/icons-react";
+import ManageSourcesDialog from "./manage-sources-dialog.tsx";
 import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
 import {useSourceSongsSchema} from "./useSourceSongsSchema.tsx";
 
@@ -20,6 +23,11 @@ export default function SourcesSearch() {
     const [appliedFilter, setAppliedFilter] = useState('');
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
+    const [manageDialogOpened, setManageDialogOpened] = useState(false);
+
+    const sourcesQuery = useListSources();
+    const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
+    const sources = sourcesResponse?.data?.sources ?? [];
 
     const searchSongsQuery = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
         query: {
@@ -53,31 +61,54 @@ export default function SourcesSearch() {
     const elements = searchSongsResponse?.data ?? [];
 
     return <>
+        <ManageSourcesDialog
+            opened={manageDialogOpened}
+            onClose={() => setManageDialogOpened(false)}
+        />
         <div style={{height: 'var(--parent-height)'}}>
-            <Collection
-                key="songs"
-                stateKey="sources-search"
-                items={elements}
-                schema={sourceSongsSchema}
-                isFetching={searchSongsQuery.isFetching}
-                toolbar={p => (
+            {sources.length === 0 ? (
+                <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
                     <SourcesSearchToolbar
-                        {...p}
-                        searchInputRef={searchInputRef}
-                        source={source}
-                        setSource={setSource}
-                        search={search}
-                        setSearch={setSearch}
-                        filter={filter}
-                        setFilter={setFilter}
-                        onApplyFilter={(filterValue) => {
-                            setFilter(filterValue);
-                            setAppliedFilter(filterValue);
-                        }}
+                        onManageSources={() => setManageDialogOpened(true)}
                     />
-                )}
-            >
-            </Collection>
+                    <Center style={{flex: 1}}>
+                        <Alert
+                            icon={<IconAlertCircle/>}
+                            title="No Sources Configured"
+                            color="yellow"
+                            style={{maxWidth: 400}}
+                        >
+                            No sources are currently configured. Click the edit button in the toolbar to add sources.
+                        </Alert>
+                    </Center>
+                </div>
+            ) : (
+                <Collection
+                    key="songs"
+                    stateKey="sources-search"
+                    items={elements}
+                    schema={sourceSongsSchema}
+                    isFetching={searchSongsQuery.isFetching}
+                    toolbar={p => (
+                        <SourcesSearchToolbar
+                            {...p}
+                            searchInputRef={searchInputRef}
+                            source={source}
+                            setSource={setSource}
+                            search={search}
+                            setSearch={setSearch}
+                            filter={filter}
+                            setFilter={setFilter}
+                            onApplyFilter={(filterValue) => {
+                                setFilter(filterValue);
+                                setAppliedFilter(filterValue);
+                            }}
+                            onManageSources={() => setManageDialogOpened(true)}
+                        />
+                    )}
+                >
+                </Collection>
+            )}
         </div>
     </>;
 }
