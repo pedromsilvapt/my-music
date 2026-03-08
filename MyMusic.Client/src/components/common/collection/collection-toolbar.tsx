@@ -25,7 +25,7 @@ import {
 import {useMemo} from "react";
 import {ZINDEX_MODAL} from "../../../consts.ts";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
-import {CollectionFilterBar} from "./collection-filter-bar.tsx";
+import {CollectionFilterBar, type CollectionFilterBarRef} from "./collection-filter-bar.tsx";
 import type {CollectionFilterMode, CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
 import styles from './collection-toolbar.module.css';
 
@@ -41,6 +41,7 @@ export interface CollectionToolbarProps<M> {
     filterMetadata?: FilterMetadataResponse;
     fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
     searchPlaceholder?: string;
+    searchInputRef?: React.RefObject<CollectionFilterBarRef | null>;
     view?: CollectionView;
     setView?: (view: CollectionView) => void;
 
@@ -210,6 +211,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
     const middleSection = props.renderMiddleSection
         ? props.renderMiddleSection()
         : <CollectionFilterBar
+            ref={props.searchInputRef}
             searchValue={search}
             onSearchChange={(value) => setSearch(value)}
             filterValue={props.filter ?? ''}

@@ -1,10 +1,14 @@
 import {ActionIcon, Button, Group, Popover, Stack, Text, TextInput, Tooltip} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {IconCode, IconFilter, IconSearch, IconX} from "@tabler/icons-react";
-import {useEffect, useState} from "react";
+import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {FILTER_DEBOUNCE_MS} from "../../../consts.ts";
 import {FilterCodeEditor} from "../../filters/filter-code-editor.tsx";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
+
+export interface CollectionFilterBarRef {
+    focusAndSelect: () => void;
+}
 
 export interface CollectionFilterBarProps {
     searchValue: string;
@@ -18,17 +22,30 @@ export interface CollectionFilterBarProps {
     fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
 }
 
-export function CollectionFilterBar({
-                                        searchValue,
-                                        onSearchChange,
-                                        filterValue,
-                                        onFilterChange,
-                                        onApply,
-                                        placeholder = "Search...",
-                                        filterMode,
-                                        filterMetadata,
-                                        fetchFilterValues,
-                                    }: CollectionFilterBarProps) {
+export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, CollectionFilterBarProps>(
+    function CollectionFilterBar({
+                                     searchValue,
+                                     onSearchChange,
+                                     filterValue,
+                                     onFilterChange,
+                                     onApply,
+                                     placeholder = "Search...",
+                                     filterMode,
+                                     filterMetadata,
+                                     fetchFilterValues,
+                                 }, ref) {
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    useImperativeHandle(ref, () => ({
+        focusAndSelect: () => {
+            const input = searchInputRef.current;
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }
+    }), []);
+
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [localSearch, setLocalSearch] = useState(searchValue);
     const [localFilter, setLocalFilter] = useState(filterValue);
@@ -66,6 +83,7 @@ export function CollectionFilterBar({
     return (
         <Group gap="sm" align="center" justify="space-between" style={{flex: 1}}>
             <TextInput
+                ref={searchInputRef}
                 placeholder={placeholder}
                 leftSection={<IconSearch size={16}/>}
                 value={localSearch}
@@ -163,4 +181,4 @@ export function CollectionFilterBar({
             )}
         </Group>
     );
-}
+});

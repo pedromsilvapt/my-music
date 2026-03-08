@@ -5,11 +5,13 @@ import {useListSources} from "../../client/sources.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import CollectionToolbar, {type CollectionToolbarProps} from "../common/collection/collection-toolbar.tsx";
+import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
 
 export interface SourcesSearchToolbarProps extends CollectionToolbarProps<SourceSong> {
     source?: ListSourcesItem | null | undefined,
     setSource?: (source: ListSourcesItem | null | undefined) => void,
+    searchInputRef?: React.RefObject<CollectionFilterBarRef | null>;
 }
 
 export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
@@ -43,6 +45,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
     return (
         <CollectionToolbar
             {...props}
+            searchInputRef={props.searchInputRef}
             filterMode="server"
             searchPlaceholder="Search songs..."
             renderLeftSection={() => (

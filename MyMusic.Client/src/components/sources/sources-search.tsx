@@ -1,17 +1,19 @@
 import {useDebouncedValue} from "@mantine/hooks";
 import {useQueryClient} from "@tanstack/react-query";
-import {useCallback, useState} from "react";
+import {useCallback, useRef, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
 import {type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
+import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import Collection from "../common/collection/collection.tsx";
 import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
 import {useSourceSongsSchema} from "./useSourceSongsSchema.tsx";
 
 export default function SourcesSearch() {
     const queryClient = useQueryClient()
+    const searchInputRef = useRef<CollectionFilterBarRef>(null);
 
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('');
@@ -39,6 +41,7 @@ export default function SourcesSearch() {
     });
 
     const onPurchase = useCallback(async (songs: SourceSong[]) => {
+        searchInputRef.current?.focusAndSelect();
         await Promise.all(songs.map(s => createPurchase.mutate({
             songId: s.id,
             sourceId: source!.id
@@ -60,6 +63,7 @@ export default function SourcesSearch() {
                 toolbar={p => (
                     <SourcesSearchToolbar
                         {...p}
+                        searchInputRef={searchInputRef}
                         source={source}
                         setSource={setSource}
                         search={search}
