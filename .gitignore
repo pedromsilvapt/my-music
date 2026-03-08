@@ -488,7 +488,6 @@ $RECYCLE.BIN/
 
 # Development configs
 **/appsettings.[Dd]evelopment.json
-**/appsettings.Development.json
 
 .devcontainer/certs/*
 !.devcontainer/certs/.gitkeep

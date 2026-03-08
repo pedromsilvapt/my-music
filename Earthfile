@@ -1,5 +1,5 @@
 VERSION 0.8
-FROM mcr.microsoft.com/dotnet/sdk:9.0
+FROM mcr.microsoft.com/dotnet/sdk:10.0
 
 WORKDIR /app/MyMusic
 
@@ -32,7 +32,7 @@ build:
     SAVE ARTIFACT publish publish
 
 docker:
-    FROM mcr.microsoft.com/dotnet/aspnet:9.0
+    FROM mcr.microsoft.com/dotnet/aspnet:10.0
     WORKDIR /app
 
     ARG REGISTRY='gitea.home'
