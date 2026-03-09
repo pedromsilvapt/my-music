@@ -58,3 +58,7 @@ docker:
 
     SAVE IMAGE $IMAGE:$TAG
     SAVE IMAGE --push --insecure $REGISTRY/$IMAGE:$TAG
+
+docker-all:
+    BUILD +docker
+    BUILD ./MyMusic.Client+docker
