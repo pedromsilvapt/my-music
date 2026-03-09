@@ -6,6 +6,9 @@
  OpenAPI spec version: 1.0.0
  */
 export interface SetCurrentSongRequest {
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     currentSongId?: number | null;
 }

@@ -8,7 +8,9 @@
 import type {ListSongsItem} from "./listSongsItem";
 
 export interface ListAuditNonConformitiesItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songId: number;
     song: ListSongsItem;
     hasWaiver: boolean;

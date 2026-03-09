@@ -9,20 +9,27 @@ import type {UpdateSongAlbum} from "./updateSongAlbum";
 import type {UpdateSongArtist} from "./updateSongArtist";
 import type {UpdateSongGenre} from "./updateSongGenre";
 
-/**
- * @nullable
- */
-export type UpdateSongItem = {
+export interface UpdateSongItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     title: string;
     label: string;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     cover: number | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year: number | null;
     /** @nullable */
     lyrics?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
     rating?: number | null;
     explicit?: boolean;
     artists: UpdateSongArtist[];
@@ -30,4 +37,4 @@ export type UpdateSongItem = {
     genres: UpdateSongGenre[];
     /** @nullable */
     repositoryPath?: string | null;
-} | null;
+}

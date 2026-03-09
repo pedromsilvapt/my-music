@@ -8,10 +8,13 @@
 import type {PurchasedSongStatus} from "./purchasedSongStatus";
 
 export interface ListPurchasesItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     sourceId: number;
     sourceName: string;
     sourceIcon: string;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     userId: number;
     externalId: string;
     /** @nullable */
@@ -19,8 +22,12 @@ export interface ListPurchasesItem {
     title: string;
     subTitle: string;
     status: PurchasedSongStatus;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     progress: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     songId?: number | null;
     /** @nullable */
     errorMessage: string | null;

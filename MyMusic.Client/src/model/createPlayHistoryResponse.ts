@@ -7,6 +7,8 @@
  */
 export interface CreatePlayHistoryResponse {
     created: boolean;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songPlayCount: number;
 }

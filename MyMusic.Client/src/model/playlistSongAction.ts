@@ -8,6 +8,7 @@
 import type {PlaylistAction} from "./playlistAction";
 
 export interface PlaylistSongAction {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     playlistId: number;
     action: PlaylistAction;
 }

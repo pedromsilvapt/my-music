@@ -9,5 +9,5 @@ import type {SyncFileInfoItem} from "./syncFileInfoItem";
 
 export interface SyncCheckResponse {
     toCreate: SyncFileInfoItem[];
-    toUpdate: unknown[];
+    toUpdate: SyncFileInfoItem[];
 }

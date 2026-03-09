@@ -15,7 +15,7 @@ export interface FilterFieldMetadata {
     isComputed?: boolean;
     isCollection?: boolean;
     /** @nullable */
-    nestedFields?: unknown[] | null;
+    nestedFields?: FilterFieldMetadata[] | null;
     /** @nullable */
     values?: string[] | null;
     supportsDynamicValues?: boolean;

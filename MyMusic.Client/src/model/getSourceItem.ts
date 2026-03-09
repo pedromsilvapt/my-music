@@ -6,6 +6,7 @@
  OpenAPI spec version: 1.0.0
  */
 export interface GetSourceItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     icon: string;
     name: string;

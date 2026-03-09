@@ -6,10 +6,16 @@
  OpenAPI spec version: 1.0.0
  */
 export interface SyncCompleteResponse {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     createdCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     updatedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     skippedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     downloadedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     removedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     errorCount: number;
 }

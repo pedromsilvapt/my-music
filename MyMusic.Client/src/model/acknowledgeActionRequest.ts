@@ -6,5 +6,6 @@
  OpenAPI spec version: 1.0.0
  */
 export interface AcknowledgeActionRequest {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songId: number;
 }

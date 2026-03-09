@@ -9,11 +9,17 @@ import type {GetArtistResponseAlbum} from "./getArtistResponseAlbum";
 import type {GetArtistResponseSong} from "./getArtistResponseSong";
 
 export interface GetArtistResponseArtist {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     photo: number | null;
     name: string;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     albumsCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songsCount: number;
     createdAt: string;
     albums: GetArtistResponseAlbum[];

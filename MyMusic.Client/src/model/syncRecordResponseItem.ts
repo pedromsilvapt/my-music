@@ -12,7 +12,10 @@ export interface SyncRecordResponseItem {
     filePath: string;
     action: SyncRecordAction;
     source: SyncRecordSource;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     songId?: number | null;
     /** @nullable */
     errorMessage?: string | null;

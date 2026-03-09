@@ -8,9 +8,10 @@
 import type {UpdateSongItem} from "./updateSongItem";
 
 export interface BatchUpdateSongResult {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     success?: boolean;
     /** @nullable */
     error?: string | null;
-    song?: UpdateSongItem | null;
+    song?: null | UpdateSongItem;
 }

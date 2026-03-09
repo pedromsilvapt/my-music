@@ -9,10 +9,14 @@ import type {GetPlaylistSong} from "./getPlaylistSong";
 import type {PlaylistType} from "./playlistType";
 
 export interface GetPlaylistItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     name: string;
     type: PlaylistType;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     currentSongId?: number | null;
     songs: GetPlaylistSong[];
 }

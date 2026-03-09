@@ -8,5 +8,8 @@
 export type GetDevicesFilterValuesParams = {
     field?: string;
     search?: string;
+    /**
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     limit?: number;
 };

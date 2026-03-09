@@ -8,7 +8,8 @@
 import type {UpdateSongAlbumArtist} from "./updateSongAlbumArtist";
 
 export interface UpdateSongAlbum {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     name: string;
-    artist?: UpdateSongAlbumArtist | null;
+    artist?: null | UpdateSongAlbumArtist;
 }

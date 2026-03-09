@@ -13,6 +13,7 @@ import type {
     DefinedUseQueryResult,
     InvalidateOptions,
     MutationFunction,
+    MutationFunctionContext,
     QueryClient,
     QueryFunction,
     QueryKey,
@@ -24,7 +25,8 @@ import type {
 } from "@tanstack/react-query";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {http, HttpResponse} from "msw";
+
+import {HttpResponse, http} from "msw";
 import type {
     CreateUserRequest,
     CreateUserResponse,
@@ -33,12 +35,26 @@ import type {
     UpdateUserRequest,
 } from "../model";
 
-export type listUsersResponse200 = {
+export type listUsersResponse200TextPlain = {
     data: ListUsersResponse;
     status: 200;
 };
 
-export type listUsersResponseSuccess = listUsersResponse200 & {
+export type listUsersResponse200ApplicationJson = {
+    data: ListUsersResponse;
+    status: 200;
+};
+
+export type listUsersResponse200TextJson = {
+    data: ListUsersResponse;
+    status: 200;
+};
+
+export type listUsersResponseSuccess = (
+    | listUsersResponse200TextPlain
+    | listUsersResponse200ApplicationJson
+    | listUsersResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -194,12 +210,26 @@ export const invalidateListUsers = async (
     return queryClient;
 };
 
-export type createUserResponse200 = {
+export type createUserResponse200TextPlain = {
     data: CreateUserResponse;
     status: 200;
 };
 
-export type createUserResponseSuccess = createUserResponse200 & {
+export type createUserResponse200ApplicationJson = {
+    data: CreateUserResponse;
+    status: 200;
+};
+
+export type createUserResponse200TextJson = {
+    data: CreateUserResponse;
+    status: 200;
+};
+
+export type createUserResponseSuccess = (
+    | createUserResponse200TextPlain
+    | createUserResponse200ApplicationJson
+    | createUserResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -293,12 +323,26 @@ export const useCreateUser = <TError = unknown, TContext = unknown>(
 > => {
     return useMutation(getCreateUserMutationOptions(options), queryClient);
 };
-export type getCurrentUserResponse200 = {
+export type getCurrentUserResponse200TextPlain = {
     data: GetUserResponse;
     status: 200;
 };
 
-export type getCurrentUserResponseSuccess = getCurrentUserResponse200 & {
+export type getCurrentUserResponse200ApplicationJson = {
+    data: GetUserResponse;
+    status: 200;
+};
+
+export type getCurrentUserResponse200TextJson = {
+    data: GetUserResponse;
+    status: 200;
+};
+
+export type getCurrentUserResponseSuccess = (
+    | getCurrentUserResponse200TextPlain
+    | getCurrentUserResponse200ApplicationJson
+    | getCurrentUserResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -454,12 +498,26 @@ export const invalidateGetCurrentUser = async (
     return queryClient;
 };
 
-export type updateCurrentUserResponse200 = {
+export type updateCurrentUserResponse200TextPlain = {
     data: GetUserResponse;
     status: 200;
 };
 
-export type updateCurrentUserResponseSuccess = updateCurrentUserResponse200 & {
+export type updateCurrentUserResponse200ApplicationJson = {
+    data: GetUserResponse;
+    status: 200;
+};
+
+export type updateCurrentUserResponse200TextJson = {
+    data: GetUserResponse;
+    status: 200;
+};
+
+export type updateCurrentUserResponseSuccess = (
+    | updateCurrentUserResponse200TextPlain
+    | updateCurrentUserResponse200ApplicationJson
+    | updateCurrentUserResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -502,6 +560,7 @@ export const getUpdateCurrentUserMutationOptions = <
             { data: UpdateUserRequest },
             TContext
         >;
+        skipInvalidation?: boolean;
         fetch?: RequestInit;
     },
 ): UseMutationOptions<
@@ -531,13 +590,16 @@ export const getUpdateCurrentUserMutationOptions = <
     const onSuccess = (
         data: Awaited<ReturnType<typeof updateCurrentUser>>,
         variables: { data: UpdateUserRequest },
-        context: TContext,
+        onMutateResult: TContext,
+        context: MutationFunctionContext,
     ) => {
-        queryClient.invalidateQueries({queryKey: getGetCurrentUserQueryKey()});
-        mutationOptions?.onSuccess?.(data, variables, context);
+        if (!options?.skipInvalidation) {
+            queryClient.invalidateQueries({queryKey: getGetCurrentUserQueryKey()});
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
     };
 
-    return {mutationFn, onSuccess, ...mutationOptions};
+    return {...mutationOptions, mutationFn, onSuccess};
 };
 
 export type UpdateCurrentUserMutationResult = NonNullable<
@@ -554,6 +616,7 @@ export const useUpdateCurrentUser = <TError = unknown, TContext = unknown>(
             { data: UpdateUserRequest },
             TContext
         >;
+        skipInvalidation?: boolean;
         fetch?: RequestInit;
     },
     queryClient?: QueryClient,
@@ -574,55 +637,145 @@ export const useUpdateCurrentUser = <TError = unknown, TContext = unknown>(
 };
 
 export const getListUsersResponseMock = (
-    overrideResponse: Partial<ListUsersResponse> = {},
-): ListUsersResponse => ({
-    users: Array.from(
-        {length: faker.number.int({min: 1, max: 10})},
-        (_, i) => i + 1,
-    ).map(() => ({
-        id: faker.number.int({min: undefined, max: undefined}),
-        username: faker.string.alpha({length: {min: 10, max: 20}}),
-        name: faker.string.alpha({length: {min: 10, max: 20}}),
-        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
-    })),
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<ListUsersResponse, object>> = {},
+): ListUsersResponse =>
+    faker.helpers.arrayElement([
+        {
+            users: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            ...overrideResponse,
+        },
+        {
+            users: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            ...overrideResponse,
+        },
+        {
+            users: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            })),
+            ...overrideResponse,
+        },
+    ]);
 
 export const getCreateUserResponseMock = (
-    overrideResponse: Partial<CreateUserResponse> = {},
-): CreateUserResponse => ({
-    user: {
-        id: faker.number.int({min: undefined, max: undefined}),
-        username: faker.string.alpha({length: {min: 10, max: 20}}),
-        name: faker.string.alpha({length: {min: 10, max: 20}}),
-        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
-    },
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<CreateUserResponse, object>> = {},
+): CreateUserResponse =>
+    faker.helpers.arrayElement([
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+    ]);
 
 export const getGetCurrentUserResponseMock = (
-    overrideResponse: Partial<GetUserResponse> = {},
-): GetUserResponse => ({
-    user: {
-        id: faker.number.int({min: undefined, max: undefined}),
-        username: faker.string.alpha({length: {min: 10, max: 20}}),
-        name: faker.string.alpha({length: {min: 10, max: 20}}),
-        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
-    },
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<GetUserResponse, object>> = {},
+): GetUserResponse =>
+    faker.helpers.arrayElement([
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+    ]);
 
 export const getUpdateCurrentUserResponseMock = (
-    overrideResponse: Partial<GetUserResponse> = {},
-): GetUserResponse => ({
-    user: {
-        id: faker.number.int({min: undefined, max: undefined}),
-        username: faker.string.alpha({length: {min: 10, max: 20}}),
-        name: faker.string.alpha({length: {min: 10, max: 20}}),
-        colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
-    },
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<GetUserResponse, object>> = {},
+): GetUserResponse =>
+    faker.helpers.arrayElement([
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+        {
+            user: {
+                id: faker.number.int(),
+                username: faker.string.alpha({length: {min: 10, max: 20}}),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                colorScheme: faker.string.alpha({length: {min: 10, max: 20}}),
+            },
+            ...overrideResponse,
+        },
+    ]);
 
 export const getListUsersMockHandler = (
     overrideResponse?:
@@ -634,14 +787,14 @@ export const getListUsersMockHandler = (
 ) => {
     return http.get(
         "*/users",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getListUsersResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -658,14 +811,14 @@ export const getCreateUserMockHandler = (
 ) => {
     return http.post(
         "*/users",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getCreateUserResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -682,14 +835,14 @@ export const getGetCurrentUserMockHandler = (
 ) => {
     return http.get(
         "*/users/me",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getGetCurrentUserResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -706,14 +859,14 @@ export const getUpdateCurrentUserMockHandler = (
 ) => {
     return http.patch(
         "*/users/me",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getUpdateCurrentUserResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,

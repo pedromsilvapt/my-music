@@ -8,9 +8,13 @@
 import type {GetSongResponseAlbumArtist} from "./getSongResponseAlbumArtist";
 
 export interface GetSongResponseAlbum {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     name: string;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year: number | null;
-    artist?: GetSongResponseAlbumArtist | null;
+    artist?: null | GetSongResponseAlbumArtist;
 }

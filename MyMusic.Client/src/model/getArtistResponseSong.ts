@@ -10,14 +10,21 @@ import type {GetArtistResponseSongAlbum} from "./getArtistResponseSongAlbum";
 import type {GetArtistResponseSongArtist} from "./getArtistResponseSongArtist";
 
 export interface GetArtistResponseSong {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     cover: number | null;
     title: string;
     artists: GetArtistResponseSongArtist[];
     album: GetArtistResponseSongAlbum;
     genres: GetArtistResponseGenre[];
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year: number | null;
     duration: string;
     isFavorite: boolean;

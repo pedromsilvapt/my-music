@@ -8,16 +8,25 @@
 import type {SyncSessionStatus} from "./syncSessionStatus";
 
 export interface SyncSessionItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     startedAt: string;
     /** @nullable */
     completedAt?: string | null;
     status: SyncSessionStatus;
     isDryRun: boolean;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     createdCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     updatedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     skippedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     downloadedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     removedCount: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     errorCount: number;
+    /** @nullable */
+    repositoryPath?: string | null;
 }

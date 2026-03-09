@@ -6,9 +6,20 @@
  OpenAPI spec version: 1.0.0
  */
 export type ListPlayHistoryParams = {
-    lastId?: number;
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+    lastId?: number | null;
+    /**
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     limit?: number;
     startDate?: string;
     endDate?: string;
-    songId?: number;
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+    songId?: number | null;
 };

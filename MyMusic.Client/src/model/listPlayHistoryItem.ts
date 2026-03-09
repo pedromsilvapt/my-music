@@ -6,18 +6,30 @@
  OpenAPI spec version: 1.0.0
  */
 export interface ListPlayHistoryItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songId: number;
     songTitle: string;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     albumId: number;
     albumName: string;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     coverId?: number | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     artistId?: number | null;
     /** @nullable */
     artistName?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     deviceId?: number | null;
     /** @nullable */
     deviceName?: string | null;

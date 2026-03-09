@@ -13,18 +13,13 @@ export interface UpdateSongItem2 {
     id: number;
     title: string;
     label: string;
-    /** @nullable */
     cover: number | null;
-    /** @nullable */
     year: number | null;
-    /** @nullable */
     lyrics?: string | null;
-    /** @nullable */
     rating?: number | null;
     explicit?: boolean;
     artists: UpdateSongArtist[];
     album: UpdateSongAlbum;
     genres: UpdateSongGenre[];
-    /** @nullable */
     repositoryPath?: string | null;
 }

@@ -7,6 +7,9 @@
  */
 export interface ReplaceQueueRequest {
     songIds: number[];
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     currentSongId?: number | null;
 }

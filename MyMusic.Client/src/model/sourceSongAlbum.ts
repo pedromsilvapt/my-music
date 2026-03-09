@@ -12,8 +12,11 @@ export interface SourceSongAlbum {
     id: string;
     name: string;
     artist: SourceSongArtist;
-    cover?: SourceArtwork | null;
-    /** @nullable */
+    cover?: null | SourceArtwork;
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year?: number | null;
     /** @nullable */
     link?: string | null;

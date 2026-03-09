@@ -66,7 +66,20 @@ module.exports = {
             }
         },
         input: {
-            target: 'http://localhost:5000/api/openapi/v1.json',
+            target: 'http://localhost:5000/openapi/v1.json',
+            // parsers: {
+            //     reference: (value, { path }) => {
+            //         if (typeof value === 'string' && value.includes('/properties/')) {
+            //             const knownSchemas = ['FilterFieldMetadata', 'SyncFileInfoItem'];
+            //             for (const schema of knownSchemas) {
+            //                 if (value.includes(schema)) {
+            //                     return { $ref: `#/components/schemas/${schema}` };
+            //                 }
+            //             }
+            //         }
+            //         return value;
+            //     }
+            // }
         },
     },
 };

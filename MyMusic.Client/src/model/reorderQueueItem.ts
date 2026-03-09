@@ -6,6 +6,8 @@
  OpenAPI spec version: 1.0.0
  */
 export interface ReorderQueueItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     fromIndex: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     toIndex: number;
 }

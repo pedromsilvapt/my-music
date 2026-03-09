@@ -5,10 +5,8 @@
  MyMusic.Server | v1
  OpenAPI spec version: 1.0.0
  */
-/**
- * @nullable
- */
-export type UpdateSongAlbumArtist = {
+export interface UpdateSongAlbumArtist {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     name: string;
-} | null;
+}

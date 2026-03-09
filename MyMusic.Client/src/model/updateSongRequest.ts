@@ -6,14 +6,21 @@
  OpenAPI spec version: 1.0.0
  */
 export interface UpdateSongRequest {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songId: number;
     /** @nullable */
     title?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     albumId?: number | null;
     /** @nullable */
     albumName?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     albumArtistId?: number | null;
     /** @nullable */
     albumArtistName?: string | null;
@@ -25,11 +32,17 @@ export interface UpdateSongRequest {
     genreIds?: number[] | null;
     /** @nullable */
     genreNames?: string[] | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year?: number | null;
     /** @nullable */
     lyrics?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
     rating?: number | null;
     /** @nullable */
     explicit?: boolean | null;

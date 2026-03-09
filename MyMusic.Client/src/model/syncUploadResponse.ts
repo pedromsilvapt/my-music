@@ -7,6 +7,9 @@
  */
 export interface SyncUploadResponse {
     success: boolean;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     songId?: number | null;
 }

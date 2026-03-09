@@ -7,5 +7,8 @@
  */
 export type AutocompleteGenresParams = {
     search?: string;
+    /**
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     limit?: number;
 };

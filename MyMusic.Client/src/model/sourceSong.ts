@@ -13,14 +13,21 @@ export interface SourceSong {
     id: string;
     title: string;
     album?: SourceSongAlbum;
-    cover?: SourceArtwork | null;
-    /** @nullable */
+    cover?: null | SourceArtwork;
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year?: number | null;
     /** @nullable */
     lyrics?: string | null;
     explicit?: boolean;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     size?: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     track?: number | null;
     /** @pattern ^-?(\d+\.)?\d{2}:\d{2}:\d{2}(\.\d{1,7})?$ */
     duration?: string;
@@ -28,13 +35,17 @@ export interface SourceSong {
     genres: string[];
     /** @nullable */
     link?: string | null;
+    /** @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$ */
     price?: number;
     /** @nullable */
     searchableText?: string | null;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     durationSeconds?: number;
     /** @nullable */
     durationCategory?: string | null;
     hasLyrics?: boolean;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     artistCount?: number;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     genreCount?: number;
 }

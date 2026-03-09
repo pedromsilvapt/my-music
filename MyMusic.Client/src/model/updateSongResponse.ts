@@ -5,8 +5,8 @@
  MyMusic.Server | v1
  OpenAPI spec version: 1.0.0
  */
-import type {UpdateSongItem2} from "./updateSongItem2";
+import type {UpdateSongItem} from "./updateSongItem";
 
 export interface UpdateSongResponse {
-    song: UpdateSongItem2;
+    song: UpdateSongItem;
 }

@@ -1,5 +1,6 @@
 import {useRef} from 'react';
 import {useShallow} from 'zustand/react/shallow';
+import {useMediaSession} from "../../hooks/use-media-session";
 import {usePlayHistoryTracker} from "../../hooks/use-play-history.ts";
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
@@ -10,6 +11,7 @@ const TIME_UPDATE_DEBOUNCE_INTERVAL_SECONDS = .25;
 
 export default function PlayerTimelineContainer() {
     usePlayHistoryTracker();
+    useMediaSession();
 
     const previousIntervalRef = useRef<number>(-1);
     const wavesurferRef = useWavesurferRef();

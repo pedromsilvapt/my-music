@@ -24,7 +24,8 @@ import type {
 } from "@tanstack/react-query";
 import {useMutation, useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {http, HttpResponse} from "msw";
+
+import {HttpResponse, http} from "msw";
 import type {
     BatchDeleteNonConformitiesRequest,
     BatchSetWaiverRequest,
@@ -35,12 +36,26 @@ import type {
     SetWaiverRequest,
 } from "../model";
 
-export type listAuditRulesResponse200 = {
+export type listAuditRulesResponse200TextPlain = {
     data: ListAuditRulesResponse;
     status: 200;
 };
 
-export type listAuditRulesResponseSuccess = listAuditRulesResponse200 & {
+export type listAuditRulesResponse200ApplicationJson = {
+    data: ListAuditRulesResponse;
+    status: 200;
+};
+
+export type listAuditRulesResponse200TextJson = {
+    data: ListAuditRulesResponse;
+    status: 200;
+};
+
+export type listAuditRulesResponseSuccess = (
+    | listAuditRulesResponse200TextPlain
+    | listAuditRulesResponse200ApplicationJson
+    | listAuditRulesResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -196,12 +211,26 @@ export const invalidateListAuditRules = async (
     return queryClient;
 };
 
-export type getAuditRuleResponse200 = {
+export type getAuditRuleResponse200TextPlain = {
     data: GetAuditRuleResponse;
     status: 200;
 };
 
-export type getAuditRuleResponseSuccess = getAuditRuleResponse200 & {
+export type getAuditRuleResponse200ApplicationJson = {
+    data: GetAuditRuleResponse;
+    status: 200;
+};
+
+export type getAuditRuleResponse200TextJson = {
+    data: GetAuditRuleResponse;
+    status: 200;
+};
+
+export type getAuditRuleResponseSuccess = (
+    | getAuditRuleResponse200TextPlain
+    | getAuditRuleResponse200ApplicationJson
+    | getAuditRuleResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -371,12 +400,26 @@ export const invalidateGetAuditRule = async (
     return queryClient;
 };
 
-export type scanAuditRuleResponse200 = {
+export type scanAuditRuleResponse200TextPlain = {
     data: ScanAuditRuleResponse;
     status: 200;
 };
 
-export type scanAuditRuleResponseSuccess = scanAuditRuleResponse200 & {
+export type scanAuditRuleResponse200ApplicationJson = {
+    data: ScanAuditRuleResponse;
+    status: 200;
+};
+
+export type scanAuditRuleResponse200TextJson = {
+    data: ScanAuditRuleResponse;
+    status: 200;
+};
+
+export type scanAuditRuleResponseSuccess = (
+    | scanAuditRuleResponse200TextPlain
+    | scanAuditRuleResponse200ApplicationJson
+    | scanAuditRuleResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -468,13 +511,26 @@ export const useScanAuditRule = <TError = unknown, TContext = unknown>(
 > => {
     return useMutation(getScanAuditRuleMutationOptions(options), queryClient);
 };
-export type listAuditNonConformitiesResponse200 = {
+export type listAuditNonConformitiesResponse200TextPlain = {
     data: ListAuditNonConformitiesResponse;
     status: 200;
 };
 
-export type listAuditNonConformitiesResponseSuccess =
-    listAuditNonConformitiesResponse200 & {
+export type listAuditNonConformitiesResponse200ApplicationJson = {
+    data: ListAuditNonConformitiesResponse;
+    status: 200;
+};
+
+export type listAuditNonConformitiesResponse200TextJson = {
+    data: ListAuditNonConformitiesResponse;
+    status: 200;
+};
+
+export type listAuditNonConformitiesResponseSuccess = (
+    | listAuditNonConformitiesResponse200TextPlain
+    | listAuditNonConformitiesResponse200ApplicationJson
+    | listAuditNonConformitiesResponse200TextJson
+    ) & {
     headers: Headers;
 };
 
@@ -1092,109 +1148,282 @@ export const useBatchDeleteAuditNonConformities = <
 };
 
 export const getListAuditRulesResponseMock = (
-    overrideResponse: Partial<ListAuditRulesResponse> = {},
-): ListAuditRulesResponse => ({
-    rules: Array.from(
-        {length: faker.number.int({min: 1, max: 10})},
-        (_, i) => i + 1,
-    ).map(() => ({
-        id: faker.number.int({min: undefined, max: undefined}),
-        name: faker.string.alpha({length: {min: 10, max: 20}}),
-        icon: faker.string.alpha({length: {min: 10, max: 20}}),
-        description: faker.string.alpha({length: {min: 10, max: 20}}),
-        nonConformityCount: faker.number.int({min: undefined, max: undefined}),
-    })),
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<ListAuditRulesResponse, object>> = {},
+): ListAuditRulesResponse =>
+    faker.helpers.arrayElement([
+        {
+            rules: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                icon: faker.string.alpha({length: {min: 10, max: 20}}),
+                description: faker.string.alpha({length: {min: 10, max: 20}}),
+                nonConformityCount: faker.number.int(),
+            })),
+            ...overrideResponse,
+        },
+        {
+            rules: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                icon: faker.string.alpha({length: {min: 10, max: 20}}),
+                description: faker.string.alpha({length: {min: 10, max: 20}}),
+                nonConformityCount: faker.number.int(),
+            })),
+            ...overrideResponse,
+        },
+        {
+            rules: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                icon: faker.string.alpha({length: {min: 10, max: 20}}),
+                description: faker.string.alpha({length: {min: 10, max: 20}}),
+                nonConformityCount: faker.number.int(),
+            })),
+            ...overrideResponse,
+        },
+    ]);
 
 export const getGetAuditRuleResponseMock = (
-    overrideResponse: Partial<GetAuditRuleResponse> = {},
-): GetAuditRuleResponse => ({
-    rule: {
-        id: faker.number.int({min: undefined, max: undefined}),
-        name: faker.string.alpha({length: {min: 10, max: 20}}),
-        icon: faker.string.alpha({length: {min: 10, max: 20}}),
-        description: faker.string.alpha({length: {min: 10, max: 20}}),
-        nonConformityCount: faker.number.int({min: undefined, max: undefined}),
-    },
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<GetAuditRuleResponse, object>> = {},
+): GetAuditRuleResponse =>
+    faker.helpers.arrayElement([
+        {
+            rule: {
+                id: faker.number.int(),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                icon: faker.string.alpha({length: {min: 10, max: 20}}),
+                description: faker.string.alpha({length: {min: 10, max: 20}}),
+                nonConformityCount: faker.number.int(),
+            },
+            ...overrideResponse,
+        },
+        {
+            rule: {
+                id: faker.number.int(),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                icon: faker.string.alpha({length: {min: 10, max: 20}}),
+                description: faker.string.alpha({length: {min: 10, max: 20}}),
+                nonConformityCount: faker.number.int(),
+            },
+            ...overrideResponse,
+        },
+        {
+            rule: {
+                id: faker.number.int(),
+                name: faker.string.alpha({length: {min: 10, max: 20}}),
+                icon: faker.string.alpha({length: {min: 10, max: 20}}),
+                description: faker.string.alpha({length: {min: 10, max: 20}}),
+                nonConformityCount: faker.number.int(),
+            },
+            ...overrideResponse,
+        },
+    ]);
 
 export const getScanAuditRuleResponseMock = (
-    overrideResponse: Partial<ScanAuditRuleResponse> = {},
-): ScanAuditRuleResponse => ({
-    nonConformitiesCreated: faker.number.int({min: undefined, max: undefined}),
-    ...overrideResponse,
-});
+    overrideResponse: Partial<Extract<ScanAuditRuleResponse, object>> = {},
+): ScanAuditRuleResponse =>
+    faker.helpers.arrayElement([
+        {nonConformitiesCreated: faker.number.int(), ...overrideResponse},
+        {nonConformitiesCreated: faker.number.int(), ...overrideResponse},
+        {nonConformitiesCreated: faker.number.int(), ...overrideResponse},
+    ]);
 
 export const getListAuditNonConformitiesResponseMock = (
-    overrideResponse: Partial<ListAuditNonConformitiesResponse> = {},
-): ListAuditNonConformitiesResponse => ({
-    nonConformities: Array.from(
-        {length: faker.number.int({min: 1, max: 10})},
-        (_, i) => i + 1,
-    ).map(() => ({
-        id: faker.number.int({min: undefined, max: undefined}),
-        songId: faker.number.int({min: undefined, max: undefined}),
-        song: {
-            id: faker.number.int({min: undefined, max: undefined}),
-            cover: faker.helpers.arrayElement([
-                faker.helpers.arrayElement([
-                    faker.number.int({min: undefined, max: undefined}),
-                    null,
-                ]),
-                null,
-            ]),
-            title: faker.string.alpha({length: {min: 10, max: 20}}),
-            artists: Array.from(
+    overrideResponse: Partial<
+        Extract<ListAuditNonConformitiesResponse, object>
+    > = {},
+): ListAuditNonConformitiesResponse =>
+    faker.helpers.arrayElement([
+        {
+            nonConformities: Array.from(
                 {length: faker.number.int({min: 1, max: 10})},
                 (_, i) => i + 1,
             ).map(() => ({
-                id: faker.number.int({min: undefined, max: undefined}),
-                name: faker.string.alpha({length: {min: 10, max: 20}}),
-            })),
-            album: {
-                id: faker.number.int({min: undefined, max: undefined}),
-                name: faker.string.alpha({length: {min: 10, max: 20}}),
-            },
-            genres: Array.from(
-                {length: faker.number.int({min: 1, max: 10})},
-                (_, i) => i + 1,
-            ).map(() => ({
-                id: faker.number.int({min: undefined, max: undefined}),
-                name: faker.string.alpha({length: {min: 10, max: 20}}),
-            })),
-            year: faker.helpers.arrayElement([
-                faker.helpers.arrayElement([
-                    faker.number.int({min: undefined, max: undefined}),
-                    null,
+                id: faker.number.int(),
+                songId: faker.number.int(),
+                song: {
+                    id: faker.number.int(),
+                    cover: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([faker.number.int(), null]),
+                        null,
+                    ]),
+                    title: faker.string.alpha({length: {min: 10, max: 20}}),
+                    artists: Array.from(
+                        {length: faker.number.int({min: 1, max: 10})},
+                        (_, i) => i + 1,
+                    ).map(() => ({
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    })),
+                    album: {
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    },
+                    genres: Array.from(
+                        {length: faker.number.int({min: 1, max: 10})},
+                        (_, i) => i + 1,
+                    ).map(() => ({
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    })),
+                    year: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([faker.number.int(), null]),
+                        null,
+                    ]),
+                    duration: faker.string.alpha({length: {min: 10, max: 20}}),
+                    isFavorite: faker.datatype.boolean(),
+                    isExplicit: faker.datatype.boolean(),
+                    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+                    addedAt: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([
+                            faker.date.past().toISOString().slice(0, 19) + "Z",
+                            null,
+                        ]),
+                        undefined,
+                    ]),
+                },
+                hasWaiver: faker.datatype.boolean(),
+                waiverReason: faker.helpers.arrayElement([
+                    faker.helpers.arrayElement([
+                        faker.string.alpha({length: {min: 10, max: 20}}),
+                        null,
+                    ]),
+                    undefined,
                 ]),
-                null,
-            ]),
-            duration: faker.string.alpha({length: {min: 10, max: 20}}),
-            isFavorite: faker.datatype.boolean(),
-            isExplicit: faker.datatype.boolean(),
-            createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-            addedAt: faker.helpers.arrayElement([
-                faker.helpers.arrayElement([
-                    faker.date.past().toISOString().slice(0, 19) + "Z",
-                    null,
-                ]),
-                undefined,
-            ]),
+                createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            })),
+            ...overrideResponse,
         },
-        hasWaiver: faker.datatype.boolean(),
-        waiverReason: faker.helpers.arrayElement([
-            faker.helpers.arrayElement([
-                faker.string.alpha({length: {min: 10, max: 20}}),
-                null,
-            ]),
-            undefined,
-        ]),
-        createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-    })),
-    ...overrideResponse,
-});
+        {
+            nonConformities: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                songId: faker.number.int(),
+                song: {
+                    id: faker.number.int(),
+                    cover: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([faker.number.int(), null]),
+                        null,
+                    ]),
+                    title: faker.string.alpha({length: {min: 10, max: 20}}),
+                    artists: Array.from(
+                        {length: faker.number.int({min: 1, max: 10})},
+                        (_, i) => i + 1,
+                    ).map(() => ({
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    })),
+                    album: {
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    },
+                    genres: Array.from(
+                        {length: faker.number.int({min: 1, max: 10})},
+                        (_, i) => i + 1,
+                    ).map(() => ({
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    })),
+                    year: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([faker.number.int(), null]),
+                        null,
+                    ]),
+                    duration: faker.string.alpha({length: {min: 10, max: 20}}),
+                    isFavorite: faker.datatype.boolean(),
+                    isExplicit: faker.datatype.boolean(),
+                    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+                    addedAt: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([
+                            faker.date.past().toISOString().slice(0, 19) + "Z",
+                            null,
+                        ]),
+                        undefined,
+                    ]),
+                },
+                hasWaiver: faker.datatype.boolean(),
+                waiverReason: faker.helpers.arrayElement([
+                    faker.helpers.arrayElement([
+                        faker.string.alpha({length: {min: 10, max: 20}}),
+                        null,
+                    ]),
+                    undefined,
+                ]),
+                createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            })),
+            ...overrideResponse,
+        },
+        {
+            nonConformities: Array.from(
+                {length: faker.number.int({min: 1, max: 10})},
+                (_, i) => i + 1,
+            ).map(() => ({
+                id: faker.number.int(),
+                songId: faker.number.int(),
+                song: {
+                    id: faker.number.int(),
+                    cover: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([faker.number.int(), null]),
+                        null,
+                    ]),
+                    title: faker.string.alpha({length: {min: 10, max: 20}}),
+                    artists: Array.from(
+                        {length: faker.number.int({min: 1, max: 10})},
+                        (_, i) => i + 1,
+                    ).map(() => ({
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    })),
+                    album: {
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    },
+                    genres: Array.from(
+                        {length: faker.number.int({min: 1, max: 10})},
+                        (_, i) => i + 1,
+                    ).map(() => ({
+                        id: faker.number.int(),
+                        name: faker.string.alpha({length: {min: 10, max: 20}}),
+                    })),
+                    year: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([faker.number.int(), null]),
+                        null,
+                    ]),
+                    duration: faker.string.alpha({length: {min: 10, max: 20}}),
+                    isFavorite: faker.datatype.boolean(),
+                    isExplicit: faker.datatype.boolean(),
+                    createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+                    addedAt: faker.helpers.arrayElement([
+                        faker.helpers.arrayElement([
+                            faker.date.past().toISOString().slice(0, 19) + "Z",
+                            null,
+                        ]),
+                        undefined,
+                    ]),
+                },
+                hasWaiver: faker.datatype.boolean(),
+                waiverReason: faker.helpers.arrayElement([
+                    faker.helpers.arrayElement([
+                        faker.string.alpha({length: {min: 10, max: 20}}),
+                        null,
+                    ]),
+                    undefined,
+                ]),
+                createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+            })),
+            ...overrideResponse,
+        },
+    ]);
 
 export const getListAuditRulesMockHandler = (
     overrideResponse?:
@@ -1206,14 +1435,14 @@ export const getListAuditRulesMockHandler = (
 ) => {
     return http.get(
         "*/audits/rules",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getListAuditRulesResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -1230,14 +1459,14 @@ export const getGetAuditRuleMockHandler = (
 ) => {
     return http.get(
         "*/audits/rules/:id",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getGetAuditRuleResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -1254,14 +1483,14 @@ export const getScanAuditRuleMockHandler = (
 ) => {
     return http.post(
         "*/audits/rules/:id/scan",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getScanAuditRuleResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -1280,14 +1509,14 @@ export const getListAuditNonConformitiesMockHandler = (
 ) => {
     return http.get(
         "*/audits/rules/:id/non-conformities",
-        async (info) => {
-            return new HttpResponse(
+        async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+            return HttpResponse.json(
                 overrideResponse !== undefined
                     ? typeof overrideResponse === "function"
                         ? await overrideResponse(info)
                         : overrideResponse
                     : getListAuditNonConformitiesResponseMock(),
-                {status: 200, headers: {"Content-Type": "text/plain"}},
+                {status: 200},
             );
         },
         options,
@@ -1304,10 +1533,11 @@ export const getSetAuditWaiverMockHandler = (
 ) => {
     return http.post(
         "*/audits/non-conformities/:id/waiver",
-        async (info) => {
+        async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
             if (typeof overrideResponse === "function") {
                 await overrideResponse(info);
             }
+
             return new HttpResponse(null, {status: 200});
         },
         options,
@@ -1324,10 +1554,11 @@ export const getDeleteAuditNonConformityMockHandler = (
 ) => {
     return http.delete(
         "*/audits/non-conformities/:id",
-        async (info) => {
+        async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
             if (typeof overrideResponse === "function") {
                 await overrideResponse(info);
             }
+
             return new HttpResponse(null, {status: 200});
         },
         options,
@@ -1344,10 +1575,11 @@ export const getBatchSetAuditWaiverMockHandler = (
 ) => {
     return http.post(
         "*/audits/non-conformities/waiver/batch",
-        async (info) => {
+        async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
             if (typeof overrideResponse === "function") {
                 await overrideResponse(info);
             }
+
             return new HttpResponse(null, {status: 200});
         },
         options,
@@ -1364,10 +1596,11 @@ export const getBatchDeleteAuditNonConformitiesMockHandler = (
 ) => {
     return http.post(
         "*/audits/non-conformities/batch-delete",
-        async (info) => {
+        async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
             if (typeof overrideResponse === "function") {
                 await overrideResponse(info);
             }
+
             return new HttpResponse(null, {status: 200});
         },
         options,

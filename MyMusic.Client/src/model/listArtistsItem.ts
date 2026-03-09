@@ -6,13 +6,23 @@
  OpenAPI spec version: 1.0.0
  */
 export interface ListArtistsItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     photo: number | null;
     name: string;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     albumsCount: number | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     songsCount: number | null;
     createdAt: string;
 }

@@ -6,9 +6,11 @@
  OpenAPI spec version: 1.0.0
  */
 export interface ListAuditRulesItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     name: string;
     icon: string;
     description: string;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     nonConformityCount: number;
 }

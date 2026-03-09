@@ -10,17 +10,25 @@ import type {ListSongsArtist} from "./listSongsArtist";
 import type {ListSongsGenre} from "./listSongsGenre";
 
 export interface GetPlaylistSong {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     order: number;
     /** @nullable */
     addedAtPlaylist?: string | null;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     cover: number | null;
     title: string;
     artists: ListSongsArtist[];
     album: ListSongsAlbum;
     genres: ListSongsGenre[];
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year: number | null;
     duration: string;
     isFavorite: boolean;

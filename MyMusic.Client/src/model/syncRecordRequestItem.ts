@@ -8,7 +8,10 @@
 export interface SyncRecordRequestItem {
     filePath: string;
     action: string;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     songId?: number | null;
     /** @nullable */
     errorMessage?: string | null;

@@ -8,9 +8,11 @@
 import type {PlaylistType} from "./playlistType";
 
 export interface ListPlaylistItem {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
     name: string;
     type: PlaylistType;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songCount: number;
     createdAt: string;
     /** @nullable */

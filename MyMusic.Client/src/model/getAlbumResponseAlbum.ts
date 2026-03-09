@@ -8,14 +8,23 @@
 import type {GetAlbumResponseSong} from "./getAlbumResponseSong";
 
 export interface GetAlbumResponseAlbum {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     cover: number | null;
     name: string;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year: number | null;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     artistId: number;
     artistName: string;
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     songsCount: number;
     createdAt: string;
     songs: GetAlbumResponseSong[];

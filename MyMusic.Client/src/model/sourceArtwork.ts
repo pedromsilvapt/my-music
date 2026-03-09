@@ -5,10 +5,7 @@
  MyMusic.Server | v1
  OpenAPI spec version: 1.0.0
  */
-/**
- * @nullable
- */
-export type SourceArtwork = {
+export interface SourceArtwork {
     /** @nullable */
     normal?: string | null;
     /** @nullable */
@@ -19,4 +16,4 @@ export type SourceArtwork = {
     biggest?: string | null;
     /** @nullable */
     smallest?: string | null;
-} | null;
+}

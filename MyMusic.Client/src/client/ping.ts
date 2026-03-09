@@ -19,7 +19,7 @@ import type {
 } from "@tanstack/react-query";
 import {useQuery} from "@tanstack/react-query";
 import type {RequestHandlerOptions} from "msw";
-import {http, HttpResponse} from "msw";
+import {HttpResponse, http} from "msw";
 
 export type pingResponse200 = {
     data: void;
@@ -181,10 +181,11 @@ export const getPingMockHandler = (
 ) => {
     return http.get(
         "*/ping",
-        async (info) => {
+        async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
             if (typeof overrideResponse === "function") {
                 await overrideResponse(info);
             }
+
             return new HttpResponse(null, {status: 200});
         },
         options,

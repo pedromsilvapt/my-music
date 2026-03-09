@@ -8,11 +8,17 @@
 export interface SongPatch {
     /** @nullable */
     title?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     albumId?: number | null;
     /** @nullable */
     albumName?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     albumArtistId?: number | null;
     /** @nullable */
     albumArtistName?: string | null;
@@ -24,11 +30,17 @@ export interface SongPatch {
     genreIds?: number[] | null;
     /** @nullable */
     genreNames?: string[] | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year?: number | null;
     /** @nullable */
     lyrics?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
     rating?: number | null;
     /** @nullable */
     explicit?: boolean | null;

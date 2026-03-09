@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
+using MyMusic.Server.DTO.Artwork;
 
 namespace MyMusic.Server.Controllers;
 
@@ -8,7 +9,7 @@ namespace MyMusic.Server.Controllers;
 [Route("artwork")]
 public class ArtworkController
 {
-    [HttpGet("/Artwork/{id}", Name = "GetArtwork")]
+    [HttpGet("{id}", Name = "GetArtwork")]
     public async Task<IResult> Get(
         IHttpContextAccessor http,
         [FromServices] MusicDbContext db,
@@ -34,5 +35,26 @@ public class ArtworkController
         http.HttpContext!.Response.Headers.CacheControl = "max-age=86400, public";
 
         return Results.Bytes(image.Data, image.MimeType);
+    }
+
+    [HttpGet("{id}/metadata", Name = "GetArtworkMetadata")]
+    public async Task<IResult> GetMetadata(
+        [FromServices] MusicDbContext db,
+        [FromRoute] long id,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var artwork = await db.Artworks
+            .AsNoTracking()
+            .Where(a => a.Id == id)
+            .Select(a => GetArtworkMetadataResponse.FromEntity(a))
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (artwork is null)
+        {
+            return Results.NotFound();
+        }
+
+        return Results.Ok(artwork);
     }
 }

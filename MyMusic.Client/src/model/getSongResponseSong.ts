@@ -12,17 +12,24 @@ import type {GetSongResponseDevice} from "./getSongResponseDevice";
 import type {GetSongResponseGenre} from "./getSongResponseGenre";
 
 export interface GetSongResponseSong {
+    /** @pattern ^-?(?:0|[1-9]\d*)$ */
     id: number;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     cover: number | null;
-    coverDetails?: GetSongResponseCover | null;
+    coverDetails?: null | GetSongResponseCover;
     title: string;
     label: string;
     artists: GetSongResponseArtist[];
     album: GetSongResponseAlbum;
     genres: GetSongResponseGenre[];
     devices: GetSongResponseDevice[];
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     year: number | null;
     duration: string;
     isFavorite: boolean;
@@ -32,10 +39,16 @@ export interface GetSongResponseSong {
     addedAt?: string | null;
     /** @nullable */
     lyrics?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
     rating?: number | null;
     /** @nullable */
     repositoryPath?: string | null;
-    /** @nullable */
+    /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
     track?: number | null;
 }
