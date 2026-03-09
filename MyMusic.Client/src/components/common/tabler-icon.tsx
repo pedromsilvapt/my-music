@@ -3,7 +3,7 @@ import React, {useEffect, useState} from "react"
 import {DEFAULT_ICON_SIZE, DEFAULT_ICON_STROKE} from "../../consts.ts";
 
 const getIconPath = (iconName: string) => `../../../node_modules/@tabler/icons-react/dist/esm/icons/${iconName}.mjs`;
-const iconModules = import.meta.glob(`../../../node_modules/@tabler/icons-react/dist/esm/icons/*.mjs`)
+const iconModules = import.meta.glob<{ default: React.ComponentType<IconProps> }>(`../../../node_modules/@tabler/icons-react/dist/esm/icons/*.mjs`)
 
 const FALLBACK_ICON = "IconHelpSquareFilled";
 
@@ -28,14 +28,14 @@ export default function TablerIcon({
         const module = iconModules[iconPath];
 
         if (module) {
-            module().then((mod: { default: React.ComponentType<IconProps> }) => {
+            module().then(mod => {
                 if (mounted) setIcon(() => mod.default)
             })
         } else if (defaultIcon) {
             const fallbackPath = getIconPath(defaultIcon);
             const fallbackModule = iconModules[fallbackPath];
             if (fallbackModule) {
-                fallbackModule().then((mod: { default: React.ComponentType<IconProps> }) => {
+                fallbackModule().then(mod => {
                     if (mounted) setIcon(() => mod.default)
                 })
             } else {
