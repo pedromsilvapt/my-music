@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {ActionIcon, Center, Drawer, type MantineColor, RingProgress} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {IconAlertTriangleFilled, IconCheck, IconLoader, IconPlayerPauseFilled,} from "@tabler/icons-react";
@@ -6,11 +7,9 @@ import {ZINDEX_DRAWER, ZINDEX_MODAL} from "../../consts.ts";
 import PurchasesQueue from "./purchases-queue.tsx";
 import usePurchasedSongsQuery from "./usePurchasedSongsQuery.tsx";
 
-export interface PurchasesQueueIndicatorProps {
+export type PurchasesQueueIndicatorProps = object;
 
-}
-
-export default function PurchasesQueueIndicator(_props: PurchasesQueueIndicatorProps) {
+export default function PurchasesQueueIndicator() {
     const [opened, {open, close}] = useDisclosure(false);
 
     const {data: data} = usePurchasedSongsQuery();

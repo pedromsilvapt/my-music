@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {createContext, useCallback, useContext, useState} from "react";
 import ManagePlaylistsDialog from "../components/playlists/manage-playlists-dialog.tsx";
 

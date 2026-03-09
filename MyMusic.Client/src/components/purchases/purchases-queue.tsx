@@ -4,11 +4,9 @@ import {getDownloadSongUrl} from "../../client/songs.ts";
 import {type ListPurchasesItem} from "../../model";
 import PurchasesQueueList from "./purchases-queue-list.tsx";
 
-export interface PurchasesQueueProps {
+export type PurchasesQueueProps = object;
 
-}
-
-export default function PurchasesQueue({}: PurchasesQueueProps) {
+export default function PurchasesQueue() {
     const requeuePurchase = useRequeuePurchase();
     const deletePurchase = useDeletePurchase();
     const deleteManyPurchases = useDeleteManyPurchases();

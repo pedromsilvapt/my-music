@@ -33,7 +33,7 @@ export function usePlaylistsSchema() {
             {
                 name: 'artwork',
                 displayName: '',
-                render: _row =>
+                render: () =>
                     <Artwork
                         id={null}
                         size={32}
@@ -76,7 +76,7 @@ export function usePlaylistsSchema() {
             }
         ],
 
-        actions: (_elems: ListPlaylistItem[]) => {
+        actions: () => {
             return [
                 {group: "Manage"},
                 {

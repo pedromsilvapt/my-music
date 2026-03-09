@@ -61,6 +61,7 @@ export default function AuditDetailPage() {
         }
     }, [id, scanMutation, refetchNonConformities]);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleSetWaiver = useCallback(async (ids: number[], hasWaiver: boolean, _reason?: string | null) => {
         if (hasWaiver) {
             setPendingWaiverIds(ids);

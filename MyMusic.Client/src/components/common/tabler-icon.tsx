@@ -1,5 +1,5 @@
 import type {IconProps} from "@tabler/icons-react";
-import {useEffect, useState} from "react"
+import React, {useEffect, useState} from "react"
 import {DEFAULT_ICON_SIZE, DEFAULT_ICON_STROKE} from "../../consts.ts";
 
 const getIconPath = (iconName: string) => `../../../node_modules/@tabler/icons-react/dist/esm/icons/${iconName}.mjs`;
@@ -19,7 +19,7 @@ export default function TablerIcon({
                                        size = DEFAULT_ICON_SIZE,
                                        stroke = DEFAULT_ICON_STROKE,
                                    }: TablerIconProps) {
-    const [Icon, setIcon] = useState<any>(null)
+    const [Icon, setIcon] = useState<React.ComponentType<IconProps> | null>(null)
 
     useEffect(() => {
         let mounted = true;
@@ -28,14 +28,14 @@ export default function TablerIcon({
         const module = iconModules[iconPath];
 
         if (module) {
-            module().then((mod: any) => {
+            module().then((mod: { default: React.ComponentType<IconProps> }) => {
                 if (mounted) setIcon(() => mod.default)
             })
         } else if (defaultIcon) {
             const fallbackPath = getIconPath(defaultIcon);
             const fallbackModule = iconModules[fallbackPath];
             if (fallbackModule) {
-                fallbackModule().then((mod: any) => {
+                fallbackModule().then((mod: { default: React.ComponentType<IconProps> }) => {
                     if (mounted) setIcon(() => mod.default)
                 })
             } else {
@@ -49,7 +49,7 @@ export default function TablerIcon({
             const fallbackPath = getIconPath(FALLBACK_ICON);
             const fallbackModule = iconModules[fallbackPath];
             if (fallbackModule) {
-                fallbackModule().then((mod: any) => {
+                fallbackModule().then((mod: { default: React.ComponentType<IconProps> }) => {
                     if (mounted) setIcon(() => mod.default)
                 })
             }

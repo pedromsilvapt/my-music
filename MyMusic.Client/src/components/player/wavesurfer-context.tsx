@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {createContext, type RefObject, useContext, useRef} from 'react';
 import type WaveSurfer from 'wavesurfer.js';
 

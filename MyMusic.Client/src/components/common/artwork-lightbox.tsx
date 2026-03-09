@@ -198,7 +198,6 @@ export default function ArtworkLightbox(props: ArtworkLightboxProps) {
                         pointerEvents: "none"
                     }}
                 >
-                    {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
                     <div
                         onClick={handleImageClick}
                         onMouseDown={handleMouseDown}
