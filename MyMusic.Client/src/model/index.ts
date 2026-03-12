@@ -209,4 +209,6 @@ export * from "./updateSourceItem";
 export * from "./updateSourceRequest";
 export * from "./updateSourceResponse";
 export * from "./updateUserRequest";
+export * from "./uploadSongBody";
+export * from "./uploadSongResponse";
 export * from "./userData";

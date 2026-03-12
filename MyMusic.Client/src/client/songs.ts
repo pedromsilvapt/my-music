@@ -57,6 +57,8 @@ import type {
 	UpdateSongItem,
 	UpdateSongRequest,
 	UpdateSongResponse,
+	UploadSongBody,
+	UploadSongResponse,
 } from "../model";
 
 export type listSongsResponse200TextPlain = {
@@ -993,6 +995,135 @@ export const useImportSongs = <TError = unknown, TContext = unknown>(
 	TContext
 > => {
 	return useMutation(getImportSongsMutationOptions(options), queryClient);
+};
+export type uploadSongResponse200TextPlain = {
+	data: UploadSongResponse;
+	status: 200;
+};
+
+export type uploadSongResponse200ApplicationJson = {
+	data: UploadSongResponse;
+	status: 200;
+};
+
+export type uploadSongResponse200TextJson = {
+	data: UploadSongResponse;
+	status: 200;
+};
+
+export type uploadSongResponseSuccess = (
+	| uploadSongResponse200TextPlain
+	| uploadSongResponse200ApplicationJson
+	| uploadSongResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type uploadSongResponse = uploadSongResponseSuccess;
+
+export const getUploadSongUrl = () => {
+	return `/api/songs/upload`;
+};
+
+export const uploadSong = async (
+	uploadSongBody: UploadSongBody,
+	options?: RequestInit,
+): Promise<uploadSongResponse> => {
+	const formData = new FormData();
+	if (uploadSongBody.file !== undefined) {
+		formData.append(`file`, uploadSongBody.file);
+	}
+
+	if (uploadSongBody.path !== undefined) {
+		formData.append(`path`, uploadSongBody.path);
+	}
+
+	if (uploadSongBody.modifiedAt !== undefined) {
+		formData.append(`modifiedAt`, uploadSongBody.modifiedAt);
+	}
+
+	if (uploadSongBody.createdAt !== undefined) {
+		formData.append(`createdAt`, uploadSongBody.createdAt);
+	}
+
+	const res = await fetch(getUploadSongUrl(), {
+		...options,
+		method: "POST",
+		body: formData,
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: uploadSongResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as uploadSongResponse;
+};
+
+export const getUploadSongMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof uploadSong>>,
+		TError,
+		{ data: UploadSongBody },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof uploadSong>>,
+	TError,
+	{ data: UploadSongBody },
+	TContext
+> => {
+	const mutationKey = ["uploadSong"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof uploadSong>>,
+		{ data: UploadSongBody }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return uploadSong(data, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type UploadSongMutationResult = NonNullable<
+	Awaited<ReturnType<typeof uploadSong>>
+>;
+export type UploadSongMutationBody = UploadSongBody;
+export type UploadSongMutationError = unknown;
+
+export const useUploadSong = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof uploadSong>>,
+			TError,
+			{ data: UploadSongBody },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof uploadSong>>,
+	TError,
+	{ data: UploadSongBody },
+	TContext
+> => {
+	return useMutation(getUploadSongMutationOptions(options), queryClient);
 };
 export type toggleSongFavoriteResponse200TextPlain = {
 	data: ToggleFavoriteResponse;
@@ -3800,6 +3931,57 @@ export const getUpdateSongResponseMock = (
 		},
 	]);
 
+export const getUploadSongResponseMock = (
+	overrideResponse: Partial<Extract<UploadSongResponse, object>> = {},
+): UploadSongResponse =>
+	faker.helpers.arrayElement([
+		{
+			success: faker.datatype.boolean(),
+			songId: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([faker.number.int(), null]),
+				undefined,
+			]),
+			error: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			...overrideResponse,
+		},
+		{
+			success: faker.datatype.boolean(),
+			songId: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([faker.number.int(), null]),
+				undefined,
+			]),
+			error: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			...overrideResponse,
+		},
+		{
+			success: faker.datatype.boolean(),
+			songId: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([faker.number.int(), null]),
+				undefined,
+			]),
+			error: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			...overrideResponse,
+		},
+	]);
+
 export const getToggleSongFavoriteResponseMock = (
 	overrideResponse: Partial<Extract<ToggleFavoriteResponse, object>> = {},
 ): ToggleFavoriteResponse =>
@@ -4526,6 +4708,30 @@ export const getImportSongsMockHandler = (
 	);
 };
 
+export const getUploadSongMockHandler = (
+	overrideResponse?:
+		| UploadSongResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<UploadSongResponse> | UploadSongResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/songs/upload",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getUploadSongResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
 export const getToggleSongFavoriteMockHandler = (
 	overrideResponse?:
 		| ToggleFavoriteResponse
@@ -4772,6 +4978,7 @@ export const getSongsMock = () => [
 	getUpdateSongMockHandler(),
 	getDownloadSongMockHandler(),
 	getImportSongsMockHandler(),
+	getUploadSongMockHandler(),
 	getToggleSongFavoriteMockHandler(),
 	getToggleFavoritesMockHandler(),
 	getGetSongDevicesMockHandler(),

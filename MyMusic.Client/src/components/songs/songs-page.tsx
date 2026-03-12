@@ -1,15 +1,18 @@
-import {useQuery} from "@tanstack/react-query";
-import {useEffect} from "react";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {useEffect, useState} from "react";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSongsResponse} from "../../model";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
+import SongImportDropzone from "./song-import-dropzone.tsx";
+import SongImportProgress from "./song-import-progress.tsx";
 
 const SONGS_STATE_KEY = "songs";
 
 export default function SongsPage() {
+    const queryClient = useQueryClient();
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
     const {setCollectionServerSearch, setCollectionServerFilter} = useCollectionActions(state => ({
         setCollectionServerSearch: state.setCollectionServerSearch,
@@ -18,6 +21,9 @@ export default function SongsPage() {
     const collectionState = useCollectionStateByKey(SONGS_STATE_KEY);
     const appliedSearch = collectionState.serverSearch;
     const appliedFilter = collectionState.serverFilter;
+
+    const [importFiles, setImportFiles] = useState<File[]>([]);
+    const [showImportProgress, setShowImportProgress] = useState(false);
 
     const songsQuery = useQuery({
         queryKey: ["songs", appliedSearch, appliedFilter],
@@ -51,21 +57,39 @@ export default function SongsPage() {
         setCollectionServerFilter(SONGS_STATE_KEY, newFilter);
     };
 
+    const handleFilesDropped = (files: File[]) => {
+        setImportFiles(files);
+        setShowImportProgress(true);
+    };
+
+    const handleImportClose = () => {
+        setShowImportProgress(false);
+        setImportFiles([]);
+        queryClient.invalidateQueries({queryKey: ["songs"]});
+    };
+
     const elements = songs?.songs ?? [];
 
     return (
-        <div style={{height: 'var(--parent-height)'}}>
-            <Collection
-                key={SONGS_STATE_KEY}
-                stateKey={SONGS_STATE_KEY}
-                items={elements}
-                schema={songsSchema}
-                filterMode="server"
-                serverSearch={appliedSearch}
-                serverFilter={appliedFilter}
-                onServerFilterChange={handleFilterChange}
-                searchPlaceholder="Search songs..."
-            />
-        </div>
+        <SongImportDropzone onFilesDropped={handleFilesDropped}>
+            <div style={{height: 'var(--parent-height)', position: 'relative'}}>
+                <Collection
+                    key={SONGS_STATE_KEY}
+                    stateKey={SONGS_STATE_KEY}
+                    items={elements}
+                    schema={songsSchema}
+                    filterMode="server"
+                    serverSearch={appliedSearch}
+                    serverFilter={appliedFilter}
+                    onServerFilterChange={handleFilterChange}
+                    searchPlaceholder="Search songs..."
+                />
+                <SongImportProgress
+                    opened={showImportProgress}
+                    onClose={handleImportClose}
+                    files={importFiles}
+                />
+            </div>
+        </SongImportDropzone>
     );
 }

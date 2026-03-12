@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -7,6 +8,7 @@ using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Metadata;
+using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Filters;
@@ -20,11 +22,17 @@ public class SongsController(
     ILogger<SongsController> logger,
     ICurrentUser currentUser,
     IOptions<Config> config,
-    ISongUpdateService songUpdateService)
+    ISongUpdateService songUpdateService,
+    IMusicService musicService,
+    IFileSystem fileSystem,
+    ILogger<MusicImportJob> importJobLogger)
     : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
     private readonly ISongUpdateService _songUpdateService = songUpdateService;
+    private readonly IMusicService _musicService = musicService;
+    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly ILogger<MusicImportJob> _importJobLogger = importJobLogger;
 
     [HttpGet(Name = "ListSongs")]
     public async Task<ListSongsResponse> List(
@@ -118,6 +126,102 @@ public class SongsController(
             cancellationToken: cancellationToken);
 
         return new { success = true };
+    }
+
+    [HttpPost("upload", Name = "UploadSong")]
+    public async Task<UploadSongResponse> Upload(
+        IFormFile file,
+        [FromForm] string path,
+        [FromForm] string modifiedAt,
+        [FromForm] string createdAt,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return new UploadSongResponse { Success = false, Error = "No file provided" };
+        }
+
+        var repositoryPath = config.Value.MusicRepositoryPath
+                             ?? throw new Exception("MusicRepositoryPath not configured");
+
+        var tempPath = _fileSystem.Path.Combine(_fileSystem.Path.GetTempPath(), $"mymusic_upload_{Guid.NewGuid()}");
+        _fileSystem.Directory.CreateDirectory(tempPath);
+
+        try
+        {
+            var tempFilePath = _fileSystem.Path.Combine(tempPath, _fileSystem.Path.GetFileName(path));
+            await using (var stream = _fileSystem.FileStream.New(tempFilePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream, cancellationToken);
+            }
+
+            var modifiedAtDateTime = DateTime.Parse(modifiedAt, null, DateTimeStyles.RoundtripKind);
+            var createdAtDateTime = DateTime.Parse(createdAt, null, DateTimeStyles.RoundtripKind);
+
+            var songImportMetadata = new SongImportMetadata(tempFilePath, createdAtDateTime, modifiedAtDateTime);
+
+            var job = new MusicImportJob(_importJobLogger);
+
+            await _musicService.ImportRepositorySongs(
+                context,
+                job,
+                currentUser.Id,
+                new[] { songImportMetadata },
+                null,
+                DuplicateSongsHandlingStrategy.SkipIdentical,
+                cancellationToken);
+
+            var importedSong = job.SongMapping.Values.FirstOrDefault();
+
+            if (importedSong == null)
+            {
+                var skipReason = job.SkipReasons.FirstOrDefault(s => s.SourceFilePath == tempFilePath);
+                var exception = job.Exceptions.FirstOrDefault();
+
+                var errorParts = new List<string>();
+
+                if (skipReason != null)
+                {
+                    errorParts.Add(FormatLogMessage(skipReason.Message, skipReason.MessageArgs));
+                }
+
+                if (exception != null)
+                {
+                    errorParts.Add($"Exception: {exception.Message}");
+                }
+
+                if (skipReason == null && exception == null)
+                {
+                    errorParts.Add("No song was imported and no skip reason was recorded");
+                }
+
+                return new UploadSongResponse { Success = false, Error = string.Join("; ", errorParts) };
+            }
+
+            _logger.LogInformation("Uploaded file {Path}, song ID: {SongId}", path, importedSong.Id);
+
+            return new UploadSongResponse { Success = true, SongId = importedSong.Id };
+        }
+        finally
+        {
+            if (_fileSystem.Directory.Exists(tempPath))
+            {
+                _fileSystem.Directory.Delete(tempPath, true);
+            }
+        }
+    }
+
+    private static string FormatLogMessage(string template, object[] args)
+    {
+        if (args == null || args.Length == 0)
+        {
+            return template;
+        }
+
+        var index = 0;
+        var formattedTemplate = System.Text.RegularExpressions.Regex.Replace(template, @"\{(\w+)\}", _ => $"{{{index++}}}");
+        return string.Format(formattedTemplate, args);
     }
 
     [HttpPost("{id:long}/favorite", Name = "ToggleSongFavorite")]
