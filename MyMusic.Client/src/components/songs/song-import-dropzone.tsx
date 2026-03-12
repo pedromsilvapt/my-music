@@ -1,5 +1,5 @@
 import {Dropzone} from "@mantine/dropzone";
-import {Group, Portal, Stack, Text, ThemeIcon} from "@mantine/core";
+import {Group, Stack, Text, ThemeIcon} from "@mantine/core";
 import {IconMusic} from "@tabler/icons-react";
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a'];
