@@ -72,6 +72,7 @@ public class DevicesController(
             Icon = request.Icon,
             Color = request.Color,
             NamingTemplate = request.NamingTemplate,
+            ImportOnPurchase = request.ImportOnPurchase,
             OwnerId = currentUser.Id,
             Owner = user,
         };
@@ -104,6 +105,10 @@ public class DevicesController(
         device.Icon = request.Icon;
         device.Color = request.Color;
         device.NamingTemplate = request.NamingTemplate;
+        if (request.ImportOnPurchase.HasValue)
+        {
+            device.ImportOnPurchase = request.ImportOnPurchase.Value;
+        }
 
         await context.SaveChangesAsync(cancellationToken);
 
@@ -118,6 +123,7 @@ public class DevicesController(
                 Icon = device.Icon,
                 Color = device.Color,
                 NamingTemplate = device.NamingTemplate,
+                ImportOnPurchase = device.ImportOnPurchase,
             },
         };
     }

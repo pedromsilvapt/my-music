@@ -137,6 +137,23 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
                 purchase.SongId = song?.Id;
                 db.Update(purchase);
                 await db.SaveChangesAsync(cancellationToken);
+
+                if (song != null)
+                {
+                    var autoImportDevices = await db.Devices
+                        .Where(d => d.OwnerId == purchase.UserId && d.ImportOnPurchase)
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var device in autoImportDevices)
+                    {
+                        await musicService.AddSongsToDevice(db, device.Id, song, cancellationToken);
+                    }
+
+                    if (autoImportDevices.Count > 0)
+                    {
+                        await db.SaveChangesAsync(cancellationToken);
+                    }
+                }
             }
             finally
             {

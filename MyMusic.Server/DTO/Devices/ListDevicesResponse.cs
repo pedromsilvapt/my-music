@@ -15,11 +15,13 @@ public record ListDeviceItem
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }
     public required int SongCount { get; init; }
+    public bool ImportOnPurchase { get; init; }
 
     public static ListDeviceItem FromEntity(Entities.Device device, int songCount) =>
         new()
         {
             Id = device.Id, Name = device.Name, Icon = device.Icon, Color = device.Color,
             NamingTemplate = device.NamingTemplate, SongCount = songCount,
+            ImportOnPurchase = device.ImportOnPurchase,
         };
 }

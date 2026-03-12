@@ -15,12 +15,14 @@ import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/con
 import {
     getDeviceIcon,
     getDeviceName,
+    getImportOnPurchase,
     getRepositoryPath,
     getServerUrl,
     getUserName,
     setDeviceIcon,
     setDeviceId,
     setDeviceName,
+    setImportOnPurchase,
     setIsConfigured,
     setLastSyncAt,
     setRepositoryPath,
@@ -33,6 +35,7 @@ const configSchema = z.object({
     userName: z.string().optional(),
     deviceName: z.string().min(1, 'Device name is required'),
     deviceType: z.string(),
+    importOnPurchase: z.boolean(),
     repositoryPath: z.string().optional(),
 });
 
@@ -52,11 +55,13 @@ export default function DeviceConfigScreen() {
             userName: getUserName() || '',
             deviceName: getDeviceName() || 'My Phone',
             deviceType: getDeviceTypeById(getDeviceIcon())?.label || 'Smartphone',
+            importOnPurchase: getImportOnPurchase(),
             repositoryPath: getRepositoryPath() || '',
         },
     });
 
     const selectedType = watch('deviceType');
+    const importOnPurchaseValue = watch('importOnPurchase');
 
     const handleTestConnection = async (serverUrlValue: string) => {
         if (!serverUrlValue) {
@@ -113,6 +118,7 @@ export default function DeviceConfigScreen() {
             await setUserName(data.userName || '');
             await setDeviceName(data.deviceName);
             await setDeviceIcon(getDeviceTypeIdByLabel(data.deviceType));
+            await setImportOnPurchase(data.importOnPurchase);
             await setRepositoryPath(data.repositoryPath || '');
 
             const apiServerUrl = data.serverUrl.endsWith('/api') ? data.serverUrl : `${data.serverUrl}/api`;
@@ -128,6 +134,7 @@ export default function DeviceConfigScreen() {
                     const newDevice = await createDevice({
                         name: data.deviceName,
                         icon: getDeviceTypeIdByLabel(data.deviceType),
+                        importOnPurchase: data.importOnPurchase,
                     });
                     await setDeviceId(newDevice.device.id);
                 }
@@ -271,6 +278,27 @@ export default function DeviceConfigScreen() {
                         </TouchableOpacity>
                     ))}
                 </View>
+
+                <Controller
+                    control={control}
+                    name="importOnPurchase"
+                    render={({field: {onChange, value}}) => (
+                        <View style={styles.toggleRow}>
+                            <View style={styles.toggleLabelContainer}>
+                                <Text style={styles.toggleLabel}>Auto-import on purchase</Text>
+                                <Text style={styles.toggleHint}>
+                                    Automatically download purchased songs to this device
+                                </Text>
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.toggle, value && styles.toggleActive]}
+                                onPress={() => onChange(!value)}
+                            >
+                                <View style={[styles.toggleThumb, value && styles.toggleThumbActive]} />
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                />
             </Card>
 
             <Card>
@@ -402,6 +430,52 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontWeight: fontWeight.medium,
         fontSize: fontSize.sm,
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: spacing.lg,
+        paddingTop: spacing.md,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+    },
+    toggleLabelContainer: {
+        flex: 1,
+        marginRight: spacing.md,
+    },
+    toggleLabel: {
+        fontSize: fontSize.md,
+        fontWeight: fontWeight.medium,
+        color: colors.text,
+    },
+    toggleHint: {
+        fontSize: fontSize.sm,
+        color: colors.textMuted,
+        marginTop: spacing.xs,
+    },
+    toggle: {
+        width: 50,
+        height: 30,
+        borderRadius: 15,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
+        padding: 2,
+    },
+    toggleActive: {
+        backgroundColor: colors.primary + '30',
+        borderColor: colors.primary,
+    },
+    toggleThumb: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        backgroundColor: colors.textSecondary,
+    },
+    toggleThumbActive: {
+        backgroundColor: colors.primary,
+        transform: [{translateX: 20}],
     },
     actions: {
         marginTop: spacing.lg,

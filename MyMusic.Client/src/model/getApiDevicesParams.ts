@@ -6,6 +6,6 @@
  OpenAPI spec version: 1.0.0
  */
 export type GetApiDevicesParams = {
-    search?: string;
-    filter?: string;
+	search?: string;
+	filter?: string;
 };

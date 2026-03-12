@@ -5,21 +5,21 @@
  MyMusic.Server | v1
  OpenAPI spec version: 1.0.0
  */
-import type {UpdateSongAlbum} from "./updateSongAlbum";
-import type {UpdateSongArtist} from "./updateSongArtist";
-import type {UpdateSongGenre} from "./updateSongGenre";
+import type { UpdateSongAlbum } from "./updateSongAlbum";
+import type { UpdateSongArtist } from "./updateSongArtist";
+import type { UpdateSongGenre } from "./updateSongGenre";
 
 export interface UpdateSongItem2 {
-    id: number;
-    title: string;
-    label: string;
-    cover: number | null;
-    year: number | null;
-    lyrics?: string | null;
-    rating?: number | null;
-    explicit?: boolean;
-    artists: UpdateSongArtist[];
-    album: UpdateSongAlbum;
-    genres: UpdateSongGenre[];
-    repositoryPath?: string | null;
+	id: number;
+	title: string;
+	label: string;
+	cover: number | null;
+	year: number | null;
+	lyrics?: string | null;
+	rating?: number | null;
+	explicit?: boolean;
+	artists: UpdateSongArtist[];
+	album: UpdateSongAlbum;
+	genres: UpdateSongGenre[];
+	repositoryPath?: string | null;
 }

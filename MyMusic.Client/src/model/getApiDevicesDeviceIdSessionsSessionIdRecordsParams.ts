@@ -6,6 +6,6 @@
  OpenAPI spec version: 1.0.0
  */
 export type GetApiDevicesDeviceIdSessionsSessionIdRecordsParams = {
-    actions?: string;
-    source?: string;
+	actions?: string;
+	source?: string;
 };

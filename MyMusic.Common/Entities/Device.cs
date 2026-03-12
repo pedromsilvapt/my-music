@@ -20,6 +20,8 @@ public class Device
 
     [MaxLength(512)] public string? NamingTemplate { get; set; }
 
+    public bool ImportOnPurchase { get; set; } = false;
+
     public DateTime? LastSyncAt { get; set; }
 
     public List<SongDevice> Songs { get; set; } = [];

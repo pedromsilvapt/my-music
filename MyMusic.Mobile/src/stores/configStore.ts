@@ -9,6 +9,7 @@ interface ConfigState {
     deviceName: string;
     deviceIcon: string;
     deviceId: number | null;
+    importOnPurchase: boolean;
     repositoryPath: string;
     isConfigured: boolean;
     lastSyncAt: string | null;
@@ -19,6 +20,7 @@ interface ConfigState {
     setDeviceName: (name: string) => void;
     setDeviceIcon: (icon: string) => void;
     setDeviceId: (id: number | null) => void;
+    setImportOnPurchase: (value: boolean) => void;
     setRepositoryPath: (path: string) => void;
     setIsConfigured: (configured: boolean) => void;
     setLastSyncAt: (date: string | null) => void;
@@ -34,6 +36,7 @@ export const useConfigStore = create<ConfigState>()(
             deviceName: 'My Phone',
             deviceIcon: DEFAULT_DEVICE_TYPE.id,
             deviceId: null,
+            importOnPurchase: false,
             repositoryPath: '',
             isConfigured: false,
             lastSyncAt: null,
@@ -44,6 +47,7 @@ export const useConfigStore = create<ConfigState>()(
             setDeviceName: (deviceName) => set({deviceName}),
             setDeviceIcon: (deviceIcon) => set({deviceIcon}),
             setDeviceId: (deviceId) => set({deviceId}),
+            setImportOnPurchase: (importOnPurchase) => set({importOnPurchase}),
             setRepositoryPath: (repositoryPath) => set({repositoryPath}),
             setIsConfigured: (isConfigured) => set({isConfigured}),
             setLastSyncAt: (lastSyncAt) => set({lastSyncAt}),
@@ -58,6 +62,7 @@ export const useConfigStore = create<ConfigState>()(
                 deviceName: state.deviceName,
                 deviceIcon: state.deviceIcon,
                 deviceId: state.deviceId,
+                importOnPurchase: state.importOnPurchase,
                 repositoryPath: state.repositoryPath,
                 isConfigured: state.isConfigured,
                 lastSyncAt: state.lastSyncAt,

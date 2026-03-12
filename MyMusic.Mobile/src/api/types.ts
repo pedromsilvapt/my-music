@@ -106,6 +106,7 @@ export const CreateDeviceRequestSchema = z.object({
     icon: z.string().optional(),
     color: z.string().optional(),
     namingTemplate: z.string().optional(),
+    importOnPurchase: z.boolean().optional(),
 });
 
 export type CreateDeviceRequest = z.infer<typeof CreateDeviceRequestSchema>;
@@ -116,6 +117,7 @@ export const CreateDeviceItemSchema = z.object({
     icon: z.string().nullable(),
     color: z.string().nullable(),
     namingTemplate: z.string().nullable(),
+    importOnPurchase: z.boolean(),
     ownerId: z.number(),
     createdAt: z.string(),
     lastSyncAt: z.string().nullable(),
@@ -134,6 +136,7 @@ export const UpdateDeviceRequestSchema = z.object({
     icon: z.string().optional(),
     color: z.string().optional(),
     namingTemplate: z.string().optional(),
+    importOnPurchase: z.boolean().optional(),
 });
 
 export type UpdateDeviceRequest = z.infer<typeof UpdateDeviceRequestSchema>;
@@ -144,6 +147,7 @@ export const UpdateDeviceItemSchema = z.object({
     icon: z.string().nullable(),
     color: z.string().nullable(),
     namingTemplate: z.string().nullable(),
+    importOnPurchase: z.boolean(),
 });
 
 export type UpdateDeviceItem = z.infer<typeof UpdateDeviceItemSchema>;
@@ -160,6 +164,7 @@ export const ListDeviceItemSchema = z.object({
     icon: z.string().nullable(),
     color: z.string().nullable(),
     namingTemplate: z.string().nullable(),
+    importOnPurchase: z.boolean(),
     ownerId: z.number().optional(),
     createdAt: z.string().optional(),
     lastSyncAt: z.string().nullable().optional(),

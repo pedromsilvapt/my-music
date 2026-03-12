@@ -14,11 +14,12 @@ public record CreateDeviceItem
     public string? Icon { get; init; }
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }
+    public bool ImportOnPurchase { get; init; }
 
     public static CreateDeviceItem FromEntity(Entities.Device device) =>
         new()
         {
             Id = device.Id, Name = device.Name, Icon = device.Icon, Color = device.Color,
-            NamingTemplate = device.NamingTemplate,
+            NamingTemplate = device.NamingTemplate, ImportOnPurchase = device.ImportOnPurchase,
         };
 }

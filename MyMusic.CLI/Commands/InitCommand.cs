@@ -34,9 +34,10 @@ public class InitCommand : Command<InitCommand.Settings>
         var userName = PromptUserName(settings.UserName, existing?.UserName);
         var deviceName = PromptDeviceName(settings.DeviceName, existing?.DeviceName);
         var deviceType = PromptDeviceType(settings.DeviceType, existing?.DeviceIcon);
+        var importOnPurchase = PromptImportOnPurchase(settings.ImportOnPurchase, existing?.ImportOnPurchase);
         var repositoryPath = PromptRepositoryPath(settings.Repository, existing?.RepositoryPath);
 
-        WriteConfig(configPath, serverUrl, userName, deviceName, deviceType, repositoryPath);
+        WriteConfig(configPath, serverUrl, userName, deviceName, deviceType, importOnPurchase, repositoryPath);
 
         return 0;
     }
@@ -75,6 +76,7 @@ public class InitCommand : Command<InitCommand.Settings>
         string? userName = null;
         string? deviceName = null;
         string? deviceIcon = null;
+        bool? importOnPurchase = null;
         string? repositoryPath = null;
 
         if (myMusic.TryGetProperty("Server", out var server))
@@ -101,6 +103,11 @@ public class InitCommand : Command<InitCommand.Settings>
             {
                 deviceIcon = icon.GetString();
             }
+
+            if (device.TryGetProperty("ImportOnPurchase", out var importOnPurchaseValue))
+            {
+                importOnPurchase = importOnPurchaseValue.GetBoolean();
+            }
         }
 
         if (myMusic.TryGetProperty("Repository", out var repository))
@@ -111,7 +118,7 @@ public class InitCommand : Command<InitCommand.Settings>
             }
         }
 
-        return new ExistingConfig(serverUrl, userName, deviceName, deviceIcon, repositoryPath);
+        return new ExistingConfig(serverUrl, userName, deviceName, deviceIcon, importOnPurchase, repositoryPath);
     }
 
     private static bool PromptOverwrite(string configPath, bool yesFlag)
@@ -211,12 +218,25 @@ public class InitCommand : Command<InitCommand.Settings>
             "Repository path:",
             defaultValue ?? "");
 
+    private static bool PromptImportOnPurchase(bool? cliValue, bool? defaultValue)
+    {
+        var defaultAnswer = cliValue ?? defaultValue ?? false;
+        var answer = AnsiConsole.Prompt(
+            new ConfirmationPrompt("Auto-import purchased songs to this device?")
+            {
+                DefaultValue = defaultAnswer,
+            });
+        
+        return answer;
+    }
+
     private static void WriteConfig(
         string configPath,
         string serverUrl,
         string userName,
         string deviceName,
         string deviceType,
+        bool importOnPurchase,
         string repositoryPath)
     {
         var config = new Dictionary<string, object>
@@ -232,6 +252,7 @@ public class InitCommand : Command<InitCommand.Settings>
                 {
                     ["Name"] = deviceName,
                     ["Icon"] = DeviceIcons[deviceType],
+                    ["ImportOnPurchase"] = importOnPurchase,
                 },
                 ["Repository"] = new Dictionary<string, object>
                 {
@@ -267,6 +288,7 @@ public class InitCommand : Command<InitCommand.Settings>
         string? UserName,
         string? DeviceName,
         string? DeviceIcon,
+        bool? ImportOnPurchase,
         string? RepositoryPath
     );
 
@@ -279,6 +301,8 @@ public class InitCommand : Command<InitCommand.Settings>
         [CommandOption("-d|--device-name")] public string? DeviceName { get; init; }
 
         [CommandOption("-t|--device-type")] public string? DeviceType { get; init; }
+
+        [CommandOption("--import-on-purchase")] public bool? ImportOnPurchase { get; init; }
 
         [CommandOption("-r|--repository")] public string? Repository { get; init; }
 

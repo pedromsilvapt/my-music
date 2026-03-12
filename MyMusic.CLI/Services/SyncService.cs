@@ -450,7 +450,8 @@ public class SyncService(
 
                 var needsUpdate = existingDevice.Icon != options.Value.Device.Icon ||
                                   existingDevice.Color != options.Value.Device.Color ||
-                                  existingDevice.NamingTemplate != options.Value.Device.NamingTemplate;
+                                  existingDevice.NamingTemplate != options.Value.Device.NamingTemplate ||
+                                  existingDevice.ImportOnPurchase != options.Value.Device.ImportOnPurchase;
 
                 if (needsUpdate)
                 {
@@ -460,6 +461,7 @@ public class SyncService(
                         Icon = options.Value.Device.Icon,
                         Color = options.Value.Device.Color,
                         NamingTemplate = options.Value.Device.NamingTemplate,
+                        ImportOnPurchase = options.Value.Device.ImportOnPurchase,
                     }, ct);
                 }
 
@@ -473,6 +475,7 @@ public class SyncService(
                 Icon = options.Value.Device.Icon,
                 Color = options.Value.Device.Color,
                 NamingTemplate = options.Value.Device.NamingTemplate,
+                ImportOnPurchase = options.Value.Device.ImportOnPurchase,
             }, ct);
             logger.LogInformation("Created device with ID: {DeviceId}", newDevice.Device.Id);
             return newDevice.Device.Id;

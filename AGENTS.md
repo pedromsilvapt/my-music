@@ -41,26 +41,22 @@ dotnet test --collect:"XPlat Code Coverage"
 ## Database Migrations
 
 ```bash
-# Create the migration
-devbox run db-create-migration "<MigrationName>"
+# Create the migration (requires DesignTimeDbContextFactory in MyMusic.Common)
+dotnet ef migrations add <MigrationName> --project MyMusic.Common
 
-# Restart the server to apply the migration
-docker restart my-music-server-1
-
-# Wait for the server to restart
-sleep 10s
+# The server applies migrations automatically on startup
 ```
 
 ## Generate Client API (Orval)
 
 ```bash
 # Restart the server to ensure OpenAPI is updated
-docker restart my-music-server-1
+pkill -f "dotnet watch" ; dotnet watch --project MyMusic.Server/MyMusic.Server.csproj
 
-# Wait for the server to restart
-sleep 10s
-
+# Then run Orval to regenerate client API
 devbox run orval
+
+pkill -f "dotnet watch"
 ```
 
 **Important:** When adding new mutations that should trigger refetch/invalidation of queries, you must add them to the
@@ -103,7 +99,7 @@ public class Song
 
     public Album Album { get; set; } = null!;
     public long AlbumId { get; set; }
-    
+
     public required List<SongArtist> Artists { get; set; }
 }
 ```
@@ -301,10 +297,10 @@ public async Task ImportMusic_EmptyDatabase()
 {
     var scenario = new Scenario();
     var musicService = scenario.CreateMusicService();
-    
+
     // Act
     await musicService.ImportRepositorySongs(...);
-    
+
     // Assert
     job.SkipReasons.ShouldBeEmpty();
     songs.Count.ShouldBe(3);
@@ -392,7 +388,7 @@ import {useSomeGeneratedMutation} from "../client/some-api.ts";
 
 export function useCustomMutation() {
     const queryClient = useQueryClient();
-    
+
     return useMutation(
         {
             ...useSomeGeneratedMutation({}),

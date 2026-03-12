@@ -22,6 +22,7 @@ public class DeviceOptions
     public string? Icon { get; set; }
     public string? Color { get; set; }
     public string? NamingTemplate { get; set; }
+    public bool ImportOnPurchase { get; set; } = false;
 }
 
 public class RepositoryOptions

@@ -6,10 +6,10 @@
  OpenAPI spec version: 1.0.0
  */
 export type GetArtistSongFilter =
-    (typeof GetArtistSongFilter)[keyof typeof GetArtistSongFilter];
+	(typeof GetArtistSongFilter)[keyof typeof GetArtistSongFilter];
 
 export const GetArtistSongFilter = {
-    All: "All",
-    Own: "Own",
-    Other: "Other",
+	All: "All",
+	Own: "Own",
+	Other: "Other",
 } as const;

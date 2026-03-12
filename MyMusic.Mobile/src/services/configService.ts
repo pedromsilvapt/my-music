@@ -56,6 +56,14 @@ export async function setDeviceId(id: number | null): Promise<void> {
     useConfigStore.getState().setDeviceId(id);
 }
 
+export function getImportOnPurchase(): boolean {
+    return useConfigStore.getState().importOnPurchase;
+}
+
+export async function setImportOnPurchase(value: boolean): Promise<void> {
+    useConfigStore.getState().setImportOnPurchase(value);
+}
+
 export function getRepositoryPath(): string {
     return useConfigStore.getState().repositoryPath;
 }
@@ -121,6 +129,7 @@ export function getAllConfig() {
         deviceName: state.deviceName,
         deviceIcon: state.deviceIcon,
         deviceId: state.deviceId,
+        importOnPurchase: state.importOnPurchase,
         repositoryPath: state.repositoryPath,
         isConfigured: state.isConfigured,
         lastSyncAt: state.lastSyncAt,
@@ -134,6 +143,7 @@ export async function resetConfig(): Promise<void> {
     useConfigStore.getState().setDeviceName('My Phone');
     useConfigStore.getState().setDeviceIcon(DEFAULT_DEVICE_TYPE.id);
     useConfigStore.getState().setDeviceId(null);
+    useConfigStore.getState().setImportOnPurchase(false);
     useConfigStore.getState().setRepositoryPath('');
     useConfigStore.getState().setIsConfigured(false);
     useConfigStore.getState().setLastSyncAt(null);

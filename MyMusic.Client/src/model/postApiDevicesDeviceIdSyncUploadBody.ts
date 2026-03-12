@@ -6,11 +6,11 @@
  OpenAPI spec version: 1.0.0
  */
 export type PostApiDevicesDeviceIdSyncUploadBody = {
-    file?: Blob;
+	file?: Blob;
 } & {
-    path?: string;
+	path?: string;
 } & {
-    modifiedAt?: string;
+	modifiedAt?: string;
 } & {
-    createdAt?: string;
+	createdAt?: string;
 };

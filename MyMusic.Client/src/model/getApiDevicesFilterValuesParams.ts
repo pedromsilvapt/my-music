@@ -6,7 +6,7 @@
  OpenAPI spec version: 1.0.0
  */
 export type GetApiDevicesFilterValuesParams = {
-    field?: string;
-    search?: string;
-    limit?: number;
+	field?: string;
+	search?: string;
+	limit?: number;
 };
