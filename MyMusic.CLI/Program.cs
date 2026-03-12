@@ -28,6 +28,8 @@ app.Configure(config =>
     {
         history.AddCommand<HistoryListCommand>("ls");
         history.AddCommand<HistoryShowCommand>("show");
+        history.AddCommand<HistoryRemoveCommand>("rm");
+        history.AddCommand<HistoryPruneCommand>("prune");
     });
     config.PropagateExceptions();
 });
@@ -94,6 +96,8 @@ static void ConfigureServices(IServiceCollection services, string[] args)
     services.AddTransient<InitCommand>();
     services.AddTransient<HistoryShowCommand>();
     services.AddTransient<HistoryListCommand>();
+    services.AddTransient<HistoryRemoveCommand>();
+    services.AddTransient<HistoryPruneCommand>();
 
     services.AddTransient<AuthenticatedHttpClientHandler>();
 

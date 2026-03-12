@@ -194,6 +194,108 @@ public class DevicesController(
         };
     }
 
+    private const int InProgressSafetyThresholdSeconds = 10;
+
+    [HttpDelete("{deviceId:long}/sessions/{sessionId:long}")]
+    public async Task<DeleteSessionResponse> DeleteSession(
+        long deviceId,
+        long sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = await context.DeviceSyncSessions
+            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (session == null)
+        {
+            throw new Exception($"Sync session not found with id {sessionId}");
+        }
+
+        if (session.Status == SyncSessionStatus.InProgress &&
+            session.StartedAt > DateTime.UtcNow.AddSeconds(-InProgressSafetyThresholdSeconds))
+        {
+            throw new Exception("Cannot delete a session that is currently in progress");
+        }
+
+        var records = await context.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == sessionId)
+            .ToListAsync(cancellationToken);
+        context.DeviceSyncSessionRecords.RemoveRange(records);
+
+        context.DeviceSyncSessions.Remove(session);
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Deleted sync session {SessionId} and {RecordCount} records", sessionId, records.Count);
+
+        return new DeleteSessionResponse { Success = true };
+    }
+
+    [HttpPost("{deviceId:long}/sessions/prune")]
+    public async Task<PruneSessionsResponse> PruneSessions(
+        long deviceId,
+        [FromBody] PruneSessionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (device == null)
+        {
+            throw new Exception($"Device not found with id {deviceId}");
+        }
+
+        var allSessions = await context.DeviceSyncSessions
+            .Where(s => s.DeviceId == deviceId)
+            .OrderByDescending(s => s.StartedAt)
+            .ToListAsync(cancellationToken);
+
+        var cutoffDate = DateTime.UtcNow.AddDays(-1);
+
+        DateTime? keepThreshold = null;
+        if (!request.All && allSessions.Count > 10)
+        {
+            keepThreshold = allSessions[9].StartedAt;
+        }
+
+        var sessionsToDelete = allSessions.Where(s =>
+        {
+            if (s.Status == SyncSessionStatus.InProgress &&
+                s.StartedAt > DateTime.UtcNow.AddSeconds(-InProgressSafetyThresholdSeconds))
+            {
+                return false;
+            }
+
+            if (request.All)
+            {
+                return true;
+            }
+
+            var olderThanOneDay = s.StartedAt < cutoffDate;
+            var olderThanThreshold = keepThreshold.HasValue && s.StartedAt < keepThreshold.Value;
+
+            return olderThanOneDay || olderThanThreshold;
+        }).ToList();
+
+        var deletedCount = 0;
+        foreach (var session in sessionsToDelete)
+        {
+            var records = await context.DeviceSyncSessionRecords
+                .Where(r => r.SessionId == session.Id)
+                .ToListAsync(cancellationToken);
+            context.DeviceSyncSessionRecords.RemoveRange(records);
+
+            context.DeviceSyncSessions.Remove(session);
+            deletedCount++;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation("Pruned {DeletedCount} sync sessions for device {DeviceId}", deletedCount, deviceId);
+
+        return new PruneSessionsResponse { DeletedCount = deletedCount };
+    }
+
     [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records")]
     public async Task<ListSyncRecordsResponse> GetSessionRecords(
         long deviceId,

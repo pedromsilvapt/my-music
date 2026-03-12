@@ -1,8 +1,9 @@
 import {Ionicons} from '@expo/vector-icons';
-import {useLocalSearchParams, useNavigation} from 'expo-router';
-import React, {useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {useLocalSearchParams, useNavigation, useRouter} from 'expo-router';
+import React, {useEffect, useLayoutEffect, useMemo, useState} from 'react';
+import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {SyncRecordResponseItem, SyncSessionItem} from '../../src/api/types';
+import {deleteSession} from '../../src/api/sync';
 import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
@@ -61,6 +62,42 @@ export default function SessionDetailScreen() {
 
         loadData();
     }, [deviceId, sessionId]);
+
+    const router = useRouter();
+
+    const handleDelete = () => {
+        if (!deviceId || !sessionId) return;
+
+        Alert.alert(
+            'Delete Session',
+            'Are you sure you want to delete this session? This action cannot be undone.',
+            [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteSession(deviceId, parseInt(sessionId));
+                            router.back();
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to delete session');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={handleDelete} style={{padding: spacing.sm}}>
+                    <Ionicons name="trash-outline" size={22} color={colors.error}/>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation, handleDelete]);
 
     const filteredRecords = useMemo(() => {
         if (filter === 'all') return records;

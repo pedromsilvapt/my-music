@@ -1,12 +1,14 @@
 import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
 import {apiMultipartRequest, apiRequest} from './client';
-import type {AcknowledgeActionRequest, SyncCheckRequest, SyncRecordsRequest, SyncStartRequest} from './types';
+import type {AcknowledgeActionRequest, PruneSessionsRequest, SyncCheckRequest, SyncRecordsRequest, SyncStartRequest} from './types';
 import {
     AcknowledgeActionResponseSchema,
+    DeleteSessionResponseSchema,
     GetPendingActionsResponseSchema,
     ListSyncRecordsResponseSchema,
     ListSyncSessionsResponseSchema,
+    PruneSessionsResponseSchema,
     SyncCheckResponseSchema,
     SyncCompleteResponseSchema,
     SyncRecordsResponseSchema,
@@ -130,4 +132,19 @@ export async function downloadSong(songId: number): Promise<Blob> {
     }
 
     return response.blob();
+}
+
+export async function deleteSession(deviceId: number, sessionId: number) {
+    return apiRequest(`/devices/${deviceId}/sessions/${sessionId}`, {
+        method: 'DELETE',
+        schema: DeleteSessionResponseSchema,
+    });
+}
+
+export async function pruneSessions(deviceId: number, request: PruneSessionsRequest) {
+    return apiRequest(`/devices/${deviceId}/sessions/prune`, {
+        method: 'POST',
+        body: request,
+        schema: PruneSessionsResponseSchema,
+    });
 }

@@ -1,8 +1,9 @@
 import {Ionicons} from '@expo/vector-icons';
-import {useRouter} from 'expo-router';
+import {useNavigation, useRouter} from 'expo-router';
 import React, {useCallback, useEffect, useState} from 'react';
-import {ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import type {SyncSessionItem} from '../../src/api/types';
+import {pruneSessions} from '../../src/api/sync';
 import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
@@ -13,6 +14,9 @@ export default function HistoryListScreen() {
     const [sessions, setSessions] = useState<SyncSessionItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [pruneModalVisible, setPruneModalVisible] = useState(false);
+    const [pruneAll, setPruneAll] = useState(false);
+    const [pruning, setPruning] = useState(false);
 
     const loadSessions = useCallback(async () => {
         if (!deviceId || !isConfigured) {
@@ -34,6 +38,47 @@ export default function HistoryListScreen() {
     useEffect(() => {
         loadSessions();
     }, [loadSessions]);
+
+    const navigation = useNavigation();
+
+    React.useEffect(() => {
+        if (!isConfigured || !deviceId || sessions.length === 0) return;
+
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={() => setPruneModalVisible(true)} style={{padding: spacing.sm}}>
+                    <Ionicons name="cut-outline" size={22} color={colors.text}/>
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation, isConfigured, deviceId, sessions.length]);
+
+    const handlePrune = async () => {
+        if (!deviceId) return;
+
+        setPruning(true);
+        try {
+            await pruneSessions(deviceId, {all: pruneAll});
+            setPruneModalVisible(false);
+            loadSessions();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to prune sessions');
+        } finally {
+            setPruning(false);
+        }
+    };
+
+    const calculateSessionsToPrune = () => {
+        if (pruneAll) return sessions.length;
+        const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const keepThreshold = sessions.length > 10 ? sessions[9].startedAt : null;
+        return sessions.filter(s => {
+            const startedAt = new Date(s.startedAt);
+            return startedAt < cutoffDate || (keepThreshold && startedAt < new Date(keepThreshold));
+        }).length;
+    };
+
+    const sessionsToPrune = calculateSessionsToPrune();
 
     const onRefresh = () => {
         setRefreshing(true);
@@ -102,6 +147,7 @@ export default function HistoryListScreen() {
     }
 
     return (
+        <>
         <ScrollView
             style={styles.container}
             contentContainerStyle={styles.content}
@@ -170,6 +216,51 @@ export default function HistoryListScreen() {
                 </TouchableOpacity>
             ))}
         </ScrollView>
+
+        <Modal
+            visible={pruneModalVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setPruneModalVisible(false)}
+        >
+            <Pressable style={styles.modalOverlay} onPress={() => setPruneModalVisible(false)}>
+                <Pressable style={styles.modalContent} onPress={() => {}}>
+                    <Text style={styles.modalTitle}>Prune Sessions</Text>
+                    <Text style={styles.modalText}>
+                        This will remove {sessionsToPrune} session(s) older than 1 day{!pruneAll && sessions.length > 10 ? ' and beyond the 10th most recent' : ''}.
+                    </Text>
+
+                    <View style={styles.switchRow}>
+                        <Text style={styles.switchLabel}>All sessions</Text>
+                        <Switch
+                            value={pruneAll}
+                            onValueChange={setPruneAll}
+                            trackColor={{false: colors.border, true: colors.primary}}
+                            thumbColor={colors.surface}
+                        />
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                            style={[styles.modalButton, styles.modalButtonCancel]}
+                            onPress={() => setPruneModalVisible(false)}
+                        >
+                            <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.modalButton, styles.modalButtonConfirm]}
+                            onPress={handlePrune}
+                            disabled={pruning || sessionsToPrune === 0}
+                        >
+                            <Text style={styles.modalButtonConfirmText}>
+                                {pruning ? 'Pruning...' : 'Prune'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </Pressable>
+        </Modal>
+        </>
     );
 }
 
@@ -277,5 +368,65 @@ const styles = StyleSheet.create({
     statLabel: {
         fontSize: fontSize.xs,
         color: colors.textMuted,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: colors.surface,
+        borderRadius: borderRadius.lg,
+        padding: spacing.lg,
+        width: '85%',
+        maxWidth: 400,
+    },
+    modalTitle: {
+        fontSize: fontSize.lg,
+        fontWeight: fontWeight.semibold,
+        color: colors.text,
+        marginBottom: spacing.md,
+    },
+    modalText: {
+        fontSize: fontSize.md,
+        color: colors.textSecondary,
+        marginBottom: spacing.lg,
+        lineHeight: 22,
+    },
+    switchRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.lg,
+        paddingVertical: spacing.sm,
+    },
+    switchLabel: {
+        fontSize: fontSize.md,
+        color: colors.text,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        gap: spacing.md,
+    },
+    modalButton: {
+        flex: 1,
+        paddingVertical: spacing.md,
+        borderRadius: borderRadius.md,
+        alignItems: 'center',
+    },
+    modalButtonCancel: {
+        backgroundColor: colors.border,
+    },
+    modalButtonCancelText: {
+        color: colors.text,
+        fontWeight: fontWeight.medium,
+    },
+    modalButtonConfirm: {
+        backgroundColor: colors.primary,
+    },
+    modalButtonConfirmText: {
+        color: '#fff',
+        fontWeight: fontWeight.semibold,
     },
 });

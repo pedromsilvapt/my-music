@@ -245,3 +245,21 @@ export type ApiError = {
     message: string;
     details?: ProblemDetails;
 };
+
+export const PruneSessionsRequestSchema = z.object({
+    all: z.boolean(),
+});
+
+export type PruneSessionsRequest = z.infer<typeof PruneSessionsRequestSchema>;
+
+export const PruneSessionsResponseSchema = z.object({
+    deletedCount: z.number(),
+});
+
+export type PruneSessionsResponse = z.infer<typeof PruneSessionsResponseSchema>;
+
+export const DeleteSessionResponseSchema = z.object({
+    success: z.boolean(),
+});
+
+export type DeleteSessionResponse = z.infer<typeof DeleteSessionResponseSchema>;

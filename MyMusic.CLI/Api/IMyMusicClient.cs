@@ -34,6 +34,18 @@ public interface IMyMusicClient
         [Query] string? source,
         CancellationToken ct = default);
 
+    [Delete("/api/devices/{deviceId}/sessions/{sessionId}")]
+    Task<DeleteSessionResponse> DeleteSessionAsync(
+        long deviceId,
+        long sessionId,
+        CancellationToken ct = default);
+
+    [Post("/api/devices/{deviceId}/sessions/prune")]
+    Task<PruneSessionsResponse> PruneSessionsAsync(
+        long deviceId,
+        [Body] PruneSessionsRequest request,
+        CancellationToken ct = default);
+
     [Post("/api/devices/{deviceId}/sync/start")]
     Task<SyncStartResponse> StartSyncAsync(
         long deviceId,
