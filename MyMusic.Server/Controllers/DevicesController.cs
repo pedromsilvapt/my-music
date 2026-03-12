@@ -378,9 +378,26 @@ public class DevicesController(
             .Where(sd => sd.DeviceId == deviceId
                          && sd.SyncAction == null
                          && !validFilePaths.Contains(sd.DevicePath))
+            .Include(sd => sd.Song)
             .ToListAsync(cancellationToken);
 
         removedFromSessionCount = orphanedSongDevices.Count;
+
+        var orphanedRecords = orphanedSongDevices.Select(sd => new DeviceSyncSessionRecord
+        {
+            SessionId = sessionId,
+            SongId = sd.SongId,
+            FilePath = sd.DevicePath,
+            Action = SyncRecordAction.Removed,
+            Source = SyncRecordSource.Server,
+            Reason = "File missing from device",
+            ProcessedAt = DateTime.UtcNow,
+        }).ToList();
+
+        if (orphanedRecords.Count > 0)
+        {
+            context.DeviceSyncSessionRecords.AddRange(orphanedRecords);
+        }
 
         if (!session.IsDryRun)
         {

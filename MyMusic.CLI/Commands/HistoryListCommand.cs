@@ -44,6 +44,8 @@ public class HistoryListCommand(
             table.AddColumn("Created");
             table.AddColumn("Updated");
             table.AddColumn("Skipped");
+            table.AddColumn("Downloaded");
+            table.AddColumn("Removed");
             table.AddColumn("Error");
 
             foreach (var session in response.Sessions)
@@ -67,6 +69,8 @@ public class HistoryListCommand(
                     ColorizeCounter(session.CreatedCount, "green"),
                     ColorizeCounter(session.UpdatedCount, "teal"),
                     ColorizeCounter(session.SkippedCount, "grey"),
+                    ColorizeCounter(session.DownloadedCount, "blue"),
+                    ColorizeCounter(session.RemovedCount, "red"),
                     ColorizeCounter(session.ErrorCount, "red")
                 );
             }
