@@ -50,6 +50,8 @@ export interface CollectionTableProps<M> {
     actions: CollectionSchemaAction<M>[];
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
+    scrollToIndex?: number;
+    highlightRequestId?: number;
     height: number;
 }
 
@@ -115,6 +117,19 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             });
         }
     }, [props.initialScrollPosition, props.items.length, virtualizer]);
+
+    useEffect(() => {
+        if (props.scrollToIndex != null && props.items.length > 0) {
+            const virtualItems = virtualizer.getVirtualItems();
+            const isVisible = virtualItems.some(item => item.index === props.scrollToIndex);
+            
+            if (!isVisible) {
+                requestAnimationFrame(() => {
+                    virtualizer.scrollToIndex(props.scrollToIndex!, {align: 'center'});
+                });
+            }
+        }
+    }, [props.scrollToIndex, props.highlightRequestId, props.items.length, virtualizer]);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
@@ -215,6 +230,8 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             isDraggingActive={isDragging}
             setItemElementRef={props.setItemElementRef}
             actions={props.actions}
+            scrollToIndex={props.scrollToIndex}
+            highlightRequestId={props.highlightRequestId}
         />;
     });
 
@@ -344,6 +361,8 @@ interface CollectionTableRowProps<M> {
     isDraggingActive?: boolean;
     setItemElementRef?: ItemElementRefCallback<M>;
     actions: CollectionSchemaAction<M>[];
+    scrollToIndex?: number;
+    highlightRequestId?: number;
 }
 
 function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
@@ -362,10 +381,24 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         isDraggingActive,
         setItemElementRef,
         actions,
+        scrollToIndex,
+        highlightRequestId,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const {showContextMenu} = useContextMenu();
+    const prevHighlightIdRef = useRef<number | undefined>(undefined);
+    const [isHighlighted, setIsHighlighted] = useState(false);
+
+    useEffect(() => {
+        if (highlightRequestId !== undefined && highlightRequestId !== prevHighlightIdRef.current) {
+            if (virtualRow.index === scrollToIndex) {
+                prevHighlightIdRef.current = highlightRequestId;
+                setIsHighlighted(true);
+                setTimeout(() => setIsHighlighted(false), 1500);
+            }
+        }
+    }, [highlightRequestId, scrollToIndex, virtualRow.index]);
 
     const {
         attributes,
@@ -454,6 +487,7 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
                 styles.row,
                 isSelected && styles.selected,
                 isDragOverlay && styles.selected,
+                isHighlighted && styles.highlighted,
             )}
         >
             {columns.map(col =>

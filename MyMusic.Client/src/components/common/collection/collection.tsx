@@ -38,6 +38,8 @@ interface CollectionProps<T extends { id: string | number }> {
     serverFilter?: string;
     onServerFilterChange?: (search: string, filter: string) => void;
     searchPlaceholder?: string;
+    scrollToIndex?: number;
+    highlightRequestId?: number;
 }
 
 const MIN_VIEW_HEIGHT = 200;
@@ -317,6 +319,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             actions={actions}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
+            scrollToIndex={props.scrollToIndex}
+            highlightRequestId={props.highlightRequestId}
             height={viewHeight}
         />;
     } else if (view === 'list') {
@@ -332,6 +336,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             actions={actions}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
+            scrollToIndex={props.scrollToIndex}
+            highlightRequestId={props.highlightRequestId}
             height={viewHeight}
         />;
     } else if (view === 'grid') {
@@ -347,6 +353,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             actions={actions}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
+            scrollToIndex={props.scrollToIndex}
+            highlightRequestId={props.highlightRequestId}
             height={viewHeight}
         />;
     } else {

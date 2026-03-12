@@ -1,9 +1,12 @@
-import {ActionIcon, Box, Group, Text} from '@mantine/core';
+import {ActionIcon, Box, Group, Text, UnstyledButton} from '@mantine/core';
+import {Link} from '@tanstack/react-router';
 import Artwork from "../common/artwork.tsx";
 import {IconDotsVertical, IconHeart, IconHeartFilled, IconMusic, IconPlaylistAdd} from "@tabler/icons-react";
 import ExplicitLabel from "../common/explicit-label.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
+import {usePlaybackActions} from "../../stores/playback-store";
+import styles from './player-info.module.css';
 
 export interface PlayerInfoProps {
     title: string;
@@ -26,20 +29,31 @@ export default function PlayerInfo(props: PlayerInfoProps) {
         }
     });
     const {open: openManagePlaylists} = useManagePlaylistsContext();
+    const {requestScrollToCurrent} = usePlaybackActions((s) => ({
+        requestScrollToCurrent: s.requestScrollToCurrent,
+    }));
+
+    const handleSongInfoClick = () => {
+        requestScrollToCurrent();
+    };
 
     return <>
         <Group>
-            <Group gap="sm">
-                <Artwork id={props.artwork} size={60} placeholderIcon={<IconMusic/>}/>
-                <Box>
-                    <ExplicitLabel visible={props.isExplicit}>
-                        <Text size="sm">{props.title}</Text>
-                    </ExplicitLabel>
-                    <Text size="xs" opacity={0.5}>
-                        {props.artists[0]} • {props.album} • {props.year}
-                    </Text>
-                </Box>
-            </Group>
+            <Link to="/player" className={styles.songInfoLink} onClick={handleSongInfoClick}>
+                <UnstyledButton className={styles.songInfoButton}>
+                    <Group gap="sm">
+                        <Artwork id={props.artwork} size={60} placeholderIcon={<IconMusic/>}/>
+                        <Box>
+                            <ExplicitLabel visible={props.isExplicit}>
+                                <Text size="sm">{props.title}</Text>
+                            </ExplicitLabel>
+                            <Text size="xs" opacity={0.5}>
+                                {props.artists[0]} • {props.album} • {props.year}
+                            </Text>
+                        </Box>
+                    </Group>
+                </UnstyledButton>
+            </Link>
             <Group gap="sm">
                 <ActionIcon
                     variant="default"

@@ -14,6 +14,7 @@ export type PlaybackState = {
         muted: boolean;
     };
     playbackKey: number;
+    scrollToCurrentRequestId: number;
 };
 
 export type PlayerCurrentSongState =
@@ -31,6 +32,7 @@ type PlaybackActions = {
     setIsFavorite: (isFavorite: boolean, songId?: number) => void;
     clear: () => void;
     incrementPlaybackKey: () => void;
+    requestScrollToCurrent: () => void;
 };
 
 type PlaybackStore = PlaybackState & PlaybackActions;
@@ -45,6 +47,7 @@ function createPlaybackStore(): StoreApi<PlaybackStore> {
                 muted: false,
             },
             playbackKey: 0,
+            scrollToCurrentRequestId: 0,
             setLoadingSong: (song, autoplay) =>
                 set((state) => {
                     state.current = {type: 'LOADING', song};
@@ -99,6 +102,10 @@ function createPlaybackStore(): StoreApi<PlaybackStore> {
                 set((state) => {
                     console.log(state.playbackKey)
                     state.playbackKey += 1;
+                }),
+            requestScrollToCurrent: () =>
+                set((state) => {
+                    state.scrollToCurrentRequestId += 1;
                 }),
         }))
     );

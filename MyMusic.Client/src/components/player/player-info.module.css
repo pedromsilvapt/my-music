@@ -1,0 +1,15 @@
+.songInfoLink {
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--mantine-radius-sm);
+}
+
+.songInfoButton {
+    border-radius: var(--mantine-radius-sm);
+    padding: var(--mantine-spacing-xs);
+    transition: background-color 150ms ease;
+}
+
+.songInfoButton:hover {
+    background-color: var(--mantine-color-default-hover);
+}

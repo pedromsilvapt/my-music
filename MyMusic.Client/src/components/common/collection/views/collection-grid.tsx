@@ -41,6 +41,8 @@ export interface CollectionGridProps<M> {
     actions: CollectionSchemaAction<M>[];
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
+    scrollToIndex?: number;
+    highlightRequestId?: number;
     height: number;
 }
 
@@ -113,6 +115,19 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             });
         }
     }, [props.initialScrollPosition, props.items.length, virtualizer, parentRef]);
+
+    useEffect(() => {
+        if (props.scrollToIndex != null && props.items.length > 0) {
+            const virtualItems = virtualizer.getVirtualItems();
+            const isVisible = virtualItems.some(item => item.index === props.scrollToIndex);
+            
+            if (!isVisible) {
+                requestAnimationFrame(() => {
+                    virtualizer.scrollToIndex(props.scrollToIndex!, {align: 'center'});
+                });
+            }
+        }
+    }, [props.scrollToIndex, props.highlightRequestId, props.items.length, virtualizer, parentRef]);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
@@ -210,6 +225,8 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             isDraggingActive={isDragging}
             setItemElementRef={props.setItemElementRef}
             actions={props.actions}
+            scrollToIndex={props.scrollToIndex}
+            highlightRequestId={props.highlightRequestId}
         />;
     });
 
@@ -294,6 +311,8 @@ export interface CollectionGridItemProps<M> {
     isDraggingActive?: boolean;
     setItemElementRef?: ItemElementRefCallback<M>;
     actions: CollectionSchemaAction<M>[];
+    scrollToIndex?: number;
+    highlightRequestId?: number;
 }
 
 export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
@@ -311,10 +330,24 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         isDraggingActive,
         setItemElementRef,
         actions,
+        scrollToIndex,
+        highlightRequestId,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const {showContextMenu} = useContextMenu();
+    const prevHighlightIdRef = useRef<number | undefined>(undefined);
+    const [isHighlighted, setIsHighlighted] = useState(false);
+
+    useEffect(() => {
+        if (highlightRequestId !== undefined && highlightRequestId !== prevHighlightIdRef.current) {
+            if (virtualItem.index === scrollToIndex) {
+                prevHighlightIdRef.current = highlightRequestId;
+                setIsHighlighted(true);
+                setTimeout(() => setIsHighlighted(false), 1500);
+            }
+        }
+    }, [highlightRequestId, scrollToIndex, virtualItem.index]);
 
     const {
         attributes,
@@ -406,6 +439,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
             styles.item,
             isSelected && styles.selected,
             isDragOverlay && styles.selected,
+            isHighlighted && styles.highlighted,
         )}>
         <Stack gap="sm">
             {schema.renderListArtwork(item, props.width - 20)}
