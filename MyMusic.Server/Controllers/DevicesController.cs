@@ -80,6 +80,20 @@ public class DevicesController(
         context.Devices.Add(device);
         await context.SaveChangesAsync(cancellationToken);
 
+        if (request.ForceCreateActions)
+        {
+            var existingSongDevices = await context.SongDevices
+                .Where(sd => sd.DeviceId == device.Id)
+                .ToListAsync(cancellationToken);
+            foreach (var sd in existingSongDevices)
+            {
+                sd.SyncAction = SongSyncAction.Download;
+            }
+            await context.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Set ForceCreateActions for {Count} SongDevices on device {DeviceId}",
+                existingSongDevices.Count, device.Id);
+        }
+
         logger.LogInformation("Created device {DeviceName} with ID {DeviceId} for user {UserId}",
             device.Name, device.Id, currentUser.Id);
 
@@ -108,6 +122,19 @@ public class DevicesController(
         if (request.ImportOnPurchase.HasValue)
         {
             device.ImportOnPurchase = request.ImportOnPurchase.Value;
+        }
+
+        if (request.ForceCreateActions == true)
+        {
+            var existingSongDevices = await context.SongDevices
+                .Where(sd => sd.DeviceId == deviceId)
+                .ToListAsync(cancellationToken);
+            foreach (var sd in existingSongDevices)
+            {
+                sd.SyncAction = SongSyncAction.Download;
+            }
+            logger.LogInformation("Set ForceCreateActions for {Count} SongDevices on device {DeviceId}",
+                existingSongDevices.Count, deviceId);
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -441,7 +468,7 @@ public class DevicesController(
 
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/complete")]
     public async Task<SyncCompleteResponse> CompleteSync(long deviceId, long sessionId,
-        CancellationToken cancellationToken)
+        [FromBody] SyncCompleteRequest? request, CancellationToken cancellationToken)
     {
         var session = await context.DeviceSyncSessions
             .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == currentUser.Id)
@@ -456,6 +483,9 @@ public class DevicesController(
         {
             throw new Exception($"Sync session {sessionId} is not in progress (status: {session.Status})");
         }
+
+        var direction = request?.Direction?.ToLowerInvariant() ?? "both";
+        var isUpDirection = direction == "up";
 
         var records = await context.DeviceSyncSessionRecords
             .Where(r => r.SessionId == sessionId)
@@ -476,34 +506,75 @@ public class DevicesController(
             .Select(r => r.FilePath)
             .ToHashSet();
 
-        var orphanedSongDevices = await context.SongDevices
-            .Where(sd => sd.DeviceId == deviceId
-                         && sd.SyncAction == null
-                         && !validFilePaths.Contains(sd.DevicePath))
-            .Include(sd => sd.Song)
-            .ToListAsync(cancellationToken);
+        // Handle orphaned song devices based on direction
+        // Up: Remove ALL songs not in validFilePaths (regardless of SyncAction)
+        // Both: Remove only songs with SyncAction == null not in validFilePaths
+        // Down: Don't remove anything (server is not modified)
+        List<SongDevice> orphanedSongDevices;
+        
+        if (direction == "both")
+        {
+            orphanedSongDevices = await context.SongDevices
+                .Where(sd => sd.DeviceId == deviceId
+                             && sd.SyncAction == null
+                             && !validFilePaths.Contains(sd.DevicePath))
+                .Include(sd => sd.Song)
+                .ToListAsync(cancellationToken);
+        }
+        else if (direction == "up")
+        {
+            orphanedSongDevices = await context.SongDevices
+                .Where(sd => sd.DeviceId == deviceId
+                             && !validFilePaths.Contains(sd.DevicePath))
+                .Include(sd => sd.Song)
+                .ToListAsync(cancellationToken);
+        }
+        else // down
+        {
+            orphanedSongDevices = new List<SongDevice>();
+        }
 
         removedFromSessionCount = orphanedSongDevices.Count;
 
-        var orphanedRecords = orphanedSongDevices.Select(sd => new DeviceSyncSessionRecord
+        if (orphanedSongDevices.Count > 0)
         {
-            SessionId = sessionId,
-            SongId = sd.SongId,
-            FilePath = sd.DevicePath,
-            Action = SyncRecordAction.Removed,
-            Source = SyncRecordSource.Server,
-            Reason = "File missing from device",
-            ProcessedAt = DateTime.UtcNow,
-        }).ToList();
+            var orphanedRecords = orphanedSongDevices.Select(sd => new DeviceSyncSessionRecord
+            {
+                SessionId = sessionId,
+                SongId = sd.SongId,
+                FilePath = sd.DevicePath,
+                Action = SyncRecordAction.Removed,
+                Source = SyncRecordSource.Server,
+                Reason = direction == "up" ? "File missing from device (up direction)" : "File missing from device",
+                ProcessedAt = DateTime.UtcNow,
+            }).ToList();
 
-        if (orphanedRecords.Count > 0)
-        {
             context.DeviceSyncSessionRecords.AddRange(orphanedRecords);
+
+            if (!session.IsDryRun)
+            {
+                context.SongDevices.RemoveRange(orphanedSongDevices);
+            }
         }
 
-        if (!session.IsDryRun)
+        // Handle pending actions for songs present on device
+        // Up: Clear ALL pending actions for songs in validFilePaths
+        // Both/Down: Don't clear anything (handled elsewhere)
+        if (isUpDirection)
         {
-            context.SongDevices.RemoveRange(orphanedSongDevices);
+            var songsToClear = await context.SongDevices
+                .Where(sd => sd.DeviceId == deviceId
+                             && validFilePaths.Contains(sd.DevicePath)
+                             && sd.SyncAction != null)
+                .ToListAsync(cancellationToken);
+
+            if (songsToClear.Count > 0 && !session.IsDryRun)
+            {
+                foreach (var sd in songsToClear)
+                {
+                    sd.SyncAction = null;
+                }
+            }
         }
 
         session.CompletedAt = DateTime.UtcNow;
@@ -554,6 +625,36 @@ public class DevicesController(
         return new GetPendingActionsResponse
         {
             Actions = pendingActions,
+        };
+    }
+
+    [HttpGet("{deviceId:long}/sync/songs")]
+    public async Task<GetDeviceSongsResponse> GetDeviceSongs(long deviceId, CancellationToken cancellationToken)
+    {
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (device == null)
+        {
+            throw new Exception($"Device not found with id {deviceId}");
+        }
+
+        var songs = await context.SongDevices
+            .Where(sd => sd.DeviceId == deviceId)
+            .Select(sd => new DeviceSongItem
+            {
+                SongId = sd.SongId,
+                Path = sd.DevicePath,
+                Action = sd.SyncAction != null ? sd.SyncAction.Value.ToString() : null,
+            })
+            .ToListAsync(cancellationToken);
+
+        logger.LogInformation("Found {Count} songs for device {DeviceId}", songs.Count, deviceId);
+
+        return new GetDeviceSongsResponse
+        {
+            Songs = songs,
         };
     }
 

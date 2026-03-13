@@ -63,6 +63,7 @@ public interface IMyMusicClient
     Task<SyncCompleteResponse> CompleteSyncAsync(
         long deviceId,
         long sessionId,
+        [Body] SyncCompleteRequest request,
         CancellationToken ct = default);
 
     [Post("/api/devices/{deviceId}/sync/check")]
@@ -83,6 +84,11 @@ public interface IMyMusicClient
 
     [Get("/api/devices/{deviceId}/sync/pending-actions")]
     Task<GetPendingActionsResponse> GetPendingActionsAsync(
+        long deviceId,
+        CancellationToken ct = default);
+
+    [Get("/api/devices/{deviceId}/sync/songs")]
+    Task<GetDeviceSongsResponse> GetDeviceSongsAsync(
         long deviceId,
         CancellationToken ct = default);
 

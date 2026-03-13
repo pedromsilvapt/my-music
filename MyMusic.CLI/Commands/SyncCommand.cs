@@ -1,8 +1,11 @@
+using System.ComponentModel;
+using System.Globalization;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using SyncDirection = MyMusic.CLI.Services.SyncDirection;
 
 namespace MyMusic.CLI.Commands;
 
@@ -42,7 +45,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
                     });
 
                     syncResult = await syncService.SyncAsync(settings.Force, settings.Verbose, settings.DryRun,
-                        settings.AutoConfirm, progress);
+                        settings.AutoConfirm, settings.Direction, progress);
                 });
 
             AnsiConsole.WriteLine();
@@ -148,5 +151,37 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         [CommandOption("--dry-run")] public bool DryRun { get; set; }
 
         [CommandOption("-y|--yes")] public bool AutoConfirm { get; set; }
+
+        [CommandOption("-d|--direction")]
+        [TypeConverter(typeof(SyncDirectionConverter))]
+        public SyncDirection Direction { get; set; } = SyncDirection.Both;
+    }
+
+    public class SyncDirectionConverter : TypeConverter
+    {
+        public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
+        {
+            return sourceType == typeof(string);
+        }
+
+        public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object? value)
+        {
+            if (value is string str)
+            {
+                return str.ToLowerInvariant() switch
+                {
+                    "up" => SyncDirection.Up,
+                    "down" => SyncDirection.Down,
+                    "both" => SyncDirection.Both,
+                    _ => throw new InvalidOperationException($"Invalid direction '{value}'. Valid values are: up, down, both"),
+                };
+            }
+            return base.ConvertFrom(context, culture, value);
+        }
+
+        public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
+        {
+            return false;
+        }
     }
 }

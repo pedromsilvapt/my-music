@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.IO.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -354,6 +355,13 @@ public class SongsController(
 
             var existingDict = existingSongDevices.ToDictionary(sd => sd.SongId);
 
+            var allExistingPaths = await context.SongDevices
+                .Where(sd => sd.DeviceId == update.DeviceId)
+                .Select(sd => sd.DevicePath)
+                .ToHashSetAsync(cancellationToken);
+
+            var newPathsInBatch = new Dictionary<string, int>();
+
             foreach (var song in songs)
             {
                 var hasExisting = existingDict.TryGetValue(song.Id, out var existing);
@@ -361,11 +369,17 @@ public class SongsController(
                 if (update.Include && !hasExisting)
                 {
                     var metadata = EntityConverter.ToSong(song);
+                    var basePath = namingStrategy.Generate(metadata);
+                    var devicePath = GetUniquePath(basePath, allExistingPaths, newPathsInBatch);
+
+                    newPathsInBatch[devicePath] = newPathsInBatch.GetValueOrDefault(devicePath, 0) + 1;
+                    allExistingPaths.Add(devicePath);
+
                     var newSongDevice = new SongDevice
                     {
                         SongId = song.Id,
                         DeviceId = update.DeviceId,
-                        DevicePath = namingStrategy.Generate(metadata),
+                        DevicePath = devicePath,
                         SyncAction = SongSyncAction.Download,
                         AddedAt = DateTime.UtcNow,
                     };
@@ -1583,4 +1597,26 @@ public class SongsController(
         8 => song.Cover != null && song.Cover.Width != song.Cover.Height,
         _ => true
     };
+
+    private static string GetUniquePath(string basePath, HashSet<string> existingPaths, Dictionary<string, int> pathsInBatch)
+    {
+        if (!existingPaths.Contains(basePath) && !pathsInBatch.ContainsKey(basePath))
+        {
+            return basePath;
+        }
+
+        var directory = Path.GetDirectoryName(basePath) ?? "";
+        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(basePath);
+        var extension = Path.GetExtension(basePath);
+
+        var counter = 2;
+        string newPath;
+        do
+        {
+            newPath = Path.Combine(directory, $"{fileNameWithoutExt} ({counter}){extension}");
+            counter++;
+        } while (existingPaths.Contains(newPath) || pathsInBatch.ContainsKey(newPath));
+
+        return newPath;
+    }
 }

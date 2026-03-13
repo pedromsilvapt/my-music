@@ -8,6 +8,7 @@ using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
 using Refit;
 using Path = System.IO.Path;
+using SyncDirection = MyMusic.CLI.Services.SyncDirection;
 
 namespace MyMusic.CLI.Services;
 
@@ -19,7 +20,7 @@ public class SyncService(
     ILogger<SyncService> logger) : ISyncService
 {
     public async Task<SyncResult> SyncAsync(bool force, bool verbose, bool dryRun, bool autoConfirm,
-        IProgress<SyncProgress>? progress = null, CancellationToken ct = default)
+        SyncDirection direction, IProgress<SyncProgress>? progress = null, CancellationToken ct = default)
     {
         var result = new SyncResult(0, 0, 0, 0, 0, 0);
 
@@ -219,35 +220,63 @@ public class SyncService(
             }
 
             // === PHASE 2: Server Actions (Server -> Device) ===
-            logger.LogInformation("Fetching pending actions from server");
-            var pendingActions = await client.GetPendingActionsAsync(deviceId.Value, ct);
-            logger.LogInformation("Found {Count} pending actions", pendingActions.Actions.Count);
-
-            var serverTotal = pendingActions.Actions.Count;
-            var serverProcessed = 0;
-            var serverRecordItems = new List<SyncRecordRequestItem>();
-
-            foreach (var action in pendingActions.Actions)
+            if (direction == SyncDirection.Up)
             {
-                var fullPath = Path.Combine(repositoryPath, action.Path);
-                serverProcessed++;
-
-                // Skip files we just uploaded - they're already current
-                if (uploadedPaths.Contains(action.Path))
+                logger.LogInformation("Skipping download phase (direction: up)");
+            }
+            else
+            {
+                logger.LogInformation("Fetching pending actions from server");
+                var pendingActionsResponse = await client.GetPendingActionsAsync(deviceId.Value, ct);
+                
+                List<PendingActionItem> actionsToProcess;
+                
+                if (direction == SyncDirection.Down)
                 {
-                    if (!dryRun)
-                    {
-                        await client.AcknowledgeActionAsync(deviceId.Value,
-                            new AcknowledgeActionRequest { SongId = action.SongId }, ct);
-                    }
-
-                    progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
-                        skipped, downloaded, removed, failed, "server"));
-                    continue;
+                    logger.LogInformation("Direction is 'down' - fetching all device songs");
+                    var allDeviceSongs = await client.GetDeviceSongsAsync(deviceId.Value, ct);
+                    actionsToProcess = allDeviceSongs.Songs
+                        .Where(s => s.Action == "Download" || s.Action == null)
+                        .Select(s => new PendingActionItem
+                        {
+                            SongId = s.SongId,
+                            Path = s.Path,
+                            Action = "Download"
+                        })
+                        .ToList();
+                    logger.LogInformation("Found {Count} songs to download (including null action)", actionsToProcess.Count);
+                }
+                else
+                {
+                    actionsToProcess = pendingActionsResponse.Actions;
+                    logger.LogInformation("Found {Count} pending actions", actionsToProcess.Count);
                 }
 
-                if (action.Action == "Download")
+                var serverTotal = actionsToProcess.Count;
+                var serverProcessed = 0;
+                var serverRecordItems = new List<SyncRecordRequestItem>();
+
+                foreach (var action in actionsToProcess)
                 {
+                    var fullPath = Path.Combine(repositoryPath, action.Path);
+                    serverProcessed++;
+
+                    // Skip files we just uploaded - they're already current
+                    if (uploadedPaths.Contains(action.Path))
+                    {
+                        if (!dryRun)
+                        {
+                            await client.AcknowledgeActionAsync(deviceId.Value,
+                                new AcknowledgeActionRequest { SongId = action.SongId }, ct);
+                        }
+
+                        progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
+                            skipped, downloaded, removed, failed, "server"));
+                        continue;
+                    }
+
+                    if (action.Action == "Download")
+                    {
                     var fileExists = fileSystem.File.Exists(fullPath);
 
                     // Prompt for confirmation only if not dry-run, file exists, and not auto-confirm
@@ -389,14 +418,18 @@ public class SyncService(
                 var serverRecordsRequest = new SyncRecordsRequest { Records = serverRecordItems };
                 await client.RecordChunkAsync(deviceId.Value, sessionId, serverRecordsRequest, ct);
             }
+            }
 
             // === COMPLETE ===
-            var completeResponse = await client.CompleteSyncAsync(deviceId.Value, sessionId, ct);
+            var directionString = direction == SyncDirection.Up ? "up" : direction == SyncDirection.Down ? "down" : "both";
+            var completeResponse = await client.CompleteSyncAsync(deviceId.Value, sessionId, 
+                new SyncCompleteRequest { Direction = directionString }, ct);
 
             logger.LogInformation(
                 "Sync complete: {Created} created, {Updated} updated, {Skipped} skipped, {Downloaded} downloaded, {Removed} removed, {Error} error",
                 completeResponse.CreatedCount, completeResponse.UpdatedCount, completeResponse.SkippedCount,
-                completeResponse.DownloadedCount, completeResponse.RemovedCount, completeResponse.ErrorCount);
+                completeResponse.DownloadedCount, completeResponse.RemovedCount, 
+                completeResponse.ErrorCount);
 
             return new SyncResult(
                 completeResponse.CreatedCount,

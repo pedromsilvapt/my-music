@@ -6,6 +6,7 @@ public record UpdateDeviceRequest
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }
     public bool? ImportOnPurchase { get; init; }
+    public bool? ForceCreateActions { get; init; }
 }
 
 public record UpdateDeviceResponse
