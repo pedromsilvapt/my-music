@@ -159,7 +159,7 @@ public class SongUpdateService(
     private async Task UpdateCoverAsync(MusicDbContext db, Song song, string coverDataUrl,
         CancellationToken cancellationToken)
     {
-        var imageBuffer = ImageBuffer.FromBase64Url(coverDataUrl);
+        var imageBuffer = await ImageBuffer.FromStringAsync(coverDataUrl, cancellationToken);
         var size = imageBuffer.Size;
 
         if (song.Cover == null)

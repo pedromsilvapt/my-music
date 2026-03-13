@@ -32,6 +32,7 @@ import type {
 	AcknowledgeActionResponse,
 	CreateDeviceRequest,
 	CreateDeviceResponse,
+	DeleteSessionResponse,
 	FilterMetadataResponse,
 	FilterValuesResponse,
 	GetDevicesDeviceIdSessionsParams,
@@ -43,6 +44,8 @@ import type {
 	ListSyncRecordsResponse,
 	ListSyncSessionsResponse,
 	PostDevicesDeviceIdSyncUploadBody,
+	PruneSessionsRequest,
+	PruneSessionsResponse,
 	SyncCheckRequest,
 	SyncCheckResponse,
 	SyncCompleteResponse,
@@ -903,6 +906,260 @@ export const invalidateGetDevicesDeviceIdSessions = async (
 	return queryClient;
 };
 
+export type deleteDevicesDeviceIdSessionsSessionIdResponse200TextPlain = {
+	data: DeleteSessionResponse;
+	status: 200;
+};
+
+export type deleteDevicesDeviceIdSessionsSessionIdResponse200ApplicationJson = {
+	data: DeleteSessionResponse;
+	status: 200;
+};
+
+export type deleteDevicesDeviceIdSessionsSessionIdResponse200TextJson = {
+	data: DeleteSessionResponse;
+	status: 200;
+};
+
+export type deleteDevicesDeviceIdSessionsSessionIdResponseSuccess = (
+	| deleteDevicesDeviceIdSessionsSessionIdResponse200TextPlain
+	| deleteDevicesDeviceIdSessionsSessionIdResponse200ApplicationJson
+	| deleteDevicesDeviceIdSessionsSessionIdResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type deleteDevicesDeviceIdSessionsSessionIdResponse =
+	deleteDevicesDeviceIdSessionsSessionIdResponseSuccess;
+
+export const getDeleteDevicesDeviceIdSessionsSessionIdUrl = (
+	deviceId: number,
+	sessionId: number,
+) => {
+	return `/api/devices/${deviceId}/sessions/${sessionId}`;
+};
+
+export const deleteDevicesDeviceIdSessionsSessionId = async (
+	deviceId: number,
+	sessionId: number,
+	options?: RequestInit,
+): Promise<deleteDevicesDeviceIdSessionsSessionIdResponse> => {
+	const res = await fetch(
+		getDeleteDevicesDeviceIdSessionsSessionIdUrl(deviceId, sessionId),
+		{
+			...options,
+			method: "DELETE",
+		},
+	);
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: deleteDevicesDeviceIdSessionsSessionIdResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as deleteDevicesDeviceIdSessionsSessionIdResponse;
+};
+
+export const getDeleteDevicesDeviceIdSessionsSessionIdMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof deleteDevicesDeviceIdSessionsSessionId>>,
+		TError,
+		{ deviceId: number; sessionId: number },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof deleteDevicesDeviceIdSessionsSessionId>>,
+	TError,
+	{ deviceId: number; sessionId: number },
+	TContext
+> => {
+	const mutationKey = ["deleteDevicesDeviceIdSessionsSessionId"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof deleteDevicesDeviceIdSessionsSessionId>>,
+		{ deviceId: number; sessionId: number }
+	> = (props) => {
+		const { deviceId, sessionId } = props ?? {};
+
+		return deleteDevicesDeviceIdSessionsSessionId(
+			deviceId,
+			sessionId,
+			fetchOptions,
+		);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDevicesDeviceIdSessionsSessionIdMutationResult = NonNullable<
+	Awaited<ReturnType<typeof deleteDevicesDeviceIdSessionsSessionId>>
+>;
+
+export type DeleteDevicesDeviceIdSessionsSessionIdMutationError = unknown;
+
+export const useDeleteDevicesDeviceIdSessionsSessionId = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof deleteDevicesDeviceIdSessionsSessionId>>,
+			TError,
+			{ deviceId: number; sessionId: number },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof deleteDevicesDeviceIdSessionsSessionId>>,
+	TError,
+	{ deviceId: number; sessionId: number },
+	TContext
+> => {
+	return useMutation(
+		getDeleteDevicesDeviceIdSessionsSessionIdMutationOptions(options),
+		queryClient,
+	);
+};
+export type postDevicesDeviceIdSessionsPruneResponse200TextPlain = {
+	data: PruneSessionsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSessionsPruneResponse200ApplicationJson = {
+	data: PruneSessionsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSessionsPruneResponse200TextJson = {
+	data: PruneSessionsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSessionsPruneResponseSuccess = (
+	| postDevicesDeviceIdSessionsPruneResponse200TextPlain
+	| postDevicesDeviceIdSessionsPruneResponse200ApplicationJson
+	| postDevicesDeviceIdSessionsPruneResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type postDevicesDeviceIdSessionsPruneResponse =
+	postDevicesDeviceIdSessionsPruneResponseSuccess;
+
+export const getPostDevicesDeviceIdSessionsPruneUrl = (deviceId: number) => {
+	return `/api/devices/${deviceId}/sessions/prune`;
+};
+
+export const postDevicesDeviceIdSessionsPrune = async (
+	deviceId: number,
+	pruneSessionsRequest: PruneSessionsRequest,
+	options?: RequestInit,
+): Promise<postDevicesDeviceIdSessionsPruneResponse> => {
+	const res = await fetch(getPostDevicesDeviceIdSessionsPruneUrl(deviceId), {
+		...options,
+		method: "POST",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(pruneSessionsRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: postDevicesDeviceIdSessionsPruneResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as postDevicesDeviceIdSessionsPruneResponse;
+};
+
+export const getPostDevicesDeviceIdSessionsPruneMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof postDevicesDeviceIdSessionsPrune>>,
+		TError,
+		{ deviceId: number; data: PruneSessionsRequest },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof postDevicesDeviceIdSessionsPrune>>,
+	TError,
+	{ deviceId: number; data: PruneSessionsRequest },
+	TContext
+> => {
+	const mutationKey = ["postDevicesDeviceIdSessionsPrune"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof postDevicesDeviceIdSessionsPrune>>,
+		{ deviceId: number; data: PruneSessionsRequest }
+	> = (props) => {
+		const { deviceId, data } = props ?? {};
+
+		return postDevicesDeviceIdSessionsPrune(deviceId, data, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type PostDevicesDeviceIdSessionsPruneMutationResult = NonNullable<
+	Awaited<ReturnType<typeof postDevicesDeviceIdSessionsPrune>>
+>;
+export type PostDevicesDeviceIdSessionsPruneMutationBody = PruneSessionsRequest;
+export type PostDevicesDeviceIdSessionsPruneMutationError = unknown;
+
+export const usePostDevicesDeviceIdSessionsPrune = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof postDevicesDeviceIdSessionsPrune>>,
+			TError,
+			{ deviceId: number; data: PruneSessionsRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof postDevicesDeviceIdSessionsPrune>>,
+	TError,
+	{ deviceId: number; data: PruneSessionsRequest },
+	TContext
+> => {
+	return useMutation(
+		getPostDevicesDeviceIdSessionsPruneMutationOptions(options),
+		queryClient,
+	);
+};
 export type getDevicesDeviceIdSessionsSessionIdRecordsResponse200TextPlain = {
 	data: ListSyncRecordsResponse;
 	status: 200;
@@ -3055,6 +3312,24 @@ export const getGetDevicesDeviceIdSessionsResponseMock = (
 		},
 	]);
 
+export const getDeleteDevicesDeviceIdSessionsSessionIdResponseMock = (
+	overrideResponse: Partial<Extract<DeleteSessionResponse, object>> = {},
+): DeleteSessionResponse =>
+	faker.helpers.arrayElement([
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+	]);
+
+export const getPostDevicesDeviceIdSessionsPruneResponseMock = (
+	overrideResponse: Partial<Extract<PruneSessionsResponse, object>> = {},
+): PruneSessionsResponse =>
+	faker.helpers.arrayElement([
+		{ deletedCount: faker.number.int(), ...overrideResponse },
+		{ deletedCount: faker.number.int(), ...overrideResponse },
+		{ deletedCount: faker.number.int(), ...overrideResponse },
+	]);
+
 export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
 	overrideResponse: Partial<Extract<ListSyncRecordsResponse, object>> = {},
 ): ListSyncRecordsResponse =>
@@ -3706,6 +3981,54 @@ export const getGetDevicesDeviceIdSessionsMockHandler = (
 	);
 };
 
+export const getDeleteDevicesDeviceIdSessionsSessionIdMockHandler = (
+	overrideResponse?:
+		| DeleteSessionResponse
+		| ((
+				info: Parameters<Parameters<typeof http.delete>[1]>[0],
+		  ) => Promise<DeleteSessionResponse> | DeleteSessionResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.delete(
+		"*/devices/:deviceId/sessions/:sessionId",
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getDeleteDevicesDeviceIdSessionsSessionIdResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getPostDevicesDeviceIdSessionsPruneMockHandler = (
+	overrideResponse?:
+		| PruneSessionsResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<PruneSessionsResponse> | PruneSessionsResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/devices/:deviceId/sessions/prune",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getPostDevicesDeviceIdSessionsPruneResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
 export const getGetDevicesDeviceIdSessionsSessionIdRecordsMockHandler = (
 	overrideResponse?:
 		| ListSyncRecordsResponse
@@ -3951,6 +4274,8 @@ export const getDevicesMock = () => [
 	getPutDevicesDeviceIdMockHandler(),
 	getDeleteDevicesDeviceIdMockHandler(),
 	getGetDevicesDeviceIdSessionsMockHandler(),
+	getDeleteDevicesDeviceIdSessionsSessionIdMockHandler(),
+	getPostDevicesDeviceIdSessionsPruneMockHandler(),
 	getGetDevicesDeviceIdSessionsSessionIdRecordsMockHandler(),
 	getPostDevicesDeviceIdSyncStartMockHandler(),
 	getPostDevicesDeviceIdSyncSessionIdRecordsMockHandler(),

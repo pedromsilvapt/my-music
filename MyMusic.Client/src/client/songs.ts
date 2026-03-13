@@ -36,8 +36,11 @@ import type {
 	AutocompleteGenresResponse,
 	AutocompleteSongsParams,
 	AutocompleteSongsResponse,
+	BatchMultiUpdateSongsRequest,
+	BatchMultiUpdateSongsResponse,
 	BatchUpdateSongsRequest,
 	BatchUpdateSongsResponse,
+	FetchMetadataResponse,
 	FilterMetadataResponse,
 	FilterValuesResponse,
 	GetSongDevicesResponse,
@@ -48,6 +51,14 @@ import type {
 	ImportSongsBody,
 	ListSongsParams,
 	ListSongsResponse,
+	SongMetadataAlbum,
+	SongMetadataFieldOfboolean,
+	SongMetadataFieldOfdecimal,
+	SongMetadataFieldOfint,
+	SongMetadataFieldOfListOfSongMetadataArtist,
+	SongMetadataFieldOfListOfstring,
+	SongMetadataFieldOfSongMetadataAlbum,
+	SongMetadataFieldOfstring,
 	ToggleFavoriteResponse,
 	ToggleFavoritesRequest,
 	ToggleFavoritesResponse,
@@ -1065,15 +1076,19 @@ export const uploadSong = async (
 export const getUploadSongMutationOptions = <
 	TError = unknown,
 	TContext = unknown,
->(options?: {
-	mutation?: UseMutationOptions<
-		Awaited<ReturnType<typeof uploadSong>>,
-		TError,
-		{ data: UploadSongBody },
-		TContext
-	>;
-	fetch?: RequestInit;
-}): UseMutationOptions<
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof uploadSong>>,
+			TError,
+			{ data: UploadSongBody },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
 	Awaited<ReturnType<typeof uploadSong>>,
 	TError,
 	{ data: UploadSongBody },
@@ -1097,7 +1112,19 @@ export const getUploadSongMutationOptions = <
 		return uploadSong(data, fetchOptions);
 	};
 
-	return { mutationFn, ...mutationOptions };
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof uploadSong>>,
+		variables: { data: UploadSongBody },
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListSongsQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type UploadSongMutationResult = NonNullable<
@@ -1114,6 +1141,7 @@ export const useUploadSong = <TError = unknown, TContext = unknown>(
 			{ data: UploadSongBody },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1123,7 +1151,11 @@ export const useUploadSong = <TError = unknown, TContext = unknown>(
 	{ data: UploadSongBody },
 	TContext
 > => {
-	return useMutation(getUploadSongMutationOptions(options), queryClient);
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getUploadSongMutationOptions(queryClient ?? backupQueryClient, options),
+		queryClient,
+	);
 };
 export type toggleSongFavoriteResponse200TextPlain = {
 	data: ToggleFavoriteResponse;
@@ -3031,6 +3063,259 @@ export const invalidateAutocompleteGenres = async (
 	return queryClient;
 };
 
+export type fetchSongMetadataResponse200TextPlain = {
+	data: FetchMetadataResponse;
+	status: 200;
+};
+
+export type fetchSongMetadataResponse200ApplicationJson = {
+	data: FetchMetadataResponse;
+	status: 200;
+};
+
+export type fetchSongMetadataResponse200TextJson = {
+	data: FetchMetadataResponse;
+	status: 200;
+};
+
+export type fetchSongMetadataResponseSuccess = (
+	| fetchSongMetadataResponse200TextPlain
+	| fetchSongMetadataResponse200ApplicationJson
+	| fetchSongMetadataResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type fetchSongMetadataResponse = fetchSongMetadataResponseSuccess;
+
+export const getFetchSongMetadataUrl = (id: number) => {
+	return `/api/songs/${id}/fetch-metadata`;
+};
+
+export const fetchSongMetadata = async (
+	id: number,
+	options?: RequestInit,
+): Promise<fetchSongMetadataResponse> => {
+	const res = await fetch(getFetchSongMetadataUrl(id), {
+		...options,
+		method: "POST",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: fetchSongMetadataResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as fetchSongMetadataResponse;
+};
+
+export const getFetchSongMetadataMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof fetchSongMetadata>>,
+		TError,
+		{ id: number },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof fetchSongMetadata>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const mutationKey = ["fetchSongMetadata"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof fetchSongMetadata>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+
+		return fetchSongMetadata(id, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type FetchSongMetadataMutationResult = NonNullable<
+	Awaited<ReturnType<typeof fetchSongMetadata>>
+>;
+
+export type FetchSongMetadataMutationError = unknown;
+
+export const useFetchSongMetadata = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof fetchSongMetadata>>,
+			TError,
+			{ id: number },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof fetchSongMetadata>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	return useMutation(getFetchSongMetadataMutationOptions(options), queryClient);
+};
+export type batchMultiUpdateSongsResponse200TextPlain = {
+	data: BatchMultiUpdateSongsResponse;
+	status: 200;
+};
+
+export type batchMultiUpdateSongsResponse200ApplicationJson = {
+	data: BatchMultiUpdateSongsResponse;
+	status: 200;
+};
+
+export type batchMultiUpdateSongsResponse200TextJson = {
+	data: BatchMultiUpdateSongsResponse;
+	status: 200;
+};
+
+export type batchMultiUpdateSongsResponseSuccess = (
+	| batchMultiUpdateSongsResponse200TextPlain
+	| batchMultiUpdateSongsResponse200ApplicationJson
+	| batchMultiUpdateSongsResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type batchMultiUpdateSongsResponse =
+	batchMultiUpdateSongsResponseSuccess;
+
+export const getBatchMultiUpdateSongsUrl = () => {
+	return `/api/songs/batch-multi`;
+};
+
+export const batchMultiUpdateSongs = async (
+	batchMultiUpdateSongsRequest: BatchMultiUpdateSongsRequest,
+	options?: RequestInit,
+): Promise<batchMultiUpdateSongsResponse> => {
+	const res = await fetch(getBatchMultiUpdateSongsUrl(), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(batchMultiUpdateSongsRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: batchMultiUpdateSongsResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as batchMultiUpdateSongsResponse;
+};
+
+export const getBatchMultiUpdateSongsMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchMultiUpdateSongs>>,
+			TError,
+			{ data: BatchMultiUpdateSongsRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof batchMultiUpdateSongs>>,
+	TError,
+	{ data: BatchMultiUpdateSongsRequest },
+	TContext
+> => {
+	const mutationKey = ["batchMultiUpdateSongs"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof batchMultiUpdateSongs>>,
+		{ data: BatchMultiUpdateSongsRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return batchMultiUpdateSongs(data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof batchMultiUpdateSongs>>,
+		variables: { data: BatchMultiUpdateSongsRequest },
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListSongsQueryKey() });
+			queryClient.invalidateQueries({ queryKey: getGetSongQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
+};
+
+export type BatchMultiUpdateSongsMutationResult = NonNullable<
+	Awaited<ReturnType<typeof batchMultiUpdateSongs>>
+>;
+export type BatchMultiUpdateSongsMutationBody = BatchMultiUpdateSongsRequest;
+export type BatchMultiUpdateSongsMutationError = unknown;
+
+export const useBatchMultiUpdateSongs = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchMultiUpdateSongs>>,
+			TError,
+			{ data: BatchMultiUpdateSongsRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof batchMultiUpdateSongs>>,
+	TError,
+	{ data: BatchMultiUpdateSongsRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getBatchMultiUpdateSongsMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
+
 export const getListSongsResponseMock = (
 	overrideResponse: Partial<Extract<ListSongsResponse, object>> = {},
 ): ListSongsResponse =>
@@ -4570,6 +4855,536 @@ export const getAutocompleteGenresResponseMock = (
 		},
 	]);
 
+export const getFetchSongMetadataResponseSongMetadataFieldOfstringMock = (
+	overrideResponse: Partial<SongMetadataFieldOfstring> = {},
+): SongMetadataFieldOfstring => ({
+	...{
+		old: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			null,
+		]),
+		new: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			null,
+		]),
+	},
+	...overrideResponse,
+});
+
+export const getFetchSongMetadataResponseSongMetadataFieldOfintMock = (
+	overrideResponse: Partial<SongMetadataFieldOfint> = {},
+): SongMetadataFieldOfint => ({
+	...{ old: faker.number.int(), new: faker.number.int() },
+	...overrideResponse,
+});
+
+export const getFetchSongMetadataResponseSongMetadataFieldOfdecimalMock = (
+	overrideResponse: Partial<SongMetadataFieldOfdecimal> = {},
+): SongMetadataFieldOfdecimal => ({
+	...{
+		old: faker.number.float({ fractionDigits: 2 }),
+		new: faker.number.float({ fractionDigits: 2 }),
+	},
+	...overrideResponse,
+});
+
+export const getFetchSongMetadataResponseSongMetadataFieldOfbooleanMock = (
+	overrideResponse: Partial<SongMetadataFieldOfboolean> = {},
+): SongMetadataFieldOfboolean => ({
+	...{ old: faker.datatype.boolean(), new: faker.datatype.boolean() },
+	...overrideResponse,
+});
+
+export const getFetchSongMetadataResponseSongMetadataAlbumMock = (
+	overrideResponse: Partial<SongMetadataAlbum> = {},
+): SongMetadataAlbum => ({
+	...{
+		name: faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			undefined,
+		]),
+		artistName: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+	},
+	...overrideResponse,
+});
+
+export const getFetchSongMetadataResponseSongMetadataFieldOfSongMetadataAlbumMock =
+	(
+		overrideResponse: Partial<SongMetadataFieldOfSongMetadataAlbum> = {},
+	): SongMetadataFieldOfSongMetadataAlbum => ({
+		...{
+			old: faker.helpers.arrayElement([
+				null,
+				{ ...getFetchSongMetadataResponseSongMetadataAlbumMock() },
+			]),
+			new: faker.helpers.arrayElement([
+				null,
+				{ ...getFetchSongMetadataResponseSongMetadataAlbumMock() },
+			]),
+		},
+		...overrideResponse,
+	});
+
+export const getFetchSongMetadataResponseSongMetadataFieldOfListOfSongMetadataArtistMock =
+	(
+		overrideResponse: Partial<SongMetadataFieldOfListOfSongMetadataArtist> = {},
+	): SongMetadataFieldOfListOfSongMetadataArtist => ({
+		...{
+			old: faker.helpers.arrayElement([
+				Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						undefined,
+					]),
+				})),
+				null,
+			]),
+			new: faker.helpers.arrayElement([
+				Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						undefined,
+					]),
+				})),
+				null,
+			]),
+		},
+		...overrideResponse,
+	});
+
+export const getFetchSongMetadataResponseSongMetadataFieldOfListOfstringMock = (
+	overrideResponse: Partial<SongMetadataFieldOfListOfstring> = {},
+): SongMetadataFieldOfListOfstring => ({
+	...{
+		old: faker.helpers.arrayElement([
+			Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			null,
+		]),
+		new: faker.helpers.arrayElement([
+			Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			null,
+		]),
+	},
+	...overrideResponse,
+});
+
+export const getFetchSongMetadataResponseMock = (
+	overrideResponse: Partial<Extract<FetchMetadataResponse, object>> = {},
+): FetchMetadataResponse =>
+	faker.helpers.arrayElement([
+		{
+			metadata: {
+				title: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				year: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfintMock() },
+					]),
+					undefined,
+				]),
+				lyrics: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				rating: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfdecimalMock() },
+					]),
+					undefined,
+				]),
+				explicit: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfbooleanMock() },
+					]),
+					undefined,
+				]),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				album: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfSongMetadataAlbumMock(),
+						},
+					]),
+					undefined,
+				]),
+				artists: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfListOfSongMetadataArtistMock(),
+						},
+					]),
+					undefined,
+				]),
+				genres: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfListOfstringMock(),
+						},
+					]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			metadata: {
+				title: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				year: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfintMock() },
+					]),
+					undefined,
+				]),
+				lyrics: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				rating: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfdecimalMock() },
+					]),
+					undefined,
+				]),
+				explicit: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfbooleanMock() },
+					]),
+					undefined,
+				]),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				album: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfSongMetadataAlbumMock(),
+						},
+					]),
+					undefined,
+				]),
+				artists: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfListOfSongMetadataArtistMock(),
+						},
+					]),
+					undefined,
+				]),
+				genres: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfListOfstringMock(),
+						},
+					]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			metadata: {
+				title: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				year: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfintMock() },
+					]),
+					undefined,
+				]),
+				lyrics: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				rating: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfdecimalMock() },
+					]),
+					undefined,
+				]),
+				explicit: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfbooleanMock() },
+					]),
+					undefined,
+				]),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
+				album: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfSongMetadataAlbumMock(),
+						},
+					]),
+					undefined,
+				]),
+				artists: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfListOfSongMetadataArtistMock(),
+						},
+					]),
+					undefined,
+				]),
+				genres: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getFetchSongMetadataResponseSongMetadataFieldOfListOfstringMock(),
+						},
+					]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+	]);
+
+export const getBatchMultiUpdateSongsResponseUpdateSongAlbumArtistMock = (
+	overrideResponse: Partial<UpdateSongAlbumArtist> = {},
+): UpdateSongAlbumArtist => ({
+	...{
+		id: faker.number.int(),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	},
+	...overrideResponse,
+});
+
+export const getBatchMultiUpdateSongsResponseUpdateSongItemMock = (
+	overrideResponse: Partial<UpdateSongItem> = {},
+): UpdateSongItem => ({
+	...{
+		id: faker.number.int(),
+		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		cover: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([faker.number.int(), null]),
+			null,
+		]),
+		year: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([faker.number.int(), null]),
+			null,
+		]),
+		lyrics: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		rating: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.float({ fractionDigits: 2 }),
+				null,
+			]),
+			undefined,
+		]),
+		explicit: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+		artists: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		})),
+		album: {
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					null,
+					{ ...getBatchMultiUpdateSongsResponseUpdateSongAlbumArtistMock() },
+				]),
+				undefined,
+			]),
+		},
+		genres: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		})),
+		repositoryPath: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+	},
+	...overrideResponse,
+});
+
+export const getBatchMultiUpdateSongsResponseMock = (
+	overrideResponse: Partial<
+		Extract<BatchMultiUpdateSongsResponse, object>
+	> = {},
+): BatchMultiUpdateSongsResponse =>
+	faker.helpers.arrayElement([
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				success: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				error: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				song: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getBatchMultiUpdateSongsResponseUpdateSongItemMock() },
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				success: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				error: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				song: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getBatchMultiUpdateSongsResponseUpdateSongItemMock() },
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				success: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				error: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				song: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getBatchMultiUpdateSongsResponseUpdateSongItemMock() },
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
+
 export const getListSongsMockHandler = (
 	overrideResponse?:
 		| ListSongsResponse
@@ -4971,6 +5786,56 @@ export const getAutocompleteGenresMockHandler = (
 		options,
 	);
 };
+
+export const getFetchSongMetadataMockHandler = (
+	overrideResponse?:
+		| FetchMetadataResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<FetchMetadataResponse> | FetchMetadataResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/songs/:id/fetch-metadata",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getFetchSongMetadataResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getBatchMultiUpdateSongsMockHandler = (
+	overrideResponse?:
+		| BatchMultiUpdateSongsResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) =>
+				| Promise<BatchMultiUpdateSongsResponse>
+				| BatchMultiUpdateSongsResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/songs/batch-multi",
+		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getBatchMultiUpdateSongsResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
 export const getSongsMock = () => [
 	getListSongsMockHandler(),
 	getBatchUpdateSongsMockHandler(),
@@ -4989,4 +5854,6 @@ export const getSongsMock = () => [
 	getAutocompleteSongsMockHandler(),
 	getAutocompleteArtistsMockHandler(),
 	getAutocompleteGenresMockHandler(),
+	getFetchSongMetadataMockHandler(),
+	getBatchMultiUpdateSongsMockHandler(),
 ];

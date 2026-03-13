@@ -43,7 +43,6 @@ export default function NowPlayingPage() {
         reorderBatch(reorders);
     };
 
-    console.log(scrollToIndex)
     return (
         <Stack gap="md" style={{height: 'var(--parent-height)'}}>
             <Text size="xl" fw={700}>Now Playing ({currentSongIndex + 1}/{queue.length} songs)</Text>

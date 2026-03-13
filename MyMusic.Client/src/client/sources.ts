@@ -33,6 +33,7 @@ import type {
 	FilterMetadataResponse,
 	GetSourceResponse,
 	ListSourcesResponse,
+	SearchMetadataResponse,
 	SearchSongsParams,
 	SourceAlbum,
 	SourceArtwork,
@@ -1756,6 +1757,220 @@ export const invalidateSearchAlbums = async (
 	return queryClient;
 };
 
+export type searchMetadataAllSourcesResponse200TextPlain = {
+	data: SearchMetadataResponse;
+	status: 200;
+};
+
+export type searchMetadataAllSourcesResponse200ApplicationJson = {
+	data: SearchMetadataResponse;
+	status: 200;
+};
+
+export type searchMetadataAllSourcesResponse200TextJson = {
+	data: SearchMetadataResponse;
+	status: 200;
+};
+
+export type searchMetadataAllSourcesResponseSuccess = (
+	| searchMetadataAllSourcesResponse200TextPlain
+	| searchMetadataAllSourcesResponse200ApplicationJson
+	| searchMetadataAllSourcesResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type searchMetadataAllSourcesResponse =
+	searchMetadataAllSourcesResponseSuccess;
+
+export const getSearchMetadataAllSourcesUrl = (query: string) => {
+	return `/api/sources/metadata/search/${query}`;
+};
+
+export const searchMetadataAllSources = async (
+	query: string,
+	options?: RequestInit,
+): Promise<searchMetadataAllSourcesResponse> => {
+	const res = await fetch(getSearchMetadataAllSourcesUrl(query), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: searchMetadataAllSourcesResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as searchMetadataAllSourcesResponse;
+};
+
+export const getSearchMetadataAllSourcesQueryKey = (query: string) => {
+	return ["api", "sources", "metadata", "search", query] as const;
+};
+
+export const getSearchMetadataAllSourcesQueryOptions = <
+	TData = Awaited<ReturnType<typeof searchMetadataAllSources>>,
+	TError = unknown,
+>(
+	query: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof searchMetadataAllSources>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey =
+		queryOptions?.queryKey ?? getSearchMetadataAllSourcesQueryKey(query);
+
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof searchMetadataAllSources>>
+	> = ({ signal }) =>
+		searchMetadataAllSources(query, { signal, ...fetchOptions });
+
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!query,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof searchMetadataAllSources>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchMetadataAllSourcesQueryResult = NonNullable<
+	Awaited<ReturnType<typeof searchMetadataAllSources>>
+>;
+export type SearchMetadataAllSourcesQueryError = unknown;
+
+export function useSearchMetadataAllSources<
+	TData = Awaited<ReturnType<typeof searchMetadataAllSources>>,
+	TError = unknown,
+>(
+	query: string,
+	options: {
+		query: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof searchMetadataAllSources>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof searchMetadataAllSources>>,
+					TError,
+					Awaited<ReturnType<typeof searchMetadataAllSources>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useSearchMetadataAllSources<
+	TData = Awaited<ReturnType<typeof searchMetadataAllSources>>,
+	TError = unknown,
+>(
+	query: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof searchMetadataAllSources>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof searchMetadataAllSources>>,
+					TError,
+					Awaited<ReturnType<typeof searchMetadataAllSources>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useSearchMetadataAllSources<
+	TData = Awaited<ReturnType<typeof searchMetadataAllSources>>,
+	TError = unknown,
+>(
+	query: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof searchMetadataAllSources>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useSearchMetadataAllSources<
+	TData = Awaited<ReturnType<typeof searchMetadataAllSources>>,
+	TError = unknown,
+>(
+	query: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof searchMetadataAllSources>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getSearchMetadataAllSourcesQueryOptions(query, options);
+
+	const _query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ..._query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateSearchMetadataAllSources = async (
+	queryClient: QueryClient,
+	query: string,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getSearchMetadataAllSourcesQueryKey(query) },
+		options,
+	);
+
+	return queryClient;
+};
+
 export const getListSourcesResponseMock = (
 	overrideResponse: Partial<Extract<ListSourcesResponse, object>> = {},
 ): ListSourcesResponse =>
@@ -3136,6 +3351,478 @@ export const getSearchAlbumsResponseMock = (): SourceAlbum[] =>
 		})),
 	]);
 
+export const getSearchMetadataAllSourcesResponseSourceArtworkMock = (
+	overrideResponse: Partial<SourceArtwork> = {},
+): SourceArtwork => ({
+	...{
+		normal: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		big: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		small: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		biggest: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		smallest: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+	},
+	...overrideResponse,
+});
+
+export const getSearchMetadataAllSourcesResponseMock = (
+	overrideResponse: Partial<Extract<SearchMetadataResponse, object>> = {},
+): SearchMetadataResponse =>
+	faker.helpers.arrayElement([
+		{
+			results: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				song: {
+					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					album: faker.helpers.arrayElement([
+						{
+							id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+							name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+							artist: {
+								id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+								name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+								link: faker.helpers.arrayElement([
+									faker.helpers.arrayElement([
+										faker.string.alpha({ length: { min: 10, max: 20 } }),
+										null,
+									]),
+									undefined,
+								]),
+							},
+							cover: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([
+									null,
+									{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+								]),
+								undefined,
+							]),
+							year: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([faker.number.int(), null]),
+								undefined,
+							]),
+							link: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([
+									faker.string.alpha({ length: { min: 10, max: 20 } }),
+									null,
+								]),
+								undefined,
+							]),
+						},
+						undefined,
+					]),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							null,
+							{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+						]),
+						undefined,
+					]),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						undefined,
+					]),
+					lyrics: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					explicit: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					size: faker.helpers.arrayElement([faker.number.int(), undefined]),
+					track: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						undefined,
+					]),
+					duration: faker.helpers.arrayElement([
+						faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
+						undefined,
+					]),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						link: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					link: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					price: faker.helpers.arrayElement([
+						faker.number.float({ fractionDigits: 2 }),
+						undefined,
+					]),
+					searchableText: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					durationSeconds: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+					durationCategory: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					hasLyrics: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					artistCount: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+					genreCount: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+				},
+			})),
+			...overrideResponse,
+		},
+		{
+			results: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				song: {
+					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					album: faker.helpers.arrayElement([
+						{
+							id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+							name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+							artist: {
+								id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+								name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+								link: faker.helpers.arrayElement([
+									faker.helpers.arrayElement([
+										faker.string.alpha({ length: { min: 10, max: 20 } }),
+										null,
+									]),
+									undefined,
+								]),
+							},
+							cover: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([
+									null,
+									{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+								]),
+								undefined,
+							]),
+							year: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([faker.number.int(), null]),
+								undefined,
+							]),
+							link: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([
+									faker.string.alpha({ length: { min: 10, max: 20 } }),
+									null,
+								]),
+								undefined,
+							]),
+						},
+						undefined,
+					]),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							null,
+							{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+						]),
+						undefined,
+					]),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						undefined,
+					]),
+					lyrics: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					explicit: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					size: faker.helpers.arrayElement([faker.number.int(), undefined]),
+					track: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						undefined,
+					]),
+					duration: faker.helpers.arrayElement([
+						faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
+						undefined,
+					]),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						link: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					link: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					price: faker.helpers.arrayElement([
+						faker.number.float({ fractionDigits: 2 }),
+						undefined,
+					]),
+					searchableText: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					durationSeconds: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+					durationCategory: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					hasLyrics: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					artistCount: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+					genreCount: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+				},
+			})),
+			...overrideResponse,
+		},
+		{
+			results: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				song: {
+					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					album: faker.helpers.arrayElement([
+						{
+							id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+							name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+							artist: {
+								id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+								name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+								link: faker.helpers.arrayElement([
+									faker.helpers.arrayElement([
+										faker.string.alpha({ length: { min: 10, max: 20 } }),
+										null,
+									]),
+									undefined,
+								]),
+							},
+							cover: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([
+									null,
+									{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+								]),
+								undefined,
+							]),
+							year: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([faker.number.int(), null]),
+								undefined,
+							]),
+							link: faker.helpers.arrayElement([
+								faker.helpers.arrayElement([
+									faker.string.alpha({ length: { min: 10, max: 20 } }),
+									null,
+								]),
+								undefined,
+							]),
+						},
+						undefined,
+					]),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							null,
+							{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+						]),
+						undefined,
+					]),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						undefined,
+					]),
+					lyrics: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					explicit: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					size: faker.helpers.arrayElement([faker.number.int(), undefined]),
+					track: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						undefined,
+					]),
+					duration: faker.helpers.arrayElement([
+						faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
+						undefined,
+					]),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						link: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					link: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					price: faker.helpers.arrayElement([
+						faker.number.float({ fractionDigits: 2 }),
+						undefined,
+					]),
+					searchableText: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					durationSeconds: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+					durationCategory: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					hasLyrics: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					artistCount: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+					genreCount: faker.helpers.arrayElement([
+						faker.number.int(),
+						undefined,
+					]),
+				},
+			})),
+			...overrideResponse,
+		},
+	]);
+
 export const getListSourcesMockHandler = (
 	overrideResponse?:
 		| ListSourcesResponse
@@ -3375,6 +4062,30 @@ export const getSearchAlbumsMockHandler = (
 		options,
 	);
 };
+
+export const getSearchMetadataAllSourcesMockHandler = (
+	overrideResponse?:
+		| SearchMetadataResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<SearchMetadataResponse> | SearchMetadataResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/sources/metadata/search/:query",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getSearchMetadataAllSourcesResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
 export const getSourcesMock = () => [
 	getListSourcesMockHandler(),
 	getCreateSourceMockHandler(),
@@ -3386,4 +4097,5 @@ export const getSourcesMock = () => [
 	getGetSongMockHandler(),
 	getPurchaseSongMockHandler(),
 	getSearchAlbumsMockHandler(),
+	getSearchMetadataAllSourcesMockHandler(),
 ];

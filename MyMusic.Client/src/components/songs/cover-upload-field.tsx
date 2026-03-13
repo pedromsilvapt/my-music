@@ -2,6 +2,7 @@ import {ActionIcon, Box, Checkbox, Group, Stack, Text, TextInput} from "@mantine
 import {notifications} from "@mantine/notifications";
 import {IconClipboard, IconDownload, IconMusic, IconUpload, IconX} from "@tabler/icons-react";
 import {useCallback, useRef, useState} from "react";
+import ArtworkLightbox from "../common/artwork-lightbox.tsx";
 
 interface CoverDimensions {
     width: number;
@@ -18,6 +19,7 @@ interface CoverUploadFieldProps {
     diffMode?: boolean;
     isChecked?: boolean;
     onCheckChange?: (checked: boolean) => void;
+    oldCoverUrl?: string;
 }
 
 export default function CoverUploadField({
@@ -30,10 +32,13 @@ export default function CoverUploadField({
                                              diffMode,
                                              isChecked = true,
                                              onCheckChange,
+                                             oldCoverUrl,
                                          }: CoverUploadFieldProps) {
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [previewDimensions, setPreviewDimensions] = useState<CoverDimensions | null>(currentDimensions ?? null);
+    const [lightboxOpened, setLightboxOpened] = useState(false);
+    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const hasChanged = diffMode && value !== null;
@@ -114,7 +119,18 @@ export default function CoverUploadField({
         setPreviewDimensions(null);
     }, [onChange]);
 
+    const handleOpenLightbox = useCallback((src: string) => {
+        setLightboxSrc(src);
+        setLightboxOpened(true);
+    }, []);
+
     const previewSrc = value || (currentCoverId ? `/api/artwork/${currentCoverId}` : null);
+    const showSideBySide = diffMode && oldCoverUrl && value;
+
+    const oldBorderColor = isChecked ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-5)';
+    const oldBgColor = isChecked ? 'var(--mantine-color-red-0)' : 'var(--mantine-color-gray-1)';
+    const newBorderColor = isChecked ? 'var(--mantine-color-green-6)' : 'var(--mantine-color-gray-5)';
+    const newBgColor = isChecked ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-gray-1)';
 
     return (
         <Stack gap="xs">
@@ -128,105 +144,218 @@ export default function CoverUploadField({
                 <Text size="sm" fw={500}>{label}</Text>
             </Group>
 
-            <Group align="flex-start" gap="md">
-                <Box
-                    style={{
-                        width: 150,
-                        height: 150,
-                        border: "1px solid var(--mantine-color-gray-3)",
-                        borderRadius: "var(--mantine-radius-sm)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        overflow: "hidden",
-                        backgroundColor: hasChanged ? "var(--mantine-color-green-0)" : undefined,
-                        borderColor: hasChanged ? "var(--mantine-color-green-6)" : undefined,
-                    }}
-                >
-                    {previewSrc ? (
-                        <img
-                            src={previewSrc}
-                            alt="Cover"
-                            style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
-                        />
-                    ) : (
-                        <IconMusic size={50} color="var(--mantine-color-gray-4)"/>
-                    )}
-                </Box>
-
-                <Stack gap="xs" style={{flex: 1}}>
-                    {previewDimensions && (
-                        <Text size="sm" c="dimmed">
-                            {previewDimensions.width} x {previewDimensions.height} px
-                        </Text>
-                    )}
-
-                    <Group gap="xs">
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            style={{display: "none"}}
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleFileUpload(file);
+            {showSideBySide ? (
+                <Group align="flex-start" gap="md">
+                    <Stack gap="xs" align="center">
+                        <Text size="xs" c={isChecked ? "red" : "dimmed"}>Old</Text>
+                        <Box
+                            style={{
+                                width: 120,
+                                height: 120,
+                                border: `1px solid ${oldBorderColor}`,
+                                borderRadius: "var(--mantine-radius-sm)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                backgroundColor: oldBgColor,
+                                cursor: "pointer",
                             }}
-                            disabled={disabled || (diffMode && !isChecked)}
-                        />
-                        <ActionIcon
-                            variant="light"
-                            size="lg"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={disabled || (diffMode && !isChecked)}
-                            loading={loading}
-                            title="Upload file"
+                            onClick={() => oldCoverUrl && handleOpenLightbox(oldCoverUrl)}
                         >
-                            <IconUpload/>
-                        </ActionIcon>
-                        <ActionIcon
-                            variant="light"
-                            size="lg"
-                            onClick={handlePaste}
-                            disabled={disabled || (diffMode && !isChecked)}
-                            title="Paste from clipboard"
+                            {oldCoverUrl ? (
+                                <img
+                                    src={oldCoverUrl.startsWith("data:") ? oldCoverUrl : oldCoverUrl}
+                                    alt="Old Cover"
+                                    style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
+                                />
+                            ) : (
+                                <IconMusic size={40} color="var(--mantine-color-gray-4)"/>
+                            )}
+                        </Box>
+                    </Stack>
+
+                    <Stack gap="xs" align="center" style={{justifyContent: "center"}}>
+                        <Text size="xs" c="dimmed">→</Text>
+                    </Stack>
+
+                    <Stack gap="xs" align="center">
+                        <Text size="xs" c={isChecked ? "green" : "dimmed"}>New</Text>
+                        <Box
+                            style={{
+                                width: 120,
+                                height: 120,
+                                border: `1px solid ${newBorderColor}`,
+                                borderRadius: "var(--mantine-radius-sm)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                backgroundColor: newBgColor,
+                                cursor: "pointer",
+                            }}
+                            onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
                         >
-                            <IconClipboard/>
-                        </ActionIcon>
-                        {(value || currentCoverId) && (
+                            <img
+                                src={previewSrc ?? ""}
+                                alt="New Cover"
+                                style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
+                            />
+                        </Box>
+
+                        <Group gap="xs">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                style={{display: "none"}}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileUpload(file);
+                                }}
+                                disabled={disabled || !isChecked}
+                            />
+                            <ActionIcon
+                                variant="light"
+                                size="lg"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={disabled || !isChecked}
+                                loading={loading}
+                                title="Upload file"
+                            >
+                                <IconUpload/>
+                            </ActionIcon>
+                            <ActionIcon
+                                variant="light"
+                                size="lg"
+                                onClick={handlePaste}
+                                disabled={disabled || !isChecked}
+                                title="Paste from clipboard"
+                            >
+                                <IconClipboard/>
+                            </ActionIcon>
                             <ActionIcon
                                 variant="light"
                                 size="lg"
                                 color="red"
                                 onClick={handleClear}
-                                disabled={disabled || (diffMode && !isChecked)}
+                                disabled={disabled || !isChecked}
                                 title="Remove cover"
                             >
                                 <IconX/>
                             </ActionIcon>
+                        </Group>
+                    </Stack>
+                </Group>
+            ) : (
+                <Group align="flex-start" gap="md">
+                    <Box
+                        style={{
+                            width: 150,
+                            height: 150,
+                            border: "1px solid var(--mantine-color-gray-3)",
+                            borderRadius: "var(--mantine-radius-sm)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            overflow: "hidden",
+                            backgroundColor: hasChanged ? "var(--mantine-color-green-0)" : undefined,
+                            borderColor: hasChanged ? "var(--mantine-color-green-6)" : undefined,
+                            cursor: previewSrc ? "pointer" : undefined,
+                        }}
+                        onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
+                    >
+                        {previewSrc ? (
+                            <img
+                                src={previewSrc}
+                                alt="Cover"
+                                style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
+                            />
+                        ) : (
+                            <IconMusic size={50} color="var(--mantine-color-gray-4)"/>
                         )}
-                    </Group>
+                    </Box>
 
-                    <Group gap="xs" align="flex-end">
-                        <TextInput
-                            placeholder="Paste image URL..."
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            style={{flex: 1}}
-                            disabled={disabled || (diffMode && !isChecked)}
-                        />
-                        <ActionIcon
-                            variant="light"
-                            size="lg"
-                            onClick={handleUrlDownload}
-                            disabled={!url || disabled || (diffMode && !isChecked)}
-                            loading={loading}
-                            title="Download from URL"
-                        >
-                            <IconDownload/>
-                        </ActionIcon>
-                    </Group>
-                </Stack>
-            </Group>
+                    <Stack gap="xs" style={{flex: 1}}>
+                        {previewDimensions && (
+                            <Text size="sm" c="dimmed">
+                                {previewDimensions.width} x {previewDimensions.height} px
+                            </Text>
+                        )}
+
+                        <Group gap="xs">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                style={{display: "none"}}
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileUpload(file);
+                                }}
+                                disabled={disabled || (diffMode && !isChecked)}
+                            />
+                            <ActionIcon
+                                variant="light"
+                                size="lg"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={disabled || (diffMode && !isChecked)}
+                                loading={loading}
+                                title="Upload file"
+                            >
+                                <IconUpload/>
+                            </ActionIcon>
+                            <ActionIcon
+                                variant="light"
+                                size="lg"
+                                onClick={handlePaste}
+                                disabled={disabled || (diffMode && !isChecked)}
+                                title="Paste from clipboard"
+                            >
+                                <IconClipboard/>
+                            </ActionIcon>
+                            {(value || currentCoverId) && (
+                                <ActionIcon
+                                    variant="light"
+                                    size="lg"
+                                    color="red"
+                                    onClick={handleClear}
+                                    disabled={disabled || (diffMode && !isChecked)}
+                                    title="Remove cover"
+                                >
+                                    <IconX/>
+                                </ActionIcon>
+                            )}
+                        </Group>
+
+                        <Group gap="xs" align="flex-end">
+                            <TextInput
+                                placeholder="Paste image URL..."
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                                style={{flex: 1}}
+                                disabled={disabled || (diffMode && !isChecked)}
+                            />
+                            <ActionIcon
+                                variant="light"
+                                size="lg"
+                                onClick={handleUrlDownload}
+                                disabled={!url || disabled || (diffMode && !isChecked)}
+                                loading={loading}
+                                title="Download from URL"
+                            >
+                                <IconDownload/>
+                            </ActionIcon>
+                        </Group>
+                    </Stack>
+                </Group>
+            )}
+
+            <ArtworkLightbox
+                opened={lightboxOpened}
+                onClose={() => setLightboxOpened(false)}
+                src={lightboxSrc ?? ""}
+            />
         </Stack>
     );
 }

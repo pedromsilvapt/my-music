@@ -257,5 +257,49 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
 
     #endregion Albums
 
+    [HttpGet("metadata/search/{query}", Name = "SearchMetadataAllSources")]
+    public async Task<ActionResult<SearchMetadataResponse>> SearchMetadataAllSources(
+        string query,
+        MusicDbContext context,
+        CancellationToken cancellationToken = default)
+    {
+        var sources = await context.Sources
+            .OrderBy(s => s.Name)
+            .ToListAsync(cancellationToken);
+
+        if (sources.Count == 0)
+        {
+            return new SearchMetadataResponse { Results = [] };
+        }
+
+        var results = new List<SearchMetadataResult>();
+
+        foreach (var source in sources)
+        {
+            try
+            {
+                var client = await sourcesService.GetSourceClientAsync(source.Id, cancellationToken);
+                var searchResults = await client.SearchSongsAsync(query, cancellationToken);
+
+                foreach (var song in searchResults)
+                {
+                    results.Add(new SearchMetadataResult
+                    {
+                        SourceId = source.Id,
+                        SourceName = source.Name,
+                        SourceIcon = source.Icon,
+                        Song = song,
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to search source {SourceId}", source.Id);
+            }
+        }
+
+        return new SearchMetadataResponse { Results = results };
+    }
+
     #endregion Operations
 }

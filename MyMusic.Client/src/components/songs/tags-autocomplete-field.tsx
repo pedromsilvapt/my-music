@@ -1,4 +1,4 @@
-import {Checkbox, Group, TagsInput, Text} from "@mantine/core";
+import {Box, Checkbox, Group, Input, TagsInput, Text} from "@mantine/core";
 import {useCallback, useState} from "react";
 
 export interface TagsAutocompleteItem {
@@ -18,21 +18,23 @@ interface TagsAutocompleteFieldProps {
     originalValue?: TagsAutocompleteItem[];
     isChecked?: boolean;
     onCheckChange?: (checked: boolean) => void;
+    originalDisplayValue?: string;
 }
 
 export default function TagsAutocompleteField({
-                                                  label,
-                                                  placeholder,
-                                                  value,
-                                                  onChange,
-                                                  onSearch,
-                                                  disabled,
-                                                  error,
-                                                  diffMode,
-                                                  originalValue,
-                                                  isChecked = true,
-                                                  onCheckChange,
-                                              }: TagsAutocompleteFieldProps) {
+                                                    label,
+                                                    placeholder,
+                                                    value,
+                                                    onChange,
+                                                    onSearch,
+                                                    disabled,
+                                                    error,
+                                                    diffMode,
+                                                    originalValue,
+                                                    isChecked = true,
+                                                    onCheckChange,
+                                                    originalDisplayValue,
+                                                }: TagsAutocompleteFieldProps) {
     const [items, setItems] = useState<TagsAutocompleteItem[]>([]);
 
     const handleSearchChange = useCallback(async (query: string) => {
@@ -63,27 +65,74 @@ export default function TagsAutocompleteField({
         onChange(newValue);
     };
 
+    if (diffMode && originalDisplayValue != null) {
+        const oldBorderColor = isChecked ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-5)';
+        const oldBgColor = isChecked ? 'var(--mantine-color-red-0)' : 'var(--mantine-color-gray-1)';
+        const newBorderColor = isChecked ? 'var(--mantine-color-green-6)' : 'var(--mantine-color-gray-5)';
+        const newBgColor = isChecked ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-gray-1)';
+
+        return (
+            <div>
+                <Group gap="xs" align="flex-end">
+                    {onCheckChange && (
+                        <Checkbox
+                            checked={isChecked}
+                            onChange={(e) => onCheckChange(e.currentTarget.checked)}
+                            mt={24}
+                        />
+                    )}
+                    <Box style={{flex: 1}}>
+                        <Input.Wrapper label={label + " (old)"}>
+                            <Input
+                                value={originalDisplayValue}
+                                readOnly
+                                styles={{
+                                    input: {
+                                        borderColor: oldBorderColor,
+                                        backgroundColor: oldBgColor,
+                                        color: 'var(--mantine-color-gray-7)',
+                                    }
+                                }}
+                            />
+                        </Input.Wrapper>
+                    </Box>
+                    <Box style={{flex: 1}}>
+                        <Input.Wrapper label={label + " (new)"}>
+                            <TagsInput
+                                placeholder={placeholder}
+                                value={tags}
+                                onChange={handleChange}
+                                onSearchChange={handleSearchChange}
+                                data={items.map(item => item.name)}
+                                comboboxProps={{withinPortal: false}}
+                                disabled={disabled || !isChecked}
+                                splitChars={[',']}
+                                styles={{
+                                    input: {
+                                        borderColor: newBorderColor,
+                                        backgroundColor: newBgColor,
+                                    }
+                                }}
+                            />
+                        </Input.Wrapper>
+                    </Box>
+                </Group>
+                {error && <Text size="xs" c="red" mt={4}>{error}</Text>}
+            </div>
+        );
+    }
+
     return (
         <div>
             <TagsInput
-                label={diffMode ? (
-                    <Group gap="xs">
-                        {onCheckChange && (
-                            <Checkbox
-                                checked={isChecked}
-                                onChange={(e) => onCheckChange(e.currentTarget.checked)}
-                            />
-                        )}
-                        <span>{label}</span>
-                    </Group>
-                ) : label}
+                label={label}
                 placeholder={placeholder}
                 value={tags}
                 onChange={handleChange}
                 onSearchChange={handleSearchChange}
                 data={items.map(item => item.name)}
                 comboboxProps={{withinPortal: false}}
-                disabled={disabled || (diffMode && !isChecked)}
+                disabled={disabled}
                 error={error}
                 splitChars={[',']}
                 styles={hasChanged ? {
@@ -93,9 +142,9 @@ export default function TagsAutocompleteField({
                     }
                 } : undefined}
             />
-            {hasChanged && originalValue && (
+            {hasChanged && (
                 <Text size="xs" c="dimmed" mt={4}>
-                    Original: {originalValue.map(o => o.name).join(", ")}
+                    Original: {originalDisplayValue ?? (originalValue && originalValue.map(o => o.name).join(", "))}
                 </Text>
             )}
         </div>

@@ -1,4 +1,13 @@
-import {Autocomplete, type AutocompleteProps, Checkbox, Group, Loader, Text} from "@mantine/core";
+import {
+    Autocomplete,
+    type AutocompleteProps,
+    Box,
+    Checkbox,
+    Group,
+    Input,
+    Loader,
+    Text,
+} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {IconDisc} from "@tabler/icons-react";
 import {useCallback, useEffect, useMemo, useState} from "react";
@@ -27,6 +36,7 @@ interface AutocompleteFieldProps {
     isChecked?: boolean;
     onCheckChange?: (checked: boolean) => void;
     showArtwork?: boolean;
+    originalDisplayValue?: string;
 }
 
 export default function AutocompleteField({
@@ -42,6 +52,7 @@ export default function AutocompleteField({
                                               isChecked = true,
                                               onCheckChange,
                                               showArtwork = false,
+                                              originalDisplayValue,
                                           }: AutocompleteFieldProps) {
     const [query, setQuery] = useState(value?.name || "");
     const [items, setItems] = useState<AutocompleteItem[]>([]);
@@ -116,20 +127,76 @@ export default function AutocompleteField({
         );
     };
 
+    if (diffMode && originalDisplayValue != null) {
+        const oldBorderColor = isChecked ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-5)';
+        const oldBgColor = isChecked ? 'var(--mantine-color-red-0)' : 'var(--mantine-color-gray-1)';
+        const newBorderColor = isChecked ? 'var(--mantine-color-green-6)' : 'var(--mantine-color-gray-5)';
+        const newBgColor = isChecked ? 'var(--mantine-color-green-0)' : 'var(--mantine-color-gray-1)';
+
+        return (
+            <div>
+                <Group gap="xs" align="flex-end">
+                    {onCheckChange && (
+                        <Checkbox
+                            checked={isChecked}
+                            onChange={(e) => onCheckChange(e.currentTarget.checked)}
+                            mt={24}
+                        />
+                    )}
+                    <Box style={{flex: 1}}>
+                        <Input.Wrapper label={label + " (old)"}>
+                            <Input
+                                value={originalDisplayValue}
+                                readOnly
+                                styles={{
+                                    input: {
+                                        borderColor: oldBorderColor,
+                                        backgroundColor: oldBgColor,
+                                        color: 'var(--mantine-color-gray-7)',
+                                    }
+                                }}
+                            />
+                        </Input.Wrapper>
+                    </Box>
+                    <Box style={{flex: 1}}>
+                        <Input.Wrapper label={label + " (new)"}>
+                            <Autocomplete
+                                placeholder={placeholder}
+                                value={query}
+                                onChange={setQuery}
+                                onBlur={handleBlur}
+                                onOptionSubmit={(val) => {
+                                    setQuery(val);
+                                    const existingItem = items.find(item => item.name === val);
+                                    if (existingItem) {
+                                        onChange(existingItem);
+                                    }
+                                }}
+                                comboboxProps={{withinPortal: false}}
+                                data={data}
+                                disabled={disabled || !isChecked}
+                                rightSection={loading ? <Loader size={16}/> : null}
+                                limit={15}
+                                renderOption={showArtwork ? renderOption : undefined}
+                                styles={{
+                                    input: {
+                                        borderColor: newBorderColor,
+                                        backgroundColor: newBgColor,
+                                    }
+                                }}
+                            />
+                        </Input.Wrapper>
+                    </Box>
+                </Group>
+                {error && <Text size="xs" c="red" mt={4}>{error}</Text>}
+            </div>
+        );
+    }
+
     return (
         <div>
             <Autocomplete
-                label={diffMode ? (
-                    <Group gap="xs">
-                        {onCheckChange && (
-                            <Checkbox
-                                checked={isChecked}
-                                onChange={(e) => onCheckChange(e.currentTarget.checked)}
-                            />
-                        )}
-                        <span>{label}</span>
-                    </Group>
-                ) : label}
+                label={label}
                 placeholder={placeholder}
                 value={query}
                 onChange={setQuery}
@@ -143,7 +210,7 @@ export default function AutocompleteField({
                 }}
                 comboboxProps={{withinPortal: false}}
                 data={data}
-                disabled={disabled || (diffMode && !isChecked)}
+                disabled={disabled}
                 error={error}
                 rightSection={loading ? <Loader size={16}/> : null}
                 limit={15}
@@ -157,8 +224,8 @@ export default function AutocompleteField({
             />
             {hasChanged && (
                 <Text size="xs" c="dimmed" mt={4}>
-                    Original: {originalValue.name}
-                    {originalValue.subtitle && ` (${originalValue.subtitle})`}
+                    Original: {originalDisplayValue ?? originalValue?.name}
+                    {!originalDisplayValue && originalValue?.subtitle && ` (${originalValue.subtitle})`}
                 </Text>
             )}
         </div>
