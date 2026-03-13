@@ -1,9 +1,9 @@
-import {useEffect, useRef, useState} from 'react';
-import {useShallow} from 'zustand/react/shallow';
-import {useWavesurferRef} from '../components/player/wavesurfer-context';
-import type {GetPlaylistSong} from '../model';
-import {usePlaybackActions, usePlaybackStore} from '../stores/playback-store';
-import {usePlayerNavigation} from './use-player-navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import { useWavesurferRef } from '../components/player/wavesurfer-context';
+import type { GetPlaylistSong } from '../model';
+import { usePlaybackActions, usePlaybackStore } from '../stores/playback-store';
+import { usePlayerNavigation } from './use-player-navigation';
 
 const SEEK_TIME_SECONDS = 10;
 
@@ -14,15 +14,15 @@ type ArtworkMetadata = {
     height: number;
 };
 
-export function useMediaSession() {
+export function useMediaSession () {
     const wavesurferRef = useWavesurferRef();
     const navigation = usePlayerNavigation();
-    const {setIsPlaying: setStoreIsPlaying, setCurrentTime} = usePlaybackActions((s) => ({
+    const { setIsPlaying: setStoreIsPlaying, setCurrentTime } = usePlaybackActions((s) => ({
         setIsPlaying: s.setIsPlaying,
         setCurrentTime: s.setCurrentTime,
     }));
 
-    const {song, isPlaying, time, duration} = usePlaybackStore(
+    const { song, isPlaying, time, duration } = usePlaybackStore(
         useShallow((s) => {
             if (s.current.type === 'LOADED') {
                 return {
@@ -40,7 +40,7 @@ export function useMediaSession() {
                     duration: 0,
                 };
             }
-            return {song: null, isPlaying: false, time: 0, duration: 0};
+            return { song: null, isPlaying: false, time: 0, duration: 0 };
         })
     );
 
@@ -246,9 +246,10 @@ export function useMediaSession() {
         }
 
         if ('setPositionState' in navigator.mediaSession) {
+            const validPosition = Math.max(0, Math.min(time, duration));
             navigator.mediaSession.setPositionState({
                 duration,
-                position: time,
+                position: validPosition,
                 playbackRate: 1,
             });
         }
