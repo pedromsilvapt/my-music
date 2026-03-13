@@ -1,99 +1,114 @@
 {
   "lockfile_version": "1",
   "packages": {
-    "dotnet-ef@9.0.9": {
-      "last_modified": "2025-11-26T06:22:50Z",
-      "resolved": "github:NixOS/nixpkgs/bb813de6d2241bcb1b5af2d3059f560c66329967#dotnet-ef",
+    "dotnet-ef@10.0.2": {
+      "last_modified": "2026-02-23T15:40:43Z",
+      "resolved": "github:NixOS/nixpkgs/80d901ec0377e19ac3f7bb8c035201e2e098cc97#dotnet-ef",
       "source": "devbox-search",
-      "version": "9.0.9",
+      "version": "10.0.2",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/zljxr4p46kxx10qgflvq0c77zranck51-dotnet-ef-9.0.9",
+              "path": "/nix/store/pdvmq5fs4qlpd3asa3fykxx7aqs0gxmm-dotnet-ef-10.0.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/zljxr4p46kxx10qgflvq0c77zranck51-dotnet-ef-9.0.9"
+          "store_path": "/nix/store/pdvmq5fs4qlpd3asa3fykxx7aqs0gxmm-dotnet-ef-10.0.2"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/l3vimgzjby1lb8068dgcadqh0hbfw5v4-dotnet-ef-9.0.9",
+              "path": "/nix/store/4k0avn48h8rlic36xllrdidlnq0r20w9-dotnet-ef-10.0.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/l3vimgzjby1lb8068dgcadqh0hbfw5v4-dotnet-ef-9.0.9"
+          "store_path": "/nix/store/4k0avn48h8rlic36xllrdidlnq0r20w9-dotnet-ef-10.0.2"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/d96fpiylrv9b1k07fx84f5ria6bla4dv-dotnet-ef-9.0.9",
+              "path": "/nix/store/wbrpxz23szbzxn3vwqbb6jkwyqgdl6xm-dotnet-ef-10.0.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/d96fpiylrv9b1k07fx84f5ria6bla4dv-dotnet-ef-9.0.9"
+          "store_path": "/nix/store/wbrpxz23szbzxn3vwqbb6jkwyqgdl6xm-dotnet-ef-10.0.2"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/b6vz2jmlyng97dr26cpf96xp00vay8rn-dotnet-ef-9.0.9",
+              "path": "/nix/store/6g7awc8yi82603pwa3p2gz3y1pafsv0s-dotnet-ef-10.0.2",
               "default": true
             }
           ],
-          "store_path": "/nix/store/b6vz2jmlyng97dr26cpf96xp00vay8rn-dotnet-ef-9.0.9"
+          "store_path": "/nix/store/6g7awc8yi82603pwa3p2gz3y1pafsv0s-dotnet-ef-10.0.2"
         }
       }
     },
-    "dotnet-sdk_9@9.0.304": {
-      "last_modified": "2025-08-10T04:38:50Z",
-      "resolved": "github:NixOS/nixpkgs/641d909c4a7538f1539da9240dedb1755c907e40#dotnet-sdk_9",
+    "dotnet-sdk_10@10.0.103": {
+      "last_modified": "2026-02-23T15:40:43Z",
+      "resolved": "github:NixOS/nixpkgs/80d901ec0377e19ac3f7bb8c035201e2e098cc97#dotnet-sdk_10",
       "source": "devbox-search",
-      "version": "9.0.304",
+      "version": "10.0.103",
       "systems": {
         "aarch64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/r8h3gzbr0fk2abdpqdcp5aravbn19l2z-dotnet-sdk-wrapped-9.0.304",
+              "path": "/nix/store/w8gdd9fppyh388dyaq8s230aam64rh3n-dotnet-sdk-wrapped-10.0.103",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/zciz1j0mg540274w1ihjpsjjjzznksyv-dotnet-sdk-wrapped-10.0.103-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/r8h3gzbr0fk2abdpqdcp5aravbn19l2z-dotnet-sdk-wrapped-9.0.304"
+          "store_path": "/nix/store/w8gdd9fppyh388dyaq8s230aam64rh3n-dotnet-sdk-wrapped-10.0.103"
         },
         "aarch64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/xxqzpsn3ahlfshkq0idyl52rwgkydjyb-dotnet-sdk-wrapped-9.0.304",
+              "path": "/nix/store/8kds4p0avmq68r44vn96am6jb87kc62g-dotnet-sdk-wrapped-10.0.103",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/pzdich6g9sxq07qhp70zflzdyli7da25-dotnet-sdk-wrapped-10.0.103-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/xxqzpsn3ahlfshkq0idyl52rwgkydjyb-dotnet-sdk-wrapped-9.0.304"
+          "store_path": "/nix/store/8kds4p0avmq68r44vn96am6jb87kc62g-dotnet-sdk-wrapped-10.0.103"
         },
         "x86_64-darwin": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/yr5s8y6va4n36kd1f2fqfl6qcilk4rd3-dotnet-sdk-wrapped-9.0.304",
+              "path": "/nix/store/w4bcabizrg1jiw5wdk5xh0ayy0sv5awr-dotnet-sdk-wrapped-10.0.103",
               "default": true
             }
           ],
-          "store_path": "/nix/store/yr5s8y6va4n36kd1f2fqfl6qcilk4rd3-dotnet-sdk-wrapped-9.0.304"
+          "store_path": "/nix/store/w4bcabizrg1jiw5wdk5xh0ayy0sv5awr-dotnet-sdk-wrapped-10.0.103"
         },
         "x86_64-linux": {
           "outputs": [
             {
               "name": "out",
-              "path": "/nix/store/xckcy6w50hrwww8qjbl09kgd0mixgjxz-dotnet-sdk-wrapped-9.0.304",
+              "path": "/nix/store/msq6k9knc3iq0arjw6pdq1vwliqnrc7z-dotnet-sdk-wrapped-10.0.103",
+              "default": true
+            },
+            {
+              "name": "man",
+              "path": "/nix/store/vwxckhxy6828whvah9as1rpfrnxxis77-dotnet-sdk-wrapped-10.0.103-man",
               "default": true
             }
           ],
-          "store_path": "/nix/store/xckcy6w50hrwww8qjbl09kgd0mixgjxz-dotnet-sdk-wrapped-9.0.304"
+          "store_path": "/nix/store/msq6k9knc3iq0arjw6pdq1vwliqnrc7z-dotnet-sdk-wrapped-10.0.103"
         }
       }
     },

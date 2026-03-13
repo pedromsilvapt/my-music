@@ -2,8 +2,8 @@
   "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.16.0/.schema/devbox.schema.json",
   "packages": [
     "nodejs@24.5.0",
-    "dotnet-sdk_9@9.0.304",
-    "dotnet-ef@9.0.9"
+    "dotnet-sdk_10@10.0.103",
+    "dotnet-ef@10.0.2"
   ],
   "env": {
     "DEVBOX_COREPACK_ENABLED": "true"
