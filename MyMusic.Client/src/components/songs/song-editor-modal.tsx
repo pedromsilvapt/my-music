@@ -191,15 +191,27 @@ export default function SongEditorModal({
 
     useEffect(() => {
         if (opened && songs.length > 0) {
-            const newStates = new Map<number, SongEditState>();
-            songs.forEach((song) => {
-                const songMetadata = externalMetadata?.get(song.id) ?? null;
-                newStates.set(song.id, createSongEditState(song, songMetadata));
+            setEditStates(prev => {
+                const newMap = new Map(prev);
+                let hasNewSongs = false;
+                songs.forEach((song) => {
+                    if (!newMap.has(song.id)) {
+                        const songMetadata = externalMetadata?.get(song.id) ?? null;
+                        newMap.set(song.id, createSongEditState(song, songMetadata));
+                        hasNewSongs = true;
+                    }
+                });
+                if (hasNewSongs) {
+                    return newMap;
+                }
+                return prev;
             });
-            setEditStates(newStates);
-            setCurrentIndex(0);
+
+            if (currentIndex >= songs.length || currentIndex < 0) {
+                setCurrentIndex(0);
+            }
         }
-    }, [opened, songs, externalMetadata]);
+    }, [opened, songs, externalMetadata, currentIndex]);
 
     const handleMetadataFetched = useCallback((metadata: SongMetadataDiff) => {
         if (!currentState) return;

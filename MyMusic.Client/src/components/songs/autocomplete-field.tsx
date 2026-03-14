@@ -103,7 +103,7 @@ export default function AutocompleteField({
             if (existingItem) {
                 onChange(existingItem);
             } else {
-                onChange(query);
+                onChange({ id: -Date.now(), name: query });
             }
         }
     };
