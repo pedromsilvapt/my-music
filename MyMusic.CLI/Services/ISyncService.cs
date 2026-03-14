@@ -10,9 +10,10 @@ public record SyncProgress(
     int Downloaded,
     int Removed,
     int Failed,
-    string Phase);
+    string Phase,
+    int Conflicts = 0);
 
-public record SyncResult(int Created, int Updated, int Skipped, int Downloaded, int Removed, int Failed);
+public record SyncResult(int Created, int Updated, int Skipped, int Downloaded, int Removed, int Failed, int Conflicts = 0);
 
 /// <summary>
 /// Sync direction determines how repositories are synchronized.

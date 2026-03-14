@@ -31,9 +31,22 @@ export const SyncCheckRequestSchema = z.object({
 
 export type SyncCheckRequest = z.infer<typeof SyncCheckRequestSchema>;
 
+export const SyncPotentialConflictItemSchema = z.object({
+    path: z.string(),
+    localModifiedAt: z.coerce.date(),
+    serverModifiedAt: z.coerce.date(),
+    lastSyncedAt: z.coerce.date().nullable(),
+    songId: z.number(),
+    serverChecksum: z.string(),
+    serverChecksumAlgorithm: z.string(),
+});
+
+export type SyncPotentialConflictItem = z.infer<typeof SyncPotentialConflictItemSchema>;
+
 export const SyncCheckResponseSchema = z.object({
     toCreate: z.array(SyncFileInfoItemSchema),
     toUpdate: z.array(SyncFileInfoSchema),
+    potentialConflicts: z.array(SyncPotentialConflictItemSchema),
 });
 
 export type SyncCheckResponse = z.infer<typeof SyncCheckResponseSchema>;
@@ -91,6 +104,7 @@ export type GetPendingActionsResponse = z.infer<typeof GetPendingActionsResponse
 
 export const AcknowledgeActionRequestSchema = z.object({
     songId: z.number(),
+    modifiedAt: z.coerce.date().optional(),
 });
 
 export type AcknowledgeActionRequest = z.infer<typeof AcknowledgeActionRequestSchema>;
@@ -263,3 +277,32 @@ export const DeleteSessionResponseSchema = z.object({
 });
 
 export type DeleteSessionResponse = z.infer<typeof DeleteSessionResponseSchema>;
+
+export const SyncConflictResolveItemSchema = z.object({
+    path: z.string(),
+    songId: z.number(),
+    fileContentBase64: z.string(),
+    localModifiedAt: z.coerce.date(),
+});
+
+export type SyncConflictResolveItem = z.infer<typeof SyncConflictResolveItemSchema>;
+
+export const SyncResolveConflictsRequestSchema = z.object({
+    conflicts: z.array(SyncConflictResolveItemSchema),
+});
+
+export type SyncResolveConflictsRequest = z.infer<typeof SyncResolveConflictsRequestSchema>;
+
+export const SyncConflictErrorItemSchema = z.object({
+    path: z.string(),
+    reason: z.string(),
+});
+
+export type SyncConflictErrorItem = z.infer<typeof SyncConflictErrorItemSchema>;
+
+export const SyncResolveConflictsResponseSchema = z.object({
+    toUpload: z.array(SyncFileInfoItemSchema),
+    conflicts: z.array(SyncConflictErrorItemSchema),
+});
+
+export type SyncResolveConflictsResponse = z.infer<typeof SyncResolveConflictsResponseSchema>;

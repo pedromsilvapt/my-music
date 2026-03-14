@@ -20,7 +20,7 @@ public class SongDevice
 
     public DateTime AddedAt { get; set; }
 
-    public DateTime LastSyncedModifiedAt { get; set; }
+    public DateTime? LastSyncedModifiedAt { get; set; }
 }
 
 public enum SongSyncAction

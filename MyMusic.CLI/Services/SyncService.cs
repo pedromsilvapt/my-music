@@ -1,4 +1,5 @@
 using System.IO.Abstractions;
+using System.IO.Hashing;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ public class SyncService(
         SyncDirection direction, IProgress<SyncProgress>? progress = null, CancellationToken ct = default)
     {
         var result = new SyncResult(0, 0, 0, 0, 0, 0);
+        var conflicts = 0;
 
         var deviceId = await GetOrCreateDeviceAsync(ct);
         if (deviceId is null)
@@ -97,20 +99,95 @@ public class SyncService(
                         failed += chunk.Length;
                         processedFiles += chunk.Length;
                         progress?.Report(new SyncProgress(totalFiles, processedFiles, "", created, updated, skipped,
-                            downloaded, removed, failed, "upload"));
+                            downloaded, removed, failed, "upload", conflicts));
                         continue;
                     }
 
                     var toCreatePaths = syncResponse.ToCreate.Select(f => f.Path).ToHashSet();
                     var toUpdatePaths = syncResponse.ToUpdate.Select(f => f.Path).ToHashSet();
+                    var recordItems = new List<SyncRecordRequestItem>();
+
+                    if (syncResponse.PotentialConflicts.Count > 0)
+                    {
+                        if (dryRun)
+                        {
+                            logger.LogInformation(
+                                "Dry-run: {Count} potential conflicts detected (not resolved)",
+                                syncResponse.PotentialConflicts.Count);
+                            conflicts += syncResponse.PotentialConflicts.Count;
+
+                            foreach (var conflict in syncResponse.PotentialConflicts)
+                            {
+                                recordItems.Add(new SyncRecordRequestItem
+                                {
+                                    FilePath = conflict.Path,
+                                    Action = "Conflict",
+                                    Source = "Device",
+                                    Reason = $"Potential conflict - server checksum: {conflict.ServerChecksum}",
+                                });
+                            }
+                        }
+                        else
+                        {
+                            logger.LogInformation("Found {Count} potential conflicts, reading file content",
+                                syncResponse.PotentialConflicts.Count);
+
+                            var resolveItems = new List<SyncConflictResolveItem>();
+                            foreach (var conflict in syncResponse.PotentialConflicts)
+                            {
+                                var fullPath = Path.Combine(repositoryPath, conflict.Path);
+                                if (!fileSystem.File.Exists(fullPath))
+                                {
+                                    logger.LogWarning("Conflict file not found locally: {Path}", conflict.Path);
+                                    continue;
+                                }
+
+                                var fileBytes = fileSystem.File.ReadAllBytes(fullPath);
+                                var fileContentBase64 = Convert.ToBase64String(fileBytes);
+                                resolveItems.Add(new SyncConflictResolveItem
+                                {
+                                    Path = conflict.Path,
+                                    SongId = conflict.SongId,
+                                    FileContentBase64 = fileContentBase64,
+                                    LocalModifiedAt = conflict.LocalModifiedAt
+                                });
+                            }
+
+                            if (resolveItems.Count > 0)
+                            {
+                                try
+                                {
+                                    var resolveResponse = await client.ResolveConflictsAsync(deviceId.Value,
+                                        new SyncResolveConflictsRequest { Conflicts = resolveItems }, ct);
+
+                                    foreach (var resolved in resolveResponse.ToUpload)
+                                    {
+                                        toUpdatePaths.Add(resolved.Path);
+                                        logger.LogInformation("Resolved conflict for {Path}: {Reason}",
+                                            resolved.Path, resolved.Reason);
+                                    }
+
+                                    foreach (var conflictError in resolveResponse.Conflicts)
+                                    {
+                                        logger.LogError("Conflict for {Path}: {Reason}", conflictError.Path, conflictError.Reason);
+                                        conflicts++;
+                                        skipped++;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    logger.LogError(ex, "Failed to resolve conflicts");
+                                }
+                            }
+                        }
+                    }
 
                     logger.LogInformation(
                         "Chunk {ChunkNumber}: {ToCreate} to create, {ToUpdate} to update, {ToSkip} to skip",
                         chunkNumber, syncResponse.ToCreate.Count, syncResponse.ToUpdate.Count,
-                        chunk.Length - syncResponse.ToCreate.Count - syncResponse.ToUpdate.Count);
+                        chunk.Length - syncResponse.ToCreate.Count - syncResponse.ToUpdate.Count - syncResponse.PotentialConflicts.Count);
 
                     var processedInChunk = 0;
-                    var recordItems = new List<SyncRecordRequestItem>();
 
                     foreach (var fileToCreate in syncResponse.ToCreate)
                     {
@@ -151,7 +228,7 @@ public class SyncService(
                         uploadedPaths.Add(fileToCreate.Path);
                         processedInChunk++;
                         progress?.Report(new SyncProgress(totalFiles, processedFiles + processedInChunk,
-                            fileToCreate.Path, created, updated, skipped, downloaded, removed, failed, "upload"));
+                            fileToCreate.Path, created, updated, skipped, downloaded, removed, failed, "upload", conflicts));
                     }
 
                     foreach (var fileToUpdate in syncResponse.ToUpdate)
@@ -193,7 +270,7 @@ public class SyncService(
                         uploadedPaths.Add(fileToUpdate.Path);
                         processedInChunk++;
                         progress?.Report(new SyncProgress(totalFiles, processedFiles + processedInChunk,
-                            fileToUpdate.Path, created, updated, skipped, downloaded, removed, failed, "upload"));
+                            fileToUpdate.Path, created, updated, skipped, downloaded, removed, failed, "upload", conflicts));
                     }
 
                     skipped += chunk.Length - syncResponse.ToCreate.Count - syncResponse.ToUpdate.Count;
@@ -212,7 +289,7 @@ public class SyncService(
 
                     processedFiles += chunk.Length;
                     progress?.Report(new SyncProgress(totalFiles, processedFiles, "", created, updated, skipped,
-                        downloaded, removed, failed, "upload"));
+                        downloaded, removed, failed, "upload", conflicts));
 
                     var recordsRequest = new SyncRecordsRequest { Records = recordItems };
                     await client.RecordChunkAsync(deviceId.Value, sessionId, recordsRequest, ct);
@@ -271,7 +348,7 @@ public class SyncService(
                         }
 
                         progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
-                            skipped, downloaded, removed, failed, "server"));
+                            skipped, downloaded, removed, failed, "server", conflicts));
                         continue;
                     }
 
@@ -285,7 +362,7 @@ public class SyncService(
                         if (!PromptUser($"Replace '{action.Path}'?"))
                         {
                             progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created,
-                                updated, skipped, downloaded, removed, failed, "server"));
+                                updated, skipped, downloaded, removed, failed, "server", conflicts));
                             continue; // Leave pending
                         }
                     }
@@ -305,8 +382,9 @@ public class SyncService(
 
                             fileSystem.File.Move(tempPath, fullPath);
 
+                            var fileInfo = fileSystem.FileInfo.New(fullPath);
                             await client.AcknowledgeActionAsync(deviceId.Value,
-                                new AcknowledgeActionRequest { SongId = action.SongId }, ct);
+                                new AcknowledgeActionRequest { SongId = action.SongId, ModifiedAt = fileInfo.LastWriteTimeUtc }, ct);
                             downloaded++;
                             serverRecordItems.Add(new SyncRecordRequestItem
                             {
@@ -356,7 +434,7 @@ public class SyncService(
                         }
 
                         progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
-                            skipped, downloaded, removed, failed, "server"));
+                            skipped, downloaded, removed, failed, "server", conflicts));
                         continue; // Already gone
                     }
 
@@ -366,7 +444,7 @@ public class SyncService(
                         if (!PromptUser($"Delete '{action.Path}'?"))
                         {
                             progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created,
-                                updated, skipped, downloaded, removed, failed, "server"));
+                                updated, skipped, downloaded, removed, failed, "server", conflicts));
                             continue; // Leave pending
                         }
                     }
@@ -409,7 +487,7 @@ public class SyncService(
                 }
 
                 progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated, skipped,
-                    downloaded, removed, failed, "server"));
+                    downloaded, removed, failed, "server", conflicts));
             }
 
             // Record server actions
@@ -437,12 +515,13 @@ public class SyncService(
                 completeResponse.SkippedCount,
                 completeResponse.DownloadedCount,
                 completeResponse.RemovedCount,
-                completeResponse.ErrorCount);
+                completeResponse.ErrorCount,
+                conflicts);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Sync failed with exception");
-            return new SyncResult(created, updated, skipped, downloaded, removed, failed + 1);
+            return new SyncResult(created, updated, skipped, downloaded, removed, failed + 1, conflicts);
         }
     }
 
@@ -564,4 +643,20 @@ public class SyncService(
     }
 
     private record ProblemDetailsResponse([property: JsonPropertyName("detail")] string? Detail);
+
+    private string ComputeChecksum(string filePath, string algorithm)
+    {
+        if (algorithm == "XxHash128")
+        {
+            using var stream = fileSystem.File.OpenRead(filePath);
+            var xxHash = new XxHash128();
+            xxHash.Append(stream);
+            return Convert.ToHexString(xxHash.GetCurrentHash());
+        }
+
+        using var md5 = System.Security.Cryptography.MD5.Create();
+        using var stream2 = fileSystem.File.OpenRead(filePath);
+        var hash = md5.ComputeHash(stream2);
+        return Convert.ToHexString(hash);
+    }
 }

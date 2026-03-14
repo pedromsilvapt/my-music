@@ -18,7 +18,7 @@ export default function SyncProgressScreen() {
 
     useEffect(() => {
         return () => {
-            setOptions({force: false, dryRun: false, autoConfirm: false});
+            setOptions({force: false, dryRun: false, autoConfirm: false, treatConflictsAsErrors: false});
         };
     }, []);
 
@@ -65,6 +65,8 @@ export default function SyncProgressScreen() {
                 return 'Scanning files...';
             case 'upload':
                 return 'Uploading files...';
+            case 'resolving':
+                return 'Resolving conflicts...';
             case 'server':
                 return 'Processing server actions...';
             case 'completing':
@@ -149,6 +151,11 @@ export default function SyncProgressScreen() {
                     {progress.failed > 0 && (
                         <View style={styles.stat}>
                             <Text style={[styles.statValue, {color: colors.error}]}>! {progress.failed}</Text>
+                        </View>
+                    )}
+                    {progress.conflicts > 0 && (
+                        <View style={styles.stat}>
+                            <Text style={[styles.statValue, {color: colors.warning}]}>⚠ {progress.conflicts}</Text>
                         </View>
                     )}
                 </View>

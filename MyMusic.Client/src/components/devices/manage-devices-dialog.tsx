@@ -57,7 +57,7 @@ export default function ManageDevicesDialog({
                 onClose();
                 onSuccess?.();
             },
-            onError: (error) => {
+            onError: (error: any) => {
                 const errorMessage = error?.response?.data?.detail 
                     ?? error?.message 
                     ?? 'Failed to update devices. Please try again.';

@@ -8,7 +8,7 @@ import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/con
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 
-type FilterType = 'all' | 'created' | 'updated' | 'skipped' | 'downloaded' | 'removed' | 'error';
+type FilterType = 'all' | 'created' | 'updated' | 'skipped' | 'downloaded' | 'removed' | 'error' | 'conflict';
 
 function formatFilePath(path: string, repositoryPath: string | null | undefined): string {
     let formatted = path;
@@ -138,6 +138,8 @@ export default function SessionDetailScreen() {
                 return colors.error;
             case 'error':
                 return colors.error;
+            case 'conflict':
+                return colors.warning;
             default:
                 return colors.textSecondary;
         }
@@ -146,6 +148,7 @@ export default function SessionDetailScreen() {
     const getActionIcon = (action: string, source: string) => {
         if (action.toLowerCase() === 'error') return 'alert-circle';
         if (action.toLowerCase() === 'skipped') return 'skip-forward';
+        if (action.toLowerCase() === 'conflict') return 'warning';
         if (source === 'Server') return 'cloud-download';
         return 'cloud-upload';
     };
@@ -162,6 +165,7 @@ export default function SessionDetailScreen() {
         {key: 'downloaded', label: 'Down'},
         {key: 'removed', label: 'Removed'},
         {key: 'error', label: 'Errors'},
+        {key: 'conflict', label: 'Conflicts'},
     ];
 
     if (loading) {

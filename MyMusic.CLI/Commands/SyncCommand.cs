@@ -62,8 +62,15 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
             summaryTable.AddRow("↓ Downloaded:", ColorizeCounter(syncResult.Downloaded, "blue"));
             summaryTable.AddRow("× Removed:", ColorizeCounter(syncResult.Removed, "red"));
             summaryTable.AddRow("! Failed:", ColorizeCounter(syncResult.Failed, "red"));
+            summaryTable.AddRow("⚠ Conflicts:", ColorizeCounter(syncResult.Conflicts, "yellow"));
 
             AnsiConsole.Write(summaryTable);
+
+            if (syncResult.Conflicts > 0)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine("[yellow]Run without --dry-run to resolve conflicts[/]");
+            }
 
             if (syncResult.Failed > 0)
             {
@@ -92,7 +99,8 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
                $"{ColorizeCounter(p.Skipped, "grey", "-")} " +
                $"{ColorizeCounter(p.Downloaded, "blue", "↓")} " +
                $"{ColorizeCounter(p.Removed, "red", "×")} " +
-               $"{ColorizeCounter(p.Failed, "red", "!")} | " +
+               $"{ColorizeCounter(p.Failed, "red", "!")} " +
+               $"{ColorizeCounter(p.Conflicts, "yellow", "⚠")} | " +
                $"[magenta]{FormatElapsedTime(elapsed)}[/] | " +
                $"[cyan]ETA: {eta}[/]";
     }

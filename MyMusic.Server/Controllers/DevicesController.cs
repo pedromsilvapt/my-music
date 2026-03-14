@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO.Abstractions;
+using System.IO.Hashing;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -686,6 +687,7 @@ public class DevicesController(
         else
         {
             songDevice.SyncAction = null;
+            songDevice.LastSyncedModifiedAt = request.ModifiedAt ?? DateTime.UtcNow;
         }
 
         await context.SaveChangesAsync(cancellationToken);
@@ -708,12 +710,17 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
+        const int SyncTimestampToleranceSeconds = 5;
+        var syncTimestampTolerance = TimeSpan.FromSeconds(SyncTimestampToleranceSeconds);
+
         var existingSongDevices = await context.SongDevices
+            .Include(sd => sd.Song)
             .Where(sd => sd.DeviceId == deviceId)
             .ToListAsync(cancellationToken);
 
         var toCreate = new List<SyncFileInfoItem>();
         var toUpdate = new List<SyncFileInfoItem>();
+        var potentialConflicts = new List<SyncPotentialConflictItem>();
 
         foreach (var clientFile in request.Files)
         {
@@ -739,27 +746,190 @@ public class DevicesController(
                     Reason = "Force flag was set",
                 });
             }
-            else if (clientFile.ModifiedAt > existingSongDevice.LastSyncedModifiedAt)
+            else if (existingSongDevice.LastSyncedModifiedAt == null)
             {
-                toUpdate.Add(new SyncFileInfoItem
+                if (existingSongDevice.SyncAction == SongSyncAction.Download)
                 {
-                    Path = clientFile.Path,
-                    ModifiedAt = clientFile.ModifiedAt,
-                    CreatedAt = clientFile.CreatedAt,
-                    Reason =
-                        $"File modified at {clientFile.ModifiedAt:O} is newer than last synced modified at {existingSongDevice.LastSyncedModifiedAt:O}",
-                });
+                    var referenceTime = existingSongDevice.AddedAt;
+                    if (IsNewerThan(existingSongDevice.Song.ModifiedAt, referenceTime, syncTimestampTolerance))
+                    {
+                        potentialConflicts.Add(new SyncPotentialConflictItem
+                        {
+                            Path = clientFile.Path,
+                            LocalModifiedAt = clientFile.ModifiedAt,
+                            ServerModifiedAt = existingSongDevice.Song.ModifiedAt,
+                            LastSyncedAt = existingSongDevice.LastSyncedModifiedAt,
+                            SongId = existingSongDevice.SongId,
+                            ServerChecksum = existingSongDevice.Song.Checksum,
+                            ServerChecksumAlgorithm = existingSongDevice.Song.ChecksumAlgorithm,
+                        });
+                    }
+                    else
+                    {
+                        toUpdate.Add(new SyncFileInfoItem
+                        {
+                            Path = clientFile.Path,
+                            ModifiedAt = clientFile.ModifiedAt,
+                            CreatedAt = clientFile.CreatedAt,
+                            Reason = "Local file exists but never synced, server has not changed since device was added",
+                        });
+                    }
+                }
+                else
+                {
+                    toUpdate.Add(new SyncFileInfoItem
+                    {
+                        Path = clientFile.Path,
+                        ModifiedAt = clientFile.ModifiedAt,
+                        CreatedAt = clientFile.CreatedAt,
+                        Reason = "Local file exists with no sync timestamp",
+                    });
+                }
+            }
+            else if (IsNewerThan(clientFile.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value, syncTimestampTolerance))
+            {
+                if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value, syncTimestampTolerance))
+                {
+                    potentialConflicts.Add(new SyncPotentialConflictItem
+                    {
+                        Path = clientFile.Path,
+                        LocalModifiedAt = clientFile.ModifiedAt,
+                        ServerModifiedAt = existingSongDevice.Song.ModifiedAt,
+                        LastSyncedAt = existingSongDevice.LastSyncedModifiedAt,
+                        SongId = existingSongDevice.SongId,
+                        ServerChecksum = existingSongDevice.Song.Checksum,
+                        ServerChecksumAlgorithm = existingSongDevice.Song.ChecksumAlgorithm,
+                    });
+                }
+                else
+                {
+                    toUpdate.Add(new SyncFileInfoItem
+                    {
+                        Path = clientFile.Path,
+                        ModifiedAt = clientFile.ModifiedAt,
+                        CreatedAt = clientFile.CreatedAt,
+                        Reason = $"File modified at {clientFile.ModifiedAt:O} is newer than last synced modified at {existingSongDevice.LastSyncedModifiedAt:O}",
+                    });
+                }
             }
         }
 
         logger.LogInformation(
-            "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update",
-            deviceId, toCreate.Count, toUpdate.Count);
+            "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update, {PotentialConflicts} potential conflicts",
+            deviceId, toCreate.Count, toUpdate.Count, potentialConflicts.Count);
 
         return new SyncCheckResponse
         {
             ToCreate = toCreate,
             ToUpdate = toUpdate,
+            PotentialConflicts = potentialConflicts,
+        };
+    }
+
+    [HttpPost("{deviceId:long}/sync/resolve-conflicts")]
+    public async Task<SyncResolveConflictsResponse> ResolveConflicts(
+        long deviceId,
+        [FromBody] SyncResolveConflictsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (device == null)
+        {
+            throw new Exception($"Device not found with id {deviceId}");
+        }
+
+        var toUpload = new List<SyncFileInfoItem>();
+        var conflicts = new List<SyncConflictErrorItem>();
+
+        foreach (var conflict in request.Conflicts)
+        {
+            var songDevice = await context.SongDevices
+                .Include(sd => sd.Song)
+                .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == conflict.SongId, cancellationToken);
+
+            if (songDevice == null)
+            {
+                logger.LogWarning("SongDevice not found for device {DeviceId} and song {SongId}", deviceId, conflict.SongId);
+                continue;
+            }
+
+            byte[] fileBytes;
+            try
+            {
+                fileBytes = Convert.FromBase64String(conflict.FileContentBase64);
+            }
+            catch (FormatException ex)
+            {
+                logger.LogError(ex, "Invalid base64 content for {Path}", conflict.Path);
+                conflicts.Add(new SyncConflictErrorItem
+                {
+                    Path = conflict.Path,
+                    Reason = "Invalid file content format",
+                });
+                continue;
+            }
+
+            string localChecksum;
+            if (songDevice.Song.ChecksumAlgorithm == "MD5")
+            {
+                using var md5 = System.Security.Cryptography.MD5.Create();
+                localChecksum = Convert.ToBase64String(md5.ComputeHash(fileBytes));
+            }
+            else
+            {
+                var xxHash = new XxHash128();
+                xxHash.Append(fileBytes);
+                localChecksum = Convert.ToBase64String(xxHash.GetCurrentHash());
+            }
+
+            if (localChecksum == songDevice.Song.Checksum)
+            {
+                var newLastSynced = conflict.LocalModifiedAt > songDevice.Song.ModifiedAt
+                    ? conflict.LocalModifiedAt
+                    : songDevice.Song.ModifiedAt;
+
+                songDevice.LastSyncedModifiedAt = newLastSynced;
+                context.SongDevices.Update(songDevice);
+
+                toUpload.Add(new SyncFileInfoItem
+                {
+                    Path = conflict.Path,
+                    ModifiedAt = conflict.LocalModifiedAt,
+                    CreatedAt = songDevice.AddedAt,
+                    Reason = "Checksums match - resolved by updating LastSyncedModifiedAt",
+                });
+
+                logger.LogInformation(
+                    "Resolved conflict for {Path} - checksums match, updated LastSyncedModifiedAt to {LastSyncedAt}",
+                    conflict.Path, newLastSynced);
+            }
+            else
+            {
+                conflicts.Add(new SyncConflictErrorItem
+                {
+                    Path = conflict.Path,
+                    Reason = $"Checksum mismatch - local: {localChecksum}, server: {songDevice.Song.Checksum}",
+                });
+
+                logger.LogError(
+                    "Conflict detected for {Path} - checksums differ (local: {LocalChecksum}, server: {ServerChecksum}), marking as error",
+                    conflict.Path, localChecksum, songDevice.Song.Checksum);
+            }
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Resolved conflicts for device {DeviceId}: {ToUpload} resolved, {Conflicts} conflicts",
+            deviceId, toUpload.Count, conflicts.Count);
+
+        return new SyncResolveConflictsResponse
+        {
+            ToUpload = toUpload,
+            Conflicts = conflicts,
         };
     }
 
@@ -843,7 +1013,7 @@ public class DevicesController(
 
             if (existingSongDevice != null)
             {
-                existingSongDevice.LastSyncedModifiedAt = DateTime.UtcNow;
+                existingSongDevice.LastSyncedModifiedAt = modifiedAtDateTime;
             }
             else
             {
@@ -853,7 +1023,7 @@ public class DevicesController(
                     SongId = importedSong.Id,
                     DevicePath = path,
                     AddedAt = createdAtDateTime,
-                    LastSyncedModifiedAt = DateTime.UtcNow,
+                    LastSyncedModifiedAt = modifiedAtDateTime,
                 };
                 context.SongDevices.Add(songDevice);
             }
@@ -989,5 +1159,10 @@ public class DevicesController(
             .ToListAsync(cancellationToken);
 
         return new FilterValuesResponse { Values = values };
+    }
+
+    private static bool IsNewerThan(DateTime current, DateTime reference, TimeSpan tolerance)
+    {
+        return (current - reference) > tolerance;
     }
 }

@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 
-export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'server' | 'completing' | 'completed' | 'error';
+export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'resolving' | 'server' | 'completing' | 'completed' | 'error';
 
 export interface SyncProgress {
     phase: SyncPhase;
@@ -13,6 +13,7 @@ export interface SyncProgress {
     downloaded: number;
     removed: number;
     failed: number;
+    conflicts: number;
     errorMessage?: string;
     startedAt?: string;
     completedAt?: string;
@@ -26,6 +27,7 @@ interface SyncState {
         force: boolean;
         dryRun: boolean;
         autoConfirm: boolean;
+        treatConflictsAsErrors: boolean;
     };
 
     startSync: (options: Partial<SyncState['options']>) => void;
@@ -48,6 +50,7 @@ const initialProgress: SyncProgress = {
     downloaded: 0,
     removed: 0,
     failed: 0,
+    conflicts: 0,
 };
 
 const initialState = {
@@ -57,6 +60,7 @@ const initialState = {
         force: false,
         dryRun: false,
         autoConfirm: false,
+        treatConflictsAsErrors: false,
     },
 };
 

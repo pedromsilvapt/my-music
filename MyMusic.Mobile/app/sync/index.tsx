@@ -89,6 +89,29 @@ export default function SyncOptionsScreen() {
                     )}
                 </View>
 
+                <View style={styles.optionCard}>
+                    <View style={styles.optionRow}>
+                        <View style={styles.optionInfo}>
+                            <Text style={styles.optionTitle}>Treat Conflicts as Errors</Text>
+                            <Text style={styles.optionDescription}>
+                                Skip conflicting files instead of asking what to do
+                            </Text>
+                        </View>
+                        <Switch
+                            value={options.treatConflictsAsErrors}
+                            onValueChange={(value) => setOptions({treatConflictsAsErrors: value})}
+                            trackColor={{false: colors.border, true: colors.primary}}
+                            thumbColor={colors.text}
+                        />
+                    </View>
+                    {!options.treatConflictsAsErrors && (
+                        <View style={styles.warningBadge}>
+                            <Ionicons name="information-circle" size={16} color={colors.info}/>
+                            <Text style={styles.warningText}>You will be asked to choose upload, download, or skip for each conflict</Text>
+                        </View>
+                    )}
+                </View>
+
                 {options.dryRun && (
                     <View style={styles.dryRunNotice}>
                         <Ionicons name="information-circle-outline" size={20} color={colors.info}/>

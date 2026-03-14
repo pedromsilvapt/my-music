@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
 import {apiMultipartRequest, apiRequest} from './client';
-import type {AcknowledgeActionRequest, PruneSessionsRequest, SyncCheckRequest, SyncRecordsRequest, SyncStartRequest} from './types';
+import type {AcknowledgeActionRequest, PruneSessionsRequest, SyncCheckRequest, SyncRecordsRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
 import {
     AcknowledgeActionResponseSchema,
     DeleteSessionResponseSchema,
@@ -12,6 +12,7 @@ import {
     SyncCheckResponseSchema,
     SyncCompleteResponseSchema,
     SyncRecordsResponseSchema,
+    SyncResolveConflictsResponseSchema,
     SyncStartResponseSchema,
     SyncUploadResponseSchema,
 } from './types';
@@ -146,5 +147,13 @@ export async function pruneSessions(deviceId: number, request: PruneSessionsRequ
         method: 'POST',
         body: request,
         schema: PruneSessionsResponseSchema,
+    });
+}
+
+export async function resolveConflicts(deviceId: number, request: SyncResolveConflictsRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/resolve-conflicts`, {
+        method: 'POST',
+        body: request,
+        schema: SyncResolveConflictsResponseSchema,
     });
 }

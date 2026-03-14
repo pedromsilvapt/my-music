@@ -98,6 +98,12 @@ public interface IMyMusicClient
         [Body] AcknowledgeActionRequest request,
         CancellationToken ct = default);
 
+    [Post("/api/devices/{deviceId}/sync/resolve-conflicts")]
+    Task<SyncResolveConflictsResponse> ResolveConflictsAsync(
+        long deviceId,
+        [Body] SyncResolveConflictsRequest request,
+        CancellationToken ct = default);
+
     [Get("/api/songs/{songId}/download")]
     Task<Stream> DownloadSongAsync(
         long songId,
