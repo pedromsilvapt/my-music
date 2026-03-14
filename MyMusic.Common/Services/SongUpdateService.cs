@@ -159,27 +159,22 @@ public class SongUpdateService(
     private async Task UpdateCoverAsync(MusicDbContext db, Song song, string coverDataUrl,
         CancellationToken cancellationToken)
     {
-        var imageBuffer = await ImageBuffer.FromStringAsync(coverDataUrl, cancellationToken);
-        var size = imageBuffer.Size;
+        var newImageBuffer = await ImageBuffer.FromStringAsync(coverDataUrl, cancellationToken);
+        var newSize = newImageBuffer.Size;
 
-        if (song.Cover == null)
+        if (song.Cover != null && song.Cover.Data.AsSpan().SequenceEqual(newImageBuffer.Data))
         {
-            song.Cover = new Artwork
-            {
-                Data = imageBuffer.Data,
-                MimeType = imageBuffer.MimeType,
-                Width = size.Width,
-                Height = size.Height,
-            };
-            await db.AddAsync(song.Cover, cancellationToken);
+            return;
         }
-        else
+
+        song.Cover = new Artwork
         {
-            song.Cover.Data = imageBuffer.Data;
-            song.Cover.MimeType = imageBuffer.MimeType;
-            song.Cover.Width = size.Width;
-            song.Cover.Height = size.Height;
-        }
+            Data = newImageBuffer.Data,
+            MimeType = newImageBuffer.MimeType,
+            Width = newSize.Width,
+            Height = newSize.Height,
+        };
+        await db.AddAsync(song.Cover, cancellationToken);
     }
 
     private async Task UpdateAlbumAsync(MusicDbContext db, Song song, long? albumId, string? albumName,
