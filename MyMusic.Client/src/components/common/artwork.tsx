@@ -3,9 +3,8 @@ import {IconPhotoScan, IconPlayerPlayFilled, IconZoomIn} from "@tabler/icons-rea
 import {useContextMenu} from "mantine-contextmenu";
 import type {MouseEvent} from "react";
 import * as React from "react";
-import {useState} from "react";
 import {DEFAULT_ARTWORK_SIZE} from "../../consts.ts";
-import ArtworkLightbox from "./artwork-lightbox.tsx";
+import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
 import styles from './artwork.module.css';
 
 interface ArtworkProps {
@@ -20,7 +19,7 @@ interface ArtworkProps {
 export default function Artwork(props: ArtworkProps) {
     const {id, placeholderIcon, enablePreview = true} = props;
     const size = props.size ?? DEFAULT_ARTWORK_SIZE;
-    const [lightboxOpened, setLightboxOpened] = useState(false);
+    const {openLightbox} = useArtworkLightbox();
     const {showContextMenu} = useContextMenu();
 
     const hasArtwork = id != null || props.url != null;
@@ -75,22 +74,18 @@ export default function Artwork(props: ArtworkProps) {
     }
 
     if (!onClick) {
-        return <>
-            <Box
-                pos="relative"
-                style={{cursor: "pointer"}}
-                onClick={() => setLightboxOpened(true)}
-            >
-                {innerElement}
-            </Box>
-            {fullSizeUrl && (
-                <ArtworkLightbox
-                    opened={lightboxOpened}
-                    onClose={() => setLightboxOpened(false)}
-                    src={fullSizeUrl}
-                />
-            )}
-        </>;
+        return <Box
+            pos="relative"
+            style={{cursor: "pointer"}}
+            onClick={ev => {
+                ev.stopPropagation();
+                ev.preventDefault();
+                if (fullSizeUrl) {
+                    openLightbox(fullSizeUrl);
+                }
+            }}>
+            {innerElement}
+        </Box>;
     }
 
     const handleContextMenu = showContextMenu([
@@ -98,33 +93,28 @@ export default function Artwork(props: ArtworkProps) {
             key: "preview",
             icon: <IconZoomIn size={16}/>,
             title: "Preview",
-            onClick: () => setLightboxOpened(true)
+            onClick: () => {
+                if (fullSizeUrl) {
+                    openLightbox(fullSizeUrl);
+                }
+            }
         }
     ]);
 
-    return <>
-        <Box
-            pos="relative"
-            onContextMenu={handleContextMenu}
+    return <Box
+        pos="relative"
+        onContextMenu={handleContextMenu}
+    >
+        {innerElement}
+        <Overlay
+            className={styles.overlay}
+            color="#000"
+            backgroundOpacity={0.35}
+            onClick={ev => onClick(ev)}
         >
-            {innerElement}
-            <Overlay
-                className={styles.overlay}
-                color="#000"
-                backgroundOpacity={0.35}
-                onClick={ev => onClick(ev)}
-            >
-                <Center maw="100%" h="100%">
-                    <IconPlayerPlayFilled color="white" size={size * 0.6}/>
-                </Center>
-            </Overlay>
-        </Box>
-        {fullSizeUrl && (
-            <ArtworkLightbox
-                opened={lightboxOpened}
-                onClose={() => setLightboxOpened(false)}
-                src={fullSizeUrl}
-            />
-        )}
-    </>;
+            <Center maw="100%" h="100%">
+                <IconPlayerPlayFilled color="white" size={size * 0.6}/>
+            </Center>
+        </Overlay>
+    </Box>;
 }

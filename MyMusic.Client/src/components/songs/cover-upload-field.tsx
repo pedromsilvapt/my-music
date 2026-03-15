@@ -2,7 +2,7 @@ import {ActionIcon, Box, Checkbox, Group, Stack, Text, TextInput} from "@mantine
 import {notifications} from "@mantine/notifications";
 import {IconClipboard, IconDownload, IconMusic, IconUpload, IconX} from "@tabler/icons-react";
 import {useCallback, useRef, useState} from "react";
-import ArtworkLightbox from "../common/artwork-lightbox.tsx";
+import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
 
 interface CoverDimensions {
     width: number;
@@ -33,12 +33,11 @@ export default function CoverUploadField({
                                              isChecked = true,
                                              onCheckChange,
                                              oldCoverUrl,
-                                         }: CoverUploadFieldProps) {
+                                          }: CoverUploadFieldProps) {
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [previewDimensions, setPreviewDimensions] = useState<CoverDimensions | null>(currentDimensions ?? null);
-    const [lightboxOpened, setLightboxOpened] = useState(false);
-    const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+    const {openLightbox} = useArtworkLightbox();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const hasChanged = diffMode && value !== null;
@@ -120,9 +119,8 @@ export default function CoverUploadField({
     }, [onChange]);
 
     const handleOpenLightbox = useCallback((src: string) => {
-        setLightboxSrc(src);
-        setLightboxOpened(true);
-    }, []);
+        openLightbox(src);
+    }, [openLightbox]);
 
     const previewSrc = value || (currentCoverId ? `/api/artwork/${currentCoverId}` : null);
     const showSideBySide = diffMode && oldCoverUrl && value;
@@ -350,12 +348,6 @@ export default function CoverUploadField({
                     </Stack>
                 </Group>
             )}
-
-            <ArtworkLightbox
-                opened={lightboxOpened}
-                onClose={() => setLightboxOpened(false)}
-                src={lightboxSrc ?? ""}
-            />
         </Stack>
     );
 }
