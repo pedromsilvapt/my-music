@@ -1,16 +1,28 @@
-import {useEffect} from 'react';
+import {useEffect, useCallback} from 'react';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerVolume from './player-volume';
 import {useWavesurferRef} from './wavesurfer-context';
+import {useUserPreferences} from '../../hooks/use-user-preferences';
 
 export default function PlayerVolumeContainer() {
     const wavesurferRef = useWavesurferRef();
     const volume = usePlaybackStore((s) => s.output.volume);
     const muted = usePlaybackStore((s) => s.output.muted);
-    const {setVolume, setMuted} = usePlaybackActions((s) => ({
+    const {setVolume: storeSetVolume, setMuted: storeSetMuted} = usePlaybackActions((s) => ({
         setVolume: s.setVolume,
         setMuted: s.setMuted,
     }));
+    const {updateVolume, updateIsMuted} = useUserPreferences();
+
+    const handleSetVolume = useCallback((newVolume: number) => {
+        storeSetVolume(newVolume);
+        updateVolume(newVolume);
+    }, [storeSetVolume, updateVolume]);
+
+    const handleSetMuted = useCallback((newMuted: boolean) => {
+        storeSetMuted(newMuted);
+        updateIsMuted(newMuted);
+    }, [storeSetMuted, updateIsMuted]);
 
     useEffect(() => {
         if (wavesurferRef.current) {
@@ -27,9 +39,9 @@ export default function PlayerVolumeContainer() {
     return (
         <PlayerVolume
             volume={volume}
-            setVolume={setVolume}
+            setVolume={handleSetVolume}
             isMuted={muted}
-            setIsMuted={setMuted}
+            setIsMuted={handleSetMuted}
         />
     );
 }

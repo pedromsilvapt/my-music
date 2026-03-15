@@ -11,4 +11,6 @@ export interface GetUserItem {
 	username: string;
 	name: string;
 	colorScheme: string;
+	volume: number;
+	isMuted: boolean;
 }

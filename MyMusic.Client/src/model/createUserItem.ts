@@ -11,4 +11,6 @@ export interface CreateUserItem {
 	username: string;
 	name: string;
 	colorScheme: string;
+	volume: number;
+	isMuted: boolean;
 }

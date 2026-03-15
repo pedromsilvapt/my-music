@@ -33,6 +33,7 @@ type PlaybackActions = {
     clear: () => void;
     incrementPlaybackKey: () => void;
     requestScrollToCurrent: () => void;
+    initializeFromUser: (volume: number, isMuted: boolean) => void;
 };
 
 type PlaybackStore = PlaybackState & PlaybackActions;
@@ -80,6 +81,11 @@ function createPlaybackStore(): StoreApi<PlaybackStore> {
             setMuted: (muted) =>
                 set((state) => {
                     state.output.muted = muted;
+                }),
+            initializeFromUser: (volume, isMuted) =>
+                set((state) => {
+                    state.output.volume = volume;
+                    state.output.muted = isMuted;
                 }),
             setCurrentTime: (currentTime) =>
                 set((state) => {

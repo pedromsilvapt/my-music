@@ -5,12 +5,10 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface ListUsersItem {
+export interface SyncConflictResolveItem {
+	path: string;
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	username: string;
-	name: string;
-	colorScheme: string;
-	volume: number;
-	isMuted: boolean;
+	songId: number;
+	fileContentBase64: string;
+	localModifiedAt: string;
 }

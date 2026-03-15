@@ -5,12 +5,10 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface ListUsersItem {
+export interface DeviceSongItem {
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	username: string;
-	name: string;
-	colorScheme: string;
-	volume: number;
-	isMuted: boolean;
+	songId: number;
+	path: string;
+	/** @nullable */
+	action?: string | null;
 }

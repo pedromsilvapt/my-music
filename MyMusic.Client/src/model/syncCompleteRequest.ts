@@ -5,9 +5,7 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface AcknowledgeActionRequest {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songId: number;
+export interface SyncCompleteRequest {
 	/** @nullable */
-	modifiedAt?: string | null;
+	direction?: string | null;
 }

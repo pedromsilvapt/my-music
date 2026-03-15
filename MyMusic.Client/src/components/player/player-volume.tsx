@@ -26,7 +26,7 @@ export default function PlayerVolume(props: PlayerVolumeProps) {
             >
                 {props.isMuted ? <IconVolumeOff size="1.1rem"/> : <IconVolume size="1.1rem"/>}
             </ActionIcon>
-            <Slider flex={1} value={props.volume * 100} onChange={v => props.setVolume(Math.min(1, v / 100))}/>
+            <Slider flex={1} value={props.volume * 100} onChangeEnd={v => props.setVolume(Math.min(1, v / 100))}/>
         </Flex>
     </>;
 }

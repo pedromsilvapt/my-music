@@ -16,5 +16,7 @@ public record CreateUserItem : ListUsersItem
             Name = user.Name,
             Username = user.Username,
             ColorScheme = user.ColorScheme,
+            Volume = user.Volume,
+            IsMuted = user.IsMuted,
         };
 }

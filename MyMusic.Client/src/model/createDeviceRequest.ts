@@ -14,4 +14,5 @@ export interface CreateDeviceRequest {
 	/** @nullable */
 	namingTemplate?: string | null;
 	importOnPurchase?: boolean;
+	forceCreateActions?: boolean;
 }

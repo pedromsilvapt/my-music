@@ -8,4 +8,8 @@ OpenAPI spec version: 1.0.0
 export interface UpdateUserRequest {
 	/** @nullable */
 	colorScheme?: string | null;
+	/** @nullable */
+	volume?: number | null;
+	/** @nullable */
+	isMuted?: boolean | null;
 }

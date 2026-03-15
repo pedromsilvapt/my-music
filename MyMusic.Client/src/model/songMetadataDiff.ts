@@ -20,6 +20,7 @@ export interface SongMetadataDiff {
 	explicit?: null | SongMetadataFieldOfboolean;
 	cover?: null | SongMetadataFieldOfstring;
 	album?: null | SongMetadataFieldOfSongMetadataAlbum;
+	albumArtist?: null | SongMetadataFieldOfstring;
 	artists?: null | SongMetadataFieldOfListOfSongMetadataArtist;
 	genres?: null | SongMetadataFieldOfListOfstring;
 }

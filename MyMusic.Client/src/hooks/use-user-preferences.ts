@@ -8,6 +8,8 @@ const DEFAULT_USER: GetUserItem = {
     username: "",
     name: "",
     colorScheme: "auto",
+    volume: 1.0,
+    isMuted: false,
 };
 
 export function useUserPreferences() {
@@ -36,11 +38,23 @@ export function useUserPreferences() {
         setColorScheme(colorScheme);
     };
 
+    const updateVolume = async (volume: number) => {
+        await updateMutation.mutateAsync({data: {volume}});
+    };
+
+    const updateIsMuted = async (isMuted: boolean) => {
+        await updateMutation.mutateAsync({data: {isMuted}});
+    };
+
     return {
         user,
         isLoading,
         colorScheme: user.colorScheme as "light" | "dark" | "auto",
+        volume: user.volume,
+        isMuted: user.isMuted,
         updateColorScheme,
+        updateVolume,
+        updateIsMuted,
         isUpdating: updateMutation.isPending,
     };
 }

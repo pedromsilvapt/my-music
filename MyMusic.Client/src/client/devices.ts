@@ -35,6 +35,7 @@ import type {
 	DeleteSessionResponse,
 	FilterMetadataResponse,
 	FilterValuesResponse,
+	GetDeviceSongsResponse,
 	GetDevicesDeviceIdSessionsParams,
 	GetDevicesDeviceIdSessionsSessionIdRecordsParams,
 	GetDevicesFilterValuesParams,
@@ -48,9 +49,12 @@ import type {
 	PruneSessionsResponse,
 	SyncCheckRequest,
 	SyncCheckResponse,
+	SyncCompleteRequest,
 	SyncCompleteResponse,
 	SyncRecordsRequest,
 	SyncRecordsResponse,
+	SyncResolveConflictsRequest,
+	SyncResolveConflictsResponse,
 	SyncStartRequest,
 	SyncStartResponse,
 	SyncUploadResponse,
@@ -1755,6 +1759,7 @@ export const getPostDevicesDeviceIdSyncSessionIdCompleteUrl = (
 export const postDevicesDeviceIdSyncSessionIdComplete = async (
 	deviceId: number,
 	sessionId: number,
+	nullSyncCompleteRequest: null | SyncCompleteRequest,
 	options?: RequestInit,
 ): Promise<postDevicesDeviceIdSyncSessionIdCompleteResponse> => {
 	const res = await fetch(
@@ -1762,6 +1767,8 @@ export const postDevicesDeviceIdSyncSessionIdComplete = async (
 		{
 			...options,
 			method: "POST",
+			headers: { "Content-Type": "application/json", ...options?.headers },
+			body: JSON.stringify(nullSyncCompleteRequest),
 		},
 	);
 
@@ -1784,14 +1791,14 @@ export const getPostDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <
 	mutation?: UseMutationOptions<
 		Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
 		TError,
-		{ deviceId: number; sessionId: number },
+		{ deviceId: number; sessionId: number; data: null | SyncCompleteRequest },
 		TContext
 	>;
 	fetch?: RequestInit;
 }): UseMutationOptions<
 	Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
 	TError,
-	{ deviceId: number; sessionId: number },
+	{ deviceId: number; sessionId: number; data: null | SyncCompleteRequest },
 	TContext
 > => {
 	const mutationKey = ["postDevicesDeviceIdSyncSessionIdComplete"];
@@ -1805,13 +1812,14 @@ export const getPostDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <
 
 	const mutationFn: MutationFunction<
 		Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
-		{ deviceId: number; sessionId: number }
+		{ deviceId: number; sessionId: number; data: null | SyncCompleteRequest }
 	> = (props) => {
-		const { deviceId, sessionId } = props ?? {};
+		const { deviceId, sessionId, data } = props ?? {};
 
 		return postDevicesDeviceIdSyncSessionIdComplete(
 			deviceId,
 			sessionId,
+			data,
 			fetchOptions,
 		);
 	};
@@ -1823,7 +1831,8 @@ export type PostDevicesDeviceIdSyncSessionIdCompleteMutationResult =
 	NonNullable<
 		Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>
 	>;
-
+export type PostDevicesDeviceIdSyncSessionIdCompleteMutationBody =
+	null | SyncCompleteRequest;
 export type PostDevicesDeviceIdSyncSessionIdCompleteMutationError = unknown;
 
 export const usePostDevicesDeviceIdSyncSessionIdComplete = <
@@ -1834,7 +1843,7 @@ export const usePostDevicesDeviceIdSyncSessionIdComplete = <
 		mutation?: UseMutationOptions<
 			Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
 			TError,
-			{ deviceId: number; sessionId: number },
+			{ deviceId: number; sessionId: number; data: null | SyncCompleteRequest },
 			TContext
 		>;
 		fetch?: RequestInit;
@@ -1843,7 +1852,7 @@ export const usePostDevicesDeviceIdSyncSessionIdComplete = <
 ): UseMutationResult<
 	Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
 	TError,
-	{ deviceId: number; sessionId: number },
+	{ deviceId: number; sessionId: number; data: null | SyncCompleteRequest },
 	TContext
 > => {
 	return useMutation(
@@ -2070,6 +2079,223 @@ export const invalidateGetDevicesDeviceIdSyncPendingActions = async (
 ): Promise<QueryClient> => {
 	await queryClient.invalidateQueries(
 		{ queryKey: getGetDevicesDeviceIdSyncPendingActionsQueryKey(deviceId) },
+		options,
+	);
+
+	return queryClient;
+};
+
+export type getDevicesDeviceIdSyncSongsResponse200TextPlain = {
+	data: GetDeviceSongsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncSongsResponse200ApplicationJson = {
+	data: GetDeviceSongsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncSongsResponse200TextJson = {
+	data: GetDeviceSongsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncSongsResponseSuccess = (
+	| getDevicesDeviceIdSyncSongsResponse200TextPlain
+	| getDevicesDeviceIdSyncSongsResponse200ApplicationJson
+	| getDevicesDeviceIdSyncSongsResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type getDevicesDeviceIdSyncSongsResponse =
+	getDevicesDeviceIdSyncSongsResponseSuccess;
+
+export const getGetDevicesDeviceIdSyncSongsUrl = (deviceId: number) => {
+	return `/api/devices/${deviceId}/sync/songs`;
+};
+
+export const getDevicesDeviceIdSyncSongs = async (
+	deviceId: number,
+	options?: RequestInit,
+): Promise<getDevicesDeviceIdSyncSongsResponse> => {
+	const res = await fetch(getGetDevicesDeviceIdSyncSongsUrl(deviceId), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: getDevicesDeviceIdSyncSongsResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as getDevicesDeviceIdSyncSongsResponse;
+};
+
+export const getGetDevicesDeviceIdSyncSongsQueryKey = (deviceId: number) => {
+	return ["api", "devices", deviceId, "sync", "songs"] as const;
+};
+
+export const getGetDevicesDeviceIdSyncSongsQueryOptions = <
+	TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+	TError = unknown,
+>(
+	deviceId: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey =
+		queryOptions?.queryKey ?? getGetDevicesDeviceIdSyncSongsQueryKey(deviceId);
+
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>
+	> = ({ signal }) =>
+		getDevicesDeviceIdSyncSongs(deviceId, { signal, ...fetchOptions });
+
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!deviceId,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetDevicesDeviceIdSyncSongsQueryResult = NonNullable<
+	Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>
+>;
+export type GetDevicesDeviceIdSyncSongsQueryError = unknown;
+
+export function useGetDevicesDeviceIdSyncSongs<
+	TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+	TError = unknown,
+>(
+	deviceId: number,
+	options: {
+		query: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+					TError,
+					Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetDevicesDeviceIdSyncSongs<
+	TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+	TError = unknown,
+>(
+	deviceId: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+					TError,
+					Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetDevicesDeviceIdSyncSongs<
+	TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+	TError = unknown,
+>(
+	deviceId: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetDevicesDeviceIdSyncSongs<
+	TData = Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+	TError = unknown,
+>(
+	deviceId: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getGetDevicesDeviceIdSyncSongsQueryOptions(
+		deviceId,
+		options,
+	);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateGetDevicesDeviceIdSyncSongs = async (
+	queryClient: QueryClient,
+	deviceId: number,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getGetDevicesDeviceIdSyncSongsQueryKey(deviceId) },
 		options,
 	);
 
@@ -2320,6 +2546,140 @@ export const usePostDevicesDeviceIdSyncCheck = <
 > => {
 	return useMutation(
 		getPostDevicesDeviceIdSyncCheckMutationOptions(options),
+		queryClient,
+	);
+};
+export type postDevicesDeviceIdSyncResolveConflictsResponse200TextPlain = {
+	data: SyncResolveConflictsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncResolveConflictsResponse200ApplicationJson =
+	{
+		data: SyncResolveConflictsResponse;
+		status: 200;
+	};
+
+export type postDevicesDeviceIdSyncResolveConflictsResponse200TextJson = {
+	data: SyncResolveConflictsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncResolveConflictsResponseSuccess = (
+	| postDevicesDeviceIdSyncResolveConflictsResponse200TextPlain
+	| postDevicesDeviceIdSyncResolveConflictsResponse200ApplicationJson
+	| postDevicesDeviceIdSyncResolveConflictsResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type postDevicesDeviceIdSyncResolveConflictsResponse =
+	postDevicesDeviceIdSyncResolveConflictsResponseSuccess;
+
+export const getPostDevicesDeviceIdSyncResolveConflictsUrl = (
+	deviceId: number,
+) => {
+	return `/api/devices/${deviceId}/sync/resolve-conflicts`;
+};
+
+export const postDevicesDeviceIdSyncResolveConflicts = async (
+	deviceId: number,
+	syncResolveConflictsRequest: SyncResolveConflictsRequest,
+	options?: RequestInit,
+): Promise<postDevicesDeviceIdSyncResolveConflictsResponse> => {
+	const res = await fetch(
+		getPostDevicesDeviceIdSyncResolveConflictsUrl(deviceId),
+		{
+			...options,
+			method: "POST",
+			headers: { "Content-Type": "application/json", ...options?.headers },
+			body: JSON.stringify(syncResolveConflictsRequest),
+		},
+	);
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: postDevicesDeviceIdSyncResolveConflictsResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as postDevicesDeviceIdSyncResolveConflictsResponse;
+};
+
+export const getPostDevicesDeviceIdSyncResolveConflictsMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof postDevicesDeviceIdSyncResolveConflicts>>,
+		TError,
+		{ deviceId: number; data: SyncResolveConflictsRequest },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof postDevicesDeviceIdSyncResolveConflicts>>,
+	TError,
+	{ deviceId: number; data: SyncResolveConflictsRequest },
+	TContext
+> => {
+	const mutationKey = ["postDevicesDeviceIdSyncResolveConflicts"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof postDevicesDeviceIdSyncResolveConflicts>>,
+		{ deviceId: number; data: SyncResolveConflictsRequest }
+	> = (props) => {
+		const { deviceId, data } = props ?? {};
+
+		return postDevicesDeviceIdSyncResolveConflicts(
+			deviceId,
+			data,
+			fetchOptions,
+		);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type PostDevicesDeviceIdSyncResolveConflictsMutationResult = NonNullable<
+	Awaited<ReturnType<typeof postDevicesDeviceIdSyncResolveConflicts>>
+>;
+export type PostDevicesDeviceIdSyncResolveConflictsMutationBody =
+	SyncResolveConflictsRequest;
+export type PostDevicesDeviceIdSyncResolveConflictsMutationError = unknown;
+
+export const usePostDevicesDeviceIdSyncResolveConflicts = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof postDevicesDeviceIdSyncResolveConflicts>>,
+			TError,
+			{ deviceId: number; data: SyncResolveConflictsRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof postDevicesDeviceIdSyncResolveConflicts>>,
+	TError,
+	{ deviceId: number; data: SyncResolveConflictsRequest },
+	TContext
+> => {
+	return useMutation(
+		getPostDevicesDeviceIdSyncResolveConflictsMutationOptions(options),
 		queryClient,
 	);
 };
@@ -3525,6 +3885,63 @@ export const getGetDevicesDeviceIdSyncPendingActionsResponseMock = (
 		},
 	]);
 
+export const getGetDevicesDeviceIdSyncSongsResponseMock = (
+	overrideResponse: Partial<Extract<GetDeviceSongsResponse, object>> = {},
+): GetDeviceSongsResponse =>
+	faker.helpers.arrayElement([
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.number.int(),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.number.int(),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.number.int(),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
+
 export const getPostDevicesDeviceIdSyncAcknowledgeResponseMock = (
 	overrideResponse: Partial<Extract<AcknowledgeActionResponse, object>> = {},
 ): AcknowledgeActionResponse =>
@@ -3569,38 +3986,25 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					undefined,
 				]),
 			})),
-			...overrideResponse,
-		},
-		{
-			toCreate: Array.from(
+			potentialConflicts: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				reason: faker.helpers.arrayElement([
+				localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				lastSyncedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						faker.date.past().toISOString().slice(0, 19) + "Z",
 						null,
 					]),
-					undefined,
+					null,
 				]),
-			})),
-			toUpdate: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				reason: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
+				songId: faker.number.int(),
+				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				serverChecksumAlgorithm: faker.string.alpha({
+					length: { min: 10, max: 20 },
+				}),
 			})),
 			...overrideResponse,
 		},
@@ -3634,6 +4038,160 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					]),
 					undefined,
 				]),
+			})),
+			potentialConflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				lastSyncedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					null,
+				]),
+				songId: faker.number.int(),
+				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				serverChecksumAlgorithm: faker.string.alpha({
+					length: { min: 10, max: 20 },
+				}),
+			})),
+			...overrideResponse,
+		},
+		{
+			toCreate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			toUpdate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			potentialConflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				lastSyncedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					null,
+				]),
+				songId: faker.number.int(),
+				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				serverChecksumAlgorithm: faker.string.alpha({
+					length: { min: 10, max: 20 },
+				}),
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getPostDevicesDeviceIdSyncResolveConflictsResponseMock = (
+	overrideResponse: Partial<Extract<SyncResolveConflictsResponse, object>> = {},
+): SyncResolveConflictsResponse =>
+	faker.helpers.arrayElement([
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			...overrideResponse,
+		},
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			...overrideResponse,
+		},
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			})),
 			...overrideResponse,
 		},
@@ -4149,6 +4707,30 @@ export const getGetDevicesDeviceIdSyncPendingActionsMockHandler = (
 	);
 };
 
+export const getGetDevicesDeviceIdSyncSongsMockHandler = (
+	overrideResponse?:
+		| GetDeviceSongsResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<GetDeviceSongsResponse> | GetDeviceSongsResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/devices/:deviceId/sync/songs",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getGetDevicesDeviceIdSyncSongsResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
 export const getPostDevicesDeviceIdSyncAcknowledgeMockHandler = (
 	overrideResponse?:
 		| AcknowledgeActionResponse
@@ -4190,6 +4772,32 @@ export const getPostDevicesDeviceIdSyncCheckMockHandler = (
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncCheckResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getPostDevicesDeviceIdSyncResolveConflictsMockHandler = (
+	overrideResponse?:
+		| SyncResolveConflictsResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) =>
+				| Promise<SyncResolveConflictsResponse>
+				| SyncResolveConflictsResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/devices/:deviceId/sync/resolve-conflicts",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getPostDevicesDeviceIdSyncResolveConflictsResponseMock(),
 				{ status: 200 },
 			);
 		},
@@ -4281,8 +4889,10 @@ export const getDevicesMock = () => [
 	getPostDevicesDeviceIdSyncSessionIdRecordsMockHandler(),
 	getPostDevicesDeviceIdSyncSessionIdCompleteMockHandler(),
 	getGetDevicesDeviceIdSyncPendingActionsMockHandler(),
+	getGetDevicesDeviceIdSyncSongsMockHandler(),
 	getPostDevicesDeviceIdSyncAcknowledgeMockHandler(),
 	getPostDevicesDeviceIdSyncCheckMockHandler(),
+	getPostDevicesDeviceIdSyncResolveConflictsMockHandler(),
 	getPostDevicesDeviceIdSyncUploadMockHandler(),
 	getGetDevicesFilterMetadataMockHandler(),
 	getGetDevicesFilterValuesMockHandler(),

@@ -5049,6 +5049,13 @@ export const getFetchSongMetadataResponseMock = (
 					]),
 					undefined,
 				]),
+				albumArtist: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
 				artists: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
 						null,
@@ -5123,6 +5130,13 @@ export const getFetchSongMetadataResponseMock = (
 					]),
 					undefined,
 				]),
+				albumArtist: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
+					]),
+					undefined,
+				]),
 				artists: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
 						null,
@@ -5194,6 +5208,13 @@ export const getFetchSongMetadataResponseMock = (
 						{
 							...getFetchSongMetadataResponseSongMetadataFieldOfSongMetadataAlbumMock(),
 						},
+					]),
+					undefined,
+				]),
+				albumArtist: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getFetchSongMetadataResponseSongMetadataFieldOfstringMock() },
 					]),
 					undefined,
 				]),

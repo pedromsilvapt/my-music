@@ -66,6 +66,21 @@ public class UsersController(
             user.ColorScheme = body.ColorScheme;
         }
 
+        if (body.Volume != null)
+        {
+            if (body.Volume < 0 || body.Volume > 1)
+            {
+                return BadRequest("Invalid volume. Must be between 0 and 1.");
+            }
+
+            user.Volume = body.Volume.Value;
+        }
+
+        if (body.IsMuted != null)
+        {
+            user.IsMuted = body.IsMuted.Value;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         return Ok(new GetUserResponse
