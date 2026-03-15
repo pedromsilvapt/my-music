@@ -88,10 +88,10 @@ export default function SongEditorModal({
                     notifications.show({title: "Error", message: `Failed to update song: ${errorDetail}`, color: "red"});
                     return;
                 }
-                
+
                 const savedSongId = variables.data.songId;
                 savedSongIds.current.add(savedSongId);
-                
+
                 setEditStates(prev => {
                     const newMap = new Map(prev);
                     const state = newMap.get(savedSongId);
@@ -104,7 +104,7 @@ export default function SongEditorModal({
                     }
                     return newMap;
                 });
-                
+
                 queryClient.invalidateQueries({queryKey: ["api", "songs"]});
                 queryClient.invalidateQueries({queryKey: ["api", "audits"]});
                 notifications.show({title: "Success", message: "Song updated successfully", color: "green"});
@@ -129,13 +129,13 @@ export default function SongEditorModal({
                     notifications.show({title: "Error", message: `Failed to update songs: ${errorDetail}`, color: "red"});
                     return;
                 }
-                
+
                 const successfulSongs = response.data.songs
                     .filter((s: BatchMultiUpdateSongResult) => s.success)
                     .map((s: BatchMultiUpdateSongResult) => s.id);
-                
+
                 successfulSongs.forEach(id => savedSongIds.current.add(id));
-                
+
                 setEditStates(prev => {
                     const newMap = new Map(prev);
                     successfulSongs.forEach(id => {
@@ -150,7 +150,7 @@ export default function SongEditorModal({
                     });
                     return newMap;
                 });
-                
+
                 queryClient.invalidateQueries({queryKey: ["api", "songs"]});
                 queryClient.invalidateQueries({queryKey: ["api", "audits"]});
                 const failed = response.data.songs.filter((s: BatchMultiUpdateSongResult) => !s.success);
@@ -490,7 +490,7 @@ export default function SongEditorModal({
                 centered
                 zIndex={ZINDEX_MODAL}
             >
-                <ScrollArea h={500}>
+                <ScrollArea>
                     <Stack gap="md">
                         {isMultiSong && (
                             <Group justify="space-between" align="center">
@@ -820,6 +820,13 @@ export default function SongEditorModal({
                         >
                             <IconSearch/>
                         </ActionIcon>
+                        {hasMetadata && (
+                            <Text size="sm" c="dimmed">
+                                {metadataFieldCount > 0
+                                    ? `(${metadataFieldCount} diff${metadataFieldCount === 1 ? '' : 's'})`
+                                    : '(0 diffs)'}
+                            </Text>
+                        )}
                     </Group>
                     <Group gap="xs">
                         <Button variant="subtle" onClick={handleClose} disabled={isLoading}>

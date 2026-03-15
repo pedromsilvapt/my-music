@@ -17,6 +17,7 @@ using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Songs;
 using MyMusic.Server.DTO.Sources;
 using MyMusic.Common.Sources;
+using MyMusic.Server;
 
 namespace MyMusic.Server.Controllers;
 
@@ -26,12 +27,15 @@ public class SongsController(
     ILogger<SongsController> logger,
     ICurrentUser currentUser,
     IOptions<Config> config,
+    IOptions<ServerConfig> serverConfig,
     ISongUpdateService songUpdateService,
     IMusicService musicService,
     IFileSystem fileSystem,
     ILogger<MusicImportJob> importJobLogger,
     ISourcesService sourcesService,
-    IAuditService auditService)
+    IAuditService auditService,
+    IThumbnailProxyService thumbnailProxyService,
+    IImageComparisonService imageComparisonService)
     : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
@@ -41,6 +45,9 @@ public class SongsController(
     private readonly ILogger<MusicImportJob> _importJobLogger = importJobLogger;
     private readonly ISourcesService _sourcesService = sourcesService;
     private readonly IAuditService _auditService = auditService;
+    private readonly IThumbnailProxyService _thumbnailProxyService = thumbnailProxyService;
+    private readonly IImageComparisonService _imageComparisonService = imageComparisonService;
+    private readonly ServerConfig _serverConfig = serverConfig.Value;
 
     [HttpGet(Name = "ListSongs")]
     public async Task<ListSongsResponse> List(
@@ -986,11 +993,26 @@ public class SongsController(
         }
 
         var bestMatch = FindClosestMatch(allResults, song);
-        
+
         var detailClient = await _sourcesService.GetSourceClientAsync(bestMatch.Source.Id, cancellationToken);
         var fullDetails = await detailClient.GetSongAsync(bestMatch.Song.Id, cancellationToken);
-        
-        var diff = CreateMetadataDiff(song, fullDetails);
+
+        fullDetails.Cover = _thumbnailProxyService.TransformArtwork(fullDetails.Cover);
+        if (fullDetails.Album is not null)
+        {
+            fullDetails.Album.Cover = _thumbnailProxyService.TransformArtwork(fullDetails.Album.Cover);
+        }
+
+        var diff = await CreateMetadataDiffAsync(song, fullDetails, cancellationToken);
+
+        if (diff.Cover is not null)
+        {
+            diff.Cover = new SongMetadataField<string>
+            {
+                Old = diff.Cover.Old,
+                New = _thumbnailProxyService.GetProxyUrl(diff.Cover.New),
+            };
+        }
 
         return new FetchMetadataResponse { Metadata = diff };
     }
@@ -1102,7 +1124,7 @@ public class SongsController(
         return score;
     }
 
-    private SongMetadataDiff CreateMetadataDiff(Song song, SourceSong sourceSong)
+    private async Task<SongMetadataDiff> CreateMetadataDiffAsync(Song song, SourceSong sourceSong, CancellationToken cancellationToken)
     {
         var diff = new SongMetadataDiff();
 
@@ -1186,14 +1208,27 @@ public class SongsController(
             };
         }
 
-        if (sourceSong.Cover != null)
+        if (sourceSong.Cover != null && !string.IsNullOrEmpty(sourceSong.Cover.Biggest))
         {
-            var oldCoverUrl = song.Cover != null ? $"/api/artwork/{song.CoverId}" : string.Empty;
-            diff.Cover = new SongMetadataField<string>
+            var imagesAreDifferent = true;
+
+            if (song.Cover != null && song.Cover.Data.Length > 0)
             {
-                Old = oldCoverUrl,
-                New = sourceSong.Cover.Biggest ?? string.Empty,
-            };
+                imagesAreDifferent = await _imageComparisonService.AreImagesDifferentAsync(
+                    song.Cover.Data,
+                    sourceSong.Cover.Biggest,
+                    cancellationToken);
+            }
+
+            if (imagesAreDifferent)
+            {
+                var oldCoverUrl = song.Cover != null ? $"{_serverConfig.ApiBasePath}/artwork/{song.CoverId}" : string.Empty;
+                diff.Cover = new SongMetadataField<string>
+                {
+                    Old = oldCoverUrl,
+                    New = sourceSong.Cover.Biggest,
+                };
+            }
         }
 
         return diff;

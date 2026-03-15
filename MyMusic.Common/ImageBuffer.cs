@@ -376,6 +376,11 @@ public class ImageBuffer
         return imageFormat;
     }
 
+    public static ImageFormat ImageFormatFromMimeType(string mimeType)
+    {
+        return GetImageFormatFromMimeType(mimeType);
+    }
+
     private static string? GetMimeTypeFromFileExtension(string? extension)
     {
         if (extension is null) return null;

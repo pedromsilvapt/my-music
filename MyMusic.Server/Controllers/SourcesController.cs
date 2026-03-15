@@ -13,9 +13,13 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("sources")]
-public class SourcesController(ILogger<SourcesController> logger, ISourcesService sourcesService) : ControllerBase
+public class SourcesController(
+    ILogger<SourcesController> logger,
+    ISourcesService sourcesService,
+    IThumbnailProxyService thumbnailProxyService) : ControllerBase
 {
     private readonly ILogger<SourcesController> _logger = logger;
+    private readonly IThumbnailProxyService _thumbnailProxyService = thumbnailProxyService;
 
     #region CRUD
 
@@ -128,6 +132,25 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
 
     #region Operations
 
+    #region Thumbnails
+
+    [HttpGet("thumbnails/{encodedUrl}", Name = "ProxyThumbnail")]
+    public async Task<IActionResult> ProxyThumbnail(
+        string encodedUrl,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _thumbnailProxyService.GetProxyImageAsync(encodedUrl, cancellationToken);
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return File(result.Data, result.MimeType);
+    }
+
+    #endregion Thumbnails
+
     #region Songs
 
     [HttpGet("{id}/songs/search/{query}", Name = "Search Songs")]
@@ -149,6 +172,15 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
         {
             var filterRequest = FilterDslParser.Parse(filter);
             results = InMemoryFilterBuilder.ApplyFilter(results, filterRequest).ToList();
+        }
+
+        foreach (var song in results)
+        {
+            song.Cover = _thumbnailProxyService.TransformArtwork(song.Cover);
+            if (song.Album is not null)
+            {
+                song.Album.Cover = _thumbnailProxyService.TransformArtwork(song.Album.Cover);
+            }
         }
 
         return results;
@@ -237,8 +269,15 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
         CancellationToken cancellationToken = default)
     {
         var source = await sourcesService.GetSourceClientAsync(id, cancellationToken);
+        var song = await source.GetSongAsync(songId, cancellationToken);
 
-        return await source.GetSongAsync(songId, cancellationToken);
+        song.Cover = _thumbnailProxyService.TransformArtwork(song.Cover);
+        if (song.Album is not null)
+        {
+            song.Album.Cover = _thumbnailProxyService.TransformArtwork(song.Album.Cover);
+        }
+
+        return song;
     }
 
     [HttpGet("{id}/songs/purchase/{songId}", Name = "Purchase Song")]
@@ -283,6 +322,12 @@ public class SourcesController(ILogger<SourcesController> logger, ISourcesServic
 
                 foreach (var song in searchResults)
                 {
+                    song.Cover = _thumbnailProxyService.TransformArtwork(song.Cover);
+                    if (song.Album is not null)
+                    {
+                        song.Album.Cover = _thumbnailProxyService.TransformArtwork(song.Album.Cover);
+                    }
+
                     results.Add(new SearchMetadataResult
                     {
                         SourceId = source.Id,

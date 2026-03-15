@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using MyMusic.Common.Services;
@@ -63,7 +64,13 @@ public static class HostBuilderExtensions
         });
         builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
+        builder.Services.AddDistributedMemoryCache();
+        builder.Services.AddHttpClient();
+        builder.Services.AddScoped<IThumbnailProxyService, ThumbnailProxyService>();
+        builder.Services.AddScoped<IImageComparisonService, ImageComparisonService>();
+
         builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
+        builder.Services.Configure<MyMusic.Common.ThumbnailCacheConfig>(builder.Configuration.GetSection("ThumbnailCache"));
 
         return builder;
     }
@@ -82,7 +89,7 @@ public static class HostBuilderExtensions
             app.MapOpenApi();
             app.MapScalarApiReference(opts =>
             {
-                opts.Servers = [new ScalarServer(serverConfig.ServerUrl)];
+                opts.Servers = [new ScalarServer(serverConfig.ClientUrl + serverConfig.ApiBasePath)];
                 opts.EnabledTargets =
                     [ScalarTarget.JavaScript, ScalarTarget.Shell, ScalarTarget.Python, ScalarTarget.CSharp];
                 opts.Theme = ScalarTheme.Purple;
