@@ -59,7 +59,6 @@ export interface SongEditState {
     metadata: SongMetadataDiff | null;
     form: FormState;
     checkboxes: FieldCheckboxes;
-    originalForm: FormState;
 }
 
 export function createInitialFormState(): FormState {
@@ -178,7 +177,7 @@ export function checkboxesFromMetadata(metadata: SongMetadataDiff | null): Field
         explicit: !!metadata.explicit,
         cover: !!metadata.cover,
         album: !!metadata.album,
-        albumArtist: !!(metadata as any).albumArtist,
+        albumArtist: !!metadata.albumArtist,
         artists: !!metadata.artists,
         genres: !!metadata.genres,
     };
@@ -193,35 +192,93 @@ export function getMetadataFieldValue<K extends keyof SongMetadataDiff>(
     return { old: (value as { old: unknown }).old, new: (value as { new: unknown }).new };
 }
 
-export function hasPendingChanges(state: SongEditState): boolean {
-    if (state.metadata != null) {
-        return true;
+export function hasFieldMetadataDiff(
+    metadata: SongMetadataDiff | null,
+    field: keyof FieldCheckboxes
+): boolean {
+    if (!metadata) return false;
+    if (field === "albumArtist") {
+        return !!(metadata.album?.new?.artistName || metadata.albumArtist);
     }
-    
-    if (state.form.title !== state.originalForm.title) return true;
-    if (state.form.year !== state.originalForm.year) return true;
-    if (state.form.lyrics !== state.originalForm.lyrics) return true;
-    if (state.form.rating !== state.originalForm.rating) return true;
-    if (state.form.explicit !== state.originalForm.explicit) return true;
-    if (state.form.cover !== state.originalForm.cover) return true;
-    
-    const formAlbumId = state.form.album?.id ?? 0;
-    const origAlbumId = state.originalForm.album?.id ?? 0;
-    if (formAlbumId !== origAlbumId) return true;
-    if (state.form.album?.name !== state.originalForm.album?.name) return true;
-    
-    const formAlbumArtistId = state.form.albumArtist?.id ?? 0;
-    const origAlbumArtistId = state.originalForm.albumArtist?.id ?? 0;
-    if (formAlbumArtistId !== origAlbumArtistId) return true;
-    if (state.form.albumArtist?.name !== state.originalForm.albumArtist?.name) return true;
-    
-    const formArtistIds = state.form.artists.map(a => a.id).sort().join(",");
-    const origArtistIds = state.originalForm.artists.map(a => a.id).sort().join(",");
-    if (formArtistIds !== origArtistIds) return true;
-    
-    const formGenreIds = state.form.genres.map(g => g.id).sort().join(",");
-    const origGenreIds = state.originalForm.genres.map(g => g.id).sort().join(",");
-    if (formGenreIds !== origGenreIds) return true;
-    
-    return false;
+    return metadata[field as keyof SongMetadataDiff] != null;
+}
+
+export function isFieldDifferentFromSong(
+    form: FormState,
+    song: GetSongResponseSong,
+    field: keyof FormState
+): boolean {
+    switch (field) {
+        case "title":
+            return form.title !== song.title;
+        case "year":
+            return form.year !== (song.year ?? undefined);
+        case "lyrics":
+            return form.lyrics !== (song.lyrics ?? "");
+        case "rating":
+            return form.rating !== (song.rating ?? undefined);
+        case "explicit":
+            return form.explicit !== song.isExplicit;
+        case "cover":
+            return form.cover != null;
+        case "album": {
+            if (!form.album && !song.album) return false;
+            if (!form.album || !song.album) return true;
+            if (form.album.id > 0) {
+                return form.album.id !== song.album.id;
+            }
+            return form.album.name !== song.album.name;
+        }
+        case "albumArtist": {
+            const songAlbumArtist = song.album?.artist;
+            if (!form.albumArtist && !songAlbumArtist) return false;
+            if (!form.albumArtist || !songAlbumArtist) return true;
+            if (form.albumArtist.id > 0) {
+                return form.albumArtist.id !== songAlbumArtist.id;
+            }
+            return form.albumArtist.name !== songAlbumArtist.name;
+        }
+        case "artists": {
+            const getKey = (a: {id: number; name: string}) => a.id > 0 ? `id:${a.id}` : `name:${a.name}`;
+            const formKeys = form.artists.map(getKey).sort().join(",");
+            const songKeys = song.artists.map(getKey).sort().join(",");
+            return formKeys !== songKeys;
+        }
+        case "genres": {
+            const getKey = (g: {id: number; name: string}) => g.id > 0 ? `id:${g.id}` : `name:${g.name}`;
+            const formKeys = form.genres.map(getKey).sort().join(",");
+            const songKeys = song.genres.map(getKey).sort().join(",");
+            return formKeys !== songKeys;
+        }
+        default:
+            return false;
+    }
+}
+
+export function shouldSaveField(
+    form: FormState,
+    song: GetSongResponseSong,
+    metadata: SongMetadataDiff | null,
+    checkbox: boolean,
+    field: keyof FieldCheckboxes
+): boolean {
+    if (hasFieldMetadataDiff(metadata, field)) {
+        return checkbox;
+    }
+    return isFieldDifferentFromSong(form, song, field as keyof FormState);
+}
+
+export function hasChangesToSave(
+    form: FormState,
+    song: GetSongResponseSong,
+    metadata: SongMetadataDiff | null,
+    checkboxes: FieldCheckboxes
+): boolean {
+    const fields: (keyof FieldCheckboxes)[] = [
+        "title", "year", "lyrics", "rating", "explicit", "cover",
+        "album", "albumArtist", "artists", "genres"
+    ];
+    return fields.some(field =>
+        shouldSaveField(form, song, metadata, checkboxes[field], field)
+    );
 }

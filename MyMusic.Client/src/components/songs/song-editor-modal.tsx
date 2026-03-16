@@ -36,10 +36,11 @@ import {
     createInitialCheckboxes,
     formStateFromMetadata,
     formStateFromSong,
-    hasPendingChanges,
+    hasChangesToSave,
+    shouldSaveField,
     type FormState,
     type FieldCheckboxes,
-} from "./song-edit-types.ts";
+} from "./song-edit-types";
 
 interface SongEditorModalProps {
     opened: boolean;
@@ -54,14 +55,12 @@ interface SongEditState {
     metadata: SongMetadataDiff | null;
     form: FormState;
     checkboxes: FieldCheckboxes;
-    originalForm: FormState;
 }
 
 function createSongEditState(song: GetSongResponseSong, metadata?: SongMetadataDiff | null): SongEditState {
-    const originalForm = formStateFromSong(song);
-    const form = metadata ? formStateFromMetadata(metadata, originalForm) : { ...originalForm };
+    const form = metadata ? formStateFromMetadata(metadata, formStateFromSong(song)) : formStateFromSong(song);
     const checkboxes = metadata ? checkboxesFromMetadata(metadata) : createInitialCheckboxes();
-    return { song, metadata: metadata ?? null, form, checkboxes, originalForm };
+    return { song, metadata: metadata ?? null, form, checkboxes };
 }
 
 export default function SongEditorModal({
@@ -80,11 +79,108 @@ export default function SongEditorModal({
     const isMultiSong = songs.length > 1;
     const currentState = currentIndex < songs.length ? editStates.get(songs[currentIndex]?.id) : null;
 
+    const modifiedSongIds = useMemo(() => {
+        const modified = new Set<number>();
+        editStates.forEach((state, id) => {
+            if (savedSongIds.current.has(id)) return;
+            if (hasChangesToSave(state.form, state.song, state.metadata, state.checkboxes)) {
+                modified.add(id);
+            }
+        });
+        return modified;
+    }, [editStates]);
+
+    const modifiedCountUpToCurrent = useMemo(() => {
+        return songs.slice(0, currentIndex + 1)
+            .filter(song => modifiedSongIds.has(song.id))
+            .length;
+    }, [songs, currentIndex, modifiedSongIds]);
+
+    const handleSaveModifiedUpToCurrent = async () => {
+        const songsToSave = songs.slice(0, currentIndex + 1).filter((song) => {
+            return modifiedSongIds.has(song.id);
+        });
+
+        if (songsToSave.length === 0) {
+            notifications.show({title: "Info", message: "No changes to save", color: "blue"});
+            return;
+        }
+
+        const updates = songsToSave.map((song) => {
+            const state = editStates.get(song.id)!;
+            const { song: songData, form, checkboxes, metadata } = state;
+            const update: Record<string, unknown> = { songId: songData.id };
+
+            if (shouldSaveField(form, songData, metadata, checkboxes.title, "title") && form.title) {
+                update.title = form.title;
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.year, "year") && form.year !== undefined) {
+                update.year = form.year;
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.lyrics, "lyrics") && form.lyrics) {
+                update.lyrics = form.lyrics;
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.rating, "rating") && form.rating !== undefined) {
+                update.rating = form.rating;
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.explicit, "explicit")) {
+                update.explicit = form.explicit;
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover") && form.cover) {
+                update.cover = form.cover;
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.album, "album") && form.album) {
+                if (form.album.id > 0) {
+                    update.albumId = form.album.id;
+                } else {
+                    update.albumName = form.album.name;
+                }
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.albumArtist, "albumArtist") && form.albumArtist) {
+                if (form.albumArtist.id > 0) {
+                    update.albumArtistId = form.albumArtist.id;
+                } else {
+                    update.albumArtistName = form.albumArtist.name;
+                }
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists") && form.artists.length > 0) {
+                update.artistIds = form.artists.filter(a => a.id > 0).map(a => a.id);
+                update.artistNames = form.artists.filter(a => a.id < 0).map(a => a.name);
+            }
+            if (shouldSaveField(form, songData, metadata, checkboxes.genres, "genres") && form.genres.length > 0) {
+                update.genreIds = form.genres.filter(g => g.id > 0).map(g => g.id);
+                update.genreNames = form.genres.filter(g => g.id < 0).map(g => g.name);
+            }
+
+            return update as {
+                songId: number;
+                title?: string;
+                year?: number;
+                lyrics?: string;
+                rating?: number;
+                explicit?: boolean;
+                cover?: string;
+                albumId?: number;
+                albumName?: string;
+                albumArtistId?: number;
+                albumArtistName?: string;
+                artistIds?: number[];
+                artistNames?: string[];
+                genreIds?: number[];
+                genreNames?: string[];
+            };
+        });
+
+        batchMultiUpdateSongs.mutate({
+            data: { updates },
+        });
+    };
+
     const updateSong = useUpdateSong({
         mutation: {
             onSuccess: (response, variables) => {
                 if (response.status >= 400) {
-                    const errorDetail = (response.data as any)?.detail || "Unknown error";
+                    const errorDetail = (response.data as unknown)?.detail || "Unknown error";
                     notifications.show({title: "Error", message: `Failed to update song: ${errorDetail}`, color: "red"});
                     return;
                 }
@@ -99,7 +195,6 @@ export default function SongEditorModal({
                         newMap.set(savedSongId, {
                             ...state,
                             metadata: null,
-                            originalForm: { ...state.form },
                         });
                     }
                     return newMap;
@@ -125,7 +220,7 @@ export default function SongEditorModal({
         mutation: {
             onSuccess: (response) => {
                 if (response.status >= 400) {
-                    const errorDetail = (response.data as any)?.detail || "Unknown error";
+                    const errorDetail = (response.data as unknown)?.detail || "Unknown error";
                     notifications.show({title: "Error", message: `Failed to update songs: ${errorDetail}`, color: "red"});
                     return;
                 }
@@ -134,7 +229,7 @@ export default function SongEditorModal({
                     .filter((s: BatchMultiUpdateSongResult) => s.success)
                     .map((s: BatchMultiUpdateSongResult) => s.id);
 
-                successfulSongs.forEach(id => savedSongIds.current.add(id));
+                successfulSongs.forEach(id => { savedSongIds.current.add(id); });
 
                 setEditStates(prev => {
                     const newMap = new Map(prev);
@@ -144,7 +239,6 @@ export default function SongEditorModal({
                             newMap.set(id, {
                                 ...state,
                                 metadata: null,
-                                originalForm: { ...state.form },
                             });
                         }
                     });
@@ -175,7 +269,7 @@ export default function SongEditorModal({
         mutation: {
             onSuccess: (response) => {
                 if (response.status >= 400) {
-                    const errorDetail = (response.data as any)?.detail || "Unknown error";
+                    const errorDetail = (response.data as unknown)?.detail || "Unknown error";
                     notifications.show({title: "Error", message: `Failed to fetch metadata: ${errorDetail}`, color: "red"});
                     return;
                 }
@@ -216,7 +310,7 @@ export default function SongEditorModal({
     const handleMetadataFetched = useCallback((metadata: SongMetadataDiff) => {
         if (!currentState) return;
 
-        const newForm = formStateFromMetadata(metadata, currentState.originalForm);
+        const newForm = formStateFromMetadata(metadata, formStateFromSong(currentState.song));
         const newCheckboxes = checkboxesFromMetadata(metadata);
 
         setEditStates((prev) => {
@@ -304,47 +398,45 @@ export default function SongEditorModal({
         const { form, checkboxes, metadata } = currentState;
         const song = currentState.song;
 
-        const hasDiff = metadata != null;
-
         const data: UpdateSongRequest = { songId: song.id };
 
-        if (!hasDiff || checkboxes.title) {
+        if (shouldSaveField(form, song, metadata, checkboxes.title, "title")) {
             data.title = form.title || null;
         }
-        if (!hasDiff || checkboxes.year) {
+        if (shouldSaveField(form, song, metadata, checkboxes.year, "year")) {
             data.year = form.year ?? null;
         }
-        if (!hasDiff || checkboxes.lyrics) {
+        if (shouldSaveField(form, song, metadata, checkboxes.lyrics, "lyrics")) {
             data.lyrics = form.lyrics || null;
         }
-        if (!hasDiff || checkboxes.rating) {
+        if (shouldSaveField(form, song, metadata, checkboxes.rating, "rating")) {
             data.rating = form.rating ?? null;
         }
-        if (!hasDiff || checkboxes.explicit) {
+        if (shouldSaveField(form, song, metadata, checkboxes.explicit, "explicit")) {
             data.explicit = form.explicit;
         }
-        if (!hasDiff || checkboxes.cover) {
+        if (shouldSaveField(form, song, metadata, checkboxes.cover, "cover")) {
             data.cover = form.cover || null;
         }
-        if (!hasDiff || checkboxes.album) {
+        if (shouldSaveField(form, song, metadata, checkboxes.album, "album")) {
             if (form.album && form.album.id > 0) {
                 data.albumId = form.album.id;
             } else if (form.album) {
                 data.albumName = form.album.name;
             }
         }
-        if (!hasDiff || checkboxes.albumArtist) {
+        if (shouldSaveField(form, song, metadata, checkboxes.albumArtist, "albumArtist")) {
             if (form.albumArtist && form.albumArtist.id > 0) {
                 data.albumArtistId = form.albumArtist.id;
             } else if (form.albumArtist) {
                 data.albumArtistName = form.albumArtist.name;
             }
         }
-        if (!hasDiff || checkboxes.artists) {
+        if (shouldSaveField(form, song, metadata, checkboxes.artists, "artists")) {
             data.artistIds = form.artists.filter(a => a.id > 0).map(a => a.id);
             data.artistNames = form.artists.filter(a => a.id < 0).map(a => a.name);
         }
-        if (!hasDiff || checkboxes.genres) {
+        if (shouldSaveField(form, song, metadata, checkboxes.genres, "genres")) {
             data.genreIds = form.genres.filter(g => g.id > 0).map(g => g.id);
             data.genreNames = form.genres.filter(g => g.id < 0).map(g => g.name);
         }
@@ -359,7 +451,7 @@ export default function SongEditorModal({
         const statesWithChanges = Array.from(editStates.values())
             .filter(state => {
                 if (savedSongIds.current.has(state.song.id)) return false;
-                return hasPendingChanges(state);
+                return hasChangesToSave(state.form, state.song, state.metadata, state.checkboxes);
             });
 
         if (statesWithChanges.length === 0) {
@@ -368,34 +460,46 @@ export default function SongEditorModal({
         }
 
         const updates = statesWithChanges.map((state) => {
-            const { song, form, checkboxes } = state;
+            const { song, form, checkboxes, metadata } = state;
             const update: Record<string, unknown> = { songId: song.id };
 
-            if (checkboxes.title && form.title) update.title = form.title;
-            if (checkboxes.year && form.year !== undefined) update.year = form.year;
-            if (checkboxes.lyrics && form.lyrics) update.lyrics = form.lyrics;
-            if (checkboxes.rating && form.rating !== undefined) update.rating = form.rating;
-            if (checkboxes.explicit) update.explicit = form.explicit;
-            if (checkboxes.cover && form.cover) update.cover = form.cover;
-            if (checkboxes.album && form.album) {
+            if (shouldSaveField(form, song, metadata, checkboxes.title, "title") && form.title) {
+                update.title = form.title;
+            }
+            if (shouldSaveField(form, song, metadata, checkboxes.year, "year") && form.year !== undefined) {
+                update.year = form.year;
+            }
+            if (shouldSaveField(form, song, metadata, checkboxes.lyrics, "lyrics") && form.lyrics) {
+                update.lyrics = form.lyrics;
+            }
+            if (shouldSaveField(form, song, metadata, checkboxes.rating, "rating") && form.rating !== undefined) {
+                update.rating = form.rating;
+            }
+            if (shouldSaveField(form, song, metadata, checkboxes.explicit, "explicit")) {
+                update.explicit = form.explicit;
+            }
+            if (shouldSaveField(form, song, metadata, checkboxes.cover, "cover") && form.cover) {
+                update.cover = form.cover;
+            }
+            if (shouldSaveField(form, song, metadata, checkboxes.album, "album") && form.album) {
                 if (form.album.id > 0) {
                     update.albumId = form.album.id;
                 } else {
                     update.albumName = form.album.name;
                 }
             }
-            if (checkboxes.albumArtist && form.albumArtist) {
+            if (shouldSaveField(form, song, metadata, checkboxes.albumArtist, "albumArtist") && form.albumArtist) {
                 if (form.albumArtist.id > 0) {
                     update.albumArtistId = form.albumArtist.id;
                 } else {
                     update.albumArtistName = form.albumArtist.name;
                 }
             }
-            if (checkboxes.artists && form.artists.length > 0) {
+            if (shouldSaveField(form, song, metadata, checkboxes.artists, "artists") && form.artists.length > 0) {
                 update.artistIds = form.artists.filter(a => a.id > 0).map(a => a.id);
                 update.artistNames = form.artists.filter(a => a.id < 0).map(a => a.name);
             }
-            if (checkboxes.genres && form.genres.length > 0) {
+            if (shouldSaveField(form, song, metadata, checkboxes.genres, "genres") && form.genres.length > 0) {
                 update.genreIds = form.genres.filter(g => g.id > 0).map(g => g.id);
                 update.genreNames = form.genres.filter(g => g.id < 0).map(g => g.name);
             }
@@ -504,7 +608,7 @@ export default function SongEditorModal({
                                     </ActionIcon>
                                     <Text size="sm" c="dimmed">
                                         {currentState.song.title}
-                                        {currentState && !savedSongIds.current.has(currentState.song.id) && hasPendingChanges(currentState) && " *"}
+                                        {currentState && !savedSongIds.current.has(currentState.song.id) && hasChangesToSave(currentState.form, currentState.song, currentState.metadata, currentState.checkboxes) && " *"}
                                     </Text>
                                     <ActionIcon
                                         variant="light"
@@ -581,7 +685,7 @@ export default function SongEditorModal({
                             onChange={(value) => handleFormChange({album: value as AutocompleteItem | null})}
                             onSearch={searchAlbums}
                             diffMode={hasMetadata && !!currentState.metadata?.album}
-                            originalValue={currentState.originalForm.album}
+                            originalValue={currentState.song.album ? { id: currentState.song.album.id, name: currentState.song.album.name } : null}
                             isChecked={currentState.checkboxes.album}
                             onCheckChange={(checked) => handleCheckboxChange("album", checked)}
                             originalDisplayValue={currentState.metadata?.album?.old?.name}
@@ -594,7 +698,7 @@ export default function SongEditorModal({
                             onChange={(value) => handleFormChange({albumArtist: value as AutocompleteItem | null})}
                             onSearch={searchArtists}
                             diffMode={hasMetadata && !!currentState.metadata?.album?.new?.artistName}
-                            originalValue={currentState.originalForm.albumArtist}
+                            originalValue={currentState.song.album?.artist ? { id: currentState.song.album.artist.id, name: currentState.song.album.artist.name } : null}
                             isChecked={currentState.checkboxes.albumArtist}
                             onCheckChange={(checked) => handleCheckboxChange("albumArtist", checked)}
                             originalDisplayValue={currentState.metadata?.album?.old?.artistName ?? undefined}
@@ -607,7 +711,7 @@ export default function SongEditorModal({
                             onChange={(value) => handleFormChange({artists: value})}
                             onSearch={searchArtists}
                             diffMode={hasMetadata && !!currentState.metadata?.artists}
-                            originalValue={currentState.originalForm.artists}
+                            originalValue={currentState.song.artists.map(a => ({ id: a.id, name: a.name }))}
                             isChecked={currentState.checkboxes.artists}
                             onCheckChange={(checked) => handleCheckboxChange("artists", checked)}
                             originalDisplayValue={currentState.metadata?.artists?.old?.map(a => a.name).join(", ")}
@@ -620,7 +724,7 @@ export default function SongEditorModal({
                             onChange={(value) => handleFormChange({genres: value})}
                             onSearch={searchGenres}
                             diffMode={hasMetadata && !!currentState.metadata?.genres}
-                            originalValue={currentState.originalForm.genres}
+                            originalValue={currentState.song.genres.map(g => ({ id: g.id, name: g.name }))}
                             isChecked={currentState.checkboxes.genres}
                             onCheckChange={(checked) => handleCheckboxChange("genres", checked)}
                             originalDisplayValue={currentState.metadata?.genres?.old?.join(", ")}
@@ -833,12 +937,21 @@ export default function SongEditorModal({
                             Cancel
                         </Button>
                         {isMultiSong && (
-                            <Button onClick={() => handleSaveCurrent(false)} loading={updateSong.isPending} disabled={isLoading}>
-                                Save Current
+                            <Button 
+                                onClick={() => {
+                                    handleSaveModifiedUpToCurrent();
+                                    if (modifiedCountUpToCurrent > 0 && currentIndex < songs.length - 1) {
+                                        setCurrentIndex(currentIndex + 1);
+                                    }
+                                }} 
+                                loading={batchMultiUpdateSongs.isPending} 
+                                disabled={isLoading || modifiedCountUpToCurrent === 0}
+                            >
+                                Save Modified ({modifiedCountUpToCurrent})
                             </Button>
                         )}
-                        <Button onClick={isMultiSong ? handleSaveAll : () => handleSaveCurrent(true)} loading={isLoading}>
-                            {isMultiSong ? "Save All" : "Save"}
+                        <Button onClick={isMultiSong ? handleSaveAll : () => handleSaveCurrent(true)} loading={isLoading} disabled={isMultiSong ? false : modifiedCountUpToCurrent === 0}>
+                            {isMultiSong ? "Save All" : `Save Modified (${modifiedCountUpToCurrent})`}
                         </Button>
                     </Group>
                 </Group>
