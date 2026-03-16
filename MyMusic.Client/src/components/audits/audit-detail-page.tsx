@@ -1,6 +1,5 @@
 import {Badge, Button, Group, Text, Title} from "@mantine/core";
 import {IconRefresh} from '@tabler/icons-react';
-import {useQueryClient} from "@tanstack/react-query";
 import {useParams} from "@tanstack/react-router";
 import {useCallback, useEffect, useState} from "react";
 import {
@@ -10,18 +9,14 @@ import {
     useListAuditNonConformities,
     useScanAuditRule
 } from "../../client/audits.ts";
-import {getSong} from "../../client/songs.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {GetSongResponseSong} from "../../model";
 import Collection from "../common/collection/collection.tsx";
-import SongEditorModal from "../songs/song-editor-modal.tsx";
 import GrantWaiverModal from "./grant-waiver-modal.tsx";
 import {useAuditNonConformitiesSchema} from "./useAuditNonConformitiesSchema.tsx";
 
 export default function AuditDetailPage() {
     const {auditId} = useParams({from: '/audits/$auditId'});
     const id = parseInt(auditId, 10);
-    const queryClient = useQueryClient();
 
     const ruleQuery = useGetAuditRule(id);
     const nonConformitiesQuery = useListAuditNonConformities(id);
@@ -41,8 +36,6 @@ export default function AuditDetailPage() {
     const [scanning, setScanning] = useState(false);
     const [waiverModalOpen, setWaiverModalOpen] = useState(false);
     const [pendingWaiverIds, setPendingWaiverIds] = useState<number[]>([]);
-    const [editorOpened, setEditorOpened] = useState(false);
-    const [songsToEdit, setSongsToEdit] = useState<GetSongResponseSong[]>([]);
 
     const rule = ruleResponse?.data?.rule;
     const nonConformities = nonConformitiesResponse?.data?.nonConformities ?? [];
@@ -61,7 +54,6 @@ export default function AuditDetailPage() {
         }
     }, [id, scanMutation, refetchNonConformities]);
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleSetWaiver = useCallback(async (ids: number[], hasWaiver: boolean, _reason?: string | null) => {
         if (hasWaiver) {
             setPendingWaiverIds(ids);
@@ -98,25 +90,7 @@ export default function AuditDetailPage() {
         await refetchNonConformities();
     }, [batchDeleteMutation, refetchNonConformities]);
 
-    const handleEditSongs = useCallback(async (songIds: number[]) => {
-        const songs: GetSongResponseSong[] = [];
-        for (const songId of songIds) {
-            const response = await getSong(songId);
-            if (response.data.song) {
-                songs.push(response.data.song);
-            }
-        }
-        setSongsToEdit(songs);
-        setEditorOpened(true);
-    }, []);
-
-    const handleEditorSuccess = useCallback(async () => {
-        setEditorOpened(false);
-        setSongsToEdit([]);
-        await queryClient.invalidateQueries({queryKey: ["api", "audits"]});
-    }, [queryClient]);
-
-    const schema = useAuditNonConformitiesSchema(handleSetWaiver, handleDelete, handleEditSongs);
+    const schema = useAuditNonConformitiesSchema(handleSetWaiver, handleDelete);
 
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
@@ -157,16 +131,6 @@ export default function AuditDetailPage() {
                 onConfirm={handleWaiverConfirm}
                 count={pendingWaiverIds.length}
                 loading={batchSetWaiverMutation.isPending}
-            />
-
-            <SongEditorModal
-                opened={editorOpened}
-                onClose={() => {
-                    setEditorOpened(false);
-                    setSongsToEdit([]);
-                }}
-                songs={songsToEdit}
-                onSuccess={handleEditorSuccess}
             />
         </div>
     );

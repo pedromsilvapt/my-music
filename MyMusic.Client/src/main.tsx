@@ -12,6 +12,7 @@ import ManagePlaylistsProvider from "./contexts/manage-playlists-context.tsx";
 import {PlayerProvider} from "./contexts/player-context.tsx";
 import {ArtworkLightboxProvider} from "./contexts/artwork-lightbox-context.tsx";
 import VolumeInitializer from "./components/volume-initializer.tsx";
+import SongEditorContextModal from "./components/songs/song-editor-context-modal.tsx";
 
 // Import the generated route tree
 import {routeTree} from './routeTree.gen'
@@ -37,20 +38,23 @@ createRoot(document.getElementById('root')!).render(
         <QueryClientProvider client={queryClient}>
             <MantineProvider defaultColorScheme="auto">
                 <Notifications position="top-right"/>
-                <ModalsProvider>
-                    <PlayerProvider>
-                        <VolumeInitializer/>
-                        <ManagePlaylistsProvider>
-                            <ManageDevicesProvider>
-                                <CollectionStoreProvider>
-                                    <ArtworkLightboxProvider>
+                <ArtworkLightboxProvider>
+                    <ModalsProvider
+                        modals={{
+                            'song-editor': SongEditorContextModal,
+                        }}>
+                        <PlayerProvider>
+                            <VolumeInitializer/>
+                            <ManagePlaylistsProvider>
+                                <ManageDevicesProvider>
+                                    <CollectionStoreProvider>
                                         <RouterProvider router={router}/>
-                                    </ArtworkLightboxProvider>
-                                </CollectionStoreProvider>
-                            </ManageDevicesProvider>
-                        </ManagePlaylistsProvider>
-                    </PlayerProvider>
-                </ModalsProvider>
+                                    </CollectionStoreProvider>
+                                </ManageDevicesProvider>
+                            </ManagePlaylistsProvider>
+                        </PlayerProvider>
+                    </ModalsProvider>
+                </ArtworkLightboxProvider>
             </MantineProvider>
         </QueryClientProvider>
     </StrictMode>,

@@ -17,9 +17,9 @@ import {
 } from "@tabler/icons-react";
 import {Link, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
-import {useState} from "react";
 
 import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
+import {modals} from '@mantine/modals';
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueueMutations} from "../../contexts/player-context.tsx";
@@ -28,7 +28,6 @@ import {useQueryData} from "../../hooks/use-query-data.ts";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
 import DeviceBadge from "../devices/device-badge.tsx";
-import SongEditorModal from "./song-editor-modal.tsx";
 
 export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
@@ -39,7 +38,6 @@ export default function SongDetailPage() {
     const toggleFavorite = useToggleFavorite();
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
-    const [editorOpened, setEditorOpened] = useState(false);
 
     if (!song) {
         return <Box p="md">Loading...</Box>;
@@ -130,7 +128,11 @@ export default function SongDetailPage() {
                             <Button
                                 leftSection={<IconEdit/>}
                                 variant="default"
-                                onClick={() => setEditorOpened(true)}
+                                onClick={() => modals.openContextModal({
+                                    modal: 'song-editor',
+                                    title: 'Edit Song',
+                                    innerProps: { songIds: [song.id] },
+                                })}
                             >
                                 Edit
                             </Button>
@@ -167,15 +169,6 @@ export default function SongDetailPage() {
                     }
                 </Box>
             </Stack>
-
-            <SongEditorModal
-                opened={editorOpened}
-                onClose={() => setEditorOpened(false)}
-                songs={[song]}
-                onSuccess={() => {
-                    setEditorOpened(false);
-                }}
-            />
         </>
     );
 }

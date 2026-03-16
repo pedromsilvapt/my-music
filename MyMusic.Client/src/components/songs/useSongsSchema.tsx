@@ -5,6 +5,7 @@ import {
     IconArrowsShuffle,
     IconDevicesCog,
     IconDownload,
+    IconEdit,
     IconHeart,
     IconHeartFilled,
     IconMusic,
@@ -13,6 +14,7 @@ import {
     IconX
 } from "@tabler/icons-react";
 import {saveAs} from 'file-saver';
+import {modals} from '@mantine/modals';
 import {useCallback, useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
@@ -179,6 +181,18 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     renderLabel: () => "Manage Devices",
                     onClick: (songs: ListSongsItem[]) => {
                         openManageDevices(songs.map(s => s.id));
+                    },
+                },
+                {
+                    name: "edit",
+                    renderIcon: () => <IconEdit/>,
+                    renderLabel: () => `Edit ${elems.length === 1 ? 'Song' : `${elems.length} Songs`}`,
+                    onClick: (songs: ListSongsItem[]) => {
+                        modals.openContextModal({
+                            modal: 'song-editor',
+                            title: 'Edit Song',
+                            innerProps: { songIds: songs.map(s => s.id) },
+                        });
                     },
                 },
                 {

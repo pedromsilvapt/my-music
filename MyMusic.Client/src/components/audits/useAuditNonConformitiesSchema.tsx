@@ -1,4 +1,5 @@
 import {Badge, Group, Text} from "@mantine/core";
+import {modals} from '@mantine/modals';
 import {IconCheck, IconEdit, IconTrash, IconX} from "@tabler/icons-react";
 import {useMemo} from "react";
 import type {ListAuditNonConformitiesItem} from "../../model";
@@ -10,8 +11,7 @@ import SongTitle from "../common/fields/song-title";
 
 export function useAuditNonConformitiesSchema(
     onSetWaiver: (ids: number[], hasWaiver: boolean, reason?: string | null) => void,
-    onDelete: (ids: number[]) => void,
-    onEditSongs: (songIds: number[]) => void
+    onDelete: (ids: number[]) => void
 ): CollectionSchema<ListAuditNonConformitiesItem> {
     return useMemo(() => ({
         key: row => row.id,
@@ -83,7 +83,11 @@ export function useAuditNonConformitiesSchema(
                     renderLabel: () => `Edit ${uniqueSongIds.length === 1 ? 'Song' : `${uniqueSongIds.length} Songs`}`,
                     onClick: () => {
                         if (uniqueSongIds.length > 0) {
-                            onEditSongs(uniqueSongIds);
+                            modals.openContextModal({
+                                modal: 'song-editor',
+                                title: 'Edit Song',
+                                innerProps: { songIds: uniqueSongIds },
+                            });
                         }
                     },
                 },
@@ -141,5 +145,5 @@ export function useAuditNonConformitiesSchema(
                 )}
             </Group>
         ),
-    }) as CollectionSchema<ListAuditNonConformitiesItem>, [onSetWaiver, onDelete, onEditSongs]);
+    }) as CollectionSchema<ListAuditNonConformitiesItem>, [onSetWaiver, onDelete]);
 }
