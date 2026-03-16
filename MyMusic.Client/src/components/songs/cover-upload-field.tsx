@@ -1,7 +1,7 @@
 import {ActionIcon, Box, Checkbox, Group, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconClipboard, IconDownload, IconMusic, IconUpload, IconX} from "@tabler/icons-react";
-import {useCallback, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
 
 interface CoverDimensions {
@@ -33,14 +33,49 @@ export default function CoverUploadField({
                                              isChecked = true,
                                              onCheckChange,
                                              oldCoverUrl,
-                                          }: CoverUploadFieldProps) {
+                                           }: CoverUploadFieldProps) {
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [previewDimensions, setPreviewDimensions] = useState<CoverDimensions | null>(currentDimensions ?? null);
+    const [oldCoverDimensions, setOldCoverDimensions] = useState<CoverDimensions | null>(null);
+    const [newCoverDimensions, setNewCoverDimensions] = useState<CoverDimensions | null>(null);
     const {openLightbox} = useArtworkLightbox();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const hasChanged = diffMode && value !== null;
+
+    const loadImageDimensions = useCallback((src: string): Promise<CoverDimensions | null> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve({width: img.width, height: img.height});
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+    }, []);
+
+    useEffect(() => {
+        if (diffMode && oldCoverUrl) {
+            loadImageDimensions(oldCoverUrl).then(setOldCoverDimensions);
+        } else {
+            setOldCoverDimensions(null);
+        }
+    }, [diffMode, oldCoverUrl, loadImageDimensions]);
+
+    useEffect(() => {
+        if (diffMode && value) {
+            loadImageDimensions(value).then(setNewCoverDimensions);
+        } else if (diffMode && currentCoverId) {
+            loadImageDimensions(`/api/artwork/${currentCoverId}`).then(setNewCoverDimensions);
+        } else {
+            setNewCoverDimensions(null);
+        }
+    }, [diffMode, value, currentCoverId, loadImageDimensions]);
+
+    useEffect(() => {
+        if (!diffMode && currentCoverId && !previewDimensions) {
+            loadImageDimensions(`/api/artwork/${currentCoverId}`).then(setPreviewDimensions);
+        }
+    }, [diffMode, currentCoverId, previewDimensions, loadImageDimensions]);
 
     const loadImageFromBase64 = useCallback((base64: string): Promise<CoverDimensions> => {
         return new Promise((resolve, reject) => {
@@ -144,63 +179,77 @@ export default function CoverUploadField({
 
             {showSideBySide ? (
                 <Group align="flex-start" gap="md">
-                    <Stack gap="xs" align="center">
-                        <Text size="xs" c={isChecked ? "red" : "dimmed"}>Old</Text>
-                        <Box
-                            style={{
-                                width: 120,
-                                height: 120,
-                                border: `1px solid ${oldBorderColor}`,
-                                borderRadius: "var(--mantine-radius-sm)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                overflow: "hidden",
-                                backgroundColor: oldBgColor,
-                                cursor: "pointer",
-                            }}
-                            onClick={() => oldCoverUrl && handleOpenLightbox(oldCoverUrl)}
-                        >
-                            {oldCoverUrl ? (
+                    <Group gap="md">
+                        <Stack gap="xs" align="center">
+                            <Text size="xs" c={isChecked ? "red" : "dimmed"}>Old</Text>
+                            <Box
+                                style={{
+                                    width: 120,
+                                    height: 120,
+                                    border: `1px solid ${oldBorderColor}`,
+                                    borderRadius: "var(--mantine-radius-sm)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    overflow: "hidden",
+                                    backgroundColor: oldBgColor,
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => oldCoverUrl && handleOpenLightbox(oldCoverUrl)}
+                            >
+                                {oldCoverUrl ? (
+                                    <img
+                                        src={oldCoverUrl.startsWith("data:") ? oldCoverUrl : oldCoverUrl}
+                                        alt="Old Cover"
+                                        style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
+                                    />
+                                ) : (
+                                    <IconMusic size={40} color="var(--mantine-color-gray-4)"/>
+                                )}
+                            </Box>
+                            {oldCoverDimensions && (
+                                <Text size="xs" c="dimmed">
+                                    {oldCoverDimensions.width} x {oldCoverDimensions.height}
+                                </Text>
+                            )}
+                        </Stack>
+
+                        <Stack gap="xs" align="center" style={{justifyContent: "center"}}>
+                            <Text size="xs" c="dimmed">→</Text>
+                        </Stack>
+
+                        <Stack gap="xs" align="center">
+                            <Text size="xs" c={isChecked ? "green" : "dimmed"}>New</Text>
+                            <Box
+                                style={{
+                                    width: 120,
+                                    height: 120,
+                                    border: `1px solid ${newBorderColor}`,
+                                    borderRadius: "var(--mantine-radius-sm)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    overflow: "hidden",
+                                    backgroundColor: newBgColor,
+                                    cursor: "pointer",
+                                }}
+                                onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
+                            >
                                 <img
-                                    src={oldCoverUrl.startsWith("data:") ? oldCoverUrl : oldCoverUrl}
-                                    alt="Old Cover"
+                                    src={previewSrc ?? ""}
+                                    alt="New Cover"
                                     style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
                                 />
-                            ) : (
-                                <IconMusic size={40} color="var(--mantine-color-gray-4)"/>
+                            </Box>
+                            {newCoverDimensions && (
+                                <Text size="xs" c="dimmed">
+                                    {newCoverDimensions.width} x {newCoverDimensions.height}
+                                </Text>
                             )}
-                        </Box>
-                    </Stack>
+                        </Stack>
+                    </Group>
 
-                    <Stack gap="xs" align="center" style={{justifyContent: "center"}}>
-                        <Text size="xs" c="dimmed">→</Text>
-                    </Stack>
-
-                    <Stack gap="xs" align="center">
-                        <Text size="xs" c={isChecked ? "green" : "dimmed"}>New</Text>
-                        <Box
-                            style={{
-                                width: 120,
-                                height: 120,
-                                border: `1px solid ${newBorderColor}`,
-                                borderRadius: "var(--mantine-radius-sm)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                overflow: "hidden",
-                                backgroundColor: newBgColor,
-                                cursor: "pointer",
-                            }}
-                            onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
-                        >
-                            <img
-                                src={previewSrc ?? ""}
-                                alt="New Cover"
-                                style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
-                            />
-                        </Box>
-
+                    <Stack gap="xs" style={{minWidth: 200}}>
                         <Group gap="xs">
                             <input
                                 ref={fileInputRef}
@@ -243,45 +292,66 @@ export default function CoverUploadField({
                                 <IconX/>
                             </ActionIcon>
                         </Group>
+
+                        <Group gap="xs" align="flex-end">
+                            <TextInput
+                                placeholder="Paste image URL..."
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                                style={{flex: 1}}
+                                disabled={disabled || !isChecked}
+                            />
+                            <ActionIcon
+                                variant="light"
+                                size="lg"
+                                onClick={handleUrlDownload}
+                                disabled={!url || disabled || !isChecked}
+                                loading={loading}
+                                title="Download from URL"
+                            >
+                                <IconDownload/>
+                            </ActionIcon>
+                        </Group>
                     </Stack>
                 </Group>
             ) : (
                 <Group align="flex-start" gap="md">
-                    <Box
-                        style={{
-                            width: 150,
-                            height: 150,
-                            border: "1px solid var(--mantine-color-gray-3)",
-                            borderRadius: "var(--mantine-radius-sm)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden",
-                            backgroundColor: hasChanged ? "var(--mantine-color-green-0)" : undefined,
-                            borderColor: hasChanged ? "var(--mantine-color-green-6)" : undefined,
-                            cursor: previewSrc ? "pointer" : undefined,
-                        }}
-                        onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
-                    >
-                        {previewSrc ? (
-                            <img
-                                src={previewSrc}
-                                alt="Cover"
-                                style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
-                            />
-                        ) : (
-                            <IconMusic size={50} color="var(--mantine-color-gray-4)"/>
-                        )}
-                    </Box>
-
-                    <Stack gap="xs" style={{flex: 1}}>
+                    <Stack gap="xs" align="center">
+                        <Box
+                            style={{
+                                width: 150,
+                                height: 150,
+                                border: "1px solid var(--mantine-color-gray-3)",
+                                borderRadius: "var(--mantine-radius-sm)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                backgroundColor: hasChanged ? "var(--mantine-color-green-0)" : undefined,
+                                borderColor: hasChanged ? "var(--mantine-color-green-6)" : undefined,
+                                cursor: previewSrc ? "pointer" : undefined,
+                            }}
+                            onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
+                        >
+                            {previewSrc ? (
+                                <img
+                                    src={previewSrc}
+                                    alt="Cover"
+                                    style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
+                                />
+                            ) : (
+                                <IconMusic size={50} color="var(--mantine-color-gray-4)"/>
+                            )}
+                        </Box>
                         {previewDimensions && (
-                            <Text size="sm" c="dimmed">
-                                {previewDimensions.width} x {previewDimensions.height} px
+                            <Text size="xs" c="dimmed">
+                                {previewDimensions.width} x {previewDimensions.height}
                             </Text>
                         )}
+                    </Stack>
 
-                        <Group gap="xs">
+                    <Stack gap="xs" style={{flex: 1}}>
+                        <Group gap="xs" style={{flex: 1}}>
                             <input
                                 ref={fileInputRef}
                                 type="file"
