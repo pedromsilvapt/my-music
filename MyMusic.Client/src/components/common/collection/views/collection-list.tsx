@@ -13,17 +13,16 @@ import {SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-ki
 import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, Stack, Text} from "@mantine/core";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
-import {useContextMenu} from "mantine-contextmenu";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, LIST_ARTWORK_SIZE, LIST_GAP, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
-import {isInteractiveElement} from "../../../../utils/event-utils.ts";
+import {useLongPress} from "../../../../hooks/use-long-press.ts";
+import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {
     type CollectionSchema,
-    type CollectionSchemaAction,
-    type CollectionSchemaActionButton
+    type CollectionSchemaAction
 } from "../collection-schema.tsx";
 import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-list.module.css';
@@ -43,12 +42,22 @@ export interface CollectionListProps<M> {
     scrollToIndex?: number;
     highlightRequestId?: number;
     height: number;
+    onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
+    const {onContextMenuTrigger} = props;
     const parentRef = useRef<HTMLDivElement>(null)
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    const handleContextMenuTrigger = useCallback((
+        event: React.MouseEvent | React.TouchEvent,
+        rowActions: CollectionSchemaAction<M>[],
+        selection: M[]
+    ) => {
+        onContextMenuTrigger?.(event, rowActions, selection);
+    }, [onContextMenuTrigger]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -194,6 +203,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
             actions={props.actions}
             scrollToIndex={props.scrollToIndex}
             highlightRequestId={props.highlightRequestId}
+            onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
 
@@ -275,6 +285,7 @@ export interface CollectionListItemProps<M> {
     actions: CollectionSchemaAction<M>[];
     scrollToIndex?: number;
     highlightRequestId?: number;
+    onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
@@ -294,10 +305,10 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
         actions,
         scrollToIndex,
         highlightRequestId,
+        onContextMenuTrigger,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const {showContextMenu} = useContextMenu();
     const prevHighlightIdRef = useRef<number | undefined>(undefined);
     const [isHighlighted, setIsHighlighted] = useState(false);
 
@@ -354,6 +365,18 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
+        console.log('[CL-MouseUp] triggered', { 
+            target: event.target,
+            isInteractive: isInteractiveElement(event.target),
+            isDraggingActive,
+            button: event.button
+        });
+        
+        if (event.button === 2) {
+            console.log('[CL-MouseUp] skipping - right click');
+            return;
+        }
+        
         if (isInteractiveElement(event.target)) {
             return;
         }
@@ -363,58 +386,63 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     };
 
     const handleContextMenu = (event: React.MouseEvent) => {
-        if (isInteractiveElement(event.target)) {
+        if (isInteractiveElement(event.target) || isArtworkPreviewElement(event.target)) {
             return;
         }
-        const contextActions = isSelected ? actions : itemActions;
-        const contextSelection = isSelected ? selection : [item];
 
-        showContextMenu(
-            contextActions
-                .filter((a): a is CollectionSchemaActionButton<M> =>
-                    !('divider' in a) && !('group' in a)
-                )
-                .map(action => ({
-                    key: action.name,
-                    icon: action.renderIcon(),
-                    title: action.renderLabel(),
-                    onClick: () => action.onClick(contextSelection),
-                }))
-        )(event);
+        const itemKey = schema.key(item);
+
+        selectionHandlers.toggle(itemKey, event);
+
+        const isNowSelected = !isSelected;
+        const contextActions = isNowSelected ? itemActions : actions;
+        const contextSelection = isNowSelected ? [item] : selection;
+
+        onContextMenuTrigger(event, contextActions, contextSelection);
     };
 
-    return <Box
-        ref={itemRef}
-        data-index={virtualItem.index}
-        data-sortable-item={sortable || undefined}
-        style={sortable ? style : undefined}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onContextMenu={handleContextMenu}
-        {...(sortable ? attributes : {})}
-        {...(sortable && !isDragOverlay ? listeners : {})}
-        className={cls(
-            styles.item,
-            isSelected && styles.selected,
-            isDragOverlay && styles.selected,
-            isHighlighted && styles.highlighted,
-        )}>
-        <Group gap="sm">
-            {schema.renderListArtwork(item, LIST_ARTWORK_SIZE)}
-            <Box flex={1}>
-                <Text size="md">{schema.renderListTitle(item, 1)}</Text>
-                <Text size="sm">
-                    {schema.renderListSubTitle(item, 1)}
-                </Text>
+    const longPressHandlers = useLongPress(handleContextMenu as (e: React.SyntheticEvent) => void);
+
+    return (
+        <>
+            <Box
+                ref={itemRef}
+                data-index={virtualItem.index}
+                data-sortable-item={sortable || undefined}
+                style={sortable ? style : undefined}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onContextMenu={longPressHandlers.onContextMenu}
+                onTouchStart={longPressHandlers.onTouchStart}
+                onTouchEnd={longPressHandlers.onTouchEnd}
+                onTouchMove={longPressHandlers.onTouchMove}
+                onTouchCancel={longPressHandlers.onTouchCancel}
+                {...(sortable ? attributes : {})}
+                {...(sortable && !isDragOverlay ? listeners : {})}
+                className={cls(
+                    styles.item,
+                    isSelected && styles.selected,
+                    isDragOverlay && styles.selected,
+                    isHighlighted && styles.highlighted,
+                )}>
+                <Group gap="sm">
+                    {schema.renderListArtwork(item, LIST_ARTWORK_SIZE)}
+                    <Box flex={1}>
+                        <Text size="md">{schema.renderListTitle(item, 1)}</Text>
+                        <Text size="sm">
+                            {schema.renderListSubTitle(item, 1)}
+                        </Text>
+                    </Box>
+                    <Box className={cls(
+                        styles.itemActions,
+                        isDropdownOpen && styles.opened,
+                        selection.length > 0 && styles.hidden
+                    )}>
+                        <CollectionActions selection={[item]} actions={itemActions} opened={isDropdownOpen}
+                                           setOpened={setIsDropdownOpen}/>
+                    </Box>
+                </Group>
             </Box>
-            <Box className={cls(
-                styles.itemActions,
-                isDropdownOpen && styles.opened,
-                selection.length > 0 && styles.hidden
-            )}>
-                <CollectionActions selection={[item]} actions={itemActions} opened={isDropdownOpen}
-                                   setOpened={setIsDropdownOpen}/>
-            </Box>
-        </Group>
-    </Box>
+        </>
+    );
 }

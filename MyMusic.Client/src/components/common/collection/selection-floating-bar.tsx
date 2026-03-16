@@ -11,6 +11,7 @@ export interface SelectionFloatingBarProps<M> {
     containerRef: React.RefObject<HTMLElement | null>;
     portalTarget: React.RefObject<HTMLElement | null>;
     onClearSelection: () => void;
+    isContextMenuOpen?: boolean;
 }
 
 const isElementInViewport = (el: HTMLElement) => {
@@ -24,14 +25,14 @@ const isElementInViewport = (el: HTMLElement) => {
 };
 
 export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps<M>) {
-    const {selection, actions, anchorElement, containerRef, portalTarget, onClearSelection} = props;
+    const {selection, actions, anchorElement, containerRef, portalTarget, onClearSelection, isContextMenuOpen} = props;
     const floatingRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({x: 0, y: 0, placement: 'bottom-start' as string});
 
     const showAtAnchor = anchorElement && isElementInViewport(anchorElement);
     const containerElement = containerRef.current;
     const showAtContainer = containerElement && !showAtAnchor;
-    const canShow = selection.length > 0 && (showAtAnchor || showAtContainer);
+    const canShow = selection.length > 0 && (showAtAnchor || showAtContainer) && !isContextMenuOpen;
 
     useLayoutEffect(() => {
         if (!floatingRef.current) {

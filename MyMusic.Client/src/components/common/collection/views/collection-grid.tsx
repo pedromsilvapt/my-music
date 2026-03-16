@@ -14,17 +14,16 @@ import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, SimpleGrid, Stack, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
-import {useContextMenu} from "mantine-contextmenu";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, GRID_ELEM_SIZE, GRID_GAP, GRID_ROW_HEIGHT} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
-import {isInteractiveElement} from "../../../../utils/event-utils.ts";
+import {useLongPress} from "../../../../hooks/use-long-press.ts";
+import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {
     type CollectionSchema,
-    type CollectionSchemaAction,
-    type CollectionSchemaActionButton
+    type CollectionSchemaAction
 } from "../collection-schema.tsx";
 import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
 import styles from './collection-grid.module.css';
@@ -44,6 +43,7 @@ export interface CollectionGridProps<M> {
     scrollToIndex?: number;
     highlightRequestId?: number;
     height: number;
+    onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
@@ -77,9 +77,18 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 }
 
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
+    const {onContextMenuTrigger} = props;
     const {lanes, parentRef, elemSize, gap} = props;
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    const handleContextMenuTrigger = useCallback((
+        event: React.MouseEvent | React.TouchEvent,
+        rowActions: CollectionSchemaAction<M>[],
+        selection: M[]
+    ) => {
+        onContextMenuTrigger?.(event, rowActions, selection);
+    }, [onContextMenuTrigger]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -227,6 +236,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             actions={props.actions}
             scrollToIndex={props.scrollToIndex}
             highlightRequestId={props.highlightRequestId}
+            onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
 
@@ -313,6 +323,7 @@ export interface CollectionGridItemProps<M> {
     actions: CollectionSchemaAction<M>[];
     scrollToIndex?: number;
     highlightRequestId?: number;
+    onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
@@ -332,10 +343,10 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         actions,
         scrollToIndex,
         highlightRequestId,
+        onContextMenuTrigger,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const {showContextMenu} = useContextMenu();
     const prevHighlightIdRef = useRef<number | undefined>(undefined);
     const [isHighlighted, setIsHighlighted] = useState(false);
 
@@ -392,6 +403,10 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
+        if (event.button === 2) {
+            return;
+        }
+
         if (isInteractiveElement(event.target)) {
             return;
         }
@@ -401,27 +416,26 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
     };
 
     const handleContextMenu = (event: React.MouseEvent) => {
-        if (isInteractiveElement(event.target)) {
+        if (isInteractiveElement(event.target) || isArtworkPreviewElement(event.target)) {
             return;
         }
-        const contextActions = isSelected ? actions : itemActions;
-        const contextSelection = isSelected ? selection : [item];
 
-        showContextMenu(
-            contextActions
-                .filter((a): a is CollectionSchemaActionButton<M> =>
-                    !('divider' in a) && !('group' in a)
-                )
-                .map(action => ({
-                    key: action.name,
-                    icon: action.renderIcon(),
-                    title: action.renderLabel(),
-                    onClick: () => action.onClick(contextSelection),
-                }))
-        )(event);
+        const itemKey = schema.key(item);
+
+        selectionHandlers.toggle(itemKey, event);
+
+        const isNowSelected = !isSelected;
+        const contextActions = isNowSelected ? itemActions : actions;
+        const contextSelection = isNowSelected ? [item] : selection;
+
+        onContextMenuTrigger(event, contextActions, contextSelection);
     };
 
-    return <Box
+    const longPressHandlers = useLongPress(handleContextMenu as (e: React.SyntheticEvent) => void);
+
+    return (
+        <>
+            <Box
         ref={itemRef}
         data-index={virtualItem.index}
         data-lane={virtualItem.lane}
@@ -432,7 +446,11 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         }}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onContextMenu={handleContextMenu}
+        onContextMenu={longPressHandlers.onContextMenu}
+        onTouchStart={longPressHandlers.onTouchStart}
+        onTouchEnd={longPressHandlers.onTouchEnd}
+        onTouchMove={longPressHandlers.onTouchMove}
+        onTouchCancel={longPressHandlers.onTouchCancel}
         {...(sortable ? attributes : {})}
         {...(sortable && !isDragOverlay ? listeners : {})}
         className={cls(
@@ -461,4 +479,6 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
             </Group>
         </Stack>
     </Box>
+        </>
+    );
 }

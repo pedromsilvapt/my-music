@@ -16,17 +16,16 @@ import {Box, Group, Table, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
-import {useContextMenu} from "mantine-contextmenu";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
-import {isInteractiveElement} from "../../../../utils/event-utils.ts";
+import {useLongPress} from "../../../../hooks/use-long-press.ts";
+import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
 import CollectionActions from "../collection-actions.tsx";
 import {
     type CollectionSchema,
     type CollectionSchemaAction,
-    type CollectionSchemaActionButton,
     type CollectionSchemaColumn,
     type CollectionSortField,
     getColumnWidthFractions,
@@ -53,13 +52,23 @@ export interface CollectionTableProps<M> {
     scrollToIndex?: number;
     highlightRequestId?: number;
     height: number;
+    onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
+    const {onContextMenuTrigger} = props;
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    const handleContextMenuTrigger = useCallback((
+        event: React.MouseEvent | React.TouchEvent,
+        actions: CollectionSchemaAction<M>[],
+        selection: M[]
+    ) => {
+        onContextMenuTrigger?.(event, actions, selection);
+    }, [onContextMenuTrigger]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -122,7 +131,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         if (props.scrollToIndex != null && props.items.length > 0) {
             const virtualItems = virtualizer.getVirtualItems();
             const isVisible = virtualItems.some(item => item.index === props.scrollToIndex);
-            
+
             if (!isVisible) {
                 requestAnimationFrame(() => {
                     virtualizer.scrollToIndex(props.scrollToIndex!, {align: 'center'});
@@ -232,6 +241,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             actions={props.actions}
             scrollToIndex={props.scrollToIndex}
             highlightRequestId={props.highlightRequestId}
+            onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
 
@@ -363,6 +373,7 @@ interface CollectionTableRowProps<M> {
     actions: CollectionSchemaAction<M>[];
     scrollToIndex?: number;
     highlightRequestId?: number;
+    onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
@@ -383,10 +394,10 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         actions,
         scrollToIndex,
         highlightRequestId,
+        onContextMenuTrigger,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const {showContextMenu} = useContextMenu();
     const prevHighlightIdRef = useRef<number | undefined>(undefined);
     const [isHighlighted, setIsHighlighted] = useState(false);
 
@@ -443,6 +454,18 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
+        console.log('[CT-MouseUp] triggered', {
+            target: event.target,
+            isInteractive: isInteractiveElement(event.target),
+            isDraggingActive,
+            button: event.button
+        });
+        
+        if (event.button === 2) {
+            console.log('[CT-MouseUp] skipping - right click');
+            return;
+        }
+        
         if (isInteractiveElement(event.target)) {
             return;
         }
@@ -452,68 +475,71 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
     };
 
     const handleContextMenu = (event: React.MouseEvent) => {
-        if (isInteractiveElement(event.target)) {
+        if (isInteractiveElement(event.target) || isArtworkPreviewElement(event.target)) {
             return;
         }
-        const contextActions = isSelected ? actions : rowActions;
-        const contextSelection = isSelected ? selection : [row];
 
-        showContextMenu(
-            contextActions
-                .filter((a): a is CollectionSchemaActionButton<M> =>
-                    !('divider' in a) && !('group' in a)
-                )
-                .map(action => ({
-                    key: action.name,
-                    icon: action.renderIcon(),
-                    title: action.renderLabel(),
-                    onClick: () => action.onClick(contextSelection),
-                }))
-        )(event);
+        const itemKey = schema.key(row);
+
+        selectionHandlers.toggle(itemKey, event);
+
+        const isNowSelected = !isSelected;
+        const contextActions = isNowSelected ? rowActions : actions;
+        const contextSelection = isNowSelected ? [row] : selection;
+
+        onContextMenuTrigger(event, contextActions, contextSelection);
     };
 
+    const longPressHandlers = useLongPress(handleContextMenu as (e: React.SyntheticEvent) => void);
+
     return (
-        <Table.Tr
-            ref={rowRef}
-            style={sortable ? style : undefined}
-            data-index={virtualRow.index}
-            data-sortable-item={sortable || undefined}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onContextMenu={handleContextMenu}
-            {...(sortable ? attributes : {})}
-            {...(sortable && !isDragOverlay ? listeners : {})}
-            className={cls(
-                styles.row,
-                isSelected && styles.selected,
-                isDragOverlay && styles.selected,
-                isHighlighted && styles.highlighted,
-            )}
-        >
-            {columns.map(col =>
-                <Table.Td key={col.name}
-                          style={{
-                              borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)',
-                              textAlign: col.align ?? 'left'
-                          }}>
-                    {col.render(row)}
-                </Table.Td>
-            )}
-            <Table.Td
-                key="__actions"
-                style={{
-                    borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)'
-                }}
+        <>
+            <Table.Tr
+                ref={rowRef}
+                style={sortable ? style : undefined}
+                data-index={virtualRow.index}
+                data-sortable-item={sortable || undefined}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onContextMenu={longPressHandlers.onContextMenu}
+                onTouchStart={longPressHandlers.onTouchStart}
+                onTouchEnd={longPressHandlers.onTouchEnd}
+                onTouchMove={longPressHandlers.onTouchMove}
+                onTouchCancel={longPressHandlers.onTouchCancel}
+                {...(sortable ? attributes : {})}
+                {...(sortable && !isDragOverlay ? listeners : {})}
                 className={cls(
-                    styles.rowActions,
-                    isDropdownOpen && styles.opened,
-                    selection.length > 0 && styles.hidden
+                    styles.row,
+                    isSelected && styles.selected,
+                    isDragOverlay && styles.selected,
+                    isHighlighted && styles.highlighted,
                 )}
             >
-                <CollectionActions selection={[row]} actions={rowActions} opened={isDropdownOpen}
-                                   setOpened={setIsDropdownOpen}/>
-            </Table.Td>
-        </Table.Tr>
+                {columns.map(col =>
+                    <Table.Td key={col.name}
+                              style={{
+                                  borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)',
+                                  textAlign: col.align ?? 'left'
+                              }}>
+                        {col.render(row)}
+                    </Table.Td>
+                )}
+                <Table.Td
+                    key="__actions"
+                    style={{
+                        borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)'
+                    }}
+                    className={cls(
+                        styles.rowActions,
+                        isDropdownOpen && styles.opened,
+                        selection.length > 0 && styles.hidden
+                    )}
+                >
+                    <CollectionActions selection={[row]} actions={rowActions} opened={isDropdownOpen}
+                                       setOpened={setIsDropdownOpen}/>
+                </Table.Td>
+            </Table.Tr>
+        </>
     );
 }
 

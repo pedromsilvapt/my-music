@@ -1,10 +1,10 @@
-import {Box, Center, Image, Overlay, ThemeIcon} from "@mantine/core";
+import {Box, Center, Image, Menu, Overlay, ThemeIcon} from "@mantine/core";
 import {IconPhotoScan, IconPlayerPlayFilled, IconZoomIn} from "@tabler/icons-react";
-import {useContextMenu} from "mantine-contextmenu";
 import type {MouseEvent} from "react";
 import * as React from "react";
 import {DEFAULT_ARTWORK_SIZE} from "../../consts.ts";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
+import {useMantineContextMenu} from "../../hooks/use-mantine-context-menu";
 import styles from './artwork.module.css';
 
 interface ArtworkProps {
@@ -20,7 +20,11 @@ export default function Artwork(props: ArtworkProps) {
     const {id, placeholderIcon, enablePreview = true} = props;
     const size = props.size ?? DEFAULT_ARTWORK_SIZE;
     const {openLightbox} = useArtworkLightbox();
-    const {showContextMenu} = useContextMenu();
+
+    const {
+        onContextMenuTrigger,
+        renderMenuItems,
+    } = useMantineContextMenu();
 
     const hasArtwork = id != null || props.url != null;
 
@@ -88,33 +92,44 @@ export default function Artwork(props: ArtworkProps) {
         </Box>;
     }
 
-    const handleContextMenu = showContextMenu([
-        {
-            key: "preview",
-            icon: <IconZoomIn size={16}/>,
-            title: "Preview",
-            onClick: () => {
-                if (fullSizeUrl) {
-                    openLightbox(fullSizeUrl);
-                }
-            }
-        }
-    ]);
+    const handleArtworkContextMenu = (event: React.MouseEvent) => {
+        event.preventDefault();
+        onContextMenuTrigger(event);
+    };
 
-    return <Box
-        pos="relative"
-        onContextMenu={handleContextMenu}
-    >
-        {innerElement}
-        <Overlay
-            className={styles.overlay}
-            color="#000"
-            backgroundOpacity={0.35}
-            onClick={ev => onClick(ev)}
-        >
-            <Center maw="100%" h="100%">
-                <IconPlayerPlayFilled color="white" size={size * 0.6}/>
-            </Center>
-        </Overlay>
-    </Box>;
+    const handlePreview = () => {
+        if (fullSizeUrl) {
+            openLightbox(fullSizeUrl);
+        }
+    };
+
+    return (
+        <>
+            <Box
+                pos="relative"
+                onContextMenu={handleArtworkContextMenu}
+                data-artwork-preview
+            >
+                {innerElement}
+                <Overlay
+                    className={styles.overlay}
+                    color="#000"
+                    backgroundOpacity={0.35}
+                    onClick={ev => onClick(ev)}
+                >
+                    <Center maw="100%" h="100%">
+                        <IconPlayerPlayFilled color="white" size={size * 0.6}/>
+                    </Center>
+                </Overlay>
+            </Box>
+            {renderMenuItems(() => (
+                <Menu.Item
+                    leftSection={<IconZoomIn size={16}/>}
+                    onClick={handlePreview}
+                >
+                    Preview
+                </Menu.Item>
+            ))}
+        </>
+    );
 }

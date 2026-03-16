@@ -71,7 +71,7 @@ interface CollectionActionMenuProps<M> {
     action: CollectionSchemaAction<M>;
 }
 
-function CollectionActionMenu<M>(props: CollectionActionMenuProps<M>) {
+export function CollectionActionMenu<M>(props: CollectionActionMenuProps<M>) {
     if ('divider' in props.action) {
         return <Menu.Divider/>;
     } else if ('group' in props.action) {

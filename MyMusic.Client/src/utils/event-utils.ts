@@ -17,3 +17,12 @@ export function isInteractiveElement(target: EventTarget | null): boolean {
     // but we still want to allow selection on them
     return !interactable.hasAttribute('data-sortable-item');
 }
+
+export function isArtworkPreviewElement(target: EventTarget | null): boolean {
+    if (!(target instanceof Element)) {
+        return false;
+    }
+
+    const artwork = target.closest('[data-artwork-preview]');
+    return artwork != null;
+}

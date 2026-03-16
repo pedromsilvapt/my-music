@@ -5,9 +5,11 @@ import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {SCROLL_DEBOUNCE_MS, SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
 import type {ScrollPosition} from "../../../contexts/collection-context.tsx";
 import {useCollectionActions} from "../../../contexts/collection-context.tsx";
+import {useMantineContextMenu} from "../../../hooks/use-mantine-context-menu";
 import {sortBy} from "../../../utils/sort-by.tsx";
-import type {CollectionFilterMode, CollectionSchema, CollectionSort} from "./collection-schema.tsx";
+import type {CollectionFilterMode, CollectionSchema, CollectionSchemaAction, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
+import {CollectionActionMenu} from "./collection-actions.tsx";
 import SelectionFloatingBar from "./selection-floating-bar.tsx";
 import CollectionGrid from "./views/collection-grid.tsx";
 import CollectionList from "./views/collection-list.tsx";
@@ -99,6 +101,13 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const [debouncedScrollPosition] = useDebouncedValue(scrollPosition, SCROLL_DEBOUNCE_MS);
     const [lastSelectedKey, setLastSelectedKey] = useState<React.Key | null>(null);
     const [lastSelectedElement, setLastSelectedElement] = useState<HTMLElement | null>(null);
+
+    const {onContextMenuTrigger, renderMenuItems, isOpen: isContextMenuOpen} = useMantineContextMenu({
+        menuWidth: 200,
+        menuHeight: 350,
+    });
+    const contextMenuSelectionRef = useRef<T[]>([]);
+    const contextMenuActionsRef = useRef<CollectionSchemaAction<T>[]>([]);
 
     const initialScrollPositionRef = useRef<ScrollPosition | null>(null);
     if (initialScrollPositionRef.current === null && storeState?.scrollPosition != null) {
@@ -241,6 +250,14 @@ export default function Collection<T extends { id: string | number }>(props: Col
         const isShiftPressed = event.shiftKey;
         const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
 
+        if (event.button === 2) {
+            if (!selectionKeys.includes(clickedKey)) {
+                selectionHandlers.setSelection([clickedKey]);
+                setLastSelectedKey(clickedKey);
+            }
+            return;
+        }
+
         if (isShiftPressed && lastSelectedKey !== null) {
             const itemsList = filteredAndSortedItems.map(item => props.schema.key(item));
             const lastIndex = itemsList.indexOf(lastSelectedKey);
@@ -302,6 +319,16 @@ export default function Collection<T extends { id: string | number }>(props: Col
         setScrollPosition(position);
     }, []);
 
+    const handleContextMenuTrigger = useCallback((
+        event: React.MouseEvent | React.TouchEvent,
+        rowActions: CollectionSchemaAction<T>[],
+        rowSelection: T[]
+    ) => {
+        contextMenuSelectionRef.current = rowSelection;
+        contextMenuActionsRef.current = rowActions;
+        onContextMenuTrigger(event);
+    }, [onContextMenuTrigger]);
+
     let viewNode: React.ReactNode;
 
     if (view === 'table') {
@@ -322,6 +349,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             scrollToIndex={props.scrollToIndex}
             highlightRequestId={props.highlightRequestId}
             height={viewHeight}
+            onContextMenuTrigger={handleContextMenuTrigger}
         />;
     } else if (view === 'list') {
         viewNode = <CollectionList
@@ -339,6 +367,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             scrollToIndex={props.scrollToIndex}
             highlightRequestId={props.highlightRequestId}
             height={viewHeight}
+            onContextMenuTrigger={handleContextMenuTrigger}
         />;
     } else if (view === 'grid') {
         viewNode = <CollectionGrid
@@ -356,6 +385,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             scrollToIndex={props.scrollToIndex}
             highlightRequestId={props.highlightRequestId}
             height={viewHeight}
+            onContextMenuTrigger={handleContextMenuTrigger}
         />;
     } else {
         throw new Error(`Invalid collection view: ${view}`);
@@ -425,6 +455,14 @@ export default function Collection<T extends { id: string | number }>(props: Col
             <div ref={floatingBarPortalTargetRef} />
         </Box>
 
+        {renderMenuItems(() => (
+            <>
+                {contextMenuActionsRef.current.map((action, i) => (
+                    <CollectionActionMenu key={i} action={action} selection={contextMenuSelectionRef.current} />
+                ))}
+            </>
+        ))}
+
         <SelectionFloatingBar
             selection={selection}
             actions={actions}
@@ -432,6 +470,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             containerRef={collectionContainerRef}
             portalTarget={floatingBarPortalTargetRef}
             onClearSelection={selectionHandlers.resetSelection}
+            isContextMenuOpen={isContextMenuOpen}
         />
     </Flex>;
 }

@@ -3,7 +3,6 @@ import {ModalsProvider} from '@mantine/modals';
 import {Notifications} from '@mantine/notifications';
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {createRouter, RouterProvider} from "@tanstack/react-router";
-import {ContextMenuProvider} from 'mantine-contextmenu';
 import './index.css'
 import {StrictMode} from 'react'
 import {createRoot} from 'react-dom/client'
@@ -39,20 +38,18 @@ createRoot(document.getElementById('root')!).render(
             <MantineProvider defaultColorScheme="auto">
                 <Notifications position="top-right"/>
                 <ModalsProvider>
-                    <ContextMenuProvider>
-                        <PlayerProvider>
-                            <VolumeInitializer/>
-                            <ManagePlaylistsProvider>
-                                <ManageDevicesProvider>
-                                    <CollectionStoreProvider>
-                                        <ArtworkLightboxProvider>
-                                            <RouterProvider router={router}/>
-                                        </ArtworkLightboxProvider>
-                                    </CollectionStoreProvider>
-                                </ManageDevicesProvider>
-                            </ManagePlaylistsProvider>
-                        </PlayerProvider>
-                    </ContextMenuProvider>
+                    <PlayerProvider>
+                        <VolumeInitializer/>
+                        <ManagePlaylistsProvider>
+                            <ManageDevicesProvider>
+                                <CollectionStoreProvider>
+                                    <ArtworkLightboxProvider>
+                                        <RouterProvider router={router}/>
+                                    </ArtworkLightboxProvider>
+                                </CollectionStoreProvider>
+                            </ManageDevicesProvider>
+                        </ManagePlaylistsProvider>
+                    </PlayerProvider>
                 </ModalsProvider>
             </MantineProvider>
         </QueryClientProvider>
