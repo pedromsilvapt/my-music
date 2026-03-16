@@ -56,7 +56,7 @@ export interface CollectionTableProps<M> {
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
-    const {onContextMenuTrigger} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, selectionHandlers: propSelectionHandlers, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, setItemElementRef, actions, height, onReorderBatch, onReorder, scrollToIndex, highlightRequestId, onSort, sort: propSort} = props;
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -80,7 +80,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     );
 
     const columns = useMemo(() => {
-        const columns = props.schema.columns.filter(col => !col.hidden);
+        const columns = propSchema.columns.filter(col => !col.hidden);
 
         const fixedWidth = columns
             .map(c => getColumnWidthPixels(c.width))
@@ -99,14 +99,14 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             ...col,
             width: getActualColumnWidth(col.width, freeWidth, freeFractions),
         }) as CollectionSchemaColumnCalculated<M>);
-    }, [props.schema.columns, tableWidth]);
+    }, [propSchema.columns, tableWidth]);
 
     const parentRef = useRef<HTMLDivElement>(null)
 
     const virtualizer = useVirtualizer({
-        count: props.items.length,
+        count: propItems.length,
         getScrollElement: () => parentRef.current,
-        estimateSize: props.schema.estimateTableRowHeight,
+        estimateSize: propSchema.estimateTableRowHeight,
         overscan: VIRTUALIZER_OVERSCAN,
     });
 
@@ -115,56 +115,56 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const hasRestoredScrollRef = useRef(false);
 
     useEffect(() => {
-        if (props.initialScrollPosition != null && !hasRestoredScrollRef.current && props.items.length > 0) {
+        if (initialScrollPosition != null && !hasRestoredScrollRef.current && propItems.length > 0) {
             hasRestoredScrollRef.current = true;
             requestAnimationFrame(() => {
-                virtualizer.scrollToIndex(props.initialScrollPosition!.index, {align: 'start'});
+                virtualizer.scrollToIndex(initialScrollPosition!.index, {align: 'start'});
                 const scrollElement = parentRef.current;
                 if (scrollElement) {
-                    scrollElement.scrollTop += props.initialScrollPosition!.offset;
+                    scrollElement.scrollTop += initialScrollPosition!.offset;
                 }
             });
         }
-    }, [props.initialScrollPosition, props.items.length, virtualizer]);
+    }, [initialScrollPosition, propItems.length, virtualizer]);
 
     useEffect(() => {
-        if (props.scrollToIndex != null && props.items.length > 0) {
+        if (scrollToIndex != null && propItems.length > 0) {
             const virtualItems = virtualizer.getVirtualItems();
-            const isVisible = virtualItems.some(item => item.index === props.scrollToIndex);
-
+            const isVisible = virtualItems.some(item => item.index === scrollToIndex);
+            
             if (!isVisible) {
                 requestAnimationFrame(() => {
-                    virtualizer.scrollToIndex(props.scrollToIndex!, {align: 'center'});
+                    virtualizer.scrollToIndex(scrollToIndex!, {align: 'center'});
                 });
             }
         }
-    }, [props.scrollToIndex, props.highlightRequestId, props.items.length, virtualizer]);
+    }, [scrollToIndex, propItems.length, virtualizer]);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
-        if (!scrollElement || !props.onScrollPositionChange) return;
+        if (!scrollElement || !onScrollPositionChange) return;
 
         const handleScroll = () => {
             const virtualItems = virtualizer.getVirtualItems();
             if (virtualItems.length > 0) {
                 const firstItem = virtualItems[0];
                 const offset = scrollElement.scrollTop - firstItem.start;
-                props.onScrollPositionChange?.({index: firstItem.index, offset});
+                onScrollPositionChange?.({index: firstItem.index, offset});
             }
         };
 
         scrollElement.addEventListener('scroll', handleScroll, {passive: true});
         return () => scrollElement.removeEventListener('scroll', handleScroll);
-    }, [props.onScrollPositionChange, virtualizer]);
+    }, [onScrollPositionChange, virtualizer]);
 
     const selectedIds = useMemo(() =>
-            new Set(props.selection.map(item => props.schema.key(item))),
-        [props.selection, props.schema.key]
+            new Set(propSelection.map(item => propSchema.key(item))),
+        [propSelection, propSchema]
     );
 
-    const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
+    const itemIds = useMemo(() => propItems.map(item => propSchema.key(item)) as string[], [propItems, propSchema]);
 
-    const draggedItem = activeId != null ? props.items.find(item => props.schema.key(item) === activeId) : null;
+    const draggedItem = activeId != null ? propItems.find(item => propSchema.key(item) === activeId) : null;
     const isDraggingMultiple = selectedIds.has(activeId as React.Key) && selectedIds.size > 1;
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -176,15 +176,15 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         const {active, over} = event;
 
         if (over && active.id !== over.id) {
-            const fromIndex = props.items.findIndex(item => props.schema.key(item) === active.id);
-            let toIndex = props.items.findIndex(item => props.schema.key(item) === over.id);
+            const fromIndex = propItems.findIndex(item => propSchema.key(item) === active.id);
+            let toIndex = propItems.findIndex(item => propSchema.key(item) === over.id);
 
             if (fromIndex !== -1 && toIndex !== -1) {
                 const selectedKeys = Array.from(selectedIds);
 
                 if (selectedKeys.length > 1) {
                     const selectedIndices = selectedKeys
-                        .map(key => props.items.findIndex(item => props.schema.key(item) === key))
+                        .map(key => propItems.findIndex(item => propSchema.key(item) === key))
                         .filter(i => i !== -1)
                         .sort((a, b) => a - b);
 
@@ -204,10 +204,10 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                     }
 
                     if (reorders.length > 0) {
-                        props.onReorderBatch?.(reorders);
+                        onReorderBatch?.(reorders);
                     }
                 } else {
-                    props.onReorder?.(fromIndex, toIndex);
+                    onReorder?.(fromIndex, toIndex);
                 }
             }
         }
@@ -217,8 +217,8 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     };
 
     const rows = virtualRows.map((virtualRow) => {
-        const row = props.items[virtualRow.index];
-        const itemId = props.schema.key(row);
+        const row = propItems[virtualRow.index];
+        const itemId = propSchema.key(row);
         const isSelected = selectedIds.has(itemId);
         const isDragOverlay = activeId === itemId;
         const isCollapsed = isDragging && isSelected && !isDragOverlay;
@@ -227,34 +227,34 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             key={itemId}
             virtualRow={virtualRow}
             virtualizer={virtualizer}
-            schema={props.schema}
+            schema={propSchema}
             row={row}
             columns={columns}
-            selection={props.selection}
-            selectionHandlers={props.selectionHandlers}
-            sortable={props.sortable}
+            selection={propSelection}
+            selectionHandlers={propSelectionHandlers}
+            sortable={sortable}
             isSelected={isSelected}
             isDragOverlay={isDragOverlay}
             isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
-            setItemElementRef={props.setItemElementRef}
-            actions={props.actions}
-            scrollToIndex={props.scrollToIndex}
-            highlightRequestId={props.highlightRequestId}
+            setItemElementRef={setItemElementRef}
+            actions={actions}
+            scrollToIndex={scrollToIndex}
+            highlightRequestId={highlightRequestId}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
 
     const tableContent = (
-        <Box style={{height: `${Math.max(props.height, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
+        <Box style={{height: `${Math.max(height, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
             <Table highlightOnHover ref={tableRef} style={{
                 borderCollapse: 'separate',
             }}>
                 <Table.Thead ref={tableHeaderRef}>
                     <Table.Tr>
                         {columns.map(col => {
-                            const isSortable = col.sortable && props.onSort && props.sortableFields?.includes(col.name as keyof M & string);
-                            const sortIndex = props.sort?.findIndex(s => s.field === col.name);
+                            const isSortable = col.sortable && onSort && sortableFields?.includes(col.name as keyof M & string);
+                            const sortIndex = propSort?.findIndex(s => s.field === col.name);
                             const isSorted = sortIndex !== undefined && sortIndex >= 0;
 
                             return (
@@ -265,7 +265,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                                         cursor: isSortable ? 'pointer' : 'default'
                                     }}
                                     key={col.name}
-                                    onClick={isSortable ? () => props.onSort?.(col.name) : undefined}
+                                    onClick={isSortable ? () => onSort?.(col.name) : undefined}
                                 >
                                     <Group gap={4} wrap="nowrap">
                                         <span>{col.displayName}</span>
@@ -273,7 +273,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                                             isSorted ? (
                                                 <>
                                                     <Text size="xs" c="blue" fw="bold">{sortIndex! + 1}</Text>
-                                                    {props.sort![sortIndex!].direction === 'asc' ?
+                                                    {propSort![sortIndex!].direction === 'asc' ?
                                                         <IconArrowUp size={14}/> : <IconArrowDown size={14}/>}
                                                 </>
                                             ) : (
@@ -287,7 +287,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                         <Table.Th key="__actions" style={{width: "60px"}}>{/* Actions Menu */}</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
-                {props.sortable ? (
+                {sortable ? (
                     <SortableContext
                         items={itemIds}
                         strategy={verticalListSortingStrategy}
@@ -309,7 +309,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         </Box>
     );
 
-    if (props.sortable) {
+    if (sortable) {
         return (
             <DndContext
                 sensors={sensors}
@@ -317,7 +317,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={{height: props.height, overflowY: "auto"}}>
+                <Box ref={parentRef} style={{height: height, overflowY: "auto"}}>
                     {tableContent}
                 </Box>
                 <DragOverlay>
@@ -351,7 +351,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         );
     }
 
-    return <Box ref={parentRef} style={{height: props.height, overflowY: "auto"}}>
+    return <Box ref={parentRef} style={{height: height, overflowY: "auto"}}>
         {tableContent}
     </Box>;
 }

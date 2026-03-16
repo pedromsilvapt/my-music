@@ -12,9 +12,10 @@ export interface PlayerControlsProps {
 }
 
 export default function PlayerControls(props: PlayerControlsProps) {
+    const {isPlaying, setIsPlaying, hasPrevious, hasNext, playPrevious, playNext} = props;
     const onPlayPause = useCallback(() => {
-        props.setIsPlaying(!props.isPlaying);
-    }, [props.setIsPlaying, props.isPlaying]);
+        setIsPlaying(!isPlaying);
+    }, [setIsPlaying, isPlaying]);
 
     return <>
         <Group>
@@ -23,27 +24,27 @@ export default function PlayerControls(props: PlayerControlsProps) {
                 size="lg"
                 aria-label="Play Previous Track in Queue"
                 title="Previous"
-                disabled={!props.hasPrevious}
-                onClick={props.playPrevious}
+                disabled={!hasPrevious}
+                onClick={playPrevious}
             >
                 <IconPlayerSkipBack/>
             </ActionIcon>
             <ActionIcon
                 variant="default"
                 size="xl"
-                aria-label={props.isPlaying ? "Pause Current Track" : "Play Current Track"}
-                title={props.isPlaying ? "Pause" : "Play"}
+                aria-label={isPlaying ? "Pause Current Track" : "Play Current Track"}
+                title={isPlaying ? "Pause" : "Play"}
                 onClick={onPlayPause}
             >
-                {props.isPlaying ? <IconPlayerPause/> : <IconPlayerPlay/>}
+                {isPlaying ? <IconPlayerPause/> : <IconPlayerPlay/>}
             </ActionIcon>
             <ActionIcon
                 variant="default"
                 size="lg"
                 aria-label="Play Next Track in Queue"
                 title="Next"
-                disabled={!props.hasNext}
-                onClick={props.playNext}
+                disabled={!hasNext}
+                onClick={playNext}
             >
                 <IconPlayerSkipForward/>
             </ActionIcon>

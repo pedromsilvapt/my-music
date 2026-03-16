@@ -15,32 +15,33 @@ export interface PlayerTimelineProps {
 }
 
 export default function PlayerTimeline(props: PlayerTimelineProps) {
+    const {song, time, duration, setTime, setIsPlaying, onLoad, onFinish} = props;
     const theme = useMantineTheme();
     const wavesurferRef = useWavesurferRef();
 
     const onReady = useCallback((ws: WaveSurfer) => {
         wavesurferRef.current = ws;
-        props.onLoad(ws.getDuration());
-        props.setIsPlaying(false);
-    }, [wavesurferRef, props.onLoad, props.setIsPlaying]);
+        onLoad(ws.getDuration());
+        setIsPlaying(false);
+    }, [wavesurferRef, onLoad, setIsPlaying]);
 
-    const onTimeUpdate = useCallback((_: WaveSurfer, time: number) => {
-        props.setTime(time);
-    }, [props.setTime]);
+    const onTimeUpdate = useCallback((_: WaveSurfer, newTime: number) => {
+        setTime(newTime);
+    }, [setTime]);
 
     const timeDisplay = useMemo(() => {
-        const minutes = Math.floor(props.time / 60).toString().padStart(2, "0");
-        const seconds = Math.floor(props.time % 60).toString().padStart(2, "0");
+        const minutes = Math.floor(time / 60).toString().padStart(2, "0");
+        const seconds = Math.floor(time % 60).toString().padStart(2, "0");
 
         return `${minutes}:${seconds}`;
-    }, [props.time]);
+    }, [time]);
 
     const durationDisplay = useMemo(() => {
-        const minutes = Math.floor(props.duration / 60).toString().padStart(2, "0");
-        const seconds = Math.floor(props.duration % 60).toString().padStart(2, "0");
+        const minutes = Math.floor(duration / 60).toString().padStart(2, "0");
+        const seconds = Math.floor(duration % 60).toString().padStart(2, "0");
 
         return `${minutes}:${seconds}`;
-    }, [props.duration]);
+    }, [duration]);
 
     return <Flex
         flex="1 1 auto"
@@ -62,12 +63,12 @@ export default function PlayerTimeline(props: PlayerTimelineProps) {
                 barGap={1}
                 barRadius={2}
                 barWidth={2}
-                url={props.song}
+                url={song}
                 onReady={onReady}
                 onTimeupdate={onTimeUpdate}
-                onPlay={() => props.setIsPlaying(true)}
-                onPause={() => props.setIsPlaying(false)}
-                onFinish={() => props.onFinish()}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onFinish={() => onFinish()}
             />
         </Box>
         <Text>{durationDisplay}</Text>

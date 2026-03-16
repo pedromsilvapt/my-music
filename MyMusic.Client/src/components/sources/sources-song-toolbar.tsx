@@ -26,7 +26,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
 
     const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
 
-    const sources = sourcesResponse?.data.sources ?? [];
+    const sources = sourcesResponse.data.sources;
 
     const sourcesOptions = useMemo(() => sources.map(source => ({
         value: '' + source.id,

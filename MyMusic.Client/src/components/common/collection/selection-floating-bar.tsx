@@ -85,7 +85,7 @@ export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps
         };
 
         update();
-    }, [anchorElement, containerRef.current, showAtAnchor, showAtContainer]);
+    }, [anchorElement, containerRef, showAtAnchor, showAtContainer]);
 
     if (!canShow) {
         return null;

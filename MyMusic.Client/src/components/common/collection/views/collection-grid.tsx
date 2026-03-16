@@ -77,7 +77,7 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 }
 
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
-    const {onContextMenuTrigger} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, onScrollPositionChange, initialScrollPosition, scrollToIndex, highlightRequestId, sortable, setItemElementRef, actions, height, onReorderBatch, onReorder} = props;
     const {lanes, parentRef, elemSize, gap} = props;
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -100,7 +100,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     );
 
     const virtualizer = useVirtualizer({
-        count: props.items.length,
+        count: propItems.length,
         getScrollElement: () => parentRef.current,
         estimateSize: () => GRID_ROW_HEIGHT,
         overscan: 0,
@@ -113,53 +113,53 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     const hasRestoredScrollRef = useRef(false);
 
     useEffect(() => {
-        if (props.initialScrollPosition != null && !hasRestoredScrollRef.current && props.items.length > 0) {
+        if (initialScrollPosition != null && !hasRestoredScrollRef.current &&         propItems.length > 0) {
             hasRestoredScrollRef.current = true;
             requestAnimationFrame(() => {
-                virtualizer.scrollToIndex(props.initialScrollPosition!.index, {align: 'start'});
+                virtualizer.scrollToIndex(initialScrollPosition!.index, {align: 'start'});
                 const scrollElement = parentRef.current;
                 if (scrollElement) {
-                    scrollElement.scrollTop += props.initialScrollPosition!.offset;
+                    scrollElement.scrollTop += initialScrollPosition!.offset;
                 }
             });
         }
-    }, [props.initialScrollPosition, props.items.length, virtualizer, parentRef]);
+    }, [initialScrollPosition,         propItems.length, virtualizer, parentRef]);
 
     useEffect(() => {
-        if (props.scrollToIndex != null && props.items.length > 0) {
+        if (scrollToIndex != null &&         propItems.length > 0) {
             const virtualItems = virtualizer.getVirtualItems();
-            const isVisible = virtualItems.some(item => item.index === props.scrollToIndex);
+            const isVisible = virtualItems.some(item => item.index === scrollToIndex);
             
             if (!isVisible) {
                 requestAnimationFrame(() => {
-                    virtualizer.scrollToIndex(props.scrollToIndex!, {align: 'center'});
+                    virtualizer.scrollToIndex(scrollToIndex!, {align: 'center'});
                 });
             }
         }
-    }, [props.scrollToIndex, props.highlightRequestId, props.items.length, virtualizer, parentRef]);
+    }, [scrollToIndex,         propItems.length, virtualizer]);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
-        if (!scrollElement || !props.onScrollPositionChange) return;
+        if (!scrollElement || !onScrollPositionChange) return;
 
         const handleScroll = () => {
             const items = virtualizer.getVirtualItems();
             if (items.length > 0) {
                 const firstItem = items[0];
                 const offset = scrollElement.scrollTop - firstItem.start;
-                props.onScrollPositionChange?.({index: firstItem.index, offset});
+                onScrollPositionChange?.({index: firstItem.index, offset});
             }
         };
 
         scrollElement.addEventListener('scroll', handleScroll, {passive: true});
         return () => scrollElement.removeEventListener('scroll', handleScroll);
-    }, [props.onScrollPositionChange, virtualizer, parentRef]);
+    }, [onScrollPositionChange, virtualizer, parentRef]);
 
-    const itemIds = useMemo(() => props.items.map(item => props.schema.key(item)) as string[], [props.items, props.schema.key]);
+    const itemIds = useMemo(() => propItems.map(item => propSchema.key(item)) as string[], [propItems, propSchema]);
 
     const selectedIds = useMemo(() =>
-            new Set(props.selection.map(item => props.schema.key(item))),
-        [props.selection, props.schema.key]
+            new Set(propSelection.map(item => propSchema.key(item))),
+        [propSelection, propSchema]
     );
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -171,15 +171,15 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
         const {active, over} = event;
 
         if (over && active.id !== over.id) {
-            const fromIndex = props.items.findIndex(item => props.schema.key(item) === active.id);
-            let toIndex = props.items.findIndex(item => props.schema.key(item) === over.id);
+            const fromIndex = propItems.findIndex(item => propSchema.key(item) === active.id);
+            let toIndex = propItems.findIndex(item => propSchema.key(item) === over.id);
 
             if (fromIndex !== -1 && toIndex !== -1) {
                 const selectedKeys = Array.from(selectedIds);
 
                 if (selectedKeys.length > 1) {
                     const selectedIndices = selectedKeys
-                        .map(key => props.items.findIndex(item => props.schema.key(item) === key))
+                        .map(key => propItems.findIndex(item => propSchema.key(item) === key))
                         .filter(i => i !== -1)
                         .sort((a, b) => a - b);
 
@@ -199,10 +199,10 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                     }
 
                     if (reorders.length > 0) {
-                        props.onReorderBatch?.(reorders);
+                        onReorderBatch?.(reorders);
                     }
                 } else {
-                    props.onReorder?.(fromIndex, toIndex);
+                    onReorder?.(fromIndex, toIndex);
                 }
             }
         }
@@ -212,8 +212,8 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     };
 
     const items = virtualItems.map((virtualItem) => {
-        const item = props.items[virtualItem.index];
-        const itemId = props.schema.key(item);
+        const item = propItems[virtualItem.index];
+        const itemId = propSchema.key(item);
         const isSelected = selectedIds.has(itemId);
         const isDragOverlay = activeId === itemId;
         const isCollapsed = isDragging && isSelected && !isDragOverlay;
@@ -224,25 +224,25 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             virtualizer={virtualizer}
             item={item}
             width={elemSize}
-            schema={props.schema}
-            selection={props.selection}
-            selectionHandlers={props.selectionHandlers}
-            sortable={props.sortable}
+            schema={propSchema}
+            selection={propSelection}
+            selectionHandlers={propSelectionHandlers}
+            sortable={sortable}
             isSelected={isSelected}
             isDragOverlay={isDragOverlay}
             isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
-            setItemElementRef={props.setItemElementRef}
-            actions={props.actions}
-            scrollToIndex={props.scrollToIndex}
-            highlightRequestId={props.highlightRequestId}
+            setItemElementRef={setItemElementRef}
+            actions={actions}
+            scrollToIndex={scrollToIndex}
+            highlightRequestId={highlightRequestId}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
 
     const gridContent = (
-        <Box style={{height: `${Math.max(props.height, virtualizer.getTotalSize())}px`}}>
-            {props.sortable ? (
+        <Box style={{height: `${Math.max(height, virtualizer.getTotalSize())}px`}}>
+            {sortable ? (
                 <SortableContext
                     items={itemIds}
                     strategy={verticalListSortingStrategy}
@@ -263,7 +263,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
         </Box>
     );
 
-    if (props.sortable) {
+    if (sortable) {
         return (
             <DndContext
                 sensors={sensors}
@@ -271,16 +271,16 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={{width: "100%", height: props.height, overflowY: "auto"}}>
+                <Box ref={parentRef} style={{width: "100%", height: height, overflowY: "auto"}}>
                     {gridContent}
                 </Box>
                 <DragOverlay>
                     {activeId && (
                         <Box className={styles.item} style={{opacity: 0.8}} w={elemSize} h={elemSize + 54}>
                             <Stack gap="sm">
-                                {props.items.find(item => props.schema.key(item) === activeId) &&
-                                    props.schema.renderListArtwork(
-                                        props.items.find(item => props.schema.key(item) === activeId)!,
+                                {propItems.find(item => propSchema.key(item) === activeId) &&
+                                    propSchema.renderListArtwork(
+                                        propItems.find(item => propSchema.key(item) === activeId)!,
                                         elemSize - 20
                                     )
                                 }
@@ -300,7 +300,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     }
 
     return (
-        <Box ref={parentRef} style={{width: "100%", height: props.height, overflowY: "auto"}}>
+        <Box ref={parentRef} style={{width: "100%", height: height, overflowY: "auto"}}>
             {gridContent}
         </Box>
     );
@@ -344,6 +344,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         scrollToIndex,
         highlightRequestId,
         onContextMenuTrigger,
+        width,
     } = props;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -440,9 +441,9 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         data-index={virtualItem.index}
         data-lane={virtualItem.lane}
         data-sortable-item={sortable || undefined}
-        style={sortable ? {...style, width: props.width, height: props.width + 54} : {
-            width: props.width,
-            height: props.width + 54
+        style={sortable ? {...style, width: width, height: width + 54} : {
+            width: width,
+            height: width + 54
         }}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
@@ -460,7 +461,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
             isHighlighted && styles.highlighted,
         )}>
         <Stack gap="sm">
-            {schema.renderListArtwork(item, props.width - 20)}
+            {schema.renderListArtwork(item, width - 20)}
             <Group>
                 <Box flex={1}>
                     <Text size="md" lineClamp={1}>{schema.renderListTitle(item, 1)}</Text>

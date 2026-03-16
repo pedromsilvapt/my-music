@@ -40,7 +40,7 @@ export default function AlbumsPage() {
 
     useEffect(() => {
         void albumsQuery.refetch();
-    }, [albumsQuery.refetch]);
+    }, [albumsQuery, albumsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setCollectionServerSearch(ALBUMS_STATE_KEY, newSearch);

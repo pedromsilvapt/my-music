@@ -105,7 +105,7 @@ export function usePurchasedSongsSchema(
             <Text c="gray">{row.subTitle}</Text>
             {getStatusBadge(row.status)}
         </>,
-    }) as CollectionSchema<ListPurchasesItem>, [onRequeue]);
+    }) as CollectionSchema<ListPurchasesItem>, [onRequeue, onDownload, onClear]);
 }
 
 

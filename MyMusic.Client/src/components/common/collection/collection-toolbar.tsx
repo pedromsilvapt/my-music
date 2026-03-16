@@ -81,9 +81,9 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
         useSensor(KeyboardSensor)
     );
 
-    const sortFields = props.sort ?? [];
-    const sortableFieldsList = props.sortableFields ?? [];
-    const columns = props.columns ?? [];
+    const sortFields = useMemo(() => props.sort ?? [], [props.sort]);
+    const sortableFieldsList = useMemo(() => props.sortableFields ?? [], [props.sortableFields]);
+    const columns = useMemo(() => props.columns ?? [], [props.columns]);
 
     const availableFields = useMemo(() => {
         return sortableFieldsList.filter(field => !sortFields.some(s => s.field === field));

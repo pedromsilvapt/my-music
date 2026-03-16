@@ -54,7 +54,7 @@ function createMetadataDiff(song: GetSongResponseSong, sourceSong: SourceSong): 
     }
 
     if (sourceSong.album?.artist?.name?.trim() && !stringEquals(song.album?.artist?.name, sourceSong.album.artist.name)) {
-        (diff as any).albumArtist = {
+        diff.albumArtist = {
             old: song.album?.artist?.name ?? "",
             new: sourceSong.album.artist.name,
         };

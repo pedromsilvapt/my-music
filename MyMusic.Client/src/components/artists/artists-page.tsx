@@ -32,7 +32,7 @@ export default function ArtistsPage() {
 
     useEffect(() => {
         void artistsQuery.refetch();
-    }, [artistsQuery.refetch]);
+    }, [artistsQuery, artistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setAppliedSearch(newSearch);

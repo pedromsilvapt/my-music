@@ -68,7 +68,7 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
     const colorScheme = useComputedColorScheme('light');
     const sourcesQuery = useListSources({query: {enabled: opened}});
     const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
-    const sources = sourcesResponse?.data?.sources ?? [];
+    const sources = sourcesResponse.data.sources;
 
     const queryClient = useQueryClient();
 

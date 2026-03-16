@@ -44,7 +44,7 @@ export default function PlaylistsPage() {
 
     useEffect(() => {
         void playlistsQuery.refetch();
-    }, [playlistsQuery.refetch]);
+    }, [playlistsQuery, playlistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setCollectionServerSearch(PLAYLISTS_STATE_KEY, newSearch);

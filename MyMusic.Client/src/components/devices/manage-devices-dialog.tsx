@@ -25,8 +25,7 @@ export default function ManageDevicesDialog({
                                             }: ManageDevicesDialogProps) {
     const devicesQuery = useGetSongDevices(songIds[0]!, {query: {enabled: opened && songIds.length > 0}});
     const devicesResponse = useQueryData(devicesQuery, "Failed to fetch devices") ?? {data: {devices: []}};
-
-    const devices = devicesResponse?.data?.devices ?? [];
+    const devices = devicesResponse.data.devices;
 
     const queryClient = useQueryClient();
 
@@ -57,7 +56,7 @@ export default function ManageDevicesDialog({
                 onClose();
                 onSuccess?.();
             },
-            onError: (error: any) => {
+            onError: (error) => {
                 const errorMessage = error?.response?.data?.detail 
                     ?? error?.message 
                     ?? 'Failed to update devices. Please try again.';
