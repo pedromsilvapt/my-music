@@ -6,12 +6,13 @@ import type {SyncSessionItem} from '../../src/api/types';
 import {pruneSessions} from '../../src/api/sync';
 import {ErrorDisplay} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
-import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
+import {useTheme} from '../../src/hooks/useTheme';
 import {fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 
 export default function HistoryListScreen() {
     const router = useRouter();
+    const {colors, fontSize, fontWeight, spacing, borderRadius, withAlpha} = useTheme();
     const {deviceId, isConfigured} = useConfigStore();
     const [sessions, setSessions] = useState<SyncSessionItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -58,7 +59,7 @@ export default function HistoryListScreen() {
         navigation.setOptions({
             headerRight: () => (
                 <TouchableOpacity onPress={() => setPruneModalVisible(true)} style={{padding: spacing.sm}}>
-                    <Ionicons name="cut-outline" size={22} color={colors.text}/>
+                    <Ionicons name="trash-outline" size={22} color={colors.text}/>
                 </TouchableOpacity>
             ),
         });
@@ -153,7 +154,7 @@ export default function HistoryListScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={[styles.loadingContainer, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
                 <ActivityIndicator size="large" color={colors.primary}/>
             </View>
         );
@@ -161,8 +162,8 @@ export default function HistoryListScreen() {
 
     if (error) {
         return (
-            <View style={styles.container}>
-                <View style={styles.errorContainer}>
+            <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+                <View style={[styles.errorContainer, {padding: spacing.sm, justifyContent: 'center'}]}>
                     <ErrorDisplay
                         error={error}
                         onRetry={loadSessions}
@@ -175,11 +176,11 @@ export default function HistoryListScreen() {
 
     if (!isConfigured || !deviceId) {
         return (
-            <View style={styles.emptyContainer}>
+            <View style={[styles.emptyContainer, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center', padding: spacing.lg}]}>
                 <Ionicons name="settings-outline" size={48} color={colors.textMuted}/>
-                <Text style={styles.emptyText}>Configure your device to view sync history</Text>
-                <TouchableOpacity style={styles.configButton} onPress={() => router.push('/settings/device')}>
-                    <Text style={styles.configButtonText}>Configure Device</Text>
+                <Text style={[styles.emptyText, {fontSize: fontSize.lg, color: colors.text, marginTop: spacing.md}]}>Configure your device to view sync history</Text>
+                <TouchableOpacity style={[styles.configButton, {backgroundColor: colors.primary, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: borderRadius.md, marginTop: spacing.lg}]} onPress={() => router.push('/settings/device')}>
+                    <Text style={[styles.configButtonText, {color: colors.textInverse, fontWeight: fontWeight.semibold}]}>Configure Device</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -187,10 +188,10 @@ export default function HistoryListScreen() {
 
     if (sessions.length === 0) {
         return (
-            <View style={styles.emptyContainer}>
+            <View style={[styles.emptyContainer, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
                 <Ionicons name="time-outline" size={48} color={colors.textMuted}/>
-                <Text style={styles.emptyText}>No sync sessions yet</Text>
-                <Text style={styles.emptySubtext}>Start a sync to see your history here</Text>
+                <Text style={[styles.emptyText, {fontSize: fontSize.lg, color: colors.text}]}>No sync sessions yet</Text>
+                <Text style={[styles.emptySubtext, {fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs}]}>Start a sync to see your history here</Text>
             </View>
         );
     }
@@ -198,8 +199,8 @@ export default function HistoryListScreen() {
     return (
         <>
         <ScrollView
-            style={styles.container}
-            contentContainerStyle={styles.content}
+            style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}
+            contentContainerStyle={[styles.content, {padding: spacing.md}]}
             refreshControl={
                 <RefreshControl
                     refreshing={refreshing}
@@ -211,54 +212,54 @@ export default function HistoryListScreen() {
             {sessions.map((session) => (
                 <TouchableOpacity
                     key={session.id}
-                    style={styles.sessionItem}
+                    style={[styles.sessionItem, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}
                     onPress={() => router.push(`/history/${session.id}`)}
                 >
                     <View style={styles.sessionHeader}>
-                        <View style={styles.sessionInfo}>
-                            <View style={styles.statusBadge}>
+                        <View style={[styles.sessionInfo, {gap: spacing.sm}]}>
+                            <View style={[styles.statusBadge, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs}]}>
                                 <Ionicons
                                     name={getStatusIcon(session.status) as any}
                                     size={16}
                                     color={getStatusColor(session.status)}
                                 />
-                                <Text style={[styles.statusText, {color: getStatusColor(session.status)}]}>
+                                <Text style={[styles.statusText, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: getStatusColor(session.status)}]}>
                                     {session.status}
                                 </Text>
                             </View>
                             {session.isDryRun && (
-                                <View style={styles.dryRunBadge}>
-                                    <Text style={styles.dryRunText}>Dry Run</Text>
+                                <View style={[styles.dryRunBadge, {backgroundColor: withAlpha('warning', 0.12), paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm}]}>
+                                    <Text style={[styles.dryRunText, {fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium}]}>Dry Run</Text>
                                 </View>
                             )}
                         </View>
-                        <Ionicons name="chevron-forward" size={20} color={colors.textMuted}/>
+                        <Ionicons name="chevron-forward" size={20} color={colors.cardTextMuted}/>
                     </View>
 
-                    <Text style={styles.sessionDate}>{formatDate(session.startedAt)}</Text>
+                    <Text style={[styles.sessionDate, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>{formatDate(session.startedAt)}</Text>
 
-                    <View style={styles.sessionStats}>
+                    <View style={[styles.sessionStats, {flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.cardBorder}]}>
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {color: colors.success}]}>{session.createdCount}</Text>
-                            <Text style={styles.statLabel}>Created</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.success}]}>{session.createdCount}</Text>
+                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
                         </View>
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {color: colors.info}]}>{session.updatedCount}</Text>
-                            <Text style={styles.statLabel}>Updated</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.info}]}>{session.updatedCount}</Text>
+                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
                         </View>
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {color: colors.textMuted}]}>{session.skippedCount}</Text>
-                            <Text style={styles.statLabel}>Skipped</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.cardTextMuted}]}>{session.skippedCount}</Text>
+                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
                         </View>
                         <View style={styles.statItem}>
                             <Text
-                                style={[styles.statValue, {color: colors.syncDownload}]}>{session.downloadedCount}</Text>
-                            <Text style={styles.statLabel}>Downloaded</Text>
+                                style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{session.downloadedCount}</Text>
+                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
                         </View>
                         {session.errorCount > 0 && (
                             <View style={styles.statItem}>
-                                <Text style={[styles.statValue, {color: colors.error}]}>{session.errorCount}</Text>
-                                <Text style={styles.statLabel}>Errors</Text>
+                                <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.error}]}>{session.errorCount}</Text>
+                                <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Errors</Text>
                             </View>
                         )}
                     </View>
@@ -272,36 +273,36 @@ export default function HistoryListScreen() {
             animationType="fade"
             onRequestClose={() => setPruneModalVisible(false)}
         >
-            <Pressable style={styles.modalOverlay} onPress={() => setPruneModalVisible(false)}>
-                <Pressable style={styles.modalContent} onPress={() => {}}>
-                    <Text style={styles.modalTitle}>Prune Sessions</Text>
-                    <Text style={styles.modalText}>
+            <Pressable style={[styles.modalOverlay, {backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center'}]} onPress={() => setPruneModalVisible(false)}>
+                <Pressable style={[styles.modalContent, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.lg, width: '85%', maxWidth: 400}]} onPress={() => {}}>
+                    <Text style={[styles.modalTitle, {fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Prune Sessions</Text>
+                    <Text style={[styles.modalText, {fontSize: fontSize.md, color: colors.cardTextSecondary, marginBottom: spacing.lg, lineHeight: 22}]}>
                         This will remove {sessionsToPrune} session(s) older than 1 day{!pruneAll && sessions.length > 10 ? ' and beyond the 10th most recent' : ''}.
                     </Text>
 
-                    <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>All sessions</Text>
+                    <View style={[styles.switchRow, {flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.lg, paddingVertical: spacing.sm}]}>
+                        <Text style={[styles.switchLabel, {fontSize: fontSize.md, color: colors.cardText}]}>All sessions</Text>
                         <Switch
                             value={pruneAll}
                             onValueChange={setPruneAll}
-                            trackColor={{false: colors.border, true: colors.primary}}
-                            thumbColor={colors.surface}
+                            trackColor={{false: colors.cardBorder, true: colors.primary}}
+                            thumbColor={colors.cardText}
                         />
                     </View>
 
-                    <View style={styles.modalButtons}>
+                    <View style={[styles.modalButtons, {flexDirection: 'row', gap: spacing.md}]}>
                         <TouchableOpacity
-                            style={[styles.modalButton, styles.modalButtonCancel]}
+                            style={[styles.modalButton, {backgroundColor: colors.cardSecondary, flex: 1, paddingVertical: spacing.md, borderRadius: borderRadius.md, alignItems: 'center'}]}
                             onPress={() => setPruneModalVisible(false)}
                         >
-                            <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                            <Text style={[styles.modalButtonCancelText, {color: colors.cardText, fontWeight: fontWeight.medium}]}>Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.modalButton, styles.modalButtonConfirm]}
+                            style={[styles.modalButton, {backgroundColor: colors.primary, flex: 1, paddingVertical: spacing.md, borderRadius: borderRadius.md, alignItems: 'center'}]}
                             onPress={handlePrune}
                             disabled={pruning || sessionsToPrune === 0}
                         >
-                            <Text style={styles.modalButtonConfirmText}>
+                            <Text style={[styles.modalButtonConfirmText, {color: colors.textInverse, fontWeight: fontWeight.semibold}]}>
                                 {pruning ? 'Pruning...' : 'Prune'}
                             </Text>
                         </TouchableOpacity>
@@ -316,57 +317,38 @@ export default function HistoryListScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.backgroundDark,
     },
     content: {
-        padding: spacing.md,
+        padding: 16,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.backgroundDark,
     },
     errorContainer: {
-        padding: spacing.sm,
+        padding: 4,
         justifyContent: 'center',
     },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.backgroundDark,
-        padding: spacing.lg,
     },
     emptyText: {
-        fontSize: fontSize.lg,
-        color: colors.text,
-        marginTop: spacing.md,
+        fontSize: 18,
     },
     emptySubtext: {
-        fontSize: fontSize.sm,
-        color: colors.textSecondary,
-        marginTop: spacing.xs,
+        fontSize: 12,
     },
     configButton: {
-        backgroundColor: colors.primary,
-        paddingHorizontal: spacing.lg,
-        paddingVertical: spacing.sm,
-        borderRadius: borderRadius.md,
-        marginTop: spacing.lg,
+        marginTop: 24,
     },
     configButtonText: {
-        color: '#fff',
-        fontWeight: fontWeight.semibold,
-    },
-    sessionCard: {
-        padding: spacing.md,
+        fontWeight: '600',
     },
     sessionItem: {
-        backgroundColor: colors.surface,
-        borderRadius: borderRadius.lg,
-        padding: spacing.md,
-        marginBottom: spacing.md,
+        marginBottom: 16,
     },
     sessionHeader: {
         flexDirection: 'row',
@@ -376,110 +358,75 @@ const styles = StyleSheet.create({
     sessionInfo: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.sm,
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.xs,
     },
     statusText: {
-        fontSize: fontSize.sm,
-        fontWeight: fontWeight.medium,
+        fontSize: 12,
+        fontWeight: '500',
     },
     dryRunBadge: {
-        backgroundColor: colors.warning + '20',
-        paddingHorizontal: spacing.sm,
+        paddingHorizontal: 8,
         paddingVertical: 2,
-        borderRadius: borderRadius.sm,
     },
     dryRunText: {
-        fontSize: fontSize.xs,
-        color: colors.warning,
-        fontWeight: fontWeight.medium,
+        fontSize: 10,
+        fontWeight: '500',
     },
     sessionDate: {
-        fontSize: fontSize.sm,
-        color: colors.textMuted,
-        marginTop: spacing.xs,
+        fontSize: 12,
     },
     sessionStats: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginTop: spacing.md,
-        paddingTop: spacing.md,
         borderTopWidth: 1,
-        borderTopColor: colors.border,
     },
     statItem: {
         alignItems: 'center',
     },
     statValue: {
-        fontSize: fontSize.md,
-        fontWeight: fontWeight.bold,
+        fontSize: 14,
+        fontWeight: '700',
     },
     statLabel: {
-        fontSize: fontSize.xs,
-        color: colors.textMuted,
+        fontSize: 10,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         justifyContent: 'center',
         alignItems: 'center',
     },
     modalContent: {
-        backgroundColor: colors.surface,
-        borderRadius: borderRadius.lg,
-        padding: spacing.lg,
         width: '85%',
         maxWidth: 400,
     },
     modalTitle: {
-        fontSize: fontSize.lg,
-        fontWeight: fontWeight.semibold,
-        color: colors.text,
-        marginBottom: spacing.md,
+        fontSize: 16,
     },
     modalText: {
-        fontSize: fontSize.md,
-        color: colors.textSecondary,
-        marginBottom: spacing.lg,
+        fontSize: 14,
         lineHeight: 22,
     },
     switchRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: spacing.lg,
-        paddingVertical: spacing.sm,
     },
     switchLabel: {
-        fontSize: fontSize.md,
-        color: colors.text,
+        fontSize: 14,
     },
     modalButtons: {
         flexDirection: 'row',
-        gap: spacing.md,
     },
     modalButton: {
         flex: 1,
-        paddingVertical: spacing.md,
-        borderRadius: borderRadius.md,
-        alignItems: 'center',
-    },
-    modalButtonCancel: {
-        backgroundColor: colors.border,
     },
     modalButtonCancelText: {
-        color: colors.text,
-        fontWeight: fontWeight.medium,
-    },
-    modalButtonConfirm: {
-        backgroundColor: colors.primary,
+        fontWeight: '500',
     },
     modalButtonConfirmText: {
-        color: '#fff',
-        fontWeight: fontWeight.semibold,
+        fontWeight: '600',
     },
 });

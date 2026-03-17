@@ -4,9 +4,9 @@ import React, {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {SyncRecordResponseItem, SyncSessionItem} from '../../src/api/types';
 import {deleteSession} from '../../src/api/sync';
-import {ErrorDisplay} from '../../src/components/ui';
+import {Card, ErrorDisplay} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
-import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
+import {useTheme} from '../../src/hooks/useTheme';
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 
@@ -35,6 +35,7 @@ function formatFilePath(path: string, repositoryPath: string | null | undefined)
 export default function SessionDetailScreen() {
     const {sessionId} = useLocalSearchParams<{ sessionId: string }>();
     const navigation = useNavigation();
+    const {colors, fontSize, fontWeight, spacing, borderRadius, withAlpha} = useTheme();
     const {deviceId} = useConfigStore();
 
     const [session, setSession] = useState<SyncSessionItem | null>(null);
@@ -128,7 +129,7 @@ export default function SessionDetailScreen() {
         navigation.setOptions({
             headerRight: () => (
                 <TouchableOpacity onPress={handleDelete} style={{padding: spacing.sm}}>
-                    <Ionicons name="trash-outline" size={22} color={colors.error}/>
+                    <Ionicons name="trash-outline" size={22} color={colors.text}/>
                 </TouchableOpacity>
             ),
         });
@@ -180,6 +181,27 @@ export default function SessionDetailScreen() {
         }
     };
 
+    const getActionColorKey = (action: string): keyof typeof colors => {
+        switch (action.toLowerCase()) {
+            case 'created':
+                return 'success';
+            case 'updated':
+                return 'info';
+            case 'skipped':
+                return 'textMuted';
+            case 'downloaded':
+                return 'syncDownload';
+            case 'removed':
+                return 'error';
+            case 'error':
+                return 'error';
+            case 'conflict':
+                return 'warning';
+            default:
+                return 'textSecondary';
+        }
+    };
+
     const getActionIcon = (action: string, source: string) => {
         if (action.toLowerCase() === 'error') return 'alert-circle';
         if (action.toLowerCase() === 'skipped') return 'skip-forward';
@@ -205,7 +227,7 @@ export default function SessionDetailScreen() {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={[styles.loadingContainer, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
                 <ActivityIndicator size="large" color={colors.primary}/>
             </View>
         );
@@ -213,8 +235,8 @@ export default function SessionDetailScreen() {
 
     if (error) {
         return (
-            <View style={styles.container}>
-                <View style={styles.errorDisplayContainer}>
+            <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+                <View style={[styles.errorDisplayContainer, {flex: 1, padding: spacing.md}]}>
                     <ErrorDisplay 
                         error={error} 
                         onDismiss={() => router.back()}
@@ -226,122 +248,130 @@ export default function SessionDetailScreen() {
 
     if (!session) {
         return (
-            <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>Session not found</Text>
+            <View style={[styles.errorContainer, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
+                <Text style={[styles.errorText, {color: colors.textSecondary, fontSize: fontSize.lg}]}>Session not found</Text>
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
             <ScrollView>
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <View style={styles.statusBadge}>
-                            <Text style={styles.statusText}>{session.status}</Text>
+                <View style={[styles.header, {padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border}]}>
+                    <View style={[styles.headerRow, {flexDirection: 'row', gap: spacing.sm}]}>
+                        <View style={[styles.statusBadge, {backgroundColor: withAlpha('success', 0.12), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm}]}>
+                            <Text style={[styles.statusText, {color: colors.success, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>{session.status}</Text>
                         </View>
                         {session.isDryRun && (
-                            <View style={styles.dryRunBadge}>
-                                <Text style={styles.dryRunText}>Dry Run</Text>
+                            <View style={[styles.dryRunBadge, {backgroundColor: withAlpha('warning', 0.12), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm}]}>
+                                <Text style={[styles.dryRunText, {color: colors.warning, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>Dry Run</Text>
                             </View>
                         )}
                     </View>
-                    <Text style={styles.dateText}>Started: {formatDate(session.startedAt)}</Text>
+                    <Text style={[styles.dateText, {color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs}]}>Started: {formatDate(session.startedAt)}</Text>
                     {session.completedAt && (
-                        <Text style={styles.dateText}>Completed: {formatDate(session.completedAt)}</Text>
+                        <Text style={[styles.dateText, {color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs}]}>Completed: {formatDate(session.completedAt)}</Text>
                     )}
                 </View>
 
-                <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>Summary</Text>
-                    <View style={styles.summaryGrid}>
-                        <View style={styles.summaryItem}>
-                            <Text style={[styles.summaryValue, {color: colors.success}]}>{session.createdCount}</Text>
-                            <Text style={styles.summaryLabel}>Created</Text>
+                <Card style={{marginHorizontal: spacing.md}}>
+                    <Text style={[styles.summaryTitle, {fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Summary</Text>
+                    <View style={[styles.summaryGrid, {flexDirection: 'row', flexWrap: 'wrap'}]}>
+                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.success}]}>{session.createdCount}</Text>
+                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
                         </View>
-                        <View style={styles.summaryItem}>
-                            <Text style={[styles.summaryValue, {color: colors.info}]}>{session.updatedCount}</Text>
-                            <Text style={styles.summaryLabel}>Updated</Text>
+                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.info}]}>{session.updatedCount}</Text>
+                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
                         </View>
-                        <View style={styles.summaryItem}>
-                            <Text style={[styles.summaryValue, {color: colors.textMuted}]}>{session.skippedCount}</Text>
-                            <Text style={styles.summaryLabel}>Skipped</Text>
+                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textMuted}]}>{session.skippedCount}</Text>
+                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
                         </View>
-                        <View style={styles.summaryItem}>
+                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
                             <Text
-                                style={[styles.summaryValue, {color: colors.syncDownload}]}>{session.downloadedCount}</Text>
-                            <Text style={styles.summaryLabel}>Downloaded</Text>
+                                style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{session.downloadedCount}</Text>
+                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
                         </View>
-                        <View style={styles.summaryItem}>
-                            <Text style={[styles.summaryValue, {color: colors.error}]}>{session.removedCount}</Text>
-                            <Text style={styles.summaryLabel}>Removed</Text>
+                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{session.removedCount}</Text>
+                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Removed</Text>
                         </View>
-                        <View style={styles.summaryItem}>
-                            <Text style={[styles.summaryValue, {color: colors.error}]}>{session.errorCount}</Text>
-                            <Text style={styles.summaryLabel}>Errors</Text>
+                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{session.errorCount}</Text>
+                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Errors</Text>
                         </View>
                     </View>
-                </View>
+                </Card>
 
-                <View style={styles.filterContainer}>
+                <View style={[styles.filterContainer, {flexDirection: 'row', paddingHorizontal: spacing.lg, gap: spacing.xs, marginBottom: spacing.md}]}>
                     {filters.map(f => (
                         <TouchableOpacity
                             key={f.key}
-                            style={[styles.filterButton, filter === f.key && styles.filterButtonActive]}
+                            style={[
+                                styles.filterButton,
+                                {paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.full, backgroundColor: colors.surface},
+                                filter === f.key && {backgroundColor: colors.primary}
+                            ]}
                             onPress={() => setFilter(f.key)}
                         >
-                            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
+                            <Text style={[
+                                styles.filterText,
+                                {fontSize: fontSize.sm, color: colors.textSecondary},
+                                filter === f.key && {color: colors.onPrimary, fontWeight: fontWeight.medium}
+                            ]}>
                                 {f.label}
                             </Text>
                         </TouchableOpacity>
                     ))}
                 </View>
 
-                <View style={styles.recordsContainer}>
+                <View style={[styles.recordsContainer, {padding: spacing.lg, paddingTop: 0}]}>
                     {sortedGroupEntries.map(([action, actionRecords]) => (
-                        <View key={action} style={styles.recordGroup}>
-                            <View style={styles.recordGroupHeader}>
-                                <View style={[styles.actionBadge, {backgroundColor: getActionColor(action) + '20'}]}>
+                        <Card key={action} style={{marginHorizontal: spacing.md}}>
+                            <View style={[styles.recordGroupHeader, {marginBottom: spacing.xs}]}>
+                                <View style={[styles.actionBadge, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm, alignSelf: 'flex-start', backgroundColor: withAlpha(getActionColorKey(action), 0.12)}]}>
                                     <Ionicons
                                         name={getActionIcon(action, actionRecords[0]?.source || '') as any}
                                         size={14}
                                         color={getActionColor(action)}
                                     />
-                                    <Text style={[styles.actionText, {color: getActionColor(action)}]}>
+                                    <Text style={[styles.actionText, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: getActionColor(action)}]}>
                                         {action} ({actionRecords.length})
                                     </Text>
                                 </View>
                             </View>
                             {actionRecords.map((record, idx) => (
-                                <View key={idx} style={styles.recordItem}>
-                                    <View style={styles.recordPathRow}>
+                                <View key={idx} style={[styles.recordItem, {paddingVertical: spacing.sm, borderBottomWidth: idx < actionRecords.length - 1 ? 1 : 0, borderBottomColor: colors.cardBorder}]}>
+                                    <View style={[styles.recordPathRow, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs}]}>
                                         <Ionicons
                                             name={record.source === 'Server' ? 'arrow-down' : 'arrow-up'}
                                             size={12}
                                             color={getActionColor(action)}
                                         />
-                                        <Text style={styles.recordPath} numberOfLines={1}>
+                                        <Text style={[styles.recordPath, {flex: 1, fontSize: fontSize.sm, color: colors.cardText}]} numberOfLines={1}>
                                             {formatFilePath(record.filePath, session?.repositoryPath)}
                                         </Text>
                                     </View>
                                     {record.errorMessage && (
-                                        <Text style={styles.recordError} numberOfLines={2}>
+                                        <Text style={[styles.recordError, {fontSize: fontSize.sm, color: colors.error, marginTop: spacing.xs}]} numberOfLines={2}>
                                             {record.errorMessage}
                                         </Text>
                                     )}
                                     {record.reason && (
-                                        <Text style={styles.recordReason} numberOfLines={2}>
+                                        <Text style={[styles.recordReason, {fontSize: fontSize.xs, color: colors.cardTextMuted, marginTop: spacing.xs, fontStyle: 'italic'}]} numberOfLines={2}>
                                             {record.reason}
                                         </Text>
                                     )}
                                 </View>
                             ))}
-                        </View>
+                        </Card>
                     ))}
 
                     {filteredRecords.length === 0 && (
-                        <View style={styles.emptyRecords}>
-                            <Text style={styles.emptyText}>No records match this filter</Text>
+                        <View style={[styles.emptyRecords, {alignItems: 'center', padding: spacing.xl}]}>
+                            <Text style={[styles.emptyText, {color: colors.textMuted}]}>No records match this filter</Text>
                         </View>
                     )}
                 </View>
@@ -353,75 +383,51 @@ export default function SessionDetailScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.backgroundDark,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.backgroundDark,
     },
     errorContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.backgroundDark,
     },
     errorDisplayContainer: {
         flex: 1,
-        padding: spacing.md,
     },
     errorText: {
-        color: colors.textSecondary,
-        fontSize: fontSize.lg,
+        fontSize: 18,
     },
     header: {
-        padding: spacing.md,
         borderBottomWidth: 1,
-        borderBottomColor: colors.border,
     },
     headerRow: {
         flexDirection: 'row',
-        gap: spacing.sm,
     },
     statusBadge: {
-        backgroundColor: colors.success + '20',
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: borderRadius.sm,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     statusText: {
-        color: colors.success,
-        fontWeight: fontWeight.medium,
-        fontSize: fontSize.sm,
+        fontWeight: '500',
+        fontSize: 12,
     },
     dryRunBadge: {
-        backgroundColor: colors.warning + '20',
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: borderRadius.sm,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     dryRunText: {
-        color: colors.warning,
-        fontWeight: fontWeight.medium,
-        fontSize: fontSize.sm,
+        fontWeight: '500',
+        fontSize: 12,
     },
     dateText: {
-        color: colors.textSecondary,
-        fontSize: fontSize.sm,
-        marginTop: spacing.xs,
-    },
-    summaryCard: {
-        backgroundColor: colors.surface,
-        margin: spacing.md,
-        borderRadius: borderRadius.lg,
-        padding: spacing.md,
+        fontSize: 12,
     },
     summaryTitle: {
-        fontSize: fontSize.md,
-        fontWeight: fontWeight.semibold,
-        color: colors.text,
-        marginBottom: spacing.md,
+        fontSize: 14,
+        fontWeight: '600',
     },
     summaryGrid: {
         flexDirection: 'row',
@@ -430,95 +436,61 @@ const styles = StyleSheet.create({
     summaryItem: {
         width: '33%',
         alignItems: 'center',
-        paddingVertical: spacing.sm,
     },
     summaryValue: {
-        fontSize: fontSize.xl,
-        fontWeight: fontWeight.bold,
+        fontSize: 18,
+        fontWeight: '700',
     },
     summaryLabel: {
-        fontSize: fontSize.xs,
-        color: colors.textMuted,
+        fontSize: 10,
     },
     filterContainer: {
         flexDirection: 'row',
-        paddingHorizontal: spacing.md,
-        gap: spacing.xs,
-        marginBottom: spacing.md,
     },
     filterButton: {
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: borderRadius.full,
-        backgroundColor: colors.surface,
-    },
-    filterButtonActive: {
-        backgroundColor: colors.primary,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 999,
     },
     filterText: {
-        fontSize: fontSize.sm,
-        color: colors.textSecondary,
-    },
-    filterTextActive: {
-        color: '#fff',
-        fontWeight: fontWeight.medium,
+        fontSize: 12,
     },
     recordsContainer: {
-        padding: spacing.md,
-        paddingTop: 0,
-    },
-    recordGroup: {
-        marginBottom: spacing.md,
+        padding: 16,
     },
     recordGroupHeader: {
-        marginBottom: spacing.xs,
+        marginBottom: 4,
     },
     actionBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.xs,
-        paddingHorizontal: spacing.sm,
-        paddingVertical: spacing.xs,
-        borderRadius: borderRadius.sm,
-        alignSelf: 'flex-start',
     },
     actionText: {
-        fontSize: fontSize.sm,
-        fontWeight: fontWeight.medium,
+        fontSize: 12,
+        fontWeight: '500',
     },
     recordItem: {
-        backgroundColor: colors.surface,
-        borderRadius: borderRadius.md,
-        padding: spacing.sm,
-        marginBottom: spacing.xs,
-        marginLeft: spacing.md,
+        marginBottom: 4,
     },
     recordPathRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.xs,
     },
     recordPath: {
         flex: 1,
-        fontSize: fontSize.sm,
-        color: colors.text,
+        fontSize: 12,
     },
     recordError: {
-        fontSize: fontSize.sm,
-        color: colors.error,
-        marginTop: spacing.xs,
+        fontSize: 12,
     },
     recordReason: {
-        fontSize: fontSize.xs,
-        color: colors.textMuted,
-        marginTop: spacing.xs,
+        fontSize: 10,
         fontStyle: 'italic',
     },
     emptyRecords: {
         alignItems: 'center',
-        padding: spacing.xl,
     },
     emptyText: {
-        color: colors.textMuted,
+        fontSize: 12,
     },
 });

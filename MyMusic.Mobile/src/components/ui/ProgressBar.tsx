@@ -1,6 +1,6 @@
 import React from 'react';
 import {StyleSheet, View, ViewStyle} from 'react-native';
-import {borderRadius, colors} from '../../constants/theme';
+import {useTheme} from '../../hooks/useTheme';
 
 interface ProgressBarProps {
     progress: number; // 0 to 1
@@ -11,36 +11,41 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({
-                                progress,
-                                height = 8,
-                                color = colors.primary,
-                                backgroundColor = colors.border,
-                                style,
-                            }: ProgressBarProps) {
+    progress,
+    height = 8,
+    color,
+    backgroundColor,
+    style,
+}: ProgressBarProps) {
+    const {colors, borderRadius} = useTheme();
+    
+    const fillColor = color ?? colors.primary;
+    const bgColor = backgroundColor ?? colors.border;
+
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
 
     return (
-        <View style={[styles.container, {height, backgroundColor}, style]}>
+        <View
+            style={[
+                {
+                    height,
+                    backgroundColor: bgColor,
+                    borderRadius: borderRadius.full,
+                    overflow: 'hidden',
+                },
+                style,
+            ]}
+        >
             <View
                 style={[
-                    styles.fill,
                     {
+                        height: '100%',
+                        backgroundColor: fillColor,
+                        borderRadius: borderRadius.full,
                         width: `${clampedProgress * 100}%`,
-                        backgroundColor: color,
                     },
                 ]}
             />
         </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        borderRadius: borderRadius.full,
-        overflow: 'hidden',
-    },
-    fill: {
-        height: '100%',
-        borderRadius: borderRadius.full,
-    },
-});

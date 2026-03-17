@@ -4,7 +4,7 @@ import {pickDirectory} from '@react-native-documents/picker';
 import {useRouter} from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, {useState} from 'react';
-import {ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {testConnection, type ConnectionTestResult} from '../../src/api/client';
@@ -12,7 +12,7 @@ import {createDevice, getDevices, updateDevice} from '../../src/api/devices';
 import {Button, Card, ErrorDisplay, Input} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
-import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
+import {useTheme} from '../../src/hooks/useTheme';
 import {
     getDeviceIcon,
     getDeviceName,
@@ -47,6 +47,7 @@ type ConfigFormData = z.infer<typeof configSchema>;
 
 export default function DeviceConfigScreen() {
     const router = useRouter();
+    const {colors, fontSize, fontWeight, spacing, borderRadius, withAlpha} = useTheme();
     const [saving, setSaving] = useState(false);
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -191,26 +192,26 @@ export default function DeviceConfigScreen() {
 
     if (step === 'registering') {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={[styles.loadingContainer, {backgroundColor: colors.backgroundSecondary, gap: spacing.md}]}>
                 <ActivityIndicator size="large" color={colors.primary}/>
-                <Text style={styles.loadingText}>Configuring device...</Text>
+                <Text style={[styles.loadingText, {fontSize: fontSize.lg, color: colors.text}]}>Configuring device...</Text>
             </View>
         );
     }
 
     if (step === 'done') {
         return (
-            <View style={styles.loadingContainer}>
+            <View style={[styles.loadingContainer, {backgroundColor: colors.backgroundSecondary, gap: spacing.md}]}>
                 <Ionicons name="checkmark-circle" size={64} color={colors.success}/>
-                <Text style={styles.loadingText}>Configuration saved!</Text>
+                <Text style={[styles.loadingText, {fontSize: fontSize.lg, color: colors.text}]}>Configuration saved!</Text>
             </View>
         );
     }
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <ScrollView style={[styles.container, {backgroundColor: colors.backgroundSecondary}]} contentContainerStyle={[styles.content, {padding: spacing.md, paddingBottom: spacing.xxl}]}>
             <Card>
-                <Text style={styles.sectionTitle}>Server</Text>
+                <Text style={[styles.sectionTitle, {fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Server</Text>
                 <Controller
                     control={control}
                     name="serverUrl"
@@ -224,6 +225,7 @@ export default function DeviceConfigScreen() {
                             error={errors.serverUrl?.message}
                             autoCapitalize="none"
                             keyboardType="url"
+                            variant="card"
                         />
                     )}
                 />
@@ -239,11 +241,12 @@ export default function DeviceConfigScreen() {
                             onChangeText={onChange}
                             onBlur={onBlur}
                             error={errors.userName?.message}
+                            variant="card"
                         />
                     )}
                 />
 
-                <View style={styles.testConnectionRow}>
+                <View style={[styles.testConnectionRow, {gap: spacing.sm, marginTop: spacing.sm}]}>
                     <Button
                         title="Test Connection"
                         onPress={handleSubmit((data) => handleTestConnection(data.serverUrl))}
@@ -262,7 +265,7 @@ export default function DeviceConfigScreen() {
             </Card>
 
             <Card>
-                <Text style={styles.sectionTitle}>Device</Text>
+                <Text style={[styles.sectionTitle, {fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Device</Text>
 
                 <Controller
                     control={control}
@@ -275,29 +278,41 @@ export default function DeviceConfigScreen() {
                             onChangeText={onChange}
                             onBlur={onBlur}
                             error={errors.deviceName?.message}
+                            variant="card"
                         />
                     )}
                 />
 
-                <Text style={styles.label}>Device Type</Text>
-                <View style={styles.deviceTypeGrid}>
+                <Text style={[styles.label, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.cardTextSecondary, marginBottom: spacing.xs}]}>Device Type</Text>
+                <View style={[styles.deviceTypeGrid, {gap: spacing.sm}]}>
                     {DEVICE_TYPES.map((type) => (
                         <TouchableOpacity
                             key={type.id}
                             style={[
                                 styles.deviceTypeButton,
-                                selectedType === type.label && styles.deviceTypeButtonActive,
+                                {
+                                    backgroundColor: colors.cardSecondary,
+                                    borderRadius: borderRadius.md,
+                                    padding: spacing.md,
+                                    borderWidth: 1,
+                                        borderColor: colors.cardBorder,
+                                },
+                                selectedType === type.label && {
+                                    borderColor: colors.primary,
+                                    backgroundColor: withAlpha('primary', 0.12),
+                                },
                             ]}
                             onPress={() => setValue('deviceType', type.label)}
                         >
                             <Ionicons
                                 name={type.icon as any}
                                 size={24}
-                                color={selectedType === type.label ? colors.primary : colors.textSecondary}
+                                color={selectedType === type.label ? colors.primary : colors.cardTextSecondary}
                             />
                             <Text style={[
                                 styles.deviceTypeText,
-                                selectedType === type.label && styles.deviceTypeTextActive,
+                                {fontSize: fontSize.xs, color: colors.cardTextSecondary, marginTop: spacing.xs},
+                                selectedType === type.label && {color: colors.primary, fontWeight: fontWeight.medium},
                             ]}>
                                 {type.label}
                             </Text>
@@ -309,15 +324,16 @@ export default function DeviceConfigScreen() {
                     control={control}
                     name="namingTemplate"
                     render={({field: {onChange, onBlur, value}}) => (
-                        <View style={styles.namingTemplateContainer}>
+                        <View style={[styles.namingTemplateContainer, {marginTop: spacing.md}]}>
                             <Input
                                 label="Naming Template"
                                 placeholder='{{ album.artist.name }}/{{ album.name }}/{{ simple_label }}.mp3'
                                 value={value}
                                 onChangeText={onChange}
                                 onBlur={onBlur}
+                                variant="card"
                             />
-                            <Text style={styles.hint}>
+                            <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
                                 Template for downloaded file names. Variables: {'{{ album.artist.name }}'}, {'{{ album.name }}'}, {'{{ title }}'}, {'{{ artists }}'}, {'{{ track }}'}, {'{{ year }}'}, {'{{ simple_label }}'}, {'{{ full_label }}'}
                             </Text>
                         </View>
@@ -328,26 +344,26 @@ export default function DeviceConfigScreen() {
                     control={control}
                     name="importOnPurchase"
                     render={({field: {onChange, value}}) => (
-                        <View style={styles.toggleRow}>
-                            <View style={styles.toggleLabelContainer}>
-                                <Text style={styles.toggleLabel}>Auto-import on purchase</Text>
-                                <Text style={styles.toggleHint}>
+                        <View style={[styles.toggleRow, {marginTop: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.cardBorder}]}>
+                            <View style={[styles.toggleLabelContainer, {marginRight: spacing.md}]}>
+                                <Text style={[styles.toggleLabel, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Auto-import on purchase</Text>
+                                <Text style={[styles.toggleHint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
                                     Automatically download purchased songs to this device
                                 </Text>
                             </View>
-                            <TouchableOpacity
-                                style={[styles.toggle, value && styles.toggleActive]}
-                                onPress={() => onChange(!value)}
-                            >
-                                <View style={[styles.toggleThumb, value && styles.toggleThumbActive]} />
-                            </TouchableOpacity>
+                            <Switch
+                                value={value}
+                                onValueChange={onChange}
+                                trackColor={{false: colors.cardBorder, true: colors.primary}}
+                                thumbColor={colors.cardText}
+                            />
                         </View>
                     )}
                 />
             </Card>
 
             <Card>
-                <Text style={styles.sectionTitle}>Repository</Text>
+                <Text style={[styles.sectionTitle, {fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Repository</Text>
 
                 <Controller
                     control={control}
@@ -361,21 +377,32 @@ export default function DeviceConfigScreen() {
                                 onChangeText={onChange}
                                 onBlur={onBlur}
                                 error={errors.repositoryPath?.message}
+                                variant="card"
                             />
-                            <TouchableOpacity style={styles.browseButton} onPress={handlePickFolder}>
+                            <TouchableOpacity 
+                                style={[
+                                    styles.browseButton,
+                                    {
+                                        borderRadius: borderRadius.md,
+                                        marginTop: -spacing.sm,
+                                    },
+                                    {backgroundColor: withAlpha('primary', 0.08), borderWidth: 1, borderColor: withAlpha('primary', 0.18)}
+                                ]} 
+                                onPress={handlePickFolder}
+                            >
                                 <Ionicons name="folder-open-outline" size={20} color={colors.primary}/>
-                                <Text style={styles.browseButtonText}>Browse</Text>
+                                <Text style={[styles.browseButtonText, {color: colors.primary, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>Browse</Text>
                             </TouchableOpacity>
                         </View>
                     )}
                 />
 
-                <Text style={styles.hint}>
+                <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
                     Tap "Browse" to select a folder from your device, or enter the path manually.
                 </Text>
             </Card>
 
-            <View style={styles.actions}>
+            <View style={[styles.actions, {marginTop: spacing.lg}]}>
                 <Button
                     title="Save Configuration"
                     onPress={handleSubmit(onSubmit)}
@@ -390,8 +417,8 @@ export default function DeviceConfigScreen() {
                 animationType="fade"
                 onRequestClose={() => setConnectionError(null)}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
+                <View style={[styles.modalOverlay, {backgroundColor: 'rgba(0, 0, 0, 0.7)'}]}>
+                    <View style={[styles.modalContent, {backgroundColor: colors.surfaceSecondary, borderRadius: borderRadius.lg, padding: spacing.sm}]}>
                         {connectionError && (
                             <ErrorDisplay
                                 error={connectionError}
@@ -408,155 +435,95 @@ export default function DeviceConfigScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.backgroundDark,
     },
     content: {
-        padding: spacing.md,
-        paddingBottom: spacing.xxl,
+        padding: 16,
+        paddingBottom: 48,
     },
     loadingContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: colors.backgroundDark,
-        gap: spacing.md,
     },
     loadingText: {
-        fontSize: fontSize.lg,
-        color: colors.text,
+        fontSize: 16,
     },
     sectionTitle: {
-        fontSize: fontSize.lg,
-        fontWeight: fontWeight.semibold,
-        color: colors.text,
-        marginBottom: spacing.md,
+        fontSize: 16,
+        marginBottom: 16,
     },
     label: {
-        fontSize: fontSize.sm,
-        fontWeight: fontWeight.medium,
-        color: colors.textSecondary,
-        marginBottom: spacing.xs,
+        fontSize: 12,
+        marginBottom: 4,
     },
     deviceTypeGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: spacing.sm,
     },
     deviceTypeButton: {
         width: '31%',
-        backgroundColor: colors.surface,
-        borderRadius: borderRadius.md,
-        padding: spacing.md,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    deviceTypeButtonActive: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primary + '20',
     },
     deviceTypeText: {
-        fontSize: fontSize.xs,
-        color: colors.textSecondary,
-        marginTop: spacing.xs,
+        fontSize: 10,
         textAlign: 'center',
     },
-    deviceTypeTextActive: {
-        color: colors.primary,
-        fontWeight: fontWeight.medium,
-    },
     hint: {
-        fontSize: fontSize.sm,
-        color: colors.textMuted,
-        marginTop: spacing.xs,
+        fontSize: 12,
     },
     testConnectionRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.sm,
-        marginTop: spacing.sm,
     },
     browseButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: spacing.xs,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        backgroundColor: colors.primary + '15',
-        borderRadius: borderRadius.md,
-        borderWidth: 1,
-        borderColor: colors.primary + '30',
-        marginTop: -spacing.sm,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        marginTop: -8,
     },
     browseButtonText: {
-        color: colors.primary,
-        fontWeight: fontWeight.medium,
-        fontSize: fontSize.sm,
+        fontSize: 12,
     },
     toggleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginTop: spacing.lg,
-        paddingTop: spacing.md,
         borderTopWidth: 1,
-        borderTopColor: colors.border,
     },
     toggleLabelContainer: {
         flex: 1,
-        marginRight: spacing.md,
     },
     toggleLabel: {
-        fontSize: fontSize.md,
-        fontWeight: fontWeight.medium,
-        color: colors.text,
+        fontSize: 14,
     },
     toggleHint: {
-        fontSize: fontSize.sm,
-        color: colors.textMuted,
-        marginTop: spacing.xs,
+        fontSize: 12,
     },
     namingTemplateContainer: {
-        marginTop: spacing.md,
+        marginTop: 16,
     },
     toggle: {
         width: 50,
         height: 30,
         borderRadius: 15,
-        backgroundColor: colors.surface,
-        borderWidth: 1,
-        borderColor: colors.border,
-        padding: 2,
-    },
-    toggleActive: {
-        backgroundColor: colors.primary + '30',
-        borderColor: colors.primary,
     },
     toggleThumb: {
         width: 26,
         height: 26,
         borderRadius: 13,
-        backgroundColor: colors.textSecondary,
-    },
-    toggleThumbActive: {
-        backgroundColor: colors.primary,
-        transform: [{translateX: 20}],
     },
     actions: {
-        marginTop: spacing.lg,
+        marginTop: 24,
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: spacing.md,
+        padding: 16,
     },
     modalContent: {
-        backgroundColor: colors.surfaceDark,
-        borderRadius: borderRadius.lg,
-        padding: spacing.sm,
         width: '95%',
         maxWidth: 400,
         maxHeight: '80%',

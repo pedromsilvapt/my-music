@@ -3,11 +3,12 @@ import {useRouter} from 'expo-router';
 import React from 'react';
 import {ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {Button} from '../../src/components/ui';
-import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
+import {useTheme} from '../../src/hooks/useTheme';
 import {useSyncStore} from '../../src/stores/syncStore';
 
 export default function SyncOptionsScreen() {
     const router = useRouter();
+    const {colors, fontSize, fontWeight, spacing, borderRadius, withAlpha} = useTheme();
     const {options, setOptions} = useSyncStore();
 
     const handleStartSync = () => {
@@ -19,103 +20,103 @@ export default function SyncOptionsScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-                <View style={styles.header}>
-                    <Text style={styles.title}>Sync Options</Text>
-                    <Text style={styles.subtitle}>Configure how you want to sync your music</Text>
+        <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+            <ScrollView style={styles.scrollView} contentContainerStyle={[styles.content, {padding: spacing.md, paddingBottom: spacing.xl}]}>
+                <View style={[styles.header, {marginBottom: spacing.lg}]}>
+                    <Text style={[styles.title, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text}]}>Sync Options</Text>
+                    <Text style={[styles.subtitle, {fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.xs}]}>Configure how you want to sync your music</Text>
                 </View>
 
-                <View style={styles.optionCard}>
+                <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
                     <View style={styles.optionRow}>
-                        <View style={styles.optionInfo}>
-                            <Text style={styles.optionTitle}>Force Upload</Text>
-                            <Text style={styles.optionDescription}>
+                        <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
+                            <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Force Upload</Text>
+                            <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
                                 Upload files even if the server already has them
                             </Text>
                         </View>
                         <Switch
                             value={options.force}
                             onValueChange={(value) => setOptions({force: value})}
-                            trackColor={{false: colors.border, true: colors.primary}}
-                            thumbColor={colors.text}
+                            trackColor={{false: colors.cardBorder, true: colors.primary}}
+                            thumbColor={colors.cardText}
                         />
                     </View>
                 </View>
 
-                <View style={styles.optionCard}>
+                <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
                     <View style={styles.optionRow}>
-                        <View style={styles.optionInfo}>
-                            <Text style={styles.optionTitle}>Dry Run</Text>
-                            <Text style={styles.optionDescription}>
+                        <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
+                            <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Dry Run</Text>
+                            <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
                                 Simulate sync without making any actual changes
                             </Text>
                         </View>
                         <Switch
                             value={options.dryRun}
                             onValueChange={(value) => setOptions({dryRun: value})}
-                            trackColor={{false: colors.border, true: colors.primary}}
-                            thumbColor={colors.text}
+                            trackColor={{false: colors.cardBorder, true: colors.primary}}
+                            thumbColor={colors.cardText}
                         />
                     </View>
                     {options.dryRun && (
-                        <View style={styles.warningBadge}>
+                        <View style={[styles.warningBadge, {gap: spacing.xs, marginTop: spacing.md, padding: spacing.sm, backgroundColor: colors.cardSecondary, borderRadius: borderRadius.md}]}>
                             <Ionicons name="information-circle" size={16} color={colors.warning}/>
-                            <Text style={styles.warningText}>Changes will be simulated only</Text>
+                            <Text style={[styles.warningText, {fontSize: fontSize.sm, color: colors.warning}]}>Changes will be simulated only</Text>
                         </View>
                     )}
                 </View>
 
-                <View style={styles.optionCard}>
+                <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
                     <View style={styles.optionRow}>
-                        <View style={styles.optionInfo}>
-                            <Text style={styles.optionTitle}>Auto Confirm Deletions</Text>
-                            <Text style={styles.optionDescription}>
+                        <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
+                            <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Auto Confirm Deletions</Text>
+                            <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
                                 Delete files without asking for confirmation
                             </Text>
                         </View>
                         <Switch
                             value={options.autoConfirm}
                             onValueChange={(value) => setOptions({autoConfirm: value})}
-                            trackColor={{false: colors.border, true: colors.primary}}
-                            thumbColor={colors.text}
+                            trackColor={{false: colors.cardBorder, true: colors.primary}}
+                            thumbColor={colors.cardText}
                         />
                     </View>
                     {!options.autoConfirm && (
-                        <View style={styles.warningBadge}>
+                        <View style={[styles.warningBadge, {gap: spacing.xs, marginTop: spacing.md, padding: spacing.sm, backgroundColor: colors.cardSecondary, borderRadius: borderRadius.md}]}>
                             <Ionicons name="warning" size={16} color={colors.warning}/>
-                            <Text style={styles.warningText}>You will be asked to confirm each deletion</Text>
+                            <Text style={[styles.warningText, {fontSize: fontSize.sm, color: colors.warning}]}>You will be asked to confirm each deletion</Text>
                         </View>
                     )}
                 </View>
 
-                <View style={styles.optionCard}>
+                <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
                     <View style={styles.optionRow}>
-                        <View style={styles.optionInfo}>
-                            <Text style={styles.optionTitle}>Treat Conflicts as Errors</Text>
-                            <Text style={styles.optionDescription}>
+                        <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
+                            <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Treat Conflicts as Errors</Text>
+                            <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
                                 Skip conflicting files instead of asking what to do
                             </Text>
                         </View>
                         <Switch
                             value={options.treatConflictsAsErrors}
                             onValueChange={(value) => setOptions({treatConflictsAsErrors: value})}
-                            trackColor={{false: colors.border, true: colors.primary}}
-                            thumbColor={colors.text}
+                            trackColor={{false: colors.cardBorder, true: colors.primary}}
+                            thumbColor={colors.cardText}
                         />
                     </View>
                     {!options.treatConflictsAsErrors && (
-                        <View style={styles.warningBadge}>
+                        <View style={[styles.warningBadge, {gap: spacing.xs, marginTop: spacing.md, padding: spacing.sm, backgroundColor: colors.cardSecondary, borderRadius: borderRadius.md}]}>
                             <Ionicons name="information-circle" size={16} color={colors.info}/>
-                            <Text style={styles.warningText}>You will be asked to choose upload, download, or skip for each conflict</Text>
+                            <Text style={[styles.warningText, {fontSize: fontSize.sm, color: colors.cardText}]}>You will be asked to choose upload, download, or skip for each conflict</Text>
                         </View>
                     )}
                 </View>
 
                 {options.dryRun && (
-                    <View style={styles.dryRunNotice}>
+                    <View style={[styles.dryRunNotice, {gap: spacing.sm, padding: spacing.md, backgroundColor: withAlpha('info', 0.12), borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.info}]}>
                         <Ionicons name="information-circle-outline" size={20} color={colors.info}/>
-                        <Text style={styles.dryRunText}>
+                        <Text style={[styles.dryRunText, {flex: 1, fontSize: fontSize.sm, color: colors.cardText, lineHeight: 20}]}>
                             In dry run mode, no files will be uploaded, downloaded, or deleted. All operations will be
                             recorded in the sync session as if they were performed.
                         </Text>
@@ -123,7 +124,7 @@ export default function SyncOptionsScreen() {
                 )}
             </ScrollView>
 
-            <View style={styles.buttonContainer}>
+            <View style={[styles.buttonContainer, {padding: spacing.md, gap: spacing.md, borderTopWidth: 1, borderTopColor: colors.border}]}>
                 <Button
                     title="Cancel"
                     onPress={handleCancel}
@@ -143,33 +144,25 @@ export default function SyncOptionsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.backgroundDark,
     },
     scrollView: {
         flex: 1,
     },
     content: {
-        padding: spacing.md,
-        paddingBottom: spacing.xl,
+        padding: 16,
+        paddingBottom: 32,
     },
     header: {
-        marginBottom: spacing.lg,
+        marginBottom: 24,
     },
     title: {
-        fontSize: fontSize.xl,
-        fontWeight: fontWeight.bold,
-        color: colors.text,
+        fontSize: 18,
     },
     subtitle: {
-        fontSize: fontSize.md,
-        color: colors.textSecondary,
-        marginTop: spacing.xs,
+        fontSize: 14,
     },
     optionCard: {
-        backgroundColor: colors.surface,
-        borderRadius: borderRadius.lg,
-        padding: spacing.md,
-        marginBottom: spacing.md,
+        marginBottom: 16,
     },
     optionRow: {
         flexDirection: 'row',
@@ -178,53 +171,32 @@ const styles = StyleSheet.create({
     },
     optionInfo: {
         flex: 1,
-        marginRight: spacing.md,
     },
     optionTitle: {
-        fontSize: fontSize.md,
-        fontWeight: fontWeight.medium,
-        color: colors.text,
+        fontSize: 14,
     },
     optionDescription: {
-        fontSize: fontSize.sm,
-        color: colors.textSecondary,
-        marginTop: spacing.xs,
+        fontSize: 12,
     },
     warningBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.xs,
-        marginTop: spacing.md,
-        padding: spacing.sm,
-        backgroundColor: colors.backgroundDark,
-        borderRadius: borderRadius.md,
     },
     warningText: {
-        fontSize: fontSize.sm,
-        color: colors.warning,
+        fontSize: 12,
     },
     dryRunNotice: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        gap: spacing.sm,
-        padding: spacing.md,
-        backgroundColor: colors.info + '20',
-        borderRadius: borderRadius.lg,
-        borderWidth: 1,
-        borderColor: colors.info,
     },
     dryRunText: {
         flex: 1,
-        fontSize: fontSize.sm,
-        color: colors.info,
+        fontSize: 12,
         lineHeight: 20,
     },
     buttonContainer: {
         flexDirection: 'row',
-        padding: spacing.md,
-        gap: spacing.md,
         borderTopWidth: 1,
-        borderTopColor: colors.border,
     },
     cancelButton: {
         flex: 1,

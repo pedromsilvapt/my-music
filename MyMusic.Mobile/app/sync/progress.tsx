@@ -4,9 +4,9 @@ import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Button, ErrorDisplay, ProgressBar} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
-import {colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {createDevice, getDevices} from '../../src/api/devices';
 import {getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
+import {useTheme} from '../../src/hooks/useTheme';
 import {getDeviceIcon, getDeviceName, getImportOnPurchase, getNamingTemplate, setDeviceId} from '../../src/services/configService';
 import {runSync, SyncCancelledError} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
@@ -14,9 +14,10 @@ import {useSyncStore} from '../../src/stores/syncStore';
 
 export default function SyncProgressScreen() {
     const router = useRouter();
+    const {colors, fontSize, fontWeight, spacing, borderRadius} = useTheme();
     const {progress, startSync, updateProgress, setError, completeSync, cancelSync, reset, setOptions} = useSyncStore();
     const {isConfigured, deviceId} = useConfigStore();
-    const [error, setSyncError] = useState<string | null>(null);
+    const [syncError, setSyncError] = useState<string | null>(null);
     const [errorDetails, setErrorDetails] = useState<ErrorDetails | null>(null);
     const [isSyncing, setIsSyncing] = useState(true);
     const [startTime] = useState(Date.now());
@@ -173,14 +174,14 @@ export default function SyncProgressScreen() {
         return progress.processedFiles / progress.totalFiles;
     };
 
-    if (error || progress.phase === 'error') {
+    if (syncError || progress.phase === 'error') {
         return (
-            <View style={styles.container}>
-                <View style={styles.errorContainer}>
+            <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+                <View style={[styles.errorContainer, {padding: spacing.lg, width: '90%'}]}>
                     <Ionicons name="alert-circle" size={64} color={colors.error}/>
-                    <Text style={styles.errorTitle}>Sync Failed</Text>
+                    <Text style={[styles.errorTitle, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text, marginTop: spacing.md}]}>Sync Failed</Text>
                     {errorDetails ? (
-                        <View style={styles.errorDisplayContainer}>
+                        <View style={[styles.errorDisplayContainer, {marginTop: spacing.md, width: '100%', maxHeight: 400}]}>
                             <ErrorDisplay
                                 error={errorDetails}
                                 onDismiss={() => {
@@ -192,7 +193,7 @@ export default function SyncProgressScreen() {
                             />
                         </View>
                     ) : (
-                        <Text style={styles.errorMessage}>{error || progress.errorMessage}</Text>
+                        <Text style={[styles.errorMessage, {fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm}]}>{syncError || progress.errorMessage}</Text>
                     )}
                     {!errorDetails && (
                         <Button
@@ -201,7 +202,7 @@ export default function SyncProgressScreen() {
                                 reset();
                                 router.back();
                             }}
-                            style={styles.errorButton}
+                            style={[styles.errorButton, {marginTop: spacing.xl, minWidth: 150}]}
                         />
                     )}
                 </View>
@@ -216,13 +217,13 @@ export default function SyncProgressScreen() {
     const isScanning = progress.phase === 'scanning';
 
     return (
-        <View style={styles.container}>
-            <View style={styles.content}>
+        <View style={[styles.container, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
+            <View style={[styles.content, {padding: spacing.lg, alignItems: 'center', width: '100%'}]}>
                 <ActivityIndicator size="large" color={colors.primary}/>
-                <Text style={styles.phaseText}>{getPhaseLabel()}</Text>
+                <Text style={[styles.phaseText, {fontSize: fontSize.lg, fontWeight: fontWeight.medium, color: colors.text, marginTop: spacing.md}]}>{getPhaseLabel()}</Text>
 
                 {isScanning && progress.scannedFiles > 0 && (
-                    <Text style={styles.scannedText}>
+                    <Text style={[styles.scannedText, {fontSize: fontSize.md, color: colors.primary, marginTop: spacing.sm, fontWeight: fontWeight.medium}]}>
                         {progress.scannedFiles} files found
                     </Text>
                 )}
@@ -232,65 +233,65 @@ export default function SyncProgressScreen() {
                         <ProgressBar
                             progress={getProgressValue()}
                             height={10}
-                            style={styles.progressBar}
+                            style={[styles.progressBar, {width: '100%', marginTop: spacing.lg}]}
                         />
-                        <Text style={styles.progressText}>
+                        <Text style={[styles.progressText, {fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.sm}]}>
                             {progress.processedFiles} / {progress.totalFiles} files
                         </Text>
                     </>
                 )}
 
                 {progress.totalFiles === 0 && isScanning && (
-                    <Text style={styles.scanningHint}>
+                    <Text style={[styles.scanningHint, {fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm, fontStyle: 'italic'}]}>
                         Scanning your music folder...
                     </Text>
                 )}
 
                 {progress.currentFile && !isScanning && (
-                    <Text style={styles.currentFile} numberOfLines={1}>
+                    <Text style={[styles.currentFile, {fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.md, fontStyle: 'italic'}]} numberOfLines={1}>
                         {progress.currentFile.split('/').pop()}
                     </Text>
                 )}
 
-                <View style={styles.statsContainer}>
+                <View style={[styles.statsContainer, {flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.md, marginTop: spacing.xl}]}>
                     <View style={styles.stat}>
-                        <Text style={[styles.statValue, {color: colors.success}]}>↑ {progress.created}</Text>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.success}]}>↑ {progress.created}</Text>
                     </View>
                     <View style={styles.stat}>
-                        <Text style={[styles.statValue, {color: colors.info}]}>↑ {progress.updated}</Text>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.info}]}>↑ {progress.updated}</Text>
                     </View>
                     <View style={styles.stat}>
-                        <Text style={[styles.statValue, {color: colors.textMuted}]}>- {progress.skipped}</Text>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textMuted}]}>- {progress.skipped}</Text>
                     </View>
                     <View style={styles.stat}>
-                        <Text style={[styles.statValue, {color: colors.syncDownload}]}>↓ {progress.downloaded}</Text>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>↓ {progress.downloaded}</Text>
                     </View>
                     {progress.removed > 0 && (
                         <View style={styles.stat}>
-                            <Text style={[styles.statValue, {color: colors.error}]}>× {progress.removed}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>× {progress.removed}</Text>
                         </View>
                     )}
                     {progress.failed > 0 && (
                         <View style={styles.stat}>
-                            <Text style={[styles.statValue, {color: colors.error}]}>! {progress.failed}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>! {progress.failed}</Text>
                         </View>
                     )}
                     {progress.conflicts > 0 && (
                         <View style={styles.stat}>
-                            <Text style={[styles.statValue, {color: colors.warning}]}>⚠ {progress.conflicts}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.warning}]}>⚠ {progress.conflicts}</Text>
                         </View>
                     )}
                 </View>
 
                 {isSyncing && (
-                    <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <TouchableOpacity style={[styles.cancelButton, {marginTop: spacing.xl, paddingVertical: spacing.sm, paddingHorizontal: spacing.xl, borderWidth: 1, borderColor: colors.error, borderRadius: borderRadius.md}]} onPress={handleCancel}>
+                        <Text style={[styles.cancelButtonText, {fontSize: fontSize.md, color: colors.error, fontWeight: fontWeight.medium}]}>Cancel</Text>
                     </TouchableOpacity>
                 )}
 
-                <View style={styles.timerContainer}>
+                <View style={[styles.timerContainer, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg}]}>
                     <Ionicons name="time-outline" size={16} color={colors.textMuted}/>
-                    <Text style={styles.timerText}>{formatElapsedTime()}</Text>
+                    <Text style={[styles.timerText, {fontSize: fontSize.md, color: colors.textMuted}]}>{formatElapsedTime()}</Text>
                 </View>
             </View>
         </View>
@@ -299,110 +300,74 @@ export default function SyncProgressScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: colors.backgroundDark,
-        justifyContent: 'center',
-        alignItems: 'center',
+        flex: 1,
     },
     content: {
-        padding: spacing.lg,
         alignItems: 'center',
-        width: '100%',
     },
     phaseText: {
-        fontSize: fontSize.lg,
-        fontWeight: fontWeight.medium,
-        color: colors.text,
-        marginTop: spacing.md,
+        fontSize: 18,
     },
     scannedText: {
-        fontSize: fontSize.md,
-        color: colors.primary,
-        marginTop: spacing.sm,
-        fontWeight: fontWeight.medium,
+        fontSize: 14,
+        fontWeight: '500',
     },
     scanningHint: {
-        fontSize: fontSize.sm,
-        color: colors.textMuted,
-        marginTop: spacing.sm,
+        fontSize: 12,
         fontStyle: 'italic',
     },
     progressBar: {
         width: '100%',
-        marginTop: spacing.lg,
     },
     progressText: {
-        fontSize: fontSize.sm,
-        color: colors.textSecondary,
-        marginTop: spacing.sm,
+        fontSize: 12,
     },
     currentFile: {
-        fontSize: fontSize.sm,
-        color: colors.textMuted,
-        marginTop: spacing.md,
+        fontSize: 12,
         fontStyle: 'italic',
     },
     statsContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
         justifyContent: 'center',
-        gap: spacing.md,
-        marginTop: spacing.xl,
     },
     stat: {
-        paddingHorizontal: spacing.md,
-        paddingVertical: spacing.sm,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
     },
     statValue: {
-        fontSize: fontSize.lg,
-        fontWeight: fontWeight.bold,
+        fontSize: 16,
     },
     timerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: spacing.xs,
-        marginTop: spacing.lg,
     },
     timerText: {
-        fontSize: fontSize.md,
-        color: colors.textMuted,
+        fontSize: 14,
     },
     cancelButton: {
-        marginTop: spacing.xl,
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.xl,
-        borderWidth: 1,
-        borderColor: colors.error,
-        borderRadius: 8,
+        marginTop: 32,
     },
     cancelButtonText: {
-        fontSize: fontSize.md,
-        color: colors.error,
-        fontWeight: fontWeight.medium,
+        fontSize: 14,
+        fontWeight: '500',
     },
     errorContainer: {
         alignItems: 'center',
-        padding: spacing.lg,
-        width: '90%',
     },
     errorDisplayContainer: {
-        marginTop: spacing.md,
         width: '100%',
-        maxHeight: 400,
     },
     errorTitle: {
-        fontSize: fontSize.xl,
-        fontWeight: fontWeight.bold,
-        color: colors.text,
-        marginTop: spacing.md,
+        fontSize: 18,
+        fontWeight: '700',
     },
     errorMessage: {
-        fontSize: fontSize.md,
-        color: colors.textSecondary,
+        fontSize: 14,
         textAlign: 'center',
-        marginTop: spacing.sm,
     },
     errorButton: {
-        marginTop: spacing.xl,
+        marginTop: 32,
         minWidth: 150,
     },
 });

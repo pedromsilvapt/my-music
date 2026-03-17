@@ -1,25 +1,30 @@
 import {Stack} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import {StyleSheet, View} from 'react-native';
-import {colors} from '../src/constants/theme';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {StyleSheet} from 'react-native';
+import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {useTheme} from '../src/hooks/useTheme';
+import {useThemeStore} from '../src/stores/themeStore';
 
 export default function RootLayout() {
+    useThemeStore();
+    
+    const {colors, statusBarStyle} = useTheme();
+
     return (
         <SafeAreaProvider>
-            <View style={styles.container}>
-                <StatusBar style="light"/>
+            <SafeAreaView style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+                <StatusBar style={statusBarStyle}/>
                 <Stack
                     screenOptions={{
                         headerStyle: {
-                            backgroundColor: colors.backgroundDark,
+                            backgroundColor: colors.backgroundSecondary,
                         },
                         headerTintColor: colors.text,
                         headerTitleStyle: {
                             fontWeight: '600',
                         },
                         contentStyle: {
-                            backgroundColor: colors.backgroundDark,
+                            backgroundColor: colors.backgroundSecondary,
                         },
                     }}
                 >
@@ -27,7 +32,6 @@ export default function RootLayout() {
                         name="index"
                         options={{
                             title: 'MyMusic',
-                            headerLargeTitle: true,
                         }}
                     />
                     <Stack.Screen
@@ -55,6 +59,12 @@ export default function RootLayout() {
                         }}
                     />
                     <Stack.Screen
+                        name="sync/index"
+                        options={{
+                            title: 'Sync Options',
+                        }}
+                    />
+                    <Stack.Screen
                         name="sync/progress"
                         options={{
                             title: 'Syncing...',
@@ -63,7 +73,7 @@ export default function RootLayout() {
                         }}
                     />
                 </Stack>
-            </View>
+            </SafeAreaView>
         </SafeAreaProvider>
     );
 }
@@ -71,6 +81,5 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.backgroundDark,
     },
 });
