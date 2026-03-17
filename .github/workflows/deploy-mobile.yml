@@ -1,0 +1,55 @@
+name: Deploy Mobile APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - uses: earthly/actions/setup-earthly@v1
+        with:
+          version: v0.8.16
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Extract version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./MyMusic.Mobile/package.json').version")
+          echo "Detected version: $VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build APK with Earthly
+        run: |
+          earthly --ci --output --artifact './MyMusic.Mobile/+package/*' ./MyMusic.Mobile
+
+      - name: Rename APK with version
+        run: |
+          mkdir -p dist
+          cp ./MyMusic-Mobile.apk "dist/my-music-mobile-${VERSION}.apk"
+          ls -la dist/
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "my-music-mobile-v${VERSION}" \
+            "dist/my-music-mobile-${VERSION}.apk" \
+            --title "MyMusic Mobile v${VERSION}" \
+            --notes "" \
+            --latest=false
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-music-mobile-apk
+          path: dist/*.apk
+          retention-days: 30
