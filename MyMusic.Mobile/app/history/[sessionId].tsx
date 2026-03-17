@@ -4,6 +4,8 @@ import React, {useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import type {SyncRecordResponseItem, SyncSessionItem} from '../../src/api/types';
 import {deleteSession} from '../../src/api/sync';
+import {ErrorDisplay} from '../../src/components/ui';
+import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
@@ -39,6 +41,7 @@ export default function SessionDetailScreen() {
     const [records, setRecords] = useState<SyncRecordResponseItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<FilterType>('all');
+    const [error, setError] = useState<ErrorDetails | null>(null);
 
     useEffect(() => {
         if (!deviceId || !sessionId) return;
@@ -53,8 +56,16 @@ export default function SessionDetailScreen() {
                     const recordsResponse = await fetchSessionDetails(deviceId, parseInt(sessionId));
                     setRecords(recordsResponse.records);
                 }
-            } catch (error) {
-                console.error('Failed to load session:', error);
+                setError(null);
+            } catch (err: any) {
+                console.error('Failed to load session:', err);
+                setError({
+                    status: err?.status,
+                    message: err?.message || 'Failed to load session',
+                    url: err?.url,
+                    responseBody: err?.details || err?.responseBody,
+                    stack: err?.stack,
+                });
             } finally {
                 setLoading(false);
             }
@@ -80,13 +91,37 @@ export default function SessionDetailScreen() {
                         try {
                             await deleteSession(deviceId, parseInt(sessionId));
                             router.back();
-                        } catch (error) {
-                            Alert.alert('Error', 'Failed to delete session');
+                        } catch (err: any) {
+                            const deleteError: ErrorDetails = {
+                                status: err?.status,
+                                message: err?.message || 'Failed to delete session',
+                                url: err?.url,
+                                responseBody: err?.details || err?.responseBody,
+                                stack: err?.stack,
+                            };
+                            Alert.alert(
+                                'Error',
+                                'Failed to delete session',
+                                [
+                                    {text: 'OK'},
+                                    {text: 'Details', onPress: () => Alert.alert('Error Details', formatErrorDetails(deleteError))},
+                                ]
+                            );
                         }
                     },
                 },
             ]
         );
+    };
+
+    const formatErrorDetails = (err: ErrorDetails): string => {
+        let details = '';
+        if (err.status) details += `Status: ${err.status}\n`;
+        if (err.message) details += `Message: ${err.message}\n`;
+        if (err.url) details += `URL: ${err.url}\n`;
+        if (err.responseBody) details += `Response: ${err.responseBody}\n`;
+        if (err.stack) details += `Stack: ${err.stack}\n`;
+        return details || 'No details available';
     };
 
     useLayoutEffect(() => {
@@ -172,6 +207,19 @@ export default function SessionDetailScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary}/>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.errorDisplayContainer}>
+                    <ErrorDisplay 
+                        error={error} 
+                        onDismiss={() => router.back()}
+                    />
+                </View>
             </View>
         );
     }
@@ -318,6 +366,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: colors.backgroundDark,
+    },
+    errorDisplayContainer: {
+        flex: 1,
+        padding: spacing.md,
     },
     errorText: {
         color: colors.textSecondary,

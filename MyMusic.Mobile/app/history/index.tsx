@@ -4,6 +4,8 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import type {SyncSessionItem} from '../../src/api/types';
 import {pruneSessions} from '../../src/api/sync';
+import {ErrorDisplay} from '../../src/components/ui';
+import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
@@ -17,6 +19,7 @@ export default function HistoryListScreen() {
     const [pruneModalVisible, setPruneModalVisible] = useState(false);
     const [pruneAll, setPruneAll] = useState(false);
     const [pruning, setPruning] = useState(false);
+    const [error, setError] = useState<ErrorDetails | null>(null);
 
     const loadSessions = useCallback(async () => {
         if (!deviceId || !isConfigured) {
@@ -27,8 +30,16 @@ export default function HistoryListScreen() {
         try {
             const response = await fetchSyncHistory(deviceId, 20);
             setSessions(response.sessions);
-        } catch (error) {
-            console.error('Failed to load sessions:', error);
+            setError(null);
+        } catch (err: any) {
+            console.error('Failed to load sessions:', err);
+            setError({
+                status: err?.status,
+                message: err?.message || 'Failed to load sessions',
+                url: err?.url,
+                responseBody: err?.details || err?.responseBody,
+                stack: err?.stack,
+            });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -61,11 +72,35 @@ export default function HistoryListScreen() {
             await pruneSessions(deviceId, {all: pruneAll});
             setPruneModalVisible(false);
             loadSessions();
-        } catch (error) {
-            Alert.alert('Error', 'Failed to prune sessions');
+        } catch (err: any) {
+            const pruneError: ErrorDetails = {
+                status: err?.status,
+                message: err?.message || 'Failed to prune sessions',
+                url: err?.url,
+                responseBody: err?.details || err?.responseBody,
+                stack: err?.stack,
+            };
+            Alert.alert(
+                'Error',
+                'Failed to prune sessions',
+                [
+                    {text: 'OK'},
+                    {text: 'Details', onPress: () => Alert.alert('Error Details', formatErrorDetails(pruneError))},
+                ]
+            );
         } finally {
             setPruning(false);
         }
+    };
+
+    const formatErrorDetails = (err: ErrorDetails): string => {
+        let details = '';
+        if (err.status) details += `Status: ${err.status}\n`;
+        if (err.message) details += `Message: ${err.message}\n`;
+        if (err.url) details += `URL: ${err.url}\n`;
+        if (err.responseBody) details += `Response: ${err.responseBody}\n`;
+        if (err.stack) details += `Stack: ${err.stack}\n`;
+        return details || 'No details available';
     };
 
     const calculateSessionsToPrune = () => {
@@ -120,6 +155,20 @@ export default function HistoryListScreen() {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.primary}/>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.container}>
+                <View style={styles.errorContainer}>
+                    <ErrorDisplay
+                        error={error}
+                        onRetry={loadSessions}
+                        onDismiss={() => setError(null)}
+                    />
+                </View>
             </View>
         );
     }
@@ -277,6 +326,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: colors.backgroundDark,
+    },
+    errorContainer: {
+        padding: spacing.sm,
+        justifyContent: 'center',
     },
     emptyContainer: {
         flex: 1,

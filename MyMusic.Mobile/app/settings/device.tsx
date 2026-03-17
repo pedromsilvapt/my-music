@@ -4,12 +4,13 @@ import {pickDirectory} from '@react-native-documents/picker';
 import {useRouter} from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, {useState} from 'react';
+import {ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Controller, useForm} from 'react-hook-form';
-import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {z} from 'zod';
-import {testConnection} from '../../src/api/client';
+import {testConnection, type ConnectionTestResult} from '../../src/api/client';
 import {createDevice, getDevices, updateDevice} from '../../src/api/devices';
-import {Button, Card, Input} from '../../src/components/ui';
+import {Button, Card, ErrorDisplay, Input} from '../../src/components/ui';
+import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
 import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {
@@ -50,6 +51,7 @@ export default function DeviceConfigScreen() {
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [step, setStep] = useState<'form' | 'registering' | 'done'>('form');
+    const [connectionError, setConnectionError] = useState<ErrorDetails | null>(null);
 
     const {control, handleSubmit, watch, setValue, formState: {errors}} = useForm<ConfigFormData>({
         resolver: zodResolver(configSchema),
@@ -75,21 +77,34 @@ export default function DeviceConfigScreen() {
 
         setTestingConnection(true);
         setConnectionStatus('idle');
+        setConnectionError(null);
 
         try {
             const apiUrl = serverUrlValue.endsWith('/api') ? serverUrlValue : `${serverUrlValue}/api`;
-            const result = await testConnection(apiUrl);
+            const result: ConnectionTestResult = await testConnection(apiUrl);
 
             setConnectionStatus(result.success ? 'success' : 'error');
 
             if (result.success) {
                 Alert.alert('Success', result.message);
             } else {
-                Alert.alert('Connection Failed', result.message);
+                const errorDetails: ErrorDetails = {
+                    title: 'Connection Failed',
+                    status: result.status,
+                    message: result.message,
+                    url: result.url,
+                    responseBody: result.responseBody,
+                    stack: result.stack,
+                };
+                setConnectionError(errorDetails);
             }
         } catch (error: any) {
             setConnectionStatus('error');
-            Alert.alert('Connection Error', error.message || 'Failed to connect to server');
+            setConnectionError({
+                title: 'Connection Error',
+                message: error.message || 'Failed to connect to server',
+                stack: error.stack,
+            });
         } finally {
             setTestingConnection(false);
         }
@@ -368,6 +383,24 @@ export default function DeviceConfigScreen() {
                     size="large"
                 />
             </View>
+
+            <Modal
+                visible={connectionError !== null}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setConnectionError(null)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        {connectionError && (
+                            <ErrorDisplay
+                                error={connectionError}
+                                onDismiss={() => setConnectionError(null)}
+                            />
+                        )}
+                    </View>
+                </View>
+            </Modal>
         </ScrollView>
     );
 }
@@ -512,5 +545,21 @@ const styles = StyleSheet.create({
     },
     actions: {
         marginTop: spacing.lg,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: spacing.md,
+    },
+    modalContent: {
+        backgroundColor: colors.surfaceDark,
+        borderRadius: borderRadius.lg,
+        padding: spacing.sm,
+        width: '95%',
+        maxWidth: 400,
+        maxHeight: '80%',
+        minHeight: 200,
     },
 });

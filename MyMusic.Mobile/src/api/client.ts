@@ -134,21 +134,57 @@ export async function downloadSong(songId: number): Promise<Blob> {
     return response.blob();
 }
 
-export async function testConnection(url?: string): Promise<{ success: boolean; message: string }> {
+export interface ConnectionTestResult {
+    success: boolean;
+    status?: number;
+    message: string;
+    url?: string;
+    responseBody?: string;
+    stack?: string;
+}
+
+export async function testConnection(url?: string): Promise<ConnectionTestResult> {
+    const testUrl = url || getServerUrl();
+    const requestUrl = `${testUrl}/ping`;
+
     try {
-        const testUrl = url || getServerUrl();
         const headers = await getAuthHeaders();
-        const response = await fetch(`${testUrl}/ping`, {headers});
+        const response = await fetch(requestUrl, {headers});
+
+        let responseBody: string | undefined;
+        try {
+            responseBody = await response.text();
+        } catch {
+            responseBody = undefined;
+        }
 
         if (response.ok) {
-            return {success: true, message: 'Connected successfully!'};
+            return {
+                success: true,
+                status: response.status,
+                message: 'Connected successfully!',
+                url: requestUrl,
+                responseBody,
+            };
         }
 
-        return {success: false, message: `Server returned ${response.status}`};
+        return {
+            success: false,
+            status: response.status,
+            message: responseBody || `Server returned ${response.status}`,
+            url: requestUrl,
+            responseBody,
+        };
     } catch (error: any) {
-        if (error.message?.includes('Network request failed')) {
-            return {success: false, message: 'Cannot connect to server. Check URL and network.'};
-        }
-        return {success: false, message: error.message || 'Connection failed'};
+        const networkError = error.message?.includes('Network request failed') || error.message?.includes('ENOTFOUND') || error.message?.includes('ECONNREFUSED');
+        
+        return {
+            success: false,
+            message: networkError 
+                ? 'Cannot connect to server. Check URL and network.' 
+                : error.message || 'Connection failed',
+            url: requestUrl,
+            stack: error.stack,
+        };
     }
 }

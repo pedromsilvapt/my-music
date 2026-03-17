@@ -2,7 +2,8 @@ import {Ionicons} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
 import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {Button, ProgressBar} from '../../src/components/ui';
+import {Button, ErrorDisplay, ProgressBar} from '../../src/components/ui';
+import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
 import {createDevice, getDevices} from '../../src/api/devices';
 import {getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
@@ -16,6 +17,7 @@ export default function SyncProgressScreen() {
     const {progress, startSync, updateProgress, setError, completeSync, cancelSync, reset, setOptions} = useSyncStore();
     const {isConfigured, deviceId} = useConfigStore();
     const [error, setSyncError] = useState<string | null>(null);
+    const [errorDetails, setErrorDetails] = useState<ErrorDetails | null>(null);
     const [isSyncing, setIsSyncing] = useState(true);
     const [startTime] = useState(Date.now());
 
@@ -35,7 +37,7 @@ export default function SyncProgressScreen() {
         startSync({});
 
         const isDeviceNotFoundError = (err: any): boolean => {
-            return err?.status === 404 || err?.status === 500 || 
+            return err?.status === 404 || err?.status === 500 ||
                    (err?.message && /device.*not found|not found.*device/i.test(err.message));
         };
 
@@ -120,7 +122,15 @@ export default function SyncProgressScreen() {
                 }
 
                 console.error('Sync failed:', err);
+                const detailedError: ErrorDetails = {
+                    status: err?.status,
+                    message: err.message || 'Sync failed',
+                    url: err?.url,
+                    responseBody: err?.details || err?.responseBody,
+                    stack: err?.stack,
+                };
                 setSyncError(err.message || 'Sync failed');
+                setErrorDetails(detailedError);
                 setError(err.message || 'Sync failed');
             } finally {
                 setIsSyncing(false);
@@ -169,15 +179,31 @@ export default function SyncProgressScreen() {
                 <View style={styles.errorContainer}>
                     <Ionicons name="alert-circle" size={64} color={colors.error}/>
                     <Text style={styles.errorTitle}>Sync Failed</Text>
-                    <Text style={styles.errorMessage}>{error || progress.errorMessage}</Text>
-                    <Button
-                        title="Go Back"
-                        onPress={() => {
-                            reset();
-                            router.back();
-                        }}
-                        style={styles.errorButton}
-                    />
+                    {errorDetails ? (
+                        <View style={styles.errorDisplayContainer}>
+                            <ErrorDisplay
+                                error={errorDetails}
+                                onDismiss={() => {
+                                    setErrorDetails(null);
+                                    setSyncError(null);
+                                    reset();
+                                    router.back();
+                                }}
+                            />
+                        </View>
+                    ) : (
+                        <Text style={styles.errorMessage}>{error || progress.errorMessage}</Text>
+                    )}
+                    {!errorDetails && (
+                        <Button
+                            title="Go Back"
+                            onPress={() => {
+                                reset();
+                                router.back();
+                            }}
+                            style={styles.errorButton}
+                        />
+                    )}
                 </View>
             </View>
         );
@@ -273,7 +299,6 @@ export default function SyncProgressScreen() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
         backgroundColor: colors.backgroundDark,
         justifyContent: 'center',
         alignItems: 'center',
@@ -357,6 +382,12 @@ const styles = StyleSheet.create({
     errorContainer: {
         alignItems: 'center',
         padding: spacing.lg,
+        width: '90%',
+    },
+    errorDisplayContainer: {
+        marginTop: spacing.md,
+        width: '100%',
+        maxHeight: 400,
     },
     errorTitle: {
         fontSize: fontSize.xl,

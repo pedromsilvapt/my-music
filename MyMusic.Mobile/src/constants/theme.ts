@@ -63,3 +63,7 @@ export const fontWeight = {
     semibold: '600' as const,
     bold: '700' as const,
 };
+
+export const fontFamily = {
+    monospace: 'Courier',
+};
