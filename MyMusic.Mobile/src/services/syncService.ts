@@ -24,7 +24,7 @@ import {
     getRepositoryPath,
     setLastSyncAt
 } from './configService';
-import {scanFromDirectory} from './fileScanner';
+import {scanFromDirectory, type ScanResult} from './fileScanner';
 
 export class SyncCancelledError extends Error {
     constructor() {
@@ -101,15 +101,28 @@ export async function runSync(
             }
         };
 
-        const files = await scanFromDirectory(repositoryPath, {
+        const scanErrors: Array<{path: string; error: string}> = [];
+
+        const {files, errors} = await scanFromDirectory(repositoryPath, {
             extensions: musicExtensions,
             excludePatterns,
             basePath: repositoryPath,
-            onProgress: (scannedCount) => {
+            onProgress: (scannedCount, currentDir) => {
                 checkCancelled();
-                onProgress({scannedFiles: scannedCount, currentFile: `${scannedCount} files found...`});
+                // Extract a readable directory name from the full path
+                const dirName = currentDir.split('/').pop() || 'music folder';
+                onProgress({
+                    scannedFiles: scannedCount,
+                    currentFile: `${scannedCount} files found in ${dirName}...`
+                });
+            },
+            onError: (path, error) => {
+                scanErrors.push({path, error});
             },
         });
+
+        // Add scan errors to the result count
+        result.failed += errors.length;
 
         checkCancelled();
 
@@ -117,6 +130,18 @@ export async function runSync(
 
         const startResponse = await startSync(deviceId, {dryRun: options.dryRun, repositoryPath});
         const sessionId = startResponse.sessionId;
+
+        // Record any scan errors to session history
+        if (scanErrors.length > 0) {
+            await recordChunk(deviceId, sessionId, {
+                records: scanErrors.map(e => ({
+                    filePath: e.path,
+                    action: 'scan-error',
+                    source: 'Scanner',
+                    errorMessage: e.error,
+                })),
+            });
+        }
 
         const chunks = chunkArray(files, chunkSize);
 

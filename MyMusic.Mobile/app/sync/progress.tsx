@@ -247,8 +247,8 @@ export default function SyncProgressScreen() {
                     </Text>
                 )}
 
-                {progress.currentFile && !isScanning && (
-                    <Text style={[styles.currentFile, {fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.md, fontStyle: 'italic'}]} numberOfLines={1}>
+                {progress.currentFile && (
+                    <Text style={[styles.currentFile, {fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.md, fontStyle: 'italic'}]} numberOfLines={2}>
                         {progress.currentFile.split('/').pop()}
                     </Text>
                 )}

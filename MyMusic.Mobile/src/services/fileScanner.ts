@@ -1,4 +1,4 @@
-import {Directory, File} from 'expo-file-system';
+import { Directory, File } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 
 export interface FileMetadata {
@@ -9,21 +9,36 @@ export interface FileMetadata {
     size: number;
 }
 
+export interface ScanError {
+    path: string;
+    error: string;
+}
+
 export interface ScanOptions {
     extensions: string[];
     excludePatterns: string[];
     basePath: string;
-    onProgress?: (scannedCount: number) => void;
+    onProgress?: (scannedCount: number, currentDir: string) => void;
+    onError?: (path: string, error: string) => void;
 }
 
-export async function scanMusicFiles(options: ScanOptions): Promise<FileMetadata[]> {
+export interface ScanResult {
+    files: FileMetadata[];
+    errors: ScanError[];
+}
+
+const PROGRESS_INTERVAL_MS = 100;
+const YIELD_INTERVAL_MS = 16;
+
+export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult> {
     const files: FileMetadata[] = [];
+    const errors: ScanError[] = [];
 
     try {
-        const {status} = await MediaLibrary.requestPermissionsAsync();
+        const { status } = await MediaLibrary.requestPermissionsAsync();
         if (status !== 'granted') {
             console.log('Media library permission not granted');
-            return files;
+            return { files, errors };
         }
 
         const media = await MediaLibrary.getAssetsAsync({
@@ -56,72 +71,130 @@ export async function scanMusicFiles(options: ScanOptions): Promise<FileMetadata
         }
     } catch (error) {
         console.error('Error scanning music files:', error);
+        errors.push({
+            path: 'media-library',
+            error: error instanceof Error ? error.message : 'Unknown error scanning media library'
+        });
     }
 
-    return files;
+    return { files, errors };
 }
 
-export async function scanFromDirectory(directoryUri: string, options: ScanOptions): Promise<FileMetadata[]> {
+export async function scanFromDirectory (directoryUri: string, options: ScanOptions): Promise<ScanResult> {
     const files: FileMetadata[] = [];
-    const {onProgress} = options;
+    const errors: ScanError[] = [];
+    const { onProgress, onError } = options;
 
     try {
         const directory = new Directory(directoryUri);
         if (!directory.exists) {
-            return files;
+            if (onError) {
+                onError(directoryUri, 'Directory does not exist');
+            }
+            return { files, errors };
         }
 
-        const items = listRecursive(directory);
+        let lastProgressTime = Date.now();
+        let lastYieldTime = Date.now();
 
-        for (const item of items) {
-            if (item instanceof File) {
-                const filename = item.name;
-                const ext = '.' + filename.split('.').pop()?.toLowerCase();
+        // Async generator that yields files as they're found
+        async function* scanDirectoryGenerator (dir: Directory, currentPath: string): AsyncGenerator<FileMetadata | null, void, unknown> {
+            let items: (Directory | File)[] = [];
 
-                if (!options.extensions.includes(ext)) continue;
-                if (shouldExclude(item.name, options.excludePatterns)) continue;
+            try {
+                items = dir.list();
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : 'Failed to list directory';
+                if (onError) {
+                    onError(currentPath, errorMsg);
+                }
+                errors.push({ path: currentPath, error: errorMsg });
+                yield null;
+                return;
+            }
 
-                const relativePath = item.uri.replace(directoryUri + '/', '');
+            for (const item of items) {
+                const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name;
 
-                files.push({
-                    relativePath,
-                    fullPath: item.uri,
-                    modifiedAt: item.modificationTime ? new Date(item.modificationTime) : new Date(),
-                    createdAt: item.creationTime ? new Date(item.creationTime) : new Date(),
-                    size: item.size || 0,
-                });
+                if (item instanceof Directory) {
+                    // Recursively scan subdirectory
+                    yield* scanDirectoryGenerator(item, itemPath);
+                } else if (item instanceof File) {
+                    const filename = item.name;
+                    const ext = '.' + filename.split('.').pop()?.toLowerCase();
 
-                if (onProgress && files.length % 50 === 0) {
-                    onProgress(files.length);
+                    if (!options.extensions.includes(ext)) {
+                        yield null;
+                        continue;
+                    }
+
+                    if (shouldExclude(item.name, options.excludePatterns)) {
+                        yield null;
+                        continue;
+                    }
+
+                    try {
+                        const relativePath = item.uri.replace(directoryUri + '/', '');
+
+                        const fileMetadata: FileMetadata = {
+                            relativePath,
+                            fullPath: item.uri,
+                            modifiedAt: item.modificationTime ? new Date(item.modificationTime) : new Date(),
+                            createdAt: item.creationTime ? new Date(item.creationTime) : new Date(),
+                            size: item.size || 0,
+                        };
+
+                        yield fileMetadata;
+                    } catch (error) {
+                        const errorMsg = error instanceof Error ? error.message : 'Failed to read file metadata';
+                        if (onError) {
+                            onError(item.uri, errorMsg);
+                        }
+                        errors.push({ path: item.uri, error: errorMsg });
+                        yield null;
+                    }
+                }
+
+                // Yield to UI thread every YIELD_INTERVAL_MS to prevent freezing
+                const now = Date.now();
+                if (now - lastYieldTime >= YIELD_INTERVAL_MS) {
+                    await new Promise(resolve => setImmediate(resolve));
+                    lastYieldTime = now;
                 }
             }
         }
 
+        // Process files from generator with time-based progress updates
+        for await (const file of scanDirectoryGenerator(directory, '')) {
+            if (file) {
+                files.push(file);
+            }
+
+            // Update progress every PROGRESS_INTERVAL_MS
+            const now = Date.now();
+            if (onProgress && now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
+                onProgress(files.length, directoryUri);
+                lastProgressTime = now;
+            }
+        }
+
+        // Final progress update
         if (onProgress) {
-            onProgress(files.length);
+            onProgress(files.length, directoryUri);
         }
     } catch (error) {
-        console.error('Error scanning directory:', error);
-    }
-
-    return files;
-}
-
-function listRecursive(dir: Directory): (Directory | File)[] {
-    const results: (Directory | File)[] = [];
-    const items = dir.list();
-
-    for (const item of items) {
-        results.push(item);
-        if (item instanceof Directory) {
-            results.push(...listRecursive(item));
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error scanning directory';
+        console.error('Error scanning directory:', errorMsg);
+        if (onError) {
+            onError(directoryUri, errorMsg);
         }
+        errors.push({ path: directoryUri, error: errorMsg });
     }
 
-    return results;
+    return { files, errors };
 }
 
-function shouldExclude(filename: string, patterns: string[]): boolean {
+function shouldExclude (filename: string, patterns: string[]): boolean {
     for (const pattern of patterns) {
         const regex = globToRegex(pattern);
         if (regex.test(filename)) return true;
@@ -130,7 +203,7 @@ function shouldExclude(filename: string, patterns: string[]): boolean {
     return false;
 }
 
-function globToRegex(glob: string): RegExp {
+function globToRegex (glob: string): RegExp {
     let regex = '^';
     for (const c of glob) {
         regex += c === '*'
@@ -153,6 +226,6 @@ function globToRegex(glob: string): RegExp {
     return new RegExp(regex, 'i');
 }
 
-function escapeRegExp(str: string): string {
+function escapeRegExp (str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
