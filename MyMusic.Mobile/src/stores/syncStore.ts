@@ -6,6 +6,7 @@ export interface SyncProgress {
     phase: SyncPhase;
     totalFiles: number;
     processedFiles: number;
+    scannedFiles: number;
     currentFile: string;
     created: number;
     updated: number;
@@ -18,11 +19,13 @@ export interface SyncProgress {
     startedAt?: string;
     completedAt?: string;
     eta?: string;
+    isCancelled?: boolean;
 }
 
 interface SyncState {
     progress: SyncProgress;
     isRunning: boolean;
+    isCancelled: boolean;
     options: {
         force: boolean;
         dryRun: boolean;
@@ -35,6 +38,7 @@ interface SyncState {
     setPhase: (phase: SyncPhase) => void;
     setError: (message: string) => void;
     completeSync: () => void;
+    cancelSync: () => void;
     reset: () => void;
     setOptions: (options: Partial<SyncState['options']>) => void;
 }
@@ -43,6 +47,7 @@ const initialProgress: SyncProgress = {
     phase: 'idle',
     totalFiles: 0,
     processedFiles: 0,
+    scannedFiles: 0,
     currentFile: '',
     created: 0,
     updated: 0,
@@ -51,11 +56,13 @@ const initialProgress: SyncProgress = {
     removed: 0,
     failed: 0,
     conflicts: 0,
+    isCancelled: false,
 };
 
 const initialState = {
     progress: initialProgress,
     isRunning: false,
+    isCancelled: false,
     options: {
         force: false,
         dryRun: false,
@@ -100,6 +107,16 @@ export const useSyncStore = create<SyncState>()((set) => ({
             ...state.progress,
             phase: 'completed',
             completedAt: new Date().toISOString(),
+        },
+    })),
+
+    cancelSync: () => set((state) => ({
+        isRunning: false,
+        isCancelled: true,
+        progress: {
+            ...state.progress,
+            phase: 'idle',
+            isCancelled: true,
         },
     })),
 

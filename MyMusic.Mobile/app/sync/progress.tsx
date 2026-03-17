@@ -1,16 +1,19 @@
 import {Ionicons} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
 import React, {useEffect, useState} from 'react';
-import {ActivityIndicator, StyleSheet, Text, View} from 'react-native';
+import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Button, ProgressBar} from '../../src/components/ui';
 import {colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
-import {runSync} from '../../src/services/syncService';
+import {createDevice, getDevices} from '../../src/api/devices';
+import {getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
+import {getDeviceIcon, getDeviceName, getImportOnPurchase, getNamingTemplate, setDeviceId} from '../../src/services/configService';
+import {runSync, SyncCancelledError} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 import {useSyncStore} from '../../src/stores/syncStore';
 
 export default function SyncProgressScreen() {
     const router = useRouter();
-    const {progress, startSync, updateProgress, setError, completeSync, reset, setOptions} = useSyncStore();
+    const {progress, startSync, updateProgress, setError, completeSync, cancelSync, reset, setOptions} = useSyncStore();
     const {isConfigured, deviceId} = useConfigStore();
     const [error, setSyncError] = useState<string | null>(null);
     const [isSyncing, setIsSyncing] = useState(true);
@@ -31,16 +34,91 @@ export default function SyncProgressScreen() {
 
         startSync({});
 
+        const isDeviceNotFoundError = (err: any): boolean => {
+            return err?.status === 404 || err?.status === 500 || 
+                   (err?.message && /device.*not found|not found.*device/i.test(err.message));
+        };
+
+        const reacquireDeviceId = async (): Promise<boolean> => {
+            try {
+                const deviceName = getDeviceName();
+                const devicesResponse = await getDevices();
+                const existingDevice = devicesResponse.devices.find(d => d.name === deviceName);
+
+                if (existingDevice) {
+                    await setDeviceId(existingDevice.id);
+                    return true;
+                }
+
+                const newDevice = await createDevice({
+                    name: deviceName,
+                    icon: getDeviceTypeIdByLabel(getDeviceIcon()),
+                    namingTemplate: getNamingTemplate() || undefined,
+                    importOnPurchase: getImportOnPurchase(),
+                });
+                await setDeviceId(newDevice.device.id);
+                return true;
+            } catch (reacquireErr) {
+                console.error('Failed to re-acquire device ID:', reacquireErr);
+                return false;
+            }
+        };
+
         const doSync = async () => {
             try {
                 const result = await runSync((prog) => {
                     updateProgress(prog);
                 });
 
+                if (result.cancelled) {
+                    reset();
+                    router.back();
+                    return;
+                }
+
                 completeSync();
 
                 router.replace(`/history/${result.sessionId}`);
             } catch (err: any) {
+                if (err instanceof SyncCancelledError) {
+                    reset();
+                    router.back();
+                    return;
+                }
+
+                if (isDeviceNotFoundError(err)) {
+                    const shouldReacquire = await new Promise<boolean>((resolve) => {
+                        Alert.alert(
+                            'Device Not Found',
+                            'This device is not registered on the server. Would you like to register it now?',
+                            [
+                                {text: 'Yes', onPress: () => resolve(true)},
+                                {text: 'No', style: 'cancel', onPress: () => resolve(false)},
+                            ]
+                        );
+                    });
+
+                    if (shouldReacquire) {
+                        const reacquired = await reacquireDeviceId();
+                        if (reacquired) {
+                            setIsSyncing(true);
+                            const retryResult = await runSync((prog) => {
+                                updateProgress(prog);
+                            });
+
+                            if (retryResult.cancelled) {
+                                reset();
+                                router.back();
+                                return;
+                            }
+
+                            completeSync();
+                            router.replace(`/history/${retryResult.sessionId}`);
+                            return;
+                        }
+                    }
+                }
+
                 console.error('Sync failed:', err);
                 setSyncError(err.message || 'Sync failed');
                 setError(err.message || 'Sync failed');
@@ -105,13 +183,25 @@ export default function SyncProgressScreen() {
         );
     }
 
+    const handleCancel = () => {
+        cancelSync();
+    };
+
+    const isScanning = progress.phase === 'scanning';
+
     return (
         <View style={styles.container}>
             <View style={styles.content}>
                 <ActivityIndicator size="large" color={colors.primary}/>
                 <Text style={styles.phaseText}>{getPhaseLabel()}</Text>
 
-                {progress.totalFiles > 0 && (
+                {isScanning && progress.scannedFiles > 0 && (
+                    <Text style={styles.scannedText}>
+                        {progress.scannedFiles} files found
+                    </Text>
+                )}
+
+                {progress.totalFiles > 0 && !isScanning && (
                     <>
                         <ProgressBar
                             progress={getProgressValue()}
@@ -124,7 +214,13 @@ export default function SyncProgressScreen() {
                     </>
                 )}
 
-                {progress.currentFile && (
+                {progress.totalFiles === 0 && isScanning && (
+                    <Text style={styles.scanningHint}>
+                        Scanning your music folder...
+                    </Text>
+                )}
+
+                {progress.currentFile && !isScanning && (
                     <Text style={styles.currentFile} numberOfLines={1}>
                         {progress.currentFile.split('/').pop()}
                     </Text>
@@ -160,6 +256,12 @@ export default function SyncProgressScreen() {
                     )}
                 </View>
 
+                {isSyncing && (
+                    <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                        <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                )}
+
                 <View style={styles.timerContainer}>
                     <Ionicons name="time-outline" size={16} color={colors.textMuted}/>
                     <Text style={styles.timerText}>{formatElapsedTime()}</Text>
@@ -186,6 +288,18 @@ const styles = StyleSheet.create({
         fontWeight: fontWeight.medium,
         color: colors.text,
         marginTop: spacing.md,
+    },
+    scannedText: {
+        fontSize: fontSize.md,
+        color: colors.primary,
+        marginTop: spacing.sm,
+        fontWeight: fontWeight.medium,
+    },
+    scanningHint: {
+        fontSize: fontSize.sm,
+        color: colors.textMuted,
+        marginTop: spacing.sm,
+        fontStyle: 'italic',
     },
     progressBar: {
         width: '100%',
@@ -226,6 +340,19 @@ const styles = StyleSheet.create({
     timerText: {
         fontSize: fontSize.md,
         color: colors.textMuted,
+    },
+    cancelButton: {
+        marginTop: spacing.xl,
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.xl,
+        borderWidth: 1,
+        borderColor: colors.error,
+        borderRadius: 8,
+    },
+    cancelButtonText: {
+        fontSize: fontSize.md,
+        color: colors.error,
+        fontWeight: fontWeight.medium,
     },
     errorContainer: {
         alignItems: 'center',

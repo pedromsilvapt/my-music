@@ -8,7 +8,7 @@ import {Controller, useForm} from 'react-hook-form';
 import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {z} from 'zod';
 import {testConnection} from '../../src/api/client';
-import {createDevice, getDevices} from '../../src/api/devices';
+import {createDevice, getDevices, updateDevice} from '../../src/api/devices';
 import {Button, Card, Input} from '../../src/components/ui';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
 import {borderRadius, colors, fontSize, fontWeight, spacing} from '../../src/constants/theme';
@@ -16,6 +16,7 @@ import {
     getDeviceIcon,
     getDeviceName,
     getImportOnPurchase,
+    getNamingTemplate,
     getRepositoryPath,
     getServerUrl,
     getUserName,
@@ -25,6 +26,7 @@ import {
     setImportOnPurchase,
     setIsConfigured,
     setLastSyncAt,
+    setNamingTemplate,
     setRepositoryPath,
     setServerUrl,
     setUserName
@@ -35,6 +37,7 @@ const configSchema = z.object({
     userName: z.string().optional(),
     deviceName: z.string().min(1, 'Device name is required'),
     deviceType: z.string(),
+    namingTemplate: z.string().optional(),
     importOnPurchase: z.boolean(),
     repositoryPath: z.string().optional(),
 });
@@ -55,6 +58,7 @@ export default function DeviceConfigScreen() {
             userName: getUserName() || '',
             deviceName: getDeviceName() || 'My Phone',
             deviceType: getDeviceTypeById(getDeviceIcon())?.label || 'Smartphone',
+            namingTemplate: getNamingTemplate() || '',
             importOnPurchase: getImportOnPurchase(),
             repositoryPath: getRepositoryPath() || '',
         },
@@ -118,6 +122,7 @@ export default function DeviceConfigScreen() {
             await setUserName(data.userName || '');
             await setDeviceName(data.deviceName);
             await setDeviceIcon(getDeviceTypeIdByLabel(data.deviceType));
+            await setNamingTemplate(data.namingTemplate || '');
             await setImportOnPurchase(data.importOnPurchase);
             await setRepositoryPath(data.repositoryPath || '');
 
@@ -130,10 +135,16 @@ export default function DeviceConfigScreen() {
 
                 if (existingDevice) {
                     await setDeviceId(existingDevice.id);
+                    if (existingDevice.namingTemplate !== data.namingTemplate) {
+                        await updateDevice(existingDevice.id, {
+                            namingTemplate: data.namingTemplate || undefined,
+                        });
+                    }
                 } else {
                     const newDevice = await createDevice({
                         name: data.deviceName,
                         icon: getDeviceTypeIdByLabel(data.deviceType),
+                        namingTemplate: data.namingTemplate || undefined,
                         importOnPurchase: data.importOnPurchase,
                     });
                     await setDeviceId(newDevice.device.id);
@@ -278,6 +289,25 @@ export default function DeviceConfigScreen() {
                         </TouchableOpacity>
                     ))}
                 </View>
+
+                <Controller
+                    control={control}
+                    name="namingTemplate"
+                    render={({field: {onChange, onBlur, value}}) => (
+                        <View style={styles.namingTemplateContainer}>
+                            <Input
+                                label="Naming Template"
+                                placeholder='{{ album.artist.name }}/{{ album.name }}/{{ simple_label }}.mp3'
+                                value={value}
+                                onChangeText={onChange}
+                                onBlur={onBlur}
+                            />
+                            <Text style={styles.hint}>
+                                Template for downloaded file names. Variables: {'{{ album.artist.name }}'}, {'{{ album.name }}'}, {'{{ title }}'}, {'{{ artists }}'}, {'{{ track }}'}, {'{{ year }}'}, {'{{ simple_label }}'}, {'{{ full_label }}'}
+                            </Text>
+                        </View>
+                    )}
+                />
 
                 <Controller
                     control={control}
@@ -453,6 +483,9 @@ const styles = StyleSheet.create({
         fontSize: fontSize.sm,
         color: colors.textMuted,
         marginTop: spacing.xs,
+    },
+    namingTemplateContainer: {
+        marginTop: spacing.md,
     },
     toggle: {
         width: 50,

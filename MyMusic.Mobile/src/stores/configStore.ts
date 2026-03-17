@@ -11,6 +11,7 @@ interface ConfigState {
     deviceId: number | null;
     importOnPurchase: boolean;
     repositoryPath: string;
+    namingTemplate: string;
     isConfigured: boolean;
     lastSyncAt: string | null;
     userId: number | null;
@@ -22,6 +23,7 @@ interface ConfigState {
     setDeviceId: (id: number | null) => void;
     setImportOnPurchase: (value: boolean) => void;
     setRepositoryPath: (path: string) => void;
+    setNamingTemplate: (template: string) => void;
     setIsConfigured: (configured: boolean) => void;
     setLastSyncAt: (date: string | null) => void;
     setUserId: (id: number | null) => void;
@@ -38,6 +40,7 @@ export const useConfigStore = create<ConfigState>()(
             deviceId: null,
             importOnPurchase: false,
             repositoryPath: '',
+            namingTemplate: '',
             isConfigured: false,
             lastSyncAt: null,
             userId: null,
@@ -49,6 +52,7 @@ export const useConfigStore = create<ConfigState>()(
             setDeviceId: (deviceId) => set({deviceId}),
             setImportOnPurchase: (importOnPurchase) => set({importOnPurchase}),
             setRepositoryPath: (repositoryPath) => set({repositoryPath}),
+            setNamingTemplate: (namingTemplate) => set({namingTemplate}),
             setIsConfigured: (isConfigured) => set({isConfigured}),
             setLastSyncAt: (lastSyncAt) => set({lastSyncAt}),
             setUserId: (userId) => set({userId}),
@@ -64,6 +68,7 @@ export const useConfigStore = create<ConfigState>()(
                 deviceId: state.deviceId,
                 importOnPurchase: state.importOnPurchase,
                 repositoryPath: state.repositoryPath,
+                namingTemplate: state.namingTemplate,
                 isConfigured: state.isConfigured,
                 lastSyncAt: state.lastSyncAt,
                 userId: state.userId,

@@ -26,6 +26,13 @@ import {
 } from './configService';
 import {scanFromDirectory} from './fileScanner';
 
+export class SyncCancelledError extends Error {
+    constructor() {
+        super('Sync was cancelled');
+        this.name = 'SyncCancelledError';
+    }
+}
+
 export interface SyncResult {
     created: number;
     updated: number;
@@ -35,6 +42,7 @@ export interface SyncResult {
     failed: number;
     conflicts: number;
     sessionId?: number;
+    cancelled?: boolean;
 }
 
 export type ConflictResolution = 'upload' | 'download' | 'skip';
@@ -85,15 +93,27 @@ export async function runSync(
     try {
         await activateKeepAwakeAsync();
 
-        onProgress({phase: 'scanning', totalFiles: 0, processedFiles: 0});
+        onProgress({phase: 'scanning', totalFiles: 0, processedFiles: 0, scannedFiles: 0, currentFile: 'Scanning your music folder...'});
+
+        const checkCancelled = () => {
+            if (useSyncStore.getState().isCancelled) {
+                throw new SyncCancelledError();
+            }
+        };
 
         const files = await scanFromDirectory(repositoryPath, {
             extensions: musicExtensions,
             excludePatterns,
             basePath: repositoryPath,
+            onProgress: (scannedCount) => {
+                checkCancelled();
+                onProgress({scannedFiles: scannedCount, currentFile: `${scannedCount} files found...`});
+            },
         });
 
-        onProgress({totalFiles: files.length, phase: 'upload'});
+        checkCancelled();
+
+        onProgress({totalFiles: files.length, scannedFiles: files.length, phase: 'upload', currentFile: ''});
 
         const startResponse = await startSync(deviceId, {dryRun: options.dryRun, repositoryPath});
         const sessionId = startResponse.sessionId;
@@ -101,6 +121,7 @@ export async function runSync(
         const chunks = chunkArray(files, chunkSize);
 
         for (let i = 0; i < chunks.length; i++) {
+            checkCancelled();
             const chunk = chunks[i];
 
             const syncFiles: SyncFileInfoItem[] = chunk.map(f => ({
@@ -197,6 +218,8 @@ export async function runSync(
             }
 
             for (const fileToCreate of syncResponse.toCreate) {
+                checkCancelled();
+
                 if (options.dryRun) {
                     result.created++;
                 } else {
@@ -234,6 +257,8 @@ export async function runSync(
             }
 
             for (const fileToUpdate of syncResponse.toUpdate) {
+                checkCancelled();
+
                 if (!toUpdatePaths.has(fileToUpdate.path)) {
                     continue;
                 }
@@ -302,6 +327,8 @@ export async function runSync(
             await recordChunk(deviceId, sessionId, {records: recordItems});
         }
 
+        checkCancelled();
+
         onProgress({phase: 'server'});
 
         const pendingActions = await getPendingActions(deviceId);
@@ -330,6 +357,8 @@ export async function runSync(
         }
 
         for (const action of pendingActions.actions) {
+            checkCancelled();
+
             if (action.action === 'Download') {
                 const fullPath = `${repositoryPath}/${action.path}`;
                 const fileExists = new File(fullPath).exists;
@@ -433,6 +462,11 @@ export async function runSync(
         await setLastSyncAt(new Date().toISOString());
 
     } catch (error) {
+        if (error instanceof SyncCancelledError) {
+            console.log('Sync cancelled by user');
+            result.cancelled = true;
+            return result;
+        }
         console.error('Sync error:', error);
         result.failed++;
         throw error;

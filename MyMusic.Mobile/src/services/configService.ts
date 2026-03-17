@@ -72,6 +72,14 @@ export async function setRepositoryPath(path: string): Promise<void> {
     useConfigStore.getState().setRepositoryPath(path);
 }
 
+export function getNamingTemplate(): string {
+    return useConfigStore.getState().namingTemplate;
+}
+
+export async function setNamingTemplate(template: string): Promise<void> {
+    useConfigStore.getState().setNamingTemplate(template);
+}
+
 export function getMusicExtensions(): string[] {
     return ['.mp3'];
 }
@@ -131,6 +139,7 @@ export function getAllConfig() {
         deviceId: state.deviceId,
         importOnPurchase: state.importOnPurchase,
         repositoryPath: state.repositoryPath,
+        namingTemplate: state.namingTemplate,
         isConfigured: state.isConfigured,
         lastSyncAt: state.lastSyncAt,
         userId: state.userId,
@@ -145,6 +154,7 @@ export async function resetConfig(): Promise<void> {
     useConfigStore.getState().setDeviceId(null);
     useConfigStore.getState().setImportOnPurchase(false);
     useConfigStore.getState().setRepositoryPath('');
+    useConfigStore.getState().setNamingTemplate('');
     useConfigStore.getState().setIsConfigured(false);
     useConfigStore.getState().setLastSyncAt(null);
     useConfigStore.getState().setUserId(null);

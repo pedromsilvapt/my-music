@@ -13,6 +13,7 @@ export interface ScanOptions {
     extensions: string[];
     excludePatterns: string[];
     basePath: string;
+    onProgress?: (scannedCount: number) => void;
 }
 
 export async function scanMusicFiles(options: ScanOptions): Promise<FileMetadata[]> {
@@ -62,6 +63,7 @@ export async function scanMusicFiles(options: ScanOptions): Promise<FileMetadata
 
 export async function scanFromDirectory(directoryUri: string, options: ScanOptions): Promise<FileMetadata[]> {
     const files: FileMetadata[] = [];
+    const {onProgress} = options;
 
     try {
         const directory = new Directory(directoryUri);
@@ -88,7 +90,15 @@ export async function scanFromDirectory(directoryUri: string, options: ScanOptio
                     createdAt: item.creationTime ? new Date(item.creationTime) : new Date(),
                     size: item.size || 0,
                 });
+
+                if (onProgress && files.length % 50 === 0) {
+                    onProgress(files.length);
+                }
             }
+        }
+
+        if (onProgress) {
+            onProgress(files.length);
         }
     } catch (error) {
         console.error('Error scanning directory:', error);
