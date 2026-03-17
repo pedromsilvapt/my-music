@@ -180,7 +180,8 @@ export default function SongEditorModal({
         mutation: {
             onSuccess: (response, variables) => {
                 if (response.status >= 400) {
-                    const errorDetail = (response.data as unknown)?.detail || "Unknown error";
+                    const responseData = response.data as { detail?: string } | undefined;
+                    const errorDetail = responseData?.detail || "Unknown error";
                     notifications.show({title: "Error", message: `Failed to update song: ${errorDetail}`, color: "red"});
                     return;
                 }
@@ -220,7 +221,8 @@ export default function SongEditorModal({
         mutation: {
             onSuccess: (response) => {
                 if (response.status >= 400) {
-                    const errorDetail = (response.data as unknown)?.detail || "Unknown error";
+                    const responseData = response.data as { detail?: string } | undefined;
+                    const errorDetail = responseData?.detail || "Unknown error";
                     notifications.show({title: "Error", message: `Failed to update songs: ${errorDetail}`, color: "red"});
                     return;
                 }
@@ -269,7 +271,8 @@ export default function SongEditorModal({
         mutation: {
             onSuccess: (response) => {
                 if (response.status >= 400) {
-                    const errorDetail = (response.data as unknown)?.detail || "Unknown error";
+                    const responseData = response.data as { detail?: string } | undefined;
+                    const errorDetail = responseData?.detail || "Unknown error";
                     notifications.show({title: "Error", message: `Failed to fetch metadata: ${errorDetail}`, color: "red"});
                     return;
                 }

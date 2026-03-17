@@ -77,7 +77,7 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 }
 
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, onScrollPositionChange, initialScrollPosition, scrollToIndex, highlightRequestId, sortable, setItemElementRef, actions, height, onReorderBatch, onReorder} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, selectionHandlers: propSelectionHandlers, onScrollPositionChange, initialScrollPosition, scrollToIndex, highlightRequestId, sortable, setItemElementRef, actions, height, onReorderBatch, onReorder} = props;
     const {lanes, parentRef, elemSize, gap} = props;
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
