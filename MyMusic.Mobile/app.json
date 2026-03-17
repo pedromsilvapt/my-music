@@ -37,6 +37,7 @@
       "bundler": "metro"
     },
     "plugins": [
+      "./plugins/withNetworkSecurityConfig.js",
       "expo-router",
       [
         "expo-media-library",

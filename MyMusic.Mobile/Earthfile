@@ -41,18 +41,23 @@ build:
 
     WORKDIR /app
 
+    # --- Layer 1: npm deps (cache bust only on package.json changes) ---
     COPY package*.json ./
     RUN npm install
 
-    COPY . .
-
+    # --- Layer 2: Expo prebuild (cache bust only on package.json / app config changes) ---
+    # Copy only the files expo prebuild actually needs
+    COPY app.json tsconfig.json* ./
+    COPY assets ./assets
+    COPY plugins ./plugins
     RUN npx expo prebuild --platform android --clean
 
+    # --- Layer 3: Gradle wrapper + ABI config ---
     RUN mkdir -p /app/android/gradle/wrapper && \
-        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-bin.zip" >> /app/android/gradle/wrapper/gradle-wrapper.properties
+        echo "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.13-bin.zip" \
+        >> /app/android/gradle/wrapper/gradle-wrapper.properties
 
     WORKDIR /app/android
-
     RUN if [ "$APK_ABI" = "both" ]; then \
             echo "ndk.abiFilters=arm64-v8a armeabi-v7a" >> gradle.properties; \
         elif [ -n "$APK_ABI" ]; then \
@@ -60,18 +65,28 @@ build:
             echo "ndk.abiFilters=$ABI_FILTERS" >> gradle.properties; \
         fi
 
+    # --- Layer 4: Pre-fetch ALL Gradle/Maven dependencies (most expensive layer) ---
+    # Cache bust only when build.gradle / package.json changes, NOT on source changes
+    RUN ./gradlew dependencies --no-daemon
+
+    # --- Layer 5: Full source copy (cache busts frequently, but now only triggers the actual compile) ---
+    WORKDIR /app
+    COPY . .
+
+    # --- Layer 6: Final build ---
+    WORKDIR /app/android
     RUN if [ "$BUILD_TYPE" = "debug" ]; then \
             ./gradlew assembleDebug; \
         else \
             ./gradlew assembleRelease; \
         fi
 
-    SAVE ARTIFACT /app/android/app/build/outputs/apk/${BUILD_TYPE}/app-${BUILD_TYPE}.apk
+    SAVE ARTIFACT /app/android/app/build/outputs/apk/${BUILD_TYPE}/app-*.apk
 
 package:
     FROM scratch
 
     ARG BUILD_TYPE=release
 
-    COPY +build/app/android/app/build/outputs/apk/${BUILD_TYPE}/app-${BUILD_TYPE}.apk /app/MyMusic-Mobile.apk
+    COPY +build/app-*.apk /app/MyMusic-Mobile.apk
     SAVE ARTIFACT /app/MyMusic-Mobile.apk
