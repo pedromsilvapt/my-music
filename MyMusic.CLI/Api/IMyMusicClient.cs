@@ -32,6 +32,8 @@ public interface IMyMusicClient
         long sessionId,
         [Query] string? actions,
         [Query] string? source,
+        [Query] int? limit = null,
+        [Query] string? cursor = null,
         CancellationToken ct = default);
 
     [Delete("/api/devices/{deviceId}/sessions/{sessionId}")]

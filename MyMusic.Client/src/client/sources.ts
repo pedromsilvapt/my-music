@@ -743,6 +743,182 @@ export const useDeleteSource = <TError = unknown, TContext = unknown>(
 > => {
 	return useMutation(getDeleteSourceMutationOptions(options), queryClient);
 };
+export type proxyThumbnailResponse200 = {
+	data: void;
+	status: 200;
+};
+
+export type proxyThumbnailResponseSuccess = proxyThumbnailResponse200 & {
+	headers: Headers;
+};
+
+export type proxyThumbnailResponse = proxyThumbnailResponseSuccess;
+
+export const getProxyThumbnailUrl = (encodedUrl: string) => {
+	return `/api/sources/thumbnails/${encodedUrl}`;
+};
+
+export const proxyThumbnail = async (
+	encodedUrl: string,
+	options?: RequestInit,
+): Promise<proxyThumbnailResponse> => {
+	const res = await fetch(getProxyThumbnailUrl(encodedUrl), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: proxyThumbnailResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as proxyThumbnailResponse;
+};
+
+export const getProxyThumbnailQueryKey = (encodedUrl: string) => {
+	return ["api", "sources", "thumbnails", encodedUrl] as const;
+};
+
+export const getProxyThumbnailQueryOptions = <
+	TData = Awaited<ReturnType<typeof proxyThumbnail>>,
+	TError = unknown,
+>(
+	encodedUrl: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData>
+		>;
+		fetch?: RequestInit;
+	},
+) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey =
+		queryOptions?.queryKey ?? getProxyThumbnailQueryKey(encodedUrl);
+
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof proxyThumbnail>>> = ({
+		signal,
+	}) => proxyThumbnail(encodedUrl, { signal, ...fetchOptions });
+
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!encodedUrl,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof proxyThumbnail>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ProxyThumbnailQueryResult = NonNullable<
+	Awaited<ReturnType<typeof proxyThumbnail>>
+>;
+export type ProxyThumbnailQueryError = unknown;
+
+export function useProxyThumbnail<
+	TData = Awaited<ReturnType<typeof proxyThumbnail>>,
+	TError = unknown,
+>(
+	encodedUrl: string,
+	options: {
+		query: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof proxyThumbnail>>,
+					TError,
+					Awaited<ReturnType<typeof proxyThumbnail>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useProxyThumbnail<
+	TData = Awaited<ReturnType<typeof proxyThumbnail>>,
+	TError = unknown,
+>(
+	encodedUrl: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof proxyThumbnail>>,
+					TError,
+					Awaited<ReturnType<typeof proxyThumbnail>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useProxyThumbnail<
+	TData = Awaited<ReturnType<typeof proxyThumbnail>>,
+	TError = unknown,
+>(
+	encodedUrl: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useProxyThumbnail<
+	TData = Awaited<ReturnType<typeof proxyThumbnail>>,
+	TError = unknown,
+>(
+	encodedUrl: string,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getProxyThumbnailQueryOptions(encodedUrl, options);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateProxyThumbnail = async (
+	queryClient: QueryClient,
+	encodedUrl: string,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getProxyThumbnailQueryKey(encodedUrl) },
+		options,
+	);
+
+	return queryClient;
+};
+
 export type searchSongsResponse200TextPlain = {
 	data: SourceSong[];
 	status: 200;
@@ -3943,6 +4119,27 @@ export const getDeleteSourceMockHandler = (
 	);
 };
 
+export const getProxyThumbnailMockHandler = (
+	overrideResponse?:
+		| void
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<void> | void),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/sources/thumbnails/:encodedUrl",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			if (typeof overrideResponse === "function") {
+				await overrideResponse(info);
+			}
+
+			return new HttpResponse(null, { status: 200 });
+		},
+		options,
+	);
+};
+
 export const getSearchSongsMockHandler = (
 	overrideResponse?:
 		| SourceSong[]
@@ -4092,6 +4289,7 @@ export const getSourcesMock = () => [
 	getGetSourceMockHandler(),
 	getUpdateSourceMockHandler(),
 	getDeleteSourceMockHandler(),
+	getProxyThumbnailMockHandler(),
 	getSearchSongsMockHandler(),
 	getGetSourceSongFilterMetadataMockHandler(),
 	getGetSongMockHandler(),

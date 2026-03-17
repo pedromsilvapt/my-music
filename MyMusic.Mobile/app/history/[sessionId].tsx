@@ -1,7 +1,8 @@
 import {Ionicons} from '@expo/vector-icons';
 import {useLocalSearchParams, useNavigation, useRouter} from 'expo-router';
-import React, {useEffect, useLayoutEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {FlashList} from '@shopify/flash-list';
 import type {SyncRecordResponseItem, SyncSessionItem} from '../../src/api/types';
 import {deleteSession} from '../../src/api/sync';
 import {Card, ErrorDisplay} from '../../src/components/ui';
@@ -11,6 +12,8 @@ import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncServ
 import {useConfigStore} from '../../src/stores/configStore';
 
 type FilterType = 'all' | 'created' | 'updated' | 'skipped' | 'downloaded' | 'removed' | 'error' | 'conflict';
+
+const PAGE_SIZE = 50;
 
 function formatFilePath(path: string, repositoryPath: string | null | undefined): string {
     let formatted = path;
@@ -32,6 +35,21 @@ function formatFilePath(path: string, repositoryPath: string | null | undefined)
     return formatted;
 }
 
+interface RecordGroup {
+    action: string;
+    records: SyncRecordResponseItem[];
+}
+
+type FlatListItem =
+    | { type: 'header'; session: SyncSessionItem }
+    | { type: 'summary'; session: SyncSessionItem }
+    | { type: 'filters'; activeFilter: FilterType; isLoading?: boolean }
+    | { type: 'group_header'; action: string; count: number; firstRecord: SyncRecordResponseItem }
+    | { type: 'record'; record: SyncRecordResponseItem; repositoryPath: string | null | undefined }
+    | { type: 'skeleton' }
+    | { type: 'loading' }
+    | { type: 'empty' };
+
 export default function SessionDetailScreen() {
     const {sessionId} = useLocalSearchParams<{ sessionId: string }>();
     const navigation = useNavigation();
@@ -41,39 +59,96 @@ export default function SessionDetailScreen() {
     const [session, setSession] = useState<SyncSessionItem | null>(null);
     const [records, setRecords] = useState<SyncRecordResponseItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [isLoadingFilter, setIsLoadingFilter] = useState(false);
     const [filter, setFilter] = useState<FilterType>('all');
     const [error, setError] = useState<ErrorDetails | null>(null);
+    const [cursor, setCursor] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
 
-    useEffect(() => {
+    const filterRef = useRef(filter);
+    filterRef.current = filter;
+
+    const loadRecords = useCallback(async (isInitial: boolean = false, isFilterChange: boolean = false) => {
         if (!deviceId || !sessionId) return;
 
-        const loadData = async () => {
-            try {
-                const sessionsResponse = await fetchSyncHistory(deviceId, 100);
+        try {
+            if (isInitial) {
+                if (isFilterChange) {
+                    setIsLoadingFilter(true);
+                } else {
+                    setLoading(true);
+                }
+                // Load session info and first page of records
+                const [sessionsResponse, recordsResponse] = await Promise.all([
+                    fetchSyncHistory(deviceId, 100),
+                    fetchSessionDetails(
+                        deviceId,
+                        parseInt(sessionId),
+                        filter === 'all' ? undefined : filter,
+                        undefined,
+                        PAGE_SIZE,
+                        null
+                    )
+                ]);
+
                 const foundSession = sessionsResponse.sessions.find(s => s.id === parseInt(sessionId));
                 setSession(foundSession || null);
+                setRecords(recordsResponse.records);
+                setCursor(recordsResponse.nextCursor);
+                setHasMore(recordsResponse.hasMore);
+                setTotalCount(recordsResponse.totalCount);
+            } else {
+                // Load next page
+                if (!hasMore || loadingMore || !cursor) return;
 
-                if (foundSession) {
-                    const recordsResponse = await fetchSessionDetails(deviceId, parseInt(sessionId));
-                    setRecords(recordsResponse.records);
-                }
-                setError(null);
-            } catch (err: any) {
-                console.error('Failed to load session:', err);
-                setError({
-                    status: err?.status,
-                    message: err?.message || 'Failed to load session',
-                    url: err?.url,
-                    responseBody: err?.details || err?.responseBody,
-                    stack: err?.stack,
-                });
-            } finally {
-                setLoading(false);
+                setLoadingMore(true);
+                const recordsResponse = await fetchSessionDetails(
+                    deviceId,
+                    parseInt(sessionId),
+                    filter === 'all' ? undefined : filter,
+                    undefined,
+                    PAGE_SIZE,
+                    cursor
+                );
+
+                setRecords(prev => [...prev, ...recordsResponse.records]);
+                setCursor(recordsResponse.nextCursor);
+                setHasMore(recordsResponse.hasMore);
             }
-        };
+            setError(null);
+        } catch (err: any) {
+            console.error('Failed to load session:', err);
+            setError({
+                status: err?.status,
+                message: err?.message || 'Failed to load session',
+                url: err?.url,
+                responseBody: err?.details || err?.responseBody,
+                stack: err?.stack,
+            });
+        } finally {
+            setLoading(false);
+            setLoadingMore(false);
+            setIsLoadingFilter(false);
+        }
+    }, [deviceId, sessionId, filter, cursor, hasMore, loadingMore]);
 
-        loadData();
+    // Initial load
+    useEffect(() => {
+        loadRecords(true);
     }, [deviceId, sessionId]);
+
+    // Reload when filter changes
+    useEffect(() => {
+        if (!loading && session) {
+            // Reset pagination and reload with new filter
+            // Don't clear records yet - skeletons will overlay them
+            setCursor(null);
+            setHasMore(false);
+            loadRecords(true, true);
+        }
+    }, [filter]);
 
     const router = useRouter();
 
@@ -225,7 +300,221 @@ export default function SessionDetailScreen() {
         {key: 'conflict', label: 'Conflicts'},
     ];
 
-    if (loading) {
+    // Build flat list data for FlashList
+    const flatListData = useMemo((): FlatListItem[] => {
+        if (!session) return [];
+
+        const data: FlatListItem[] = [
+            {type: 'header', session},
+            {type: 'summary', session},
+            {type: 'filters', activeFilter: filter, isLoading: isLoadingFilter},
+        ];
+
+        if (isLoadingFilter) {
+            // Show 5 skeleton records while loading new filter
+            for (let i = 0; i < 5; i++) {
+                data.push({type: 'skeleton'});
+            }
+        } else if (sortedGroupEntries.length === 0) {
+            data.push({type: 'empty'});
+        } else {
+            for (const [action, actionRecords] of sortedGroupEntries) {
+                data.push({
+                    type: 'group_header',
+                    action,
+                    count: actionRecords.length,
+                    firstRecord: actionRecords[0],
+                });
+
+                actionRecords.forEach((record) => {
+                    data.push({
+                        type: 'record',
+                        record,
+                        repositoryPath: session?.repositoryPath,
+                    });
+                });
+            }
+        }
+
+        if (loadingMore) {
+            data.push({type: 'loading'});
+        }
+
+        return data;
+    }, [session, sortedGroupEntries, filter, loadingMore, isLoadingFilter]);
+
+    const handleLoadMore = useCallback(() => {
+        if (hasMore && !loadingMore && !loading) {
+            loadRecords(false);
+        }
+    }, [hasMore, loadingMore, loading, loadRecords]);
+
+    const renderItem = useCallback(({item}: {item: FlatListItem}) => {
+        switch (item.type) {
+            case 'header':
+                return (
+                    <View style={[styles.header, {padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border}]}>
+                        <View style={[styles.headerRow, {flexDirection: 'row', gap: spacing.sm}]}>
+                            <View style={[styles.statusBadge, {backgroundColor: withAlpha('success', 0.12), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm}]}>
+                                <Text style={[styles.statusText, {color: colors.success, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>{item.session.status}</Text>
+                            </View>
+                            {item.session.isDryRun && (
+                                <View style={[styles.dryRunBadge, {backgroundColor: withAlpha('warning', 0.12), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm}]}>
+                                    <Text style={[styles.dryRunText, {color: colors.warning, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>Dry Run</Text>
+                                </View>
+                            )}
+                        </View>
+                        <Text style={[styles.dateText, {color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs}]}>Started: {formatDate(item.session.startedAt)}</Text>
+                        {item.session.completedAt && (
+                            <Text style={[styles.dateText, {color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs}]}>Completed: {formatDate(item.session.completedAt)}</Text>
+                        )}
+                    </View>
+                );
+
+            case 'summary':
+                return (
+                    <Card style={{marginHorizontal: spacing.md}}>
+                        <Text style={[styles.summaryTitle, {fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Summary</Text>
+                        <View style={[styles.summaryGrid, {flexDirection: 'row', flexWrap: 'wrap'}]}>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.success}]}>{item.session.createdCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
+                            </View>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.info}]}>{item.session.updatedCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
+                            </View>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textMuted}]}>{item.session.skippedCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
+                            </View>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{item.session.downloadedCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
+                            </View>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.removedCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Removed</Text>
+                            </View>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.errorCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Errors</Text>
+                            </View>
+                        </View>
+                    </Card>
+                );
+
+            case 'filters':
+                return (
+                    <View style={[styles.filterContainer, {flexDirection: 'row', paddingHorizontal: spacing.lg, gap: spacing.xs, marginBottom: spacing.md, marginTop: spacing.md}]}>
+                        {filters.map(f => (
+                            <TouchableOpacity
+                                key={f.key}
+                                style={[
+                                    styles.filterButton,
+                                    {paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.full, backgroundColor: colors.surface},
+                                    item.activeFilter === f.key && {backgroundColor: colors.primary}
+                                ]}
+                                onPress={() => !item.isLoading && setFilter(f.key)}
+                                disabled={item.isLoading}
+                            >
+                                <Text style={[
+                                    styles.filterText,
+                                    {fontSize: fontSize.sm, color: colors.textSecondary},
+                                    item.activeFilter === f.key && {color: colors.onPrimary, fontWeight: fontWeight.medium},
+                                    item.isLoading && {opacity: 0.5}
+                                ]}>
+                                    {f.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                        {item.isLoading && (
+                            <ActivityIndicator size="small" color={colors.primary} style={{marginLeft: spacing.sm}} />
+                        )}
+                    </View>
+                );
+
+            case 'group_header':
+                return (
+                    <View style={{marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm}}>
+                        <View style={[styles.actionBadge, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm, alignSelf: 'flex-start', backgroundColor: withAlpha(getActionColorKey(item.action), 0.12)}]}>
+                            <Ionicons
+                                name={getActionIcon(item.action, item.firstRecord.source) as any}
+                                size={14}
+                                color={getActionColor(item.action)}
+                            />
+                            <Text style={[styles.actionText, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: getActionColor(item.action)}]}>
+                                {item.action} ({item.count})
+                            </Text>
+                        </View>
+                    </View>
+                );
+
+            case 'skeleton':
+                return (
+                    <Card style={{marginHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: 0}}>
+                        <View style={[styles.recordItem]}>
+                            <View style={[styles.recordPathRow, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs}]}>
+                                <View style={{width: 12, height: 12, backgroundColor: colors.textMuted, borderRadius: 6, opacity: 0.3}} />
+                                <View style={{flex: 1, height: 14, backgroundColor: colors.textMuted, borderRadius: 4, opacity: 0.3}} />
+                            </View>
+                        </View>
+                    </Card>
+                );
+
+            case 'record':
+                return (
+                    <Card style={{marginHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: 0}}>
+                        <View style={[styles.recordItem]}>
+                            <View style={[styles.recordPathRow, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs}]}>
+                                <Ionicons
+                                    name={item.record.source === 'Server' ? 'arrow-down' : 'arrow-up'}
+                                    size={12}
+                                    color={getActionColor(item.record.action)}
+                                />
+                                <Text style={[styles.recordPath, {flex: 1, fontSize: fontSize.sm, color: colors.cardText}]} numberOfLines={1}>
+                                    {formatFilePath(item.record.filePath, item.repositoryPath)}
+                                </Text>
+                            </View>
+                            {item.record.errorMessage && (
+                                <Text style={[styles.recordError, {fontSize: fontSize.sm, color: colors.error, marginTop: spacing.xs}]} numberOfLines={2}>
+                                    {item.record.errorMessage}
+                                </Text>
+                            )}
+                            {item.record.reason && (
+                                <Text style={[styles.recordReason, {fontSize: fontSize.xs, color: colors.cardTextMuted, marginTop: spacing.xs, fontStyle: 'italic'}]} numberOfLines={2}>
+                                    {item.record.reason}
+                                </Text>
+                            )}
+                        </View>
+                    </Card>
+                );
+
+            case 'loading':
+                return (
+                    <View style={{padding: spacing.lg, alignItems: 'center'}}>
+                        <ActivityIndicator size="small" color={colors.primary}/>
+                        <Text style={{marginTop: spacing.xs, color: colors.textSecondary, fontSize: fontSize.sm}}>
+                            Loading more records...
+                        </Text>
+                    </View>
+                );
+
+            case 'empty':
+                return (
+                    <View style={[styles.emptyRecords, {alignItems: 'center', padding: spacing.xl, marginHorizontal: spacing.md}]}>
+                        <Text style={[styles.emptyText, {color: colors.textMuted}]}>No records match this filter</Text>
+                    </View>
+                );
+
+            default:
+                return null;
+        }
+    }, [colors, spacing, fontSize, fontWeight, borderRadius, withAlpha]);
+
+    const getItemType = (item: FlatListItem) => item.type;
+
+    if (loading && records.length === 0) {
         return (
             <View style={[styles.loadingContainer, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
                 <ActivityIndicator size="large" color={colors.primary}/>
@@ -237,8 +526,8 @@ export default function SessionDetailScreen() {
         return (
             <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
                 <View style={[styles.errorDisplayContainer, {flex: 1, padding: spacing.md}]}>
-                    <ErrorDisplay 
-                        error={error} 
+                    <ErrorDisplay
+                        error={error}
                         onDismiss={() => router.back()}
                     />
                 </View>
@@ -256,126 +545,25 @@ export default function SessionDetailScreen() {
 
     return (
         <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
-            <ScrollView>
-                <View style={[styles.header, {padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border}]}>
-                    <View style={[styles.headerRow, {flexDirection: 'row', gap: spacing.sm}]}>
-                        <View style={[styles.statusBadge, {backgroundColor: withAlpha('success', 0.12), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm}]}>
-                            <Text style={[styles.statusText, {color: colors.success, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>{session.status}</Text>
-                        </View>
-                        {session.isDryRun && (
-                            <View style={[styles.dryRunBadge, {backgroundColor: withAlpha('warning', 0.12), paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm}]}>
-                                <Text style={[styles.dryRunText, {color: colors.warning, fontWeight: fontWeight.medium, fontSize: fontSize.sm}]}>Dry Run</Text>
-                            </View>
-                        )}
-                    </View>
-                    <Text style={[styles.dateText, {color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs}]}>Started: {formatDate(session.startedAt)}</Text>
-                    {session.completedAt && (
-                        <Text style={[styles.dateText, {color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs}]}>Completed: {formatDate(session.completedAt)}</Text>
-                    )}
-                </View>
-
-                <Card style={{marginHorizontal: spacing.md}}>
-                    <Text style={[styles.summaryTitle, {fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Summary</Text>
-                    <View style={[styles.summaryGrid, {flexDirection: 'row', flexWrap: 'wrap'}]}>
-                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.success}]}>{session.createdCount}</Text>
-                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
-                        </View>
-                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.info}]}>{session.updatedCount}</Text>
-                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
-                        </View>
-                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textMuted}]}>{session.skippedCount}</Text>
-                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
-                        </View>
-                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                            <Text
-                                style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{session.downloadedCount}</Text>
-                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
-                        </View>
-                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{session.removedCount}</Text>
-                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Removed</Text>
-                        </View>
-                        <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                            <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{session.errorCount}</Text>
-                            <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Errors</Text>
-                        </View>
-                    </View>
-                </Card>
-
-                <View style={[styles.filterContainer, {flexDirection: 'row', paddingHorizontal: spacing.lg, gap: spacing.xs, marginBottom: spacing.md}]}>
-                    {filters.map(f => (
-                        <TouchableOpacity
-                            key={f.key}
-                            style={[
-                                styles.filterButton,
-                                {paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.full, backgroundColor: colors.surface},
-                                filter === f.key && {backgroundColor: colors.primary}
-                            ]}
-                            onPress={() => setFilter(f.key)}
-                        >
-                            <Text style={[
-                                styles.filterText,
-                                {fontSize: fontSize.sm, color: colors.textSecondary},
-                                filter === f.key && {color: colors.onPrimary, fontWeight: fontWeight.medium}
-                            ]}>
-                                {f.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                <View style={[styles.recordsContainer, {padding: spacing.lg, paddingTop: 0}]}>
-                    {sortedGroupEntries.map(([action, actionRecords]) => (
-                        <Card key={action} style={{marginHorizontal: spacing.md}}>
-                            <View style={[styles.recordGroupHeader, {marginBottom: spacing.xs}]}>
-                                <View style={[styles.actionBadge, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm, alignSelf: 'flex-start', backgroundColor: withAlpha(getActionColorKey(action), 0.12)}]}>
-                                    <Ionicons
-                                        name={getActionIcon(action, actionRecords[0]?.source || '') as any}
-                                        size={14}
-                                        color={getActionColor(action)}
-                                    />
-                                    <Text style={[styles.actionText, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: getActionColor(action)}]}>
-                                        {action} ({actionRecords.length})
-                                    </Text>
-                                </View>
-                            </View>
-                            {actionRecords.map((record, idx) => (
-                                <View key={idx} style={[styles.recordItem, {paddingVertical: spacing.sm, borderBottomWidth: idx < actionRecords.length - 1 ? 1 : 0, borderBottomColor: colors.cardBorder}]}>
-                                    <View style={[styles.recordPathRow, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs}]}>
-                                        <Ionicons
-                                            name={record.source === 'Server' ? 'arrow-down' : 'arrow-up'}
-                                            size={12}
-                                            color={getActionColor(action)}
-                                        />
-                                        <Text style={[styles.recordPath, {flex: 1, fontSize: fontSize.sm, color: colors.cardText}]} numberOfLines={1}>
-                                            {formatFilePath(record.filePath, session?.repositoryPath)}
-                                        </Text>
-                                    </View>
-                                    {record.errorMessage && (
-                                        <Text style={[styles.recordError, {fontSize: fontSize.sm, color: colors.error, marginTop: spacing.xs}]} numberOfLines={2}>
-                                            {record.errorMessage}
-                                        </Text>
-                                    )}
-                                    {record.reason && (
-                                        <Text style={[styles.recordReason, {fontSize: fontSize.xs, color: colors.cardTextMuted, marginTop: spacing.xs, fontStyle: 'italic'}]} numberOfLines={2}>
-                                            {record.reason}
-                                        </Text>
-                                    )}
-                                </View>
-                            ))}
-                        </Card>
-                    ))}
-
-                    {filteredRecords.length === 0 && (
-                        <View style={[styles.emptyRecords, {alignItems: 'center', padding: spacing.xl}]}>
-                            <Text style={[styles.emptyText, {color: colors.textMuted}]}>No records match this filter</Text>
-                        </View>
-                    )}
-                </View>
-            </ScrollView>
+            <FlashList
+                data={flatListData}
+                renderItem={renderItem}
+                keyExtractor={(item, index) => {
+                    if (item.type === 'header') return 'header';
+                    if (item.type === 'summary') return 'summary';
+                    if (item.type === 'filters') return 'filters';
+                    if (item.type === 'group_header') return `group-${item.action}`;
+                    if (item.type === 'record') return `record-${item.record.filePath}-${index}`;
+                    if (item.type === 'loading') return 'loading';
+                    if (item.type === 'empty') return 'empty';
+                    return `item-${index}`;
+                }}
+                // @ts-expect-error FlashList types don't include estimatedItemSize but it's required
+                estimatedItemSize={100}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                contentContainerStyle={{paddingBottom: spacing.lg}}
+            />
         </View>
     );
 }
@@ -454,12 +642,6 @@ const styles = StyleSheet.create({
     },
     filterText: {
         fontSize: 12,
-    },
-    recordsContainer: {
-        padding: 16,
-    },
-    recordGroupHeader: {
-        marginBottom: 4,
     },
     actionBadge: {
         flexDirection: 'row',

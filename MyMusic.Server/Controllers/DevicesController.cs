@@ -330,6 +330,8 @@ public class DevicesController(
         long sessionId,
         [FromQuery] string? actions = null,
         [FromQuery] string? source = null,
+        [FromQuery] int? limit = null,
+        [FromQuery] string? cursor = null,
         CancellationToken cancellationToken = default)
     {
         var session = await context.DeviceSyncSessions
@@ -359,13 +361,49 @@ public class DevicesController(
             query = query.Where(r => r.Source == sourceValue);
         }
 
-        var records = await query
-            .OrderBy(r => r.FilePath)
-            .ToListAsync(cancellationToken);
+        // Get total count for pagination metadata
+        var totalCount = await query.CountAsync(cancellationToken);
+
+        // Apply cursor filter if provided (records with ID greater than cursor)
+        if (!string.IsNullOrEmpty(cursor) && long.TryParse(cursor, out var cursorId))
+        {
+            query = query.Where(r => r.Id > cursorId);
+        }
+
+        // Order by ID for stable pagination
+        query = query.OrderBy(r => r.Id);
+
+        List<DeviceSyncSessionRecord> records;
+        string? nextCursor = null;
+        bool hasMore = false;
+
+        if (limit.HasValue)
+        {
+            // Fetch one extra to determine if there are more records
+            records = await query
+                .Take(limit.Value + 1)
+                .ToListAsync(cancellationToken);
+
+            // Check if we have more records
+            if (records.Count > limit.Value)
+            {
+                hasMore = true;
+                records.RemoveAt(records.Count - 1); // Remove the extra record
+                nextCursor = records.LastOrDefault()?.Id.ToString();
+            }
+        }
+        else
+        {
+            // No limit specified - return all records (backward compatibility)
+            records = await query.ToListAsync(cancellationToken);
+        }
 
         return new ListSyncRecordsResponse
         {
             Records = records.Select(SyncRecordResponseItem.FromEntity).ToList(),
+            NextCursor = nextCursor,
+            HasMore = hasMore,
+            TotalCount = totalCount,
         };
     }
 

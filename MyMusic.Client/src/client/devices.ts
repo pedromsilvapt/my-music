@@ -3725,6 +3725,18 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
 					undefined,
 				]),
 			})),
+			nextCursor: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			hasMore: faker.helpers.arrayElement([
+				faker.datatype.boolean(),
+				undefined,
+			]),
+			totalCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
 			...overrideResponse,
 		},
 		{
@@ -3758,6 +3770,18 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
 					undefined,
 				]),
 			})),
+			nextCursor: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			hasMore: faker.helpers.arrayElement([
+				faker.datatype.boolean(),
+				undefined,
+			]),
+			totalCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
 			...overrideResponse,
 		},
 		{
@@ -3791,6 +3815,18 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
 					undefined,
 				]),
 			})),
+			nextCursor: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			hasMore: faker.helpers.arrayElement([
+				faker.datatype.boolean(),
+				undefined,
+			]),
+			totalCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
 			...overrideResponse,
 		},
 	]);

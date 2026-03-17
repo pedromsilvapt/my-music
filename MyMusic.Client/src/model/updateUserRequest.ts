@@ -8,7 +8,10 @@ OpenAPI spec version: 1.0.0
 export interface UpdateUserRequest {
 	/** @nullable */
 	colorScheme?: string | null;
-	/** @nullable */
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$
+	 */
 	volume?: number | null;
 	/** @nullable */
 	isMuted?: boolean | null;

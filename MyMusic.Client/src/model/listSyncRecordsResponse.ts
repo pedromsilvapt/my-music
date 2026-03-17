@@ -8,4 +8,9 @@ OpenAPI spec version: 1.0.0
 
 export interface ListSyncRecordsResponse {
 	records: SyncRecordResponseItem[];
+	/** @nullable */
+	nextCursor?: string | null;
+	hasMore?: boolean;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	totalCount?: number;
 }

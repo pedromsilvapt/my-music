@@ -3,6 +3,9 @@ namespace MyMusic.CLI.Api.Dtos;
 public record ListSyncRecordsResponse
 {
     public required List<SyncRecordResponseItem> Records { get; init; }
+    public string? NextCursor { get; init; }
+    public bool HasMore { get; init; }
+    public int TotalCount { get; init; }
 }
 
 public record SyncRecordResponseItem

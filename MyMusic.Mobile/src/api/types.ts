@@ -240,6 +240,9 @@ export type SyncRecordResponseItem = z.infer<typeof SyncRecordResponseItemSchema
 
 export const ListSyncRecordsResponseSchema = z.object({
     records: z.array(SyncRecordResponseItemSchema),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+    totalCount: z.number(),
 });
 
 export type ListSyncRecordsResponse = z.infer<typeof ListSyncRecordsResponseSchema>;

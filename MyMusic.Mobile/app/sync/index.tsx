@@ -116,7 +116,7 @@ export default function SyncOptionsScreen() {
                 {options.dryRun && (
                     <View style={[styles.dryRunNotice, {gap: spacing.sm, padding: spacing.md, backgroundColor: withAlpha('info', 0.12), borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.info}]}>
                         <Ionicons name="information-circle-outline" size={20} color={colors.info}/>
-                        <Text style={[styles.dryRunText, {flex: 1, fontSize: fontSize.sm, color: colors.cardText, lineHeight: 20}]}>
+                        <Text style={[styles.dryRunText, {flex: 1, fontSize: fontSize.sm, color: colors.text, lineHeight: 20}]}>
                             In dry run mode, no files will be uploaded, downloaded, or deleted. All operations will be
                             recorded in the sync session as if they were performed.
                         </Text>

@@ -11,6 +11,7 @@ export interface CreateUserItem {
 	username: string;
 	name: string;
 	colorScheme: string;
+	/** @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$ */
 	volume: number;
 	isMuted: boolean;
 }
