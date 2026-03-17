@@ -79,7 +79,7 @@ export default function SettingsScreen() {
                         {repositoryPath || 'Not set'}
                     </Text>
                 </View>
-                <View style={[styles.infoRow, {paddingVertical: spacing.sm}]}>
+                <View style={[styles.infoRow, {paddingVertical: spacing.sm, borderBottomWidth: 0}]}>
                     <Text style={[styles.infoLabel, {fontSize: fontSize.sm, color: colors.cardTextSecondary}]}>Device ID</Text>
                     <Text style={[styles.infoValue, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.cardText}]}>{deviceId || 'Not registered'}</Text>
                 </View>

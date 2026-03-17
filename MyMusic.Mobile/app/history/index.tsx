@@ -302,7 +302,7 @@ export default function HistoryListScreen() {
                             onPress={handlePrune}
                             disabled={pruning || sessionsToPrune === 0}
                         >
-                            <Text style={[styles.modalButtonConfirmText, {color: colors.textInverse, fontWeight: fontWeight.semibold}]}>
+                            <Text style={[styles.modalButtonConfirmText, {color: colors.onPrimary, fontWeight: fontWeight.semibold}]}>
                                 {pruning ? 'Pruning...' : 'Prune'}
                             </Text>
                         </TouchableOpacity>

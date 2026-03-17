@@ -1,14 +1,23 @@
 import {Stack} from 'expo-router';
 import {StatusBar} from 'expo-status-bar';
-import {StyleSheet} from 'react-native';
+import * as NavigationBar from 'expo-navigation-bar';
+import {Platform, StyleSheet} from 'react-native';
 import {SafeAreaProvider, SafeAreaView} from 'react-native-safe-area-context';
+import {useEffect} from 'react';
 import {useTheme} from '../src/hooks/useTheme';
 import {useThemeStore} from '../src/stores/themeStore';
 
 export default function RootLayout() {
     useThemeStore();
-    
-    const {colors, statusBarStyle} = useTheme();
+
+    const {colors, statusBarStyle, isDark} = useTheme();
+
+    useEffect(() => {
+        if (Platform.OS === 'android') {
+            NavigationBar.setBackgroundColorAsync(colors.backgroundSecondary);
+            NavigationBar.setButtonStyleAsync(isDark ? 'light' : 'dark');
+        }
+    }, [colors.backgroundSecondary, isDark]);
 
     return (
         <SafeAreaProvider>

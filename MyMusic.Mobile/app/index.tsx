@@ -66,7 +66,7 @@ export default function HomeScreen() {
             </View>
 
             <Card>
-                <View style={[styles.deviceHeader, {gap: spacing.md}]}>
+                <TouchableOpacity onPress={() => router.push('/settings/device')} style={[styles.deviceHeader, {gap: spacing.md}]}>
                     <Ionicons name={getDeviceIcon(deviceIcon) as any} size={32} color={colors.primary}/>
                     <View style={styles.deviceInfo}>
                         <Text style={[styles.deviceName, {fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.cardText}]}>{deviceName || 'No device configured'}</Text>
@@ -74,10 +74,8 @@ export default function HomeScreen() {
                             {isConfigured ? 'Ready to sync' : 'Not configured'}
                         </Text>
                     </View>
-                    <TouchableOpacity onPress={() => router.push('/settings/device')}>
-                        <Ionicons name="chevron-forward" size={24} color={colors.cardTextSecondary}/>
-                    </TouchableOpacity>
-                </View>
+                    <Ionicons name="chevron-forward" size={24} color={colors.cardTextSecondary}/>
+                </TouchableOpacity>
 
                 {repositoryPath ? (
                     <View style={[styles.repositoryInfo, {gap: spacing.xs, marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.cardBorder}]}>
