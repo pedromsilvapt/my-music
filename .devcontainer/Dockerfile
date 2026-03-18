@@ -48,3 +48,7 @@ RUN su - "vscode" -c "curl -fsSL https://opencode.ai/install | bash" && \
 RUN mkdir -p /app/data && chown vscode:vscode /app/data
 
 RUN echo fs.inotify.max_user_instances=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+RUN uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
