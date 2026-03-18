@@ -1,3 +1,4 @@
+using EntityFrameworkCore.Projectables;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using Microsoft.Data.Sqlite;
@@ -54,6 +55,7 @@ public class Scenario
 
         var options = new DbContextOptionsBuilder<MusicDbContext>()
             .UseSqlite(keepAliveConnection)
+            .UseProjectables()
             .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
             .LogTo(Console.WriteLine)
             .Options;

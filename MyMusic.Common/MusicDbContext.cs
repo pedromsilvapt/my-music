@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMusic.Common.Entities;
 
 namespace MyMusic.Common;
@@ -60,8 +62,11 @@ public class MusicDbContext : DbContext
         // AutoFetchedMetadata entity configuration
         modelBuilder.Entity<AutoFetchedMetadata>(entity =>
         {
-            // Store JSON data
-            entity.Property(e => e.SourceMetadata).HasColumnType("jsonb");
+            // Value converter for SourceMetadata to support cross-database JSON storage
+            var jsonConverter = new ValueConverter<JsonElement, string>(
+                v => v.GetRawText(),
+                v => string.IsNullOrEmpty(v) ? JsonDocument.Parse("{}").RootElement : JsonDocument.Parse(v).RootElement);
+            entity.Property(e => e.SourceMetadata).HasConversion(jsonConverter);
 
             // For querying by song + status (finding pending metadata)
             entity.HasIndex(e => new { e.SongId, e.Status });

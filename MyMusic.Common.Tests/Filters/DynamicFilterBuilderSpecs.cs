@@ -1,3 +1,4 @@
+using EntityFrameworkCore.Projectables;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -27,6 +28,7 @@ public class DynamicFilterBuilderSpecs
 
         var options = new DbContextOptionsBuilder<MusicDbContext>()
             .UseSqlite(keepAliveConnection)
+            .UseProjectables()
             .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
             .Options;
         var context = new MusicDbContext(options);
