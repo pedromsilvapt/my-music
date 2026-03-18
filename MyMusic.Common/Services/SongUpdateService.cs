@@ -153,7 +153,7 @@ public class SongUpdateService(
         }
 
         song.ModifiedAt = DateTime.UtcNow;
-        song.Label = BuildLabel(song);
+        song.Label = SongLabelBuilder.Build(song);
     }
 
     private async Task UpdateCoverAsync(MusicDbContext db, Song song, string coverDataUrl,
@@ -388,18 +388,11 @@ public class SongUpdateService(
 
         song.RepositoryPath = fileTarget.FilePath!;
 
-        song.Label = BuildLabel(song);
+        song.Label = SongLabelBuilder.Build(song);
 
         var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
         song.Checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, song.RepositoryPath);
         song.ChecksumAlgorithm = checksumAlgorithm.GetType().Name;
-    }
-
-    private static string BuildLabel(Song song)
-    {
-        var artists = string.Join(", ", song.Artists.Select(a => a.Artist.Name));
-        var explicitSuffix = song.Explicit ? " (Explicit)" : "";
-        return $"{song.Title}{explicitSuffix} - {artists}";
     }
 
     private static SongUpdateResult MapToResult(Song song)

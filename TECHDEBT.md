@@ -164,7 +164,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** String formatting for labels should be in dedicated builder class.  
 **Effort:** Small  
 **Test Strategy:** Test label generation before extraction.  
-- [ ] TD0015
+- [x] TD0015
 
 ### TD0016 - Split MetadataFetchQueue: Extract MetadataFetchExecutor
 **File(s):** `MyMusic.Common/Services/MetadataFetchQueue.cs:142-421` (Executor inner class)  
