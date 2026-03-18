@@ -10,7 +10,7 @@ namespace MyMusic.Common.Tests.Services;
 public class MetadataFetchQueueSpecs
 {
     [Fact]
-    public void MetadataFetchTask_Entity_CanBeCreatedWithAllRequiredFields()
+    public void MetadataFetchTask_WithRequiredFields_CanBeCreated()
     {
         // Arrange & Act
         var task = new MetadataFetchTask
@@ -29,7 +29,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void MetadataFetchTask_Entity_StatusTransitions_FromQueuedToProcessing()
+    public void MetadataFetchTask_QueuedStatus_TransitionsToProcessing()
     {
         // Arrange
         var task = new MetadataFetchTask
@@ -52,7 +52,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void MetadataFetchTask_Entity_CanBeMarkedAsCompleted()
+    public void MetadataFetchTask_ProcessingStatus_CanBeMarkedAsCompleted()
     {
         // Arrange
         var task = new MetadataFetchTask
@@ -76,7 +76,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void MetadataFetchTask_Entity_CanBeMarkedAsFailed()
+    public void MetadataFetchTask_ProcessingStatus_CanBeMarkedAsFailed()
     {
         // Arrange
         var task = new MetadataFetchTask
@@ -100,7 +100,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void AutoFetchedMetadata_Entity_CanStoreJsonPatch()
+    public void AutoFetchedMetadata_WithJsonPatch_CanStoreSourceData()
     {
         // Arrange
         var sourceData = new { Title = "Updated Title", Year = 2024 };
@@ -122,7 +122,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void AutoFetchedMetadata_Entity_StatusTransitions_FromPendingToApplied()
+    public void AutoFetchedMetadata_PendingStatus_TransitionsToApplied()
     {
         // Arrange
         var metadata = new AutoFetchedMetadata
@@ -141,7 +141,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void AutoFetchedMetadata_Entity_CanBeMarkedAsFailed()
+    public void AutoFetchedMetadata_PendingStatus_CanBeMarkedAsFailed()
     {
         // Arrange
         var metadata = new AutoFetchedMetadata
@@ -162,7 +162,7 @@ public class MetadataFetchQueueSpecs
     }
 
     [Fact]
-    public void AutoFetchedMetadata_Entity_CanTrackSource()
+    public void AutoFetchedMetadata_WithSourceId_CanTrackSource()
     {
         // Arrange
         var metadata = new AutoFetchedMetadata

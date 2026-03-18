@@ -11,7 +11,7 @@ namespace MyMusic.Common.Tests.Services;
 public class MusicServiceSpecs
 {
     [Fact]
-    public async Task ImportMusic_EmptyDatabase()
+    public async Task ImportMusic_EmptyDatabase_CreatesSongs()
     {
         // Arrange
         var scenario = new Scenario();

@@ -190,7 +190,7 @@ public class DynamicFilterBuilderSpecs
     #region Batch 1: Empty/Basic Cases
 
     [Fact]
-    public void EmptyFilter_ReturnsAllSongs()
+    public void Build_EmptyFilter_ReturnsAllSongs()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -201,7 +201,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void WhitespaceFilter_ReturnsAllSongs()
+    public void Build_WhitespaceFilter_ReturnsAllSongs()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -216,7 +216,7 @@ public class DynamicFilterBuilderSpecs
     #region Batch 1: Equality Operators
 
     [Fact]
-    public void Title_Eq_MatchesExactly()
+    public void Build_TitleEquals_MatchesExactly()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -227,7 +227,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void Title_Eq_CaseSensitive_NoMatch()
+    public void Build_TitleEquals_CaseSensitive_ReturnsNoMatch()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -238,7 +238,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void Title_Neq_ExcludesMatch()
+    public void Build_TitleNotEquals_ExcludesMatch()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -249,7 +249,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void Year_Eq_MatchesExactly()
+    public void Build_YearEquals_MatchesExactly()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -260,7 +260,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void Year_Neq_ExcludesMatch()
+    public void Build_YearNotEquals_ExcludesMatch()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -271,7 +271,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void IsFavorite_Eq_True()
+    public void Build_IsFavoriteEqualsTrue_ReturnsFavoriteSongs()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -282,7 +282,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void Explicit_Eq_True()
+    public void Build_ExplicitEqualsTrue_ReturnsExplicitSongs()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
@@ -293,7 +293,7 @@ public class DynamicFilterBuilderSpecs
     }
 
     [Fact]
-    public void Explicit_Eq_False()
+    public void Build_ExplicitEqualsFalse_ReturnsNonExplicitSongs()
     {
         var (context, _, songs, _, _, _) = SetupTestData();
 
