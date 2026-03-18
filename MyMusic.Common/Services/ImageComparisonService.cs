@@ -6,8 +6,6 @@ public class ImageComparisonService(
     IThumbnailProxyService thumbnailProxyService,
     ILogger<ImageComparisonService> logger) : IImageComparisonService
 {
-    private readonly IThumbnailProxyService _thumbnailProxyService = thumbnailProxyService;
-    private readonly ILogger<ImageComparisonService> _logger = logger;
 
     public async Task<bool> AreImagesDifferentAsync(
         byte[] localImageData,
@@ -26,11 +24,11 @@ public class ImageComparisonService(
 
         try
         {
-            var remoteImage = await _thumbnailProxyService.GetImageAsync(remoteImageUrl, cancellationToken);
+            var remoteImage = await thumbnailProxyService.GetImageAsync(remoteImageUrl, cancellationToken);
 
             if (remoteImage is null)
             {
-                _logger.LogWarning("Failed to fetch remote image for comparison: {Url}", remoteImageUrl);
+                logger.LogWarning("Failed to fetch remote image for comparison: {Url}", remoteImageUrl);
                 return true;
             }
 
@@ -38,7 +36,7 @@ public class ImageComparisonService(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Error comparing images - URL: {Url}", remoteImageUrl);
+            logger.LogWarning(ex, "Error comparing images - URL: {Url}", remoteImageUrl);
             return true;
         }
     }

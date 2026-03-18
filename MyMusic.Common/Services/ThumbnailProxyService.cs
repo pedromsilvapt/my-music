@@ -16,8 +16,6 @@ public class ThumbnailProxyService(
     IImageCacheService imageCacheService) : IThumbnailProxyService
 {
     private readonly ThumbnailCacheConfig _config = config.Value;
-    private readonly ILogger<ThumbnailProxyService> _logger = logger;
-    private readonly IImageCacheService _imageCacheService = imageCacheService;
 
     public string GetProxyUrl(string originalUrl)
     {
@@ -87,7 +85,7 @@ public class ThumbnailProxyService(
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to parse data URL: {Url}", url);
+                logger.LogWarning(ex, "Failed to parse data URL: {Url}", url);
                 return null;
             }
         }
@@ -104,7 +102,7 @@ public class ThumbnailProxyService(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to fetch image from: {Url}", url);
+            logger.LogWarning(ex, "Failed to fetch image from: {Url}", url);
             return null;
         }
     }
@@ -120,7 +118,7 @@ public class ThumbnailProxyService(
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to decode URL: {EncodedUrl}", encodedUrl);
+            logger.LogWarning(ex, "Failed to decode URL: {EncodedUrl}", encodedUrl);
             return null;
         }
 
@@ -131,7 +129,7 @@ public class ThumbnailProxyService(
         }
 
         var cacheKey = $"thumbnail:{encodedUrl}";
-        var cachedResult = await _imageCacheService.GetAsync(cacheKey, cancellationToken);
+        var cachedResult = await imageCacheService.GetAsync(cacheKey, cancellationToken);
 
         if (cachedResult is not null)
         {
@@ -145,7 +143,7 @@ public class ThumbnailProxyService(
             return null;
         }
 
-        await _imageCacheService.SetAsync(cacheKey, imageBuffer.MimeType, imageBuffer.Data, cancellationToken);
+        await imageCacheService.SetAsync(cacheKey, imageBuffer.MimeType, imageBuffer.Data, cancellationToken);
 
         return imageBuffer;
     }

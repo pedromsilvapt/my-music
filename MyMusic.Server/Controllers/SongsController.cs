@@ -40,18 +40,6 @@ public class SongsController(
     MetadataDiffBuilder metadataDiffBuilder)
     : ControllerBase
 {
-    private readonly ILogger<SongsController> _logger = logger;
-    private readonly ISongUpdateService _songUpdateService = songUpdateService;
-    private readonly IMusicService _musicService = musicService;
-    private readonly IFileSystem _fileSystem = fileSystem;
-    private readonly ILogger<MusicImportJob> _importJobLogger = importJobLogger;
-    private readonly ISourcesService _sourcesService = sourcesService;
-    private readonly IAuditService _auditService = auditService;
-    private readonly IThumbnailProxyService _thumbnailProxyService = thumbnailProxyService;
-    private readonly IImageComparisonService _imageComparisonService = imageComparisonService;
-    private readonly MetadataDiffBuilder _metadataDiffBuilder = metadataDiffBuilder;
-    private readonly ServerConfig _serverConfig = serverConfig.Value;
-
     // Match scoring constants for metadata comparison
     private const int ExactTitleMatchPoints = 100;
     private const int PartialTitleMatchPoints = 50;
@@ -95,7 +83,7 @@ public class SongsController(
 
         return new ListSongsResponse
         {
-            Songs = songs.Select(ListSongsItem.FromEntity).ToList(),
+            Songs = songs.Select(ListSongItem.FromEntity).ToList(),
         };
     }
 
@@ -170,13 +158,13 @@ public class SongsController(
         var repositoryPath = config.Value.MusicRepositoryPath
                              ?? throw new Exception("MusicRepositoryPath not configured");
 
-        var tempPath = _fileSystem.Path.Combine(_fileSystem.Path.GetTempPath(), $"mymusic_upload_{Guid.NewGuid()}");
-        _fileSystem.Directory.CreateDirectory(tempPath);
+        var tempPath = fileSystem.Path.Combine(fileSystem.Path.GetTempPath(), $"mymusic_upload_{Guid.NewGuid()}");
+        fileSystem.Directory.CreateDirectory(tempPath);
 
         try
         {
-            var tempFilePath = _fileSystem.Path.Combine(tempPath, _fileSystem.Path.GetFileName(path));
-            await using (var stream = _fileSystem.FileStream.New(tempFilePath, FileMode.Create))
+            var tempFilePath = fileSystem.Path.Combine(tempPath, fileSystem.Path.GetFileName(path));
+            await using (var stream = fileSystem.FileStream.New(tempFilePath, FileMode.Create))
             {
                 await file.CopyToAsync(stream, cancellationToken);
             }
@@ -186,9 +174,9 @@ public class SongsController(
 
             var songImportMetadata = new SongImportMetadata(tempFilePath, createdAtDateTime, modifiedAtDateTime);
 
-            var job = new MusicImportJob(_importJobLogger);
+            var job = new MusicImportJob(importJobLogger);
 
-            await _musicService.ImportRepositorySongs(
+            await musicService.ImportRepositorySongs(
                 context,
                 job,
                 currentUser.Id,
@@ -224,15 +212,15 @@ public class SongsController(
                 return new UploadSongResponse { Success = false, Error = string.Join("; ", errorParts) };
             }
 
-            _logger.LogInformation("Uploaded file {Path}, song ID: {SongId}", path, importedSong.Id);
+            logger.LogInformation("Uploaded file {Path}, song ID: {SongId}", path, importedSong.Id);
 
             return new UploadSongResponse { Success = true, SongId = importedSong.Id };
         }
         finally
         {
-            if (_fileSystem.Directory.Exists(tempPath))
+            if (fileSystem.Directory.Exists(tempPath))
             {
-                _fileSystem.Directory.Delete(tempPath, true);
+                fileSystem.Directory.Delete(tempPath, true);
             }
         }
     }
@@ -505,7 +493,7 @@ public class SongsController(
         }
 
         var update = MapToModel(request);
-        var result = await _songUpdateService.UpdateSong(context, id, update, cancellationToken);
+        var result = await songUpdateService.UpdateSong(context, id, update, cancellationToken);
 
         var song = await context.Songs.FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
         if (song != null)
@@ -527,7 +515,7 @@ public class SongsController(
 
         foreach (var songId in request.SongIds)
         {
-            var result = await _songUpdateService.BatchUpdateSong(context, songId, update, cancellationToken);
+            var result = await songUpdateService.BatchUpdateSong(context, songId, update, cancellationToken);
             results.Add(new BatchUpdateSongResult
             {
                 Id = result.Id,
@@ -987,13 +975,13 @@ public class SongsController(
         {
             try
             {
-                var client = await _sourcesService.GetSourceClientAsync(source.Id, cancellationToken);
+                var client = await sourcesService.GetSourceClientAsync(source.Id, cancellationToken);
                 var results = await client.SearchSongsAsync(searchQuery, cancellationToken);
                 allResults.AddRange(results.Select(r => (source, r)));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to search source {SourceId}", source.Id);
+                logger.LogWarning(ex, "Failed to search source {SourceId}", source.Id);
             }
         }
 
@@ -1004,17 +992,17 @@ public class SongsController(
 
         var bestMatch = FindClosestMatch(allResults, song);
 
-        var detailClient = await _sourcesService.GetSourceClientAsync(bestMatch.Source.Id, cancellationToken);
+        var detailClient = await sourcesService.GetSourceClientAsync(bestMatch.Source.Id, cancellationToken);
         var fullDetails = await detailClient.GetSongAsync(bestMatch.Song.Id, cancellationToken);
 
-        fullDetails.Cover = _thumbnailProxyService.TransformArtwork(fullDetails.Cover);
+        fullDetails.Cover = thumbnailProxyService.TransformArtwork(fullDetails.Cover);
         if (fullDetails.Album is not null)
         {
-            fullDetails.Album.Cover = _thumbnailProxyService.TransformArtwork(fullDetails.Album.Cover);
+            fullDetails.Album.Cover = thumbnailProxyService.TransformArtwork(fullDetails.Album.Cover);
         }
 
         // Use the shared MetadataDiffBuilder to create the diff
-        var diffModel = await _metadataDiffBuilder.CreateDiffAsync(song, fullDetails, cancellationToken);
+        var diffModel = await metadataDiffBuilder.CreateDiffAsync(song, fullDetails, cancellationToken);
         var diff = MetadataDiffMapper.ToSongMetadataDiff(diffModel);
 
         // Apply thumbnail proxy to the new cover URL
@@ -1023,7 +1011,7 @@ public class SongsController(
             diff.Cover = new SongMetadataField<string>
             {
                 Old = diff.Cover.Old,
-                New = _thumbnailProxyService.GetProxyUrl(diff.Cover.New),
+                New = thumbnailProxyService.GetProxyUrl(diff.Cover.New),
             };
         }
 
@@ -1045,7 +1033,7 @@ public class SongsController(
             foreach (var item in request.Updates)
             {
                 var update = MapMultiItemToModel(item);
-                var result = await _songUpdateService.BatchUpdateSong(context, item.SongId, update, cancellationToken);
+                var result = await songUpdateService.BatchUpdateSong(context, item.SongId, update, cancellationToken);
 
                 if (result.Success && result.Song != null)
                 {

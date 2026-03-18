@@ -23,7 +23,6 @@ public class SongUpdateService(
     IOptions<Config> config,
     ILogger<SongUpdateService> logger) : ISongUpdateService
 {
-    private readonly ILogger _logger = logger;
 
     public async Task<SongUpdateResult> UpdateSong(MusicDbContext db, long songId, SongUpdateModel update,
         CancellationToken cancellationToken = default)
@@ -78,7 +77,7 @@ public class SongUpdateService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update song {SongId}", songId);
+            logger.LogError(ex, "Failed to update song {SongId}", songId);
             return new BatchUpdateResult
             {
                 Id = songId,
