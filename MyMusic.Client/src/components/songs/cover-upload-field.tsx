@@ -207,10 +207,12 @@ export default function CoverUploadField({
                                     <IconMusic size={40} color="var(--mantine-color-gray-4)"/>
                                 )}
                             </Box>
-                            {oldCoverDimensions && (
+                            {oldCoverDimensions ? (
                                 <Text size="xs" c="dimmed">
                                     {oldCoverDimensions.width} x {oldCoverDimensions.height}
                                 </Text>
+                            ) : (
+                                <Text size="xs" c="dimmed">no size</Text>
                             )}
                         </Stack>
 
@@ -241,10 +243,12 @@ export default function CoverUploadField({
                                     style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
                                 />
                             </Box>
-                            {newCoverDimensions && (
+                            {newCoverDimensions ? (
                                 <Text size="xs" c="dimmed">
                                     {newCoverDimensions.width} x {newCoverDimensions.height}
                                 </Text>
+                            ) : (
+                                <Text size="xs" c="dimmed">no size</Text>
                             )}
                         </Stack>
                     </Group>
@@ -343,10 +347,12 @@ export default function CoverUploadField({
                                 <IconMusic size={50} color="var(--mantine-color-gray-4)"/>
                             )}
                         </Box>
-                        {previewDimensions && (
+                        {previewDimensions ? (
                             <Text size="xs" c="dimmed">
                                 {previewDimensions.width} x {previewDimensions.height}
                             </Text>
+                        ) : (
+                            <Text size="xs" c="dimmed">no size</Text>
                         )}
                     </Stack>
 
