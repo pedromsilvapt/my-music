@@ -16,7 +16,7 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<PurchasesQueue>();
         builder.Services.AddSingleton<MetadataFetchQueue>();
         builder.Services.AddHostedService<MetadataFetchCleanupService>();
-        builder.Services.AddScoped<IFileSystem, FileSystem>();
+        builder.Services.AddSingleton<IFileSystem, FileSystem>();
         builder.Services.AddScoped<IMusicService, MusicService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();

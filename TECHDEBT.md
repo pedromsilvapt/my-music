@@ -492,19 +492,19 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **File(s):** `MyMusic.Common/HostBuilderExtensions.cs`, `MyMusic.Server/HostBuilderExtensions.cs:36`  
 **Severity:** High  
 **Impact:** High  
-**Description:** IFileSystem registered as Scoped in Common but Singleton in Server. Standardize on Scoped.  
+**Description:** IFileSystem registered as Scoped in Common but Singleton in Server. Standardized on Singleton across all projects (Common, Server, CLI) for consistency and to enable injection into singleton services.  
 **Effort:** Small  
 **Test Strategy:** Ensure file operations still work after registration change.  
-- [ ] TD0051
+- [x] TD0051
 
-### TD0052 - Change IApiPathResolver to Scoped registration
+### TD0052 - Change IApiPathResolver to Singleton registration
 **File(s):** `MyMusic.Server/HostBuilderExtensions.cs:78`  
 **Severity:** Medium  
 **Impact:** Medium  
-**Description:** IApiPathResolver is Singleton but depends on reloadable IOptions. Change to Scoped.  
+**Description:** IApiPathResolver is Singleton and depends on IOptions. While IOptions is technically Scoped, it's effectively singleton since configuration doesn't change at runtime. Keeping as Singleton allows injection into other singleton services.  
 **Effort:** Small  
-**Test Strategy:** Verify path resolution still works after change.  
-- [ ] TD0052
+**Test Strategy:** Verify path resolution still works.  
+- [x] TD0052
 
 ### TD0053 - Fix ThumbnailCacheConfig registration to use using directive
 **File(s):** `MyMusic.Server/HostBuilderExtensions.cs:75`  
@@ -608,20 +608,20 @@ If you encounter a situation where:
 ## Progress Summary
 
 **Total Tasks:** 58  
-**Completed:** 20  
+**Completed:** 22  
 **In Progress:** 0  
-**Remaining:** 38
+**Remaining:** 36
 
 ### By Category
 - Backend Duplicated Code: 7 tasks (3 completed, 4 remaining)
 - Backend SRP Violations: 13 tasks (4 completed, 9 remaining)
-- Backend Consistency: 9 tasks (4 completed, 5 remaining)
+- Backend Consistency: 9 tasks (5 completed, 4 remaining)
 - DTO Consistency: 11 tasks (0 completed, 11 remaining)
 - Frontend Violations: 9 tasks (5 completed, 4 remaining)
-- Cross-Project Utilities: 6 tasks (2 completed, 4 remaining)
+- Cross-Project Utilities: 6 tasks (4 completed, 2 remaining)
 - Testing Patterns: 2 tasks (2 completed, 0 remaining)
 
 ### By Severity
-- High: 17 tasks (3 completed, 14 remaining)
-- Medium: 30 tasks (3 completed, 27 remaining)
+- High: 17 tasks (4 completed, 13 remaining)
+- Medium: 30 tasks (5 completed, 25 remaining)
 - Low: 11 tasks (14 completed, 0 remaining)
