@@ -231,7 +231,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Use private readonly `_logger` field consistently across all services.  
 **Effort:** Small  
 **Test Strategy:** No functional change - compilation check sufficient.  
-- [ ] TD0022
+- [x] TD0022
 
 ### TD0023 - Remove public settable logger properties
 **File(s):** `MyMusic.Common/Services/MusicService.cs:30` - `public ILogger Logger { get; set; }`  
@@ -240,7 +240,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Public mutable properties for Logger, FileSystem, Config should be private readonly fields.  
 **Effort:** Small  
 **Test Strategy:** Verify no external code sets these properties.  
-- [ ] TD0023
+- [x] TD0023
 
 ### TD0024 - Standardize exception types for domain errors
 **File(s):** `MyMusic.Common/Services/MusicService.cs:52, 83`, `MyMusic.Common/Services/SourcesService.cs:14`  
@@ -531,7 +531,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** This service has no logging while others log extensively. Add appropriate logging.  
 **Effort:** Small  
 **Test Strategy:** Add logging - verify it works, no functional changes.  
-- [ ] TD0054
+- [x] TD0054
 
 ### TD0055 - Standardize configuration class structure
 **File(s):** `MyMusic.Common/Config.cs`, `MyMusic.Server/ServerConfig.cs`, `MyMusic.CLI/Configuration/MyMusicOptions.cs`  

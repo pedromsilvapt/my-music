@@ -27,10 +27,9 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
     /// </summary>
     private readonly AsyncReaderWriterLock _repositoryManagementLock = new();
 
-    public ILogger Logger { get; set; } = logger;
-
-    public IFileSystem FileSystem { get; set; } = fileSystem;
-    public Config Config { get; set; } = config.Value;
+    private readonly ILogger _logger = logger;
+    private readonly IFileSystem _fileSystem = fileSystem;
+    private readonly Config _config = config.Value;
 
     #region Device
 
@@ -87,7 +86,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
             cancellationToken);
 
         var namingStrategy = new TemplateNamingStrategy(
-            device.NamingTemplate ?? Config.DefaultNamingTemplate);
+            device.NamingTemplate ?? _config.DefaultNamingTemplate);
 
         if (songDevice == null)
         {
@@ -185,29 +184,29 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
             var sourceFolder = sourceFoldersQueue.Pop();
 
             // Check if this folder should be ignored. If so, skip it completely
-            if (FileSystem.File.Exists(FileSystem.Path.Combine(sourceFolder, MusicIgnoreFile)))
+            if (_fileSystem.File.Exists(_fileSystem.Path.Combine(sourceFolder, MusicIgnoreFile)))
             {
                 continue;
             }
 
-            var files = FileSystem.Directory.GetFiles(sourceFolder);
+            var files = _fileSystem.Directory.GetFiles(sourceFolder);
 
             foreach (var filePath in files)
             {
-                var extension = FileSystem.Path.GetExtension(filePath);
+                var extension = _fileSystem.Path.GetExtension(filePath);
 
                 if (string.Equals(extension, ".mp3", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(extension, ".m4a", StringComparison.OrdinalIgnoreCase))
                 {
-                    importedSongs.Add(new SongImportMetadata(filePath, FileSystem.File.GetCreationTimeUtc(filePath),
-                        FileSystem.File.GetLastWriteTimeUtc(filePath)));
+                    importedSongs.Add(new SongImportMetadata(filePath, _fileSystem.File.GetCreationTimeUtc(filePath),
+                        _fileSystem.File.GetLastWriteTimeUtc(filePath)));
                 }
             }
 
             // If this function was called to scan all subdirectories as well
             if (searchOption == SearchOption.AllDirectories)
             {
-                var subFolders = FileSystem.Directory.GetDirectories(sourceFolder);
+                var subFolders = _fileSystem.Directory.GetDirectories(sourceFolder);
 
                 foreach (var subFolder in subFolders)
                 {
@@ -234,11 +233,11 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
         DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.SkipIdentical,
         CancellationToken cancellationToken = default)
     {
-        Logger.LogDebug("Acquiring lock to begin importing songs into repository Id {RepositoryId}", userId);
+        _logger.LogDebug("Acquiring lock to begin importing songs into repository Id {RepositoryId}", userId);
 
         using (await _repositoryManagementLock.AcquireWriteLockAsync(cancellationToken))
         {
-            Logger.LogDebug("  >> Lock acquired");
+            _logger.LogDebug("  >> Lock acquired");
 
             var repo = new UserMusicService(db, userId);
 
@@ -268,22 +267,22 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
             {
                 await using var dbTrans = await db.Database.BeginTransactionAsync(cancellationToken);
 
-                Logger.LogDebug("Importing song from file {SongFilePath}", importSongMetadata.SourceFilePath);
+                _logger.LogDebug("Importing song from file {SongFilePath}", importSongMetadata.SourceFilePath);
 
                 SongMetadata? metadata = null;
 
                 try
                 {
-                    var sourceFile = new FileTarget(FileSystem) { FilePath = importSongMetadata.SourceFilePath };
-                    var targetFile = new FileTarget(FileSystem)
-                        { Folder = FileSystem.Path.Join(Config.MusicRepositoryPath, user.Username) };
+                    var sourceFile = new FileTarget(_fileSystem) { FilePath = importSongMetadata.SourceFilePath };
+                    var targetFile = new FileTarget(_fileSystem)
+                        { Folder = _fileSystem.Path.Join(_config.MusicRepositoryPath, user.Username) };
 
                     metadata = await sourceFile.ReadMetadata(cancellationToken);
 
                     // Get the length of the file
                     var duration = metadata.Duration;
 
-                    Logger.LogDebug("  >> Metadata read: {Song}", metadata.FullLabel);
+                    _logger.LogDebug("  >> Metadata read: {Song}", metadata.FullLabel);
 
                     #region Metadata Validations
 
@@ -319,9 +318,9 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     #endregion
 
-                    var checksum = CalculateChecksum(FileSystem, checksumAlgorithm, sourceFile.FilePath);
+                    var checksum = CalculateChecksum(_fileSystem, checksumAlgorithm, sourceFile.FilePath);
 
-                    Logger.LogDebug("  >> Checksum calculated: {Checksum}", checksum);
+                    _logger.LogDebug("  >> Checksum calculated: {Checksum}", checksum);
 
                     var song = await repo.GetSongByChecksum(checksum, checksumAlgorithmName, cancellationToken);
 
@@ -373,11 +372,11 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                         if (biggestCoverArt.Length > 500)
                         {
-                            Logger.LogDebug("Downloading cover {CoverUrl}", biggestCoverArt.Substring(0, 1000));
+                            _logger.LogDebug("Downloading cover {CoverUrl}", biggestCoverArt.Substring(0, 1000));
                         }
                         else
                         {
-                            Logger.LogDebug("Downloading cover {CoverUrl}", biggestCoverArt);
+                            _logger.LogDebug("Downloading cover {CoverUrl}", biggestCoverArt);
                         }
 
                         cover = await ImageBuffer.FromStringAsync(biggestCoverArt, cancellationToken);
@@ -511,7 +510,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     #endregion Genres
 
-                    var size = FileSystem.FileInfo.New(sourceFile.FilePath).Length;
+                    var size = _fileSystem.FileInfo.New(sourceFile.FilePath).Length;
 
                     await using (var sourceStream = sourceFile.Read())
                     {
@@ -664,7 +663,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                         $"Failed to import song {metadata?.FullLabel ?? "(undefined)"} from file {importSongMetadata.SourceFilePath}",
                         ex));
 
-                    Logger.LogError(ex, "Failed to import song {SongLabel} from file {File}",
+                    _logger.LogError(ex, "Failed to import song {SongLabel} from file {File}",
                         metadata?.FullLabel ?? "(undefined)", importSongMetadata.SourceFilePath);
 
                     await dbTrans.RollbackAsync(cancellationToken);
@@ -672,7 +671,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
             }
         }
 
-        Logger.LogDebug("  >> Lock released");
+        _logger.LogDebug("  >> Lock released");
     }
 
     public static NonCryptographicHashAlgorithm CreateChecksumAlgorithm() => new XxHash128();
