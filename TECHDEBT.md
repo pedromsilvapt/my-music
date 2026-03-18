@@ -70,7 +70,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** `EncodeBase64Url` and `DecodeBase64Url` methods are in service class but could be shared utilities. Move to `MyMusic.Common/Utilities/Base64UrlEncoder.cs`.  
 **Effort:** Small  
 **Test Strategy:** Write unit tests for encoding/decoding round-trip.  
-- [ ] TD0005
+- [x] TD0005
 
 ### TD0006 - Create shared test database setup utility
 **File(s):** `MyMusic.Common.Tests/Scenario.cs:50-64`, `MyMusic.Common.Tests/Filters/DynamicFilterBuilderSpecs.cs:24-33`  
@@ -428,7 +428,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Manual fetch calls suggest APIs not in OpenAPI spec or client not regenerated. Regenerate Orval client.  
 **Effort:** Small  
 **Test Strategy:** Ensure generated client works with existing tests.  
-- [ ] TD0043
+- [x] TD0043
 
 ### TD0044 - Convert manual fetch calls to use generated clients
 **File(s):** `songs-page.tsx:35-36`, `playlists-page.tsx:30-31`, `useApplyMetadata.ts:16-28`, `useBatchMetadataFetch.ts:18-32`, and others (11+ files)  
@@ -437,7 +437,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Replace manual fetch with Orval-generated client functions.  
 **Effort:** Medium  
 **Test Strategy:** Test all affected components/hooks after conversion.  
-- [ ] TD0044
+- [x] TD0044
 
 ### TD0045 - Standardize error handling pattern
 **File(s):** Various hooks and components with different error handling approaches  
@@ -482,7 +482,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Document exceptions where manual fetch is necessary vs using generated clients.  
 **Effort:** Small  
 **Test Strategy:** Documentation only.  
-- [ ] TD0049
+- [x] TD0049
 
 ### TD0050 - Review and fix any other useShallow violations
 **File(s):** TBD after TD0048 audit  
@@ -626,9 +626,9 @@ If you encounter a situation where:
 ## Progress Summary
 
 **Total Tasks:** 60  
-**Completed:** 4  
+**Completed:** 7  
 **In Progress:** 0  
-**Remaining:** 56
+**Remaining:** 53
 
 ### By Category
 - Backend Duplicated Code: 8 tasks

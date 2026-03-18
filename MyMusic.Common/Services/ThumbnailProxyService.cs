@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Sources;
+using MyMusic.Common.Utilities;
 
 namespace MyMusic.Common.Services;
 
@@ -33,7 +34,7 @@ public class ThumbnailProxyService(
             return originalUrl;
         }
 
-        var base64Url = EncodeBase64Url(originalUrl);
+        var base64Url = Base64UrlEncoder.Encode(originalUrl);
         return _config.ProxyPathPrefix + base64Url;
     }
 
@@ -113,7 +114,7 @@ public class ThumbnailProxyService(
         string originalUrl;
         try
         {
-            originalUrl = DecodeBase64Url(encodedUrl);
+            originalUrl = Base64UrlEncoder.Decode(encodedUrl);
         }
         catch (Exception ex)
         {
@@ -161,32 +162,6 @@ public class ThumbnailProxyService(
         }
 
         return imageBuffer;
-    }
-
-    private static string EncodeBase64Url(string input)
-    {
-        var bytes = Encoding.UTF8.GetBytes(input);
-        var base64 = Convert.ToBase64String(bytes);
-        return base64
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
-    }
-
-    private static string DecodeBase64Url(string input)
-    {
-        var base64 = input
-            .Replace('-', '+')
-            .Replace('_', '/');
-
-        switch (base64.Length % 4)
-        {
-            case 2: base64 += "=="; break;
-            case 3: base64 += "="; break;
-        }
-
-        var bytes = Convert.FromBase64String(base64);
-        return Encoding.UTF8.GetString(bytes);
     }
 
     private static byte[] EncodeForCache(string mimeType, byte[] imageData)
