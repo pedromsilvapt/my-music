@@ -29,12 +29,12 @@ jobs:
 
       - name: Build APK with Earthly
         run: |
-          earthly --ci --output --artifact './MyMusic.Mobile/+package/*' ./MyMusic.Mobile
+          earthly --ci --output --artifact './MyMusic.Mobile/+package/*' .
 
       - name: Rename APK with version
         run: |
           mkdir -p dist
-          cp ./MyMusic-Mobile.apk "dist/my-music-mobile-${VERSION}.apk"
+          cp ./MyMusic.Mobile/MyMusic-Mobile.apk "dist/my-music-mobile-${VERSION}.apk"
           ls -la dist/
 
       - name: Create GitHub Release
