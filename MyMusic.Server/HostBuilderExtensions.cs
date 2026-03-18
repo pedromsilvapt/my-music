@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using MyMusic.Common;
 using MyMusic.Common.Services;
 using MyMusic.Server.Services;
 using Scalar.AspNetCore;
@@ -72,7 +73,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IImageComparisonService, ImageComparisonService>();
 
         builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
-        builder.Services.Configure<MyMusic.Common.ThumbnailCacheConfig>(builder.Configuration.GetSection("ThumbnailCache"));
+        builder.Services.Configure<ThumbnailCacheConfig>(builder.Configuration.GetSection("ThumbnailCache"));
 
         // Register the API path resolver as singleton
         builder.Services.AddSingleton<IApiPathResolver, ApiPathResolver>();
