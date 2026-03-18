@@ -260,7 +260,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
             }
 
             // Create the objects representing all the songs
-            var checksumAlgorithm = CreateChecksumAlgorithm();
+            var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
             var checksumAlgorithmName = checksumAlgorithm.GetType().Name;
 
             foreach (var importSongMetadata in importSongsMetadataList)
@@ -318,7 +318,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     #endregion
 
-                    var checksum = CalculateChecksum(_fileSystem, checksumAlgorithm, sourceFile.FilePath);
+                    var checksum = ChecksumService.CalculateChecksum(_fileSystem, checksumAlgorithm, sourceFile.FilePath);
 
                     _logger.LogDebug("  >> Checksum calculated: {Checksum}", checksum);
 
@@ -663,31 +663,6 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
         }
 
         _logger.LogDebug("  >> Lock released");
-    }
-
-    public static NonCryptographicHashAlgorithm CreateChecksumAlgorithm() => new XxHash128();
-
-    public static string CalculateChecksum(IFileSystem fs, NonCryptographicHashAlgorithm algorithm, string filePath)
-    {
-        using var file = fs.File.OpenRead(filePath);
-
-        return CalculateChecksum(algorithm, file);
-    }
-
-    public static string CalculateChecksum(NonCryptographicHashAlgorithm algorithm, byte[] bytes)
-    {
-        using var memory = new MemoryStream(bytes);
-
-        return CalculateChecksum(algorithm, memory);
-    }
-
-    public static string CalculateChecksum(NonCryptographicHashAlgorithm algorithm, Stream stream)
-    {
-        algorithm.Append(stream);
-
-        var hash = algorithm.GetHashAndReset();
-
-        return Convert.ToBase64String(hash);
     }
 
     #endregion

@@ -390,8 +390,8 @@ public class SongUpdateService(
 
         song.Label = BuildLabel(song);
 
-        var checksumAlgorithm = new XxHash128();
-        song.Checksum = MusicService.CalculateChecksum(fileSystem, checksumAlgorithm, song.RepositoryPath);
+        var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
+        song.Checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, song.RepositoryPath);
         song.ChecksumAlgorithm = checksumAlgorithm.GetType().Name;
     }
 

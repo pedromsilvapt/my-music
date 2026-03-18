@@ -137,7 +137,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Static checksum methods should be in dedicated ChecksumService.  
 **Effort:** Small  
 **Test Strategy:** Test checksum calculations before move.  
-- [ ] TD0012
+- [x] TD0012
 
 ### TD0013 - Split SongUpdateService: Extract EntityResolutionService
 **File(s):** `MyMusic.Common/Services/SongUpdateService.cs:180-243, 330-373` (Entity Creation Logic)  
