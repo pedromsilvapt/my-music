@@ -34,7 +34,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** All 8 audit rules share identical 4-step scan patterns. Extract base class to encapsulate common scanning logic, requiring only the filtering predicate from each implementation.  
 **Effort:** Medium  
 **Test Strategy:** Write tests for each audit rule's current behavior, then refactor to use base class ensuring same results.  
-- [ ] TD0001
+- [x] TD0001
 
 ### TD0002 - Consolidate MetadataDiffBuilder sync/async methods
 **File(s):** `MyMusic.Common/Services/MetadataDiffBuilder.cs:21-153 (CreateDiffAsync)`, `MyMusic.Common/Services/MetadataDiffBuilder.cs:158-270 (CreateDiff)`  
