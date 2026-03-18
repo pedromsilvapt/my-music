@@ -258,7 +258,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Use primary constructor + private readonly fields consistently. Avoid public settable properties.  
 **Effort:** Small  
 **Test Strategy:** No functional change - compilation check sufficient.  
-- [ ] TD0026
+- [x] TD0026
 
 ### TD0027 - Remove commented-out code blocks
 **File(s):** `MyMusic.Common/Services/MusicService.cs:611-618`  
@@ -316,7 +316,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Most use singular (PlaylistItem), but Songs/Albums/Artists use plural (SongsItem). Standardize on singular.  
 **Effort:** Medium  
 **Test Strategy:** Search/replace in DTOs and their usages - ensure compilation.  
-- [ ] TD0032
+- [x] TD0032
 
 ### TD0033 - Standardize duration formatting across DTOs
 **File(s):** `MyMusic.Server/DTO/Songs/ListSongsItem.cs:40` (interpolation), `MyMusic.Server/DTO/Albums/GetAlbumResponse.cs:63` (ToString)  
@@ -397,7 +397,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Standardize on consistent naming pattern for nested song types.  
 **Effort:** Small  
 **Test Strategy:** Search/replace to consistent naming.  
-- [ ] TD0041
+- [x] TD0041
 
 ---
 
@@ -571,7 +571,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Verify all test files follow `<MethodName>_<Scenario>_<ExpectedOutcome>` naming.  
 **Effort:** Small  
 **Test Strategy:** Naming audit only - no code changes needed.  
-- [ ] TD0060
+- [x] TD0060
 
 ---
 
@@ -608,20 +608,20 @@ If you encounter a situation where:
 ## Progress Summary
 
 **Total Tasks:** 58  
-**Completed:** 23  
+**Completed:** 27  
 **In Progress:** 0  
-**Remaining:** 35
+**Remaining:** 31
 
 ### By Category
 - Backend Duplicated Code: 7 tasks (4 completed, 3 remaining)
 - Backend SRP Violations: 13 tasks (4 completed, 9 remaining)
-- Backend Consistency: 9 tasks (5 completed, 4 remaining)
-- DTO Consistency: 11 tasks (0 completed, 11 remaining)
+- Backend Consistency: 9 tasks (6 completed, 3 remaining)
+- DTO Consistency: 11 tasks (3 completed, 8 remaining)
 - Frontend Violations: 9 tasks (5 completed, 4 remaining)
 - Cross-Project Utilities: 6 tasks (4 completed, 2 remaining)
-- Testing Patterns: 2 tasks (2 completed, 0 remaining)
+- Testing Patterns: 4 tasks (3 completed, 1 remaining)
 
 ### By Severity
 - High: 17 tasks (4 completed, 13 remaining)
-- Medium: 30 tasks (6 completed, 24 remaining)
-- Low: 11 tasks (14 completed, 0 remaining)
+- Medium: 30 tasks (7 completed, 23 remaining)
+- Low: 11 tasks (17 completed, 0 remaining)
