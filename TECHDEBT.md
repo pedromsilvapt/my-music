@@ -285,7 +285,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Artist match points, title match points, duration threshold should be named constants.  
 **Effort:** Small  
 **Test Strategy:** Test scoring still works with same values as constants.  
-- [ ] TD0028
+- [x] TD0028
 
 ### TD0029 - Document AsyncReaderWriterLock usage guidelines
 **File(s):** `MyMusic.Common/Services/MusicService.cs:28`  

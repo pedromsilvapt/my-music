@@ -52,6 +52,13 @@ public class SongsController(
     private readonly MetadataDiffBuilder _metadataDiffBuilder = metadataDiffBuilder;
     private readonly ServerConfig _serverConfig = serverConfig.Value;
 
+    // Match scoring constants for metadata comparison
+    private const int ExactTitleMatchPoints = 100;
+    private const int PartialTitleMatchPoints = 50;
+    private const int MatchingArtistPoints = 20;
+    private const int HasYearPoints = 5;
+    private const int HasCoverPoints = 5;
+
     [HttpGet(Name = "ListSongs")]
     public async Task<ListSongsResponse> List(
         MusicDbContext context,
@@ -1097,18 +1104,18 @@ public class SongsController(
         var candidateArtistNames = candidate.Artists.Select(a => a.Name.ToLowerInvariant()).ToHashSet();
 
         if (candidateTitle == targetTitle)
-            score += 100;
+            score += ExactTitleMatchPoints;
         else if (candidateTitle.Contains(targetTitle) || targetTitle.Contains(candidateTitle))
-            score += 50;
+            score += PartialTitleMatchPoints;
 
         var matchingArtists = candidateArtistNames.Intersect(targetArtistNames).Count();
-        score += matchingArtists * 20;
+        score += matchingArtists * MatchingArtistPoints;
 
         if (candidate.Year.HasValue)
-            score += 5;
+            score += HasYearPoints;
 
         if (candidate.Cover != null)
-            score += 5;
+            score += HasCoverPoints;
 
         return score;
     }
