@@ -43,7 +43,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** `CreateDiffAsync()` and `CreateDiff()` are nearly identical. Sync version should call async version with synchronous image comparison, or extract shared logic into private method.  
 **Effort:** Small  
 **Test Strategy:** Create tests for both methods with same inputs, verify identical outputs, then consolidate.  
-- [ ] TD0002
+- [x] TD0002
 
 ### TD0003 - Extract shared background service patterns from PurchasesQueue and MetadataFetchQueue
 **File(s):** `MyMusic.Common/Services/PurchasesQueue.cs:27-103`, `MyMusic.Common/Services/MetadataFetchQueue.cs:32-137`  
@@ -608,12 +608,12 @@ If you encounter a situation where:
 ## Progress Summary
 
 **Total Tasks:** 58  
-**Completed:** 22  
+**Completed:** 23  
 **In Progress:** 0  
-**Remaining:** 36
+**Remaining:** 35
 
 ### By Category
-- Backend Duplicated Code: 7 tasks (3 completed, 4 remaining)
+- Backend Duplicated Code: 7 tasks (4 completed, 3 remaining)
 - Backend SRP Violations: 13 tasks (4 completed, 9 remaining)
 - Backend Consistency: 9 tasks (5 completed, 4 remaining)
 - DTO Consistency: 11 tasks (0 completed, 11 remaining)
@@ -623,5 +623,5 @@ If you encounter a situation where:
 
 ### By Severity
 - High: 17 tasks (4 completed, 13 remaining)
-- Medium: 30 tasks (5 completed, 25 remaining)
+- Medium: 30 tasks (6 completed, 24 remaining)
 - Low: 11 tasks (14 completed, 0 remaining)

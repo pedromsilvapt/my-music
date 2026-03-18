@@ -182,7 +182,7 @@ public class MetadataFetchController(
             if (sourceSong != null)
             {
                 // Build diff at runtime using the shared builder
-                var diffModel = metadataDiffBuilder.CreateDiff(song, sourceSong);
+                var diffModel = await metadataDiffBuilder.CreateDiffAsync(song, sourceSong, cancellationToken);
                 diff = MetadataDiffMapper.ToSongMetadataDiff(diffModel);
                 
                 // Apply thumbnail proxy to the new cover URL (same as manual fetch)
