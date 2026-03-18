@@ -304,6 +304,35 @@ Order: System → Microsoft → Third-party → MyMusic (or use implicit usings)
 - Use **Scenario** class for test setup (in-memory SQLite + MockFileSystem)
 - Follow naming: `<MethodName>_<Scenario>_<ExpectedOutcome>`
 
+#### Assertion Style Guidelines
+
+Prefer **direct assertions** over `ShouldSatisfyAllConditions` for clarity and better error messages:
+
+```csharp
+// Good - Direct assertions with clear failure messages
+songs.Count.ShouldBe(3);
+songs[0].Title.ShouldBe("Song Title");
+songs[0].Artists.Count.ShouldBe(2);
+
+// Avoid - Multiple conditions in one assertion
+songs.ShouldSatisfyAllConditions(
+    () => songs.Count.ShouldBe(3),
+    () => songs[0].Title.ShouldBe("Song Title"),
+    () => songs[0].Artists.Count.ShouldBe(2)
+);
+```
+
+Use `ShouldSatisfyAllConditions` only when you need to assert multiple independent conditions on the same object and want all failures reported at once:
+
+```csharp
+// Acceptable - When multiple unrelated properties need verification
+user.ShouldSatisfyAllConditions(
+    () => user.Name.ShouldNotBeNull(),
+    () => user.Email.ShouldContain("@"),
+    () => user.CreatedAt.ShouldBeGreaterThan(DateTime.MinValue)
+);
+```
+
 ```csharp
 [Fact]
 public async Task ImportMusic_EmptyDatabase()
