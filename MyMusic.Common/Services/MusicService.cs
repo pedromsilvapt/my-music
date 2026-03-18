@@ -607,15 +607,6 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     // Timestamps
                     song.ModifiedAt = importSongMetadata.CreatedAt.ToUniversalTime();
 
-                    //if (existingSong is not null && duplicatesStrategy == DuplicateSongsHandlingStrategy.Overwrite)
-                    //{
-                    //    // TODO Need to check, if when updating an entity, old relations are deleted or if they are kept.
-                    //    song.Id = existingSong.Id;
-                    //    song.AddedAt = existingSong.AddedAt;
-                    //    song.CreatedAt = existingSong.CreatedAt < song.CreatedAt ? existingSong.CreatedAt : song.CreatedAt;
-                    //    song.ModifiedAt = existingSong.ModifiedAt > song.ModifiedAt ? existingSong.ModifiedAt : song.ModifiedAt;
-                    //}
-
                     if (cover is not null)
                     {
                         var songCover = song.Cover;
