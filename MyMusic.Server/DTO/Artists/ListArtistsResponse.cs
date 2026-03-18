@@ -4,10 +4,10 @@ namespace MyMusic.Server.DTO.Artists;
 
 public record ListArtistsResponse
 {
-    public required IEnumerable<ListArtistsItem> Artists { get; set; }
+    public required IEnumerable<ListArtistItem> Artists { get; set; }
 }
 
-public record ListArtistsItem
+public record ListArtistItem
 {
     public required long Id { get; set; }
     public required long? Photo { get; set; }
@@ -16,9 +16,9 @@ public record ListArtistsItem
     public required int? SongsCount { get; set; }
     public required DateTime CreatedAt { get; set; }
 
-    public static ListArtistsItem FromEntity(Entities.Artist artist)
+    public static ListArtistItem FromEntity(Entities.Artist artist)
     {
-        return new ListArtistsItem
+        return new ListArtistItem
         {
             Id = artist.Id,
             Photo = artist.PhotoId,

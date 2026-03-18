@@ -22,7 +22,7 @@ public class UsersController(
 
         return new ListUsersResponse
         {
-            Users = users.Select(ListUsersItem.FromEntity).ToList(),
+            Users = users.Select(ListUserItem.FromEntity).ToList(),
         };
     }
 

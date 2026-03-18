@@ -15,7 +15,7 @@ public record GetPlaylistItem
     public required string Name { get; init; }
     public required PlaylistType Type { get; init; }
     public long? CurrentSongId { get; init; }
-    public required List<GetPlaylistSong> Songs { get; init; }
+    public required List<GetPlaylistSongItem> Songs { get; init; }
 
     public static GetPlaylistItem FromEntity(Playlist playlist) =>
         new()
@@ -26,17 +26,17 @@ public record GetPlaylistItem
             CurrentSongId = playlist.CurrentSongId,
             Songs = playlist.PlaylistSongs
                 .OrderBy(ps => ps.Order)
-                .Select(ps => GetPlaylistSong.FromEntity(ps.Song, ps.Order, ps.AddedAt))
+                .Select(ps => GetPlaylistSongItem.FromEntity(ps.Song, ps.Order, ps.AddedAt))
                 .ToList(),
         };
 }
 
-public record GetPlaylistSong : ListSongsItem
+public record GetPlaylistSongItem : ListSongItem
 {
     public required int Order { get; init; }
     public DateTime? AddedAtPlaylist { get; init; }
 
-    public static GetPlaylistSong FromEntity(SongEntity song, int order, DateTime addedAt) =>
+    public static GetPlaylistSongItem FromEntity(SongEntity song, int order, DateTime addedAt) =>
         new()
         {
             Id = song.Id,

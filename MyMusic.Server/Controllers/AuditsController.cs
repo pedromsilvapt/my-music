@@ -18,12 +18,12 @@ public class AuditsController(
         CancellationToken cancellationToken)
     {
         var rules = auditService.GetRules();
-        var ruleItems = new List<ListAuditRulesItem>();
+        var ruleItems = new List<ListAuditRuleItem>();
 
         foreach (var rule in rules)
         {
             var count = await auditService.GetNonConformityCount(db, rule.Id, currentUser.Id, cancellationToken);
-            ruleItems.Add(new ListAuditRulesItem
+            ruleItems.Add(new ListAuditRuleItem
             {
                 Id = rule.Id,
                 Name = rule.Name,
@@ -79,7 +79,7 @@ public class AuditsController(
         var nonConformities = await auditService.GetNonConformities(db, id, currentUser.Id, cancellationToken);
         return new ListAuditNonConformitiesResponse
         {
-            NonConformities = nonConformities.Select(ListAuditNonConformitiesItem.FromEntity),
+            NonConformities = nonConformities.Select(ListAuditNonConformityItem.FromEntity),
         };
     }
 

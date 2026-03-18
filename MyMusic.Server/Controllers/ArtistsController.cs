@@ -41,7 +41,7 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
 
         return new ListArtistsResponse
         {
-            Artists = artists.Select(ListArtistsItem.FromEntity).ToList(),
+            Artists = artists.Select(ListArtistItem.FromEntity).ToList(),
         };
     }
 

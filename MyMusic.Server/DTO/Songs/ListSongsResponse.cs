@@ -4,10 +4,10 @@ namespace MyMusic.Server.DTO.Songs;
 
 public record ListSongsResponse
 {
-    public required IEnumerable<ListSongsItem> Songs { get; set; }
+    public required IEnumerable<ListSongItem> Songs { get; set; }
 }
 
-public record ListSongsItem
+public record ListSongItem
 {
     public required long Id { get; set; }
     public required long? Cover { get; set; }
@@ -22,13 +22,13 @@ public record ListSongsItem
     public required DateTime CreatedAt { get; set; }
     public DateTime? AddedAt { get; set; }
 
-    public static ListSongsItem FromEntity(Entities.Song song)
+    public static ListSongItem FromEntity(Entities.Song song)
     {
         var artists = song.Artists.Select(a => ListSongsArtist.FromEntity(a.Artist)).ToList();
         var genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList();
         var album = ListSongsAlbum.FromEntity(song.Album);
 
-        return new ListSongsItem
+        return new ListSongItem
         {
             Id = song.Id,
             Cover = song.CoverId,

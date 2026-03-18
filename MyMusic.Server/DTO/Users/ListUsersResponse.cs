@@ -4,10 +4,10 @@ namespace MyMusic.Server.DTO.Users;
 
 public record ListUsersResponse
 {
-    public required IEnumerable<ListUsersItem> Users { get; set; }
+    public required IEnumerable<ListUserItem> Users { get; set; }
 }
 
-public record ListUsersItem
+public record ListUserItem
 {
     public required long Id { get; set; }
     public required string Username { get; set; }
@@ -16,7 +16,7 @@ public record ListUsersItem
     public required double Volume { get; set; }
     public required bool IsMuted { get; set; }
 
-    public static ListUsersItem FromEntity(Entities.User user) =>
+    public static ListUserItem FromEntity(Entities.User user) =>
         new()
         {
             Id = user.Id,

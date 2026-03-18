@@ -17,7 +17,7 @@ public record GetAlbumResponseAlbum
     public required string ArtistName { get; set; }
     public required int SongsCount { get; set; }
     public required DateTime CreatedAt { get; set; }
-    public required List<GetAlbumResponseSong> Songs { get; set; }
+    public required List<GetAlbumSongItem> Songs { get; set; }
 
     public static GetAlbumResponseAlbum FromEntity(Entities.Album album)
     {
@@ -31,33 +31,33 @@ public record GetAlbumResponseAlbum
             ArtistName = album.Artist.Name,
             SongsCount = album.SongsCount,
             CreatedAt = album.CreatedAt,
-            Songs = album.Songs.Select(GetAlbumResponseSong.FromEntity).ToList(),
+            Songs = album.Songs.Select(GetAlbumSongItem.FromEntity).ToList(),
         };
     }
 }
 
-public record GetAlbumResponseSong
+public record GetAlbumSongItem
 {
     public required long Id { get; set; }
     public required long? Cover { get; set; }
     public required string Title { get; set; }
     public required List<GetAlbumResponseArtist> Artists { get; set; }
-    public required GetAlbumResponseSongAlbum Album { get; set; }
+    public required GetAlbumSongItemAlbum Album { get; set; }
     public required List<GetAlbumResponseGenre> Genres { get; set; }
     public required int? Year { get; set; }
     public required string Duration { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
 
-    public static GetAlbumResponseSong FromEntity(Entities.Song song)
+    public static GetAlbumSongItem FromEntity(Entities.Song song)
     {
-        return new GetAlbumResponseSong
+        return new GetAlbumSongItem
         {
             Id = song.Id,
             Cover = song.CoverId,
             Title = song.Title,
             Artists = song.Artists.Select(GetAlbumResponseArtist.FromEntity).ToList(),
-            Album = GetAlbumResponseSongAlbum.FromEntity(song.Album),
+            Album = GetAlbumSongItemAlbum.FromEntity(song.Album),
             Genres = song.Genres.Select(GetAlbumResponseGenre.FromEntity).ToList(),
             Year = song.Year,
             Duration = song.Duration.ToString(@"mm\:ss"),
@@ -82,14 +82,14 @@ public record GetAlbumResponseGenre
     }
 }
 
-public record GetAlbumResponseSongAlbum
+public record GetAlbumSongItemAlbum
 {
     public required long Id { get; set; }
     public required string Name { get; set; }
 
-    public static GetAlbumResponseSongAlbum FromEntity(Entities.Album album)
+    public static GetAlbumSongItemAlbum FromEntity(Entities.Album album)
     {
-        return new GetAlbumResponseSongAlbum
+        return new GetAlbumSongItemAlbum
         {
             Id = album.Id,
             Name = album.Name,

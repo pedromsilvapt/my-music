@@ -5,11 +5,11 @@ namespace MyMusic.Server.DTO.Purchases;
 
 public record ListPurchasesResponse
 {
-    public required IEnumerable<ListPurchasesItem> Purchases { get; set; }
+    public required IEnumerable<ListPurchaseItem> Purchases { get; set; }
 }
 
-public record ListPurchasesItem : PurchasedSongDto
+public record ListPurchaseItem : PurchasedSongDto
 {
-    public new static ListPurchasesItem FromEntity(Entities.PurchasedSong purchasedSong) =>
-        Mapper.Map(purchasedSong).ToANew<ListPurchasesItem>();
+    public new static ListPurchaseItem FromEntity(Entities.PurchasedSong purchasedSong) =>
+        Mapper.Map(purchasedSong).ToANew<ListPurchaseItem>();
 }

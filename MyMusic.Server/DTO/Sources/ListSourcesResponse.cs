@@ -5,11 +5,11 @@ namespace MyMusic.Server.DTO.Sources;
 
 public record ListSourcesResponse
 {
-    public required IEnumerable<ListSourcesItem> Sources { get; set; }
+    public required IEnumerable<ListSourceItem> Sources { get; set; }
 }
 
-public record ListSourcesItem : SourceDto
+public record ListSourceItem : SourceDto
 {
-    public new static ListSourcesItem FromEntity(Entities.Source source) =>
-        Mapper.Map(source).ToANew<ListSourcesItem>();
+    public new static ListSourceItem FromEntity(Entities.Source source) =>
+        Mapper.Map(source).ToANew<ListSourceItem>();
 }

@@ -27,7 +27,7 @@ public class PurchasesController(
 
         return new ListPurchasesResponse
         {
-            Purchases = purchases.Select(ListPurchasesItem.FromEntity).ToList(),
+            Purchases = purchases.Select(ListPurchaseItem.FromEntity).ToList(),
         };
     }
 

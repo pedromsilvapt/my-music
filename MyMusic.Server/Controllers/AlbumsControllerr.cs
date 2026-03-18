@@ -41,7 +41,7 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
 
         return new ListAlbumsResponse
         {
-            Albums = albums.Select(ListAlbumsItem.FromEntity).ToList(),
+            Albums = albums.Select(ListAlbumItem.FromEntity).ToList(),
         };
     }
 

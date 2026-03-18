@@ -33,7 +33,7 @@ public class SourcesController(
 
         return new ListSourcesResponse
         {
-            Sources = sources.Select(ListSourcesItem.FromEntity).ToList(),
+            Sources = sources.Select(ListSourceItem.FromEntity).ToList(),
         };
     }
 

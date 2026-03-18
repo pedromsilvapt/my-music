@@ -7,7 +7,7 @@ public record CreateUserResponse
     public required CreateUserItem User { get; set; }
 }
 
-public record CreateUserItem : ListUsersItem
+public record CreateUserItem : ListUserItem
 {
     public new static CreateUserItem FromEntity(Entities.User user) =>
         new()

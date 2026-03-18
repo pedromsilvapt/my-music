@@ -2,10 +2,10 @@ namespace MyMusic.Server.DTO.Audits;
 
 public record ListAuditRulesResponse
 {
-    public required IEnumerable<ListAuditRulesItem> Rules { get; set; }
+    public required IEnumerable<ListAuditRuleItem> Rules { get; set; }
 }
 
-public record ListAuditRulesItem
+public record ListAuditRuleItem
 {
     public required long Id { get; set; }
     public required string Name { get; set; }
