@@ -34,6 +34,18 @@ public class MetadataFetchQueue(IServiceScopeFactory serviceScopeFactory)
         int maxParallelTasks)
         : BackgroundTaskScheduler<MetadataFetchTask>(maxParallelTasks, false)
     {
+        // Error message patterns for categorization
+        private const string TimeoutPattern = "timeout";
+        private const string TimedOutPattern = "timed out";
+        private const string ServiceUnavailablePattern = "service unavailable";
+        private const string Error503Pattern = "503";
+        private const string ServicePattern = "service";
+        private const string NoMetadataFoundPattern = "no metadata found";
+        private const string NotFoundPattern = "not found";
+        private const string NoResultsPattern = "no results";
+        private const string NetworkPattern = "network";
+        private const string ConnectionPattern = "connection";
+        private const string UnreachablePattern = "unreachable";
         protected override async Task<List<MetadataFetchTask>> PullNextTasksAsync(int count,
             CancellationToken cancellationToken)
         {
@@ -89,16 +101,16 @@ public class MetadataFetchQueue(IServiceScopeFactory serviceScopeFactory)
         {
             var message = errorMessage.ToLowerInvariant();
 
-            if (message.Contains("timeout") || message.Contains("timed out"))
+            if (message.Contains(TimeoutPattern) || message.Contains(TimedOutPattern))
                 return MetadataFetchFailureReason.Timeout;
 
-            if (message.Contains("service unavailable") || message.Contains("503") || message.Contains("service"))
+            if (message.Contains(ServiceUnavailablePattern) || message.Contains(Error503Pattern) || message.Contains(ServicePattern))
                 return MetadataFetchFailureReason.ServiceUnavailable;
 
-            if (message.Contains("no metadata found") || message.Contains("not found") || message.Contains("no results"))
+            if (message.Contains(NoMetadataFoundPattern) || message.Contains(NotFoundPattern) || message.Contains(NoResultsPattern))
                 return MetadataFetchFailureReason.NoMetadataFound;
 
-            if (message.Contains("network") || message.Contains("connection") || message.Contains("unreachable"))
+            if (message.Contains(NetworkPattern) || message.Contains(ConnectionPattern) || message.Contains(UnreachablePattern))
                 return MetadataFetchFailureReason.NetworkError;
 
             return MetadataFetchFailureReason.SystemError;
