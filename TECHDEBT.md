@@ -200,7 +200,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Base64 URL-safe encoding should be in separate codec class.  
 **Effort:** Small  
 **Test Strategy:** Already covered by TD0005.  
-- [ ] TD0019
+- [x] TD0019
 
 ### TD0020 - Split ThumbnailProxyService: Extract ImageCacheService
 **File(s):** `MyMusic.Common/Services/ThumbnailProxyService.cs:130-163` (Caching Logic)  
@@ -209,7 +209,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Distributed cache operations should be in ImageCacheService.  
 **Effort:** Small  
 **Test Strategy:** Test caching behavior before extraction.  
-- [ ] TD0020
+- [x] TD0020
 
 ### TD0021 - Move SongsController business logic to MetadataMatchingService
 **File(s):** `MyMusic.Server/Controllers/SongsController.cs:1072-1114` (FindClosestMatch, CalculateMatchScore)  

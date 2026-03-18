@@ -12,10 +12,12 @@ namespace MyMusic.Common.Services;
 public class ThumbnailProxyService(
     IDistributedCache cache,
     IOptions<ThumbnailCacheConfig> config,
-    ILogger<ThumbnailProxyService> logger) : IThumbnailProxyService
+    ILogger<ThumbnailProxyService> logger,
+    IImageCacheService imageCacheService) : IThumbnailProxyService
 {
     private readonly ThumbnailCacheConfig _config = config.Value;
     private readonly ILogger<ThumbnailProxyService> _logger = logger;
+    private readonly IImageCacheService _imageCacheService = imageCacheService;
 
     public string GetProxyUrl(string originalUrl)
     {
@@ -129,12 +131,11 @@ public class ThumbnailProxyService(
         }
 
         var cacheKey = $"thumbnail:{encodedUrl}";
-        var cachedData = await cache.GetAsync(cacheKey, cancellationToken);
+        var cachedResult = await _imageCacheService.GetAsync(cacheKey, cancellationToken);
 
-        if (cachedData is not null && cachedData.Length > 1)
+        if (cachedResult is not null)
         {
-            _logger.LogDebug("Cache hit for thumbnail: {EncodedUrl}", encodedUrl);
-            var (mimeType, imageData) = DecodeFromCache(cachedData);
+            var (mimeType, imageData) = cachedResult.Value;
             return ImageBuffer.FromBytes(imageData, ImageBuffer.ImageFormatFromMimeType(mimeType));
         }
 
@@ -144,44 +145,8 @@ public class ThumbnailProxyService(
             return null;
         }
 
-        if (imageBuffer.Data.Length <= _config.MaxEntrySizeBytes)
-        {
-            var cacheOptions = new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(_config.EntryTtlMinutes)
-            };
-
-            var cacheData = EncodeForCache(imageBuffer.MimeType, imageBuffer.Data);
-            await cache.SetAsync(cacheKey, cacheData, cacheOptions, cancellationToken);
-            _logger.LogDebug("Cached thumbnail: {EncodedUrl}, size: {Size} bytes", encodedUrl, imageBuffer.Data.Length);
-        }
-        else
-        {
-            _logger.LogDebug("Skipped caching thumbnail {EncodedUrl} - exceeds size limit ({Size} > {Max})",
-                encodedUrl, imageBuffer.Data.Length, _config.MaxEntrySizeBytes);
-        }
+        await _imageCacheService.SetAsync(cacheKey, imageBuffer.MimeType, imageBuffer.Data, cancellationToken);
 
         return imageBuffer;
-    }
-
-    private static byte[] EncodeForCache(string mimeType, byte[] imageData)
-    {
-        var mimeBytes = Encoding.UTF8.GetBytes(mimeType);
-        var result = new byte[1 + mimeBytes.Length + imageData.Length];
-        result[0] = (byte)mimeBytes.Length;
-        Buffer.BlockCopy(mimeBytes, 0, result, 1, mimeBytes.Length);
-        Buffer.BlockCopy(imageData, 0, result, 1 + mimeBytes.Length, imageData.Length);
-        return result;
-    }
-
-    private static (string mimeType, byte[] imageData) DecodeFromCache(byte[] cachedData)
-    {
-        var mimeLength = cachedData[0];
-        var mimeBytes = new byte[mimeLength];
-        Buffer.BlockCopy(cachedData, 1, mimeBytes, 0, mimeLength);
-        var mimeType = Encoding.UTF8.GetString(mimeBytes);
-        var imageData = new byte[cachedData.Length - 1 - mimeLength];
-        Buffer.BlockCopy(cachedData, 1 + mimeLength, imageData, 0, imageData.Length);
-        return (mimeType, imageData);
     }
 }

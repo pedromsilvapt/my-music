@@ -69,6 +69,7 @@ public static class HostBuilderExtensions
 
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
+        builder.Services.AddScoped<IImageCacheService, ImageCacheService>();
         builder.Services.AddScoped<IThumbnailProxyService, ThumbnailProxyService>();
         builder.Services.AddScoped<IImageComparisonService, ImageComparisonService>();
 
