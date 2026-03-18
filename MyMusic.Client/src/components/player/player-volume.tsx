@@ -6,6 +6,7 @@ export interface PlayerVolumeProps {
     setIsMuted: (muted: boolean) => void;
     volume: number;
     setVolume: (volume: number) => void;
+    onVolumeChangeEnd?: (volume: number) => void;
 }
 
 export default function PlayerVolume(props: PlayerVolumeProps) {
@@ -26,7 +27,7 @@ export default function PlayerVolume(props: PlayerVolumeProps) {
             >
                 {props.isMuted ? <IconVolumeOff size="1.1rem"/> : <IconVolume size="1.1rem"/>}
             </ActionIcon>
-            <Slider flex={1} value={props.volume * 100} onChangeEnd={v => props.setVolume(Math.min(1, v / 100))}/>
+            <Slider flex={1} value={props.volume * 100} onChange={v => props.setVolume(Math.min(1, v / 100))} onChangeEnd={v => props.onVolumeChangeEnd?.(Math.min(1, v / 100))} label={(value) => Math.round(value)}/>
         </Flex>
     </>;
 }

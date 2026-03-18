@@ -16,6 +16,10 @@ export default function PlayerVolumeContainer() {
 
     const handleSetVolume = useCallback((newVolume: number) => {
         storeSetVolume(newVolume);
+    }, [storeSetVolume]);
+
+    const handleVolumeChangeEnd = useCallback((newVolume: number) => {
+        storeSetVolume(newVolume);
         updateVolume(newVolume);
     }, [storeSetVolume, updateVolume]);
 
@@ -40,6 +44,7 @@ export default function PlayerVolumeContainer() {
         <PlayerVolume
             volume={volume}
             setVolume={handleSetVolume}
+            onVolumeChangeEnd={handleVolumeChangeEnd}
             isMuted={muted}
             setIsMuted={handleSetMuted}
         />
