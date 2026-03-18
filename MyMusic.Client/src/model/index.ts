@@ -36,6 +36,7 @@ export * from "./batchSetWaiverRequest";
 export * from "./batchUpdateSongResult";
 export * from "./batchUpdateSongsRequest";
 export * from "./batchUpdateSongsResponse";
+export * from "./clearAllTasksResponse";
 export * from "./createDeviceItem";
 export * from "./createDeviceRequest";
 export * from "./createDeviceResponse";

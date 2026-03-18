@@ -32,18 +32,20 @@ import type {
 	AutoFetchedMetadataResponse,
 	BatchMetadataFetchRequest,
 	BatchMetadataFetchResponse,
+	ClearAllTasksResponse,
 	FailedTaskDetailResponse,
-	MetadataAlbum,
-	MetadataDiff,
-	MetadataFieldOfboolean,
-	MetadataFieldOfint,
-	MetadataFieldOfListOfMetadataArtist,
-	MetadataFieldOfListOfstring,
-	MetadataFieldOfMetadataAlbum,
-	MetadataFieldOfstring,
 	MetadataQueueStatusResponse,
 	RequeueFailedMetadataRequest,
 	RequeueFailedMetadataResponse,
+	SongMetadataAlbum,
+	SongMetadataDiff,
+	SongMetadataFieldOfboolean,
+	SongMetadataFieldOfdecimal,
+	SongMetadataFieldOfint,
+	SongMetadataFieldOfListOfSongMetadataArtist,
+	SongMetadataFieldOfListOfstring,
+	SongMetadataFieldOfSongMetadataAlbum,
+	SongMetadataFieldOfstring,
 } from "../model";
 import { MetadataFetchFailureReason } from "../model";
 
@@ -1029,6 +1031,124 @@ export const invalidateGetMetadataFetchFailedTasks = async (
 	return queryClient;
 };
 
+export type postMetadataFetchClearAllResponse200TextPlain = {
+	data: ClearAllTasksResponse;
+	status: 200;
+};
+
+export type postMetadataFetchClearAllResponse200ApplicationJson = {
+	data: ClearAllTasksResponse;
+	status: 200;
+};
+
+export type postMetadataFetchClearAllResponse200TextJson = {
+	data: ClearAllTasksResponse;
+	status: 200;
+};
+
+export type postMetadataFetchClearAllResponseSuccess = (
+	| postMetadataFetchClearAllResponse200TextPlain
+	| postMetadataFetchClearAllResponse200ApplicationJson
+	| postMetadataFetchClearAllResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type postMetadataFetchClearAllResponse =
+	postMetadataFetchClearAllResponseSuccess;
+
+export const getPostMetadataFetchClearAllUrl = () => {
+	return `/api/metadata-fetch/clear-all`;
+};
+
+export const postMetadataFetchClearAll = async (
+	options?: RequestInit,
+): Promise<postMetadataFetchClearAllResponse> => {
+	const res = await fetch(getPostMetadataFetchClearAllUrl(), {
+		...options,
+		method: "POST",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: postMetadataFetchClearAllResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as postMetadataFetchClearAllResponse;
+};
+
+export const getPostMetadataFetchClearAllMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof postMetadataFetchClearAll>>,
+		TError,
+		void,
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof postMetadataFetchClearAll>>,
+	TError,
+	void,
+	TContext
+> => {
+	const mutationKey = ["postMetadataFetchClearAll"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof postMetadataFetchClearAll>>,
+		void
+	> = () => {
+		return postMetadataFetchClearAll(fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type PostMetadataFetchClearAllMutationResult = NonNullable<
+	Awaited<ReturnType<typeof postMetadataFetchClearAll>>
+>;
+
+export type PostMetadataFetchClearAllMutationError = unknown;
+
+export const usePostMetadataFetchClearAll = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof postMetadataFetchClearAll>>,
+			TError,
+			void,
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof postMetadataFetchClearAll>>,
+	TError,
+	void,
+	TContext
+> => {
+	return useMutation(
+		getPostMetadataFetchClearAllMutationOptions(options),
+		queryClient,
+	);
+};
+
 export const getPostMetadataFetchBatchResponseMock = (
 	overrideResponse: Partial<Extract<BatchMetadataFetchResponse, object>> = {},
 ): BatchMetadataFetchResponse =>
@@ -1050,81 +1170,105 @@ export const getPostMetadataFetchBatchResponseMock = (
 		},
 	]);
 
-export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfstringMock = (
-	overrideResponse: Partial<MetadataFieldOfstring> = {},
-): MetadataFieldOfstring => ({
-	...{
-		old: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock =
+	(
+		overrideResponse: Partial<SongMetadataFieldOfstring> = {},
+	): SongMetadataFieldOfstring => ({
+		...{
+			old: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
 				null,
 			]),
-			null,
-		]),
-		new: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
+			new: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
 				null,
 			]),
-			null,
-		]),
-	},
-	...overrideResponse,
-});
+		},
+		...overrideResponse,
+	});
 
-export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfintMock = (
-	overrideResponse: Partial<MetadataFieldOfint> = {},
-): MetadataFieldOfint => ({
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfintMock = (
+	overrideResponse: Partial<SongMetadataFieldOfint> = {},
+): SongMetadataFieldOfint => ({
 	...{ old: faker.number.int(), new: faker.number.int() },
 	...overrideResponse,
 });
 
-export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfbooleanMock = (
-	overrideResponse: Partial<MetadataFieldOfboolean> = {},
-): MetadataFieldOfboolean => ({
-	...{ old: faker.datatype.boolean(), new: faker.datatype.boolean() },
-	...overrideResponse,
-});
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfdecimalMock =
+	(
+		overrideResponse: Partial<SongMetadataFieldOfdecimal> = {},
+	): SongMetadataFieldOfdecimal => ({
+		...{
+			old: faker.number.float({ fractionDigits: 2 }),
+			new: faker.number.float({ fractionDigits: 2 }),
+		},
+		...overrideResponse,
+	});
 
-export const getGetMetadataFetchSongSongIdResponseMetadataAlbumMock = (
-	overrideResponse: Partial<MetadataAlbum> = {},
-): MetadataAlbum => ({
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfbooleanMock =
+	(
+		overrideResponse: Partial<SongMetadataFieldOfboolean> = {},
+	): SongMetadataFieldOfboolean => ({
+		...{ old: faker.datatype.boolean(), new: faker.datatype.boolean() },
+		...overrideResponse,
+	});
+
+export const getGetMetadataFetchSongSongIdResponseSongMetadataAlbumMock = (
+	overrideResponse: Partial<SongMetadataAlbum> = {},
+): SongMetadataAlbum => ({
 	...{
-		id: faker.number.int(),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			undefined,
+		]),
+		artistName: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
 	},
 	...overrideResponse,
 });
 
-export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfMetadataAlbumMock =
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfSongMetadataAlbumMock =
 	(
-		overrideResponse: Partial<MetadataFieldOfMetadataAlbum> = {},
-	): MetadataFieldOfMetadataAlbum => ({
+		overrideResponse: Partial<SongMetadataFieldOfSongMetadataAlbum> = {},
+	): SongMetadataFieldOfSongMetadataAlbum => ({
 		...{
 			old: faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataAlbumMock() },
+				{ ...getGetMetadataFetchSongSongIdResponseSongMetadataAlbumMock() },
 			]),
 			new: faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataAlbumMock() },
+				{ ...getGetMetadataFetchSongSongIdResponseSongMetadataAlbumMock() },
 			]),
 		},
 		...overrideResponse,
 	});
 
-export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfMetadataArtistMock =
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfListOfSongMetadataArtistMock =
 	(
-		overrideResponse: Partial<MetadataFieldOfListOfMetadataArtist> = {},
-	): MetadataFieldOfListOfMetadataArtist => ({
+		overrideResponse: Partial<SongMetadataFieldOfListOfSongMetadataArtist> = {},
+	): SongMetadataFieldOfListOfSongMetadataArtist => ({
 		...{
 			old: faker.helpers.arrayElement([
 				Array.from(
 					{ length: faker.number.int({ min: 1, max: 10 }) },
 					(_, i) => i + 1,
 				).map(() => ({
-					id: faker.number.int(),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					name: faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						undefined,
+					]),
 				})),
 				null,
 			]),
@@ -1133,8 +1277,10 @@ export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfMetadataA
 					{ length: faker.number.int({ min: 1, max: 10 }) },
 					(_, i) => i + 1,
 				).map(() => ({
-					id: faker.number.int(),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					name: faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						undefined,
+					]),
 				})),
 				null,
 			]),
@@ -1142,10 +1288,10 @@ export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfMetadataA
 		...overrideResponse,
 	});
 
-export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfstringMock =
+export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfListOfstringMock =
 	(
-		overrideResponse: Partial<MetadataFieldOfListOfstring> = {},
-	): MetadataFieldOfListOfstring => ({
+		overrideResponse: Partial<SongMetadataFieldOfListOfstring> = {},
+	): SongMetadataFieldOfListOfstring => ({
 		...{
 			old: faker.helpers.arrayElement([
 				Array.from(
@@ -1165,28 +1311,43 @@ export const getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfstringMoc
 		...overrideResponse,
 	});
 
-export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
-	overrideResponse: Partial<MetadataDiff> = {},
-): MetadataDiff => ({
+export const getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock = (
+	overrideResponse: Partial<SongMetadataDiff> = {},
+): SongMetadataDiff => ({
 	...{
 		title: faker.helpers.arrayElement([
 			faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataFieldOfstringMock() },
+				{
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock(),
+				},
 			]),
 			undefined,
 		]),
 		year: faker.helpers.arrayElement([
 			faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataFieldOfintMock() },
+				{
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfintMock(),
+				},
 			]),
 			undefined,
 		]),
 		lyrics: faker.helpers.arrayElement([
 			faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataFieldOfstringMock() },
+				{
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock(),
+				},
+			]),
+			undefined,
+		]),
+		rating: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				null,
+				{
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfdecimalMock(),
+				},
 			]),
 			undefined,
 		]),
@@ -1194,7 +1355,7 @@ export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
 			faker.helpers.arrayElement([
 				null,
 				{
-					...getGetMetadataFetchSongSongIdResponseMetadataFieldOfbooleanMock(),
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfbooleanMock(),
 				},
 			]),
 			undefined,
@@ -1202,7 +1363,9 @@ export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
 		cover: faker.helpers.arrayElement([
 			faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataFieldOfstringMock() },
+				{
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock(),
+				},
 			]),
 			undefined,
 		]),
@@ -1210,7 +1373,7 @@ export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
 			faker.helpers.arrayElement([
 				null,
 				{
-					...getGetMetadataFetchSongSongIdResponseMetadataFieldOfMetadataAlbumMock(),
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfSongMetadataAlbumMock(),
 				},
 			]),
 			undefined,
@@ -1218,7 +1381,9 @@ export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
 		albumArtist: faker.helpers.arrayElement([
 			faker.helpers.arrayElement([
 				null,
-				{ ...getGetMetadataFetchSongSongIdResponseMetadataFieldOfstringMock() },
+				{
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock(),
+				},
 			]),
 			undefined,
 		]),
@@ -1226,7 +1391,7 @@ export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
 			faker.helpers.arrayElement([
 				null,
 				{
-					...getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfMetadataArtistMock(),
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfListOfSongMetadataArtistMock(),
 				},
 			]),
 			undefined,
@@ -1235,7 +1400,7 @@ export const getGetMetadataFetchSongSongIdResponseMetadataDiffMock = (
 			faker.helpers.arrayElement([
 				null,
 				{
-					...getGetMetadataFetchSongSongIdResponseMetadataFieldOfListOfstringMock(),
+					...getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfListOfstringMock(),
 				},
 			]),
 			undefined,
@@ -1253,7 +1418,7 @@ export const getGetMetadataFetchSongSongIdResponseMock = (
 			metadata: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					null,
-					{ ...getGetMetadataFetchSongSongIdResponseMetadataDiffMock() },
+					{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
 				]),
 				undefined,
 			]),
@@ -1285,7 +1450,7 @@ export const getGetMetadataFetchSongSongIdResponseMock = (
 			metadata: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					null,
-					{ ...getGetMetadataFetchSongSongIdResponseMetadataDiffMock() },
+					{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
 				]),
 				undefined,
 			]),
@@ -1317,7 +1482,7 @@ export const getGetMetadataFetchSongSongIdResponseMock = (
 			metadata: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					null,
-					{ ...getGetMetadataFetchSongSongIdResponseMetadataDiffMock() },
+					{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
 				]),
 				undefined,
 			]),
@@ -1488,6 +1653,27 @@ export const getGetMetadataFetchFailedTasksResponseMock =
 			})),
 		]);
 
+export const getPostMetadataFetchClearAllResponseMock = (
+	overrideResponse: Partial<Extract<ClearAllTasksResponse, object>> = {},
+): ClearAllTasksResponse =>
+	faker.helpers.arrayElement([
+		{
+			tasksDeleted: faker.number.int(),
+			metadataDeleted: faker.number.int(),
+			...overrideResponse,
+		},
+		{
+			tasksDeleted: faker.number.int(),
+			metadataDeleted: faker.number.int(),
+			...overrideResponse,
+		},
+		{
+			tasksDeleted: faker.number.int(),
+			metadataDeleted: faker.number.int(),
+			...overrideResponse,
+		},
+	]);
+
 export const getPostMetadataFetchBatchMockHandler = (
 	overrideResponse?:
 		| BatchMetadataFetchResponse
@@ -1633,6 +1819,30 @@ export const getGetMetadataFetchFailedTasksMockHandler = (
 		options,
 	);
 };
+
+export const getPostMetadataFetchClearAllMockHandler = (
+	overrideResponse?:
+		| ClearAllTasksResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<ClearAllTasksResponse> | ClearAllTasksResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/metadata-fetch/clear-all",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getPostMetadataFetchClearAllResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
 export const getMetadataFetchMock = () => [
 	getPostMetadataFetchBatchMockHandler(),
 	getGetMetadataFetchSongSongIdMockHandler(),
@@ -1640,4 +1850,5 @@ export const getMetadataFetchMock = () => [
 	getGetMetadataFetchQueueStatusMockHandler(),
 	getPostMetadataFetchRequeueMockHandler(),
 	getGetMetadataFetchFailedTasksMockHandler(),
+	getPostMetadataFetchClearAllMockHandler(),
 ];
