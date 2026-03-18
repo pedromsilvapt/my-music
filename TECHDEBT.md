@@ -276,7 +276,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Remove large block of commented code about Overwrite strategy.  
 **Effort:** Small  
 **Test Strategy:** No functional change - can skip tests.  
-- [ ] TD0027
+- [x] TD0027
 
 ### TD0028 - Extract magic numbers to constants in MetadataDiffBuilder
 **File(s):** `MyMusic.Common/Services/MetadataDiffBuilder.cs:374 (30), 386 (100), 391 (50), 407 (5)`  
@@ -419,7 +419,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Selector returns new object without useShallow, causing unnecessary re-renders. Wrap with useShallow.  
 **Effort:** Small  
 **Test Strategy:** Test collection component behavior before and after fix.  
-- [ ] TD0042
+- [x] TD0042
 
 ### TD0043 - Regenerate Orval client for metadata-fetch endpoints
 **File(s):** All metadata-fetch hooks using manual fetch  
@@ -464,7 +464,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Remove commented-out code that should be deleted.  
 **Effort:** Small  
 **Test Strategy:** No functional change - can skip tests.  
-- [ ] TD0047
+- [x] TD0047
 
 ### TD0048 - Audit all Zustand store usage for useShallow compliance
 **File(s):** All frontend components using Zustand stores  
@@ -522,7 +522,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Using fully qualified name instead of using directive. Make consistent with other registrations.  
 **Effort:** Small  
 **Test Strategy:** No functional change - compilation check sufficient.  
-- [ ] TD0053
+- [x] TD0053
 
 ### TD0054 - Add logging to SourcesService
 **File(s):** `MyMusic.Common/Services/SourcesService.cs`  
@@ -626,9 +626,9 @@ If you encounter a situation where:
 ## Progress Summary
 
 **Total Tasks:** 60  
-**Completed:** 0  
+**Completed:** 4  
 **In Progress:** 0  
-**Remaining:** 60
+**Remaining:** 56
 
 ### By Category
 - Backend Duplicated Code: 8 tasks
