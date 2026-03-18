@@ -616,3 +616,59 @@ Authentication is handled via headers (`X-MyMusic-UserId`, `X-MyMusic-UserName`)
 
 ## Recent Changes
 - 003-metadata-auto-fetch: Added .NET 9.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit
+
+## Technical Debt Management
+
+The project maintains a **TECHDEBT.md** file that tracks all identified code quality issues across the codebase. When working on the codebase, you should reference this file to understand and address technical debt systematically.
+
+### Reference
+
+- **TECHDEBT.md Location:** `/workspaces/my-music/TECHDEBT.md`
+- **Total Tasks:** 60 technical debt items across 7 categories
+- **Categories:** Backend Duplication, Backend SRP Violations, Backend Consistency, DTO Consistency, Frontend Violations, Cross-Project Utilities, Testing Patterns
+
+### Mandatory Testing Rule (CRITICAL)
+
+**All technical debt tasks MUST include test creation BEFORE implementing changes**, with these exceptions:
+
+- Typo fixes in comments or strings
+- Comment additions or updates  
+- Whitespace/formatting changes
+- File renames without logic changes
+- Simple code moves without behavior changes
+
+**Process for technical debt tasks:**
+1. Write tests verifying the CURRENT behavior
+2. Run tests to ensure they pass
+3. Implement the refactoring
+4. Run tests again to verify nothing broke
+5. Update the checkbox `[ ]` to `[x]` in TECHDEBT.md
+
+**If you cannot write tests beforehand, you MUST ask the user for permission before proceeding.** Technical debt solutions should NEVER change functionality.
+
+### Working with TECHDEBT.md
+
+**Task Selection:**
+- High Severity + High Impact: Do first (critical code quality issues)
+- High Severity + Low Impact: Do soon (important but less urgent)
+- Low Severity + High Impact: Do when convenient (good ROI)
+- Low Severity + Low Impact: Do last or skip (nice to have)
+
+**Completion Checklist:**
+- [ ] Task selected from TECHDEBT.md
+- [ ] Tests written (if applicable)
+- [ ] Tests pass before changes
+- [ ] Refactoring implemented
+- [ ] Tests pass after changes
+- [ ] Checkbox updated in TECHDEBT.md
+- [ ] Commit message references task ID (e.g., "TD0042 - Fix useShallow violation")
+
+### Why This Matters
+
+Technical debt accumulation leads to:
+- Increased bug rates
+- Slower feature development
+- Higher maintenance costs
+- Developer onboarding friction
+
+By systematically addressing tech debt with proper testing, we maintain code quality while improving the codebase over time.
