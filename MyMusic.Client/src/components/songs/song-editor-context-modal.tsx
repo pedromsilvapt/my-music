@@ -25,6 +25,9 @@ import {
     useFetchSongMetadata,
     useUpdateSong,
     getSong,
+    autocompleteAlbums,
+    autocompleteArtists,
+    autocompleteGenres,
 } from "../../client/songs.ts";
 import {useApplyMetadata} from "../../hooks/useApplyMetadata";
 import {useAutoFetchMetadata, usePrefetchMetadata} from "../../hooks/useAutoFetchMetadata";
@@ -167,10 +170,11 @@ export default function SongEditorContextModal({
                 const currentSong = songs.find(s => s.id === currentSongId);
                 
                 if (currentSong) {
-                    const songMetadata = metadataQuery.data?.hasMetadata 
-                        ? (metadataQuery.data.metadata as SongMetadataDiff) 
+                    const responseData = metadataQuery.data?.data;
+                    const songMetadata = responseData?.hasMetadata 
+                        ? (responseData.metadata as SongMetadataDiff) 
                         : null;
-                    const preSelectedFields = metadataQuery.data?.preSelectedFields;
+                    const preSelectedFields = responseData?.preSelectedFields;
                     newMap.set(currentSong.id, createSongEditState(currentSong, songMetadata, preSelectedFields));
                 }
                 
@@ -356,25 +360,22 @@ export default function SongEditorContextModal({
     }, [handleMetadataFetched]);
 
     const searchAlbums = useCallback(async (query: string): Promise<AutocompleteItem[]> => {
-        const response = await fetch(`/api/songs/autocomplete/albums?search=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        return data.albums.map((a: { id: number; name: string; artistName?: string }) => ({
+        const response = await autocompleteAlbums({ search: query });
+        return response.data.albums.map((a) => ({
             id: a.id,
             name: a.name,
-            subtitle: a.artistName,
+            subtitle: a.artistName ?? undefined,
         }));
     }, []);
 
     const searchArtists = useCallback(async (query: string): Promise<TagsAutocompleteItem[]> => {
-        const response = await fetch(`/api/songs/autocomplete/artists?search=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        return data.artists.map((a: { id: number; name: string }) => ({id: a.id, name: a.name}));
+        const response = await autocompleteArtists({ search: query });
+        return response.data.artists.map((a) => ({ id: a.id, name: a.name }));
     }, []);
 
     const searchGenres = useCallback(async (query: string): Promise<TagsAutocompleteItem[]> => {
-        const response = await fetch(`/api/songs/autocomplete/genres?search=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        return data.genres.map((g: { id: number; name: string }) => ({id: g.id, name: g.name}));
+        const response = await autocompleteGenres({ search: query });
+        return response.data.genres.map((g) => ({ id: g.id, name: g.name }));
     }, []);
 
     const handleSaveModifiedUpToCurrent = async () => {

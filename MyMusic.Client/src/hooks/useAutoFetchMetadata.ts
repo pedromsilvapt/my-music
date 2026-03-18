@@ -1,12 +1,9 @@
-import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {useQueryClient} from "@tanstack/react-query";
+import {useEffect} from "react";
+import {useGetMetadataFetchSongSongId, getMetadataFetchSongSongId} from "../client/metadata-fetch";
+import type {AutoFetchedMetadataResponse} from "../model";
 
-export interface AutoFetchedMetadataResponse {
-    hasMetadata: boolean;
-    metadata?: SongMetadataDiff;
-    fetchedAt?: string;
-    sourceName?: string;
-    preSelectedFields: string[];
-}
+export type {AutoFetchedMetadataResponse};
 
 export interface SongMetadataDiff {
     title?: MetadataField<string>;
@@ -35,28 +32,21 @@ export interface MetadataArtist {
     name: string;
 }
 
-async function fetchAutoFetchedMetadata(songId: number): Promise<AutoFetchedMetadataResponse> {
-    const response = await fetch(`/api/metadata-fetch/song/${songId}`);
-    
-    if (!response.ok) {
-        throw new Error('Failed to fetch metadata');
-    }
-    
-    return response.json();
-}
-
 const STALE_TIME_MS = 1000 * 60 * 5; // 5 minutes
 
 /**
  * Hook to fetch auto-fetched metadata for a single song.
  */
 export function useAutoFetchMetadata(songId: number | null) {
-    return useQuery({
-        queryKey: ['metadata-fetch', 'song', songId],
-        queryFn: () => fetchAutoFetchedMetadata(songId!),
-        enabled: songId !== null,
-        staleTime: STALE_TIME_MS,
-    });
+    return useGetMetadataFetchSongSongId(
+        songId ?? 0,
+        {
+            query: {
+                enabled: songId !== null,
+                staleTime: STALE_TIME_MS,
+            },
+        }
+    );
 }
 
 /**
@@ -65,7 +55,7 @@ export function useAutoFetchMetadata(songId: number | null) {
  */
 export function usePrefetchMetadata() {
     const queryClient = useQueryClient();
-    
+
     return {
         /**
          * Prefetch metadata for a specific song.
@@ -73,53 +63,53 @@ export function usePrefetchMetadata() {
          */
         prefetch: async (songId: number) => {
             await queryClient.prefetchQuery({
-                queryKey: ['metadata-fetch', 'song', songId],
-                queryFn: () => fetchAutoFetchedMetadata(songId),
+                queryKey: ["api", "metadata-fetch", "song", songId],
+                queryFn: () => getMetadataFetchSongSongId(songId),
                 staleTime: STALE_TIME_MS,
             });
         },
-        
+
         /**
          * Get cached metadata for a song if it exists.
          */
         getCached: (songId: number): AutoFetchedMetadataResponse | undefined => {
-            return queryClient.getQueryData(['metadata-fetch', 'song', songId]);
+            const cached = queryClient.getQueryData<{ data: AutoFetchedMetadataResponse }>(["api", "metadata-fetch", "song", songId]);
+            return cached?.data;
         },
     };
 }
 
 /**
  * Hook to manage metadata fetching for multiple songs with prefetch-ahead support.
- * 
+ *
  * Usage:
  * - When on song N, call `prefetchNext(songIds[N+1])` to preload next song
  * - Use `getMetadata(songId)` to get cached metadata for any song
  */
 export function useMultiSongMetadata(songIds: number[], currentIndex: number) {
     const queryClient = useQueryClient();
-    
+
     // Current song metadata query
     const currentSongId = songIds[currentIndex] ?? null;
     const currentQuery = useAutoFetchMetadata(currentSongId);
-    
+
     // Prefetch-ahead logic: when current changes, prefetch next
+    const prefetchMetadata = usePrefetchMetadata();
+
+    // Use effect to prefetch next song
     useEffect(() => {
         if (currentIndex < songIds.length - 1) {
             const nextSongId = songIds[currentIndex + 1];
-            queryClient.prefetchQuery({
-                queryKey: ['metadata-fetch', 'song', nextSongId],
-                queryFn: () => fetchAutoFetchedMetadata(nextSongId),
-                staleTime: STALE_TIME_MS,
-            });
+            // Fire and forget - no await needed
+            prefetchMetadata.prefetch(nextSongId);
         }
-    }, [currentIndex, songIds, queryClient]);
-    
+    }, [currentIndex, songIds, prefetchMetadata]);
+
     return {
         currentQuery,
         getMetadata: (songId: number): AutoFetchedMetadataResponse | undefined => {
-            return queryClient.getQueryData(['metadata-fetch', 'song', songId]);
+            const cached = queryClient.getQueryData<{ data: AutoFetchedMetadataResponse }>(["api", "metadata-fetch", "song", songId]);
+            return cached?.data;
         },
     };
 }
-
-import {useEffect} from "react";

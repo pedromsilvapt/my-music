@@ -1,33 +1,15 @@
 import {useMutation, useQueryClient} from "@tanstack/react-query";
-
-interface ClearAllTasksResponse {
-    tasksDeleted: number;
-    metadataDeleted: number;
-}
-
-async function clearAllTasksAndMetadata(): Promise<ClearAllTasksResponse> {
-    const response = await fetch('/api/metadata-fetch/clear-all', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error('Failed to clear tasks and metadata');
-    }
-
-    return response.json();
-}
+import {usePostMetadataFetchClearAll} from "../client/metadata-fetch";
 
 export function useClearAllTasks() {
     const queryClient = useQueryClient();
+    const mutation = usePostMetadataFetchClearAll({});
 
-    return useMutation<ClearAllTasksResponse, Error, void>({
-        mutationFn: clearAllTasksAndMetadata,
+    return useMutation({
+        ...mutation,
         onSettled: () => {
             // Invalidate all metadata-fetch related queries
             queryClient.invalidateQueries({queryKey: ['metadata-fetch']});
         },
-    });
+    }, queryClient);
 }
