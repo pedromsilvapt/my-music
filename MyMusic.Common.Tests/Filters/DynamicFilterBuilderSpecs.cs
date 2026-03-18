@@ -1,7 +1,5 @@
 using EntityFrameworkCore.Projectables;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Filters;
 using Shouldly;
@@ -23,16 +21,7 @@ public class DynamicFilterBuilderSpecs
     private static (MusicDbContext DbContext, User Owner, List<Song> Songs, List<Artist> Artists, List<Genre> Genres,
         List<Album> Albums) SetupTestData()
     {
-        var keepAliveConnection = new SqliteConnection("DataSource=:memory:");
-        keepAliveConnection.Open();
-
-        var options = new DbContextOptionsBuilder<MusicDbContext>()
-            .UseSqlite(keepAliveConnection)
-            .UseProjectables()
-            .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
-            .Options;
-        var context = new MusicDbContext(options);
-        context.Database.EnsureCreated();
+        var context = Scenario.CreateDbContext();
 
         var owner = new User { Name = "Test User", Username = "testuser" };
         context.Users.Add(owner);

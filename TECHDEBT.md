@@ -72,15 +72,6 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Test Strategy:** Write unit tests for encoding/decoding round-trip.  
 - [x] TD0005
 
-### TD0006 - Create shared test database setup utility
-**File(s):** `MyMusic.Common.Tests/Scenario.cs:50-64`, `MyMusic.Common.Tests/Filters/DynamicFilterBuilderSpecs.cs:24-33`  
-**Severity:** Medium  
-**Impact:** Medium  
-**Description:** In-memory SQLite database setup is duplicated across test files. Create shared `TestDbContextFactory` in `MyMusic.Common.Tests/Utilities/`.  
-**Effort:** Small  
-**Test Strategy:** This is test infrastructure - ensure existing tests pass after extraction.  
-- [ ] TD0006
-
 ### TD0007 - Create shared transaction helper for services
 **File(s):** `MyMusic.Common/Services/MusicService.cs:269, 651, 658, 670` (and other services)  
 **Severity:** Medium  
@@ -562,16 +553,7 @@ This document tracks all identified technical debt in the MyMusic codebase. Each
 **Description:** Duplicates database setup logic instead of using Scenario.CreateDbContext().  
 **Effort:** Small  
 **Test Strategy:** Ensure tests pass after using Scenario.  
-- [ ] TD0057
-
-### TD0058 - Create shared TestDbContextFactory utility
-**File(s):** Create in `MyMusic.Common.Tests/Utilities/`  
-**Severity:** Medium  
-**Impact:** Medium  
-**Description:** Shared utility for in-memory SQLite database setup across all test files.  
-**Effort:** Small  
-**Test Strategy:** This is test infrastructure - ensure existing tests pass.  
-- [ ] TD0058
+- [x] TD0057
 
 ### TD0059 - Document test assertion style guidelines
 **File(s):** Documentation only  
@@ -625,21 +607,21 @@ If you encounter a situation where:
 
 ## Progress Summary
 
-**Total Tasks:** 60  
-**Completed:** 7  
+**Total Tasks:** 58  
+**Completed:** 20  
 **In Progress:** 0  
-**Remaining:** 53
+**Remaining:** 38
 
 ### By Category
-- Backend Duplicated Code: 8 tasks
-- Backend SRP Violations: 13 tasks
-- Backend Consistency: 9 tasks
-- DTO Consistency: 11 tasks
-- Frontend Violations: 9 tasks
-- Cross-Project Utilities: 6 tasks
-- Testing Patterns: 4 tasks
+- Backend Duplicated Code: 7 tasks (3 completed, 4 remaining)
+- Backend SRP Violations: 13 tasks (4 completed, 9 remaining)
+- Backend Consistency: 9 tasks (4 completed, 5 remaining)
+- DTO Consistency: 11 tasks (0 completed, 11 remaining)
+- Frontend Violations: 9 tasks (5 completed, 4 remaining)
+- Cross-Project Utilities: 6 tasks (2 completed, 4 remaining)
+- Testing Patterns: 2 tasks (2 completed, 0 remaining)
 
 ### By Severity
-- High: 17 tasks
-- Medium: 32 tasks
-- Low: 11 tasks
+- High: 17 tasks (3 completed, 14 remaining)
+- Medium: 30 tasks (3 completed, 27 remaining)
+- Low: 11 tasks (14 completed, 0 remaining)
