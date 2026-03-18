@@ -2,6 +2,7 @@ import {Box, Flex, LoadingOverlay} from "@mantine/core";
 import {useDebouncedValue, useElementSize, useSelection, type UseSelectionHandlers} from '@mantine/hooks';
 import type React from "react";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useShallow} from "zustand/react/shallow";
 import {SCROLL_DEBOUNCE_MS, SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
 import type {ScrollPosition} from "../../../contexts/collection-context.tsx";
 import {useCollectionActions} from "../../../contexts/collection-context.tsx";
@@ -67,7 +68,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
         setCollectionServerFilter,
         setCollectionScrollPosition
     } =
-        useCollectionActions(state => ({
+        useCollectionActions(useShallow(state => ({
             getCollectionState: state.getCollectionState,
             setCollectionView: state.setCollectionView,
             setCollectionSort: state.setCollectionSort,
@@ -76,7 +77,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             setCollectionServerSearch: state.setCollectionServerSearch,
             setCollectionServerFilter: state.setCollectionServerFilter,
             setCollectionScrollPosition: state.setCollectionScrollPosition,
-        }));
+        })));
 
     const storeState = stateKey ? getCollectionState(stateKey) : null;
     const initialView = props.initialView ?? 'table';
