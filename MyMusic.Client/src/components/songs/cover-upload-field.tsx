@@ -158,7 +158,7 @@ export default function CoverUploadField({
     }, [openLightbox]);
 
     const previewSrc = value || (currentCoverId ? `/api/artwork/${currentCoverId}` : null);
-    const showSideBySide = diffMode && oldCoverUrl && value;
+    const showSideBySide = diffMode && oldCoverUrl;
 
     const oldBorderColor = isChecked ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-5)';
     const oldBgColor = isChecked ? 'var(--mantine-color-red-0)' : 'var(--mantine-color-gray-1)';

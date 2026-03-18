@@ -1,5 +1,6 @@
 import {Badge, Group, Text} from "@mantine/core";
 import {modals} from '@mantine/modals';
+import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {IconCheck, IconEdit, IconTrash, IconX} from "@tabler/icons-react";
 import {useMemo} from "react";
 import type {ListAuditNonConformitiesItem} from "../../model";
@@ -86,6 +87,7 @@ export function useAuditNonConformitiesSchema(
                             modals.openContextModal({
                                 modal: 'song-editor',
                                 title: 'Edit Song',
+                                size: SONG_EDITOR_MODAL_SIZE,
                                 innerProps: { songIds: uniqueSongIds },
                             });
                         }

@@ -31,3 +31,5 @@ export const LIST_ARTWORK_SIZE = 64;
 export const ZINDEX_MODAL = 1000;
 export const ZINDEX_DRAWER = 1001;
 export const ZINDEX_LIGHTBOX = 1002;
+
+export const SONG_EDITOR_MODAL_SIZE = "lg";

@@ -73,7 +73,7 @@ export default function TagsAutocompleteField({
 
         return (
             <div>
-                <Group gap="xs" align="flex-end">
+                <Group gap="xs" align="flex-start">
                     {onCheckChange && (
                         <Checkbox
                             checked={isChecked}
@@ -111,6 +111,7 @@ export default function TagsAutocompleteField({
                                     input: {
                                         borderColor: newBorderColor,
                                         backgroundColor: newBgColor,
+                                        color: 'var(--mantine-color-gray-7)',
                                     }
                                 }}
                             />

@@ -14,11 +14,14 @@ public static class HostBuilderExtensions
     public static T UseMyMusicCommon<T>(this T builder) where T : IHostApplicationBuilder
     {
         builder.Services.AddSingleton<PurchasesQueue>();
+        builder.Services.AddSingleton<MetadataFetchQueue>();
+        builder.Services.AddHostedService<MetadataFetchCleanupService>();
         builder.Services.AddScoped<IFileSystem, FileSystem>();
         builder.Services.AddScoped<IMusicService, MusicService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
         builder.Services.AddTransient<PurchasesQueue.PurchasesExecutor>();
+        builder.Services.AddTransient<MetadataFetchQueue.MetadataFetchExecutor>();
         builder.Services.AddTransient<MusicImportJob>();
 
         builder.Services.AddScoped<IAuditService, AuditService>();
@@ -30,6 +33,8 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAuditRule, SmallCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, NonJpegCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, NonSquareCoverAuditRule>();
+
+        builder.Services.AddScoped<IAuditRuleFieldMapper, AuditRuleFieldMapper>();
 
         builder.Services.AddScoped<ISeedService, SeedService>();
 

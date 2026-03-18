@@ -18,6 +18,7 @@ using MyMusic.Server.DTO.Songs;
 using MyMusic.Server.DTO.Sources;
 using MyMusic.Common.Sources;
 using MyMusic.Server;
+using MyMusic.Server.Mapping;
 
 namespace MyMusic.Server.Controllers;
 
@@ -35,7 +36,8 @@ public class SongsController(
     ISourcesService sourcesService,
     IAuditService auditService,
     IThumbnailProxyService thumbnailProxyService,
-    IImageComparisonService imageComparisonService)
+    IImageComparisonService imageComparisonService,
+    MetadataDiffBuilder metadataDiffBuilder)
     : ControllerBase
 {
     private readonly ILogger<SongsController> _logger = logger;
@@ -47,6 +49,7 @@ public class SongsController(
     private readonly IAuditService _auditService = auditService;
     private readonly IThumbnailProxyService _thumbnailProxyService = thumbnailProxyService;
     private readonly IImageComparisonService _imageComparisonService = imageComparisonService;
+    private readonly MetadataDiffBuilder _metadataDiffBuilder = metadataDiffBuilder;
     private readonly ServerConfig _serverConfig = serverConfig.Value;
 
     [HttpGet(Name = "ListSongs")]
@@ -1003,8 +1006,11 @@ public class SongsController(
             fullDetails.Album.Cover = _thumbnailProxyService.TransformArtwork(fullDetails.Album.Cover);
         }
 
-        var diff = await CreateMetadataDiffAsync(song, fullDetails, cancellationToken);
+        // Use the shared MetadataDiffBuilder to create the diff
+        var diffModel = await _metadataDiffBuilder.CreateDiffAsync(song, fullDetails, cancellationToken);
+        var diff = MetadataDiffMapper.ToSongMetadataDiff(diffModel);
 
+        // Apply thumbnail proxy to the new cover URL
         if (diff.Cover is not null)
         {
             diff.Cover = new SongMetadataField<string>
@@ -1105,116 +1111,6 @@ public class SongsController(
             score += 5;
 
         return score;
-    }
-
-    private async Task<SongMetadataDiff> CreateMetadataDiffAsync(Song song, SourceSong sourceSong, CancellationToken cancellationToken)
-    {
-        var diff = new SongMetadataDiff();
-
-        if (!string.IsNullOrEmpty(sourceSong.Title) && !string.Equals(song.Title, sourceSong.Title, StringComparison.OrdinalIgnoreCase))
-        {
-            diff.Title = new SongMetadataField<string>
-            {
-                Old = song.Title,
-                New = sourceSong.Title,
-            };
-        }
-
-        if (sourceSong.Year.HasValue && sourceSong.Year.Value > 0 && song.Year != sourceSong.Year)
-        {
-            diff.Year = new SongMetadataField<int>
-            {
-                Old = song.Year ?? 0,
-                New = sourceSong.Year.Value,
-            };
-        }
-
-        if (!string.IsNullOrWhiteSpace(sourceSong.Lyrics) && !string.Equals(song.Lyrics, sourceSong.Lyrics, StringComparison.OrdinalIgnoreCase))
-        {
-            diff.Lyrics = new SongMetadataField<string>
-            {
-                Old = song.Lyrics ?? string.Empty,
-                New = sourceSong.Lyrics,
-            };
-        }
-
-        if (sourceSong.Explicit != song.Explicit)
-        {
-            diff.Explicit = new SongMetadataField<bool>
-            {
-                Old = song.Explicit,
-                New = sourceSong.Explicit,
-            };
-        }
-
-        if (!string.IsNullOrEmpty(sourceSong.Album?.Name) &&
-            !string.Equals(song.Album?.Name, sourceSong.Album.Name, StringComparison.OrdinalIgnoreCase))
-        {
-            diff.Album = new SongMetadataField<SongMetadataAlbum>
-            {
-                Old = new SongMetadataAlbum { Name = song.Album?.Name ?? string.Empty },
-                New = new SongMetadataAlbum { Name = sourceSong.Album.Name },
-            };
-        }
-
-        if (!string.IsNullOrEmpty(sourceSong.Album?.Artist?.Name) &&
-            !string.Equals(song.Album?.Artist?.Name, sourceSong.Album.Artist?.Name, StringComparison.OrdinalIgnoreCase))
-        {
-            diff.AlbumArtist = new SongMetadataField<string>
-            {
-                Old = song.Album?.Artist?.Name ?? string.Empty,
-                New = sourceSong.Album.Artist?.Name ?? string.Empty,
-            };
-        }
-
-        var songArtistNames = song.Artists.Select(a => a.Artist.Name).ToList();
-        var sourceArtistNames = sourceSong.Artists.Select(a => a.Name).ToList();
-
-        if (sourceArtistNames.Count > 0 && !songArtistNames.SequenceEqual(sourceArtistNames, StringComparer.OrdinalIgnoreCase))
-        {
-            diff.Artists = new SongMetadataField<List<SongMetadataArtist>>
-            {
-                Old = songArtistNames.Select(n => new SongMetadataArtist { Name = n }).ToList(),
-                New = sourceArtistNames.Select(n => new SongMetadataArtist { Name = n }).ToList(),
-            };
-        }
-
-        var songGenreNames = song.Genres.Select(g => g.Genre.Name).ToList();
-        var sourceGenreNames = sourceSong.Genres.ToList();
-
-        if (sourceGenreNames.Count > 0 && !songGenreNames.SequenceEqual(sourceGenreNames, StringComparer.OrdinalIgnoreCase))
-        {
-            diff.Genres = new SongMetadataField<List<string>>
-            {
-                Old = songGenreNames,
-                New = sourceGenreNames,
-            };
-        }
-
-        if (sourceSong.Cover != null && !string.IsNullOrEmpty(sourceSong.Cover.Biggest))
-        {
-            var imagesAreDifferent = true;
-
-            if (song.Cover != null && song.Cover.Data.Length > 0)
-            {
-                imagesAreDifferent = await _imageComparisonService.AreImagesDifferentAsync(
-                    song.Cover.Data,
-                    sourceSong.Cover.Biggest,
-                    cancellationToken);
-            }
-
-            if (imagesAreDifferent)
-            {
-                var oldCoverUrl = song.Cover != null ? $"{_serverConfig.ApiBasePath}/artwork/{song.CoverId}" : string.Empty;
-                diff.Cover = new SongMetadataField<string>
-                {
-                    Old = oldCoverUrl,
-                    New = sourceSong.Cover.Biggest,
-                };
-            }
-        }
-
-        return diff;
     }
 
     private SongUpdateModel MapMultiItemToModel(SongMultiUpdateItem item) =>

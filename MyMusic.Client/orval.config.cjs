@@ -62,6 +62,14 @@ module.exports = {
                             invalidates: ['getDevices'],
                         },
                         {
+                            onMutations: ['triggerBatchFetch', 'requeueFailed', 'clearAllTasksAndMetadata'],
+                            invalidates: ['getQueueStatus', 'getFailedTasks'],
+                        },
+                        {
+                            onMutations: ['applyMetadata'],
+                            invalidates: ['getAutoFetchedMetadata'],
+                        },
+                        {
                             onMutations: ['updateCurrentUser'],
                             invalidates: ['getCurrentUser'],
                         },

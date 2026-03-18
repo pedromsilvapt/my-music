@@ -265,6 +265,19 @@ public record GetPlaylistSong : ListSongsItem
 - **Use aliased imports** (`using Entities = ...`) to avoid ambiguity with domain entities
 - **Inherit from `ListSongsItem`** for song-related nested types to reuse its properties
 
+### Cross-Project Configuration Access Pattern
+
+Use this pattern when a service in `MyMusic.Common` needs access to configuration or values only available in `MyMusic.Server`:
+
+1. **Define interface in Common** - Declare the required values
+2. **Implement in Server** - Access actual configuration source  
+3. **Register in DI** - Simple type registration
+
+#### Existing Examples (see code for implementation details)
+
+- **ICurrentUser / HttpCurrentUser** - Access to current user from HTTP context
+- **IApiPathResolver / ApiPathResolver** - Access to server configuration values
+
 ### Imports
 
 ```csharp
@@ -596,3 +609,10 @@ The mobile app uses the same API endpoints as the web client and CLI:
 - Sessions: `/api/devices/{deviceId}/sessions`
 
 Authentication is handled via headers (`X-MyMusic-UserId`, `X-MyMusic-UserName`) stored securely.
+
+## Active Technologies
+- .NET 9.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit (003-metadata-auto-fetch)
+- PostgreSQL with EF Core, JsonElement for metadata patch storage (003-metadata-auto-fetch)
+
+## Recent Changes
+- 003-metadata-auto-fetch: Added .NET 9.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit

@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using System.IO.Abstractions;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
@@ -39,16 +41,16 @@ public static class HostBuilderExtensions
 
             TypeTransformer.MapType<decimal>(new OpenApiSchema { Type = JsonSchemaType.Number, Format = "decimal" });
             TypeTransformer.MapType<decimal?>(new OpenApiSchema
-                { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" });
+            { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "decimal" });
             TypeTransformer.MapType<double>(new OpenApiSchema { Type = JsonSchemaType.Number, Format = "double" });
             TypeTransformer.MapType<double?>(new OpenApiSchema
-                { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "double" });
+            { Type = JsonSchemaType.Number | JsonSchemaType.Null, Format = "double" });
             TypeTransformer.MapType<int>(new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int32" });
             TypeTransformer.MapType<int?>(new OpenApiSchema
-                { Type = JsonSchemaType.Integer | JsonSchemaType.Null, Format = "int32" });
+            { Type = JsonSchemaType.Integer | JsonSchemaType.Null, Format = "int32" });
             TypeTransformer.MapType<long>(new OpenApiSchema { Type = JsonSchemaType.Integer, Format = "int64" });
             TypeTransformer.MapType<long?>(new OpenApiSchema
-                { Type = JsonSchemaType.Integer | JsonSchemaType.Null, Format = "int64" });
+            { Type = JsonSchemaType.Integer | JsonSchemaType.Null, Format = "int64" });
 
             options.AddSchemaTransformer<TypeTransformer>();
 
@@ -71,6 +73,12 @@ public static class HostBuilderExtensions
 
         builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
         builder.Services.Configure<MyMusic.Common.ThumbnailCacheConfig>(builder.Configuration.GetSection("ThumbnailCache"));
+
+        // Register the API path resolver as singleton
+        builder.Services.AddSingleton<IApiPathResolver, ApiPathResolver>();
+
+        // Register MetadataDiffBuilder with simple type registration
+        builder.Services.AddScoped<MetadataDiffBuilder>();
 
         return builder;
     }

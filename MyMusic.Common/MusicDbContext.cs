@@ -48,4 +48,39 @@ public class MusicDbContext : DbContext
     public DbSet<DeviceSyncSessionRecord> DeviceSyncSessionRecords { get; set; } = null!;
 
     public DbSet<AuditNonConformity> AuditNonConformities { get; set; } = null!;
+
+    public DbSet<AutoFetchedMetadata> AutoFetchedMetadata { get; set; } = null!;
+
+    public DbSet<MetadataFetchTask> MetadataFetchTasks { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // AutoFetchedMetadata entity configuration
+        modelBuilder.Entity<AutoFetchedMetadata>(entity =>
+        {
+            // Store JSON data
+            entity.Property(e => e.SourceMetadata).HasColumnType("jsonb");
+
+            // For querying by song + status (finding pending metadata)
+            entity.HasIndex(e => new { e.SongId, e.Status });
+
+            // For 30-day window queries (fetch deduplication)
+            entity.HasIndex(e => new { e.SongId, e.FetchedAt });
+
+            // For status-based cleanup (expired records)
+            entity.HasIndex(e => new { e.Status, e.FetchedAt });
+        });
+
+        // MetadataFetchTask entity configuration
+        modelBuilder.Entity<MetadataFetchTask>(entity =>
+        {
+            // For pulling queued tasks (scheduler)
+            entity.HasIndex(e => new { e.Status, e.CreatedAt });
+
+            // For querying by song (checking if already queued)
+            entity.HasIndex(e => new { e.SongId, e.Status });
+        });
+    }
 }

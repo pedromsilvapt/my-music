@@ -20,6 +20,7 @@ import {saveAs} from 'file-saver';
 
 import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
 import {modals} from '@mantine/modals';
+import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueueMutations} from "../../contexts/player-context.tsx";
@@ -131,6 +132,7 @@ export default function SongDetailPage() {
                                 onClick={() => modals.openContextModal({
                                     modal: 'song-editor',
                                     title: 'Edit Song',
+                                    size: SONG_EDITOR_MODAL_SIZE,
                                     innerProps: { songIds: [song.id] },
                                 })}
                             >

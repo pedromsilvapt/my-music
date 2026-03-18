@@ -1,11 +1,16 @@
-import {Badge, Group, Paper, Text, Title} from "@mantine/core";
-import {IconClipboardCheck} from '@tabler/icons-react';
+import {Badge, Button, Group, Paper, Text, Title} from "@mantine/core";
+import {IconClipboardCheck, IconRefresh} from '@tabler/icons-react';
 import {Link} from "@tanstack/react-router";
+import {useState} from "react";
 import {useListAuditRules} from "../../client/audits.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
+import {useBatchMetadataFetch} from "../../hooks/useBatchMetadataFetch";
+import {TaskMonitorLink} from "./task-monitor-link";
 
 export default function AuditsPage() {
     const auditRulesQuery = useListAuditRules();
+    const batchFetch = useBatchMetadataFetch();
+    const [message, setMessage] = useState<string | null>(null);
 
     const auditRulesResponse = useQueryData(
         auditRulesQuery,
@@ -14,11 +19,37 @@ export default function AuditsPage() {
 
     const rules = auditRulesResponse?.data?.rules ?? [];
 
+    const handleAutoFetch = () => {
+        batchFetch.mutate(undefined, {
+            onSuccess: (response) => {
+                setMessage(response.message);
+                setTimeout(() => setMessage(null), 5000);
+            }
+        });
+    };
+
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
             <Group justify="space-between" mb="md">
                 <Title order={2}>Audits</Title>
+                <Group gap="sm">
+                    <TaskMonitorLink />
+                    <Button
+                        leftSection={<IconRefresh size={18}/>}
+                        onClick={handleAutoFetch}
+                        loading={batchFetch.isPending}
+                        variant="light"
+                    >
+                        Auto-fetch Metadata
+                    </Button>
+                </Group>
             </Group>
+
+            {message && (
+                <Paper p="sm" mb="md" withBorder bg="green.0">
+                    <Text c="green.7">{message}</Text>
+                </Paper>
+            )}
 
             <div style={{flex: 1, overflow: 'auto'}}>
                 {rules.map((rule) => (

@@ -15,6 +15,7 @@ import {
 } from "@tabler/icons-react";
 import {saveAs} from 'file-saver';
 import {modals} from '@mantine/modals';
+import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useCallback, useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
@@ -191,6 +192,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                         modals.openContextModal({
                             modal: 'song-editor',
                             title: 'Edit Song',
+                            size: SONG_EDITOR_MODAL_SIZE,
                             innerProps: { songIds: songs.map(s => s.id) },
                         });
                     },
