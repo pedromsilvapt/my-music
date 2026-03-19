@@ -13,7 +13,12 @@ export type GetDevicesDeviceIdSessionsSessionIdRecordsParams = {
 	 * @pattern ^-?(?:0|[1-9]\d*)$
 	 */
 	limit?: number | null;
-	cursor?: string;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	offset?: number | null;
+	sort?: string;
 	includeSongInfo?: boolean;
 	filter?: string;
 };

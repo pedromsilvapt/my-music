@@ -650,6 +650,6 @@ export async function fetchSyncHistory(deviceId: number, count: number = 10) {
     return getSessions(deviceId, count);
 }
 
-export async function fetchSessionDetails(deviceId: number, sessionId: number, actions?: string, source?: string, limit?: number, cursor?: string | null) {
-    return getSessionRecords(deviceId, sessionId, actions, source, limit, cursor);
+export async function fetchSessionDetails(deviceId: number, sessionId: number, actions?: string, source?: string, limit?: number, offset?: number | null, sort?: string) {
+    return getSessionRecords(deviceId, sessionId, actions, source, limit, offset, sort);
 }

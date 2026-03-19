@@ -1,6 +1,6 @@
 import {Ionicons} from '@expo/vector-icons';
 import {useLocalSearchParams, useNavigation, useRouter} from 'expo-router';
-import React, {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useLayoutEffect, useMemo, useState} from 'react';
 import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {FlashList} from '@shopify/flash-list';
 import type {SyncRecordResponseItem, SyncSessionItem} from '../../src/api/types';
@@ -11,7 +11,7 @@ import {useTheme} from '../../src/hooks/useTheme';
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 
-type FilterType = 'all' | 'created' | 'updated' | 'skipped' | 'downloaded' | 'removed' | 'error' | 'conflict';
+type FilterType = 'all' | 'created' | 'updated' | 'skipped' | 'downloaded' | 'removed' | 'error';
 
 const PAGE_SIZE = 50;
 
@@ -33,11 +33,6 @@ function formatFilePath(path: string, repositoryPath: string | null | undefined)
     }
 
     return formatted;
-}
-
-interface RecordGroup {
-    action: string;
-    records: SyncRecordResponseItem[];
 }
 
 type FlatListItem =
@@ -63,12 +58,7 @@ export default function SessionDetailScreen() {
     const [isLoadingFilter, setIsLoadingFilter] = useState(false);
     const [filter, setFilter] = useState<FilterType>('all');
     const [error, setError] = useState<ErrorDetails | null>(null);
-    const [cursor, setCursor] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(false);
-    const [totalCount, setTotalCount] = useState(0);
-
-    const filterRef = useRef(filter);
-    filterRef.current = filter;
 
     const loadRecords = useCallback(async (isInitial: boolean = false, isFilterChange: boolean = false) => {
         if (!deviceId || !sessionId) return;
@@ -89,32 +79,32 @@ export default function SessionDetailScreen() {
                         filter === 'all' ? undefined : filter,
                         undefined,
                         PAGE_SIZE,
-                        null
+                        0,
+                        'action_date'
                     )
                 ]);
 
                 const foundSession = sessionsResponse.sessions.find(s => s.id === parseInt(sessionId));
                 setSession(foundSession || null);
                 setRecords(recordsResponse.records);
-                setCursor(recordsResponse.nextCursor);
                 setHasMore(recordsResponse.hasMore);
-                setTotalCount(recordsResponse.totalCount);
             } else {
                 // Load next page
-                if (!hasMore || loadingMore || !cursor) return;
+                if (!hasMore || loadingMore) return;
 
                 setLoadingMore(true);
+                const currentOffset = records.length;
                 const recordsResponse = await fetchSessionDetails(
                     deviceId,
                     parseInt(sessionId),
                     filter === 'all' ? undefined : filter,
                     undefined,
                     PAGE_SIZE,
-                    cursor
+                    currentOffset,
+                    'action_date'
                 );
 
                 setRecords(prev => [...prev, ...recordsResponse.records]);
-                setCursor(recordsResponse.nextCursor);
                 setHasMore(recordsResponse.hasMore);
             }
             setError(null);
@@ -132,7 +122,7 @@ export default function SessionDetailScreen() {
             setLoadingMore(false);
             setIsLoadingFilter(false);
         }
-    }, [deviceId, sessionId, filter, cursor, hasMore, loadingMore]);
+    }, [deviceId, sessionId, filter, hasMore, loadingMore]);
 
     // Initial load
     useEffect(() => {
@@ -144,7 +134,6 @@ export default function SessionDetailScreen() {
         if (!loading && session) {
             // Reset pagination and reload with new filter
             // Don't clear records yet - skeletons will overlay them
-            setCursor(null);
             setHasMore(false);
             loadRecords(true, true);
         }
@@ -210,30 +199,31 @@ export default function SessionDetailScreen() {
         });
     }, [navigation, handleDelete]);
 
-    const filteredRecords = useMemo(() => {
-        if (filter === 'all') return records;
-        return records.filter(r => r.action.toLowerCase() === filter);
-    }, [records, filter]);
+    // Server returns records sorted by action then date, so they arrive pre-grouped.
+    // Build group headers by detecting action boundaries in the ordered records.
+    const groupEntries = useMemo((): Array<{ action: string; records: SyncRecordResponseItem[] }> => {
+        const groups: Array<{ action: string; records: SyncRecordResponseItem[] }> = [];
+        let currentAction: string | null = null;
+        let currentGroup: SyncRecordResponseItem[] = [];
 
-    const groupedRecords = useMemo(() => {
-        const groups: Record<string, SyncRecordResponseItem[]> = {};
-        for (const record of filteredRecords) {
-            if (!groups[record.action]) {
-                groups[record.action] = [];
+        for (const record of records) {
+            if (record.action !== currentAction) {
+                if (currentAction !== null && currentGroup.length > 0) {
+                    groups.push({action: currentAction, records: currentGroup});
+                }
+                currentAction = record.action;
+                currentGroup = [record];
+            } else {
+                currentGroup.push(record);
             }
-            groups[record.action].push(record);
         }
-        return groups;
-    }, [filteredRecords]);
 
-    const sortedGroupEntries = useMemo(() => {
-        const entries = Object.entries(groupedRecords);
-        return entries.sort(([actionA], [actionB]) => {
-            if (actionA.toLowerCase() === 'skipped') return 1;
-            if (actionB.toLowerCase() === 'skipped') return -1;
-            return actionA.localeCompare(actionB);
-        });
-    }, [groupedRecords]);
+        if (currentAction !== null && currentGroup.length > 0) {
+            groups.push({action: currentAction, records: currentGroup});
+        }
+
+        return groups;
+    }, [records]);
 
     const getActionColor = (action: string) => {
         switch (action.toLowerCase()) {
@@ -249,8 +239,6 @@ export default function SessionDetailScreen() {
                 return colors.error;
             case 'error':
                 return colors.error;
-            case 'conflict':
-                return colors.warning;
             default:
                 return colors.textSecondary;
         }
@@ -270,8 +258,6 @@ export default function SessionDetailScreen() {
                 return 'error';
             case 'error':
                 return 'error';
-            case 'conflict':
-                return 'warning';
             default:
                 return 'textSecondary';
         }
@@ -280,10 +266,22 @@ export default function SessionDetailScreen() {
     const getActionIcon = (action: string, source: string) => {
         if (action.toLowerCase() === 'error') return 'alert-circle';
         if (action.toLowerCase() === 'skipped') return 'skip-forward';
-        if (action.toLowerCase() === 'conflict') return 'warning';
         if (source === 'Server') return 'cloud-download';
         return 'cloud-upload';
     };
+
+    const getSessionActionCount = useCallback((action: string): number => {
+        if (!session) return 0;
+        switch (action.toLowerCase()) {
+            case 'created': return session.createdCount;
+            case 'updated': return session.updatedCount;
+            case 'skipped': return session.skippedCount;
+            case 'downloaded': return session.downloadedCount;
+            case 'removed': return session.removedCount;
+            case 'error': return session.errorCount;
+            default: return 0;
+        }
+    }, [session]);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleString();
@@ -297,7 +295,6 @@ export default function SessionDetailScreen() {
         {key: 'downloaded', label: 'Down'},
         {key: 'removed', label: 'Removed'},
         {key: 'error', label: 'Errors'},
-        {key: 'conflict', label: 'Conflicts'},
     ];
 
     // Build flat list data for FlashList
@@ -315,18 +312,18 @@ export default function SessionDetailScreen() {
             for (let i = 0; i < 5; i++) {
                 data.push({type: 'skeleton'});
             }
-        } else if (sortedGroupEntries.length === 0) {
+        } else if (groupEntries.length === 0) {
             data.push({type: 'empty'});
         } else {
-            for (const [action, actionRecords] of sortedGroupEntries) {
+            for (const group of groupEntries) {
                 data.push({
                     type: 'group_header',
-                    action,
-                    count: actionRecords.length,
-                    firstRecord: actionRecords[0],
+                    action: group.action,
+                    count: getSessionActionCount(group.action),
+                    firstRecord: group.records[0],
                 });
 
-                actionRecords.forEach((record) => {
+                group.records.forEach((record) => {
                     data.push({
                         type: 'record',
                         record,
@@ -341,7 +338,7 @@ export default function SessionDetailScreen() {
         }
 
         return data;
-    }, [session, sortedGroupEntries, filter, loadingMore, isLoadingFilter]);
+    }, [session, groupEntries, filter, loadingMore, isLoadingFilter, getSessionActionCount]);
 
     const handleLoadMore = useCallback(() => {
         if (hasMore && !loadingMore && !loading) {

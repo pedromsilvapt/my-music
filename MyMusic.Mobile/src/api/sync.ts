@@ -110,14 +110,16 @@ export async function getSessionRecords(
     actions?: string,
     source?: string,
     limit?: number,
-    cursor?: string | null
+    offset?: number | null,
+    sort?: string
 ) {
     let url = `/devices/${deviceId}/sessions/${sessionId}/records`;
     const params = new URLSearchParams();
     if (actions) params.set('actions', actions);
     if (source) params.set('source', source);
     if (limit !== undefined) params.set('limit', limit.toString());
-    if (cursor) params.set('cursor', cursor);
+    if (offset !== undefined && offset !== null) params.set('offset', offset.toString());
+    if (sort) params.set('sort', sort);
     const queryString = params.toString();
     if (queryString) url += `?${queryString}`;
 

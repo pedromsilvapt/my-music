@@ -353,7 +353,8 @@ public class DevicesController(
         [FromQuery] string? actions = null,
         [FromQuery] string? source = null,
         [FromQuery] int? limit = null,
-        [FromQuery] string? cursor = null,
+        [FromQuery] int? offset = null,
+        [FromQuery] string? sort = null,
         [FromQuery] bool? includeSongInfo = null,
         [FromQuery] string? filter = null,
         CancellationToken cancellationToken = default)
@@ -407,14 +408,25 @@ public class DevicesController(
         // Get total count for pagination metadata
         var totalCount = await query.CountAsync(cancellationToken);
 
-        // Apply cursor filter if provided (records with ID greater than cursor)
-        if (!string.IsNullOrEmpty(cursor) && long.TryParse(cursor, out var cursorId))
+        // Apply sorting
+        IOrderedQueryable<DeviceSyncSessionRecord> orderedQuery;
+        if (sort == "action_date")
         {
-            query = query.Where(r => r.Id > cursorId);
+            orderedQuery = query
+                .OrderBy(r => r.Action)
+                .ThenBy(r => r.ProcessedAt)
+                .ThenBy(r => r.Id);
+        }
+        else
+        {
+            orderedQuery = query.OrderBy(r => r.Id);
         }
 
-        // Order by ID for stable pagination
-        query = query.OrderBy(r => r.Id);
+        // Apply offset-based pagination
+        if (offset.HasValue && offset.Value > 0)
+        {
+            orderedQuery = (IOrderedQueryable<DeviceSyncSessionRecord>)orderedQuery.Skip(offset.Value);
+        }
 
         List<DeviceSyncSessionRecord> records;
         string? nextCursor = null;
@@ -423,7 +435,7 @@ public class DevicesController(
         if (limit.HasValue)
         {
             // Fetch one extra to determine if there are more records
-            records = await query
+            records = await orderedQuery
                 .Take(limit.Value + 1)
                 .ToListAsync(cancellationToken);
 
@@ -432,13 +444,14 @@ public class DevicesController(
             {
                 hasMore = true;
                 records.RemoveAt(records.Count - 1); // Remove the extra record
-                nextCursor = records.LastOrDefault()?.Id.ToString();
+                var currentOffset = offset ?? 0;
+                nextCursor = (currentOffset + limit.Value).ToString();
             }
         }
         else
         {
             // No limit specified - return all records (backward compatibility)
-            records = await query.ToListAsync(cancellationToken);
+            records = await orderedQuery.ToListAsync(cancellationToken);
         }
 
         return new ListSyncRecordsResponse
