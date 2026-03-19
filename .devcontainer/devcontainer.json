@@ -9,10 +9,10 @@
     "--hostname=my-music-devcontainer"
   ],
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
-    "ghcr.io/meaningful-ooo/devcontainer-features/fish:2": {}
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
   "postCreateCommand": "dotnet restore && cd MyMusic.Client && pnpm install",
+  "postStartCommand": "sudo sysctl -p",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -47,18 +47,8 @@
       "type": "volume"
     },
     {
-      "source": "${localEnv:HOME}/.local/share/opencode/auth.json",
-      "target": "/home/vscode/.local/share/opencode/auth.json",
-      "type": "bind"
-    },
-    {
       "source": "${localEnv:HOME}/.config/opencode",
       "target": "/home/vscode/.config/opencode",
-      "type": "bind"
-    },
-    {
-      "source": "${localWorkspaceFolder}/.devcontainer/opencode.json",
-      "target": "/home/vscode/.config/opencode/opencode.json",
       "type": "bind"
     },
     {
