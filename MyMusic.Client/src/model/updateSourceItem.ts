@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface UpdateSourceItem {
-  icon: string;
-  name: string;
-  address: string;
-  isPaid: boolean;
+	icon: string;
+	name: string;
+	address: string;
+	isPaid: boolean;
 }

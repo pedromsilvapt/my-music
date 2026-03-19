@@ -17,6 +17,7 @@ public record ListSongItem
     public required IEnumerable<ListSongsGenre> Genres { get; set; }
     public required int? Year { get; set; }
     public required string Duration { get; set; }
+    public required IEnumerable<ListSongsDevice> Devices { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
     public required DateTime CreatedAt { get; set; }
@@ -27,6 +28,7 @@ public record ListSongItem
         var artists = song.Artists.Select(a => ListSongsArtist.FromEntity(a.Artist)).ToList();
         var genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList();
         var album = ListSongsAlbum.FromEntity(song.Album);
+        var devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).ToList();
 
         return new ListSongItem
         {
@@ -38,6 +40,7 @@ public record ListSongItem
             Genres = genres,
             Year = song.Year,
             Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
+            Devices = devices,
             IsFavorite = song.IsFavorite,
             IsExplicit = song.Explicit,
             CreatedAt = song.CreatedAt,
@@ -87,6 +90,25 @@ public record ListSongsGenre
         {
             Id = genre.Id,
             Name = genre.Name,
+        };
+    }
+}
+
+public record ListSongsDevice
+{
+    public required long Id { get; set; }
+    public required string Name { get; set; }
+    public string? Icon { get; set; }
+    public string? Color { get; set; }
+
+    public static ListSongsDevice FromEntity(Entities.Device device)
+    {
+        return new ListSongsDevice
+        {
+            Id = device.Id,
+            Name = device.Name,
+            Icon = device.Icon,
+            Color = device.Color
         };
     }
 }

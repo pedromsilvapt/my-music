@@ -5,11 +5,11 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type ArtistSongFilter = typeof ArtistSongFilter[keyof typeof ArtistSongFilter];
-
+export type ArtistSongFilter =
+	(typeof ArtistSongFilter)[keyof typeof ArtistSongFilter];
 
 export const ArtistSongFilter = {
-  All: 'All',
-  Own: 'Own',
-  Other: 'Other',
+	All: "All",
+	Own: "Own",
+	Other: "Other",
 } as const;

@@ -6,6 +6,6 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export type ListAlbumsParams = {
-search?: string;
-filter?: string;
+	search?: string;
+	filter?: string;
 };

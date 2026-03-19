@@ -5,7 +5,7 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type GetAlbumFilterValuesParams = {
+export type GetDevicesDeviceIdSessionsSessionIdRecordsFilterValuesParams = {
 	field?: string;
 	search?: string;
 	/**

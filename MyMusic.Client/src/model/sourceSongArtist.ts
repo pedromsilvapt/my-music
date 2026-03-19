@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SourceSongArtist {
-  id: string;
-  name: string;
-  /** @nullable */
-  link?: string | null;
+	id: string;
+	name: string;
+	/** @nullable */
+	link?: string | null;
 }

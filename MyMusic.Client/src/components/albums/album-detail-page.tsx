@@ -3,7 +3,7 @@ import {IconArrowBack, IconDisc} from "@tabler/icons-react";
 import {Link, useParams} from "@tanstack/react-router";
 import {useGetAlbum} from "../../client/albums.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListSongsItem} from "../../model";
+import type {ListSongItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
@@ -19,7 +19,7 @@ export default function AlbumDetailPage() {
         return <Box p="md">Loading...</Box>;
     }
 
-    const songs = album.songs as unknown as ListSongsItem[];
+    const songs = album.songs as unknown as ListSongItem[];
 
     return (
         <Stack gap="md">

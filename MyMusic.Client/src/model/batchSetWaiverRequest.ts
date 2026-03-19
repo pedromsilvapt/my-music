@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface BatchSetWaiverRequest {
-  ids: number[];
-  hasWaiver: boolean;
-  /** @nullable */
-  waiverReason?: string | null;
+	ids: number[];
+	hasWaiver: boolean;
+	/** @nullable */
+	waiverReason?: string | null;
 }

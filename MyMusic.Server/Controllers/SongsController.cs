@@ -62,6 +62,8 @@ public class SongsController(
             .ThenInclude(a => a.Artist)
             .Include(s => s.Genres)
             .ThenInclude(g => g.Genre)
+            .Include(s => s.Devices)
+            .ThenInclude(sd => sd.Device)
             .AsSplitQuery();
 
         if (!string.IsNullOrWhiteSpace(search))

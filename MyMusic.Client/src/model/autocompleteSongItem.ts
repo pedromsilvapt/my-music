@@ -6,16 +6,16 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface AutocompleteSongItem {
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  id: number;
-  title: string;
-  /** @nullable */
-  albumName?: string | null;
-  /**
-   * @nullable
-   * @pattern ^-?(?:0|[1-9]\d*)$
-   */
-  coverId?: number | null;
-  /** @nullable */
-  artistName?: string | null;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	id: number;
+	title: string;
+	/** @nullable */
+	albumName?: string | null;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	coverId?: number | null;
+	/** @nullable */
+	artistName?: string | null;
 }

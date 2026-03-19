@@ -5,11 +5,11 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type AddToQueuePosition = typeof AddToQueuePosition[keyof typeof AddToQueuePosition];
-
+export type AddToQueuePosition =
+	(typeof AddToQueuePosition)[keyof typeof AddToQueuePosition];
 
 export const AddToQueuePosition = {
-  Now: 'Now',
-  Next: 'Next',
-  Last: 'Last',
+	Now: "Now",
+	Next: "Next",
+	Last: "Last",
 } as const;

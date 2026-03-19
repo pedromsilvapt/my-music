@@ -3,7 +3,7 @@ import {IconArrowBack, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListAlbumsItem, ListSongsItem} from "../../model";
+import type {ListAlbumsItem, ListSongItem} from "../../model";
 import {GetArtistSongFilter} from "../../model";
 import {useAlbumsSchema} from "../albums/useAlbumsSchema.tsx";
 import Artwork from "../common/artwork.tsx";
@@ -30,7 +30,7 @@ export default function ArtistDetailPage() {
     }
 
     const albums = artist.albums as unknown as ListAlbumsItem[];
-    const songs = artist.songs as unknown as ListSongsItem[];
+    const songs = artist.songs as unknown as ListSongItem[];
 
     return (
         <Stack gap="md">

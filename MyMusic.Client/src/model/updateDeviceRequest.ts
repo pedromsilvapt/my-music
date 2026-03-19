@@ -6,14 +6,14 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface UpdateDeviceRequest {
-  /** @nullable */
-  icon?: string | null;
-  /** @nullable */
-  color?: string | null;
-  /** @nullable */
-  namingTemplate?: string | null;
-  /** @nullable */
-  importOnPurchase?: boolean | null;
-  /** @nullable */
-  forceCreateActions?: boolean | null;
+	/** @nullable */
+	icon?: string | null;
+	/** @nullable */
+	color?: string | null;
+	/** @nullable */
+	namingTemplate?: string | null;
+	/** @nullable */
+	importOnPurchase?: boolean | null;
+	/** @nullable */
+	forceCreateActions?: boolean | null;
 }

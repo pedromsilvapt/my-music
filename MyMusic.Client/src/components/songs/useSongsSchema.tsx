@@ -18,11 +18,12 @@ import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useCallback, useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs";
+import {useGetDevices} from "../../client/devices";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
 import {useCurrentSongId, useQueue, useQueueMutations} from "../../contexts/player-context";
 import {useToggleFavorites} from "../../hooks/use-favorites";
-import type {ListSongsItem} from "../../model";
+import type {ListSongItem} from "../../model";
 import {usePlaybackStoreApi} from "../../stores/playback-store";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 import {isGetPlaylistSong} from "../../utils/type-guards";
@@ -35,8 +36,9 @@ import SongSubTitle from "../common/fields/song-sub-title";
 import SongTitle from "../common/fields/song-title";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {usePlayHandler} from "../player/usePlayHandler";
+import {SongDevicesCell} from "./song-devices-cell";
 
-export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongsItem> {
+export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongItem> {
     const {play, playNext, playLast, removeByIndices, shuffleByIndices} = useQueueMutations();
     const playbackStore = usePlaybackStoreApi();
     const currentSongId = useCurrentSongId();
@@ -56,6 +58,9 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
     const {open: openManageDevices} = useManageDevicesContext();
     const {data: filterMetadata} = useFilterMetadata('songs');
 
+    const {data: devicesData} = useGetDevices();
+    const allDevices = useMemo(() => devicesData?.data.devices ?? [], [devicesData]);
+    
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
         const params = new URLSearchParams({field, limit: "15"});
         if (searchTerm) params.set("search", searchTerm);
@@ -76,7 +81,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
             ...(nowPlaying ? [{
                 name: 'position',
                 displayName: '',
-                render: (row: ListSongsItem & { order?: number }) => <Text c="dimmed">#{(row.order ?? 0) + 1}</Text>,
+                render: (row: ListSongItem & { order?: number }) => <Text c="dimmed">#{(row.order ?? 0) + 1}</Text>,
                 align: 'center',
                 width: 40,
             }] : []),
@@ -138,6 +143,13 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                 sortable: true,
             },
             {
+                name: 'devices',
+                displayName: 'Devices',
+                render: row => <SongDevicesCell song={row} allDevices={allDevices} />,
+                align: 'center',
+                width: 'auto',
+            },
+            {
                 name: 'createdAt',
                 displayName: 'Created At',
                 render: row => row.createdAt,
@@ -164,7 +176,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: "favorite",
                     renderIcon: () => allAreFavorites ? <IconHeartFilled/> : <IconHeart/>,
                     renderLabel: () => allAreFavorites ? "Unfavorite" : "Favorite",
-                    onClick: (songs: ListSongsItem[]) => {
+                    onClick: (songs: ListSongItem[]) => {
                         toggleFavorites.mutate({data: {ids: songs.map(s => s.id)}});
                     },
                 },
@@ -172,7 +184,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: "manage-playlists",
                     renderIcon: () => <IconPlaylistAdd/>,
                     renderLabel: () => "Manage Playlists",
-                    onClick: (songs: ListSongsItem[]) => {
+                    onClick: (songs: ListSongItem[]) => {
                         openManagePlaylists(songs.map(s => s.id));
                     },
                 },
@@ -180,7 +192,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: "manage-devices",
                     renderIcon: () => <IconDevicesCog/>,
                     renderLabel: () => "Manage Devices",
-                    onClick: (songs: ListSongsItem[]) => {
+                    onClick: (songs: ListSongItem[]) => {
                         openManageDevices(songs.map(s => s.id));
                     },
                 },
@@ -188,7 +200,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: "edit",
                     renderIcon: () => <IconEdit/>,
                     renderLabel: () => `Edit ${elems.length === 1 ? 'Song' : `${elems.length} Songs`}`,
-                    onClick: (songs: ListSongsItem[]) => {
+                    onClick: (songs: ListSongItem[]) => {
                         modals.openContextModal({
                             modal: 'song-editor',
                             title: 'Edit Song',
@@ -201,7 +213,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: 'download',
                     renderIcon: () => <IconDownload/>,
                     renderLabel: () => "Download",
-                    onClick: (songs: ListSongsItem[]) => {
+                    onClick: (songs: ListSongItem[]) => {
                         for (const song of songs) {
                             saveAs(getDownloadSongUrl(song.id));
                         }
@@ -212,26 +224,26 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                     name: "play",
                     renderIcon: () => <IconPlayerPlayFilled/>,
                     renderLabel: () => "Play",
-                    onClick: (songs: ListSongsItem[]) => play(songs),
+                    onClick: (songs: ListSongItem[]) => play(songs),
                 },
                 {
                     name: "play-next",
                     renderIcon: () => <IconArrowRightDashed/>,
                     renderLabel: () => "Play Next",
-                    onClick: (songs: ListSongsItem[]) => playNext(songs),
+                    onClick: (songs: ListSongItem[]) => playNext(songs),
                 },
                 {
                     name: "play-last",
                     renderIcon: () => <IconArrowForward/>,
                     renderLabel: () => "Play Last",
-                    onClick: (songs: ListSongsItem[]) => playLast(songs),
+                    onClick: (songs: ListSongItem[]) => playLast(songs),
                 },
                 ...(nowPlaying ? [
                     {
                         name: "shuffle",
                         renderIcon: () => <IconArrowsShuffle/>,
                         renderLabel: () => "Shuffle",
-                        onClick: (songs: ListSongsItem[]) => {
+                        onClick: (songs: ListSongItem[]) => {
                             const indices = songs
                                 .map(s => isGetPlaylistSong(s) ? s.order : -1)
                                 .filter((i): i is number => i >= 0);
@@ -242,7 +254,7 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
                         name: "remove-from-queue",
                         renderIcon: () => <IconX/>,
                         renderLabel: () => "Remove from Queue",
-                        onClick: (songs: ListSongsItem[]) => {
+                        onClick: (songs: ListSongItem[]) => {
                             const indices = songs
                                 .map(s => isGetPlaylistSong(s) ? s.order : -1)
                                 .filter((i): i is number => i >= 0);
@@ -263,5 +275,5 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongsItem>, [play, playNext, playLast, removeByIndices, shuffleByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeByIndices, shuffleByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices]);
 }
