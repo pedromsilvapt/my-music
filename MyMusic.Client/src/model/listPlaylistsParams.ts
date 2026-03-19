@@ -6,7 +6,7 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export type ListPlaylistsParams = {
-	includeSystem?: boolean;
-	search?: string;
-	filter?: string;
+includeSystem?: boolean;
+search?: string;
+filter?: string;
 };

@@ -13,6 +13,7 @@ public class DeviceSyncSessionRecord
 
     [MaxLength(1024)] public required string FilePath { get; set; }
 
+    public Song? Song { get; set; }
     public long? SongId { get; set; }
 
     public SyncRecordAction Action { get; set; }

@@ -6,10 +6,10 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SetWaiverRequest {
-	hasWaiver: boolean;
-	/**
-	 * @maxLength 500
-	 * @nullable
-	 */
-	waiverReason?: string | null;
+  hasWaiver: boolean;
+  /**
+   * @maxLength 500
+   * @nullable
+   */
+  waiverReason?: string | null;
 }

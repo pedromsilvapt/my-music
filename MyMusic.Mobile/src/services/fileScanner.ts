@@ -29,6 +29,18 @@ export interface ScanResult {
 
 const PROGRESS_INTERVAL_MS = 100;
 const YIELD_INTERVAL_MS = 16;
+const IDLE_CALLBACK_TIMEOUT_MS = 10;
+
+// Helper to yield control to the UI thread using requestIdleCallback with fallback
+function yieldToUI(): Promise<void> {
+    return new Promise((resolve) => {
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => resolve(), { timeout: IDLE_CALLBACK_TIMEOUT_MS });
+        } else {
+            setTimeout(resolve, 0);
+        }
+    });
+}
 
 export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult> {
     const files: FileMetadata[] = [];
@@ -158,7 +170,7 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                 // Yield to UI thread every YIELD_INTERVAL_MS to prevent freezing
                 const now = Date.now();
                 if (now - lastYieldTime >= YIELD_INTERVAL_MS) {
-                    await new Promise(resolve => setImmediate(resolve));
+                    await yieldToUI();
                     lastYieldTime = now;
                 }
             }

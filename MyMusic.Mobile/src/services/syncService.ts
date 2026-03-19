@@ -20,8 +20,10 @@ import {
     getChunkSize,
     getDeviceId,
     getExcludePatterns,
+    getLastScanTotal,
     getMusicExtensions,
     getRepositoryPath,
+    setLastScanTotal,
     setLastSyncAt
 } from './configService';
 import {scanFromDirectory, type ScanResult} from './fileScanner';
@@ -93,7 +95,18 @@ export async function runSync(
     try {
         await activateKeepAwakeAsync();
 
-        onProgress({phase: 'scanning', totalFiles: 0, processedFiles: 0, scannedFiles: 0, currentFile: 'Scanning your music folder...'});
+        // Load previous scan total for estimation
+        const previousScanTotal = await getLastScanTotal();
+        let estimatedTotal = previousScanTotal || 0;
+
+        onProgress({
+            phase: 'scanning',
+            totalFiles: 0,
+            estimatedTotalFiles: estimatedTotal,
+            processedFiles: 0,
+            scannedFiles: 0,
+            currentFile: 'Scanning your music folder...'
+        });
 
         const checkCancelled = () => {
             if (useSyncStore.getState().isCancelled) {
@@ -111,8 +124,15 @@ export async function runSync(
                 checkCancelled();
                 // Extract a readable directory name from the full path
                 const dirName = currentDir.split('/').pop() || 'music folder';
+                
+                // If actual count exceeds estimate, update estimate to match
+                if (scannedCount > estimatedTotal) {
+                    estimatedTotal = scannedCount;
+                }
+                
                 onProgress({
                     scannedFiles: scannedCount,
+                    estimatedTotalFiles: estimatedTotal,
                     currentFile: `${scannedCount} files found in ${dirName}...`
                 });
             },
@@ -126,7 +146,18 @@ export async function runSync(
 
         checkCancelled();
 
-        onProgress({totalFiles: files.length, scannedFiles: files.length, phase: 'upload', currentFile: ''});
+        // Update estimate one final time if actual is higher
+        if (files.length > estimatedTotal) {
+            estimatedTotal = files.length;
+        }
+
+        onProgress({
+            totalFiles: files.length,
+            estimatedTotalFiles: estimatedTotal,
+            scannedFiles: files.length,
+            phase: 'upload',
+            currentFile: ''
+        });
 
         const startResponse = await startSync(deviceId, {dryRun: options.dryRun, repositoryPath});
         const sessionId = startResponse.sessionId;
@@ -485,6 +516,9 @@ export async function runSync(
         result.sessionId = sessionId;
 
         await setLastSyncAt(new Date().toISOString());
+        
+        // Save the actual scan count for next sync's estimate
+        await setLastScanTotal(files.length);
 
     } catch (error) {
         if (error instanceof SyncCancelledError) {

@@ -493,6 +493,9 @@ namespace MyMusic.Common.Migrations
                     b.HasKey("Id")
                         .HasName("pk_device_sync_session_records");
 
+                    b.HasIndex("SongId")
+                        .HasDatabaseName("ix_device_sync_session_records_song_id");
+
                     b.HasIndex("SessionId", "FilePath")
                         .IsUnique()
                         .HasDatabaseName("ix_device_sync_session_records_session_id_file_path");
@@ -1301,7 +1304,14 @@ namespace MyMusic.Common.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_device_sync_session_records_device_sync_sessions_session_id");
 
+                    b.HasOne("MyMusic.Common.Entities.Song", "Song")
+                        .WithMany()
+                        .HasForeignKey("SongId")
+                        .HasConstraintName("fk_device_sync_session_records_songs_song_id");
+
                     b.Navigation("Session");
+
+                    b.Navigation("Song");
                 });
 
             modelBuilder.Entity("MyMusic.Common.Entities.Genre", b =>

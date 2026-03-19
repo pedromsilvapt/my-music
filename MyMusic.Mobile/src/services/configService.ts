@@ -1,9 +1,11 @@
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {DEFAULT_DEVICE_TYPE} from '../constants/deviceIcons';
 import {useConfigStore} from '../stores/configStore';
 
 const SECURE_USER_ID_KEY = 'mymusic-userId';
 const SECURE_USER_NAME_KEY = 'mymusic-userName';
+const LAST_SCAN_TOTAL_KEY = 'mymusic-lastScanTotal';
 
 let isInitialized = false;
 
@@ -147,6 +149,15 @@ export function getAllConfig() {
     };
 }
 
+export async function getLastScanTotal(): Promise<number | null> {
+    const value = await AsyncStorage.getItem(LAST_SCAN_TOTAL_KEY);
+    return value ? parseInt(value, 10) : null;
+}
+
+export async function setLastScanTotal(count: number): Promise<void> {
+    await AsyncStorage.setItem(LAST_SCAN_TOTAL_KEY, count.toString());
+}
+
 export async function resetConfig(): Promise<void> {
     useConfigStore.getState().setServerUrl('http://localhost:5000/api');
     useConfigStore.getState().setDeviceName('My Phone');
@@ -162,4 +173,5 @@ export async function resetConfig(): Promise<void> {
 
     await SecureStore.deleteItemAsync(SECURE_USER_ID_KEY);
     await SecureStore.deleteItemAsync(SECURE_USER_NAME_KEY);
+    await AsyncStorage.removeItem(LAST_SCAN_TOTAL_KEY);
 }

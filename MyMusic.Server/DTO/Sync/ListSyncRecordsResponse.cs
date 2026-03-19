@@ -10,18 +10,28 @@ public record ListSyncRecordsResponse
     public int TotalCount { get; init; }
 }
 
+public record SyncRecordSongInfo
+{
+    public required long Id { get; init; }
+    public required string Title { get; init; }
+    public required string ArtistNames { get; init; }
+    public string? CoverId { get; init; }
+}
+
 public record SyncRecordResponseItem
 {
     public required string FilePath { get; init; }
     public required SyncRecordAction Action { get; init; }
     public required SyncRecordSource Source { get; init; }
     public long? SongId { get; init; }
+    public SyncRecordSongInfo? SongInfo { get; init; }
     public string? ErrorMessage { get; init; }
     public string? Reason { get; init; }
     public DateTime ProcessedAt { get; init; }
 
-    public static SyncRecordResponseItem FromEntity(DeviceSyncSessionRecord record) =>
-        new()
+    public static SyncRecordResponseItem FromEntity(DeviceSyncSessionRecord record, bool includeSongInfo = false)
+    {
+        var item = new SyncRecordResponseItem
         {
             FilePath = record.FilePath,
             Action = record.Action,
@@ -31,4 +41,21 @@ public record SyncRecordResponseItem
             Reason = record.Reason,
             ProcessedAt = record.ProcessedAt,
         };
+
+        if (includeSongInfo && record.SongId.HasValue && record.Song is not null)
+        {
+            item = item with
+            {
+                SongInfo = new SyncRecordSongInfo
+                {
+                    Id = record.Song.Id,
+                    Title = record.Song.Title,
+                    ArtistNames = string.Join(", ", record.Song.Artists.Select(a => a.Artist.Name)),
+                    CoverId = record.Song.CoverId?.ToString(),
+                }
+            };
+        }
+
+        return item;
+    }
 }

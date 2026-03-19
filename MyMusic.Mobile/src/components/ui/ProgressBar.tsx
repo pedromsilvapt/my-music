@@ -1,5 +1,5 @@
-import React from 'react';
-import {StyleSheet, View, ViewStyle} from 'react-native';
+import React, {useEffect, useRef} from 'react';
+import {Animated, StyleSheet, View, ViewStyle} from 'react-native';
 import {useTheme} from '../../hooks/useTheme';
 
 interface ProgressBarProps {
@@ -8,6 +8,7 @@ interface ProgressBarProps {
     color?: string;
     backgroundColor?: string;
     style?: ViewStyle;
+    animated?: boolean;
 }
 
 export function ProgressBar({
@@ -16,6 +17,7 @@ export function ProgressBar({
     color,
     backgroundColor,
     style,
+    animated = true,
 }: ProgressBarProps) {
     const {colors, borderRadius} = useTheme();
     
@@ -23,6 +25,21 @@ export function ProgressBar({
     const bgColor = backgroundColor ?? colors.border;
 
     const clampedProgress = Math.min(Math.max(progress, 0), 1);
+    
+    // Animated value for smooth progress transitions
+    const animatedProgress = useRef(new Animated.Value(clampedProgress)).current;
+    
+    useEffect(() => {
+        if (animated) {
+            Animated.timing(animatedProgress, {
+                toValue: clampedProgress,
+                duration: 300,
+                useNativeDriver: false,
+            }).start();
+        } else {
+            animatedProgress.setValue(clampedProgress);
+        }
+    }, [clampedProgress, animated, animatedProgress]);
 
     return (
         <View
@@ -36,13 +53,18 @@ export function ProgressBar({
                 style,
             ]}
         >
-            <View
+            <Animated.View
                 style={[
                     {
                         height: '100%',
                         backgroundColor: fillColor,
                         borderRadius: borderRadius.full,
-                        width: `${clampedProgress * 100}%`,
+                    },
+                    {
+                        width: animatedProgress.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['0%', '100%'],
+                        }),
                     },
                 ]}
             />

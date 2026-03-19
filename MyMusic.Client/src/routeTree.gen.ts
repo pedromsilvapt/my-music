@@ -27,6 +27,8 @@ import { Route as PlaylistsPlaylistIdRouteImport } from './routes/playlists.$pla
 import { Route as AuditsAuditIdRouteImport } from './routes/audits.$auditId'
 import { Route as ArtistsArtistIdRouteImport } from './routes/artists.$artistId'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums.$albumId'
+import { Route as DevicesDeviceIdSessionsIndexRouteImport } from './routes/devices.$deviceId.sessions.index'
+import { Route as DevicesDeviceIdSessionsSessionIdRouteImport } from './routes/devices.$deviceId.sessions.$sessionId'
 
 const SongsRoute = SongsRouteImport.update({
   id: '/songs',
@@ -118,6 +120,18 @@ const AlbumsAlbumIdRoute = AlbumsAlbumIdRouteImport.update({
   path: '/$albumId',
   getParentRoute: () => AlbumsRoute,
 } as any)
+const DevicesDeviceIdSessionsIndexRoute =
+  DevicesDeviceIdSessionsIndexRouteImport.update({
+    id: '/devices/$deviceId/sessions/',
+    path: '/devices/$deviceId/sessions/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DevicesDeviceIdSessionsSessionIdRoute =
+  DevicesDeviceIdSessionsSessionIdRouteImport.update({
+    id: '/devices/$deviceId/sessions/$sessionId',
+    path: '/devices/$deviceId/sessions/$sessionId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -138,6 +152,8 @@ export interface FileRoutesByFullPath {
   '/devices/': typeof DevicesIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
+  '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
+  '/devices/$deviceId/sessions/': typeof DevicesDeviceIdSessionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -155,6 +171,8 @@ export interface FileRoutesByTo {
   '/devices': typeof DevicesIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
   '/songs': typeof SongsIndexRoute
+  '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
+  '/devices/$deviceId/sessions': typeof DevicesDeviceIdSessionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -176,6 +194,8 @@ export interface FileRoutesById {
   '/devices/': typeof DevicesIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
+  '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
+  '/devices/$deviceId/sessions/': typeof DevicesDeviceIdSessionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -198,6 +218,8 @@ export interface FileRouteTypes {
     | '/devices/'
     | '/playlists/'
     | '/songs/'
+    | '/devices/$deviceId/sessions/$sessionId'
+    | '/devices/$deviceId/sessions/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -215,6 +237,8 @@ export interface FileRouteTypes {
     | '/devices'
     | '/playlists'
     | '/songs'
+    | '/devices/$deviceId/sessions/$sessionId'
+    | '/devices/$deviceId/sessions'
   id:
     | '__root__'
     | '/'
@@ -235,6 +259,8 @@ export interface FileRouteTypes {
     | '/devices/'
     | '/playlists/'
     | '/songs/'
+    | '/devices/$deviceId/sessions/$sessionId'
+    | '/devices/$deviceId/sessions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -250,6 +276,8 @@ export interface RootRouteChildren {
   AuditsIndexRoute: typeof AuditsIndexRoute
   DevicesIndexRoute: typeof DevicesIndexRoute
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
+  DevicesDeviceIdSessionsSessionIdRoute: typeof DevicesDeviceIdSessionsSessionIdRoute
+  DevicesDeviceIdSessionsIndexRoute: typeof DevicesDeviceIdSessionsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -380,6 +408,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlbumsAlbumIdRouteImport
       parentRoute: typeof AlbumsRoute
     }
+    '/devices/$deviceId/sessions/': {
+      id: '/devices/$deviceId/sessions/'
+      path: '/devices/$deviceId/sessions'
+      fullPath: '/devices/$deviceId/sessions/'
+      preLoaderRoute: typeof DevicesDeviceIdSessionsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/devices/$deviceId/sessions/$sessionId': {
+      id: '/devices/$deviceId/sessions/$sessionId'
+      path: '/devices/$deviceId/sessions/$sessionId'
+      fullPath: '/devices/$deviceId/sessions/$sessionId'
+      preLoaderRoute: typeof DevicesDeviceIdSessionsSessionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -434,6 +476,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuditsIndexRoute: AuditsIndexRoute,
   DevicesIndexRoute: DevicesIndexRoute,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
+  DevicesDeviceIdSessionsSessionIdRoute: DevicesDeviceIdSessionsSessionIdRoute,
+  DevicesDeviceIdSessionsIndexRoute: DevicesDeviceIdSessionsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

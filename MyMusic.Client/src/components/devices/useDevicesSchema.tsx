@@ -1,13 +1,15 @@
-import {Code, Text} from "@mantine/core";
+import {Code, Text, Anchor} from "@mantine/core";
 import {modals} from "@mantine/modals";
 import {notifications} from "@mantine/notifications";
-import {IconTrash} from "@tabler/icons-react";
+import {IconTrash, IconHistory} from "@tabler/icons-react";
 import {useCallback, useMemo} from "react";
+import {Link} from "@tanstack/react-router";
 import {useDeleteDevicesDeviceId} from "../../client/devices.ts";
 import type {ListDeviceItem} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
+import {TEXT_COLOR} from "../../utils/colors.ts";
 
 export function useDevicesSchema() {
     const deleteDevice = useDeleteDevicesDeviceId();
@@ -80,7 +82,11 @@ export function useDevicesSchema() {
             {
                 name: 'name',
                 displayName: 'Name',
-                render: row => <Text fw={500}>{row.name}</Text>,
+                render: row => (
+                    <Anchor component={Link} to={`/devices/${row.id}/sessions`} c={TEXT_COLOR}>
+                        <Text fw={500}>{row.name}</Text>
+                    </Anchor>
+                ),
                 width: '2fr',
                 sortable: true,
             },
@@ -104,6 +110,17 @@ export function useDevicesSchema() {
             return [
                 {group: "Manage"},
                 {
+                    name: "view-sessions",
+                    renderIcon: () => <IconHistory/>,
+                    renderLabel: () => "View Sessions",
+                    onClick: (devices: ListDeviceItem[]) => {
+                        const device = devices[0];
+                        if (device) {
+                            window.location.href = `/devices/${device.id}/sessions`;
+                        }
+                    },
+                },
+                {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,
                     renderLabel: () => "Delete",
@@ -114,7 +131,11 @@ export function useDevicesSchema() {
 
         estimateListRowHeight: () => 84,
         renderListArtwork: () => <TablerIcon icon="IconDevices" size={40} color="gray"/>,
-        renderListTitle: (row) => <Text fw={500}>{row.name}</Text>,
+        renderListTitle: (row) => (
+            <Anchor component={Link} to={`/devices/${row.id}/sessions`} c={TEXT_COLOR}>
+                <Text fw={500}>{row.name}</Text>
+            </Anchor>
+        ),
         renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
     }) as CollectionSchema<ListDeviceItem>, [handleDelete, filterMetadata, fetchFilterValues]);
 }

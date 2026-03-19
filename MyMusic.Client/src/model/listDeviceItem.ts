@@ -6,16 +6,16 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface ListDeviceItem {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	name: string;
-	/** @nullable */
-	icon?: string | null;
-	/** @nullable */
-	color?: string | null;
-	/** @nullable */
-	namingTemplate?: string | null;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songCount: number;
-	importOnPurchase?: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  name: string;
+  /** @nullable */
+  icon?: string | null;
+  /** @nullable */
+  color?: string | null;
+  /** @nullable */
+  namingTemplate?: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songCount: number;
+  importOnPurchase?: boolean;
 }

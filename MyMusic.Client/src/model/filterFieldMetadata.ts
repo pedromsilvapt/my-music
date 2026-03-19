@@ -6,17 +6,17 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface FilterFieldMetadata {
-	name: string;
-	/** @nullable */
-	entityPath?: string | null;
-	type: string;
-	description: string;
-	supportedOperators: string[];
-	isComputed?: boolean;
-	isCollection?: boolean;
-	/** @nullable */
-	nestedFields?: FilterFieldMetadata[] | null;
-	/** @nullable */
-	values?: string[] | null;
-	supportsDynamicValues?: boolean;
+  name: string;
+  /** @nullable */
+  entityPath?: string | null;
+  type: string;
+  description: string;
+  supportedOperators: string[];
+  isComputed?: boolean;
+  isCollection?: boolean;
+  /** @nullable */
+  nestedFields?: FilterFieldMetadata[] | null;
+  /** @nullable */
+  values?: string[] | null;
+  supportsDynamicValues?: boolean;
 }

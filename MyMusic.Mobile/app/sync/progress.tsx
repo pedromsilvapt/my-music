@@ -170,8 +170,14 @@ export default function SyncProgressScreen() {
     };
 
     const getProgressValue = () => {
-        if (progress.totalFiles === 0) return 0;
-        return progress.processedFiles / progress.totalFiles;
+        if (progress.totalFiles === 0 && progress.estimatedTotalFiles === 0) return 0;
+        const total = progress.totalFiles > 0 ? progress.totalFiles : progress.estimatedTotalFiles;
+        return progress.processedFiles / total;
+    };
+
+    const getEstimatedProgressValue = () => {
+        if (progress.estimatedTotalFiles === 0) return 0;
+        return progress.scannedFiles / progress.estimatedTotalFiles;
     };
 
     if (syncError || progress.phase === 'error') {
@@ -222,7 +228,20 @@ export default function SyncProgressScreen() {
                 <ActivityIndicator size="large" color={colors.primary}/>
                 <Text style={[styles.phaseText, {fontSize: fontSize.lg, fontWeight: fontWeight.medium, color: colors.text, marginTop: spacing.md}]}>{getPhaseLabel()}</Text>
 
-                {isScanning && progress.scannedFiles > 0 && (
+                {isScanning && progress.estimatedTotalFiles > 0 && (
+                    <>
+                        <ProgressBar
+                            progress={getEstimatedProgressValue()}
+                            height={10}
+                            style={[styles.progressBar, {width: '100%', marginTop: spacing.lg}]}
+                        />
+                        <Text style={[styles.progressText, {fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.sm}]}>
+                            {progress.scannedFiles} / ~{progress.estimatedTotalFiles} files
+                        </Text>
+                    </>
+                )}
+
+                {isScanning && progress.estimatedTotalFiles === 0 && progress.scannedFiles > 0 && (
                     <Text style={[styles.scannedText, {fontSize: fontSize.md, color: colors.primary, marginTop: spacing.sm, fontWeight: fontWeight.medium}]}>
                         {progress.scannedFiles} files found
                     </Text>
@@ -241,7 +260,7 @@ export default function SyncProgressScreen() {
                     </>
                 )}
 
-                {progress.totalFiles === 0 && isScanning && (
+                {progress.totalFiles === 0 && progress.estimatedTotalFiles === 0 && isScanning && (
                     <Text style={[styles.scanningHint, {fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm, fontStyle: 'italic'}]}>
                         Scanning your music folder...
                     </Text>

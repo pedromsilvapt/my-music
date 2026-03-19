@@ -5,6 +5,7 @@ export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'resolving' | 'server' 
 export interface SyncProgress {
     phase: SyncPhase;
     totalFiles: number;
+    estimatedTotalFiles: number;
     processedFiles: number;
     scannedFiles: number;
     currentFile: string;
@@ -46,6 +47,7 @@ interface SyncState {
 const initialProgress: SyncProgress = {
     phase: 'idle',
     totalFiles: 0,
+    estimatedTotalFiles: 0,
     processedFiles: 0,
     scannedFiles: 0,
     currentFile: '',

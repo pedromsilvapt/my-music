@@ -194,6 +194,28 @@ public class DevicesController(
         return NoContent();
     }
 
+    [HttpGet("{deviceId:long}", Name = "GetDevice")]
+    public async Task<GetDeviceResponse> Get(long deviceId, CancellationToken cancellationToken)
+    {
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (device == null)
+        {
+            throw new Exception($"Device not found with id {deviceId}");
+        }
+
+        var songCount = await context.SongDevices
+            .Where(sd => sd.DeviceId == deviceId)
+            .CountAsync(cancellationToken);
+
+        return new GetDeviceResponse
+        {
+            Device = GetDeviceItem.FromEntity(device, songCount),
+        };
+    }
+
     [HttpGet("{deviceId:long}/sessions")]
     public async Task<ListSyncSessionsResponse> ListSessions(
         long deviceId,
@@ -332,6 +354,8 @@ public class DevicesController(
         [FromQuery] string? source = null,
         [FromQuery] int? limit = null,
         [FromQuery] string? cursor = null,
+        [FromQuery] bool? includeSongInfo = null,
+        [FromQuery] string? filter = null,
         CancellationToken cancellationToken = default)
     {
         var session = await context.DeviceSyncSessions
@@ -347,6 +371,25 @@ public class DevicesController(
             .Where(s => s.Id == sessionId)
             .SelectMany(s => s.Records);
 
+        // Conditionally include Song and Artists if requested
+        if (includeSongInfo == true)
+        {
+            query = query
+                .Include(r => r.Song)
+                .ThenInclude(s => s.Artists)
+                .ThenInclude(a => a.Artist);
+        }
+
+        // Apply filter DSL if provided
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            var filterRequest = FilterDslParser.Parse(filter);
+            DynamicFilterBuilder.ResolveEntityPaths(filterRequest, GetSessionRecordFieldMappings());
+            var filterExpression = DynamicFilterBuilder.BuildFilter<DeviceSyncSessionRecord>(filterRequest);
+            query = query.Where(filterExpression);
+        }
+
+        // Keep existing actions/source filters for backward compatibility
         if (!string.IsNullOrEmpty(actions))
         {
             var actionList = actions.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -400,11 +443,132 @@ public class DevicesController(
 
         return new ListSyncRecordsResponse
         {
-            Records = records.Select(SyncRecordResponseItem.FromEntity).ToList(),
+            Records = records.Select(r => SyncRecordResponseItem.FromEntity(r, includeSongInfo == true)).ToList(),
             NextCursor = nextCursor,
             HasMore = hasMore,
             TotalCount = totalCount,
         };
+    }
+
+    [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records/filter-metadata")]
+    public FilterMetadataResponse GetSessionRecordsFilterMetadata(
+        long deviceId,
+        long sessionId)
+    {
+        return new FilterMetadataResponse
+        {
+            Fields =
+            [
+                new FilterFieldMetadata
+                {
+                    Name = "filePath",
+                    Type = "string",
+                    Description = "File path of the synced file",
+                    SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "action",
+                    Type = "enum",
+                    Description = "Sync action performed",
+                    SupportedOperators = ["eq", "neq", "in"],
+                    Values = Enum.GetNames(typeof(SyncRecordAction)).ToList(),
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "source",
+                    Type = "enum",
+                    Description = "Source of the sync record",
+                    SupportedOperators = ["eq", "neq"],
+                    Values = Enum.GetNames(typeof(SyncRecordSource)).ToList(),
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "song",
+                    EntityPath = "Song.SearchableText",
+                    Type = "string",
+                    Description = "Song title, album, or label",
+                    IsComputed = true,
+                    SupportedOperators = ["contains"],
+                    SupportsDynamicValues = false,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "song.title",
+                    EntityPath = "Song.Title",
+                    Type = "string",
+                    Description = "Song title",
+                    SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "song.artist.name",
+                    EntityPath = "Song.Artists.Artist.Name",
+                    Type = "string",
+                    Description = "Song artist name",
+                    IsCollection = true,
+                    SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+                    SupportsDynamicValues = true,
+                },
+                new FilterFieldMetadata
+                {
+                    Name = "song.album.name",
+                    EntityPath = "Song.Album.Name",
+                    Type = "string",
+                    Description = "Song album name",
+                    SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+                    SupportsDynamicValues = true,
+                },
+            ],
+            Operators = FilterMetadataHelper.GetOperatorMetadata(),
+        };
+    }
+
+    [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records/filter-values")]
+    public async Task<FilterValuesResponse> GetSessionRecordsFilterValues(
+        long deviceId,
+        long sessionId,
+        [FromQuery] string field,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = field.ToLower() switch
+        {
+            "filepath" => context.DeviceSyncSessionRecords
+                .Where(r => r.SessionId == sessionId && r.Session.DeviceId == deviceId && r.Session.Device.OwnerId == currentUser.Id)
+                .Select(r => r.FilePath)
+                .Distinct(),
+            "song.title" => context.Songs
+                .Where(s => s.OwnerId == currentUser.Id)
+                .Select(s => s.Title)
+                .Distinct(),
+            "song.artist.name" => context.Artists
+                .Where(a => a.OwnerId == currentUser.Id)
+                .Select(a => a.Name)
+                .Distinct(),
+            "song.album.name" => context.Albums
+                .Where(a => a.OwnerId == currentUser.Id)
+                .Select(a => a.Name)
+                .Distinct(),
+            _ => Enumerable.Empty<string?>().AsQueryable(),
+        };
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(v => v != null && v.ToLower().Contains(searchLower));
+        }
+
+        var values = await query
+            .Where(v => v != null)
+            .OrderBy(v => v)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new FilterValuesResponse { Values = values! };
     }
 
     [HttpPost("{deviceId:long}/sync/start")]
@@ -1202,5 +1366,16 @@ public class DevicesController(
     private static bool IsNewerThan(DateTime current, DateTime reference, TimeSpan tolerance)
     {
         return (current - reference) > tolerance;
+    }
+
+    private static Dictionary<string, string> GetSessionRecordFieldMappings()
+    {
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["song"] = "Song.SearchableText",
+            ["song.title"] = "Song.Title",
+            ["song.artist.name"] = "Song.Artists.Artist.Name",
+            ["song.album.name"] = "Song.Album.Name",
+        };
     }
 }

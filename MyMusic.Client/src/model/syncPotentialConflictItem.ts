@@ -6,13 +6,13 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SyncPotentialConflictItem {
-	path: string;
-	localModifiedAt: string;
-	serverModifiedAt: string;
-	/** @nullable */
-	lastSyncedAt: string | null;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songId: number;
-	serverChecksum: string;
-	serverChecksumAlgorithm: string;
+  path: string;
+  localModifiedAt: string;
+  serverModifiedAt: string;
+  /** @nullable */
+  lastSyncedAt: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songId: number;
+  serverChecksum: string;
+  serverChecksumAlgorithm: string;
 }
