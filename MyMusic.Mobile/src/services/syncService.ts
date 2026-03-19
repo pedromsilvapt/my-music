@@ -167,8 +167,8 @@ export async function runSync(
             await recordChunk(deviceId, sessionId, {
                 records: scanErrors.map(e => ({
                     filePath: e.path,
-                    action: 'scan-error',
-                    source: 'Scanner',
+                    action: 'Error',
+                    source: 'Device',
                     errorMessage: e.error,
                 })),
             });
@@ -179,6 +179,13 @@ export async function runSync(
         for (let i = 0; i < chunks.length; i++) {
             checkCancelled();
             const chunk = chunks[i];
+            const recordItems: Array<{
+                filePath: string;
+                action: string;
+                source: string;
+                reason?: string;
+                errorMessage?: string;
+            }> = [];
 
             const syncFiles: SyncFileInfoItem[] = chunk.map(f => ({
                 path: f.relativePath,
@@ -278,6 +285,12 @@ export async function runSync(
 
                 if (options.dryRun) {
                     result.created++;
+                    recordItems.push({
+                        filePath: fileToCreate.path,
+                        action: 'Created',
+                        source: 'Device',
+                        reason: fileToCreate.reason,
+                    });
                 } else {
                     try {
                         const file = chunk.find(f => f.relativePath === fileToCreate.path);
@@ -294,10 +307,24 @@ export async function runSync(
                                 fileToCreate.createdAt.toISOString()
                             );
                             result.created++;
+                            recordItems.push({
+                                filePath: fileToCreate.path,
+                                action: 'Created',
+                                source: 'Device',
+                                reason: fileToCreate.reason,
+                            });
                         }
                     } catch (e) {
                         result.failed++;
-                        console.error('Upload failed:', e);
+                        const errorMessage = e instanceof Error ? e.message : String(e);
+                        console.error('Upload failed:', errorMessage);
+                        recordItems.push({
+                            filePath: fileToCreate.path,
+                            action: 'Error',
+                            source: 'Device',
+                            reason: fileToCreate.reason,
+                            errorMessage,
+                        });
                     }
                 }
 
@@ -321,6 +348,12 @@ export async function runSync(
 
                 if (options.dryRun) {
                     result.updated++;
+                    recordItems.push({
+                        filePath: fileToUpdate.path,
+                        action: 'Updated',
+                        source: 'Device',
+                        reason: fileToUpdate.reason,
+                    });
                 } else {
                     try {
                         const file = chunk.find(f => f.relativePath === fileToUpdate.path);
@@ -337,10 +370,24 @@ export async function runSync(
                                 fileToUpdate.createdAt.toISOString()
                             );
                             result.updated++;
+                            recordItems.push({
+                                filePath: fileToUpdate.path,
+                                action: 'Updated',
+                                source: 'Device',
+                                reason: fileToUpdate.reason,
+                            });
                         }
                     } catch (e) {
                         result.failed++;
-                        console.error('Update failed:', e);
+                        const errorMessage = e instanceof Error ? e.message : String(e);
+                        console.error('Update failed:', errorMessage);
+                        recordItems.push({
+                            filePath: fileToUpdate.path,
+                            action: 'Error',
+                            source: 'Device',
+                            reason: fileToUpdate.reason,
+                            errorMessage,
+                        });
                     }
                 }
 
@@ -357,28 +404,17 @@ export async function runSync(
 
             result.skipped += chunk.length - syncResponse.toCreate.length - syncResponse.toUpdate.length - syncResponse.potentialConflicts.length;
 
-            const recordItems = chunk.map(f => {
-                let action: string;
-                let reason: string;
-
-                if (toCreatePaths.has(f.relativePath)) {
-                    action = 'Created';
-                    reason = 'New file';
-                } else if (toUpdatePaths.has(f.relativePath)) {
-                    action = 'Updated';
-                    reason = 'File updated';
-                } else {
-                    action = 'Skipped';
-                    reason = 'Unchanged';
+            // Add skipped files to records
+            for (const file of chunk) {
+                if (!toCreatePaths.has(file.relativePath) && !toUpdatePaths.has(file.relativePath)) {
+                    recordItems.push({
+                        filePath: file.relativePath,
+                        action: 'Skipped',
+                        source: 'Device',
+                        reason: 'Unchanged',
+                    });
                 }
-
-                return {
-                    filePath: f.relativePath,
-                    action,
-                    source: 'Device',
-                    reason,
-                };
-            });
+            }
 
             await recordChunk(deviceId, sessionId, {records: recordItems});
         }
@@ -490,7 +526,7 @@ export async function runSync(
                     await acknowledgeAction(deviceId, {songId: action.songId});
                 }
                 await recordChunk(deviceId, sessionId, {
-                    records: [{filePath: action.path, action: 'Removed', songId: action.songId}],
+                    records: [{filePath: action.path, action: 'Removed', source: 'Device', songId: action.songId}],
                 });
                 result.removed++;
             }
