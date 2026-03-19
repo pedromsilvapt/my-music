@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
@@ -56,14 +57,7 @@ public class SongsController(
     {
         var query = context.Songs
             .Where(s => s.OwnerId == currentUser.Id)
-            .Include(s => s.Album)
-            .ThenInclude(a => a.Artist)
-            .Include(s => s.Artists)
-            .ThenInclude(a => a.Artist)
-            .Include(s => s.Genres)
-            .ThenInclude(g => g.Genre)
-            .Include(s => s.Devices)
-            .ThenInclude(sd => sd.Device)
+            .IncludeSongMetadata()
             .AsSplitQuery();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -94,13 +88,7 @@ public class SongsController(
     {
         var song = await context.Songs
             .Where(s => s.Id == id && s.OwnerId == currentUser.Id)
-            .Include(s => s.Album)
-            .Include(s => s.Artists)
-            .ThenInclude(a => a.Artist)
-            .Include(s => s.Genres)
-            .ThenInclude(g => g.Genre)
-            .Include(s => s.Devices)
-            .ThenInclude(sd => sd.Device)
+            .IncludeSongMetadata()
             .FirstOrDefaultAsync(cancellationToken);
 
         if (song == null)

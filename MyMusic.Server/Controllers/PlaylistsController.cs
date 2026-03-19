@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Filters;
@@ -355,7 +356,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
 
         var existingBySongId = playlist.PlaylistSongs.ToDictionary(ps => ps.SongId);
         var requestOrder = request.SongIds.ToList();
-        
+
         var existingSongIdsInRequest = requestOrder.Where(id => existingBySongId.ContainsKey(id)).ToList();
         var newSongIds = requestOrder.Where(id => !existingBySongId.ContainsKey(id)).ToList();
 
@@ -394,14 +395,14 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         var ordersToMove = existingSongIdsInRequest
             .Select(id => existingBySongId[id].Order)
             .ToHashSet();
-        
+
         var remaining = allSongs
             .Where(ps => !ordersToMove.Contains(ps.Order))
             .OrderBy(ps => ps.Order)
             .ToList();
 
         var orderMapping = new Dictionary<long, int>();
-        
+
         int compactedOrder = 0;
         foreach (var ps in remaining)
         {
@@ -409,7 +410,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         }
 
         int totalToInsert = existingSongIdsInRequest.Count + newSongIds.Count;
-        
+
         foreach (var ps in remaining.Where(ps => orderMapping[ps.Id] >= insertIndex))
         {
             orderMapping[ps.Id] += totalToInsert;
@@ -425,11 +426,11 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         {
             var parameterPairs = string.Join(",", orderMapping.Select(kv => $"({kv.Key}, {kv.Value})"));
             var sql = $@"
-                UPDATE playlist_songs 
+                UPDATE playlist_songs
                 SET ""order"" = r.new_order
                 FROM (VALUES {parameterPairs}) AS r(id, new_order)
                 WHERE playlist_songs.id = r.id";
-            
+
             await context.Database.ExecuteSqlRawAsync(sql, cancellationToken);
         }
 
@@ -655,22 +656,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
     {
         return await context.Playlists
             .Where(p => p.Id == id && p.OwnerId == currentUser.Id)
-            .Include(p => p.PlaylistSongs)
-            .ThenInclude(ps => ps.Song)
-            .ThenInclude(s => s.Album)
-            .ThenInclude(a => a.Artist)
-            .Include(p => p.PlaylistSongs)
-            .ThenInclude(ps => ps.Song)
-            .ThenInclude(s => s.Artists)
-            .ThenInclude(sa => sa.Artist)
-            .Include(p => p.PlaylistSongs)
-            .ThenInclude(ps => ps.Song)
-            .ThenInclude(s => s.Genres)
-            .ThenInclude(sg => sg.Genre)
-            .Include(p => p.PlaylistSongs)
-            .ThenInclude(ps => ps.Song)
-            .ThenInclude(s => s.Devices)
-            .ThenInclude(sd => sd.Device)
+            .IncludeSongMetadata("PlaylistSongs.Song")
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
     }
