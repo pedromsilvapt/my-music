@@ -667,6 +667,10 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             .ThenInclude(ps => ps.Song)
             .ThenInclude(s => s.Genres)
             .ThenInclude(sg => sg.Genre)
+            .Include(p => p.PlaylistSongs)
+            .ThenInclude(ps => ps.Song)
+            .ThenInclude(s => s.Devices)
+            .ThenInclude(sd => sd.Device)
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);
     }
