@@ -1,4 +1,5 @@
 import {create} from 'zustand';
+import type {ScannerType} from '../services/scannerRegistry';
 
 export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'resolving' | 'server' | 'completing' | 'completed' | 'error';
 
@@ -32,6 +33,7 @@ interface SyncState {
         dryRun: boolean;
         autoConfirm: boolean;
         treatConflictsAsErrors: boolean;
+        scannerType: ScannerType;
     };
 
     startSync: (options: Partial<SyncState['options']>) => void;
@@ -70,6 +72,7 @@ const initialState = {
         dryRun: false,
         autoConfirm: false,
         treatConflictsAsErrors: false,
+        scannerType: 'fileSystem' as ScannerType,
     },
 };
 

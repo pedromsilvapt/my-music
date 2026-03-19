@@ -1,9 +1,10 @@
 import {Ionicons} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
 import React from 'react';
-import {ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
+import {ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Button} from '../../src/components/ui';
 import {useTheme} from '../../src/hooks/useTheme';
+import {getScannerOptions} from '../../src/services/scannerRegistry';
 import {useSyncStore} from '../../src/stores/syncStore';
 
 export default function SyncOptionsScreen() {
@@ -19,12 +20,57 @@ export default function SyncOptionsScreen() {
         router.back();
     };
 
+    const scannerOptions = getScannerOptions();
+
     return (
         <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
             <ScrollView style={styles.scrollView} contentContainerStyle={[styles.content, {padding: spacing.md, paddingBottom: spacing.xl}]}>
                 <View style={[styles.header, {marginBottom: spacing.lg}]}>
                     <Text style={[styles.title, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text}]}>Sync Options</Text>
                     <Text style={[styles.subtitle, {fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.xs}]}>Configure how you want to sync your music</Text>
+                </View>
+
+                <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
+                    <View style={styles.optionRow}>
+                        <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
+                            <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Scanner Type</Text>
+                            <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
+                                Media Library is faster on Android, File System works on all platforms
+                            </Text>
+                        </View>
+                    </View>
+                    <View style={[styles.segmentedControl, {marginTop: spacing.md, flexDirection: 'row', backgroundColor: colors.cardSecondary, borderRadius: borderRadius.md, padding: 4}]}>
+                        {scannerOptions.map((option) => (
+                            <TouchableOpacity
+                                key={option.value}
+                                onPress={() => setOptions({scannerType: option.value})}
+                                style={[
+                                    styles.segmentButton,
+                                    {
+                                        flex: 1,
+                                        paddingVertical: spacing.sm,
+                                        paddingHorizontal: spacing.md,
+                                        borderRadius: borderRadius.sm,
+                                        backgroundColor: options.scannerType === option.value ? colors.primary : 'transparent',
+                                    },
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.segmentText,
+                                        {
+                                            fontSize: fontSize.sm,
+                                            fontWeight: fontWeight.medium,
+                                            color: options.scannerType === option.value ? colors.cardText : colors.cardTextSecondary,
+                                            textAlign: 'center',
+                                        },
+                                    ]}
+                                >
+                                    {option.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
                 </View>
 
                 <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
@@ -203,5 +249,14 @@ const styles = StyleSheet.create({
     },
     startButton: {
         flex: 2,
+    },
+    segmentedControl: {
+        flexDirection: 'row',
+    },
+    segmentButton: {
+        flex: 1,
+    },
+    segmentText: {
+        textAlign: 'center',
     },
 });

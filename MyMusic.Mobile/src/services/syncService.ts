@@ -26,7 +26,8 @@ import {
     setLastScanTotal,
     setLastSyncAt
 } from './configService';
-import {scanFromDirectory, type ScanResult} from './fileScanner';
+import {type ScanResult} from './fileScanner';
+import {getScanner} from './scannerRegistry';
 
 export class SyncCancelledError extends Error {
     constructor() {
@@ -116,7 +117,7 @@ export async function runSync(
 
         const scanErrors: Array<{path: string; error: string}> = [];
 
-        const {files, errors} = await scanFromDirectory(repositoryPath, {
+        const {files, errors} = await getScanner(options.scannerType)(repositoryPath, {
             extensions: musicExtensions,
             excludePatterns,
             basePath: repositoryPath,

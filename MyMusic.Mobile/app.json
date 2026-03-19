@@ -42,6 +42,7 @@
       [
         "expo-media-library",
         {
+          "granularPermissions": ["audio"],
           "photosPermission": "MyMusic needs access to your photos.",
           "savePhotosPermission": "MyMusic saves photos.",
           "isAccessMediaLocationEnabled": true
