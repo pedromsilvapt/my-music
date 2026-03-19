@@ -31,7 +31,9 @@ export function useUserPreferences() {
                 : "auto";
             setColorScheme(scheme);
         }
-    }, [user.colorScheme, isLoading, setColorScheme]);
+        // setColorScheme is excluded from deps as it causes infinite re-renders when color scheme is manually set
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user.colorScheme, isLoading]);
 
     const updateColorScheme = async (colorScheme: "light" | "dark" | "auto") => {
         await updateMutation.mutateAsync({data: {colorScheme}});
