@@ -25,7 +25,7 @@
       ],
       "bump": [
         "cd ./MyMusic.Client/",
-        "npx dotnet-bump $1 ../MyMusic.Server/MyMusic.Server.csproj ../MyMusic.CLI/MyMusic.CLI.csproj package.json package-lock.json"
+        "npx dotnet-bump $1 ../MyMusic.Server/MyMusic.Server.csproj ../MyMusic.CLI/MyMusic.CLI.csproj ../MyMusic.Mobile/package.json ../MyMusic.Mobile/package-lock.json package.json package-lock.json"
       ],
       "start:android": [
         "cd ./MyMusic.Mobile",
