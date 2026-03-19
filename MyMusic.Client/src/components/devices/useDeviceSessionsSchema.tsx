@@ -112,7 +112,7 @@ export function useDeviceSessionsSchema(deviceId: number) {
             {
                 name: 'isDryRun',
                 displayName: 'Dry Run',
-                render: row => row.isDryRun ? <Badge color="gray">Yes</Badge> : <Text c="dimmed">No</Text>,
+                render: row => row.isDryRun ? <Badge color="yellow">Yes</Badge> : <Text c="dimmed">No</Text>,
                 width: 90,
                 align: 'center',
             },
