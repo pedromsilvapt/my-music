@@ -355,6 +355,11 @@ public static class DynamicFilterBuilder
             return Expression.Constant(false);
         }
 
+        if (property.Type != typeof(string))
+        {
+            return BuildComparisonExpression(property, value, property.Type, ExpressionType.Equal);
+        }
+
         var stringValue = value.ToString() ?? "";
         var lowerValue = stringValue.ToLower();
 
@@ -364,7 +369,7 @@ public static class DynamicFilterBuilder
         var method = typeof(string).GetMethod(methodName, [typeof(string)])
                      ?? throw new InvalidOperationException($"Method {methodName} not found on string");
 
-        var nullCheck = Expression.NotEqual(property, Expression.Constant(null));
+        var nullCheck = Expression.NotEqual(property, Expression.Constant(null, typeof(string)));
         var lowerProperty = Expression.Call(property, toLowerMethod);
         var constant = Expression.Constant(lowerValue);
         var methodCall = Expression.Call(lowerProperty, method, constant);
@@ -381,7 +386,7 @@ public static class DynamicFilterBuilder
 
         var values = value is JsonElement jsonElement
             ? jsonElement.EnumerateArray().Select(e => ConvertValue(GetElementValue(e), propertyType) ?? "").ToList()
-            : value as IEnumerable<object> ?? [value];
+            : (value as IEnumerable<object> ?? [value]).Select(v => ConvertValue(v, propertyType) ?? "").ToList();
 
         var list = values.ToList()!;
         var constant = Expression.Constant(list, typeof(List<object>));
@@ -395,8 +400,8 @@ public static class DynamicFilterBuilder
 
     private static Expression BuildNullExpression(Expression property, bool isNull) =>
         isNull
-            ? Expression.Equal(property, Expression.Constant(null))
-            : Expression.NotEqual(property, Expression.Constant(null));
+            ? Expression.Equal(property, Expression.Constant(null, property.Type))
+            : Expression.NotEqual(property, Expression.Constant(null, property.Type));
 
     private static Expression BuildBetweenExpression(Expression property, object? value1, object? value2,
         Type propertyType)
@@ -496,6 +501,11 @@ public static class DynamicFilterBuilder
         if (targetType == typeof(TimeSpan))
         {
             return TimeSpan.Parse(value.ToString()!);
+        }
+
+        if (targetType.IsEnum)
+        {
+            return Enum.Parse(targetType, value.ToString()!, ignoreCase: true);
         }
 
         return Convert.ChangeType(value, targetType);

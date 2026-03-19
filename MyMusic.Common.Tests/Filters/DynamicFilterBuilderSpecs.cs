@@ -1433,4 +1433,110 @@ public class DynamicFilterBuilderSpecs
     }
 
     #endregion
+
+    #region Batch 13: Enum Property Filtering
+
+    private static DeviceSyncSessionRecord CreateSyncRecord(
+        SyncRecordAction action = SyncRecordAction.Created,
+        string filePath = "/test/file.mp3",
+        SyncRecordSource source = SyncRecordSource.Device,
+        long? songId = null)
+    {
+        return new DeviceSyncSessionRecord
+        {
+            Id = 1,
+            SessionId = 1,
+            FilePath = filePath,
+            Action = action,
+            Source = source,
+            SongId = songId,
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+
+    private static bool ExecuteFilterOnRecord(DeviceSyncSessionRecord record, string filter)
+    {
+        var filterRequest = FilterDslParser.Parse(filter);
+        var filterExpression = DynamicFilterBuilder.BuildFilter<DeviceSyncSessionRecord>(filterRequest);
+        var compiled = filterExpression.Compile();
+        return compiled(record);
+    }
+
+    [Fact]
+    public void Enum_Eq_MatchesExactValue()
+    {
+        var record = CreateSyncRecord(action: SyncRecordAction.Error);
+
+        ExecuteFilterOnRecord(record, @"action = ""Error""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action = ""Created""").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Enum_Eq_CaseInsensitive()
+    {
+        var record = CreateSyncRecord(action: SyncRecordAction.Error);
+
+        ExecuteFilterOnRecord(record, @"action = ""error""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action = ""ERROR""").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Enum_Neq_ExcludesMatch()
+    {
+        var record = CreateSyncRecord(action: SyncRecordAction.Error);
+
+        ExecuteFilterOnRecord(record, @"action != ""Error""").ShouldBeFalse();
+        ExecuteFilterOnRecord(record, @"action != ""Created""").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Enum_Contains_FallsBackToEquality()
+    {
+        var record = CreateSyncRecord(action: SyncRecordAction.Error);
+
+        ExecuteFilterOnRecord(record, @"action contains ""Error""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action contains ""Created""").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Enum_StartsWith_FallsBackToEquality()
+    {
+        var record = CreateSyncRecord(action: SyncRecordAction.Error);
+
+        ExecuteFilterOnRecord(record, @"action startsWith ""Error""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action startsWith ""Skipped""").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Enum_In_MatchesMultipleValues()
+    {
+        var record = CreateSyncRecord(action: SyncRecordAction.Error);
+
+        ExecuteFilterOnRecord(record, @"action in [""Error"", ""Created""]").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action in [""Created"", ""Skipped""]").ShouldBeFalse();
+    }
+
+    [Fact]
+    public void Enum_Source_Eq()
+    {
+        var deviceRecord = CreateSyncRecord(source: SyncRecordSource.Device);
+        var serverRecord = CreateSyncRecord(source: SyncRecordSource.Server);
+
+        ExecuteFilterOnRecord(deviceRecord, @"source = ""Device""").ShouldBeTrue();
+        ExecuteFilterOnRecord(deviceRecord, @"source = ""Server""").ShouldBeFalse();
+        ExecuteFilterOnRecord(serverRecord, @"source = ""Server""").ShouldBeTrue();
+    }
+
+    [Fact]
+    public void Enum_CombinedWithOtherField()
+    {
+        var record = CreateSyncRecord(
+            action: SyncRecordAction.Error,
+            filePath: "/music/song.mp3");
+
+        ExecuteFilterOnRecord(record, @"action = ""Error"" and filePath contains ""music""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action = ""Error"" and filePath contains ""other""").ShouldBeFalse();
+    }
+
+    #endregion
 }
