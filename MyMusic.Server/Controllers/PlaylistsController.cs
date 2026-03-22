@@ -409,6 +409,35 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             orderMapping[ps.Id] = compactedOrder++;
         }
 
+        if (request.Position == AddToQueuePosition.Now || request.Position == AddToQueuePosition.Next)
+        {
+            if (playlist.CurrentSongId.HasValue)
+            {
+                var currentPsInRemaining = remaining.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId.Value);
+                if (currentPsInRemaining != null)
+                {
+                    insertIndex = orderMapping[currentPsInRemaining.Id] + 1;
+                }
+                else if (existingBySongId.TryGetValue(playlist.CurrentSongId.Value, out var currentPs))
+                {
+                    int movedBeforeCurrent = existingSongIdsInRequest.Count(id => existingBySongId[id].Order < currentPs.Order);
+                    insertIndex = currentPs.Order - movedBeforeCurrent;
+                }
+                else
+                {
+                    insertIndex = 0;
+                }
+            }
+            else
+            {
+                insertIndex = 0;
+            }
+        }
+        else
+        {
+            insertIndex = remaining.Count;
+        }
+
         int totalToInsert = existingSongIdsInRequest.Count + newSongIds.Count;
 
         foreach (var ps in remaining.Where(ps => orderMapping[ps.Id] >= insertIndex))
