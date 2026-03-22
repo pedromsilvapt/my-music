@@ -182,7 +182,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconTableFilled size={16}/>
-                                <span>Table</span>
+                                <Text visibleFrom="sm">Table</Text>
                             </Center>
                         ),
                     },
@@ -191,7 +191,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconLayoutGridFilled size={16}/>
-                                <span>Grid</span>
+                                <Text visibleFrom="sm">Grid</Text>
                             </Center>
                         ),
                     },
@@ -200,7 +200,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconListDetails size={16}/>
-                                <span>List</span>
+                                <Text visibleFrom="sm">List</Text>
                             </Center>
                         ),
                     },
@@ -305,9 +305,9 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
             </Popover>
         </Group>;
 
-    return <Group className={styles.toolbar} justify="space-between" grow={true}>
-        {leftSection}
-        {middleSection}
-        {rightSection}
-    </Group>;
+    return <div className={styles.toolbar}>
+        <div className={styles.views}>{leftSection}</div>
+        <div className={styles.search}>{middleSection}</div>
+        <div className={styles.actions}>{rightSection}</div>
+    </div>;
 }

@@ -1,5 +1,32 @@
 .toolbar {
+    display: grid;
+    gap: var(--mantine-spacing-xs);
     margin-bottom: var(--mantine-spacing-md);
+    grid-template-areas:
+        "views actions"
+        "search search";
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+}
+
+@media (min-width: 36rem) {
+    .toolbar {
+        grid-template-areas: "views search actions";
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto;
+    }
+}
+
+.views {
+    grid-area: views;
+}
+
+.search {
+    grid-area: search;
+}
+
+.actions {
+    grid-area: actions;
 }
 
 .selectedActions {
