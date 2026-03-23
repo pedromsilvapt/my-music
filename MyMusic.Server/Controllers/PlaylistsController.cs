@@ -173,7 +173,8 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         var existingSongIds = playlist.PlaylistSongs.Select(ps => ps.SongId).ToHashSet();
         var newSongIds = request.SongIds.Where(songId => !existingSongIds.Contains(songId)).ToList();
 
-        var maxOrder = playlist.PlaylistSongs.Any() ? playlist.PlaylistSongs.Max(ps => ps.Order) : -1;
+        var maxOrder = playlist.PlaylistSongs.Any() ? playlist.PlaylistSongs.Max(ps => ps.Order) : 0.0;
+        var nextOrder = maxOrder + 1000.0;
 
         foreach (var songId in newSongIds)
         {
@@ -181,10 +182,11 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             {
                 PlaylistId = playlist.Id,
                 SongId = songId,
-                Order = ++maxOrder,
+                Order = nextOrder,
                 AddedAt = DateTime.UtcNow,
             };
             context.PlaylistSongs.Add(playlistSong);
+            nextOrder += 1000.0;
         }
 
         playlist.ModifiedAt = DateTime.UtcNow;
@@ -319,7 +321,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             {
                 PlaylistId = playlist.Id,
                 SongId = request.SongIds[i],
-                Order = i,
+                Order = (i + 1) * 1000.0,
                 AddedAt = DateTime.UtcNow,
             });
         }
@@ -355,29 +357,15 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
 
         var existingBySongId = playlist.PlaylistSongs.ToDictionary(ps => ps.SongId);
-        var requestOrder = request.SongIds.ToList();
-
-        var existingSongIdsInRequest = requestOrder.Where(id => existingBySongId.ContainsKey(id)).ToList();
-        var newSongIds = requestOrder.Where(id => !existingBySongId.ContainsKey(id)).ToList();
+        var existingSongIdsInRequest = request.SongIds.Where(id => existingBySongId.ContainsKey(id)).ToList();
+        var newSongIds = request.SongIds.Where(id => !existingBySongId.ContainsKey(id)).ToList();
 
         if (existingSongIdsInRequest.Count == 0 && newSongIds.Count == 0)
         {
             return await GetQueue(context, cancellationToken);
         }
 
-        var maxOrder = playlist.PlaylistSongs.Any() ? playlist.PlaylistSongs.Max(ps => ps.Order) : -1;
-
-        int insertIndex;
-        if (request.Position == AddToQueuePosition.Now || request.Position == AddToQueuePosition.Next)
-        {
-            insertIndex = playlist.CurrentSongId.HasValue
-                ? playlist.PlaylistSongs.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId)?.Order + 1 ?? 0
-                : 0;
-        }
-        else
-        {
-            insertIndex = maxOrder + 1;
-        }
+        var maxOrder = playlist.PlaylistSongs.Any() ? playlist.PlaylistSongs.Max(ps => ps.Order) : 0.0;
 
         if (request.Position == AddToQueuePosition.Now)
         {
@@ -391,93 +379,147 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             }
         }
 
-        var allSongs = playlist.PlaylistSongs.ToList();
-        var ordersToMove = existingSongIdsInRequest
-            .Select(id => existingBySongId[id].Order)
-            .ToHashSet();
-
-        var remaining = allSongs
-            .Where(ps => !ordersToMove.Contains(ps.Order))
-            .OrderBy(ps => ps.Order)
-            .ToList();
-
-        var orderMapping = new Dictionary<long, int>();
-
-        int compactedOrder = 0;
-        foreach (var ps in remaining)
+        double insertOrder;
+        if (request.Position == AddToQueuePosition.Last)
         {
-            orderMapping[ps.Id] = compactedOrder++;
+            insertOrder = maxOrder + 1000.0;
         }
-
-        if (request.Position == AddToQueuePosition.Now || request.Position == AddToQueuePosition.Next)
+        else
         {
-            if (playlist.CurrentSongId.HasValue)
+            var songsByOrder = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
+            
+            if (!playlist.CurrentSongId.HasValue || songsByOrder.Count == 0)
             {
-                var currentPsInRemaining = remaining.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId.Value);
-                if (currentPsInRemaining != null)
+                insertOrder = 1000.0;
+            }
+            else
+            {
+                var currentSongOrder = existingBySongId.TryGetValue(playlist.CurrentSongId.Value, out var existingPs)
+                    ? existingPs.Order
+                    : playlist.PlaylistSongs.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId.Value)?.Order ?? 0;
+                
+                var currentIndex = songsByOrder.FindIndex(ps => ps.SongId == playlist.CurrentSongId.Value);
+                
+                if (currentIndex < 0 || currentIndex >= songsByOrder.Count - 1)
                 {
-                    insertIndex = orderMapping[currentPsInRemaining.Id] + 1;
-                }
-                else if (existingBySongId.TryGetValue(playlist.CurrentSongId.Value, out var currentPs))
-                {
-                    int movedBeforeCurrent = existingSongIdsInRequest.Count(id => existingBySongId[id].Order < currentPs.Order);
-                    insertIndex = currentPs.Order - movedBeforeCurrent;
+                    insertOrder = currentSongOrder + 1000.0;
                 }
                 else
                 {
-                    insertIndex = 0;
+                    var nextOrder = songsByOrder[currentIndex + 1].Order;
+                    insertOrder = (currentSongOrder + nextOrder) / 2.0;
+                }
+            }
+        }
+
+        var existingOrdersToReposition = existingSongIdsInRequest
+            .Select(id => existingBySongId[id])
+            .OrderBy(ps => ps.Order)
+            .ToList();
+
+        var remainingSongs = playlist.PlaylistSongs
+            .Where(ps => !existingSongIdsInRequest.Contains(ps.SongId))
+            .OrderBy(ps => ps.Order)
+            .ToList();
+
+        var allOrders = remainingSongs.Select(ps => ps.Order).ToList();
+        var needsRebalance = NeedsRebalance(allOrders) || allOrders.Count == 0;
+
+        if (needsRebalance && remainingSongs.Count > 0)
+        {
+            var rebalancedOrders = RebalanceOrders(remainingSongs.Count);
+            for (var i = 0; i < remainingSongs.Count; i++)
+            {
+                remainingSongs[i].Order = rebalancedOrders[i];
+            }
+            
+            var currentSong = playlist.CurrentSongId.HasValue
+                ? remainingSongs.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId.Value)
+                : null;
+            if (currentSong != null)
+            {
+                var currentIndex = remainingSongs.IndexOf(currentSong);
+                if (currentIndex < remainingSongs.Count - 1)
+                {
+                    var nextOrder = remainingSongs[currentIndex + 1].Order;
+                    insertOrder = (currentSong.Order + nextOrder) / 2.0;
+                }
+                else
+                {
+                    insertOrder = currentSong.Order + 1000.0;
                 }
             }
             else
             {
-                insertIndex = 0;
+                insertOrder = 1000.0;
             }
         }
-        else
+
+        var songOrder = insertOrder;
+        foreach (var ps in existingOrdersToReposition)
         {
-            insertIndex = remaining.Count;
+            ps.Order = songOrder;
+            songOrder += 0.001;
         }
 
-        int totalToInsert = existingSongIdsInRequest.Count + newSongIds.Count;
-
-        foreach (var ps in remaining.Where(ps => orderMapping[ps.Id] >= insertIndex))
-        {
-            orderMapping[ps.Id] += totalToInsert;
-        }
-
-        for (int i = 0; i < existingSongIdsInRequest.Count; i++)
-        {
-            var existingPs = existingBySongId[existingSongIdsInRequest[i]];
-            orderMapping[existingPs.Id] = insertIndex + i;
-        }
-
-        if (orderMapping.Count > 0)
-        {
-            var parameterPairs = string.Join(",", orderMapping.Select(kv => $"({kv.Key}, {kv.Value})"));
-            var sql = $@"
-                UPDATE playlist_songs
-                SET ""order"" = r.new_order
-                FROM (VALUES {parameterPairs}) AS r(id, new_order)
-                WHERE playlist_songs.id = r.id";
-
-            await context.Database.ExecuteSqlRawAsync(sql, cancellationToken);
-        }
-
-        for (int i = 0; i < newSongIds.Count; i++)
+        foreach (var songId in newSongIds)
         {
             playlist.PlaylistSongs.Add(new PlaylistSong
             {
                 PlaylistId = playlist.Id,
-                SongId = newSongIds[i],
-                Order = insertIndex + existingSongIdsInRequest.Count + i,
+                SongId = songId,
+                Order = songOrder,
                 AddedAt = DateTime.UtcNow,
             });
+            songOrder += 0.001;
         }
 
         playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
 
+        if (NeedsRebalance(playlist.PlaylistSongs.Select(ps => ps.Order).ToList()))
+        {
+            await RebalanceAndSave(playlist, context, cancellationToken);
+        }
+
         return await GetQueue(context, cancellationToken);
+    }
+
+    private static bool NeedsRebalance(IReadOnlyList<double> orders)
+    {
+        if (orders.Count < 2) return false;
+        
+        var sortedOrders = orders.Order().ToList();
+        for (var i = 1; i < sortedOrders.Count; i++)
+        {
+            var gap = sortedOrders[i] - sortedOrders[i - 1];
+            if (gap < 0.001 && gap > 0)
+            {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    private static List<double> RebalanceOrders(int count)
+    {
+        return Enumerable.Range(0, count)
+            .Select(i => (i + 1) * 1000.0)
+            .ToList();
+    }
+
+    private async Task RebalanceAndSave(Playlist playlist, MusicDbContext context, CancellationToken cancellationToken)
+    {
+        var songs = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
+        var rebalancedOrders = RebalanceOrders(songs.Count);
+        
+        for (var i = 0; i < songs.Count; i++)
+        {
+            songs[i].Order = rebalancedOrders[i];
+        }
+        
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     [HttpDelete("queue/songs", Name = "RemoveFromQueue")]
@@ -499,17 +541,16 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             context.PlaylistSongs.RemoveRange(songsToRemove);
             playlist.PlaylistSongs.RemoveAll(ps => songIdsToRemove.Contains(ps.SongId));
 
-            var remainingSongs = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
-            for (var i = 0; i < remainingSongs.Count; i++)
-            {
-                remainingSongs[i].Order = i;
-            }
-
             if (playlist.CurrentSongId.HasValue && songIdsToRemove.Contains(playlist.CurrentSongId.Value))
             {
-                var currentOrder = songsToRemove.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId)?.Order ?? 0;
-                var nextSong = playlist.PlaylistSongs.FirstOrDefault(ps => ps.Order >= currentOrder);
-                playlist.CurrentSongId = nextSong?.SongId;
+                var removedSong = songsToRemove.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId);
+                var removedOrder = removedSong?.Order ?? 0;
+                
+                var nextSong = playlist.PlaylistSongs
+                    .OrderBy(ps => ps.Order)
+                    .FirstOrDefault(ps => ps.Order > removedOrder);
+                    
+                playlist.CurrentSongId = nextSong?.SongId ?? playlist.PlaylistSongs.OrderBy(ps => ps.Order).FirstOrDefault()?.SongId;
             }
 
             playlist.ModifiedAt = DateTime.UtcNow;
@@ -528,37 +569,69 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
         await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
 
-        var songDict = playlist.PlaylistSongs.ToDictionary(ps => ps.Order);
+        var songsByOrder = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
 
         foreach (var reorder in request.Reorders)
         {
-            if (!songDict.TryGetValue(reorder.FromIndex, out var song))
+            if (reorder.FromIndex < 0 || reorder.FromIndex >= songsByOrder.Count ||
+                reorder.ToIndex < 0 || reorder.ToIndex >= songsByOrder.Count ||
+                reorder.FromIndex == reorder.ToIndex)
             {
                 continue;
             }
 
-            var songsToShift = playlist.PlaylistSongs
-                .Where(ps => reorder.ToIndex <= reorder.FromIndex
-                    ? ps.Order >= reorder.ToIndex && ps.Order < reorder.FromIndex
-                    : ps.Order > reorder.FromIndex && ps.Order <= reorder.ToIndex)
-                .ToList();
+            var song = songsByOrder[reorder.FromIndex];
 
-            foreach (var s in songsToShift)
+            double newOrder;
+            if (reorder.ToIndex == 0)
             {
-                s.Order += reorder.ToIndex <= reorder.FromIndex ? 1 : -1;
+                newOrder = songsByOrder[0].Order - 1000.0;
+            }
+            else if (reorder.ToIndex == songsByOrder.Count - 1)
+            {
+                newOrder = songsByOrder[^1].Order + 1000.0;
+            }
+            else
+            {
+                var lowerIndex = Math.Min(reorder.ToIndex, reorder.FromIndex);
+                if (reorder.FromIndex < reorder.ToIndex)
+                {
+                    lowerIndex = reorder.ToIndex;
+                }
+                
+                var prevIndex = reorder.ToIndex > reorder.FromIndex ? reorder.ToIndex : Math.Max(0, reorder.ToIndex - 1);
+                var nextIndex = reorder.ToIndex > reorder.FromIndex ? Math.Min(songsByOrder.Count - 1, reorder.ToIndex) : reorder.ToIndex;
+                
+                if (reorder.FromIndex < reorder.ToIndex)
+                {
+                    prevIndex = reorder.ToIndex;
+                    nextIndex = Math.Min(reorder.ToIndex + 1, songsByOrder.Count - 1);
+                }
+                else
+                {
+                    prevIndex = Math.Max(0, reorder.ToIndex - 1);
+                    nextIndex = reorder.ToIndex;
+                }
+
+                var prevOrder = songsByOrder[prevIndex].Order;
+                var nextOrder = songsByOrder[nextIndex].Order;
+                
+                newOrder = (prevOrder + nextOrder) / 2.0;
             }
 
-            song.Order = reorder.ToIndex;
+            song.Order = newOrder;
+            songsByOrder = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
         }
 
-        var remainingSongs = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
-        for (var i = 0; i < remainingSongs.Count; i++)
+        if (NeedsRebalance(playlist.PlaylistSongs.Select(ps => ps.Order).ToList()))
         {
-            remainingSongs[i].Order = i;
+            await RebalanceAndSave(playlist, context, cancellationToken);
         }
-
-        playlist.ModifiedAt = DateTime.UtcNow;
-        await context.SaveChangesAsync(cancellationToken);
+        else
+        {
+            playlist.ModifiedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
         return await GetQueue(context, cancellationToken);
     }
@@ -577,9 +650,9 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             return await GetQueue(context, cancellationToken);
         }
 
-        var songsByOrder = playlist.PlaylistSongs.ToDictionary(ps => ps.Order);
+        var songsByOrder = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
         var songsAtIndices = request.Indices
-            .Where(i => songsByOrder.ContainsKey(i))
+            .Where(i => i >= 0 && i < songsByOrder.Count)
             .Select(i => songsByOrder[i])
             .ToList();
 
@@ -596,8 +669,15 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
             songsAtIndices[i].Order = orders[i];
         }
 
-        playlist.ModifiedAt = DateTime.UtcNow;
-        await context.SaveChangesAsync(cancellationToken);
+        if (NeedsRebalance(playlist.PlaylistSongs.Select(ps => ps.Order).ToList()))
+        {
+            await RebalanceAndSave(playlist, context, cancellationToken);
+        }
+        else
+        {
+            playlist.ModifiedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
         return await GetQueue(context, cancellationToken);
     }

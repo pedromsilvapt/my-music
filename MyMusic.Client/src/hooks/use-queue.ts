@@ -10,17 +10,23 @@ import {
     useSetQueueCurrentSong,
     useShuffleQueue,
 } from '../client/playlists';
-import type {GetPlaylistSong, ListSongsItem} from '../model';
+import type {GetPlaylistItem, GetPlaylistSongItem, ListSongsItem} from '../model';
 import {AddToQueuePosition} from '../model';
 import {usePlaybackActions} from '../stores/playback-store';
 
-export type PlayableItem = GetPlaylistSong | ListSongsItem;
+export type PlayableItem = GetPlaylistSongItem | ListSongsItem;
 
-function isPlaylistSong(song: PlayableItem): song is GetPlaylistSong {
+interface QueueQueryData {
+    data: {
+        playlist: GetPlaylistItem;
+    };
+}
+
+function isPlaylistSong(song: PlayableItem): song is GetPlaylistSongItem {
     return 'order' in song;
 }
 
-function toPlaylistSong(song: PlayableItem, order: number): GetPlaylistSong {
+function toPlaylistSong(song: PlayableItem, order: number): GetPlaylistSongItem {
     if (isPlaylistSong(song)) {
         return {...song, order};
     }
@@ -28,7 +34,56 @@ function toPlaylistSong(song: PlayableItem, order: number): GetPlaylistSong {
         ...song,
         order,
         addedAtPlaylist: new Date().toISOString(),
-    } as GetPlaylistSong;
+    } as GetPlaylistSongItem;
+}
+
+function compactOrders(songs: GetPlaylistSongItem[]): GetPlaylistSongItem[] {
+    return songs.map((song, index) => ({
+        ...song,
+        order: index + 1,
+    }));
+}
+
+function insertAfterCurrent(
+    songs: GetPlaylistSongItem[],
+    newSongs: GetPlaylistSongItem[],
+    currentSongId: number | null | undefined
+): GetPlaylistSongItem[] {
+    if (!currentSongId || songs.length === 0) {
+        return compactOrders([...newSongs, ...songs]);
+    }
+
+    const currentIndex = songs.findIndex((s) => s.id === currentSongId);
+    if (currentIndex < 0) {
+        return compactOrders([...newSongs, ...songs]);
+    }
+
+    const beforeCurrent = songs.slice(0, currentIndex + 1);
+    const afterCurrent = songs.slice(currentIndex + 1);
+    return compactOrders([...beforeCurrent, ...newSongs, ...afterCurrent]);
+}
+
+function appendToEnd(songs: GetPlaylistSongItem[], newSongs: GetPlaylistSongItem[]): GetPlaylistSongItem[] {
+    return compactOrders([...songs, ...newSongs]);
+}
+
+function removeBySongIds(songs: GetPlaylistSongItem[], songIdsToRemove: Set<number>): GetPlaylistSongItem[] {
+    return compactOrders(songs.filter((s) => !songIdsToRemove.has(s.id)));
+}
+
+function reorderSongs(
+    songs: GetPlaylistSongItem[],
+    fromIndex: number,
+    toIndex: number
+): GetPlaylistSongItem[] {
+    if (fromIndex < 0 || fromIndex >= songs.length || toIndex < 0 || toIndex >= songs.length) {
+        return songs;
+    }
+
+    const result = [...songs];
+    const [movedSong] = result.splice(fromIndex, 1);
+    result.splice(toIndex, 0, movedSong);
+    return compactOrders(result);
 }
 
 export function useQueue() {
@@ -41,9 +96,15 @@ export function useQueue() {
 
 export function useQueueMutations() {
     const queryClient = useQueryClient();
-    const {setLoadingSong: setLoadingSongAction, clear: clearAction, incrementPlaybackKey} = usePlaybackActions(
-        (s) => ({setLoadingSong: s.setLoadingSong, clear: s.clear, incrementPlaybackKey: s.incrementPlaybackKey})
-    );
+    const {
+        setLoadingSong: setLoadingSongAction,
+        clear: clearAction,
+        incrementPlaybackKey,
+    } = usePlaybackActions((s) => ({
+        setLoadingSong: s.setLoadingSong,
+        clear: s.clear,
+        incrementPlaybackKey: s.incrementPlaybackKey,
+    }));
 
     const replaceQueue = useReplaceQueue({});
     const addToQueue = useAddToQueue({});
@@ -52,96 +113,314 @@ export function useQueueMutations() {
     const setCurrentSong = useSetQueueCurrentSong({});
     const shuffleQueue = useShuffleQueue({});
 
-    const setLoadingSong = useCallback((song: GetPlaylistSong) => {
+    const setLoadingSong = useCallback((song: GetPlaylistSongItem) => {
         setLoadingSongAction(song, true);
     }, [setLoadingSongAction]);
 
-    const play = useCallback((songs: PlayableItem[]) => {
-        if (songs.length === 0) return;
+    const play = useCallback(
+        (songs: PlayableItem[]) => {
+            if (songs.length === 0) return;
 
-        console.log(1);
-        incrementPlaybackKey();
+            incrementPlaybackKey();
 
-        const songIds = songs.map((s) => s.id);
-        const firstSong = songs[0];
-        const songsToAdd = songs.map((song, i) => toPlaylistSong(song, i));
+            const songIds = songs.map((s) => s.id);
+            const firstSong = songs[0];
+            const songsToAdd = songs.map((song, i) => toPlaylistSong(song, i + 1));
 
-        setLoadingSong(songsToAdd[0]);
+            setLoadingSong(songsToAdd[0]);
 
-        const optimisticQueue = songsToAdd;
-        queryClient.setQueryData(getGetQueueQueryKey(), {
-            data: {
-                playlist: {
-                    id: 0,
-                    name: 'Queue',
-                    type: 1,
-                    currentSongId: firstSong.id,
-                    songs: optimisticQueue,
+            const optimisticQueue = songsToAdd;
+
+            queryClient.setQueryData(getGetQueueQueryKey(), {
+                data: {
+                    playlist: {
+                        id: 0,
+                        name: 'Queue',
+                        type: 1,
+                        currentSongId: firstSong.id,
+                        songs: optimisticQueue,
+                    },
                 },
-            },
-            status: 200,
-            headers: new Headers(),
-        });
+                status: 200,
+                headers: new Headers(),
+            });
 
-        replaceQueue.mutate({data: {songIds, currentSongId: firstSong.id}});
-    }, [replaceQueue, queryClient, setLoadingSong, incrementPlaybackKey]);
+            replaceQueue.mutate({data: {songIds, currentSongId: firstSong.id}});
+        },
+        [replaceQueue, queryClient, setLoadingSong, incrementPlaybackKey]
+    );
 
-    const playNext = useCallback((songs: PlayableItem[]) => {
-        if (songs.length === 0) return;
-        const songIds = songs.map((s) => s.id);
-        addToQueue.mutate({data: {songIds, position: AddToQueuePosition.Next}});
-    }, [addToQueue]);
+    const playNext = useCallback(
+        (songs: PlayableItem[]) => {
+            if (songs.length === 0) return;
 
-    const playLast = useCallback((songs: PlayableItem[]) => {
-        if (songs.length === 0) return;
-        const songIds = songs.map((s) => s.id);
-        addToQueue.mutate({data: {songIds, position: AddToQueuePosition.Last}});
-    }, [addToQueue]);
+            const songIds = songs.map((s) => s.id);
+            const queryKey = getGetQueueQueryKey();
 
-    const removeByIndices = useCallback((indices: number[], currentSongId: number | null | undefined) => {
-        const queueData = queryClient.getQueryData(getGetQueueQueryKey()) as
-            | { data: { playlist: { songs: GetPlaylistSong[] } } }
-            | undefined;
-        const queue = queueData?.data?.playlist?.songs ?? [];
-        const songIds = indices.map((i) => queue[i]?.id).filter((id): id is number => id !== undefined);
+            const previousData = queryClient.getQueryData<QueueQueryData>(queryKey);
+            const currentQueue = previousData?.data?.playlist?.songs ?? [];
+            const currentSongId = previousData?.data?.playlist?.currentSongId;
 
-        if (songIds.length === 0) return;
+            const newSongs = songs.map((song, i) => toPlaylistSong(song, i + 1));
+            const optimisticQueue = insertAfterCurrent(currentQueue, newSongs, currentSongId);
 
-        const currentSongOrder = queue.find((s) => s.id === currentSongId)?.order ?? -1;
-        const isCurrentSongRemoved = currentSongOrder >= 0 && indices.includes(currentSongOrder);
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: optimisticQueue,
+                    },
+                },
+            });
 
-        if (isCurrentSongRemoved) {
-            const remainingQueue = queue.filter((_, i) => !indices.includes(i));
-            if (remainingQueue.length > 0) {
-                const nextIndex = Math.min(currentSongOrder, remainingQueue.length - 1);
-                const nextSong = remainingQueue[nextIndex];
-                setLoadingSong(nextSong);
-                setCurrentSong.mutate({data: {currentSongId: nextSong.id}});
-            } else {
-                clearAction();
-                setCurrentSong.mutate({data: {currentSongId: null}});
+            addToQueue.mutate(
+                {data: {songIds, position: AddToQueuePosition.Next}},
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({queryKey});
+                    },
+                }
+            );
+        },
+        [addToQueue, queryClient]
+    );
+
+    const playLast = useCallback(
+        (songs: PlayableItem[]) => {
+            if (songs.length === 0) return;
+
+            const songIds = songs.map((s) => s.id);
+            const queryKey = getGetQueueQueryKey();
+
+            const previousData = queryClient.getQueryData<QueueQueryData>(queryKey);
+            const currentQueue = previousData?.data?.playlist?.songs ?? [];
+
+            const newSongs = songs.map((song, i) => toPlaylistSong(song, currentQueue.length + i + 1));
+            const optimisticQueue = appendToEnd(currentQueue, newSongs);
+
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: optimisticQueue,
+                    },
+                },
+            });
+
+            addToQueue.mutate(
+                {data: {songIds, position: AddToQueuePosition.Last}},
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({queryKey});
+                    },
+                }
+            );
+        },
+        [addToQueue, queryClient]
+    );
+
+    const removeByIndices = useCallback(
+        (indices: number[], currentSongId: number | null | undefined) => {
+            const queryKey = getGetQueueQueryKey();
+            const previousData = queryClient.getQueryData<QueueQueryData>(queryKey);
+            const queue = previousData?.data?.playlist?.songs ?? [];
+
+            const songsToRemove = indices.map((i) => queue[i]).filter((s): s is GetPlaylistSongItem => !!s);
+            const songIdsToRemove = new Set(songsToRemove.map((s) => s.id));
+
+            if (songIdsToRemove.size === 0) return;
+
+            const isCurrentSongRemoved =
+                currentSongId !== null && currentSongId !== undefined && songIdsToRemove.has(currentSongId);
+
+            const optimisticQueue = removeBySongIds(queue, songIdsToRemove);
+
+            if (isCurrentSongRemoved) {
+                if (optimisticQueue.length > 0) {
+                    const currentIndex = queue.findIndex((s) => s.id === currentSongId);
+                    const nextIndex = Math.min(currentIndex, optimisticQueue.length - 1);
+                    const nextSong = optimisticQueue[nextIndex];
+                    setLoadingSong(nextSong);
+                    setCurrentSong.mutate({data: {currentSongId: nextSong.id}});
+                } else {
+                    clearAction();
+                    setCurrentSong.mutate({data: {currentSongId: null}});
+                }
             }
-        }
 
-        removeFromQueue.mutate({data: {songIds}});
-    }, [removeFromQueue, setCurrentSong, clearAction, setLoadingSong, queryClient]);
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: optimisticQueue,
+                    },
+                },
+            });
 
-    const reorder = useCallback((fromIndex: number, toIndex: number) => {
-        reorderQueue.mutate({data: {reorders: [{fromIndex, toIndex}]}});
-    }, [reorderQueue]);
+            removeFromQueue.mutate(
+                {data: {songIds: Array.from(songIdsToRemove)}},
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({queryKey});
+                    },
+                }
+            );
+        },
+        [removeFromQueue, setCurrentSong, clearAction, setLoadingSong, queryClient]
+    );
 
-    const reorderBatch = useCallback((reorders: { fromIndex: number; toIndex: number }[]) => {
-        reorderQueue.mutate({data: {reorders}});
-    }, [reorderQueue]);
+    const reorder = useCallback(
+        (fromIndex: number, toIndex: number) => {
+            const queryKey = getGetQueueQueryKey();
+            const previousData = queryClient.getQueryData<QueueQueryData>(queryKey);
+            const queue = previousData?.data?.playlist?.songs ?? [];
 
-    const updateCurrentSong = useCallback((songId: number | null) => {
-        setCurrentSong.mutate({data: {currentSongId: songId}});
-    }, [setCurrentSong]);
+            if (fromIndex < 0 || fromIndex >= queue.length || toIndex < 0 || toIndex >= queue.length) {
+                return;
+            }
 
-    const shuffleByIndices = useCallback((indices: number[]) => {
-        if (indices.length < 2) return;
-        shuffleQueue.mutate({data: {indices}});
-    }, [shuffleQueue]);
+            const optimisticQueue = reorderSongs(queue, fromIndex, toIndex);
+
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: optimisticQueue,
+                    },
+                },
+            });
+
+            reorderQueue.mutate(
+                {data: {reorders: [{fromIndex, toIndex}]}},
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({queryKey});
+                    },
+                }
+            );
+        },
+        [reorderQueue, queryClient]
+    );
+
+    const reorderBatch = useCallback(
+        (reorders: {fromIndex: number; toIndex: number}[]) => {
+            const queryKey = getGetQueueQueryKey();
+            const previousData = queryClient.getQueryData<QueueQueryData>(queryKey);
+            let queue = previousData?.data?.playlist?.songs ?? [];
+
+            const validReorders: {fromIndex: number; toIndex: number}[] = [];
+
+            for (const {fromIndex, toIndex} of reorders) {
+                if (fromIndex >= 0 && fromIndex < queue.length && toIndex >= 0 && toIndex < queue.length) {
+                    queue = reorderSongs(queue, fromIndex, toIndex);
+                    validReorders.push({fromIndex, toIndex});
+                }
+            }
+
+            if (validReorders.length === 0) return;
+
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: queue,
+                    },
+                },
+            });
+
+            reorderQueue.mutate(
+                {data: {reorders: validReorders}},
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({queryKey});
+                    },
+                }
+            );
+        },
+        [reorderQueue, queryClient]
+    );
+
+    const updateCurrentSong = useCallback(
+        (songId: number | null) => {
+            setCurrentSong.mutate({data: {currentSongId: songId}});
+        },
+        [setCurrentSong]
+    );
+
+    const shuffleByIndices = useCallback(
+        (indices: number[]) => {
+            if (indices.length < 2) return;
+
+            const queryKey = getGetQueueQueryKey();
+            const previousData = queryClient.getQueryData<QueueQueryData>(queryKey);
+            const queue = previousData?.data?.playlist?.songs ?? [];
+
+            const validIndices = indices.filter((i) => i >= 0 && i < queue.length);
+            if (validIndices.length < 2) return;
+
+            const songsAtIndices = validIndices.map((i) => queue[i]);
+            const shuffledOrders = songsAtIndices.map((_, i) => i);
+            for (let i = shuffledOrders.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledOrders[i], shuffledOrders[j]] = [shuffledOrders[j], shuffledOrders[i]];
+            }
+
+            const optimisticQueue = [...queue];
+            for (let i = 0; i < validIndices.length; i++) {
+                const shuffledIndex = shuffledOrders[i];
+                optimisticQueue[validIndices[i]] = songsAtIndices[shuffledIndex];
+            }
+
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: compactOrders(optimisticQueue),
+                    },
+                },
+            });
+
+            shuffleQueue.mutate(
+                {data: {indices: validIndices}},
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({queryKey});
+                    },
+                }
+            );
+        },
+        [shuffleQueue, queryClient]
+    );
 
     return {
         play,

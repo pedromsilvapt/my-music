@@ -87,5 +87,12 @@ public class MusicDbContext : DbContext
             // For querying by song (checking if already queued)
             entity.HasIndex(e => new { e.SongId, e.Status });
         });
+
+        // PlaylistSong entity configuration
+        modelBuilder.Entity<PlaylistSong>(entity =>
+        {
+            // Composite index for efficient ordered queries within a playlist
+            entity.HasIndex(e => new { e.PlaylistId, e.Order });
+        });
     }
 }

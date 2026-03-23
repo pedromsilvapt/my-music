@@ -26,7 +26,7 @@ public record GetPlaylistItem
             CurrentSongId = playlist.CurrentSongId,
             Songs = playlist.PlaylistSongs
                 .OrderBy(ps => ps.Order)
-                .Select(ps => GetPlaylistSongItem.FromEntity(ps.Song, ps.Order, ps.AddedAt))
+                .Select((ps, index) => GetPlaylistSongItem.FromEntity(ps.Song, index + 1, ps.AddedAt))
                 .ToList(),
         };
 }
@@ -36,7 +36,7 @@ public record GetPlaylistSongItem : ListSongItem
     public required int Order { get; init; }
     public DateTime? AddedAtPlaylist { get; init; }
 
-    public static GetPlaylistSongItem FromEntity(SongEntity song, int order, DateTime addedAt) =>
+    public static GetPlaylistSongItem FromEntity(SongEntity song, int displayOrder, DateTime addedAt) =>
         new()
         {
             Id = song.Id,
@@ -52,7 +52,7 @@ public record GetPlaylistSongItem : ListSongItem
             IsExplicit = song.Explicit,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,
-            Order = order,
+            Order = displayOrder,
             AddedAtPlaylist = addedAt,
         };
 }

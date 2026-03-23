@@ -10,7 +10,7 @@ public class PlaylistSong
     public Song Song { get; set; } = null!;
     public long SongId { get; set; }
 
-    public int Order { get; set; }
+    public double Order { get; set; }
 
     public DateTime AddedAt { get; set; }
 }
