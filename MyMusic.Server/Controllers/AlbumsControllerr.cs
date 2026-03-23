@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Albums;
@@ -50,13 +51,7 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
     {
         var album = await context.Albums
             .Include(a => a.Artist)
-            .Include(a => a.Songs)
-            .Include(a => a.Songs)
-            .ThenInclude(s => s.Artists)
-            .ThenInclude(sa => sa.Artist)
-            .Include(s => s.Songs)
-            .ThenInclude(s => s.Genres)
-            .ThenInclude(s => s.Genre)
+            .IncludeSongMetadata("Songs", includeAlbum: false)
             .FirstOrDefaultAsync(a => a.Id == id && a.OwnerId == currentUser.Id, cancellationToken);
 
         if (album == null)

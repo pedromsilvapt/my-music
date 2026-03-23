@@ -7,6 +7,7 @@ OpenAPI spec version: 1.0.0
 */ import type { GetAlbumResponseArtist } from "./getAlbumResponseArtist";
 import type { GetAlbumResponseGenre } from "./getAlbumResponseGenre";
 import type { GetAlbumSongItemAlbum } from "./getAlbumSongItemAlbum";
+import type { ListSongsDevice } from "./listSongsDevice";
 
 export interface GetAlbumSongItem {
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
@@ -26,6 +27,7 @@ export interface GetAlbumSongItem {
 	 */
 	year: number | null;
 	duration: string;
+	devices: ListSongsDevice[];
 	isFavorite: boolean;
 	isExplicit: boolean;
 }

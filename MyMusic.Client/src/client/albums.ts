@@ -966,6 +966,27 @@ export const getGetAlbumResponseMock = (
 						null,
 					]),
 					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
 					isFavorite: faker.datatype.boolean(),
 					isExplicit: faker.datatype.boolean(),
 				})),
@@ -1021,6 +1042,27 @@ export const getGetAlbumResponseMock = (
 						null,
 					]),
 					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
 					isFavorite: faker.datatype.boolean(),
 					isExplicit: faker.datatype.boolean(),
 				})),
@@ -1076,6 +1118,27 @@ export const getGetAlbumResponseMock = (
 						null,
 					]),
 					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
 					isFavorite: faker.datatype.boolean(),
 					isExplicit: faker.datatype.boolean(),
 				})),

@@ -18,11 +18,20 @@ public static class SongQueryableExtensions
 
     public static IQueryable<TEntity> IncludeSongMetadata<TEntity>(
         this IQueryable<TEntity> query,
-        string songNavigationPath)
-        where TEntity : class =>
-        query
-            .Include($"{songNavigationPath}.Album.Artist")
+        string songNavigationPath,
+        bool includeAlbum = true)
+        where TEntity : class
+    {
+        var result = query
             .Include($"{songNavigationPath}.Artists.Artist")
             .Include($"{songNavigationPath}.Genres.Genre")
             .Include($"{songNavigationPath}.Devices.Device");
+
+        if (includeAlbum)
+        {
+            result = result.Include($"{songNavigationPath}.Album.Artist");
+        }
+
+        return result;
+    }
 }
