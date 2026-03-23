@@ -1,5 +1,5 @@
 import {Box, Flex, LoadingOverlay} from "@mantine/core";
-import {useDebouncedValue, useElementSize, useSelection, type UseSelectionHandlers} from '@mantine/hooks';
+import {useDebouncedValue, useElementSize} from '@mantine/hooks';
 import type React from "react";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useShallow} from "zustand/react/shallow";
@@ -11,6 +11,7 @@ import {sortBy} from "../../../utils/sort-by.tsx";
 import type {CollectionFilterMode, CollectionSchema, CollectionSchemaAction, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
 import {CollectionActionMenu} from "./collection-actions.tsx";
+import {createSelectionStore, SelectionStoreProvider} from "./selection-store.ts";
 import SelectionFloatingBar from "./selection-floating-bar.tsx";
 import CollectionGrid from "./views/collection-grid.tsx";
 import CollectionList from "./views/collection-list.tsx";
@@ -19,12 +20,6 @@ import CollectionTable from "./views/collection-table.tsx";
 export type {
     CollectionSchema, CollectionSort, CollectionSortField, SortDirection, CollectionFilterMode
 } from "./collection-schema";
-
-export type CollectionSelectionHandlers<T> = Omit<UseSelectionHandlers<T>, 'toggle'> & {
-    toggle: (toggled: T, event?: React.MouseEvent) => void;
-};
-
-export type ItemElementRefCallback<M> = (item: M, element: HTMLElement | null) => void;
 
 interface CollectionProps<T extends { id: string | number }> {
     items: T[],
@@ -100,8 +95,6 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const [throttledSearch] = useDebouncedValue(clientSearch, SEARCH_DEBOUNCE_MS);
     const [debouncedScrollPosition] = useDebouncedValue(scrollPosition, SCROLL_DEBOUNCE_MS);
-    const [lastSelectedKey, setLastSelectedKey] = useState<React.Key | null>(null);
-    const [lastSelectedElement, setLastSelectedElement] = useState<HTMLElement | null>(null);
 
     const {onContextMenuTrigger, renderMenuItems, isOpen: isContextMenuOpen} = useMantineContextMenu({
         menuWidth: 200,
@@ -114,6 +107,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
     if (initialScrollPositionRef.current === null && storeState?.scrollPosition != null) {
         initialScrollPositionRef.current = storeState.scrollPosition;
     }
+
+    const selectionStore = useMemo(() => createSelectionStore(), []);
 
     useEffect(() => {
         if (stateKey) {
@@ -156,12 +151,6 @@ export default function Collection<T extends { id: string | number }>(props: Col
             setCollectionScrollPosition(stateKey, debouncedScrollPosition);
         }
     }, [stateKey, debouncedScrollPosition, setCollectionScrollPosition, storeState?.scrollPosition]);
-
-    const setItemElementRef = useCallback((_item: T, element: HTMLElement | null) => {
-        if (element) {
-            setLastSelectedElement(element);
-        }
-    }, []);
 
     const sortableFields = useMemo(() => {
         return props.schema.columns
@@ -240,21 +229,17 @@ export default function Collection<T extends { id: string | number }>(props: Col
         return items;
     }, [props.items, throttledSearch, clientFilter, sort, filterMode, evaluateClientFilter, props.schema]);
 
-    const [selectionKeys, selectionHandlers] = useSelection({
-        data: props.items.map(item => props.schema.key(item)),
-        defaultSelection: [],
-        resetSelectionOnDataChange: false,
-    });
-
     const handleItemClick = useCallback((clickedKey: React.Key, event: React.MouseEvent) => {
         const isCtrlPressed = event.ctrlKey || event.metaKey;
         const isShiftPressed = event.shiftKey;
         const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+        const currentSelectionKeys = selectionStore.getState().selectedKeys;
+        const lastSelectedKey = selectionStore.getState().lastSelectedKey;
 
         if (event.button === 2) {
-            if (!selectionKeys.includes(clickedKey)) {
-                selectionHandlers.setSelection([clickedKey]);
-                setLastSelectedKey(clickedKey);
+            if (!currentSelectionKeys.has(clickedKey)) {
+                selectionStore.getState().setSelection([clickedKey]);
+                selectionStore.getState().setLastSelectedKey(clickedKey);
             }
             return;
         }
@@ -269,52 +254,42 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 const end = Math.max(lastIndex, clickedIndex);
                 const rangeKeys = itemsList.slice(start, end + 1);
 
-                const currentlySelected = new Set(selectionKeys);
-                const allInRangeSelected = rangeKeys.every(key => currentlySelected.has(key));
+                const allInRangeSelected = rangeKeys.every(key => currentSelectionKeys.has(key));
 
                 if (allInRangeSelected) {
-                    selectionHandlers.setSelection(selectionKeys.filter(key => !rangeKeys.includes(key)));
+                    selectionStore.getState().setSelection(Array.from(currentSelectionKeys).filter(key => !rangeKeys.includes(key)));
                 } else {
-                    const newSelection = new Set([...selectionKeys, ...rangeKeys]);
-                    selectionHandlers.setSelection(Array.from(newSelection));
+                    const newSelection = new Set([...Array.from(currentSelectionKeys), ...rangeKeys]);
+                    selectionStore.getState().setSelection(Array.from(newSelection));
                 }
             }
         } else if (isCtrlPressed || isTouchDevice) {
-            selectionHandlers.toggle(clickedKey);
-        } else {
-            if (selectionKeys.length === 1 && selectionKeys[0] === clickedKey) {
-                selectionHandlers.resetSelection();
+            const newKeys = new Set(currentSelectionKeys);
+            if (newKeys.has(clickedKey)) {
+                newKeys.delete(clickedKey);
             } else {
-                selectionHandlers.setSelection([clickedKey]);
+                newKeys.add(clickedKey);
+            }
+            selectionStore.getState().setSelection(Array.from(newKeys));
+        } else {
+            if (currentSelectionKeys.size === 1 && currentSelectionKeys.has(clickedKey)) {
+                selectionStore.getState().reset();
+            } else {
+                selectionStore.getState().setSelection([clickedKey]);
             }
         }
 
-        setLastSelectedKey(clickedKey);
-    }, [filteredAndSortedItems, lastSelectedKey, props.schema, selectionKeys, selectionHandlers]);
-
-    const customSelectionHandlers = useMemo(() => ({
-        ...selectionHandlers,
-        toggle: handleItemClick,
-    }) as CollectionSelectionHandlers<React.Key>, [selectionHandlers, handleItemClick]);
-
-    const selection = useMemo(() => {
-        return props.items.filter((item) => selectionKeys.includes(props.schema.key(item)));
-    }, [props.items, selectionKeys, props.schema]);
+        selectionStore.getState().setLastSelectedKey(clickedKey);
+    }, [filteredAndSortedItems, props.schema, selectionStore]);
 
     const handleSelectAll = useCallback(() => {
         const allKeys = filteredAndSortedItems.map(item => props.schema.key(item));
-        selectionHandlers.setSelection(allKeys);
-    }, [filteredAndSortedItems, props.schema, selectionHandlers]);
+        selectionStore.getState().setSelection(allKeys);
+    }, [filteredAndSortedItems, props.schema, selectionStore]);
 
-    useEffect(() => {
-        if (selection.length === 0) {
-            setLastSelectedElement(null);
-        }
-    }, [selection.length]);
-
-    const actions = useMemo(() => {
-        return props.schema.actions?.(selection) ?? [];
-    }, [props.schema, selection]);
+    const handleClearSelection = useCallback(() => {
+        selectionStore.getState().reset();
+    }, [selectionStore]);
 
     const handleScrollPositionChange = useCallback((position: ScrollPosition) => {
         setScrollPosition(position);
@@ -336,15 +311,13 @@ export default function Collection<T extends { id: string | number }>(props: Col
         viewNode = <CollectionTable
             schema={props.schema}
             items={filteredAndSortedItems}
-            selection={selection}
-            selectionHandlers={customSelectionHandlers}
+            selectionStore={selectionStore}
+            onToggle={handleItemClick}
             sort={sort}
             onSort={handleSort}
             sortable={props.sortable}
             onReorder={props.onReorder}
             onReorderBatch={props.onReorderBatch}
-            setItemElementRef={setItemElementRef}
-            actions={actions}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
             scrollToIndex={props.scrollToIndex}
@@ -356,13 +329,11 @@ export default function Collection<T extends { id: string | number }>(props: Col
         viewNode = <CollectionList
             schema={props.schema}
             items={filteredAndSortedItems}
-            selection={selection}
-            selectionHandlers={customSelectionHandlers}
+            selectionStore={selectionStore}
+            onToggle={handleItemClick}
             sortable={props.sortable}
             onReorder={props.onReorder}
             onReorderBatch={props.onReorderBatch}
-            setItemElementRef={setItemElementRef}
-            actions={actions}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
             scrollToIndex={props.scrollToIndex}
@@ -374,13 +345,11 @@ export default function Collection<T extends { id: string | number }>(props: Col
         viewNode = <CollectionGrid
             schema={props.schema}
             items={filteredAndSortedItems}
-            selection={selection}
-            selectionHandlers={customSelectionHandlers}
+            selectionStore={selectionStore}
+            onToggle={handleItemClick}
             sortable={props.sortable}
             onReorder={props.onReorder}
             onReorderBatch={props.onReorderBatch}
-            setItemElementRef={setItemElementRef}
-            actions={actions}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
             scrollToIndex={props.scrollToIndex}
@@ -427,32 +396,34 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 search: currentSearch,
                 setSearch: handleSearchChange,
                 filter: currentFilter,
-                setFilter: handleFilterChange,
-                onApplyFilter: handleApplyFilter,
-                filterMode: filterMode,
-                searchPlaceholder: props.searchPlaceholder,
-                view: view,
-                setView: setView,
-                sort: sort,
-                onSort: handleSort,
-                onSortRemove: handleSortRemove,
-                onReorderSort: handleReorderSort,
-                sortableFields: sortableFields,
-                columns: props.schema.columns,
-                filterMetadata: props.schema.filterMetadata,
-                fetchFilterValues: props.schema.fetchFilterValues,
-                selectionCount: selection.length,
-                totalItems: filteredAndSortedItems.length,
-                onSelectAll: handleSelectAll,
-                onClearSelection: selectionHandlers.resetSelection,
-            })}
-        </Box>
+                 setFilter: handleFilterChange,
+                 onApplyFilter: handleApplyFilter,
+                 filterMode: filterMode,
+                 searchPlaceholder: props.searchPlaceholder,
+                 view: view,
+                 setView: setView,
+                 sort: sort,
+                 onSort: handleSort,
+                 onSortRemove: handleSortRemove,
+                 onReorderSort: handleReorderSort,
+                 sortableFields: sortableFields,
+                 columns: props.schema.columns,
+                 filterMetadata: props.schema.filterMetadata,
+                 fetchFilterValues: props.schema.fetchFilterValues,
+                 selectionStore: selectionStore,
+                 totalItems: filteredAndSortedItems.length,
+                 onSelectAll: handleSelectAll,
+                 onClearSelection: handleClearSelection,
+             })}
+         </Box>
 
         <Box ref={collectionContainerRef} pos="relative" flex={1}
              style={{minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
             <LoadingOverlay visible={props.isFetching ?? false} zIndex={ZINDEX_MODAL}
                             overlayProps={{radius: "sm", blur: 2}}/>
-            {viewNode}
+            <SelectionStoreProvider store={selectionStore}>
+                {viewNode}
+            </SelectionStoreProvider>
             <div ref={floatingBarPortalTargetRef} />
         </Box>
 
@@ -465,12 +436,13 @@ export default function Collection<T extends { id: string | number }>(props: Col
         ))}
 
         <SelectionFloatingBar
-            selection={selection}
-            actions={actions}
-            anchorElement={lastSelectedElement}
+            items={props.items}
+            itemKey={props.schema.key}
+            selectionStore={selectionStore}
+            actionsFn={props.schema.actions}
             containerRef={collectionContainerRef}
             portalTarget={floatingBarPortalTargetRef}
-            onClearSelection={selectionHandlers.resetSelection}
+            onClearSelection={handleClearSelection}
             isContextMenuOpen={isContextMenuOpen}
         />
     </Flex>;

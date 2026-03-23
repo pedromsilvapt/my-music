@@ -22,7 +22,7 @@ import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
 import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
-import CollectionActions from "../collection-actions.tsx";
+import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
     type CollectionSchemaAction,
@@ -31,22 +31,20 @@ import {
     getColumnWidthFractions,
     getColumnWidthPixels
 } from "../collection-schema.tsx";
-import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
+import type {SelectionStore} from "../selection-store.ts";
 import styles from './collection-table.module.css';
 
 export interface CollectionTableProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
-    selection: M[];
-    selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    selectionStore: SelectionStore;
+    onToggle: (key: React.Key, event: React.MouseEvent) => void;
     sort?: CollectionSortField<M>[];
     onSort?: (field: string) => void;
     sortableFields?: (keyof M & string)[];
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
-    setItemElementRef?: ItemElementRefCallback<M>;
-    actions: CollectionSchemaAction<M>[];
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
@@ -56,7 +54,7 @@ export interface CollectionTableProps<M> {
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, selectionHandlers: propSelectionHandlers, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, setItemElementRef, actions, height, onReorderBatch, onReorder, scrollToIndex, highlightRequestId, onSort, sort: propSort} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, highlightRequestId, onSort, sort: propSort} = props;
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -64,11 +62,18 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
 
     const handleContextMenuTrigger = useCallback((
         event: React.MouseEvent | React.TouchEvent,
-        actions: CollectionSchemaAction<M>[],
-        selection: M[]
+        rowActions: CollectionSchemaAction<M>[],
+        rowSelection: M[]
     ) => {
-        onContextMenuTrigger?.(event, actions, selection);
+        onContextMenuTrigger?.(event, rowActions, rowSelection);
     }, [onContextMenuTrigger]);
+
+    const toggleRef = useRef(onToggle);
+    toggleRef.current = onToggle;
+
+    const handleRowToggle = useCallback((key: React.Key, event?: React.MouseEvent | React.TouchEvent) => {
+        toggleRef.current(key, event as React.MouseEvent);
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -157,15 +162,10 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         return () => scrollElement.removeEventListener('scroll', handleScroll);
     }, [onScrollPositionChange, virtualizer]);
 
-    const selectedIds = useMemo(() =>
-            new Set(propSelection.map(item => propSchema.key(item))),
-        [propSelection, propSchema]
-    );
-
     const itemIds = useMemo(() => propItems.map(item => propSchema.key(item)) as string[], [propItems, propSchema]);
 
     const draggedItem = activeId != null ? propItems.find(item => propSchema.key(item) === activeId) : null;
-    const isDraggingMultiple = selectedIds.has(activeId as React.Key) && selectedIds.size > 1;
+    const isDraggingMultiple = selectionStore.getState().selectedKeys.has(activeId as React.Key) && selectionStore.getState().selectedKeys.size > 1;
 
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id);
@@ -180,7 +180,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             let toIndex = propItems.findIndex(item => propSchema.key(item) === over.id);
 
             if (fromIndex !== -1 && toIndex !== -1) {
-                const selectedKeys = Array.from(selectedIds);
+                const selectedKeys = Array.from(selectionStore.getState().selectedKeys);
 
                 if (selectedKeys.length > 1) {
                     const selectedIndices = selectedKeys
@@ -219,9 +219,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const rows = virtualRows.map((virtualRow) => {
         const row = propItems[virtualRow.index];
         const itemId = propSchema.key(row);
-        const isSelected = selectedIds.has(itemId);
         const isDragOverlay = activeId === itemId;
-        const isCollapsed = isDragging && isSelected && !isDragOverlay;
 
         return <CollectionTableRow
             key={itemId}
@@ -230,15 +228,13 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             schema={propSchema}
             row={row}
             columns={columns}
-            selection={propSelection}
-            selectionHandlers={propSelectionHandlers}
+            items={propItems}
+            selectionStore={selectionStore}
+            itemId={itemId}
+            onToggle={handleRowToggle}
             sortable={sortable}
-            isSelected={isSelected}
             isDragOverlay={isDragOverlay}
-            isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
-            setItemElementRef={setItemElementRef}
-            actions={actions}
             scrollToIndex={scrollToIndex}
             highlightRequestId={highlightRequestId}
             onContextMenuTrigger={handleContextMenuTrigger}
@@ -343,7 +339,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                     )}
                     {isDraggingMultiple && (
                         <Box bg="blue.1" p="xs" style={{borderRadius: 4}}>
-                            Dragging {selectedIds.size} items
+                            Dragging {selectionStore.getState().selectedKeys.size} items
                         </Box>
                     )}
                 </DragOverlay>
@@ -362,15 +358,13 @@ interface CollectionTableRowProps<M> {
     schema: CollectionSchema<M>;
     row: M;
     columns: CollectionSchemaColumn<M>[];
-    selection: M[];
-    selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    items: M[];
+    selectionStore: SelectionStore;
+    itemId: React.Key;
+    onToggle: (key: React.Key, event?: React.MouseEvent | React.TouchEvent) => void;
     sortable?: boolean;
-    isSelected?: boolean;
     isDragOverlay?: boolean;
-    isCollapsed?: boolean;
     isDraggingActive?: boolean;
-    setItemElementRef?: ItemElementRefCallback<M>;
-    actions: CollectionSchemaAction<M>[];
     scrollToIndex?: number;
     highlightRequestId?: number;
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
@@ -383,19 +377,19 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         schema,
         row,
         columns,
-        selection,
-        selectionHandlers,
+        items,
+        selectionStore,
+        itemId,
+        onToggle,
         sortable,
-        isSelected,
         isDragOverlay,
-        isCollapsed,
         isDraggingActive,
-        setItemElementRef,
-        actions,
         scrollToIndex,
         highlightRequestId,
         onContextMenuTrigger,
     } = props;
+
+    const isSelected = selectionStore(state => state.selectedKeys.has(itemId));
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const prevHighlightIdRef = useRef<number | undefined>(undefined);
@@ -410,6 +404,8 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
             }
         }
     }, [highlightRequestId, scrollToIndex, virtualRow.index]);
+
+    const isCollapsed = isDraggingActive && isSelected && !isDragOverlay;
 
     const {
         attributes,
@@ -443,9 +439,9 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         setNodeRef(node);
         virtualizer.measureElement(node);
         if (isSelected && node) {
-            setItemElementRef?.(row, node);
+            selectionStore.getState().setLastSelectedElement(node);
         }
-    }, [setNodeRef, virtualizer, isSelected, setItemElementRef, row]);
+    }, [setNodeRef, virtualizer, isSelected, selectionStore]);
 
     const handleMouseDown = (event: React.MouseEvent) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -454,15 +450,7 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
-        console.log('[CT-MouseUp] triggered', {
-            target: event.target,
-            isInteractive: isInteractiveElement(event.target),
-            isDraggingActive,
-            button: event.button
-        });
-        
         if (event.button === 2) {
-            console.log('[CT-MouseUp] skipping - right click');
             return;
         }
         
@@ -470,7 +458,7 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
             return;
         }
         if (!isDraggingActive) {
-            selectionHandlers.toggle(schema.key(row), event);
+            onToggle(schema.key(row), event);
         }
     };
 
@@ -481,11 +469,11 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
 
         const itemKey = schema.key(row);
 
-        selectionHandlers.toggle(itemKey, event);
+        onToggle(itemKey, event);
 
         const isNowSelected = !isSelected;
-        const contextActions = isNowSelected ? rowActions : actions;
-        const contextSelection = isNowSelected ? [row] : selection;
+        const contextActions = isNowSelected ? rowActions : (schema.actions?.(items.filter(item => selectionStore.getState().selectedKeys.has(schema.key(item)))) ?? []);
+        const contextSelection = isNowSelected ? [row] : items.filter(item => selectionStore.getState().selectedKeys.has(schema.key(item)));
 
         onContextMenuTrigger(event, contextActions, contextSelection);
     };
@@ -529,14 +517,16 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
                     style={{
                         borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)'
                     }}
-                    className={cls(
-                        styles.rowActions,
-                        isDropdownOpen && styles.opened,
-                        selection.length > 0 && styles.hidden
-                    )}
                 >
-                    <CollectionActions selection={[row]} actions={rowActions} opened={isDropdownOpen}
-                                       setOpened={setIsDropdownOpen}/>
+                    <RowActionsContainer 
+                        item={row} 
+                        actions={rowActions} 
+                        opened={isDropdownOpen} 
+                        setOpened={setIsDropdownOpen}
+                        containerClassName={styles.rowActions}
+                        openedClassName={styles.opened}
+                        hiddenClassName={styles.hidden}
+                    />
                 </Table.Td>
             </Table.Tr>
         </>

@@ -1,8 +1,9 @@
-import {ActionIcon, Group, Menu, Tooltip} from "@mantine/core";
+import {ActionIcon, Box, Group, Menu, Tooltip} from "@mantine/core";
 import {useUncontrolled} from "@mantine/hooks";
 import {IconDotsVertical} from "@tabler/icons-react";
 import {useCallback} from "react";
 import type {CollectionSchemaAction, CollectionSchemaActionButton} from "./collection-schema.tsx";
+import {useSelectionStoreContext} from "./selection-store.ts";
 
 export interface CollectionActionsProps<M> {
     selection: M[];
@@ -27,15 +28,19 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
     const primaryActions = props.actions.filter(isPrimary);
     const secondaryActions = props.actions.filter(isSecondary);
 
+    const getActionKey = (action: CollectionSchemaAction<M>): string => {
+        if ('divider' in action) return 'divider';
+        if ('group' in action) return `group-${action.group}`;
+        return action.name;
+    };
+
     return <>
         <Group gap="xs">
             {primaryActions.length > 0 && primaryActions.map(action =>
-                <Tooltip label={action.renderLabel()} openDelay={500}>
+                <Tooltip key={action.name} label={action.renderLabel()} openDelay={500}>
                     <ActionIcon
                         variant="default"
                         size="lg"
-                        // aria-label={action.renderLabel()}
-                        // title={action.renderLabel()}
                         onClick={() => {
                             action.onClick(props.selection);
                         }}>
@@ -47,18 +52,14 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                 <Menu.Target>
                     <ActionIcon
                         variant="default"
-                        // size="lg"
                         aria-label="Actions"
                         title="Actions"
-                        // onClick={ev => ev.stopPropagation()}
-                        // onMouseDown={ev => ev.stopPropagation()}
-                        // onMouseUp={ev => ev.stopPropagation()}
                     >
                         <IconDotsVertical/>
                     </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
-                    {secondaryActions.map((action, i) => <CollectionActionMenu key={i} action={action}
+                    {secondaryActions.map((action) => <CollectionActionMenu key={getActionKey(action)} action={action}
                                                                                selection={props.selection}/>)}
                 </Menu.Dropdown>
             </Menu>}
@@ -93,4 +94,33 @@ export function CollectionActionMenu<M>(props: CollectionActionMenuProps<M>) {
             </Menu.Item>
         )
     }
+}
+
+export interface RowActionsContainerProps<M> {
+    item: M;
+    actions: CollectionSchemaAction<M>[];
+    opened: boolean;
+    setOpened: (open: boolean) => void;
+    containerClassName: string;
+    openedClassName: string;
+    hiddenClassName: string;
+}
+
+export function RowActionsContainer<M>(props: RowActionsContainerProps<M>) {
+    const selectionStore = useSelectionStoreContext();
+    const hasSelection = selectionStore(state => state.hasSelection);
+
+    const classNames = [props.containerClassName];
+    if (props.opened) {
+        classNames.push(props.openedClassName);
+    }
+    if (hasSelection) {
+        classNames.push(props.hiddenClassName);
+    }
+
+    return (
+        <Box className={classNames.join(' ')}>
+            <CollectionActions selection={[props.item]} actions={props.actions} opened={props.opened} setOpened={props.setOpened}/>
+        </Box>
+    );
 }

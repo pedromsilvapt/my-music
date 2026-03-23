@@ -1,13 +1,15 @@
 import {computePosition, flip, offset, shift} from '@floating-ui/dom';
 import {CloseButton, Group, Paper, Portal, Text, Transition} from "@mantine/core";
-import {useLayoutEffect, useRef, useState} from "react";
+import {useLayoutEffect, useMemo, useRef, useState} from "react";
 import CollectionActions from "./collection-actions.tsx";
 import type {CollectionSchemaAction} from "./collection-schema.tsx";
+import type {SelectionStore} from "./selection-store.ts";
 
 export interface SelectionFloatingBarProps<M> {
-    selection: M[];
-    actions: CollectionSchemaAction<M>[];
-    anchorElement: HTMLElement | null;
+    items: M[];
+    itemKey: (item: M) => React.Key;
+    selectionStore: SelectionStore;
+    actionsFn?: (selection: M[]) => CollectionSchemaAction<M>[];
     containerRef: React.RefObject<HTMLElement | null>;
     portalTarget: React.RefObject<HTMLElement | null>;
     onClearSelection: () => void;
@@ -25,14 +27,21 @@ const isElementInViewport = (el: HTMLElement) => {
 };
 
 export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps<M>) {
-    const {selection, actions, anchorElement, containerRef, portalTarget, onClearSelection, isContextMenuOpen} = props;
+    const {items, itemKey, selectionStore, actionsFn, containerRef, portalTarget, onClearSelection, isContextMenuOpen} = props;
     const floatingRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({x: 0, y: 0, placement: 'bottom-start' as string});
+
+    const selectedKeys = selectionStore(state => state.selectedKeys);
+    const anchorElement = selectionStore(state => state.lastSelectedElement);
+    const selectionCount = selectedKeys.size;
+
+    const selection = useMemo(() => items.filter(item => selectedKeys.has(itemKey(item))), [items, itemKey, selectedKeys]);
+    const actions = useMemo(() => actionsFn?.(selection) ?? [], [actionsFn, selection]);
 
     const showAtAnchor = anchorElement && isElementInViewport(anchorElement);
     const containerElement = containerRef.current;
     const showAtContainer = containerElement && !showAtAnchor;
-    const canShow = selection.length > 0 && (showAtAnchor || showAtContainer) && !isContextMenuOpen;
+    const canShow = selectionCount > 0 && (showAtAnchor || showAtContainer) && !isContextMenuOpen;
 
     useLayoutEffect(() => {
         if (!floatingRef.current) {

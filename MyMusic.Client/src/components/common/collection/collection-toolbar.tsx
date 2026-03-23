@@ -27,6 +27,8 @@ import {ZINDEX_MODAL} from "../../../consts.ts";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
 import {CollectionFilterBar, type CollectionFilterBarRef} from "./collection-filter-bar.tsx";
 import type {CollectionFilterMode, CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
+import type {SelectionStore} from "./selection-store.ts";
+import {useSelectionCount} from "./selection-store.ts";
 import styles from './collection-toolbar.module.css';
 
 export type CollectionView = 'table' | 'list' | 'grid';
@@ -52,7 +54,7 @@ export interface CollectionToolbarProps<M> {
     sortableFields?: (keyof M & string)[];
     columns?: CollectionSchemaColumn<M>[];
 
-    selectionCount?: number;
+    selectionStore?: SelectionStore;
     totalItems?: number;
     onSelectAll?: () => void;
     onClearSelection?: () => void;
@@ -167,8 +169,9 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
         );
     };
 
+    const selectionCount = useSelectionCount(props.selectionStore ?? null);
     const hasSelectAll = props.onSelectAll && props.totalItems !== undefined;
-    const showSelectAll = hasSelectAll && (props.selectionCount ?? 0) < (props.totalItems ?? 0);
+    const showSelectAll = hasSelectAll && selectionCount < (props.totalItems ?? 0);
 
     const leftSection = props.renderLeftSection
         ? props.renderLeftSection()

@@ -20,24 +20,22 @@ import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
 import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
-import CollectionActions from "../collection-actions.tsx";
+import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
     type CollectionSchemaAction
 } from "../collection-schema.tsx";
-import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
+import type {SelectionStore} from "../selection-store.ts";
 import styles from './collection-grid.module.css';
 
 export interface CollectionGridProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
-    selection: M[];
-    selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    selectionStore: SelectionStore;
+    onToggle: (key: React.Key, event: React.MouseEvent) => void;
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
-    setItemElementRef?: ItemElementRefCallback<M>;
-    actions: CollectionSchemaAction<M>[];
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
@@ -61,6 +59,7 @@ export default function CollectionGrid<M>(props: CollectionGridProps<M>) {
         // TODO Because we lose the virtualizer's state, we must ensure we scroll to the same element that was visible previously
                                    key={"internal-grid-" + lanes}
                                    items={props.items}
+                                   selectionStore={props.selectionStore}
                                    lanes={lanes}
                                    parentRef={parentRef}
                                    tableWidth={tableWidth}
@@ -77,18 +76,25 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 }
 
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, selectionHandlers: propSelectionHandlers, onScrollPositionChange, initialScrollPosition, scrollToIndex, highlightRequestId, sortable, setItemElementRef, actions, height, onReorderBatch, onReorder} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, scrollToIndex, highlightRequestId, sortable, height, onReorderBatch, onReorder} = props;
     const {lanes, parentRef, elemSize, gap} = props;
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
+    const toggleRef = useRef(onToggle);
+    toggleRef.current = onToggle;
+
     const handleContextMenuTrigger = useCallback((
         event: React.MouseEvent | React.TouchEvent,
         rowActions: CollectionSchemaAction<M>[],
-        selection: M[]
+        rowSelection: M[]
     ) => {
-        onContextMenuTrigger?.(event, rowActions, selection);
+        onContextMenuTrigger?.(event, rowActions, rowSelection);
     }, [onContextMenuTrigger]);
+
+    const handleRowToggle = useCallback((key: React.Key, event?: React.MouseEvent | React.TouchEvent) => {
+        toggleRef.current(key, event as React.MouseEvent);
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -157,11 +163,6 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
 
     const itemIds = useMemo(() => propItems.map(item => propSchema.key(item)) as string[], [propItems, propSchema]);
 
-    const selectedIds = useMemo(() =>
-            new Set(propSelection.map(item => propSchema.key(item))),
-        [propSelection, propSchema]
-    );
-
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id);
         setIsDragging(true);
@@ -175,7 +176,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             let toIndex = propItems.findIndex(item => propSchema.key(item) === over.id);
 
             if (fromIndex !== -1 && toIndex !== -1) {
-                const selectedKeys = Array.from(selectedIds);
+                const selectedKeys = Array.from(selectionStore.getState().selectedKeys);
 
                 if (selectedKeys.length > 1) {
                     const selectedIndices = selectedKeys
@@ -214,9 +215,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     const items = virtualItems.map((virtualItem) => {
         const item = propItems[virtualItem.index];
         const itemId = propSchema.key(item);
-        const isSelected = selectedIds.has(itemId);
         const isDragOverlay = activeId === itemId;
-        const isCollapsed = isDragging && isSelected && !isDragOverlay;
 
         return <CollectionGridItem
             key={itemId}
@@ -225,15 +224,13 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             item={item}
             width={elemSize}
             schema={propSchema}
-            selection={propSelection}
-            selectionHandlers={propSelectionHandlers}
+            items={propItems}
+            selectionStore={selectionStore}
+            itemId={itemId}
+            onToggle={handleRowToggle}
             sortable={sortable}
-            isSelected={isSelected}
             isDragOverlay={isDragOverlay}
-            isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
-            setItemElementRef={setItemElementRef}
-            actions={actions}
             scrollToIndex={scrollToIndex}
             highlightRequestId={highlightRequestId}
             onContextMenuTrigger={handleContextMenuTrigger}
@@ -287,7 +284,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                                 <Group>
                                     <Box flex={1}>
                                         <Text size="md" lineClamp={1}>
-                                            {selectedIds.size > 1 ? `Dragging ${selectedIds.size} items` : 'Dragging'}
+                                            {selectionStore.getState().selectedKeys.size > 1 ? `Dragging ${selectionStore.getState().selectedKeys.size} items` : 'Dragging'}
                                         </Text>
                                     </Box>
                                 </Group>
@@ -311,16 +308,14 @@ export interface CollectionGridItemProps<M> {
     virtualizer: Virtualizer<HTMLDivElement, Element>;
     schema: CollectionSchema<M>;
     item: M;
-    selection: M[];
-    selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    items: M[];
+    selectionStore: SelectionStore;
+    itemId: React.Key;
+    onToggle: (key: React.Key, event?: React.MouseEvent | React.TouchEvent) => void;
     width: number;
     sortable?: boolean;
-    isSelected?: boolean;
     isDragOverlay?: boolean;
-    isCollapsed?: boolean;
     isDraggingActive?: boolean;
-    setItemElementRef?: ItemElementRefCallback<M>;
-    actions: CollectionSchemaAction<M>[];
     scrollToIndex?: number;
     highlightRequestId?: number;
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
@@ -330,22 +325,22 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
     const {
         schema,
         item,
-        selection,
-        selectionHandlers,
+        items,
+        selectionStore,
+        itemId,
+        onToggle,
         virtualItem,
         virtualizer,
         sortable,
-        isSelected,
         isDragOverlay,
-        isCollapsed,
         isDraggingActive,
-        setItemElementRef,
-        actions,
         scrollToIndex,
         highlightRequestId,
         onContextMenuTrigger,
         width,
     } = props;
+
+    const isSelected = selectionStore(state => state.selectedKeys.has(itemId));
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const prevHighlightIdRef = useRef<number | undefined>(undefined);
@@ -360,6 +355,8 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
             }
         }
     }, [highlightRequestId, scrollToIndex, virtualItem.index]);
+
+    const isCollapsed = isDraggingActive && isSelected && !isDragOverlay;
 
     const {
         attributes,
@@ -393,9 +390,9 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         setNodeRef(node);
         virtualizer.measureElement(node);
         if (isSelected && node) {
-            setItemElementRef?.(item, node);
+            selectionStore.getState().setLastSelectedElement(node);
         }
-    }, [setNodeRef, virtualizer, isSelected, setItemElementRef, item]);
+    }, [setNodeRef, virtualizer, isSelected, selectionStore]);
 
     const handleMouseDown = (event: React.MouseEvent) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -412,7 +409,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
             return;
         }
         if (!isDraggingActive) {
-            selectionHandlers.toggle(schema.key(item), event);
+            onToggle(schema.key(item), event);
         }
     };
 
@@ -423,11 +420,11 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
 
         const itemKey = schema.key(item);
 
-        selectionHandlers.toggle(itemKey, event);
+        onToggle(itemKey, event);
 
         const isNowSelected = !isSelected;
-        const contextActions = isNowSelected ? itemActions : actions;
-        const contextSelection = isNowSelected ? [item] : selection;
+        const contextActions = isNowSelected ? itemActions : (schema.actions?.(items.filter(i => selectionStore.getState().selectedKeys.has(schema.key(i)))) ?? []);
+        const contextSelection = isNowSelected ? [item] : items.filter(i => selectionStore.getState().selectedKeys.has(schema.key(i)));
 
         onContextMenuTrigger(event, contextActions, contextSelection);
     };
@@ -437,49 +434,49 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
     return (
         <>
             <Box
-        ref={itemRef}
-        data-index={virtualItem.index}
-        data-lane={virtualItem.lane}
-        data-sortable-item={sortable || undefined}
-        style={sortable ? {...style, width: width, height: width + 54} : {
-            width: width,
-            height: width + 54
-        }}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onContextMenu={longPressHandlers.onContextMenu}
-        onTouchStart={longPressHandlers.onTouchStart}
-        onTouchEnd={longPressHandlers.onTouchEnd}
-        onTouchMove={longPressHandlers.onTouchMove}
-        onTouchCancel={longPressHandlers.onTouchCancel}
-        {...(sortable ? attributes : {})}
-        {...(sortable && !isDragOverlay ? listeners : {})}
-        className={cls(
-            styles.item,
-            isSelected && styles.selected,
-            isDragOverlay && styles.selected,
-            isHighlighted && styles.highlighted,
-        )}>
-        <Stack gap="sm">
-            {schema.renderListArtwork(item, width - 20)}
-            <Group>
-                <Box flex={1}>
-                    <Text size="md" lineClamp={1}>{schema.renderListTitle(item, 1)}</Text>
-                    <Text size="sm" opacity={0.5} lineClamp={1}>
-                        {schema.renderListSubTitle(item, 1)}
-                    </Text>
-                </Box>
-                <Box className={cls(
-                    styles.itemActions,
-                    isDropdownOpen && styles.opened,
-                    selection.length > 0 && styles.hidden
-                )}>
-                    <CollectionActions selection={[item]} actions={itemActions} opened={isDropdownOpen}
-                                       setOpened={setIsDropdownOpen}/>
-                </Box>
-            </Group>
-        </Stack>
-    </Box>
+                ref={itemRef}
+                data-index={virtualItem.index}
+                data-sortable-item={sortable || undefined}
+                style={sortable ? style : undefined}
+                onMouseDown={handleMouseDown}
+                onMouseUp={handleMouseUp}
+                onContextMenu={longPressHandlers.onContextMenu}
+                onTouchStart={longPressHandlers.onTouchStart}
+                onTouchEnd={longPressHandlers.onTouchEnd}
+                onTouchMove={longPressHandlers.onTouchMove}
+                onTouchCancel={longPressHandlers.onTouchCancel}
+                {...(sortable ? attributes : {})}
+                {...(sortable && !isDragOverlay ? listeners : {})}
+                className={cls(
+                    styles.item,
+                    isSelected && styles.selected,
+                    isDragOverlay && styles.selected,
+                    isHighlighted && styles.highlighted,
+                )}
+                w={width}
+                h={width + 54}
+            >
+                <Stack gap="sm">
+                    {schema.renderListArtwork(item, width - 20)}
+                    <Group>
+                        <Box flex={1}>
+                            <Text size="sm" lineClamp={1}>{schema.renderListTitle(item, 1)}</Text>
+                            <Text size="xs" c="dimmed" lineClamp={1}>
+                                {schema.renderListSubTitle(item, 1)}
+                            </Text>
+                        </Box>
+                    </Group>
+                </Stack>
+                <RowActionsContainer 
+                    item={item} 
+                    actions={itemActions} 
+                    opened={isDropdownOpen} 
+                    setOpened={setIsDropdownOpen}
+                    containerClassName={styles.itemActions}
+                    openedClassName={styles.opened}
+                    hiddenClassName={styles.hidden}
+                />
+            </Box>
         </>
     );
 }

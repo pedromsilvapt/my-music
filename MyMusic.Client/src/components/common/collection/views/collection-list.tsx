@@ -19,24 +19,22 @@ import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
 import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
-import CollectionActions from "../collection-actions.tsx";
+import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
     type CollectionSchemaAction
 } from "../collection-schema.tsx";
-import type {CollectionSelectionHandlers, ItemElementRefCallback} from "../collection.tsx";
+import type {SelectionStore} from "../selection-store.ts";
 import styles from './collection-list.module.css';
 
 export interface CollectionListProps<M> {
     schema: CollectionSchema<M>;
     items: M[];
-    selection: M[];
-    selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    selectionStore: SelectionStore;
+    onToggle: (key: React.Key, event: React.MouseEvent) => void;
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
-    setItemElementRef?: ItemElementRefCallback<M>;
-    actions: CollectionSchemaAction<M>[];
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
@@ -46,18 +44,25 @@ export interface CollectionListProps<M> {
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selection: propSelection, selectionHandlers: propSelectionHandlers, onScrollPositionChange, initialScrollPosition, sortable, setItemElementRef, actions, height, onReorderBatch, onReorder, scrollToIndex, highlightRequestId} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, height, onReorderBatch, onReorder, scrollToIndex, highlightRequestId} = props;
     const parentRef = useRef<HTMLDivElement>(null)
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
+    const toggleRef = useRef(onToggle);
+    toggleRef.current = onToggle;
+
     const handleContextMenuTrigger = useCallback((
         event: React.MouseEvent | React.TouchEvent,
         rowActions: CollectionSchemaAction<M>[],
-        selection: M[]
+        rowSelection: M[]
     ) => {
-        onContextMenuTrigger?.(event, rowActions, selection);
+        onContextMenuTrigger?.(event, rowActions, rowSelection);
     }, [onContextMenuTrigger]);
+
+    const handleRowToggle = useCallback((key: React.Key, event?: React.MouseEvent | React.TouchEvent) => {
+        toggleRef.current(key, event as React.MouseEvent);
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -125,11 +130,6 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
 
     const itemIds = useMemo(() => propItems.map(item => propSchema.key(item)) as string[], [propItems, propSchema]);
 
-    const selectedIds = useMemo(() =>
-            new Set(propSelection.map(item => propSchema.key(item))),
-        [propSelection, propSchema]
-    );
-
     const handleDragStart = (event: DragStartEvent) => {
         setActiveId(event.active.id);
         setIsDragging(true);
@@ -143,7 +143,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
             let toIndex = propItems.findIndex(item => propSchema.key(item) === over.id);
 
             if (fromIndex !== -1 && toIndex !== -1) {
-                const selectedKeys = Array.from(selectedIds);
+                const selectedKeys = Array.from(selectionStore.getState().selectedKeys);
 
                 if (selectedKeys.length > 1) {
                     const selectedIndices = selectedKeys
@@ -182,9 +182,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
     const items = virtualItems.map((virtualItem) => {
         const item = propItems[virtualItem.index];
         const itemId = propSchema.key(item);
-        const isSelected = selectedIds.has(itemId);
         const isDragOverlay = activeId === itemId;
-        const isCollapsed = isDragging && isSelected && !isDragOverlay;
 
         return <CollectionListItem
             key={itemId}
@@ -192,15 +190,13 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
             virtualizer={virtualizer}
             item={item}
             schema={propSchema}
-            selection={propSelection}
-            selectionHandlers={propSelectionHandlers}
+            items={propItems}
+            selectionStore={selectionStore}
+            itemId={itemId}
+            onToggle={handleRowToggle}
             sortable={sortable}
-            isSelected={isSelected}
             isDragOverlay={isDragOverlay}
-            isCollapsed={isCollapsed}
             isDraggingActive={isDragging}
-            setItemElementRef={setItemElementRef}
-            actions={actions}
             scrollToIndex={scrollToIndex}
             highlightRequestId={highlightRequestId}
             onContextMenuTrigger={handleContextMenuTrigger}
@@ -253,7 +249,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                                 }
                                 <Box flex={1}>
                                     <Text size="md">
-                                        {selectedIds.size > 1 ? `Dragging ${selectedIds.size} items` : 'Dragging'}
+                                        {selectionStore.getState().selectedKeys.size > 1 ? `Dragging ${selectionStore.getState().selectedKeys.size} items` : 'Dragging'}
                                     </Text>
                                 </Box>
                             </Group>
@@ -274,15 +270,13 @@ export interface CollectionListItemProps<M> {
     virtualizer: Virtualizer<HTMLDivElement, Element>;
     schema: CollectionSchema<M>;
     item: M;
-    selection: M[];
-    selectionHandlers: CollectionSelectionHandlers<React.Key>;
+    items: M[];
+    selectionStore: SelectionStore;
+    itemId: React.Key;
+    onToggle: (key: React.Key, event?: React.MouseEvent | React.TouchEvent) => void;
     sortable?: boolean;
-    isSelected?: boolean;
     isDragOverlay?: boolean;
-    isCollapsed?: boolean;
     isDraggingActive?: boolean;
-    setItemElementRef?: ItemElementRefCallback<M>;
-    actions: CollectionSchemaAction<M>[];
     scrollToIndex?: number;
     highlightRequestId?: number;
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
@@ -292,21 +286,21 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     const {
         schema,
         item,
-        selection,
-        selectionHandlers,
+        items,
+        selectionStore,
+        itemId,
+        onToggle,
         virtualItem,
         virtualizer,
         sortable,
-        isSelected,
         isDragOverlay,
-        isCollapsed,
         isDraggingActive,
-        setItemElementRef,
-        actions,
         scrollToIndex,
         highlightRequestId,
         onContextMenuTrigger,
     } = props;
+
+    const isSelected = selectionStore(state => state.selectedKeys.has(itemId));
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const prevHighlightIdRef = useRef<number | undefined>(undefined);
@@ -321,6 +315,8 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
             }
         }
     }, [highlightRequestId, scrollToIndex, virtualItem.index]);
+
+    const isCollapsed = isDraggingActive && isSelected && !isDragOverlay;
 
     const {
         attributes,
@@ -354,9 +350,9 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
         setNodeRef(node);
         virtualizer.measureElement(node);
         if (isSelected && node) {
-            setItemElementRef?.(item, node);
+            selectionStore.getState().setLastSelectedElement(node);
         }
-    }, [setNodeRef, virtualizer, isSelected, setItemElementRef, item]);
+    }, [setNodeRef, virtualizer, isSelected, selectionStore]);
 
     const handleMouseDown = (event: React.MouseEvent) => {
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
@@ -365,15 +361,7 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
     };
 
     const handleMouseUp = (event: React.MouseEvent) => {
-        console.log('[CL-MouseUp] triggered', { 
-            target: event.target,
-            isInteractive: isInteractiveElement(event.target),
-            isDraggingActive,
-            button: event.button
-        });
-        
         if (event.button === 2) {
-            console.log('[CL-MouseUp] skipping - right click');
             return;
         }
         
@@ -381,7 +369,7 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
             return;
         }
         if (!isDraggingActive) {
-            selectionHandlers.toggle(schema.key(item), event);
+            onToggle(schema.key(item), event);
         }
     };
 
@@ -392,11 +380,11 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
 
         const itemKey = schema.key(item);
 
-        selectionHandlers.toggle(itemKey, event);
+        onToggle(itemKey, event);
 
         const isNowSelected = !isSelected;
-        const contextActions = isNowSelected ? itemActions : actions;
-        const contextSelection = isNowSelected ? [item] : selection;
+        const contextActions = isNowSelected ? itemActions : (schema.actions?.(items.filter(i => selectionStore.getState().selectedKeys.has(schema.key(i)))) ?? []);
+        const contextSelection = isNowSelected ? [item] : items.filter(i => selectionStore.getState().selectedKeys.has(schema.key(i)));
 
         onContextMenuTrigger(event, contextActions, contextSelection);
     };
@@ -433,14 +421,15 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
                             {schema.renderListSubTitle(item, 1)}
                         </Text>
                     </Box>
-                    <Box className={cls(
-                        styles.itemActions,
-                        isDropdownOpen && styles.opened,
-                        selection.length > 0 && styles.hidden
-                    )}>
-                        <CollectionActions selection={[item]} actions={itemActions} opened={isDropdownOpen}
-                                           setOpened={setIsDropdownOpen}/>
-                    </Box>
+                    <RowActionsContainer 
+                        item={item} 
+                        actions={itemActions} 
+                        opened={isDropdownOpen} 
+                        setOpened={setIsDropdownOpen}
+                        containerClassName={styles.itemActions}
+                        openedClassName={styles.opened}
+                        hiddenClassName={styles.hidden}
+                    />
                 </Group>
             </Box>
         </>
