@@ -96,10 +96,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const [throttledSearch] = useDebouncedValue(clientSearch, SEARCH_DEBOUNCE_MS);
     const [debouncedScrollPosition] = useDebouncedValue(scrollPosition, SCROLL_DEBOUNCE_MS);
 
-    const {onContextMenuTrigger, renderMenuItems, isOpen: isContextMenuOpen} = useMantineContextMenu({
-        menuWidth: 200,
-        menuHeight: 350,
-    });
+    const {onContextMenuTrigger, renderMenuItems, isOpen: isContextMenuOpen} = useMantineContextMenu();
     const contextMenuSelectionRef = useRef<T[]>([]);
     const contextMenuActionsRef = useRef<CollectionSchemaAction<T>[]>([]);
 

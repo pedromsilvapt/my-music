@@ -1,10 +1,6 @@
 import {Menu} from "@mantine/core";
+import {useElementSize, useViewportSize} from "@mantine/hooks";
 import {useCallback, useEffect, useMemo, useState} from "react";
-
-export interface UseMantineContextMenuOptions {
-    menuWidth?: number;
-    menuHeight?: number;
-}
 
 export interface UseMantineContextMenuReturn {
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent) => void;
@@ -12,11 +8,10 @@ export interface UseMantineContextMenuReturn {
     isOpen: boolean;
 }
 
-export function useMantineContextMenu(
-    options: UseMantineContextMenuOptions = {}
-): UseMantineContextMenuReturn {
-    const {menuWidth = 200, menuHeight = 350} = options;
-    const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+export function useMantineContextMenu(): UseMantineContextMenuReturn {
+    const {ref: menuRef, width, height} = useElementSize<HTMLDivElement>();
+    const {width: viewportWidth, height: viewportHeight} = useViewportSize();
+    const [clickPosition, setClickPosition] = useState<{ x: number; y: number } | null>(null);
     const [isOpen, setIsOpen] = useState(false);
 
     const onContextMenuTrigger = useCallback((event: React.MouseEvent | React.TouchEvent) => {
@@ -32,13 +27,13 @@ export function useMantineContextMenu(
             clientY = event.clientY;
         }
 
-        setPosition({x: clientX, y: clientY});
+        setClickPosition({x: clientX, y: clientY});
         setIsOpen(true);
     }, []);
 
     const onClose = useCallback(() => {
         setIsOpen(false);
-        setPosition(null);
+        setClickPosition(null);
     }, []);
 
     useEffect(() => {
@@ -53,12 +48,21 @@ export function useMantineContextMenu(
     }, [isOpen, onClose]);
 
     const constrainedPosition = useMemo(() => {
-        if (!position) return null;
-        return {
-            left: Math.min(position.x, window.innerWidth - menuWidth),
-            top: Math.min(position.y, window.innerHeight - menuHeight),
-        };
-    }, [position, menuWidth, menuHeight]);
+        if (!clickPosition) return null;
+
+        let left = clickPosition.x;
+        let top = clickPosition.y;
+
+        if (left + width > viewportWidth) {
+            left = Math.max(0, left - width);
+        }
+
+        if (top + height > viewportHeight) {
+            top = Math.max(0, top - height);
+        }
+
+        return {left, top};
+    }, [clickPosition, width, height, viewportWidth, viewportHeight]);
 
     const renderMenuItems = useCallback((children: () => React.ReactNode) => {
         if (!constrainedPosition) return null;
@@ -66,6 +70,7 @@ export function useMantineContextMenu(
         return (
             <Menu opened={isOpen} onClose={onClose}>
                 <Menu.Dropdown
+                    ref={menuRef}
                     styles={{
                         dropdown: {
                             position: 'fixed',
@@ -78,7 +83,7 @@ export function useMantineContextMenu(
                 </Menu.Dropdown>
             </Menu>
         );
-    }, [constrainedPosition, isOpen, onClose]);
+    }, [constrainedPosition, isOpen, onClose, menuRef]);
 
     return {
         onContextMenuTrigger,
