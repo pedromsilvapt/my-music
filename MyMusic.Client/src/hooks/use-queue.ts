@@ -10,9 +10,11 @@ import {
     useSetQueueCurrentSong,
     useShuffleQueue,
 } from '../client/playlists';
+import {useUpdateCurrentUser} from '../client/users';
 import type {GetPlaylistItem, GetPlaylistSongItem, ListSongsItem} from '../model';
 import {AddToQueuePosition} from '../model';
 import {usePlaybackActions} from '../stores/playback-store';
+import {useQueueManagerStore} from '../stores/queue-manager-store';
 
 export type PlayableItem = GetPlaylistSongItem | ListSongsItem;
 
@@ -105,6 +107,9 @@ export function useQueueMutations() {
         clear: s.clear,
         incrementPlaybackKey: s.incrementPlaybackKey,
     }));
+    const setCurrentQueueId = useQueueManagerStore((s) => s.setCurrentQueueId);
+    const visibleQueueId = useQueueManagerStore((s) => s.visibleQueueId);
+    const updateCurrentUserMutation = useUpdateCurrentUser({});
 
     const replaceQueue = useReplaceQueue({});
     const addToQueue = useAddToQueue({});
@@ -118,10 +123,11 @@ export function useQueueMutations() {
     }, [setLoadingSongAction]);
 
     const play = useCallback(
-        (songs: PlayableItem[]) => {
+        async (songs: PlayableItem[]) => {
             if (songs.length === 0) return;
 
             incrementPlaybackKey();
+            setCurrentQueueId(visibleQueueId);
 
             const songIds = songs.map((s) => s.id);
             const firstSong = songs[0];
@@ -145,9 +151,14 @@ export function useQueueMutations() {
                 headers: new Headers(),
             });
 
+            // Persist currentQueueId to server
+            await updateCurrentUserMutation.mutateAsync({
+                data: {currentQueueId: visibleQueueId},
+            });
+
             replaceQueue.mutate({data: {songIds, currentSongId: firstSong.id}});
         },
-        [replaceQueue, queryClient, setLoadingSong, incrementPlaybackKey]
+        [replaceQueue, queryClient, setLoadingSong, incrementPlaybackKey, setCurrentQueueId, visibleQueueId, updateCurrentUserMutation]
     );
 
     const playNext = useCallback(

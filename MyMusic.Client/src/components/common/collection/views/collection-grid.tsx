@@ -278,7 +278,8 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                                 {propItems.find(item => propSchema.key(item) === activeId) &&
                                     propSchema.renderListArtwork(
                                         propItems.find(item => propSchema.key(item) === activeId)!,
-                                        elemSize - 20
+                                        elemSize - 20,
+                                        propItems
                                     )
                                 }
                                 <Group>
@@ -457,7 +458,7 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
                 h={width + 54}
             >
                 <Stack gap="sm">
-                    {schema.renderListArtwork(item, width - 20)}
+                    {schema.renderListArtwork(item, width - 20, items)}
                     <Group>
                         <Box flex={1}>
                             <Text size="sm" lineClamp={1}>{schema.renderListTitle(item, 1)}</Text>

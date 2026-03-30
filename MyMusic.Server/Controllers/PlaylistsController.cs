@@ -294,7 +294,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         playlist = await LoadPlaylistWithSongs(context, playlist.Id, cancellationToken);
 
         return new GetPlaylistResponse
@@ -309,7 +309,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         await LoadPlaylistWithSongs(context, playlist.Id, cancellationToken);
 
         context.PlaylistSongs.RemoveRange(playlist.PlaylistSongs);
@@ -333,13 +333,49 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         return await GetQueue(context, cancellationToken);
     }
 
+    [HttpPut("queues/{id:long}/current-song", Name = "SetQueueCurrentSongById")]
+    public async Task<GetPlaylistResponse> SetQueueCurrentSongById(
+        [FromRoute] long id,
+        [FromBody] SetCurrentSongRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            throw new Exception($"User not found with id {currentUser.Id}");
+        }
+
+        var queue = await context.Playlists
+            .Where(p => p.Id == id && p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (queue == null)
+        {
+            throw new Exception($"Queue not found with id {id}");
+        }
+
+        queue.CurrentSongId = request.CurrentSongId;
+        queue.ModifiedAt = DateTime.UtcNow;
+        user.CurrentQueueId = id;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        var playlist = await LoadPlaylistWithSongs(context, id, cancellationToken);
+
+        return new GetPlaylistResponse
+        {
+            Playlist = GetPlaylistItem.FromEntity(playlist!),
+        };
+    }
+
     [HttpPut("queue/current-song", Name = "SetQueueCurrentSong")]
     public async Task<GetPlaylistResponse> SetQueueCurrentSong(
         [FromBody] SetCurrentSongRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         playlist.CurrentSongId = request.CurrentSongId;
         playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
@@ -353,7 +389,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
 
         var existingBySongId = playlist.PlaylistSongs.ToDictionary(ps => ps.SongId);
@@ -528,7 +564,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
 
         var songIdsToRemove = request.SongIds.ToHashSet();
@@ -566,7 +602,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
 
         var songsByOrder = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
@@ -642,7 +678,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Queue, cancellationToken);
+        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
         await context.Entry(playlist).Collection(p => p.PlaylistSongs).LoadAsync(cancellationToken);
 
         if (request.Indices.Count < 2)
@@ -726,6 +762,195 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
     {
         var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Favorites, cancellationToken);
         return await RemoveSong(playlist.Id, songId, context, cancellationToken);
+    }
+
+    [HttpGet("queues", Name = "ListQueues")]
+    public async Task<ListQueuesResponse> ListQueues(
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var queues = await context.Playlists
+            .Where(p => p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+            .Include(p => p.PlaylistSongs)
+            .OrderByDescending(p => p.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        return new ListQueuesResponse
+        {
+            Queues = queues.Select(ListQueueItem.FromEntity).ToList(),
+        };
+    }
+
+    [HttpPost("queues", Name = "CreateQueue")]
+    public async Task<CreateQueueResponse> CreateQueue(
+        [FromBody] CreateQueueRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            throw new Exception($"User not found with id {currentUser.Id}");
+        }
+
+        var name = request.Name;
+        if (string.IsNullOrEmpty(name))
+        {
+            name = $"Queue ({DateTime.UtcNow:MMM d, yyyy})";
+        }
+
+        var currentSongId = request.CurrentSongId;
+        if (currentSongId == null && request.SongIds.Count > 0)
+        {
+            currentSongId = request.SongIds[0];
+        }
+
+        var playlist = new Playlist
+        {
+            Name = name,
+            Type = PlaylistType.Queue,
+            OwnerId = currentUser.Id,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow,
+            PlaylistSongs = [],
+            CurrentSongId = currentSongId,
+        };
+
+        context.Playlists.Add(playlist);
+        await context.SaveChangesAsync(cancellationToken);
+
+        var order = 1000.0;
+        foreach (var songId in request.SongIds)
+        {
+            context.PlaylistSongs.Add(new PlaylistSong
+            {
+                PlaylistId = playlist.Id,
+                SongId = songId,
+                Order = order,
+                AddedAt = DateTime.UtcNow,
+            });
+            order += 1000.0;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        user.CurrentQueueId = playlist.Id;
+        await context.SaveChangesAsync(cancellationToken);
+
+        var loadedPlaylist = await LoadPlaylistWithSongs(context, playlist.Id, cancellationToken);
+        return new CreateQueueResponse
+        {
+            Queue = GetPlaylistItem.FromEntity(loadedPlaylist!),
+        };
+    }
+
+    [HttpPut("queues/{id:long}", Name = "RenameQueue")]
+    public async Task<RenameQueueResponse> RenameQueue(
+        [FromRoute] long id,
+        [FromBody] RenameQueueRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var queue = await context.Playlists
+            .Where(p => p.Id == id && p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+            .Include(p => p.PlaylistSongs)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (queue == null)
+        {
+            throw new Exception($"Queue not found with id {id}");
+        }
+
+        queue.Name = request.Name;
+        queue.ModifiedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return new RenameQueueResponse
+        {
+            Queue = ListQueueItem.FromEntity(queue),
+        };
+    }
+
+    [HttpDelete("queues/{id:long}", Name = "DeleteQueue")]
+    public async Task<ActionResult> DeleteQueue(
+        [FromRoute] long id,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            throw new Exception($"User not found with id {currentUser.Id}");
+        }
+
+        var queue = await context.Playlists
+            .Where(p => p.Id == id && p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+            .Include(p => p.PlaylistSongs)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (queue == null)
+        {
+            throw new Exception($"Queue not found with id {id}");
+        }
+
+        var wasCurrentQueue = user.CurrentQueueId == queue.Id;
+
+        context.PlaylistSongs.RemoveRange(queue.PlaylistSongs);
+        context.Playlists.Remove(queue);
+
+        if (wasCurrentQueue)
+        {
+            var nextQueue = await context.Playlists
+                .Where(p => p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue && p.Id != queue.Id)
+                .OrderByDescending(p => p.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+            user.CurrentQueueId = nextQueue?.Id;
+        }
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        return NoContent();
+    }
+
+    private async Task<Playlist> GetOrCreateCurrentQueue(
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            throw new Exception($"User not found with id {currentUser.Id}");
+        }
+
+        if (user.CurrentQueueId.HasValue)
+        {
+            var existingQueue = await context.Playlists
+                .Where(p => p.Id == user.CurrentQueueId.Value && p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (existingQueue != null)
+            {
+                return existingQueue;
+            }
+        }
+
+        var playlist = new Playlist
+        {
+            Name = $"Queue ({DateTime.UtcNow:MMM d, yyyy})",
+            Type = PlaylistType.Queue,
+            OwnerId = currentUser.Id,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow,
+            PlaylistSongs = [],
+        };
+
+        context.Playlists.Add(playlist);
+        await context.SaveChangesAsync(cancellationToken);
+
+        user.CurrentQueueId = playlist.Id;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return playlist;
     }
 
     private async Task<Playlist> GetOrCreateSystemPlaylist(

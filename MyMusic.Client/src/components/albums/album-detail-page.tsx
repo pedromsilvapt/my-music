@@ -7,13 +7,20 @@ import type {ListSongItem} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
+import {useMemo} from "react";
 
 export default function AlbumDetailPage() {
     const {albumId} = useParams({from: '/albums/$albumId'});
     const albumQuery = useGetAlbum(Number(albumId));
     const albumResponse = useQueryData(albumQuery, "Failed to fetch album");
     const album = albumResponse?.data.album ?? null;
-    const songsSchema = useSongsSchema();
+
+    const queueContext = useMemo(() => ({
+        type: 'album' as const,
+        albumName: album?.name,
+    }), [album?.name]);
+
+    const songsSchema = useSongsSchema(false, {queueContext});
 
     if (!album) {
         return <Box p="md">Loading...</Box>;

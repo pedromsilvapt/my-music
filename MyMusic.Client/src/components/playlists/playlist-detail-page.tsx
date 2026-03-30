@@ -1,5 +1,5 @@
 import {useParams} from "@tanstack/react-router";
-import {useEffect} from "react";
+import {useEffect, useMemo} from "react";
 import {useGetPlaylist} from "../../client/playlists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
@@ -11,7 +11,12 @@ export default function PlaylistDetailPage() {
     const playlistQuery = useGetPlaylist(id);
     const playlistResponse = useQueryData(playlistQuery, "Failed to fetch playlist");
 
-    const songsSchema = useSongsSchema();
+    const queueContext = useMemo(() => ({
+        type: 'playlist' as const,
+        playlistName: playlistResponse?.data?.playlist?.name,
+    }), [playlistResponse?.data?.playlist?.name]);
+
+    const songsSchema = useSongsSchema(false, {queueContext});
 
     const refetch = playlistQuery.refetch;
 

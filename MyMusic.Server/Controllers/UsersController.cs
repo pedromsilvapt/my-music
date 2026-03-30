@@ -81,6 +81,18 @@ public class UsersController(
             user.IsMuted = body.IsMuted.Value;
         }
 
+        if (body.CurrentQueueId.HasValue)
+        {
+            var queue = await db.Playlists
+                .Where(p => p.Id == body.CurrentQueueId.Value && p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (queue == null)
+            {
+                return BadRequest("Queue not found or does not belong to user.");
+            }
+            user.CurrentQueueId = body.CurrentQueueId.Value;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         return Ok(new GetUserResponse

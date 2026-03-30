@@ -12,8 +12,12 @@ import ManagePlaylistsProvider from "./contexts/manage-playlists-context.tsx";
 import {PlayerProvider} from "./contexts/player-context.tsx";
 import {ArtworkLightboxProvider} from "./contexts/artwork-lightbox-context.tsx";
 import VolumeInitializer from "./components/volume-initializer.tsx";
+import QueueInitializer from "./components/queue-initializer.tsx";
 import SongEditorContextModal from "./components/songs/song-editor-context-modal.tsx";
+import RenameQueueModal from "./components/queue/rename-queue-modal.tsx";
+import DeleteQueueModal from "./components/queue/delete-queue-modal.tsx";
 import {ContextMenuStoreProvider} from "./stores/context-menu-store.tsx";
+import {QueueManagerProvider} from "./stores/queue-manager-store.tsx";
 
 // Import the generated route tree
 import {routeTree} from './routeTree.gen'
@@ -43,18 +47,23 @@ createRoot(document.getElementById('root')!).render(
                     <ModalsProvider
                         modals={{
                             'song-editor': SongEditorContextModal,
+                            'rename-queue': RenameQueueModal,
+                            'delete-queue': DeleteQueueModal,
                         }}>
                         <PlayerProvider>
-                            <VolumeInitializer/>
-                            <ContextMenuStoreProvider>
-                                <ManagePlaylistsProvider>
-                                    <ManageDevicesProvider>
-                                        <CollectionStoreProvider>
-                                            <RouterProvider router={router}/>
-                                        </CollectionStoreProvider>
-                                    </ManageDevicesProvider>
-                                </ManagePlaylistsProvider>
-                            </ContextMenuStoreProvider>
+                            <QueueManagerProvider>
+                                <VolumeInitializer/>
+                                <QueueInitializer/>
+                                <ContextMenuStoreProvider>
+                                    <ManagePlaylistsProvider>
+                                        <ManageDevicesProvider>
+                                            <CollectionStoreProvider>
+                                                <RouterProvider router={router}/>
+                                            </CollectionStoreProvider>
+                                        </ManageDevicesProvider>
+                                    </ManagePlaylistsProvider>
+                                </ContextMenuStoreProvider>
+                            </QueueManagerProvider>
                         </PlayerProvider>
                     </ModalsProvider>
                 </ArtworkLightboxProvider>

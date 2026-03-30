@@ -32,14 +32,19 @@ import type {
 	AddToQueueRequest,
 	CreatePlaylistRequest,
 	CreatePlaylistResponse,
+	CreateQueueRequest,
+	CreateQueueResponse,
 	FilterMetadataResponse,
 	FilterValuesResponse,
 	GetPlaylistFilterValuesParams,
 	GetPlaylistResponse,
 	ListPlaylistsParams,
 	ListPlaylistsResponse,
+	ListQueuesResponse,
 	ManagePlaylistSongsRequest,
 	RemoveFromQueueRequest,
+	RenameQueueRequest,
+	RenameQueueResponse,
 	ReorderQueueRequest,
 	ReplaceQueueRequest,
 	SetCurrentSongRequest,
@@ -2635,6 +2640,571 @@ export const useRemoveFromFavorites = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
+export type listQueuesResponse200TextPlain = {
+	data: ListQueuesResponse;
+	status: 200;
+};
+
+export type listQueuesResponse200ApplicationJson = {
+	data: ListQueuesResponse;
+	status: 200;
+};
+
+export type listQueuesResponse200TextJson = {
+	data: ListQueuesResponse;
+	status: 200;
+};
+
+export type listQueuesResponseSuccess = (
+	| listQueuesResponse200TextPlain
+	| listQueuesResponse200ApplicationJson
+	| listQueuesResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type listQueuesResponse = listQueuesResponseSuccess;
+
+export const getListQueuesUrl = () => {
+	return `/api/playlists/queues`;
+};
+
+export const listQueues = async (
+	options?: RequestInit,
+): Promise<listQueuesResponse> => {
+	const res = await fetch(getListQueuesUrl(), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: listQueuesResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as listQueuesResponse;
+};
+
+export const getListQueuesQueryKey = () => {
+	return ["api", "playlists", "queues"] as const;
+};
+
+export const getListQueuesQueryOptions = <
+	TData = Awaited<ReturnType<typeof listQueues>>,
+	TError = unknown,
+>(options?: {
+	query?: Partial<
+		UseQueryOptions<Awaited<ReturnType<typeof listQueues>>, TError, TData>
+	>;
+	fetch?: RequestInit;
+}) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey = queryOptions?.queryKey ?? getListQueuesQueryKey();
+
+	const queryFn: QueryFunction<Awaited<ReturnType<typeof listQueues>>> = ({
+		signal,
+	}) => listQueues({ signal, ...fetchOptions });
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+		Awaited<ReturnType<typeof listQueues>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListQueuesQueryResult = NonNullable<
+	Awaited<ReturnType<typeof listQueues>>
+>;
+export type ListQueuesQueryError = unknown;
+
+export function useListQueues<
+	TData = Awaited<ReturnType<typeof listQueues>>,
+	TError = unknown,
+>(
+	options: {
+		query: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof listQueues>>, TError, TData>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof listQueues>>,
+					TError,
+					Awaited<ReturnType<typeof listQueues>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListQueues<
+	TData = Awaited<ReturnType<typeof listQueues>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof listQueues>>, TError, TData>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof listQueues>>,
+					TError,
+					Awaited<ReturnType<typeof listQueues>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListQueues<
+	TData = Awaited<ReturnType<typeof listQueues>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof listQueues>>, TError, TData>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useListQueues<
+	TData = Awaited<ReturnType<typeof listQueues>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<Awaited<ReturnType<typeof listQueues>>, TError, TData>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getListQueuesQueryOptions(options);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateListQueues = async (
+	queryClient: QueryClient,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getListQueuesQueryKey() },
+		options,
+	);
+
+	return queryClient;
+};
+
+export type createQueueResponse200TextPlain = {
+	data: CreateQueueResponse;
+	status: 200;
+};
+
+export type createQueueResponse200ApplicationJson = {
+	data: CreateQueueResponse;
+	status: 200;
+};
+
+export type createQueueResponse200TextJson = {
+	data: CreateQueueResponse;
+	status: 200;
+};
+
+export type createQueueResponseSuccess = (
+	| createQueueResponse200TextPlain
+	| createQueueResponse200ApplicationJson
+	| createQueueResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type createQueueResponse = createQueueResponseSuccess;
+
+export const getCreateQueueUrl = () => {
+	return `/api/playlists/queues`;
+};
+
+export const createQueue = async (
+	createQueueRequest: CreateQueueRequest,
+	options?: RequestInit,
+): Promise<createQueueResponse> => {
+	const res = await fetch(getCreateQueueUrl(), {
+		...options,
+		method: "POST",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(createQueueRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: createQueueResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as createQueueResponse;
+};
+
+export const getCreateQueueMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof createQueue>>,
+			TError,
+			{ data: CreateQueueRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof createQueue>>,
+	TError,
+	{ data: CreateQueueRequest },
+	TContext
+> => {
+	const mutationKey = ["createQueue"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof createQueue>>,
+		{ data: CreateQueueRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return createQueue(data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof createQueue>>,
+		variables: { data: CreateQueueRequest },
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
+			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
+};
+
+export type CreateQueueMutationResult = NonNullable<
+	Awaited<ReturnType<typeof createQueue>>
+>;
+export type CreateQueueMutationBody = CreateQueueRequest;
+export type CreateQueueMutationError = unknown;
+
+export const useCreateQueue = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof createQueue>>,
+			TError,
+			{ data: CreateQueueRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof createQueue>>,
+	TError,
+	{ data: CreateQueueRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getCreateQueueMutationOptions(queryClient ?? backupQueryClient, options),
+		queryClient,
+	);
+};
+export type renameQueueResponse200TextPlain = {
+	data: RenameQueueResponse;
+	status: 200;
+};
+
+export type renameQueueResponse200ApplicationJson = {
+	data: RenameQueueResponse;
+	status: 200;
+};
+
+export type renameQueueResponse200TextJson = {
+	data: RenameQueueResponse;
+	status: 200;
+};
+
+export type renameQueueResponseSuccess = (
+	| renameQueueResponse200TextPlain
+	| renameQueueResponse200ApplicationJson
+	| renameQueueResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type renameQueueResponse = renameQueueResponseSuccess;
+
+export const getRenameQueueUrl = (id: number) => {
+	return `/api/playlists/queues/${id}`;
+};
+
+export const renameQueue = async (
+	id: number,
+	renameQueueRequest: RenameQueueRequest,
+	options?: RequestInit,
+): Promise<renameQueueResponse> => {
+	const res = await fetch(getRenameQueueUrl(id), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(renameQueueRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: renameQueueResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as renameQueueResponse;
+};
+
+export const getRenameQueueMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof renameQueue>>,
+			TError,
+			{ id: number; data: RenameQueueRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof renameQueue>>,
+	TError,
+	{ id: number; data: RenameQueueRequest },
+	TContext
+> => {
+	const mutationKey = ["renameQueue"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof renameQueue>>,
+		{ id: number; data: RenameQueueRequest }
+	> = (props) => {
+		const { id, data } = props ?? {};
+
+		return renameQueue(id, data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof renameQueue>>,
+		variables: { id: number; data: RenameQueueRequest },
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
+			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
+};
+
+export type RenameQueueMutationResult = NonNullable<
+	Awaited<ReturnType<typeof renameQueue>>
+>;
+export type RenameQueueMutationBody = RenameQueueRequest;
+export type RenameQueueMutationError = unknown;
+
+export const useRenameQueue = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof renameQueue>>,
+			TError,
+			{ id: number; data: RenameQueueRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof renameQueue>>,
+	TError,
+	{ id: number; data: RenameQueueRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getRenameQueueMutationOptions(queryClient ?? backupQueryClient, options),
+		queryClient,
+	);
+};
+export type deleteQueueResponse200 = {
+	data: void;
+	status: 200;
+};
+
+export type deleteQueueResponseSuccess = deleteQueueResponse200 & {
+	headers: Headers;
+};
+
+export type deleteQueueResponse = deleteQueueResponseSuccess;
+
+export const getDeleteQueueUrl = (id: number) => {
+	return `/api/playlists/queues/${id}`;
+};
+
+export const deleteQueue = async (
+	id: number,
+	options?: RequestInit,
+): Promise<deleteQueueResponse> => {
+	const res = await fetch(getDeleteQueueUrl(id), {
+		...options,
+		method: "DELETE",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: deleteQueueResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as deleteQueueResponse;
+};
+
+export const getDeleteQueueMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof deleteQueue>>,
+			TError,
+			{ id: number },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof deleteQueue>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const mutationKey = ["deleteQueue"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof deleteQueue>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+
+		return deleteQueue(id, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof deleteQueue>>,
+		variables: { id: number },
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
+			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
+};
+
+export type DeleteQueueMutationResult = NonNullable<
+	Awaited<ReturnType<typeof deleteQueue>>
+>;
+
+export type DeleteQueueMutationError = unknown;
+
+export const useDeleteQueue = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof deleteQueue>>,
+			TError,
+			{ id: number },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof deleteQueue>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getDeleteQueueMutationOptions(queryClient ?? backupQueryClient, options),
+		queryClient,
+	);
+};
 export type getPlaylistFilterMetadataResponse200TextPlain = {
 	data: FilterMetadataResponse;
 	status: 200;
@@ -3062,6 +3632,130 @@ export const invalidateGetPlaylistFilterValues = async (
 	);
 
 	return queryClient;
+};
+
+export type setQueueCurrentSongByIdResponse200TextPlain = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type setQueueCurrentSongByIdResponse200ApplicationJson = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type setQueueCurrentSongByIdResponse200TextJson = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type setQueueCurrentSongByIdResponseSuccess = (
+	| setQueueCurrentSongByIdResponse200TextPlain
+	| setQueueCurrentSongByIdResponse200ApplicationJson
+	| setQueueCurrentSongByIdResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type setQueueCurrentSongByIdResponse =
+	setQueueCurrentSongByIdResponseSuccess;
+
+export const getSetQueueCurrentSongByIdUrl = (id: number) => {
+	return `/api/playlists/queues/${id}/current-song`;
+};
+
+export const setQueueCurrentSongById = async (
+	id: number,
+	setCurrentSongRequest: SetCurrentSongRequest,
+	options?: RequestInit,
+): Promise<setQueueCurrentSongByIdResponse> => {
+	const res = await fetch(getSetQueueCurrentSongByIdUrl(id), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(setCurrentSongRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: setQueueCurrentSongByIdResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as setQueueCurrentSongByIdResponse;
+};
+
+export const getSetQueueCurrentSongByIdMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof setQueueCurrentSongById>>,
+		TError,
+		{ id: number; data: SetCurrentSongRequest },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof setQueueCurrentSongById>>,
+	TError,
+	{ id: number; data: SetCurrentSongRequest },
+	TContext
+> => {
+	const mutationKey = ["setQueueCurrentSongById"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof setQueueCurrentSongById>>,
+		{ id: number; data: SetCurrentSongRequest }
+	> = (props) => {
+		const { id, data } = props ?? {};
+
+		return setQueueCurrentSongById(id, data, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type SetQueueCurrentSongByIdMutationResult = NonNullable<
+	Awaited<ReturnType<typeof setQueueCurrentSongById>>
+>;
+export type SetQueueCurrentSongByIdMutationBody = SetCurrentSongRequest;
+export type SetQueueCurrentSongByIdMutationError = unknown;
+
+export const useSetQueueCurrentSongById = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof setQueueCurrentSongById>>,
+			TError,
+			{ id: number; data: SetCurrentSongRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof setQueueCurrentSongById>>,
+	TError,
+	{ id: number; data: SetCurrentSongRequest },
+	TContext
+> => {
+	return useMutation(
+		getSetQueueCurrentSongByIdMutationOptions(options),
+		queryClient,
+	);
 };
 
 export const getListPlaylistsResponseMock = (
@@ -6577,6 +7271,366 @@ export const getRemoveFromFavoritesResponseMock = (
 		},
 	]);
 
+export const getListQueuesResponseMock = (
+	overrideResponse: Partial<Extract<ListQueuesResponse, object>> = {},
+): ListQueuesResponse =>
+	faker.helpers.arrayElement([
+		{
+			queues: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				songCount: faker.number.int(),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			queues: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				songCount: faker.number.int(),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			queues: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				songCount: faker.number.int(),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getCreateQueueResponseMock = (
+	overrideResponse: Partial<Extract<CreateQueueResponse, object>> = {},
+): CreateQueueResponse =>
+	faker.helpers.arrayElement([
+		{
+			queue: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					order: faker.number.int(),
+					addedAtPlaylist: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+			},
+			...overrideResponse,
+		},
+		{
+			queue: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					order: faker.number.int(),
+					addedAtPlaylist: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+			},
+			...overrideResponse,
+		},
+		{
+			queue: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					order: faker.number.int(),
+					addedAtPlaylist: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+			},
+			...overrideResponse,
+		},
+	]);
+
+export const getRenameQueueResponseMock = (
+	overrideResponse: Partial<Extract<RenameQueueResponse, object>> = {},
+): RenameQueueResponse =>
+	faker.helpers.arrayElement([
+		{
+			queue: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				songCount: faker.number.int(),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			queue: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				songCount: faker.number.int(),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			queue: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				songCount: faker.number.int(),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+	]);
+
 export const getGetPlaylistFilterMetadataResponseMock = (
 	overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
 ): FilterMetadataResponse =>
@@ -6768,6 +7822,267 @@ export const getGetPlaylistFilterValuesResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+	]);
+
+export const getSetQueueCurrentSongByIdResponseMock = (
+	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
+): GetPlaylistResponse =>
+	faker.helpers.arrayElement([
+		{
+			playlist: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					order: faker.number.int(),
+					addedAtPlaylist: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+			},
+			...overrideResponse,
+		},
+		{
+			playlist: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					order: faker.number.int(),
+					addedAtPlaylist: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+			},
+			...overrideResponse,
+		},
+		{
+			playlist: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+				currentSongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					order: faker.number.int(),
+					addedAtPlaylist: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+			},
 			...overrideResponse,
 		},
 	]);
@@ -7198,6 +8513,99 @@ export const getRemoveFromFavoritesMockHandler = (
 	);
 };
 
+export const getListQueuesMockHandler = (
+	overrideResponse?:
+		| ListQueuesResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<ListQueuesResponse> | ListQueuesResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/playlists/queues",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getListQueuesResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getCreateQueueMockHandler = (
+	overrideResponse?:
+		| CreateQueueResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<CreateQueueResponse> | CreateQueueResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/playlists/queues",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getCreateQueueResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getRenameQueueMockHandler = (
+	overrideResponse?:
+		| RenameQueueResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<RenameQueueResponse> | RenameQueueResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/queues/:id",
+		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getRenameQueueResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getDeleteQueueMockHandler = (
+	overrideResponse?:
+		| void
+		| ((
+				info: Parameters<Parameters<typeof http.delete>[1]>[0],
+		  ) => Promise<void> | void),
+	options?: RequestHandlerOptions,
+) => {
+	return http.delete(
+		"*/playlists/queues/:id",
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			if (typeof overrideResponse === "function") {
+				await overrideResponse(info);
+			}
+
+			return new HttpResponse(null, { status: 200 });
+		},
+		options,
+	);
+};
+
 export const getGetPlaylistFilterMetadataMockHandler = (
 	overrideResponse?:
 		| FilterMetadataResponse
@@ -7245,6 +8653,30 @@ export const getGetPlaylistFilterValuesMockHandler = (
 		options,
 	);
 };
+
+export const getSetQueueCurrentSongByIdMockHandler = (
+	overrideResponse?:
+		| GetPlaylistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/queues/:id/current-song",
+		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getSetQueueCurrentSongByIdResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
 export const getPlaylistsMock = () => [
 	getListPlaylistsMockHandler(),
 	getCreatePlaylistMockHandler(),
@@ -7264,6 +8696,11 @@ export const getPlaylistsMock = () => [
 	getGetFavoritesMockHandler(),
 	getAddToFavoritesMockHandler(),
 	getRemoveFromFavoritesMockHandler(),
+	getListQueuesMockHandler(),
+	getCreateQueueMockHandler(),
+	getRenameQueueMockHandler(),
+	getDeleteQueueMockHandler(),
 	getGetPlaylistFilterMetadataMockHandler(),
 	getGetPlaylistFilterValuesMockHandler(),
+	getSetQueueCurrentSongByIdMockHandler(),
 ];

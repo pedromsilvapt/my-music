@@ -94,5 +94,15 @@ public class MusicDbContext : DbContext
             // Composite index for efficient ordered queries within a playlist
             entity.HasIndex(e => new { e.PlaylistId, e.Order });
         });
+
+        // User entity configuration for CurrentQueue relationship
+        // User has one optional CurrentQueue (Playlist), but Playlist can be owned by many users
+        // This is a one-way navigation - User.CurrentQueue points to a Playlist
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasOne(e => e.CurrentQueue)
+                .WithOne()
+                .HasForeignKey<User>(e => e.CurrentQueueId);
+        });
     }
 }

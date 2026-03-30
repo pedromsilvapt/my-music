@@ -15,4 +15,9 @@ export interface UpdateUserRequest {
 	volume?: number | null;
 	/** @nullable */
 	isMuted?: boolean | null;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	currentQueueId?: number | null;
 }

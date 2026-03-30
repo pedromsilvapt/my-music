@@ -29,7 +29,7 @@ export interface CollectionSchema<M> {
     //#region List
 
     estimateListRowHeight: (index: number) => number;
-    renderListArtwork: (elem: M, size: number) => React.ReactNode;
+    renderListArtwork: (elem: M, size: number, allItems?: M[]) => React.ReactNode;
     renderListTitle: (elem: M, lineClamp: number) => React.ReactNode;
     renderListSubTitle: (elem: M, lineClamp: number) => React.ReactNode;
 
@@ -58,7 +58,7 @@ export interface CollectionSchemaActionButton<M> {
 export interface CollectionSchemaColumn<M> {
     name: string;
     displayName: string;
-    render: (elem: M) => React.ReactNode;
+    render: (elem: M, index?: number, allItems?: M[]) => React.ReactNode;
     sortable?: boolean;
     hidden?: boolean;
     width?: Property.Width<string | number> | undefined;

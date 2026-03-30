@@ -9,6 +9,7 @@ import {useAlbumsSchema} from "../albums/useAlbumsSchema.tsx";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
+import {useMemo} from "react";
 
 export default function ArtistDetailPage() {
     const {artistId} = useParams({from: '/artists/$artistId'});
@@ -16,14 +17,21 @@ export default function ArtistDetailPage() {
     const navigate = useNavigate({from: '/artists/$artistId'});
     const searchParams = search as Record<string, unknown>;
     const songFilter = (searchParams.songFilter as string)?.toLowerCase() ?? 'all';
-    const albumsSchema = useAlbumsSchema();
-    const songsSchema = useSongsSchema();
 
     const artistQuery = useGetArtist(Number(artistId), {
         songFilter: songFilter === 'own' ? GetArtistSongFilter.Own : songFilter === 'other' ? GetArtistSongFilter.Other : GetArtistSongFilter.All
     });
     const artistResponse = useQueryData(artistQuery, "Failed to fetch artist");
     const artist = artistResponse?.data.artist ?? null;
+
+    const albumsSchema = useAlbumsSchema();
+
+    const queueContext = useMemo(() => ({
+        type: 'artist' as const,
+        artistName: artist?.name,
+    }), [artist?.name]);
+
+    const songsSchema = useSongsSchema(false, {queueContext});
 
     if (!artist) {
         return <Box p="md">Loading...</Box>;

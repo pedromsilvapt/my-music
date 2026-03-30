@@ -15,4 +15,8 @@ public class User
     public double Volume { get; set; } = 1.0;
 
     public bool IsMuted { get; set; } = false;
+
+    public long? CurrentQueueId { get; set; }
+    
+    public Playlist? CurrentQueue { get; set; }
 }

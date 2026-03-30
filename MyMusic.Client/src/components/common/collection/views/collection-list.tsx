@@ -242,10 +242,11 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                         <Box className={styles.item} style={{opacity: 0.8}}>
                             <Group gap="sm">
                                 {propItems.find(item => propSchema.key(item) === activeId) &&
-                                    propSchema.renderListArtwork(
-                                        propItems.find(item => propSchema.key(item) === activeId)!,
-                                        LIST_ARTWORK_SIZE
-                                    )
+                                propSchema.renderListArtwork(
+                                    propItems.find(item => propSchema.key(item) === activeId)!,
+                                    LIST_ARTWORK_SIZE,
+                                    propItems
+                                )
                                 }
                                 <Box flex={1}>
                                     <Text size="md">
@@ -414,7 +415,7 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
                     isHighlighted && styles.highlighted,
                 )}>
                 <Group gap="sm">
-                    {schema.renderListArtwork(item, LIST_ARTWORK_SIZE)}
+                    {schema.renderListArtwork(item, LIST_ARTWORK_SIZE, items)}
                     <Box flex={1}>
                         <Text size="md">{schema.renderListTitle(item, 1)}</Text>
                         <Text size="sm">

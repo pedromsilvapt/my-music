@@ -331,7 +331,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                                     textAlign: col.align ?? 'left',
                                     borderBottom: '1px solid var(--table-border-color)',
                                 }}>
-                                    {col.render(draggedItem)}
+                                    {col.render(draggedItem, propItems.findIndex(item => propSchema.key(item) === activeId), propItems)}
                                 </Box>
                             ))}
                             <Box style={{display: 'table-cell', width: '60px'}}/>
@@ -509,7 +509,7 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
                                   borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)',
                                   textAlign: col.align ?? 'left'
                               }}>
-                        {col.render(row)}
+                        {col.render(row, virtualRow.index, items)}
                     </Table.Td>
                 )}
                 <Table.Td

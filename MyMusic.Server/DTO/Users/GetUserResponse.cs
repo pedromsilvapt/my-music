@@ -15,6 +15,7 @@ public record GetUserItem
     public required string ColorScheme { get; set; }
     public required double Volume { get; set; }
     public required bool IsMuted { get; set; }
+    public long? CurrentQueueId { get; set; }
 
     public static GetUserItem FromEntity(Entities.User user)
     {
@@ -26,6 +27,7 @@ public record GetUserItem
             ColorScheme = user.ColorScheme,
             Volume = user.Volume,
             IsMuted = user.IsMuted,
+            CurrentQueueId = user.CurrentQueueId,
         };
     }
 }

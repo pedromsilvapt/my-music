@@ -42,6 +42,10 @@ module.exports = {
                             invalidates: ['getQueue'],
                         },
                         {
+                            onMutations: ['createQueue', 'deleteQueue', 'renameQueue'],
+                            invalidates: ['listQueues', 'getQueue'],
+                        },
+                        {
                             onMutations: ['addToFavorites', 'removeFromFavorites'],
                             invalidates: ['getFavorites'],
                         },

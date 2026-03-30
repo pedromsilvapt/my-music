@@ -6,6 +6,7 @@ import ExplicitLabel from "../common/explicit-label.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {usePlaybackActions} from "../../stores/playback-store";
+import {useQueuesMutations, useQueueList} from "../../hooks/use-queues";
 import styles from './player-info.module.css';
 
 export interface PlayerInfoProps {
@@ -32,8 +33,13 @@ export default function PlayerInfo(props: PlayerInfoProps) {
     const {requestScrollToCurrent} = usePlaybackActions((s) => ({
         requestScrollToCurrent: s.requestScrollToCurrent,
     }));
+    const {viewQueue} = useQueuesMutations();
+    const {visibleQueueId, currentQueueId} = useQueueList();
 
     const handleSongInfoClick = () => {
+        if (currentQueueId !== null && visibleQueueId !== currentQueueId) {
+            viewQueue(currentQueueId);
+        }
         requestScrollToCurrent();
     };
 

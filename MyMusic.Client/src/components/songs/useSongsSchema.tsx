@@ -21,10 +21,11 @@ import {getDownloadSongUrl} from "../../client/songs";
 import {useGetDevices} from "../../client/devices";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
-import {useCurrentSongId, useQueue, useQueueMutations} from "../../contexts/player-context";
+import {useQueue, useQueueMutations} from "../../contexts/player-context";
 import {useToggleFavorites} from "../../hooks/use-favorites";
+import {useQueueList} from "../../hooks/use-queues";
 import type {ListSongItem} from "../../model";
-import {usePlaybackStoreApi} from "../../stores/playback-store";
+import {usePlaybackStore, usePlaybackStoreApi} from "../../stores/playback-store";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 import {isGetPlaylistSong} from "../../utils/type-guards";
 import Artwork from "../common/artwork";
@@ -37,12 +38,33 @@ import SongTitle from "../common/fields/song-title";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {usePlayHandler} from "../player/usePlayHandler";
 import {SongDevicesCell} from "./song-devices-cell";
+import type {QueueContext} from "../../utils/queue-name-generator";
 
-export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<ListSongItem> {
+export interface UseSongsSchemaOptions {
+    visibleQueueId?: number | null;
+    currentQueueId?: number | null;
+    visibleQueueCurrentSongId?: number | null;
+    queueContext?: QueueContext;
+}
+
+export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
     const {play, playNext, playLast, removeByIndices, shuffleByIndices} = useQueueMutations();
     const playbackStore = usePlaybackStoreApi();
-    const currentSongId = useCurrentSongId();
     const {currentSongId: queueCurrentSongId} = useQueue();
+    const {queues} = useQueueList();
+
+    const effectiveVisibleQueueId = options?.visibleQueueId ?? null;
+    const effectiveCurrentQueueId = options?.currentQueueId ?? null;
+    const effectiveVisibleQueueCurrentSongId = options?.visibleQueueCurrentSongId ?? null;
+
+    const visibleQueue = useMemo(() =>
+            queues.find(q => q.id === effectiveVisibleQueueId),
+        [queues, effectiveVisibleQueueId]
+    );
+    const isViewingActiveQueue = effectiveVisibleQueueId === effectiveCurrentQueueId;
+    const isPlaying = usePlaybackStore((s) =>
+        s.current.type === 'LOADED' ? s.current.isPlaying : false
+    );
 
     const toggleFavorites = useToggleFavorites({
         mutation: {
@@ -53,14 +75,19 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
             }
         }
     });
-    const playHandler = usePlayHandler(nowPlaying);
+
+    const queueContext = useMemo(() => 
+        options?.queueContext ?? {type: 'songs' as const}, 
+        [options?.queueContext]
+    );
+    const playHandler = usePlayHandler(nowPlaying, {visibleQueueId: effectiveVisibleQueueId, currentQueueId: effectiveCurrentQueueId});
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
     const {data: filterMetadata} = useFilterMetadata('songs');
 
     const {data: devicesData} = useGetDevices();
     const allDevices = useMemo(() => devicesData?.data.devices ?? [], [devicesData]);
-    
+
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
         const params = new URLSearchParams({field, limit: "15"});
         if (searchTerm) params.set("search", searchTerm);
@@ -81,25 +108,40 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
             ...(nowPlaying ? [{
                 name: 'position',
                 displayName: '',
-                render: (row: ListSongItem & { order?: number }) => <Text c="dimmed">#{(row.order ?? 0) + 1}</Text>,
+                render: (row: ListSongItem & { order?: number }) => <Text c="dimmed">#{row.order ?? 1}</Text>,
                 align: 'center',
                 width: 40,
             }] : []),
             {
                 name: 'artwork',
                 displayName: '',
-                render: row => <SongArtwork id={row.cover} onClick={ev => playHandler([row], ev)}/>,
+                render: (row, _index, allItems) => (
+                    <SongArtwork
+                        id={row.cover}
+                        onClick={ev => playHandler([row], ev, queueContext, allItems)}
+                    />
+                ),
                 width: 52,
             },
             {
                 name: 'title',
                 displayName: 'Title',
-                render: row => <SongTitle
-                    title={row.title}
-                    songId={row.id}
-                    isExplicit={row.isExplicit}
-                    isPlaying={nowPlaying && currentSongId === row.id}
-                />,
+                render: row => {
+                    const visibleQueueCurrentSongId = effectiveVisibleQueueCurrentSongId ?? visibleQueue?.currentSongId;
+                    const isCurrentSongOfVisibleQueue = visibleQueueCurrentSongId === row.id;
+                    const currentSongIndicator = nowPlaying && isCurrentSongOfVisibleQueue
+                        ? (isViewingActiveQueue
+                            ? (isPlaying ? 'playing' : 'paused')
+                            : 'paused')
+                        : null;
+
+                    return <SongTitle
+                        title={row.title}
+                        songId={row.id}
+                        isExplicit={row.isExplicit}
+                        currentSongIndicator={currentSongIndicator}
+                    />;
+                },
                 width: '2fr',
                 sortable: true,
             },
@@ -266,14 +308,14 @@ export function useSongsSchema(nowPlaying: boolean = false): CollectionSchema<Li
         },
 
         estimateListRowHeight: () => 84,
-        renderListArtwork: (row, size) => <Artwork
+        renderListArtwork: (row, size, allItems) => <Artwork
             id={row.cover}
             size={size}
             placeholderIcon={<IconMusic/>}
-            onClick={ev => playHandler([row], ev)}
+            onClick={ev => playHandler([row], ev, queueContext, allItems)}
         />,
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeByIndices, shuffleByIndices, nowPlaying, currentSongId, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeByIndices, shuffleByIndices, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId]);
 }
