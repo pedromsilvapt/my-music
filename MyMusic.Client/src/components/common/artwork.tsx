@@ -2,10 +2,12 @@ import {Box, Center, Image, Menu, Overlay, ThemeIcon} from "@mantine/core";
 import {IconPhotoScan, IconPlayerPlayFilled, IconZoomIn} from "@tabler/icons-react";
 import type {MouseEvent} from "react";
 import * as React from "react";
+import {useMemo} from "react";
 import {DEFAULT_ARTWORK_SIZE} from "../../consts.ts";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
-import {useMantineContextMenu} from "../../hooks/use-mantine-context-menu";
+import {useContextMenuTrigger} from "../../hooks/use-context-menu-trigger";
 import styles from './artwork.module.css';
+import {ContextMenuPortal} from "./context-menu-portal.tsx";
 
 interface ArtworkProps {
     id?: number | null | undefined;
@@ -21,10 +23,8 @@ export default function Artwork(props: ArtworkProps) {
     const size = props.size ?? DEFAULT_ARTWORK_SIZE;
     const {openLightbox} = useArtworkLightbox();
 
-    const {
-        onContextMenuTrigger,
-        renderMenuItems,
-    } = useMantineContextMenu();
+    const contextMenuId = useMemo(() => `artwork-${id ?? 'no-id'}`, [id]);
+    const {trigger: onContextMenuTrigger} = useContextMenuTrigger(contextMenuId);
 
     const hasArtwork = id != null || props.url != null;
 
@@ -122,14 +122,17 @@ export default function Artwork(props: ArtworkProps) {
                     </Center>
                 </Overlay>
             </Box>
-            {renderMenuItems(() => (
-                <Menu.Item
-                    leftSection={<IconZoomIn size={16}/>}
-                    onClick={handlePreview}
-                >
-                    Preview
-                </Menu.Item>
-            ))}
+            <ContextMenuPortal 
+                menuId={contextMenuId} 
+                content={() => (
+                    <Menu.Item
+                        leftSection={<IconZoomIn size={16}/>}
+                        onClick={handlePreview}
+                    >
+                        Preview
+                    </Menu.Item>
+                )}
+            />
         </>
     );
 }

@@ -6,8 +6,9 @@ import {useShallow} from "zustand/react/shallow";
 import {SCROLL_DEBOUNCE_MS, SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
 import type {ScrollPosition} from "../../../contexts/collection-context.tsx";
 import {useCollectionActions} from "../../../contexts/collection-context.tsx";
-import {useMantineContextMenu} from "../../../hooks/use-mantine-context-menu";
+import {useContextMenuTrigger} from "../../../hooks/use-context-menu-trigger";
 import {sortBy} from "../../../utils/sort-by.tsx";
+import {ContextMenuPortal} from "../context-menu-portal.tsx";
 import type {CollectionFilterMode, CollectionSchema, CollectionSchemaAction, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
 import {CollectionActionMenu} from "./collection-actions.tsx";
@@ -96,7 +97,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const [throttledSearch] = useDebouncedValue(clientSearch, SEARCH_DEBOUNCE_MS);
     const [debouncedScrollPosition] = useDebouncedValue(scrollPosition, SCROLL_DEBOUNCE_MS);
 
-    const {onContextMenuTrigger, renderMenuItems, isOpen: isContextMenuOpen} = useMantineContextMenu();
+    const contextMenuId = useMemo(() => `collection-${stateKey ?? 'default'}`, [stateKey]);
+    const {trigger: onContextMenuTrigger} = useContextMenuTrigger(contextMenuId);
     const contextMenuSelectionRef = useRef<T[]>([]);
     const contextMenuActionsRef = useRef<CollectionSchemaAction<T>[]>([]);
 
@@ -424,13 +426,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
             <div ref={floatingBarPortalTargetRef} />
         </Box>
 
-        {renderMenuItems(() => (
-            <>
-                {contextMenuActionsRef.current.map((action, i) => (
-                    <CollectionActionMenu key={i} action={action} selection={contextMenuSelectionRef.current} />
-                ))}
-            </>
-        ))}
+        <ContextMenuPortal menuId={contextMenuId} content={() => contextMenuActionsRef.current.map((action, i) => (
+            <CollectionActionMenu key={i} action={action} selection={contextMenuSelectionRef.current} />
+        ))} />
 
         <SelectionFloatingBar
             items={props.items}
@@ -440,7 +438,6 @@ export default function Collection<T extends { id: string | number }>(props: Col
             containerRef={collectionContainerRef}
             portalTarget={floatingBarPortalTargetRef}
             onClearSelection={handleClearSelection}
-            isContextMenuOpen={isContextMenuOpen}
         />
     </Flex>;
 }

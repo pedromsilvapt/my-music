@@ -1,6 +1,7 @@
 import {computePosition, flip, offset, shift} from '@floating-ui/dom';
 import {CloseButton, Group, Paper, Portal, Text, Transition} from "@mantine/core";
 import {useLayoutEffect, useMemo, useRef, useState} from "react";
+import {useContextMenuStore} from "../../../stores/context-menu-store.tsx";
 import CollectionActions from "./collection-actions.tsx";
 import type {CollectionSchemaAction} from "./collection-schema.tsx";
 import type {SelectionStore} from "./selection-store.ts";
@@ -13,7 +14,6 @@ export interface SelectionFloatingBarProps<M> {
     containerRef: React.RefObject<HTMLElement | null>;
     portalTarget: React.RefObject<HTMLElement | null>;
     onClearSelection: () => void;
-    isContextMenuOpen?: boolean;
 }
 
 const isElementInViewport = (el: HTMLElement) => {
@@ -27,13 +27,14 @@ const isElementInViewport = (el: HTMLElement) => {
 };
 
 export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps<M>) {
-    const {items, itemKey, selectionStore, actionsFn, containerRef, portalTarget, onClearSelection, isContextMenuOpen} = props;
+    const {items, itemKey, selectionStore, actionsFn, containerRef, portalTarget, onClearSelection} = props;
     const floatingRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({x: 0, y: 0, placement: 'bottom-start' as string});
 
     const selectedKeys = selectionStore(state => state.selectedKeys);
     const anchorElement = selectionStore(state => state.lastSelectedElement);
     const selectionCount = selectedKeys.size;
+    const isContextMenuOpen = useContextMenuStore(state => state.isOpen);
 
     const selection = useMemo(() => items.filter(item => selectedKeys.has(itemKey(item))), [items, itemKey, selectedKeys]);
     const actions = useMemo(() => actionsFn?.(selection) ?? [], [actionsFn, selection]);

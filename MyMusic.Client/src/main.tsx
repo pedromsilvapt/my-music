@@ -13,6 +13,7 @@ import {PlayerProvider} from "./contexts/player-context.tsx";
 import {ArtworkLightboxProvider} from "./contexts/artwork-lightbox-context.tsx";
 import VolumeInitializer from "./components/volume-initializer.tsx";
 import SongEditorContextModal from "./components/songs/song-editor-context-modal.tsx";
+import {ContextMenuStoreProvider} from "./stores/context-menu-store.tsx";
 
 // Import the generated route tree
 import {routeTree} from './routeTree.gen'
@@ -45,13 +46,15 @@ createRoot(document.getElementById('root')!).render(
                         }}>
                         <PlayerProvider>
                             <VolumeInitializer/>
-                            <ManagePlaylistsProvider>
-                                <ManageDevicesProvider>
-                                    <CollectionStoreProvider>
-                                        <RouterProvider router={router}/>
-                                    </CollectionStoreProvider>
-                                </ManageDevicesProvider>
-                            </ManagePlaylistsProvider>
+                            <ContextMenuStoreProvider>
+                                <ManagePlaylistsProvider>
+                                    <ManageDevicesProvider>
+                                        <CollectionStoreProvider>
+                                            <RouterProvider router={router}/>
+                                        </CollectionStoreProvider>
+                                    </ManageDevicesProvider>
+                                </ManagePlaylistsProvider>
+                            </ContextMenuStoreProvider>
                         </PlayerProvider>
                     </ModalsProvider>
                 </ArtworkLightboxProvider>
