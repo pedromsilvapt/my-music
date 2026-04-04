@@ -5,7 +5,7 @@ import {useListSources} from "../../client/sources.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import CollectionToolbar, {type CollectionToolbarProps} from "../common/collection/collection-toolbar.tsx";
-import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
+import {CollectionFilterBar, type CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
 import {IconHeart, IconPencil} from "@tabler/icons-react";
 
@@ -21,6 +21,18 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
     const [source, setSource] = useUncontrolled<ListSourcesItem | null | undefined>({
         value: props.source,
         onChange: props.setSource,
+    });
+
+    const [search, setSearch] = useUncontrolled({
+        value: props.search,
+        defaultValue: '',
+        onChange: props.setSearch,
+    });
+
+    const [filter, setFilter] = useUncontrolled({
+        value: props.filter,
+        defaultValue: '',
+        onChange: props.setFilter,
     });
 
     const sourcesQuery = useListSources();
@@ -48,6 +60,10 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
     return (
         <CollectionToolbar
             {...props}
+            search={search}
+            setSearch={setSearch}
+            filter={filter}
+            setFilter={setFilter}
             searchInputRef={props.searchInputRef}
             filterMode="server"
             searchPlaceholder="Search songs..."
@@ -61,18 +77,37 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
                     <ActionIcon
                         variant="subtle"
                         size="lg"
-                        onClick={props.onOpenWishlist}
-                        title="Wishlist"
-                    >
-                        <IconHeart size={18}/>
-                    </ActionIcon>
-                    <ActionIcon
-                        variant="subtle"
-                        size="lg"
                         onClick={props.onManageSources}
                         title="Manage sources"
                     >
                         <IconPencil size={18}/>
+                    </ActionIcon>
+                </Group>
+            )}
+            renderMiddleSection={() => (
+                <Group gap="sm" align="center" justify="space-between" style={{flex: 1}}>
+                    <CollectionFilterBar
+                        ref={props.searchInputRef}
+                        searchValue={search}
+                        onSearchChange={setSearch}
+                        filterValue={filter}
+                        onFilterChange={setFilter}
+                        onApply={(filterValue) => {
+                            setFilter(filterValue);
+                            props.onApplyFilter?.(filterValue);
+                        }}
+                        filterMode="server"
+                        placeholder="Search songs..."
+                        filterMetadata={props.filterMetadata}
+                        fetchFilterValues={props.fetchFilterValues}
+                    />
+                    <ActionIcon
+                        variant="subtle"
+                        size="lg"
+                        onClick={props.onOpenWishlist}
+                        title="Wishlist"
+                    >
+                        <IconHeart size={18}/>
                     </ActionIcon>
                 </Group>
             )}

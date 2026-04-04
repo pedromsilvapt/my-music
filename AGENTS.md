@@ -505,6 +505,11 @@ in the Orval-generated code and should be ignored. Focus on fixing TypeScript er
 All Mantine package styles should be imported in `src/components/styles.ts`. When adding a new @mantine package that
 requires styles (e.g., `@mantine/dates`), add the import there instead of in individual components.
 
+### useUncontrolled Hook
+
+Use `useUncontrolled` from `@mantine/hooks` for props that can be either controlled or uncontrolled. It eliminates the
+need for `useState` + `useEffect` sync patterns and automatically calls the parent's `onChange` callback.
+
 ### Debouncing Pattern
 
 When implementing search, filter, or other input-based functionality that requires debouncing, **always
