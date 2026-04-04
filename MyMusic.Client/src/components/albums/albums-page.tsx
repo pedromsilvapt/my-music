@@ -8,13 +8,12 @@ import {useAlbumsSchema} from "./useAlbumsSchema.tsx";
 const ALBUMS_STATE_KEY = "albums";
 
 export default function AlbumsPage() {
-    const {setCollectionServerSearch, setCollectionServerFilter} = useCollectionActions(state => ({
-        setCollectionServerSearch: state.setCollectionServerSearch,
-        setCollectionServerFilter: state.setCollectionServerFilter,
+    const {setCollectionFilter} = useCollectionActions(state => ({
+        setCollectionFilter: state.setCollectionFilter,
     }));
     const collectionState = useCollectionStateByKey(ALBUMS_STATE_KEY);
-    const appliedSearch = collectionState.serverSearch;
-    const appliedFilter = collectionState.serverFilter;
+    const appliedSearch = collectionState.filter.search;
+    const appliedFilter = collectionState.filter.expression;
 
     const albumsQuery = useQuery({
         queryKey: ["albums", appliedSearch, appliedFilter],
@@ -43,8 +42,7 @@ export default function AlbumsPage() {
     }, [albumsQuery, albumsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
-        setCollectionServerSearch(ALBUMS_STATE_KEY, newSearch);
-        setCollectionServerFilter(ALBUMS_STATE_KEY, newFilter);
+        setCollectionFilter(ALBUMS_STATE_KEY, { search: newSearch, expression: newFilter });
     };
 
     const elements = albums?.albums ?? [];

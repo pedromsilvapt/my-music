@@ -12,13 +12,12 @@ const PLAYLISTS_STATE_KEY = "playlists";
 
 export default function PlaylistsPage() {
     const [opened, setOpened] = useState(false);
-    const {setCollectionServerSearch, setCollectionServerFilter} = useCollectionActions(state => ({
-        setCollectionServerSearch: state.setCollectionServerSearch,
-        setCollectionServerFilter: state.setCollectionServerFilter,
+    const {setCollectionFilter} = useCollectionActions(state => ({
+        setCollectionFilter: state.setCollectionFilter,
     }));
     const collectionState = useCollectionStateByKey(PLAYLISTS_STATE_KEY);
-    const appliedSearch = collectionState.serverSearch;
-    const appliedFilter = collectionState.serverFilter;
+    const appliedSearch = collectionState.filter.search;
+    const appliedFilter = collectionState.filter.expression;
 
     const playlistsQuery = useQuery({
         queryKey: ["playlists", appliedSearch, appliedFilter],
@@ -47,8 +46,7 @@ export default function PlaylistsPage() {
     }, [playlistsQuery, playlistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
-        setCollectionServerSearch(PLAYLISTS_STATE_KEY, newSearch);
-        setCollectionServerFilter(PLAYLISTS_STATE_KEY, newFilter);
+        setCollectionFilter(PLAYLISTS_STATE_KEY, { search: newSearch, expression: newFilter });
     };
 
     const elements = playlists?.playlists ?? [];

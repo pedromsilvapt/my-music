@@ -12,13 +12,15 @@ export interface ScrollPosition {
     offset: number;
 }
 
+export interface CollectionFilterState {
+    search: string;
+    expression: string;
+}
+
 export interface CollectionState<T = unknown> {
     view: CollectionView;
     sort: CollectionSort<T>;
-    clientSearch: string;
-    clientFilter: string;
-    serverSearch: string;
-    serverFilter: string;
+    filter: CollectionFilterState;
     scrollPosition: ScrollPosition | null;
 }
 
@@ -30,10 +32,7 @@ type CollectionStoreActions = {
     getCollectionState: (key: string) => CollectionState;
     setCollectionView: (key: string, view: CollectionView) => void;
     setCollectionSort: (key: string, sort: CollectionSort<unknown>) => void;
-    setCollectionClientSearch: (key: string, search: string) => void;
-    setCollectionClientFilter: (key: string, filter: string) => void;
-    setCollectionServerSearch: (key: string, search: string) => void;
-    setCollectionServerFilter: (key: string, filter: string) => void;
+    setCollectionFilter: (key: string, filter: CollectionFilterState) => void;
     setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => void;
     clearCollectionState: (key: string) => void;
 };
@@ -43,10 +42,7 @@ type CollectionStore = CollectionStoreState & CollectionStoreActions;
 const DEFAULT_COLLECTION_STATE: CollectionState = {
     view: 'table',
     sort: [],
-    clientSearch: '',
-    clientFilter: '',
-    serverSearch: '',
-    serverFilter: '',
+    filter: { search: '', expression: '' },
     scrollPosition: null,
 };
 
@@ -74,36 +70,12 @@ function createCollectionStore(): StoreApi<CollectionStore> {
                     state.collections[key].sort = sort;
                 });
             },
-            setCollectionClientSearch: (key: string, search: string) => {
+            setCollectionFilter: (key: string, filter: CollectionFilterState) => {
                 set((state) => {
                     if (!state.collections[key]) {
                         state.collections[key] = {...DEFAULT_COLLECTION_STATE};
                     }
-                    state.collections[key].clientSearch = search;
-                });
-            },
-            setCollectionClientFilter: (key: string, filter: string) => {
-                set((state) => {
-                    if (!state.collections[key]) {
-                        state.collections[key] = {...DEFAULT_COLLECTION_STATE};
-                    }
-                    state.collections[key].clientFilter = filter;
-                });
-            },
-            setCollectionServerSearch: (key: string, search: string) => {
-                set((state) => {
-                    if (!state.collections[key]) {
-                        state.collections[key] = {...DEFAULT_COLLECTION_STATE};
-                    }
-                    state.collections[key].serverSearch = search;
-                });
-            },
-            setCollectionServerFilter: (key: string, filter: string) => {
-                set((state) => {
-                    if (!state.collections[key]) {
-                        state.collections[key] = {...DEFAULT_COLLECTION_STATE};
-                    }
-                    state.collections[key].serverFilter = filter;
+                    state.collections[key].filter = filter;
                 });
             },
             setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => {

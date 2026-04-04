@@ -3,9 +3,10 @@ import {useDebouncedValue, useElementSize} from '@mantine/hooks';
 import type React from "react";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useShallow} from "zustand/react/shallow";
-import {SCROLL_DEBOUNCE_MS, SEARCH_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
+import {SCROLL_DEBOUNCE_MS, ZINDEX_MODAL} from "../../../consts.ts";
 import type {ScrollPosition} from "../../../contexts/collection-context.tsx";
 import {useCollectionActions} from "../../../contexts/collection-context.tsx";
+import useFilter from "../../../hooks/useFilter.ts";
 import {useContextMenuTrigger} from "../../../hooks/use-context-menu-trigger";
 import {sortBy} from "../../../utils/sort-by.tsx";
 import {ContextMenuPortal} from "../context-menu-portal.tsx";
@@ -58,43 +59,50 @@ export default function Collection<T extends { id: string | number }>(props: Col
         getCollectionState,
         setCollectionView,
         setCollectionSort,
-        setCollectionClientSearch,
-        setCollectionClientFilter,
-        setCollectionServerSearch,
-        setCollectionServerFilter,
+        setCollectionFilter,
         setCollectionScrollPosition
     } =
         useCollectionActions(useShallow(state => ({
             getCollectionState: state.getCollectionState,
             setCollectionView: state.setCollectionView,
             setCollectionSort: state.setCollectionSort,
-            setCollectionClientSearch: state.setCollectionClientSearch,
-            setCollectionClientFilter: state.setCollectionClientFilter,
-            setCollectionServerSearch: state.setCollectionServerSearch,
-            setCollectionServerFilter: state.setCollectionServerFilter,
+            setCollectionFilter: state.setCollectionFilter,
             setCollectionScrollPosition: state.setCollectionScrollPosition,
         })));
 
     const storeState = stateKey ? getCollectionState(stateKey) : null;
     const initialView = props.initialView ?? 'table';
 
-    const [clientSearch, setClientSearch] = useState(() => {
-        if (filterMode === 'server' && stateKey) {
-            return storeState?.serverSearch ?? '';
-        }
-        return storeState?.clientSearch ?? '';
+    // Memoize onChange callbacks for useFilter to prevent unnecessary re-renders
+    const handleServerSearchChange = useCallback((value: string) => {
+        props.onServerFilterChange?.(value, props.serverFilter ?? '');
+    }, [props.onServerFilterChange, props.serverFilter]);
+
+    const handleServerFilterChange = useCallback((value: string) => {
+        props.onServerFilterChange?.(props.serverSearch ?? '', value);
+    }, [props.onServerFilterChange, props.serverSearch]);
+
+    // Unified filter state using useFilter hook
+    // For client mode: internal state
+    // For server mode: controlled by parent
+    const searchFilter = useFilter({
+        value: filterMode === 'server' ? props.serverSearch : undefined,
+        defaultValue: storeState?.filter?.search ?? '',
+        onChange: filterMode === 'server' ? handleServerSearchChange : undefined,
+        debounceMs: filterMode === 'server' ? 300 : 0,
     });
-    const [clientFilter, setClientFilter] = useState(() => {
-        if (filterMode === 'server' && stateKey) {
-            return storeState?.serverFilter ?? '';
-        }
-        return storeState?.clientFilter ?? '';
+
+    const filterExpression = useFilter({
+        value: filterMode === 'server' ? props.serverFilter : undefined,
+        defaultValue: storeState?.filter?.expression ?? '',
+        onChange: filterMode === 'server' ? handleServerFilterChange : undefined,
+        debounceMs: 0, // Filter expression applies on demand, not on every keystroke
     });
+
     const [view, setView] = useState<CollectionView>(storeState?.view ?? initialView);
     const [sort, setSort] = useState<CollectionSort<T>>((storeState?.sort as CollectionSort<T>) ?? []);
     const [scrollPosition, setScrollPosition] = useState<ScrollPosition | null>(storeState?.scrollPosition ?? null);
 
-    const [throttledSearch] = useDebouncedValue(clientSearch, SEARCH_DEBOUNCE_MS);
     const [debouncedScrollPosition] = useDebouncedValue(scrollPosition, SCROLL_DEBOUNCE_MS);
 
     const contextMenuId = useMemo(() => `collection-${stateKey ?? 'default'}`, [stateKey]);
@@ -109,6 +117,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const selectionStore = useMemo(() => createSelectionStore(), []);
 
+    // Persist state to store
     useEffect(() => {
         if (stateKey) {
             setCollectionView(stateKey, view);
@@ -123,27 +132,12 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     useEffect(() => {
         if (stateKey) {
-            setCollectionClientSearch(stateKey, clientSearch);
+            setCollectionFilter(stateKey, {
+                search: searchFilter.value,
+                expression: filterExpression.value,
+            });
         }
-    }, [stateKey, clientSearch, setCollectionClientSearch]);
-
-    useEffect(() => {
-        if (stateKey) {
-            setCollectionClientFilter(stateKey, clientFilter);
-        }
-    }, [stateKey, clientFilter, setCollectionClientFilter]);
-
-    useEffect(() => {
-        if (stateKey && filterMode === 'server') {
-            setCollectionServerSearch(stateKey, clientSearch);
-        }
-    }, [stateKey, clientSearch, filterMode, setCollectionServerSearch]);
-
-    useEffect(() => {
-        if (stateKey && filterMode === 'server') {
-            setCollectionServerFilter(stateKey, clientFilter);
-        }
-    }, [stateKey, clientFilter, filterMode, setCollectionServerFilter]);
+    }, [stateKey, searchFilter.value, filterExpression.value, setCollectionFilter]);
 
     useEffect(() => {
         if (stateKey && debouncedScrollPosition != null && debouncedScrollPosition !== storeState?.scrollPosition) {
@@ -209,16 +203,18 @@ export default function Collection<T extends { id: string | number }>(props: Col
         let items = props.items;
 
         if (filterMode === 'client') {
-            if (throttledSearch.trim() !== '') {
-                const searchLowerCase = throttledSearch.toLowerCase();
+            // For client mode, use the (optionally debounced) search value
+            const searchValue = searchFilter.debouncedValue;
+            if (searchValue.trim() !== '') {
+                const searchLowerCase = searchValue.toLowerCase();
                 items = items.filter((item) => {
                     return props.schema.searchVector(item).toLowerCase().includes(searchLowerCase);
                 });
             }
 
-            if (clientFilter.trim() !== '') {
-                items = items.filter((item) => evaluateClientFilter(item, clientFilter));
-            }
+        if (filterExpression.value.trim() !== '') {
+            items = items.filter((item) => evaluateClientFilter(item, filterExpression.value));
+        }
         }
 
         if (sort.length > 0) {
@@ -226,7 +222,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
         }
 
         return items;
-    }, [props.items, throttledSearch, clientFilter, sort, filterMode, evaluateClientFilter, props.schema]);
+    }, [props.items, searchFilter.debouncedValue, filterExpression.value, sort, filterMode, evaluateClientFilter, props.schema]);
 
     const handleItemClick = useCallback((clickedKey: React.Key, event: React.MouseEvent) => {
         const isCtrlPressed = event.ctrlKey || event.metaKey;
@@ -360,61 +356,47 @@ export default function Collection<T extends { id: string | number }>(props: Col
         throw new Error(`Invalid collection view: ${view}`);
     }
 
+    // Unified handlers that work for both client and server modes
     const handleSearchChange = useCallback((value: string) => {
-        if (filterMode === 'client') {
-            setClientSearch(value);
-        } else if (filterMode === 'server') {
-            props.onServerFilterChange?.(value, props.serverFilter ?? '');
-        }
-    }, [filterMode, props]);
+        searchFilter.setValue(value);
+    }, [searchFilter]);
 
     const handleFilterChange = useCallback((value: string) => {
-        if (filterMode === 'client') {
-            setClientFilter(value);
-        } else if (filterMode === 'server') {
-            props.onServerFilterChange?.(props.serverSearch ?? '', value);
-        }
-    }, [filterMode, props]);
+        filterExpression.setValue(value);
+    }, [filterExpression]);
 
-    const handleApplyFilter = useCallback((filterValue: string) => {
-        if (filterMode === 'client') {
-            setClientFilter(filterValue);
-        } else if (filterMode === 'server') {
-            props.onServerFilterChange?.(props.serverSearch ?? '', filterValue);
-        }
-    }, [filterMode, props]);
-
-    const currentSearch = filterMode === 'server' ? (props.serverSearch ?? '') : clientSearch;
-    const currentFilter = filterMode === 'server' ? (props.serverFilter ?? '') : clientFilter;
+    const handleApplyFilter = useCallback((value: string) => {
+        filterExpression.setValue(value);
+    }, [filterExpression]);
 
     const toolbar = props.toolbar ?? (p => <CollectionToolbar {...p} />);
 
     return <Flex ref={containerRef} direction="column" style={{height: `100%`}}>
         <Box ref={toolbarRef}>
             {toolbar({
-                search: currentSearch,
+                search: searchFilter.value,
                 setSearch: handleSearchChange,
-                filter: currentFilter,
-                 setFilter: handleFilterChange,
-                 onApplyFilter: handleApplyFilter,
-                 filterMode: filterMode,
-                 searchPlaceholder: props.searchPlaceholder,
-                 view: view,
-                 setView: setView,
-                 sort: sort,
-                 onSort: handleSort,
-                 onSortRemove: handleSortRemove,
-                 onReorderSort: handleReorderSort,
-                 sortableFields: sortableFields,
-                 columns: props.schema.columns,
-                 filterMetadata: props.schema.filterMetadata,
-                 fetchFilterValues: props.schema.fetchFilterValues,
-                 selectionStore: selectionStore,
-                 totalItems: filteredAndSortedItems.length,
-                 onSelectAll: handleSelectAll,
-                 onClearSelection: handleClearSelection,
-             })}
-         </Box>
+                filter: filterExpression.value,
+                setFilter: handleFilterChange,
+                onApplyFilter: handleApplyFilter,
+                filterMode: filterMode,
+                searchPlaceholder: props.searchPlaceholder,
+                view: view,
+                setView: setView,
+                sort: sort,
+                onSort: handleSort,
+                onSortRemove: handleSortRemove,
+                onReorderSort: handleReorderSort,
+                sortableFields: sortableFields,
+                columns: props.schema.columns,
+                filterMetadata: props.schema.filterMetadata,
+                fetchFilterValues: props.schema.fetchFilterValues,
+                selectionStore: selectionStore,
+                totalItems: filteredAndSortedItems.length,
+                onSelectAll: handleSelectAll,
+                onClearSelection: handleClearSelection,
+            })}
+        </Box>
 
         <Box ref={collectionContainerRef} pos="relative" flex={1}
              style={{minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
@@ -426,9 +408,22 @@ export default function Collection<T extends { id: string | number }>(props: Col
             <div ref={floatingBarPortalTargetRef} />
         </Box>
 
-        <ContextMenuPortal menuId={contextMenuId} content={() => contextMenuActionsRef.current.map((action, i) => (
-            <CollectionActionMenu key={i} action={action} selection={contextMenuSelectionRef.current} />
-        ))} />
+        <ContextMenuPortal menuId={contextMenuId} content={() => {
+            let dividerCount = 0;
+            return contextMenuActionsRef.current.map((action) => {
+                // Handle divider
+                if ('divider' in action) {
+                    dividerCount++;
+                    return <div key={`divider-${dividerCount}`} className="context-menu-divider" />;
+                }
+                // Handle group
+                if ('group' in action) {
+                    return <div key={`group-${action.group}`} className="context-menu-group">{action.group}</div>;
+                }
+                // Handle action button
+                return <CollectionActionMenu key={`action-${action.name}`} action={action} selection={contextMenuSelectionRef.current} />;
+            });
+        }} />
 
         <SelectionFloatingBar
             items={props.items}

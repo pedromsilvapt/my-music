@@ -14,13 +14,12 @@ const SONGS_STATE_KEY = "songs";
 export default function SongsPage() {
     const queryClient = useQueryClient();
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
-    const {setCollectionServerSearch, setCollectionServerFilter} = useCollectionActions(state => ({
-        setCollectionServerSearch: state.setCollectionServerSearch,
-        setCollectionServerFilter: state.setCollectionServerFilter,
+    const {setCollectionFilter} = useCollectionActions(state => ({
+        setCollectionFilter: state.setCollectionFilter,
     }));
     const collectionState = useCollectionStateByKey(SONGS_STATE_KEY);
-    const appliedSearch = collectionState.serverSearch;
-    const appliedFilter = collectionState.serverFilter;
+    const appliedSearch = collectionState.filter.search;
+    const appliedFilter = collectionState.filter.expression;
 
     const [importFiles, setImportFiles] = useState<File[]>([]);
     const [showImportProgress, setShowImportProgress] = useState(false);
@@ -53,8 +52,7 @@ export default function SongsPage() {
     }, [registerRefetch, unregisterRefetch, songsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
-        setCollectionServerSearch(SONGS_STATE_KEY, newSearch);
-        setCollectionServerFilter(SONGS_STATE_KEY, newFilter);
+        setCollectionFilter(SONGS_STATE_KEY, { search: newSearch, expression: newFilter });
     };
 
     const handleFilesDropped = (files: File[]) => {

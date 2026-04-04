@@ -18,8 +18,6 @@ export interface SourcesSearchToolbarProps extends CollectionToolbarProps<Source
 }
 
 export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
-    console.log('[SourcesSearchToolbar] props.search:', props.search);
-    console.log('[SourcesSearchToolbar] props.setSearch defined:', !!props.setSearch);
     const [source, setSource] = useUncontrolled<ListSourcesItem | null | undefined>({
         value: props.source,
         onChange: props.setSource,
