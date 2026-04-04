@@ -16,10 +16,12 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<PurchasesQueue>();
         builder.Services.AddSingleton<MetadataFetchQueue>();
         builder.Services.AddHostedService<MetadataFetchCleanupService>();
+        builder.Services.AddHostedService<WishlistBackgroundService>();
         builder.Services.AddSingleton<IFileSystem, FileSystem>();
         builder.Services.AddScoped<IMusicService, MusicService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
+        builder.Services.AddScoped<IWishlistService, WishlistService>();
         builder.Services.AddTransient<PurchasesQueue.PurchasesExecutor>();
         builder.Services.AddTransient<MetadataFetchQueue.MetadataFetchExecutor>();
         builder.Services.AddTransient<MusicImportJob>();

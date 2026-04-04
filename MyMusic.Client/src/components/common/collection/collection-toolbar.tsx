@@ -65,11 +65,14 @@ export interface CollectionToolbarProps<M> {
 }
 
 export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
+    console.log('[CollectionToolbar] props.search:', props.search);
+    console.log('[CollectionToolbar] props.setSearch defined:', !!props.setSearch);
     const [search, setSearch] = useUncontrolled({
         value: props.search,
         defaultValue: '',
         onChange: props.setSearch,
     });
+    console.log('[CollectionToolbar] useUncontrolled returned search:', search);
     const [view, setView] = useUncontrolled({
         value: props.view,
         defaultValue: 'table',

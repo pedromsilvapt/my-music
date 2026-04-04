@@ -1,5 +1,5 @@
 import {ActionIcon, Button, Group, Popover, Stack, Text, TextInput, Tooltip} from "@mantine/core";
-import {useDebouncedValue} from "@mantine/hooks";
+import {useDebouncedValue, useUncontrolled} from "@mantine/hooks";
 import {IconCode, IconFilter, IconSearch, IconX} from "@tabler/icons-react";
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {FILTER_DEBOUNCE_MS} from "../../../consts.ts";
@@ -47,10 +47,18 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
     }), []);
 
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const [localSearch, setLocalSearch] = useState(searchValue);
+    const [localSearch, setLocalSearch] = useUncontrolled({
+        value: searchValue,
+        defaultValue: "",
+        onChange: onSearchChange
+    });
     const [localFilter, setLocalFilter] = useState(filterValue);
     const [debouncedSearch] = useDebouncedValue(localSearch, FILTER_DEBOUNCE_MS);
     const hasFilter = filterValue.trim().length > 0;
+
+    console.log('[CollectionFilterBar] searchValue prop:', searchValue);
+    console.log('[CollectionFilterBar] localSearch state:', localSearch);
+    console.log('[CollectionFilterBar] filterMode:', filterMode);
 
     useEffect(() => {
         setLocalFilter(filterValue);
@@ -58,15 +66,15 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
 
     useEffect(() => {
         if (filterMode === 'server' && debouncedSearch !== searchValue) {
+            console.log('[CollectionFilterBar] Debounced search triggers onSearchChange:', debouncedSearch);
             onSearchChange(debouncedSearch);
         }
     }, [debouncedSearch, filterMode, onSearchChange, searchValue]);
 
     useEffect(() => {
-        if (filterMode === 'client') {
-            setLocalSearch(searchValue);
-        }
-    }, [searchValue, filterMode]);
+        console.log('[CollectionFilterBar] searchValue changed, syncing to localSearch:', searchValue);
+        setLocalSearch(searchValue);
+    }, [searchValue]);
 
     const handleClearFilter = () => {
         setLocalFilter("");
@@ -89,9 +97,6 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                 value={localSearch}
                 onChange={(e) => {
                     setLocalSearch(e.target.value);
-                    if (filterMode === 'client') {
-                        onSearchChange(e.target.value);
-                    }
                 }}
                 style={{flex: 1}}
                 rightSection={

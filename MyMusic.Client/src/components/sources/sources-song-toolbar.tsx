@@ -7,16 +7,19 @@ import type {ListSourcesItem, SourceSong} from "../../model";
 import CollectionToolbar, {type CollectionToolbarProps} from "../common/collection/collection-toolbar.tsx";
 import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
-import {IconPencil} from "@tabler/icons-react";
+import {IconHeart, IconPencil} from "@tabler/icons-react";
 
 export interface SourcesSearchToolbarProps extends CollectionToolbarProps<SourceSong> {
     source?: ListSourcesItem | null | undefined,
     setSource?: (source: ListSourcesItem | null | undefined) => void,
     searchInputRef?: React.RefObject<CollectionFilterBarRef | null>;
     onManageSources?: () => void;
+    onOpenWishlist?: () => void;
 }
 
 export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
+    console.log('[SourcesSearchToolbar] props.search:', props.search);
+    console.log('[SourcesSearchToolbar] props.setSearch defined:', !!props.setSearch);
     const [source, setSource] = useUncontrolled<ListSourcesItem | null | undefined>({
         value: props.source,
         onChange: props.setSource,
@@ -57,6 +60,14 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
                         onChange={sourceId => setSource(sources.find(s => s.id.toString() === sourceId))}
                         data={sourcesOptions}
                     />
+                    <ActionIcon
+                        variant="subtle"
+                        size="lg"
+                        onClick={props.onOpenWishlist}
+                        title="Wishlist"
+                    >
+                        <IconHeart size={18}/>
+                    </ActionIcon>
                     <ActionIcon
                         variant="subtle"
                         size="lg"

@@ -45,6 +45,8 @@ public class MusicDbContext : DbContext
 
     public DbSet<User> Users { get; set; } = null!;
 
+    public DbSet<WishlistItem> WishlistItems { get; set; } = null!;
+
     public DbSet<DeviceSyncSession> DeviceSyncSessions { get; set; } = null!;
 
     public DbSet<DeviceSyncSessionRecord> DeviceSyncSessionRecords { get; set; } = null!;

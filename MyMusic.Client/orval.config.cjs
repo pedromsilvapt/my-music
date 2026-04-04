@@ -77,6 +77,10 @@ module.exports = {
                             onMutations: ['updateCurrentUser'],
                             invalidates: ['getCurrentUser'],
                         },
+                        {
+                            onMutations: ['createWishlist', 'updateWishlist', 'deleteWishlist'],
+                            invalidates: ['listWishlist'],
+                        },
                     ],
                 }
             }

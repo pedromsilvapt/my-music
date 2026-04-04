@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMusic.Common;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyMusic.Common.Migrations
 {
     [DbContext(typeof(MusicDbContext))]
-    partial class MusicDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260404120600_AddWishlistItem")]
+    partial class AddWishlistItem
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1152,10 +1155,6 @@ namespace MyMusic.Common.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<int>("ContinuousFailedCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("continuous_failed_count");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1165,11 +1164,6 @@ namespace MyMusic.Common.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)")
                         .HasColumnName("hash");
-
-                    b.Property<string>("LastErrorMessage")
-                        .HasMaxLength(1024)
-                        .HasColumnType("character varying(1024)")
-                        .HasColumnName("last_error_message");
 
                     b.Property<long>("OwnerId")
                         .HasColumnType("bigint")
@@ -1196,12 +1190,11 @@ namespace MyMusic.Common.Migrations
                     b.HasKey("Id")
                         .HasName("pk_wishlist_items");
 
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_wishlist_items_owner_id");
+
                     b.HasIndex("SourceId")
                         .HasDatabaseName("ix_wishlist_items_source_id");
-
-                    b.HasIndex("OwnerId", "SourceId", "Query")
-                        .IsUnique()
-                        .HasDatabaseName("ix_wishlist_items_owner_id_source_id_query");
 
                     b.ToTable("wishlist_items", (string)null);
                 });

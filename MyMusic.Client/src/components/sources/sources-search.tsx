@@ -13,6 +13,8 @@ import {IconAlertCircle} from "@tabler/icons-react";
 import ManageSourcesDialog from "./manage-sources-dialog.tsx";
 import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
 import {useSourceSongsSchema} from "./useSourceSongsSchema.tsx";
+import WishlistModal from "../wishlist/wishlist-modal.tsx";
+import {useDisclosure} from "@mantine/hooks";
 
 export default function SourcesSearch() {
     const queryClient = useQueryClient()
@@ -24,6 +26,7 @@ export default function SourcesSearch() {
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
     const [manageDialogOpened, setManageDialogOpened] = useState(false);
+    const [wishlistOpened, {open: openWishlist, close: closeWishlist}] = useDisclosure(false);
 
     const sourcesQuery = useListSources();
     const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
@@ -60,10 +63,26 @@ export default function SourcesSearch() {
 
     const elements = searchSongsResponse?.data ?? [];
 
+    const currentSongIds = elements.map(e => e.id);
+
     return <>
         <ManageSourcesDialog
             opened={manageDialogOpened}
             onClose={() => setManageDialogOpened(false)}
+        />
+        <WishlistModal
+            opened={wishlistOpened}
+            onClose={closeWishlist}
+            currentSource={source}
+            currentQuery={search}
+            currentSongIds={currentSongIds}
+            onItemClick={(sourceId, query) => {
+                const selectedSource = sources.find(s => s.id === sourceId);
+                if (selectedSource) {
+                    setSource(selectedSource);
+                    setSearch(query);
+                }
+            }}
         />
         <div style={{height: 'var(--parent-height)'}}>
             {sources.length === 0 ? (
@@ -104,6 +123,7 @@ export default function SourcesSearch() {
                                 setAppliedFilter(filterValue);
                             }}
                             onManageSources={() => setManageDialogOpened(true)}
+                            onOpenWishlist={openWishlist}
                         />
                     )}
                 >
