@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SongMetadataFieldOfint {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	old: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	new: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  old: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  new: number;
 }

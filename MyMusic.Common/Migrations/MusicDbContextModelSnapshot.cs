@@ -1160,6 +1160,11 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Filter")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("filter");
+
                     b.Property<string>("Hash")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -1199,9 +1204,9 @@ namespace MyMusic.Common.Migrations
                     b.HasIndex("SourceId")
                         .HasDatabaseName("ix_wishlist_items_source_id");
 
-                    b.HasIndex("OwnerId", "SourceId", "Query")
+                    b.HasIndex("OwnerId", "SourceId", "Query", "Filter")
                         .IsUnique()
-                        .HasDatabaseName("ix_wishlist_items_owner_id_source_id_query");
+                        .HasDatabaseName("ix_wishlist_items_owner_id_source_id_query_filter");
 
                     b.ToTable("wishlist_items", (string)null);
                 });

@@ -5,10 +5,11 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type PlaylistType = (typeof PlaylistType)[keyof typeof PlaylistType];
+export type PlaylistType = typeof PlaylistType[keyof typeof PlaylistType];
+
 
 export const PlaylistType = {
-	Playlist: "Playlist",
-	Queue: "Queue",
-	Favorites: "Favorites",
+  Playlist: 'Playlist',
+  Queue: 'Queue',
+  Favorites: 'Favorites',
 } as const;

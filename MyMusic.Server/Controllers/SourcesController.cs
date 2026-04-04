@@ -16,7 +16,8 @@ namespace MyMusic.Server.Controllers;
 public class SourcesController(
     ILogger<SourcesController> logger,
     ISourcesService sourcesService,
-    IThumbnailProxyService thumbnailProxyService) : ControllerBase
+    IThumbnailProxyService thumbnailProxyService,
+    IPurchasesSearchService purchasesSearchService) : ControllerBase
 {
     private readonly ILogger<SourcesController> _logger = logger;
     private readonly IThumbnailProxyService _thumbnailProxyService = thumbnailProxyService;
@@ -158,22 +159,17 @@ public class SourcesController(
         long id,
         string query,
         CancellationToken cancellationToken = default,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] bool fuzzyMatch = true)
     {
-        var source = await sourcesService.GetSourceClientAsync(id, cancellationToken);
-        var results = await source.SearchSongsAsync(query, cancellationToken);
+        _logger.LogInformation(
+            "SearchSongsAsync called - SourceId: {SourceId}, Query: {Query}, Filter: {Filter}, FuzzyMatch: {FuzzyMatch}",
+            id, query, filter ?? "(none)", fuzzyMatch);
 
-        results = InMemoryFilterBuilder.ApplyFuzzySearch(
-            results,
-            query,
-            s => s.SearchableText).ToList();
+        // Use PurchasesSearchService for centralized search logic
+        var results = await purchasesSearchService.SearchAsync(id, query, filter, fuzzyMatch, cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            var filterRequest = FilterDslParser.Parse(filter);
-            results = InMemoryFilterBuilder.ApplyFilter(results, filterRequest).ToList();
-        }
-
+        // Apply thumbnail proxy transformation
         foreach (var song in results)
         {
             song.Cover = _thumbnailProxyService.TransformArtwork(song.Cover);
@@ -182,6 +178,10 @@ public class SourcesController(
                 song.Album.Cover = _thumbnailProxyService.TransformArtwork(song.Album.Cover);
             }
         }
+
+        _logger.LogInformation(
+            "SearchSongsAsync completed - SourceId: {SourceId}, Query: {Query}, Results: {ResultCount}",
+            id, query, results.Count);
 
         return results;
     }

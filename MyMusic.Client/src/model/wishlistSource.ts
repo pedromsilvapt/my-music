@@ -5,8 +5,9 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface GetArtistResponseSongAlbum {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	name: string;
+export interface WishlistSource {
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  name: string;
+  icon: string;
 }

@@ -5,11 +5,11 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type SyncSessionStatus =
-	(typeof SyncSessionStatus)[keyof typeof SyncSessionStatus];
+export type SyncSessionStatus = typeof SyncSessionStatus[keyof typeof SyncSessionStatus];
+
 
 export const SyncSessionStatus = {
-	InProgress: "InProgress",
-	Completed: "Completed",
-	Cancelled: "Cancelled",
+  InProgress: 'InProgress',
+  Completed: 'Completed',
+  Cancelled: 'Cancelled',
 } as const;

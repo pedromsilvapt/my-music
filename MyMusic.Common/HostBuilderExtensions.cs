@@ -22,6 +22,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
         builder.Services.AddScoped<IWishlistService, WishlistService>();
+        builder.Services.AddScoped<IPurchasesSearchService, PurchasesSearchService>();
         builder.Services.AddTransient<PurchasesQueue.PurchasesExecutor>();
         builder.Services.AddTransient<MetadataFetchQueue.MetadataFetchExecutor>();
         builder.Services.AddTransient<MusicImportJob>();

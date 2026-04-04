@@ -6,6 +6,6 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SyncStartResponse {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	sessionId: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  sessionId: number;
 }

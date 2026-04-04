@@ -14,6 +14,7 @@ public record WishlistItem
     public required long Id { get; init; }
     public required long SourceId { get; init; }
     public required string Query { get; init; }
+    public string? Filter { get; init; }
     public required WishlistItemStatus Status { get; init; }
     public required int ContinuousFailedCount { get; init; }
     public required string? LastErrorMessage { get; init; }
@@ -27,6 +28,7 @@ public record WishlistItem
             Id = item.Id,
             SourceId = item.SourceId,
             Query = item.Query,
+            Filter = item.Filter,
             Status = item.Status,
             ContinuousFailedCount = item.ContinuousFailedCount,
             LastErrorMessage = item.LastErrorMessage,

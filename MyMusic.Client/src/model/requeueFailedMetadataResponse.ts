@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface RequeueFailedMetadataResponse {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	requeuedCount: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	failedCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  requeuedCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  failedCount: number;
 }

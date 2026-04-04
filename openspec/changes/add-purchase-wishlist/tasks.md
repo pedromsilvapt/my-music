@@ -90,8 +90,8 @@
 - [x] 11.1 Run backend build: `dotnet build`
 - [x] 11.2 Run backend tests: `dotnet test`
 - [x] 11.3 Run frontend lint: `npm run lint`
-- [ ] 11.4 Manual testing: Create wishlist item from search
-- [ ] 11.5 Manual testing: Verify background service marks items as Updated
-- [ ] 11.6 Manual testing: Click item navigates to search
-- [ ] 11.7 Manual testing: Keep button updates hash and resets status
-- [ ] 11.8 Manual testing: Delete removes from list
+- [x] 11.4 Manual testing: Create wishlist item from search
+- [x] 11.5 Manual testing: Verify background service marks items as Updated
+- [x] 11.6 Manual testing: Click item navigates to search
+- [x] 11.7 Manual testing: Keep button updates hash and resets status
+- [x] 11.8 Manual testing: Delete removes from list

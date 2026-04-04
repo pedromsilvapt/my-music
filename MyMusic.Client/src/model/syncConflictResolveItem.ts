@@ -6,9 +6,9 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SyncConflictResolveItem {
-	path: string;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songId: number;
-	fileContentBase64: string;
-	localModifiedAt: string;
+  path: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songId: number;
+  fileContentBase64: string;
+  localModifiedAt: string;
 }

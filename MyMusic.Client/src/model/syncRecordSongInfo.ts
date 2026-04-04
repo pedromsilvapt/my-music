@@ -6,10 +6,10 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SyncRecordSongInfo {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	title: string;
-	artistNames: string;
-	/** @nullable */
-	coverId?: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  title: string;
+  artistNames: string;
+  /** @nullable */
+  coverId?: string | null;
 }

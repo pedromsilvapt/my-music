@@ -31,7 +31,7 @@ public class WishlistController(
             currentUser.Id,
             request.SourceId,
             request.Query,
-            request.SongIds,
+            request.Filter,
             cancellationToken);
 
         return new CreateWishlistResponse

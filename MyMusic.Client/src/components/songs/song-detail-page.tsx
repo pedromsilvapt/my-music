@@ -18,7 +18,7 @@ import {
 import {Link, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
 
-import {getDownloadSongUrl, useGetSong} from "../../client/songs.ts";
+import {getDownloadSongUrl, useGetLocalSong} from "../../client/songs.ts";
 import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
@@ -32,7 +32,7 @@ import DeviceBadge from "../devices/device-badge.tsx";
 
 export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
-    const songQuery = useGetSong(Number(songId));
+    const songQuery = useGetLocalSong(Number(songId));
     const songResponse = useQueryData(songQuery, "Failed to fetch song");
     const song = songResponse?.data.song ?? null;
     const {play, playNext, playLast} = useQueueMutations();

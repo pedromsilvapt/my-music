@@ -6,8 +6,9 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface CreateWishlistRequest {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	sourceId: number;
-	query: string;
-	songIds: string[];
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  sourceId: number;
+  query: string;
+  /** @nullable */
+  filter?: string | null;
 }

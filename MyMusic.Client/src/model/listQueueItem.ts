@@ -6,15 +6,15 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface ListQueueItem {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	name: string;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songCount: number;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	currentSongId?: number | null;
-	createdAt: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  name: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songCount: number;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  currentSongId?: number | null;
+  createdAt: string;
 }

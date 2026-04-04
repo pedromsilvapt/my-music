@@ -1,7 +1,7 @@
-import {Alert, Center} from "@mantine/core";
+import {Alert, Button, Center, Group} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {useQueryClient} from "@tanstack/react-query";
-import {useCallback, useRef, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
 import {useListSources, type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
@@ -9,7 +9,7 @@ import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourcesItem, SourceSong} from "../../model";
 import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import Collection from "../common/collection/collection.tsx";
-import {IconAlertCircle} from "@tabler/icons-react";
+import {IconAlertCircle, IconFilter, IconFilterOff} from "@tabler/icons-react";
 import ManageSourcesDialog from "./manage-sources-dialog.tsx";
 import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
 import {useSourceSongsSchema} from "./useSourceSongsSchema.tsx";
@@ -23,16 +23,22 @@ export default function SourcesSearch() {
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('');
     const [appliedFilter, setAppliedFilter] = useState('');
+    const [fuzzyMatch, setFuzzyMatch] = useState(true);
     const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
     const [manageDialogOpened, setManageDialogOpened] = useState(false);
     const [wishlistOpened, {open: openWishlist, close: closeWishlist}] = useDisclosure(false);
 
+    // Reset fuzzyMatch to true when search or filter changes
+    useEffect(() => {
+        setFuzzyMatch(true);
+    }, [debouncedSearch, appliedFilter]);
+
     const sourcesQuery = useListSources();
     const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
     const sources = sourcesResponse?.data?.sources ?? [];
 
-    const searchSongsQuery = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter}, {
+    const searchSongsQuery = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter, fuzzyMatch}, {
         query: {
             placeholderData: (prev) => prev as searchSongsResponse | undefined
         }
@@ -63,8 +69,6 @@ export default function SourcesSearch() {
 
     const elements = searchSongsResponse?.data ?? [];
 
-    const currentSongIds = elements.map(e => e.id);
-
     return <>
         <ManageSourcesDialog
             opened={manageDialogOpened}
@@ -75,7 +79,7 @@ export default function SourcesSearch() {
             onClose={closeWishlist}
             currentSource={source}
             currentQuery={search}
-            currentSongIds={currentSongIds}
+            currentFilter={appliedFilter}
             onItemClick={(sourceId, query) => {
                 const selectedSource = sources.find(s => s.id === sourceId);
                 if (selectedSource) {
@@ -102,32 +106,45 @@ export default function SourcesSearch() {
                     </Center>
                 </div>
             ) : (
-                <Collection
-                    key="songs"
-                    stateKey="sources-search"
-                    items={elements}
-                    schema={sourceSongsSchema}
-                    isFetching={searchSongsQuery.isFetching}
-                    toolbar={p => (
-                        <SourcesSearchToolbar
-                            {...p}
-                            searchInputRef={searchInputRef}
-                            source={source}
-                            setSource={setSource}
-                            search={search}
-                            setSearch={setSearch}
-                            filter={filter}
-                            setFilter={setFilter}
-                            onApplyFilter={(filterValue) => {
-                                setFilter(filterValue);
-                                setAppliedFilter(filterValue);
-                            }}
-                            onManageSources={() => setManageDialogOpened(true)}
-                            onOpenWishlist={openWishlist}
+                <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
+                    <div style={{flex: 1, minHeight: 0}}>
+                        <Collection
+                            key="songs"
+                            stateKey="sources-search"
+                            items={elements}
+                            schema={sourceSongsSchema}
+                            isFetching={searchSongsQuery.isFetching}
+                            toolbar={p => (
+                                <SourcesSearchToolbar
+                                    {...p}
+                                    searchInputRef={searchInputRef}
+                                    source={source}
+                                    setSource={setSource}
+                                    search={search}
+                                    setSearch={setSearch}
+                                    filter={filter}
+                                    setFilter={setFilter}
+                                    onApplyFilter={(filterValue) => {
+                                        setFilter(filterValue);
+                                        setAppliedFilter(filterValue);
+                                    }}
+                                    onManageSources={() => setManageDialogOpened(true)}
+                                    onOpenWishlist={openWishlist}
+                                />
+                            )}
                         />
-                    )}
-                >
-                </Collection>
+                    </div>
+                    <Group justify="center" p="xs">
+                        <Button
+                            variant={fuzzyMatch ? "light" : "filled"}
+                            size="sm"
+                            leftSection={fuzzyMatch ? <IconFilter size={16}/> : <IconFilterOff size={16}/>}
+                            onClick={() => setFuzzyMatch(!fuzzyMatch)}
+                        >
+                            {fuzzyMatch ? "Show all results" : "Show matched results"}
+                        </Button>
+                    </Group>
+                </div>
             )}
         </div>
     </>;

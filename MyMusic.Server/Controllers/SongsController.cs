@@ -83,7 +83,7 @@ public class SongsController(
         };
     }
 
-    [HttpGet("{id:long}", Name = "GetSong")]
+    [HttpGet("{id:long}", Name = "GetLocalSong")]
     public async Task<GetSongResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
     {
         var song = await context.Songs

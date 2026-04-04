@@ -6,14 +6,14 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SourceArtwork {
-	/** @nullable */
-	normal?: string | null;
-	/** @nullable */
-	big?: string | null;
-	/** @nullable */
-	small?: string | null;
-	/** @nullable */
-	biggest?: string | null;
-	/** @nullable */
-	smallest?: string | null;
+  /** @nullable */
+  normal?: string | null;
+  /** @nullable */
+  big?: string | null;
+  /** @nullable */
+  small?: string | null;
+  /** @nullable */
+  biggest?: string | null;
+  /** @nullable */
+  smallest?: string | null;
 }

@@ -24,10 +24,12 @@ import {
     useBatchMultiUpdateSongs,
     useFetchSongMetadata,
     useUpdateSong,
-    getSong,
     autocompleteAlbums,
     autocompleteArtists,
     autocompleteGenres,
+} from "../../client/songs.ts";
+import {
+    getLocalSong,
 } from "../../client/songs.ts";
 import {useApplyMetadata} from "../../hooks/useApplyMetadata";
 import {useAutoFetchMetadata, usePrefetchMetadata} from "../../hooks/useAutoFetchMetadata";
@@ -140,7 +142,7 @@ export default function SongEditorContextModal({
             setLoading(true);
             const fetched: GetSongResponseSong[] = [];
             for (const songId of innerProps.songIds) {
-                const response = await getSong(songId);
+                const response = await getLocalSong(songId);
                 if (response.data.song) {
                     fetched.push(response.data.song);
                 }

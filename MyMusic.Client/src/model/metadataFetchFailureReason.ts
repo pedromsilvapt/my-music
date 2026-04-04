@@ -5,14 +5,14 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type MetadataFetchFailureReason =
-	(typeof MetadataFetchFailureReason)[keyof typeof MetadataFetchFailureReason];
+export type MetadataFetchFailureReason = typeof MetadataFetchFailureReason[keyof typeof MetadataFetchFailureReason];
+
 
 export const MetadataFetchFailureReason = {
-	None: "None",
-	ServiceUnavailable: "ServiceUnavailable",
-	NoMetadataFound: "NoMetadataFound",
-	NetworkError: "NetworkError",
-	SystemError: "SystemError",
-	Timeout: "Timeout",
+  None: 'None',
+  ServiceUnavailable: 'ServiceUnavailable',
+  NoMetadataFound: 'NoMetadataFound',
+  NetworkError: 'NetworkError',
+  SystemError: 'SystemError',
+  Timeout: 'Timeout',
 } as const;

@@ -14,7 +14,7 @@ interface WishlistModalProps {
     onClose: () => void;
     currentSource?: ListSourcesItem | null;
     currentQuery: string;
-    currentSongIds: string[];
+    currentFilter: string;
     onItemClick?: (sourceId: number, query: string) => void;
 }
 
@@ -23,7 +23,7 @@ export default function WishlistModal({
     onClose,
     currentSource,
     currentQuery,
-    currentSongIds,
+    currentFilter,
     onItemClick
 }: WishlistModalProps) {
     const {data: wishlistResponse, isPending} = useWishlist();
@@ -41,19 +41,34 @@ export default function WishlistModal({
             return;
         }
 
+        // Only store filter if it's not empty
+        const filterToStore = currentFilter.trim() || undefined;
+
         createMutation.mutate({
             data: {
                 sourceId: currentSource.id,
                 query: currentQuery.trim(),
-                songIds: currentSongIds
+                filter: filterToStore
             }
         }, {
-            onSuccess: () => {
+            onSuccess: (response) => {
+                if (response.status >= 400) {
+                    const responseData = response.data as { detail?: string } | undefined;
+                    const errorDetail = responseData?.detail || "Unknown error";
+                    notifications.show({
+                        title: "Error",
+                        message: `Failed to add to wishlist: ${errorDetail}`,
+                        color: "red"
+                    });
+                    return;
+                }
+                
                 notifications.show({
                     title: "Added to Wishlist",
                     message: `Tracking "${currentQuery}" for changes`,
                     color: "green"
                 });
+                onClose();
             },
             onError: (error) => {
                 notifications.show({
@@ -63,7 +78,7 @@ export default function WishlistModal({
                 });
             }
         });
-    }, [currentSource, currentQuery, currentSongIds, createMutation]);
+    }, [currentSource, currentQuery, currentFilter, createMutation, onClose]);
 
     const handleKeep = useCallback((id: number) => {
         updateMutation.mutate({id}, {
@@ -164,6 +179,11 @@ export default function WishlistModal({
                                                 <Text size="sm" lineClamp={1}>
                                                     {item.query}
                                                 </Text>
+                                                {item.filter && (
+                                                    <Text size="xs" c="blue" lineClamp={1}>
+                                                        Filter: {item.filter}
+                                                    </Text>
+                                                )}
                                                 {source && (
                                                     <Text size="xs" c="dimmed">
                                                         {source.name}

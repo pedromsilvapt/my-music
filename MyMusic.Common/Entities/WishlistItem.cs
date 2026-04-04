@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
 
-[Index(nameof(OwnerId), nameof(SourceId), nameof(Query), IsUnique = true)]
+[Index(nameof(OwnerId), nameof(SourceId), nameof(Query), nameof(Filter), IsUnique = true)]
 public class WishlistItem
 {
     public long Id { get; set; }
@@ -15,6 +15,8 @@ public class WishlistItem
     public long SourceId { get; set; }
 
     [MaxLength(512)] public required string Query { get; set; }
+
+    [MaxLength(1024)] public string? Filter { get; set; }
 
     [MaxLength(128)] public required string Hash { get; set; }
 
