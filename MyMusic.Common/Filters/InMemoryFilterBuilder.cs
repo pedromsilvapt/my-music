@@ -14,6 +14,14 @@ public static class InMemoryFilterBuilder
         return items.Where(compiled);
     }
 
+    private static readonly char[] FuzzySplitDelimiters = new[] {
+        ' ', '\t', '\n', '\r',
+        '-', '–', '—',
+        '(', ')', '{', '}', '[', ']',
+        '.', ',', '!', '?', ':', ';',
+        '\'', '"', '/', '\\', '|'
+    };
+
     public static IEnumerable<T> ApplyFuzzySearch<T>(
         IEnumerable<T> items,
         string? search,
@@ -25,7 +33,7 @@ public static class InMemoryFilterBuilder
         }
 
         var searchTerms = search.ToLower()
-            .Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(FuzzySplitDelimiters, StringSplitOptions.RemoveEmptyEntries);
 
         if (searchTerms.Length == 0)
         {

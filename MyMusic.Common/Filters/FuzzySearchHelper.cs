@@ -4,6 +4,14 @@ namespace MyMusic.Common.Filters;
 
 public static class FuzzySearchHelper
 {
+    private static readonly char[] FuzzySplitDelimiters = new[] {
+        ' ', '\t', '\n', '\r',
+        '-', '–', '—',
+        '(', ')', '{', '}', '[', ']',
+        '.', ',', '!', '?', ':', ';',
+        '\'', '"', '/', '\\', '|'
+    };
+
     public static IQueryable<T> ApplyFuzzySearch<T>(
         IQueryable<T> query,
         string? search,
@@ -16,7 +24,7 @@ public static class FuzzySearchHelper
 
         var searchTerms = search
             .ToLower()
-            .Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            .Split(FuzzySplitDelimiters, StringSplitOptions.RemoveEmptyEntries);
 
         if (searchTerms.Length == 0)
         {
