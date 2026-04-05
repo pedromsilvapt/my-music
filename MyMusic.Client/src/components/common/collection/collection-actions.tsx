@@ -10,6 +10,7 @@ export interface CollectionActionsProps<M> {
     actions: CollectionSchemaAction<M>[];
     opened?: boolean;
     setOpened?: (open: boolean) => void;
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
@@ -40,7 +41,7 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                 <Tooltip key={action.name} label={action.renderLabel()} openDelay={500}>
                     <ActionIcon
                         variant="default"
-                        size="lg"
+                        size={props.size ?? 'md'}
                         onClick={() => {
                             action.onClick(props.selection);
                         }}>
@@ -52,6 +53,7 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                 <Menu.Target>
                     <ActionIcon
                         variant="default"
+                        size={props.size ?? 'md'}
                         aria-label="Actions"
                         title="Actions"
                     >

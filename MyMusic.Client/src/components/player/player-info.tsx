@@ -1,34 +1,21 @@
-import {ActionIcon, Box, Group, Text, UnstyledButton} from '@mantine/core';
+import {Box, Group, Text, UnstyledButton} from '@mantine/core';
 import {Link} from '@tanstack/react-router';
 import Artwork from "../common/artwork.tsx";
-import {IconDotsVertical, IconHeart, IconHeartFilled, IconMusic, IconPlaylistAdd} from "@tabler/icons-react";
+import {IconMusic} from "@tabler/icons-react";
 import ExplicitLabel from "../common/explicit-label.tsx";
-import {useToggleFavorite} from "../../hooks/use-favorites.ts";
-import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
-import {usePlaybackActions} from "../../stores/playback-store";
 import {useQueuesMutations, useQueueList} from "../../hooks/use-queues";
-import {useCallback} from "react";
+import {usePlaybackActions} from "../../stores/playback-store";
 import styles from './player-info.module.css';
+import type {GetPlaylistSongItem, ListSongItem} from '../../model';
+import {useSongsSchema} from '../songs/useSongsSchema';
+import CollectionActions from '../common/collection/collection-actions';
 
 export interface PlayerInfoProps {
-    title: string;
-    artists: string[];
-    album: string;
-    year: number | null | undefined;
-    artwork: number | null;
-    isFavorite: boolean;
+    song: GetPlaylistSongItem;
     setIsFavorite: (isFavorite: boolean, songId?: number) => void;
-    isExplicit: boolean;
-    id: number;
 }
 
 export default function PlayerInfo(props: PlayerInfoProps) {
-    const handleFavoriteSuccess = useCallback((data: { data: { isFavorite: boolean } }) => {
-        props.setIsFavorite(data.data.isFavorite, props.id);
-    }, [props]);
-    
-    const toggleFavorite = useToggleFavorite(handleFavoriteSuccess);
-    const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {requestScrollToCurrent} = usePlaybackActions((s) => ({
         requestScrollToCurrent: s.requestScrollToCurrent,
     }));
@@ -42,51 +29,37 @@ export default function PlayerInfo(props: PlayerInfoProps) {
         requestScrollToCurrent();
     };
 
+    const schema = useSongsSchema(false);
+    const allActions = schema.actions?.([props.song as ListSongItem]) ?? [];
+    const actions = allActions.filter(action => {
+        if ('group' in action && action.group === 'Queue') return false;
+        if ('name' in action && ['play', 'play-next', 'play-last', 'shuffle', 'remove-from-queue'].includes(action.name)) return false;
+        return true;
+    }).map(action => {
+        if ('name' in action && (action.name === 'favorite' || action.name === 'manage-playlists')) {
+            return { ...action, primary: true };
+        }
+        return action;
+    });
+
     return <>
         <Group>
             <Link to="/player" className={styles.songInfoLink} onClick={handleSongInfoClick}>
                 <UnstyledButton className={styles.songInfoButton}>
                     <Group gap="sm">
-                        <Artwork id={props.artwork} size={60} placeholderIcon={<IconMusic/>}/>
+                        <Artwork id={props.song.cover} size={60} placeholderIcon={<IconMusic/>}/>
                         <Box>
-                            <ExplicitLabel visible={props.isExplicit}>
-                                <Text size="sm">{props.title}</Text>
+                            <ExplicitLabel visible={props.song.isExplicit}>
+                                <Text size="sm">{props.song.title}</Text>
                             </ExplicitLabel>
                             <Text size="xs" opacity={0.5}>
-                                {props.artists[0]} • {props.album} • {props.year}
+                                {props.song.artists[0].name} • {props.song.album.name} • {props.song.year}
                             </Text>
                         </Box>
                     </Group>
                 </UnstyledButton>
             </Link>
-            <Group gap="sm">
-                <ActionIcon
-                    variant="default"
-                    size="lg"
-                    aria-label={props.isFavorite ? "Favorite" : "Unfavorite"}
-                    title={props.isFavorite ? "Favorite" : "Unfavorite"}
-                    onClick={() => toggleFavorite.mutate({id: props.id})}
-                >
-                    {props.isFavorite ? <IconHeartFilled/> : <IconHeart/>}
-                </ActionIcon>
-                <ActionIcon
-                    variant="default"
-                    size="lg"
-                    aria-label="Add to Playlists"
-                    title="Add to Playlists"
-                    onClick={() => openManagePlaylists([props.id])}
-                >
-                    <IconPlaylistAdd/>
-                </ActionIcon>
-                <ActionIcon
-                    variant="default"
-                    size="lg"
-                    aria-label="Song Actions"
-                    title="Song Actions"
-                >
-                    <IconDotsVertical/>
-                </ActionIcon>
-            </Group>
+            <CollectionActions selection={[props.song as ListSongItem]} actions={actions} size="lg" />
         </Group>
     </>;
 }

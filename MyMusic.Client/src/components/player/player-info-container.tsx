@@ -1,4 +1,3 @@
-import type {ListSongsArtist} from '../../model';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerInfo from './player-info';
 
@@ -14,16 +13,6 @@ export default function PlayerInfoContainer() {
     if (!song) return null;
 
     return (
-        <PlayerInfo
-            artwork={song.cover}
-            title={song.title}
-            album={song.album.name}
-            artists={song.artists.map((a: ListSongsArtist) => a.name)}
-            year={song.year}
-            isExplicit={song.isExplicit}
-            isFavorite={song.isFavorite}
-            setIsFavorite={setIsFavorite}
-            id={song.id}
-        />
+        <PlayerInfo song={song} setIsFavorite={setIsFavorite} />
     );
 }
