@@ -96,25 +96,29 @@ export async function scanFromDirectory(
                     // Get full file info including local path
                     const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
 
-                    if (!assetInfo.localUri) {
+                    // Use localUri as primary, fallback to asset.uri (guaranteed to be file:// on Android)
+                    const sourceUri = assetInfo.localUri || asset.uri;
+
+                    if (!sourceUri) {
                         if (onError) {
                             onError(
                                 asset.uri,
-                                'Could not get local file path for media asset'
+                                'Could not get any valid URI for media asset'
                             );
                         }
                         errors.push({
                             path: asset.uri,
-                            error: 'Could not get local file path for media asset',
+                            error: 'Could not get any valid URI for media asset',
                         });
                         continue;
                     }
 
-                    // Convert to file path
-                    const filePath = normalizePath(assetInfo.localUri);
+                    // Normalize the URI (preserves content:// URIs, converts file:// to path)
+                    const filePath = normalizePath(sourceUri);
 
                     // Check if file is within the repository directory
-                    if (!isWithinDirectory(filePath, repoPath)) {
+                    // Skip this check for content URIs since they can't be matched to file system paths
+                    if (!isContentUri(sourceUri) && !isWithinDirectory(filePath, repoPath)) {
                         continue;
                     }
 
@@ -133,7 +137,10 @@ export async function scanFromDirectory(
                     }
 
                     // Calculate relative path from repository root
-                    const relativePath = filePath.substring(repoPath.length);
+                    // For content URIs, use the filename since we can't determine the directory structure
+                    const relativePath = isContentUri(sourceUri)
+                        ? filename
+                        : filePath.substring(repoPath.length);
 
                     // Get file size
                     let size = 0;
@@ -198,16 +205,24 @@ export async function scanFromDirectory(
 }
 
 /**
- * Normalize a path by removing file:// or content:// prefix and trailing slash
+ * Check if a path is a content URI
+ */
+function isContentUri(path: string): boolean {
+    return path.startsWith('content://');
+}
+
+/**
+ * Normalize a path by removing file:// prefix and trailing slash.
+ * Content URIs are preserved as-is since expo-file-system can handle them.
  */
 function normalizePath(path: string): string {
+    // Preserve content:// URIs as-is (expo-file-system File class can handle them)
+    if (isContentUri(path)) {
+        return path;
+    }
     // Remove file:// prefix
     if (path.startsWith('file://')) {
         path = path.substring(7);
-    }
-    // Remove content:// prefix (we shouldn't use content URIs for actual file operations)
-    else if (path.startsWith('content://')) {
-        path = path.substring(10);
     }
     // Remove trailing slash
     if (path.endsWith('/')) {
