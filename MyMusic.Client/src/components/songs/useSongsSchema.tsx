@@ -173,6 +173,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 displayName: 'Year',
                 render: row => row.year,
                 align: 'center',
+                width: 55,
                 sortable: true,
             },
             {
@@ -180,6 +181,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 displayName: 'Duration',
                 render: row => row.duration,
                 align: 'right',
+                width: 80,
                 sortable: true,
             },
             {
@@ -187,7 +189,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 displayName: 'Devices',
                 render: row => <SongDevicesCell song={row} allDevices={allDevices} />,
                 align: 'center',
-                width: 'auto',
+                width: 90,
             },
             {
                 name: 'createdAt',
