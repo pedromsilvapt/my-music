@@ -3,7 +3,7 @@ import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {IconCheck, IconEdit, IconTrash, IconX} from "@tabler/icons-react";
 import {useMemo} from "react";
-import type {ListAuditNonConformitiesItem} from "../../model";
+import type {ListAuditNonConformityItem, ListSongsArtist} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection";
 import SongAlbum from "../common/fields/song-album";
 import SongArtists from "../common/fields/song-artists";
@@ -13,10 +13,10 @@ import SongTitle from "../common/fields/song-title";
 export function useAuditNonConformitiesSchema(
     onSetWaiver: (ids: number[], hasWaiver: boolean, reason?: string | null) => void,
     onDelete: (ids: number[]) => void
-): CollectionSchema<ListAuditNonConformitiesItem> {
+): CollectionSchema<ListAuditNonConformityItem> {
     return useMemo(() => ({
         key: row => row.id,
-        searchVector: nc => `${nc.song.title} - ${nc.song.artists.map(a => a.name).join(', ')} - ${nc.song.album.name}`,
+        searchVector: nc => `${nc.song.title} - ${nc.song.artists.map((a: ListSongsArtist) => a.name).join(', ')} - ${nc.song.album.name}`,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -99,7 +99,7 @@ export function useAuditNonConformitiesSchema(
                     name: "grant-waiver",
                     renderIcon: () => <IconCheck/>,
                     renderLabel: () => `Grant Waiver`,
-                    onClick: (items: ListAuditNonConformitiesItem[]) => {
+                    onClick: (items: ListAuditNonConformityItem[]) => {
                         const ids = items.filter(nc => !nc.hasWaiver).map(nc => nc.id);
                         if (ids.length > 0) {
                             onSetWaiver(ids, true, null);
@@ -110,7 +110,7 @@ export function useAuditNonConformitiesSchema(
                     name: "remove-waiver",
                     renderIcon: () => <IconX/>,
                     renderLabel: () => `Remove Waiver`,
-                    onClick: (items: ListAuditNonConformitiesItem[]) => {
+                    onClick: (items: ListAuditNonConformityItem[]) => {
                         const ids = items.filter(nc => nc.hasWaiver).map(nc => nc.id);
                         if (ids.length > 0) {
                             onSetWaiver(ids, false, null);
@@ -122,7 +122,7 @@ export function useAuditNonConformitiesSchema(
                     name: "remove",
                     renderIcon: () => <IconTrash/>,
                     renderLabel: () => `Remove`,
-                    onClick: (items: ListAuditNonConformitiesItem[]) => {
+                    onClick: (items: ListAuditNonConformityItem[]) => {
                         const ids = items.map(nc => nc.id);
                         if (ids.length > 0) {
                             onDelete(ids);
@@ -138,7 +138,7 @@ export function useAuditNonConformitiesSchema(
         renderListSubTitle: (nc) => (
             <Group gap="xs">
                 <Text size="sm" c="dimmed" lineClamp={1}>
-                    {nc.song.artists.map(a => a.name).join(', ')} • {nc.song.album.name}
+                    {nc.song.artists.map((a: ListSongsArtist) => a.name).join(', ')} • {nc.song.album.name}
                 </Text>
                 {nc.hasWaiver ? (
                     <Badge color="yellow" variant="light" size="xs">Waived</Badge>
@@ -147,5 +147,5 @@ export function useAuditNonConformitiesSchema(
                 )}
             </Group>
         ),
-    }) as CollectionSchema<ListAuditNonConformitiesItem>, [onSetWaiver, onDelete]);
+    }) as CollectionSchema<ListAuditNonConformityItem>, [onSetWaiver, onDelete]);
 }

@@ -3,22 +3,22 @@ import {useUncontrolled} from "@mantine/hooks";
 import {useEffect, useMemo} from "react";
 import {useListSources} from "../../client/sources.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListSourcesItem, SourceSong} from "../../model";
+import type {ListSourceItem, SourceSong} from "../../model";
 import CollectionToolbar, {type CollectionToolbarProps} from "../common/collection/collection-toolbar.tsx";
 import {CollectionFilterBar, type CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
 import {IconHeart, IconPencil} from "@tabler/icons-react";
 
 export interface SourcesSearchToolbarProps extends CollectionToolbarProps<SourceSong> {
-    source?: ListSourcesItem | null | undefined,
-    setSource?: (source: ListSourcesItem | null | undefined) => void,
+    source?: ListSourceItem | null | undefined,
+    setSource?: (source: ListSourceItem | null | undefined) => void,
     searchInputRef?: React.RefObject<CollectionFilterBarRef | null>;
     onManageSources?: () => void;
     onOpenWishlist?: () => void;
 }
 
 export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
-    const [source, setSource] = useUncontrolled<ListSourcesItem | null | undefined>({
+    const [source, setSource] = useUncontrolled<ListSourceItem | null | undefined>({
         value: props.source,
         onChange: props.setSource,
     });

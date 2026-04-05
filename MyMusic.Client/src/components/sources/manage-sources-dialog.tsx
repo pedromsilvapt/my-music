@@ -23,7 +23,7 @@ import {
 } from "../../client/sources.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {CreateSourceData, ListSourcesItem} from "../../model";
+import type {CreateSourceData, ListSourceItem} from "../../model";
 import TablerIcon from "../common/tabler-icon.tsx";
 import {IconAlertTriangle, IconPlus, IconTrash} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
@@ -50,7 +50,7 @@ function createEmptyFormData(): SourceFormData {
     };
 }
 
-function sourceToFormData(source: ListSourcesItem): SourceFormData {
+function sourceToFormData(source: ListSourceItem): SourceFormData {
     return {
         name: source.name,
         icon: source.icon,

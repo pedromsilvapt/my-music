@@ -1,15 +1,15 @@
 import {Button, Group, Stack,} from '@mantine/core';
 import {IconShoppingCartX} from "@tabler/icons-react";
-import {type ListPurchasesItem} from "../../model";
+import {type ListPurchaseItem} from "../../model";
 import CollectionToolbar from "../common/collection/collection-toolbar.tsx";
 import Collection from "../common/collection/collection.tsx";
 import usePurchasedSongsQuery from "./usePurchasedSongsQuery.tsx";
 import {usePurchasedSongsSchema} from "./usePurchasedSongsSchema.tsx";
 
 interface PurchasesQueueListProps {
-    onRequeue: (purchases: ListPurchasesItem[]) => void;
-    onDownload: (purchases: ListPurchasesItem[]) => void;
-    onClear: (purchases: ListPurchasesItem[]) => void;
+    onRequeue: (purchases: ListPurchaseItem[]) => void;
+    onDownload: (purchases: ListPurchaseItem[]) => void;
+    onClear: (purchases: ListPurchaseItem[]) => void;
     onClearCompleted: () => void;
     onClearAll: () => void;
     refreshInterval?: number; // in milliseconds, default 5000

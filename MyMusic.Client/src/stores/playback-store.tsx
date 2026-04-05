@@ -4,7 +4,7 @@ import {createContext, useContext, useRef} from 'react';
 import {create, type StoreApi, useStore} from 'zustand';
 import {immer} from 'zustand/middleware/immer';
 import {useShallow} from 'zustand/react/shallow';
-import type {GetPlaylistSong} from '../model';
+import type {GetPlaylistSongItem} from '../model';
 
 export type PlaybackState = {
     current: PlayerCurrentSongState;
@@ -19,11 +19,11 @@ export type PlaybackState = {
 
 export type PlayerCurrentSongState =
     | { type: 'EMPTY' }
-    | { type: 'LOADING'; song: GetPlaylistSong }
-    | { type: 'LOADED'; song: GetPlaylistSong; time: number; duration: number; isPlaying: boolean };
+    | { type: 'LOADING'; song: GetPlaylistSongItem }
+    | { type: 'LOADED'; song: GetPlaylistSongItem; time: number; duration: number; isPlaying: boolean };
 
 type PlaybackActions = {
-    setLoadingSong: (song: GetPlaylistSong, autoplay: boolean) => void;
+    setLoadingSong: (song: GetPlaylistSongItem, autoplay: boolean) => void;
     load: (duration: number) => void;
     setIsPlaying: (isPlaying: boolean) => void;
     setVolume: (volume: number) => void;

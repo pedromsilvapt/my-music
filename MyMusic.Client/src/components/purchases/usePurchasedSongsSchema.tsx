@@ -10,16 +10,16 @@ import {
     IconX
 } from "@tabler/icons-react";
 import {useMemo} from "react";
-import {type ListPurchasesItem, PurchasedSongStatus} from "../../model";
+import {type ListPurchaseItem, PurchasedSongStatus} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import type {CollectionSchemaAction} from "../common/collection/collection-schema.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import SongArtwork from "../common/fields/song-artwork.tsx";
 
 export function usePurchasedSongsSchema(
-    onRequeue: (purchases: ListPurchasesItem[]) => void,
-    onDownload: (purchases: ListPurchasesItem[]) => void,
-    onClear: (purchases: ListPurchasesItem[]) => void,
+    onRequeue: (purchases: ListPurchaseItem[]) => void,
+    onDownload: (purchases: ListPurchaseItem[]) => void,
+    onClear: (purchases: ListPurchaseItem[]) => void,
 ) {
     return useMemo(() => ({
         key: row => row.id,
@@ -57,7 +57,7 @@ export function usePurchasedSongsSchema(
         ],
 
         actions: (purchases) => {
-            const buttons: CollectionSchemaAction<ListPurchasesItem>[] = [];
+            const buttons: CollectionSchemaAction<ListPurchaseItem>[] = [];
 
             if (purchases.some(p => p.status == PurchasedSongStatus.Completed && p.songId != null)) {
                 buttons.push({
@@ -105,7 +105,7 @@ export function usePurchasedSongsSchema(
             <Text c="gray">{row.subTitle}</Text>
             {getStatusBadge(row.status)}
         </>,
-    }) as CollectionSchema<ListPurchasesItem>, [onRequeue, onDownload, onClear]);
+    }) as CollectionSchema<ListPurchaseItem>, [onRequeue, onDownload, onClear]);
 }
 
 

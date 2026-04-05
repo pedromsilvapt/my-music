@@ -1,8 +1,8 @@
-import type {GetPlaylistSong} from '../model';
+import type {GetPlaylistSongItem} from '../model';
 import {usePlaybackStore} from '../stores/playback-store';
 import {useQueue} from './use-queue';
 
-export function useCurrentSong(): GetPlaylistSong | null {
+export function useCurrentSong(): GetPlaylistSongItem | null {
     const song = usePlaybackStore((state) => {
         const current = state.current;
         if (current.type === 'LOADING' || current.type === 'LOADED') {

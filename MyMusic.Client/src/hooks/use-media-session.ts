@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useWavesurferRef } from '../components/player/wavesurfer-context';
-import type { GetPlaylistSong } from '../model';
+import type {GetPlaylistSongItem, ListSongsArtist} from '../model';
 import { usePlaybackActions, usePlaybackStore } from '../stores/playback-store';
 import { usePlayerNavigation } from './use-player-navigation';
 
@@ -45,7 +45,7 @@ export function useMediaSession () {
     );
 
     const [artworkMetadata, setArtworkMetadata] = useState<ArtworkMetadata | null>(null);
-    const songRef = useRef<GetPlaylistSong | null>(null);
+    const songRef = useRef<GetPlaylistSongItem | null>(null);
     const isPlayingRef = useRef<boolean>(false);
     const timeRef = useRef<number>(0);
     const durationRef = useRef<number>(0);
@@ -182,7 +182,7 @@ export function useMediaSession () {
             return;
         }
 
-        const artists = song.artists.map((a) => a.name).join(', ');
+        const artists = song.artists.map((a: ListSongsArtist) => a.name).join(', ');
         const album = song.album.name;
         const title = song.title;
 

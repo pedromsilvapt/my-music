@@ -1,7 +1,7 @@
 import {useListPurchases} from "../../client/purchases.ts";
 import {PURCHASE_REFETCH_INTERVAL_MS} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListPurchasesItem} from "../../model";
+import type {ListPurchaseItem} from "../../model";
 
 export default function usePurchasedSongsQuery() {
     const purchasesQuery = useListPurchases({
@@ -19,7 +19,7 @@ export default function usePurchasedSongsQuery() {
     if (!purchasesResponse) {
         return {
             ...purchasesQuery,
-            data: {data: {purchases: [] as ListPurchasesItem[], total: 0}},
+            data: {data: {purchases: [] as ListPurchaseItem[], total: 0}},
         };
     }
 
@@ -29,7 +29,7 @@ export default function usePurchasedSongsQuery() {
     };
 }
 
-function arePurchasesActive(purchases: ListPurchasesItem[] | null | undefined) {
+function arePurchasesActive(purchases: ListPurchaseItem[] | null | undefined) {
     if (!purchases || purchases.length === 0) {
         return false;
     }

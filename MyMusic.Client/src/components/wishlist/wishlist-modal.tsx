@@ -4,7 +4,7 @@ import {IconHeart, IconTrash} from "@tabler/icons-react";
 import {useCallback} from "react";
 import {useListSources} from "../../client/sources";
 import {useCreateWishlistMutation, useRemoveWishlistMutation, useUpdateWishlistMutation, useWishlist} from "../../hooks/use-wishlist";
-import type {ListSourcesItem} from "../../model";
+import type {ListSourceItem} from "../../model";
 import {WishlistItemStatus} from "../../model";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import TablerIcon from "../common/tabler-icon.tsx";
@@ -12,7 +12,7 @@ import TablerIcon from "../common/tabler-icon.tsx";
 interface WishlistModalProps {
     opened: boolean;
     onClose: () => void;
-    currentSource?: ListSourcesItem | null;
+    currentSource?: ListSourceItem | null;
     currentQuery: string;
     currentFilter: string;
     onItemClick?: (sourceId: number, query: string) => void;

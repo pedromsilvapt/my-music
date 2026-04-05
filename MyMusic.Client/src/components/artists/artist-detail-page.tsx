@@ -3,8 +3,8 @@ import {IconArrowBack, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListAlbumsItem, ListSongItem} from "../../model";
-import {GetArtistSongFilter} from "../../model";
+import type {ListAlbumItem, ListSongItem} from "../../model";
+import {ArtistSongFilter} from "../../model";
 import {useAlbumsSchema} from "../albums/useAlbumsSchema.tsx";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -19,7 +19,7 @@ export default function ArtistDetailPage() {
     const songFilter = (searchParams.songFilter as string)?.toLowerCase() ?? 'all';
 
     const artistQuery = useGetArtist(Number(artistId), {
-        songFilter: songFilter === 'own' ? GetArtistSongFilter.Own : songFilter === 'other' ? GetArtistSongFilter.Other : GetArtistSongFilter.All
+        songFilter: songFilter === 'own' ? ArtistSongFilter.Own : songFilter === 'other' ? ArtistSongFilter.Other : ArtistSongFilter.All
     });
     const artistResponse = useQueryData(artistQuery, "Failed to fetch artist");
     const artist = artistResponse?.data.artist ?? null;
@@ -37,7 +37,7 @@ export default function ArtistDetailPage() {
         return <Box p="md">Loading...</Box>;
     }
 
-    const albums = artist.albums as unknown as ListAlbumsItem[];
+    const albums = artist.albums as unknown as ListAlbumItem[];
     const songs = artist.songs as unknown as ListSongItem[];
 
     return (

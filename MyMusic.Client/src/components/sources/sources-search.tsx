@@ -6,7 +6,7 @@ import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchase
 import {useListSources, type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListSourcesItem, SourceSong} from "../../model";
+import type {ListSourceItem, SourceSong} from "../../model";
 import type {CollectionFilterBarRef} from "../common/collection/collection-filter-bar.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {IconAlertCircle, IconFilter, IconFilterOff} from "@tabler/icons-react";
@@ -24,7 +24,7 @@ export default function SourcesSearch() {
     const [filter, setFilter] = useState('');
     const [appliedFilter, setAppliedFilter] = useState('');
     const [fuzzyMatch, setFuzzyMatch] = useState(true);
-    const [source, setSource] = useState<ListSourcesItem | null | undefined>(null);
+    const [source, setSource] = useState<ListSourceItem | null | undefined>(null);
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
     const [manageDialogOpened, setManageDialogOpened] = useState(false);
     const [wishlistOpened, {open: openWishlist, close: closeWishlist}] = useDisclosure(false);

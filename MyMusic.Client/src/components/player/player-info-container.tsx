@@ -1,3 +1,4 @@
+import type {ListSongsArtist} from '../../model';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerInfo from './player-info';
 
@@ -17,7 +18,7 @@ export default function PlayerInfoContainer() {
             artwork={song.cover}
             title={song.title}
             album={song.album.name}
-            artists={song.artists.map(a => a.name)}
+            artists={song.artists.map((a: ListSongsArtist) => a.name)}
             year={song.year}
             isExplicit={song.isExplicit}
             isFavorite={song.isFavorite}

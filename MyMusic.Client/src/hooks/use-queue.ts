@@ -11,12 +11,12 @@ import {
     useShuffleQueue,
 } from '../client/playlists';
 import {useUpdateCurrentUser} from '../client/users';
-import type {GetPlaylistItem, GetPlaylistSongItem, ListSongsItem} from '../model';
+import type {GetPlaylistItem, GetPlaylistSongItem, ListSongItem} from '../model';
 import {AddToQueuePosition} from '../model';
 import {usePlaybackActions} from '../stores/playback-store';
 import {useQueueManagerStore} from '../stores/queue-manager-store';
 
-export type PlayableItem = GetPlaylistSongItem | ListSongsItem;
+export type PlayableItem = GetPlaylistSongItem | ListSongItem;
 
 interface QueueQueryData {
     data: {

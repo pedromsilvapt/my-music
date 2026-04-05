@@ -2,7 +2,7 @@ import {Anchor, Tooltip} from "@mantine/core";
 import {IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
-import type {ListAlbumsItem} from "../../model";
+import type {ListAlbumItem} from "../../model";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
@@ -89,5 +89,5 @@ export function useAlbumsSchema() {
             <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => row.songsCount + ' songs',
-    }) as CollectionSchema<ListAlbumsItem>, [filterMetadata, fetchFilterValues]);
+    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues]);
 }

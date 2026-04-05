@@ -1,7 +1,7 @@
 import {saveAs} from 'file-saver';
 import {useDeleteManyPurchases, useDeletePurchase, useRequeuePurchase} from "../../client/purchases.ts";
 import {getDownloadSongUrl} from "../../client/songs.ts";
-import {type ListPurchasesItem} from "../../model";
+import {type ListPurchaseItem} from "../../model";
 import PurchasesQueueList from "./purchases-queue-list.tsx";
 
 export type PurchasesQueueProps = object;
@@ -11,19 +11,19 @@ export default function PurchasesQueue() {
     const deletePurchase = useDeletePurchase();
     const deleteManyPurchases = useDeleteManyPurchases();
 
-    const handleRequeue = (purchases: ListPurchasesItem[]) => {
+    const handleRequeue = (purchases: ListPurchaseItem[]) => {
         for (const purchase of purchases) {
             requeuePurchase.mutate({id: purchase.id})
         }
     };
-    const handleDownload = (purchases: ListPurchasesItem[]) => {
+    const handleDownload = (purchases: ListPurchaseItem[]) => {
         for (const file of purchases) {
             if (file.songId != null) {
                 saveAs(getDownloadSongUrl(file.songId));
             }
         }
     };
-    const handleClear = (purchases: ListPurchasesItem[]) => {
+    const handleClear = (purchases: ListPurchaseItem[]) => {
         for (const purchase of purchases) {
             deletePurchase.mutate({id: purchase.id})
         }
