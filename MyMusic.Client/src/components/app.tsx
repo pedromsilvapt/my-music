@@ -1,4 +1,4 @@
-import {AppShell, Avatar, Burger, Divider, Group, NavLink, Text} from "@mantine/core";
+import {AppShell, Avatar, Burger, Divider, Group, NavLink, ScrollArea, Text} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {
     IconClipboardCheck,
@@ -55,77 +55,79 @@ function App() {
                     <PurchasesQueueIndicator/>
                 </Group>
             </AppShell.Header>
-            <AppShell.Navbar p="md">
-                <NavLink
-                    renderRoot={(props) => <Link to={"/player"} {...props} />}
-                    href="/player"
-                    key="player"
-                    leftSection={<IconPlayerPlay stroke={2}/>}
-                    label="Now Playing"
-                />
+            <AppShell.Navbar>
+                <ScrollArea h="100%" p="md">
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/player"} {...props} />}
+                        href="/player"
+                        key="player"
+                        leftSection={<IconPlayerPlay stroke={2}/>}
+                        label="Now Playing"
+                    />
 
-                <Divider my="md"/>
+                    <Divider my="md"/>
 
-                <NavLink
-                    renderRoot={(props) => <Link to={"/"} {...props} />}
-                    key="home"
-                    leftSection={<IconHome stroke={2}/>}
-                    label="Home"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/songs"} {...props} />}
-                    href="/songs"
-                    leftSection={<IconMusic stroke={2}/>}
-                    label="Songs"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/albums"} {...props} />}
-                    key="albums"
-                    leftSection={<IconDisc stroke={2}/>}
-                    label="Albums"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/artists"} {...props} />}
-                    key="artists"
-                    leftSection={<IconUsers stroke={2}/>}
-                    label="Artists"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/playlists"} {...props} />}
-                    key="playlists"
-                    leftSection={<IconPlaylist stroke={2}/>}
-                    label="Playlists"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/devices"} {...props} />}
-                    key="devices"
-                    leftSection={<IconDevices stroke={2}/>}
-                    label="Devices"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/history"} {...props} />}
-                    key="history"
-                    leftSection={<IconHistory stroke={2}/>}
-                    label="History"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/audits"} {...props} />}
-                    key="audits"
-                    leftSection={<IconClipboardCheck stroke={2}/>}
-                    label="Audits"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/purchases"} {...props} />}
-                    key="purchases"
-                    leftSection={<IconShoppingCart stroke={2}/>}
-                    label="Purchases"
-                />
-                <NavLink
-                    renderRoot={(props) => <Link to={"/settings"} {...props} />}
-                    key="settings"
-                    leftSection={<IconSettings stroke={2}/>}
-                    label="Settings"
-                />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/"} {...props} />}
+                        key="home"
+                        leftSection={<IconHome stroke={2}/>}
+                        label="Home"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/songs"} {...props} />}
+                        href="/songs"
+                        leftSection={<IconMusic stroke={2}/>}
+                        label="Songs"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/albums"} {...props} />}
+                        key="albums"
+                        leftSection={<IconDisc stroke={2}/>}
+                        label="Albums"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/artists"} {...props} />}
+                        key="artists"
+                        leftSection={<IconUsers stroke={2}/>}
+                        label="Artists"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/playlists"} {...props} />}
+                        key="playlists"
+                        leftSection={<IconPlaylist stroke={2}/>}
+                        label="Playlists"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/devices"} {...props} />}
+                        key="devices"
+                        leftSection={<IconDevices stroke={2}/>}
+                        label="Devices"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/history"} {...props} />}
+                        key="history"
+                        leftSection={<IconHistory stroke={2}/>}
+                        label="History"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/audits"} {...props} />}
+                        key="audits"
+                        leftSection={<IconClipboardCheck stroke={2}/>}
+                        label="Audits"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/purchases"} {...props} />}
+                        key="purchases"
+                        leftSection={<IconShoppingCart stroke={2}/>}
+                        label="Purchases"
+                    />
+                    <NavLink
+                        renderRoot={(props) => <Link to={"/settings"} {...props} />}
+                        key="settings"
+                        leftSection={<IconSettings stroke={2}/>}
+                        label="Settings"
+                    />
+                </ScrollArea>
             </AppShell.Navbar>
             <AppShell.Main
                 style={{'--parent-height': "calc(100vh - var(--app-shell-header-height, 0px) - var(--app-shell-footer-height, 0px) - var(--app-shell-padding) * 2)"}}>
