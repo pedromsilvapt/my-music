@@ -1,5 +1,5 @@
 import {useQueryClient} from '@tanstack/react-query';
-import {useCallback} from 'react';
+import {useCallback, useMemo, useRef} from 'react';
 import {
     getListQueuesQueryKey,
     useCreateQueue,
@@ -34,10 +34,11 @@ export function useQueuesMutations() {
     const setVisibleQueueId = useQueueManagerStore((s) => s.setVisibleQueueId);
     const setCurrentQueueId = useQueueManagerStore((s) => s.setCurrentQueueId);
 
-    const createQueueMutation = useCreateQueue({});
-    const deleteQueueMutation = useDeleteQueue({});
-    const renameQueueMutation = useRenameQueue({});
-    const updateCurrentUserMutation = useUpdateCurrentUser({});
+    // Use refs for mutations to avoid unstable references in dependency arrays
+    const createQueueMutationRef = useRef(useCreateQueue({}));
+    const deleteQueueMutationRef = useRef(useDeleteQueue({}));
+    const renameQueueMutationRef = useRef(useRenameQueue({}));
+    const updateCurrentUserMutationRef = useRef(useUpdateCurrentUser({}));
 
     const createQueue = useCallback(async (
         songIds: number[],
@@ -45,7 +46,7 @@ export function useQueuesMutations() {
     ): Promise<number | null> => {
         const currentSongId = options?.currentSongId ?? (songIds.length > 0 ? songIds[0] : undefined);
         
-        const result = await createQueueMutation.mutateAsync({
+        const result = await createQueueMutationRef.current.mutateAsync({
             data: {
                 songIds,
                 name: options?.name,
@@ -58,24 +59,24 @@ export function useQueuesMutations() {
         setCurrentQueueId(queueId);
         
         // Update user's current queue on server
-        await updateCurrentUserMutation.mutateAsync({
+        await updateCurrentUserMutationRef.current.mutateAsync({
             data: {currentQueueId: queueId},
         });
 
         queryClient.invalidateQueries({queryKey: getListQueuesQueryKey()});
         
         return queueId;
-    }, [createQueueMutation, updateCurrentUserMutation, setVisibleQueueId, setCurrentQueueId, queryClient]);
+    }, [setVisibleQueueId, setCurrentQueueId, queryClient]);
 
     const deleteQueue = useCallback(async (queueId: number): Promise<void> => {
-        await deleteQueueMutation.mutateAsync({id: queueId});
+        await deleteQueueMutationRef.current.mutateAsync({id: queueId});
         queryClient.invalidateQueries({queryKey: getListQueuesQueryKey()});
-    }, [deleteQueueMutation, queryClient]);
+    }, [queryClient]);
 
     const renameQueue = useCallback(async (queueId: number, name: string): Promise<void> => {
-        await renameQueueMutation.mutateAsync({id: queueId, data: {name}});
+        await renameQueueMutationRef.current.mutateAsync({id: queueId, data: {name}});
         queryClient.invalidateQueries({queryKey: getListQueuesQueryKey()});
-    }, [renameQueueMutation, queryClient]);
+    }, [queryClient]);
 
     // View a queue without affecting playback
     const viewQueue = useCallback((queueId: number): void => {
@@ -85,21 +86,21 @@ export function useQueuesMutations() {
     // Set current queue (playing queue) - persists to server
     const playFromQueue = useCallback(async (queueId: number): Promise<void> => {
         setCurrentQueueId(queueId);
-        await updateCurrentUserMutation.mutateAsync({
+        await updateCurrentUserMutationRef.current.mutateAsync({
             data: {currentQueueId: queueId},
         });
-    }, [updateCurrentUserMutation, setCurrentQueueId]);
+    }, [setCurrentQueueId]);
 
-    return {
+    return useMemo(() => ({
         createQueue,
         deleteQueue,
         renameQueue,
         viewQueue,
         playFromQueue,
-        isCreating: createQueueMutation.isPending,
-        isDeleting: deleteQueueMutation.isPending,
-        isRenaming: renameQueueMutation.isPending,
-    };
+        isCreating: createQueueMutationRef.current.isPending,
+        isDeleting: deleteQueueMutationRef.current.isPending,
+        isRenaming: renameQueueMutationRef.current.isPending,
+    }), [createQueue, deleteQueue, renameQueue, viewQueue, playFromQueue]);
 }
 
 export function useQueueList(): {

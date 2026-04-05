@@ -7,6 +7,7 @@ import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {usePlaybackActions} from "../../stores/playback-store";
 import {useQueuesMutations, useQueueList} from "../../hooks/use-queues";
+import {useCallback} from "react";
 import styles from './player-info.module.css';
 
 export interface PlayerInfoProps {
@@ -22,13 +23,11 @@ export interface PlayerInfoProps {
 }
 
 export default function PlayerInfo(props: PlayerInfoProps) {
-    const toggleFavorite = useToggleFavorite({
-        mutation: {
-            onSuccess: (data) => {
-                props.setIsFavorite(data.data.isFavorite, props.id);
-            }
-        }
-    });
+    const handleFavoriteSuccess = useCallback((data: { data: { isFavorite: boolean } }) => {
+        props.setIsFavorite(data.data.isFavorite, props.id);
+    }, [props]);
+    
+    const toggleFavorite = useToggleFavorite(handleFavoriteSuccess);
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {requestScrollToCurrent} = usePlaybackActions((s) => ({
         requestScrollToCurrent: s.requestScrollToCurrent,

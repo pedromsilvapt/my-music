@@ -1,10 +1,10 @@
-import {useCallback} from 'react';
+import {useCallback, useRef} from 'react';
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
 import type {PlayableItem} from '../../hooks/use-queue';
 import {useQueueMutations} from '../../hooks/use-queue';
 import {useQueuesMutations} from '../../hooks/use-queues';
 import {generateQueueName, type QueueContext} from '../../utils/queue-name-generator';
-import {usePlaybackStoreApi} from '../../stores/playback-store';
+import {usePlaybackActions} from '../../stores/playback-store';
 import {useQueueManagerStore} from '../../stores/queue-manager-store';
 import {useQueryClient} from '@tanstack/react-query';
 import {getGetQueueQueryKey, useSetQueueCurrentSongById} from '../../client/playlists';
@@ -21,6 +21,8 @@ export interface UsePlayHandlerOptions {
     currentQueueId: number | null;
 }
 
+// useSetQueueCurrentSongById returns a new object every render.
+// Wrap in useRef to avoid unstable references in dependency arrays.
 export function usePlayHandler(
     nowPlaying: boolean = false,
     options?: UsePlayHandlerOptions
@@ -28,9 +30,11 @@ export function usePlayHandler(
     const {playNext, playLast} = useQueueMutations();
     const {createQueue} = useQueuesMutations();
     const {goTo} = usePlayerNavigation();
-    const playbackStore = usePlaybackStoreApi();
-    const setQueueCurrentSongById = useSetQueueCurrentSongById({});
-    const {incrementPlaybackKey} = playbackStore.getState();
+    const {incrementPlaybackKey, setLoadingSong} = usePlaybackActions(s => ({
+        incrementPlaybackKey: s.incrementPlaybackKey,
+        setLoadingSong: s.setLoadingSong,
+    }));
+    const setQueueCurrentSongByIdRef = useRef(useSetQueueCurrentSongById({}));
     const setCurrentQueueId = useQueueManagerStore((s) => s.setCurrentQueueId);
     const queryClient = useQueryClient();
 
@@ -61,8 +65,8 @@ export function usePlayHandler(
             order: clickedIndex + 1,
             addedAtPlaylist: new Date().toISOString(),
         } as import('../../model').GetPlaylistSongItem;
-        playbackStore.getState().setLoadingSong(songWithOrder, true);
-    }, [createQueue, incrementPlaybackKey, playbackStore]);
+        setLoadingSong(songWithOrder, true);
+    }, [createQueue, incrementPlaybackKey, setLoadingSong]);
 
     return useCallback((
         rows: PlayableItem[],
@@ -78,8 +82,8 @@ export function usePlayHandler(
             if (visibleQueueId && visibleQueueId !== currentQueueId) {
                 // Switch to the different queue and play the song in a single atomic request
                 setCurrentQueueId(visibleQueueId);
-                playbackStore.getState().setLoadingSong(clickedSong, true);
-                setQueueCurrentSongById.mutate({
+                setLoadingSong(clickedSong, true);
+                setQueueCurrentSongByIdRef.current.mutate({
                     id: visibleQueueId,
                     data: { currentSongId: clickedSong.id }
                 }, {
@@ -98,5 +102,5 @@ export function usePlayHandler(
         } else {
             playAndCreateQueue(rows, context, allItems);
         }
-    }, [nowPlaying, visibleQueueId, currentQueueId, setCurrentQueueId, setQueueCurrentSongById, queryClient, playbackStore, goTo, playAndCreateQueue, playNext, playLast]);
+    }, [nowPlaying, visibleQueueId, currentQueueId, setCurrentQueueId, queryClient, setLoadingSong, goTo, playAndCreateQueue, playNext, playLast]);
 }

@@ -1,5 +1,5 @@
 import {useQueryClient} from '@tanstack/react-query';
-import {useCallback} from 'react';
+import {useCallback, useMemo, useRef} from 'react';
 import {
     getGetQueueQueryKey,
     useAddToQueue,
@@ -109,14 +109,15 @@ export function useQueueMutations() {
     }));
     const setCurrentQueueId = useQueueManagerStore((s) => s.setCurrentQueueId);
     const visibleQueueId = useQueueManagerStore((s) => s.visibleQueueId);
-    const updateCurrentUserMutation = useUpdateCurrentUser({});
 
-    const replaceQueue = useReplaceQueue({});
-    const addToQueue = useAddToQueue({});
-    const removeFromQueue = useRemoveFromQueue({});
-    const reorderQueue = useReorderQueue({});
-    const setCurrentSong = useSetQueueCurrentSong({});
-    const shuffleQueue = useShuffleQueue({});
+    // Use refs for mutations to avoid unstable references in dependency arrays
+    const updateCurrentUserMutationRef = useRef(useUpdateCurrentUser({}));
+    const replaceQueueRef = useRef(useReplaceQueue({}));
+    const addToQueueRef = useRef(useAddToQueue({}));
+    const removeFromQueueRef = useRef(useRemoveFromQueue({}));
+    const reorderQueueRef = useRef(useReorderQueue({}));
+    const setCurrentSongRef = useRef(useSetQueueCurrentSong({}));
+    const shuffleQueueRef = useRef(useShuffleQueue({}));
 
     const setLoadingSong = useCallback((song: GetPlaylistSongItem) => {
         setLoadingSongAction(song, true);
@@ -152,13 +153,13 @@ export function useQueueMutations() {
             });
 
             // Persist currentQueueId to server
-            await updateCurrentUserMutation.mutateAsync({
+            await updateCurrentUserMutationRef.current.mutateAsync({
                 data: {currentQueueId: visibleQueueId},
             });
 
-            replaceQueue.mutate({data: {songIds, currentSongId: firstSong.id}});
+            replaceQueueRef.current.mutate({data: {songIds, currentSongId: firstSong.id}});
         },
-        [replaceQueue, queryClient, setLoadingSong, incrementPlaybackKey, setCurrentQueueId, visibleQueueId, updateCurrentUserMutation]
+        [queryClient, setLoadingSong, incrementPlaybackKey, setCurrentQueueId, visibleQueueId]
     );
 
     const playNext = useCallback(
@@ -184,7 +185,7 @@ export function useQueueMutations() {
                 },
             });
 
-            addToQueue.mutate(
+            addToQueueRef.current.mutate(
                 {data: {songIds, position: AddToQueuePosition.Next}},
                 {
                     onError: () => {
@@ -198,7 +199,7 @@ export function useQueueMutations() {
                 }
             );
         },
-        [addToQueue, queryClient]
+        [queryClient]
     );
 
     const playLast = useCallback(
@@ -223,7 +224,7 @@ export function useQueueMutations() {
                 },
             });
 
-            addToQueue.mutate(
+            addToQueueRef.current.mutate(
                 {data: {songIds, position: AddToQueuePosition.Last}},
                 {
                     onError: () => {
@@ -237,7 +238,7 @@ export function useQueueMutations() {
                 }
             );
         },
-        [addToQueue, queryClient]
+        [queryClient]
     );
 
     const removeByIndices = useCallback(
@@ -262,10 +263,10 @@ export function useQueueMutations() {
                     const nextIndex = Math.min(currentIndex, optimisticQueue.length - 1);
                     const nextSong = optimisticQueue[nextIndex];
                     setLoadingSong(nextSong);
-                    setCurrentSong.mutate({data: {currentSongId: nextSong.id}});
+                    setCurrentSongRef.current.mutate({data: {currentSongId: nextSong.id}});
                 } else {
                     clearAction();
-                    setCurrentSong.mutate({data: {currentSongId: null}});
+                    setCurrentSongRef.current.mutate({data: {currentSongId: null}});
                 }
             }
 
@@ -278,7 +279,7 @@ export function useQueueMutations() {
                 },
             });
 
-            removeFromQueue.mutate(
+            removeFromQueueRef.current.mutate(
                 {data: {songIds: Array.from(songIdsToRemove)}},
                 {
                     onError: () => {
@@ -292,7 +293,7 @@ export function useQueueMutations() {
                 }
             );
         },
-        [removeFromQueue, setCurrentSong, clearAction, setLoadingSong, queryClient]
+        [clearAction, setLoadingSong, queryClient]
     );
 
     const reorder = useCallback(
@@ -316,7 +317,7 @@ export function useQueueMutations() {
                 },
             });
 
-            reorderQueue.mutate(
+            reorderQueueRef.current.mutate(
                 {data: {reorders: [{fromIndex, toIndex}]}},
                 {
                     onError: () => {
@@ -330,7 +331,7 @@ export function useQueueMutations() {
                 }
             );
         },
-        [reorderQueue, queryClient]
+        [queryClient]
     );
 
     const reorderBatch = useCallback(
@@ -359,7 +360,7 @@ export function useQueueMutations() {
                 },
             });
 
-            reorderQueue.mutate(
+            reorderQueueRef.current.mutate(
                 {data: {reorders: validReorders}},
                 {
                     onError: () => {
@@ -373,14 +374,14 @@ export function useQueueMutations() {
                 }
             );
         },
-        [reorderQueue, queryClient]
+        [queryClient]
     );
 
     const updateCurrentSong = useCallback(
         (songId: number | null) => {
-            setCurrentSong.mutate({data: {currentSongId: songId}});
+            setCurrentSongRef.current.mutate({data: {currentSongId: songId}});
         },
-        [setCurrentSong]
+        []
     );
 
     const shuffleByIndices = useCallback(
@@ -416,7 +417,7 @@ export function useQueueMutations() {
                 },
             });
 
-            shuffleQueue.mutate(
+            shuffleQueueRef.current.mutate(
                 {data: {indices: validIndices}},
                 {
                     onError: () => {
@@ -430,10 +431,10 @@ export function useQueueMutations() {
                 }
             );
         },
-        [shuffleQueue, queryClient]
+        [queryClient]
     );
 
-    return {
+    return useMemo(() => ({
         play,
         playNext,
         playLast,
@@ -442,5 +443,5 @@ export function useQueueMutations() {
         reorderBatch,
         updateCurrentSong,
         shuffleByIndices,
-    };
+    }), [play, playNext, playLast, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices]);
 }

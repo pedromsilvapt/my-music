@@ -3,7 +3,7 @@ export {
     PlaybackStoreProvider as PlayerProvider,
     PlaybackStoreProvider,
     usePlaybackStore,
-    usePlaybackStoreApi,
+    usePlaybackActions,
 } from '../stores/playback-store';
 
 export type {

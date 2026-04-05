@@ -27,10 +27,10 @@ export default function ManagePlaylistsProvider({children}: ManagePlaylistsProvi
     const [songIds, setSongIds] = useState<number[]>([]);
     const [refetchFns, setRefetchFns] = useState<Map<string, () => void>>(new Map());
 
-    const open = (newSongIds: number[]) => {
+    const open = useCallback((newSongIds: number[]) => {
         setSongIds(newSongIds);
         setOpened(true);
-    };
+    }, []);
 
     const registerRefetch = useCallback((key: string, fn: () => void) => {
         setRefetchFns(prev => {

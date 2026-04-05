@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import {createContext, useContext, useState} from "react";
+import {createContext, useCallback, useContext, useState} from "react";
 import ManageDevicesDialog from "../components/devices/manage-devices-dialog.tsx";
 
 interface ManageDevicesContextValue {
@@ -24,10 +24,10 @@ export default function ManageDevicesProvider({children}: ManageDevicesProviderP
     const [opened, setOpened] = useState(false);
     const [songIds, setSongIds] = useState<number[]>([]);
 
-    const open = (newSongIds: number[]) => {
+    const open = useCallback((newSongIds: number[]) => {
         setSongIds(newSongIds);
         setOpened(true);
-    };
+    }, []);
 
     const handleClose = () => {
         setOpened(false);

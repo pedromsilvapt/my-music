@@ -1,25 +1,27 @@
-import {useCallback} from 'react';
+import {useCallback, useMemo, useRef} from 'react';
 import {useSetQueueCurrentSong} from '../client/playlists';
-import type {GetPlaylistSong} from '../model';
-import {usePlaybackStoreApi} from '../stores/playback-store';
+import type {GetPlaylistSongItem} from '../model';
+import {usePlaybackActions} from '../stores/playback-store';
 import {useQueue} from './use-queue';
 
+// useSetQueueCurrentSong returns a new object every render.
+// Wrap in useRef so callbacks don't need it in dependency arrays.
 export function usePlayerNavigation() {
     const {queue, currentSongId} = useQueue();
-    const playbackStore = usePlaybackStoreApi();
-    const setCurrentSong = useSetQueueCurrentSong({});
+    const {setLoadingSong} = usePlaybackActions(s => ({setLoadingSong: s.setLoadingSong}));
+    const setCurrentSongRef = useRef(useSetQueueCurrentSong({}));
 
     const currentSong = queue.find((s) => s.id === currentSongId);
     const currentIndex = currentSong?.order ?? -1;
     const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
     const hasPrevious = currentIndex > 0;
 
-    const navigateToSong = useCallback((song: GetPlaylistSong | undefined) => {
+    const navigateToSong = useCallback((song: GetPlaylistSongItem | undefined) => {
         if (!song) return;
 
-        playbackStore.getState().setLoadingSong(song, true);
-        setCurrentSong.mutate({data: {currentSongId: song.id}});
-    }, [playbackStore, setCurrentSong]);
+        setLoadingSong(song, true);
+        setCurrentSongRef.current.mutate({data: {currentSongId: song.id}});
+    }, [setLoadingSong]);
 
     const goForward = useCallback(() => {
         if (!hasNext) return;
@@ -38,12 +40,12 @@ export function usePlayerNavigation() {
         navigateToSong(song);
     }, [queue, navigateToSong]);
 
-    return {
+    return useMemo(() => ({
         goForward,
         goBackward,
         goTo,
         hasNext,
         hasPrevious,
         currentIndex,
-    };
+    }), [goForward, goBackward, goTo, hasNext, hasPrevious, currentIndex]);
 }

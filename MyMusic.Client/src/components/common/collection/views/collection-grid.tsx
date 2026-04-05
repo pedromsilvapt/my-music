@@ -14,7 +14,7 @@ import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, SimpleGrid, Stack, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, GRID_ELEM_SIZE, GRID_GAP, GRID_ROW_HEIGHT} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
@@ -322,7 +322,32 @@ export interface CollectionGridItemProps<M> {
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
-export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
+// Custom comparison for React.memo - ignores virtualItem.start since only CSS
+// transform offset changes during scroll, not item content.
+function areGridItemPropsEqual<M>(
+    prevProps: CollectionGridItemProps<M>,
+    nextProps: CollectionGridItemProps<M>
+): boolean {
+    return (
+        prevProps.itemId === nextProps.itemId &&
+        prevProps.item === nextProps.item &&
+        prevProps.virtualItem.index === nextProps.virtualItem.index &&
+        prevProps.selectionStore === nextProps.selectionStore &&
+        prevProps.schema === nextProps.schema &&
+        prevProps.virtualizer === nextProps.virtualizer &&
+        prevProps.items === nextProps.items &&
+        prevProps.width === nextProps.width &&
+        prevProps.sortable === nextProps.sortable &&
+        prevProps.isDragOverlay === nextProps.isDragOverlay &&
+        prevProps.isDraggingActive === nextProps.isDraggingActive &&
+        prevProps.scrollToIndex === nextProps.scrollToIndex &&
+        prevProps.highlightRequestId === nextProps.highlightRequestId &&
+        prevProps.onToggle === nextProps.onToggle &&
+        prevProps.onContextMenuTrigger === nextProps.onContextMenuTrigger
+    );
+}
+
+function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
     const {
         schema,
         item,
@@ -481,3 +506,5 @@ export function CollectionGridItem<M>(props: CollectionGridItemProps<M>) {
         </>
     );
 }
+
+export const CollectionGridItem = React.memo(CollectionGridItemInner, areGridItemPropsEqual) as (<M>(props: CollectionGridItemProps<M>) => React.ReactNode);

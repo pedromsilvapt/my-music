@@ -25,7 +25,7 @@ import {useQueue, useQueueMutations} from "../../contexts/player-context";
 import {useToggleFavorites} from "../../hooks/use-favorites";
 import {useQueueList} from "../../hooks/use-queues";
 import type {ListSongItem} from "../../model";
-import {usePlaybackStore, usePlaybackStoreApi} from "../../stores/playback-store";
+import {usePlaybackActions, usePlaybackStore} from "../../stores/playback-store";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 import {isGetPlaylistSong} from "../../utils/type-guards";
 import Artwork from "../common/artwork";
@@ -49,7 +49,7 @@ export interface UseSongsSchemaOptions {
 
 export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
     const {play, playNext, playLast, removeByIndices, shuffleByIndices} = useQueueMutations();
-    const playbackStore = usePlaybackStoreApi();
+    const {setIsFavorite} = usePlaybackActions(s => ({setIsFavorite: s.setIsFavorite}));
     const {currentSongId: queueCurrentSongId} = useQueue();
     const {queues} = useQueueList();
 
@@ -66,15 +66,13 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
         s.current.type === 'LOADED' ? s.current.isPlaying : false
     );
 
-    const toggleFavorites = useToggleFavorites({
-        mutation: {
-            onSuccess: (data) => {
-                for (const song of data.data.songs) {
-                    playbackStore.getState().setIsFavorite(song.isFavorite, song.id);
-                }
-            }
+    const toggleFavoritesOnSuccess = useCallback((data: { data: { songs: Array<{ id: number; isFavorite: boolean }> } }) => {
+        for (const song of data.data.songs) {
+            setIsFavorite(song.isFavorite, song.id);
         }
-    });
+    }, [setIsFavorite]);
+
+    const toggleFavorites = useToggleFavorites(toggleFavoritesOnSuccess);
 
     const queueContext = useMemo(() => 
         options?.queueContext ?? {type: 'songs' as const}, 

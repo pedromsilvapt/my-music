@@ -16,7 +16,7 @@ import {Box, Group, Table, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
@@ -370,7 +370,32 @@ interface CollectionTableRowProps<M> {
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
-function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
+// Custom comparison for React.memo - ignores virtualRow.start since only CSS
+// transform offset changes during scroll, not row content.
+function areTableRowPropsEqual<M>(
+    prevProps: CollectionTableRowProps<M>,
+    nextProps: CollectionTableRowProps<M>
+): boolean {
+    return (
+        prevProps.itemId === nextProps.itemId &&
+        prevProps.row === nextProps.row &&
+        prevProps.virtualRow.index === nextProps.virtualRow.index &&
+        prevProps.selectionStore === nextProps.selectionStore &&
+        prevProps.schema === nextProps.schema &&
+        prevProps.virtualizer === nextProps.virtualizer &&
+        prevProps.columns === nextProps.columns &&
+        prevProps.items === nextProps.items &&
+        prevProps.sortable === nextProps.sortable &&
+        prevProps.isDragOverlay === nextProps.isDragOverlay &&
+        prevProps.isDraggingActive === nextProps.isDraggingActive &&
+        prevProps.scrollToIndex === nextProps.scrollToIndex &&
+        prevProps.highlightRequestId === nextProps.highlightRequestId &&
+        prevProps.onToggle === nextProps.onToggle &&
+        prevProps.onContextMenuTrigger === nextProps.onContextMenuTrigger
+    );
+}
+
+function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
     const {
         virtualRow,
         virtualizer,
@@ -532,6 +557,8 @@ function CollectionTableRow<M>(props: CollectionTableRowProps<M>) {
         </>
     );
 }
+
+const CollectionTableRow = React.memo(CollectionTableRowInner, areTableRowPropsEqual) as (<M>(props: CollectionTableRowProps<M>) => React.ReactNode);
 
 export interface CollectionSchemaColumnCalculated<M> extends CollectionSchemaColumn<M> {
     width?: number;

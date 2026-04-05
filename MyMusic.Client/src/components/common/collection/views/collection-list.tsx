@@ -13,7 +13,7 @@ import {SortableContext, useSortable, verticalListSortingStrategy} from "@dnd-ki
 import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, Stack, Text} from "@mantine/core";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
-import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {DRAG_ACTIVATION_DISTANCE, LIST_ARTWORK_SIZE, LIST_GAP, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
@@ -283,7 +283,31 @@ export interface CollectionListItemProps<M> {
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
-export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
+// Custom comparison for React.memo - ignores virtualItem.start since only CSS
+// transform offset changes during scroll, not item content.
+function areListItemPropsEqual<M>(
+    prevProps: CollectionListItemProps<M>,
+    nextProps: CollectionListItemProps<M>
+): boolean {
+    return (
+        prevProps.itemId === nextProps.itemId &&
+        prevProps.item === nextProps.item &&
+        prevProps.virtualItem.index === nextProps.virtualItem.index &&
+        prevProps.selectionStore === nextProps.selectionStore &&
+        prevProps.schema === nextProps.schema &&
+        prevProps.virtualizer === nextProps.virtualizer &&
+        prevProps.items === nextProps.items &&
+        prevProps.sortable === nextProps.sortable &&
+        prevProps.isDragOverlay === nextProps.isDragOverlay &&
+        prevProps.isDraggingActive === nextProps.isDraggingActive &&
+        prevProps.scrollToIndex === nextProps.scrollToIndex &&
+        prevProps.highlightRequestId === nextProps.highlightRequestId &&
+        prevProps.onToggle === nextProps.onToggle &&
+        prevProps.onContextMenuTrigger === nextProps.onContextMenuTrigger
+    );
+}
+
+function CollectionListItemInner<M>(props: CollectionListItemProps<M>) {
     const {
         schema,
         item,
@@ -436,3 +460,5 @@ export function CollectionListItem<M>(props: CollectionListItemProps<M>) {
         </>
     );
 }
+
+export const CollectionListItem = React.memo(CollectionListItemInner, areListItemPropsEqual) as (<M>(props: CollectionListItemProps<M>) => React.ReactNode);

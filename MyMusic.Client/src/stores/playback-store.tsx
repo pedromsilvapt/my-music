@@ -145,11 +145,3 @@ export function usePlaybackStore<U>(selector: (state: PlaybackStore) => U): U {
 export const usePlaybackActions = <S extends object>(selector: (state: PlaybackStore) => S): S => {
     return usePlaybackStore(useShallow(selector));
 };
-
-export function usePlaybackStoreApi() {
-    const store = useContext(PlaybackStoreContext);
-    if (!store) {
-        throw new Error('Missing PlaybackStoreProvider');
-    }
-    return store;
-}
