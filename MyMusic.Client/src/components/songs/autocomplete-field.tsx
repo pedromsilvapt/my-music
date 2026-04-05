@@ -24,7 +24,7 @@ export interface AutocompleteItem {
 }
 
 interface AutocompleteFieldProps {
-    label: string;
+    label?: string;
     placeholder?: string;
     value: AutocompleteItem | null;
     onChange: (value: AutocompleteItem | string | null) => void;
@@ -37,23 +37,25 @@ interface AutocompleteFieldProps {
     onCheckChange?: (checked: boolean) => void;
     showArtwork?: boolean;
     originalDisplayValue?: string;
+    leftSection?: React.ReactNode;
 }
 
 export default function AutocompleteField({
-                                              label,
-                                              placeholder,
-                                              value,
-                                              onChange,
-                                              onSearch,
-                                              disabled,
-                                              error,
-                                              diffMode,
-                                              originalValue,
-                                              isChecked = true,
-                                              onCheckChange,
-                                              showArtwork = false,
-                                              originalDisplayValue,
-                                          }: AutocompleteFieldProps) {
+                                               label,
+                                               placeholder,
+                                               value,
+                                               onChange,
+                                               onSearch,
+                                               disabled,
+                                               error,
+                                               diffMode,
+                                               originalValue,
+                                               isChecked = true,
+                                               onCheckChange,
+                                               showArtwork = false,
+                                               originalDisplayValue,
+                                               leftSection,
+                                           }: AutocompleteFieldProps) {
     const [query, setQuery] = useState(value?.name || "");
     const [items, setItems] = useState<AutocompleteItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -175,6 +177,7 @@ export default function AutocompleteField({
                                 comboboxProps={{withinPortal: false}}
                                 data={data}
                                 disabled={disabled || !isChecked}
+                                leftSection={isChecked ? leftSection : undefined}
                                 rightSection={loading ? <Loader size={16}/> : null}
                                 limit={15}
                                 renderOption={showArtwork ? renderOption : undefined}
@@ -213,6 +216,7 @@ export default function AutocompleteField({
                 data={data}
                 disabled={disabled}
                 error={error}
+                leftSection={leftSection}
                 rightSection={loading ? <Loader size={16}/> : null}
                 limit={15}
                 renderOption={showArtwork ? renderOption : undefined}

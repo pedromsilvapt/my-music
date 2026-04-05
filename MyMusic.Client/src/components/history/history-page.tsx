@@ -1,5 +1,6 @@
 import {Group} from "@mantine/core";
 import {DateInput} from "@mantine/dates";
+import {IconCalendar, IconSearch} from "@tabler/icons-react";
 import {useMemo, useState} from "react";
 import {useListPlayHistory} from "../../client/play-history.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -87,23 +88,24 @@ export default function HistoryPage() {
                     <CollectionToolbar
                         {...props}
                         renderMiddleSection={() => (
-                            <Group gap="md" wrap="nowrap">
+                            <Group gap="md" wrap="nowrap" justify="center">
                                 <SongAutocompleteField
                                     value={selectedSong}
                                     onChange={setSelectedSong}
+                                    leftSection={<IconSearch size={16}/>}
                                 />
                                 <DateInput
-                                    label="Start Date"
                                     placeholder="Start date"
                                     value={startDate}
                                     onChange={handleStartDateChange}
+                                    leftSection={<IconCalendar size={16}/>}
                                     clearable
                                 />
                                 <DateInput
-                                    label="End Date"
                                     placeholder="End date"
                                     value={endDate}
                                     onChange={handleEndDateChange}
+                                    leftSection={<IconCalendar size={16}/>}
                                     clearable
                                 />
                             </Group>

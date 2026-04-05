@@ -5,6 +5,7 @@ import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx
 interface SongAutocompleteFieldProps {
     label?: string;
     placeholder?: string;
+    leftSection?: React.ReactNode;
     value: AutocompleteItem | null;
     onChange: (value: AutocompleteItem | null) => void;
     disabled?: boolean;
@@ -12,13 +13,14 @@ interface SongAutocompleteFieldProps {
 }
 
 export default function SongAutocompleteField({
-                                                  label = "Song",
-                                                  placeholder = "Search for a song...",
-                                                  value,
-                                                  onChange,
-                                                  disabled,
-                                                  error,
-                                              }: SongAutocompleteFieldProps) {
+                                                   label,
+                                                   placeholder = "Search for a song...",
+                                                   value,
+                                                   onChange,
+                                                   disabled,
+                                                   error,
+                                                   leftSection,
+                                               }: SongAutocompleteFieldProps) {
     const handleSearch = useCallback(async (query: string) => {
         if (query.length < 1) return [];
         const response = await autocompleteSongs({search: query, limit: 15});
@@ -49,6 +51,7 @@ export default function SongAutocompleteField({
             disabled={disabled}
             error={error}
             showArtwork={true}
+            leftSection={leftSection}
         />
     );
 }
