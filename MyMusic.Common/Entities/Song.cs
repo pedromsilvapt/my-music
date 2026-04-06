@@ -74,5 +74,5 @@ public class Song
 
     [Projectable] public int GenreCount => Genres.Count;
 
-    [Projectable] public string SearchableText => (Title ?? "") + " " + (Album.Name ?? "") + " " + (Label ?? "");
+    [Projectable] public string SearchableText => (Label ?? "") + " " + (Album.Name ?? "");
 }

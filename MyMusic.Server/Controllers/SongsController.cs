@@ -577,9 +577,7 @@ public class SongsController(
 
         if (!string.IsNullOrEmpty(search))
         {
-            var searchLower = search.ToLower();
-            query = query.Where(s =>
-                s.Title.ToLower().Contains(searchLower) || s.Album.Name.ToLower().Contains(searchLower));
+            query = FuzzySearchHelper.ApplyFuzzySearch(query, search, s => s.SearchableText);
         }
 
         var songs = await query

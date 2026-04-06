@@ -180,6 +180,7 @@ export default function AutocompleteField({
                                 leftSection={isChecked ? leftSection : undefined}
                                 rightSection={loading ? <Loader size={16}/> : null}
                                 limit={15}
+                                filter={({options}) => options}
                                 renderOption={showArtwork ? renderOption : undefined}
                                 styles={{
                                     input: {
@@ -219,6 +220,7 @@ export default function AutocompleteField({
                 leftSection={leftSection}
                 rightSection={loading ? <Loader size={16}/> : null}
                 limit={15}
+                filter={({options}) => options}
                 renderOption={showArtwork ? renderOption : undefined}
                 styles={hasChanged ? {
                     input: {
