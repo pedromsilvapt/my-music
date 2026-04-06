@@ -205,6 +205,7 @@ export default function SongEditorContextModal({
     };
 
     const updateSong = useUpdateSong({
+        skipInvalidation: true,
         mutation: {
             onSuccess: (response, variables) => {
                 if (response.status >= 400) {
@@ -255,6 +256,7 @@ export default function SongEditorContextModal({
     });
 
     const batchMultiUpdateSongs = useBatchMultiUpdateSongs({
+        skipInvalidation: true,
         mutation: {
             onSuccess: (response) => {
                 if (response.status >= 400) {

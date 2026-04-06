@@ -44,17 +44,17 @@ createRoot(document.getElementById('root')!).render(
             <MantineProvider defaultColorScheme="auto">
                 <Notifications position="top-right"/>
                 <ArtworkLightboxProvider>
-                    <ModalsProvider
-                        modals={{
-                            'song-editor': SongEditorContextModal,
-                            'rename-queue': RenameQueueModal,
-                            'delete-queue': DeleteQueueModal,
-                        }}>
-                        <PlayerProvider>
-                            <QueueManagerProvider>
-                                <VolumeInitializer/>
-                                <QueueInitializer/>
-                                <ContextMenuStoreProvider>
+                    <ContextMenuStoreProvider>
+                        <ModalsProvider
+                            modals={{
+                                'song-editor': SongEditorContextModal,
+                                'rename-queue': RenameQueueModal,
+                                'delete-queue': DeleteQueueModal,
+                            }}>
+                            <PlayerProvider>
+                                <QueueManagerProvider>
+                                    <VolumeInitializer/>
+                                    <QueueInitializer/>
                                     <ManagePlaylistsProvider>
                                         <ManageDevicesProvider>
                                             <CollectionStoreProvider>
@@ -62,10 +62,10 @@ createRoot(document.getElementById('root')!).render(
                                             </CollectionStoreProvider>
                                         </ManageDevicesProvider>
                                     </ManagePlaylistsProvider>
-                                </ContextMenuStoreProvider>
-                            </QueueManagerProvider>
-                        </PlayerProvider>
-                    </ModalsProvider>
+                                </QueueManagerProvider>
+                            </PlayerProvider>
+                        </ModalsProvider>
+                    </ContextMenuStoreProvider>
                 </ArtworkLightboxProvider>
             </MantineProvider>
         </QueryClientProvider>

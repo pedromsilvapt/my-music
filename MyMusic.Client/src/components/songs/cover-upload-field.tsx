@@ -1,8 +1,11 @@
 import {ActionIcon, Box, Checkbox, Group, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
-import {IconClipboard, IconDownload, IconMusic, IconUpload, IconX} from "@tabler/icons-react";
+import {IconClipboard, IconDownload, IconMusic, IconUpload, IconWorld, IconX} from "@tabler/icons-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
+import {fetchArtworkAsDataUrl} from "../../utils/artwork.ts";
+import {autocompleteSongs} from "../../client/songs.ts";
+import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
 
 interface CoverDimensions {
     width: number;
@@ -39,6 +42,8 @@ export default function CoverUploadField({
     const [previewDimensions, setPreviewDimensions] = useState<CoverDimensions | null>(currentDimensions ?? null);
     const [oldCoverDimensions, setOldCoverDimensions] = useState<CoverDimensions | null>(null);
     const [newCoverDimensions, setNewCoverDimensions] = useState<CoverDimensions | null>(null);
+    const [coverSourceMode, setCoverSourceMode] = useState<'url' | 'song'>('url');
+    const [selectedSong, setSelectedSong] = useState<AutocompleteItem | null>(null);
     const {openLightbox} = useArtworkLightbox();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -151,6 +156,45 @@ export default function CoverUploadField({
     const handleClear = useCallback(() => {
         onChange(null, null);
         setPreviewDimensions(null);
+        setSelectedSong(null);
+        setUrl("");
+    }, [onChange]);
+
+    const searchSongs = useCallback(async (query: string): Promise<AutocompleteItem[]> => {
+        if (query.length < 1) return [];
+        const response = await autocompleteSongs({ search: query, limit: 15 });
+        return response.data.songs.map(song => ({
+            id: song.id,
+            name: song.title,
+            subtitle: song.albumName ?? undefined,
+            coverId: song.coverId,
+            artistName: song.artistName ?? undefined,
+        }));
+    }, []);
+
+    const handleSongSelect = useCallback(async (song: AutocompleteItem | string | null) => {
+        if (song === null || typeof song === "string") {
+            setSelectedSong(null);
+            return;
+        }
+
+        setSelectedSong(song);
+
+        if (!song.coverId) {
+            notifications.show({ title: "No Cover", message: "Selected song has no cover artwork", color: "yellow" });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { dataUrl, dimensions } = await fetchArtworkAsDataUrl(song.coverId);
+            setPreviewDimensions(dimensions);
+            onChange(dataUrl, dimensions);
+        } catch {
+            notifications.show({ title: "Error", message: "Failed to load cover from selected song", color: "red" });
+        } finally {
+            setLoading(false);
+        }
     }, [onChange]);
 
     const handleOpenLightbox = useCallback((src: string) => {
@@ -286,36 +330,67 @@ export default function CoverUploadField({
                                 <IconClipboard/>
                             </ActionIcon>
                             <ActionIcon
-                                variant="light"
+                                variant={coverSourceMode === 'url' ? 'filled' : 'light'}
                                 size="lg"
-                                color="red"
-                                onClick={handleClear}
+                                onClick={() => setCoverSourceMode('url')}
                                 disabled={disabled || !isChecked}
-                                title="Remove cover"
+                                title="From URL"
                             >
-                                <IconX/>
+                                <IconWorld/>
                             </ActionIcon>
+                            <ActionIcon
+                                variant={coverSourceMode === 'song' ? 'filled' : 'light'}
+                                size="lg"
+                                onClick={() => setCoverSourceMode('song')}
+                                disabled={disabled || !isChecked}
+                                title="From existing song"
+                            >
+                                <IconMusic/>
+                            </ActionIcon>
+                            {(value || currentCoverId) && (
+                                <ActionIcon
+                                    variant="light"
+                                    size="lg"
+                                    color="red"
+                                    onClick={handleClear}
+                                    disabled={disabled || !isChecked}
+                                    title="Remove cover"
+                                >
+                                    <IconX/>
+                                </ActionIcon>
+                            )}
                         </Group>
 
-                        <Group gap="xs" align="flex-end">
-                            <TextInput
-                                placeholder="Paste image URL..."
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                style={{flex: 1}}
+                        {coverSourceMode === 'url' ? (
+                            <Group gap="xs" align="flex-end">
+                                <TextInput
+                                    placeholder="Paste image URL..."
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    style={{flex: 1}}
+                                    disabled={disabled || !isChecked}
+                                />
+                                <ActionIcon
+                                    variant="light"
+                                    size="lg"
+                                    onClick={handleUrlDownload}
+                                    disabled={!url || disabled || !isChecked}
+                                    loading={loading}
+                                    title="Download from URL"
+                                >
+                                    <IconDownload/>
+                                </ActionIcon>
+                            </Group>
+                        ) : (
+                            <AutocompleteField
+                                placeholder="Search for a song to use its cover..."
+                                value={selectedSong}
+                                onChange={handleSongSelect}
+                                onSearch={searchSongs}
                                 disabled={disabled || !isChecked}
+                                showArtwork={true}
                             />
-                            <ActionIcon
-                                variant="light"
-                                size="lg"
-                                onClick={handleUrlDownload}
-                                disabled={!url || disabled || !isChecked}
-                                loading={loading}
-                                title="Download from URL"
-                            >
-                                <IconDownload/>
-                            </ActionIcon>
-                        </Group>
+                        )}
                     </Stack>
                 </Group>
             ) : (
@@ -388,6 +463,24 @@ export default function CoverUploadField({
                             >
                                 <IconClipboard/>
                             </ActionIcon>
+                            <ActionIcon
+                                variant={coverSourceMode === 'url' ? 'filled' : 'light'}
+                                size="lg"
+                                onClick={() => setCoverSourceMode('url')}
+                                disabled={disabled || (diffMode && !isChecked)}
+                                title="From URL"
+                            >
+                                <IconWorld/>
+                            </ActionIcon>
+                            <ActionIcon
+                                variant={coverSourceMode === 'song' ? 'filled' : 'light'}
+                                size="lg"
+                                onClick={() => setCoverSourceMode('song')}
+                                disabled={disabled || (diffMode && !isChecked)}
+                                title="From existing song"
+                            >
+                                <IconMusic/>
+                            </ActionIcon>
                             {(value || currentCoverId) && (
                                 <ActionIcon
                                     variant="light"
@@ -402,25 +495,36 @@ export default function CoverUploadField({
                             )}
                         </Group>
 
-                        <Group gap="xs" align="flex-end">
-                            <TextInput
-                                placeholder="Paste image URL..."
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                style={{flex: 1}}
+                        {coverSourceMode === 'url' ? (
+                            <Group gap="xs" align="flex-end">
+                                <TextInput
+                                    placeholder="Paste image URL..."
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    style={{flex: 1}}
+                                    disabled={disabled || (diffMode && !isChecked)}
+                                />
+                                <ActionIcon
+                                    variant="light"
+                                    size="lg"
+                                    onClick={handleUrlDownload}
+                                    disabled={!url || disabled || (diffMode && !isChecked)}
+                                    loading={loading}
+                                    title="Download from URL"
+                                >
+                                    <IconDownload/>
+                                </ActionIcon>
+                            </Group>
+                        ) : (
+                            <AutocompleteField
+                                placeholder="Search for a song to use its cover..."
+                                value={selectedSong}
+                                onChange={handleSongSelect}
+                                onSearch={searchSongs}
                                 disabled={disabled || (diffMode && !isChecked)}
+                                showArtwork={true}
                             />
-                            <ActionIcon
-                                variant="light"
-                                size="lg"
-                                onClick={handleUrlDownload}
-                                disabled={!url || disabled || (diffMode && !isChecked)}
-                                loading={loading}
-                                title="Download from URL"
-                            >
-                                <IconDownload/>
-                            </ActionIcon>
-                        </Group>
+                        )}
                     </Stack>
                 </Group>
             )}
