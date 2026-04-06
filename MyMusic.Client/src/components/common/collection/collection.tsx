@@ -38,8 +38,8 @@ interface CollectionProps<T extends { id: string | number }> {
     serverFilter?: string;
     onServerFilterChange?: (search: string, filter: string) => void;
     searchPlaceholder?: string;
-    scrollToIndex?: number;
-    highlightRequestId?: number;
+    scrollToSongId?: number | string;
+    scrollRequestId?: number;
 }
 
 const MIN_VIEW_HEIGHT = 200;
@@ -300,6 +300,11 @@ export default function Collection<T extends { id: string | number }>(props: Col
         onContextMenuTrigger(event);
     }, [onContextMenuTrigger]);
 
+    const scrollToIndex = useMemo(() => {
+        if (props.scrollToSongId == null) return undefined;
+        return filteredAndSortedItems.findIndex(item => props.schema.key(item) === props.scrollToSongId);
+    }, [filteredAndSortedItems, props.scrollToSongId, props.schema]);
+
     let viewNode: React.ReactNode;
 
     if (view === 'table') {
@@ -315,8 +320,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderBatch={props.onReorderBatch}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
-            scrollToIndex={props.scrollToIndex}
-            highlightRequestId={props.highlightRequestId}
+            scrollToIndex={scrollToIndex}
+            scrollRequestId={props.scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
@@ -331,8 +336,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderBatch={props.onReorderBatch}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
-            scrollToIndex={props.scrollToIndex}
-            highlightRequestId={props.highlightRequestId}
+            scrollToIndex={scrollToIndex}
+            scrollRequestId={props.scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
@@ -347,8 +352,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             onReorderBatch={props.onReorderBatch}
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
-            scrollToIndex={props.scrollToIndex}
-            highlightRequestId={props.highlightRequestId}
+            scrollToIndex={scrollToIndex}
+            scrollRequestId={props.scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;

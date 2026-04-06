@@ -48,13 +48,13 @@ export interface CollectionTableProps<M> {
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
-    highlightRequestId?: number;
+    scrollRequestId?: number;
     height: number;
     onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, highlightRequestId, onSort, sort: propSort} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, onSort, sort: propSort} = props;
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -133,7 +133,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     }, [initialScrollPosition, propItems.length, virtualizer]);
 
     useEffect(() => {
-        if (scrollToIndex != null && propItems.length > 0) {
+        if (scrollRequestId != null && scrollToIndex != null && scrollToIndex >= 0) {
             const virtualItems = virtualizer.getVirtualItems();
             const isVisible = virtualItems.some(item => item.index === scrollToIndex);
             
@@ -143,7 +143,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                 });
             }
         }
-    }, [scrollToIndex, propItems.length, virtualizer]);
+    }, [scrollRequestId, scrollToIndex, virtualizer]);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
@@ -236,7 +236,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             isDragOverlay={isDragOverlay}
             isDraggingActive={isDragging}
             scrollToIndex={scrollToIndex}
-            highlightRequestId={highlightRequestId}
+            scrollRequestId={scrollRequestId}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
@@ -366,12 +366,10 @@ interface CollectionTableRowProps<M> {
     isDragOverlay?: boolean;
     isDraggingActive?: boolean;
     scrollToIndex?: number;
-    highlightRequestId?: number;
+    scrollRequestId?: number;
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
-// Custom comparison for React.memo - ignores virtualRow.start since only CSS
-// transform offset changes during scroll, not row content.
 function areTableRowPropsEqual<M>(
     prevProps: CollectionTableRowProps<M>,
     nextProps: CollectionTableRowProps<M>
@@ -389,7 +387,7 @@ function areTableRowPropsEqual<M>(
         prevProps.isDragOverlay === nextProps.isDragOverlay &&
         prevProps.isDraggingActive === nextProps.isDraggingActive &&
         prevProps.scrollToIndex === nextProps.scrollToIndex &&
-        prevProps.highlightRequestId === nextProps.highlightRequestId &&
+        prevProps.scrollRequestId === nextProps.scrollRequestId &&
         prevProps.onToggle === nextProps.onToggle &&
         prevProps.onContextMenuTrigger === nextProps.onContextMenuTrigger
     );
@@ -410,25 +408,25 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
         isDragOverlay,
         isDraggingActive,
         scrollToIndex,
-        highlightRequestId,
+        scrollRequestId,
         onContextMenuTrigger,
     } = props;
 
     const isSelected = selectionStore(state => state.selectedKeys.has(itemId));
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const prevHighlightIdRef = useRef<number | undefined>(undefined);
+    const prevScrollRequestIdRef = useRef<number | undefined>(undefined);
     const [isHighlighted, setIsHighlighted] = useState(false);
 
     useEffect(() => {
-        if (highlightRequestId !== undefined && highlightRequestId !== prevHighlightIdRef.current) {
+        if (scrollRequestId !== undefined && scrollRequestId !== prevScrollRequestIdRef.current) {
             if (virtualRow.index === scrollToIndex) {
-                prevHighlightIdRef.current = highlightRequestId;
+                prevScrollRequestIdRef.current = scrollRequestId;
                 setIsHighlighted(true);
                 setTimeout(() => setIsHighlighted(false), 1500);
             }
         }
-    }, [highlightRequestId, scrollToIndex, virtualRow.index]);
+    }, [scrollRequestId, scrollToIndex, virtualRow.index]);
 
     const isCollapsed = isDraggingActive && isSelected && !isDragOverlay;
 
