@@ -63,12 +63,12 @@ interface SongEditState {
     checkboxes: FieldCheckboxes;
 }
 
-function createSongEditState(
+async function createSongEditState(
     song: GetSongResponseSong, 
     metadata?: SongMetadataDiff | null,
     preSelectedFields?: string[]
-): SongEditState {
-    const form = metadata ? formStateFromMetadata(metadata, formStateFromSong(song)) : formStateFromSong(song);
+): Promise<SongEditState> {
+    const form = metadata ? await formStateFromMetadata(metadata, formStateFromSong(song)) : formStateFromSong(song);
     let checkboxes = metadata ? checkboxesFromMetadata(metadata) : createInitialCheckboxes();
     
     // Apply rule-based pre-selections
@@ -168,8 +168,7 @@ export default function SongEditorContextModal({
             }
             
             // Metadata loaded (or confirmed no metadata) - initialize current song
-            setEditStates(prev => {
-                const newMap = new Map(prev);
+            const initializeCurrentSong = async () => {
                 const currentSong = songs.find(s => s.id === currentSongId);
                 
                 if (currentSong) {
@@ -178,11 +177,17 @@ export default function SongEditorContextModal({
                         ? (responseData.metadata as SongMetadataDiff) 
                         : null;
                     const preSelectedFields = responseData?.preSelectedFields;
-                    newMap.set(currentSong.id, createSongEditState(currentSong, songMetadata, preSelectedFields));
+                    const editState = await createSongEditState(currentSong, songMetadata, preSelectedFields);
+                    
+                    setEditStates(prev => {
+                        const newMap = new Map(prev);
+                        newMap.set(currentSong.id, editState);
+                        return newMap;
+                    });
                 }
-                
-                return newMap;
-            });
+            };
+            
+            initializeCurrentSong();
             
             // Mark this song as attempted (either has metadata or confirmed no metadata)
             setMetadataAttemptedSongs(prev => new Set(prev).add(currentSongId));
@@ -337,10 +342,10 @@ export default function SongEditorContextModal({
         },
     });
 
-    const handleMetadataFetched = useCallback((metadata: SongMetadataDiff) => {
+    const handleMetadataFetched = useCallback(async (metadata: SongMetadataDiff) => {
         if (!currentState) return;
 
-        const newForm = formStateFromMetadata(metadata, formStateFromSong(currentState.song));
+        const newForm = await formStateFromMetadata(metadata, formStateFromSong(currentState.song));
         const newCheckboxes = checkboxesFromMetadata(metadata);
 
         setEditStates((prev) => {
@@ -581,7 +586,7 @@ export default function SongEditorContextModal({
         }
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentIndex < songs.length - 1) {
             const nextIndex = currentIndex + 1;
             const nextSongId = songs[nextIndex]?.id;
@@ -590,12 +595,13 @@ export default function SongEditorContextModal({
             const cachedData = getCached(nextSongId);
             if (cachedData && !editStates.has(nextSongId)) {
                 const nextSong = songs[nextIndex];
+                const songMetadata = cachedData.hasMetadata 
+                    ? (cachedData.metadata as SongMetadataDiff) 
+                    : null;
+                const editState = await createSongEditState(nextSong, songMetadata, cachedData.preSelectedFields);
                 setEditStates(prev => {
                     const newMap = new Map(prev);
-                    const songMetadata = cachedData.hasMetadata 
-                        ? (cachedData.metadata as SongMetadataDiff) 
-                        : null;
-                    newMap.set(nextSongId, createSongEditState(nextSong, songMetadata, cachedData.preSelectedFields));
+                    newMap.set(nextSongId, editState);
                     return newMap;
                 });
                 setMetadataAttemptedSongs(prev => new Set(prev).add(nextSongId));
@@ -829,7 +835,7 @@ export default function SongEditorContextModal({
                             <NumberInput
                                 label={hasMetadata && currentState.metadata?.year ? "Year (new)" : "Year"}
                                 placeholder="Release year"
-                                value={currentState.form.year}
+                                value={currentState.form.year ?? undefined}
                                 onChange={(val) => handleFormChange({year: typeof val === 'number' ? val : undefined})}
                                 disabled={hasMetadata && !!currentState.metadata?.year && !currentState.checkboxes.year}
                                 styles={hasMetadata && currentState.metadata?.year ? {

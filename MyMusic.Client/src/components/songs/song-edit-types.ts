@@ -3,6 +3,7 @@ import type { ArtworkRef } from "../../model/artworkRef";
 import type {
     SongMetadataDiff,
 } from "../../model/songMetadataDiff";
+import { convertArtworkUrlToBase64 } from "../../utils/artwork";
 
 export interface SongEditMetadata {
     title?: string;
@@ -113,10 +114,10 @@ export function formStateFromSong(song: GetSongResponseSong): FormState {
     };
 }
 
-export function formStateFromMetadata(
+export async function formStateFromMetadata(
     metadata: SongMetadataDiff,
     originalForm: FormState,
-): FormState {
+): Promise<FormState> {
     const form: FormState = { ...originalForm };
 
     if (metadata.title) {
@@ -135,7 +136,12 @@ export function formStateFromMetadata(
         form.explicit = metadata.explicit.new ?? false;
     }
     if (metadata.cover) {
-        form.cover = metadata.cover.new ? { base64: metadata.cover.new } : null;
+        if (metadata.cover.new) {
+            const base64 = await convertArtworkUrlToBase64(metadata.cover.new);
+            form.cover = { base64 };
+        } else {
+            form.cover = null;
+        }
     }
     if (metadata.album) {
         form.album = {
