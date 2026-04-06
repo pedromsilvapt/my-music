@@ -6,9 +6,9 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface CreatePlayHistoryResponse {
-  created: boolean;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  id: number;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  songPlayCount: number;
+	created: boolean;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	id: number;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	songPlayCount: number;
 }

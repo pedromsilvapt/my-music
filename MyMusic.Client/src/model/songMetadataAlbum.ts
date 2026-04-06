@@ -6,7 +6,7 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SongMetadataAlbum {
-  name?: string;
-  /** @nullable */
-  artistName?: string | null;
+	name?: string;
+	/** @nullable */
+	artistName?: string | null;
 }

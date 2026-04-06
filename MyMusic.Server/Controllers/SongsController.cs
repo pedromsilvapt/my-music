@@ -855,38 +855,28 @@ public class SongsController(
         new()
         {
             Title = request.Title,
-            AlbumId = request.AlbumId,
-            AlbumName = request.AlbumName,
-            AlbumArtistId = request.AlbumArtistId,
-            AlbumArtistName = request.AlbumArtistName,
-            ArtistIds = request.ArtistIds,
-            ArtistNames = request.ArtistNames,
-            GenreIds = request.GenreIds,
-            GenreNames = request.GenreNames,
             Year = request.Year,
             Lyrics = request.Lyrics,
             Rating = request.Rating,
             Explicit = request.Explicit,
             Cover = request.Cover,
+            Album = request.Album,
+            Artists = request.Artists,
+            Genres = request.Genres,
         };
 
     private static SongUpdateModel MapPatchToModel(SongPatch patch) =>
         new()
         {
             Title = patch.Title,
-            AlbumId = patch.AlbumId,
-            AlbumName = patch.AlbumName,
-            AlbumArtistId = patch.AlbumArtistId,
-            AlbumArtistName = patch.AlbumArtistName,
-            ArtistIds = patch.ArtistIds,
-            ArtistNames = patch.ArtistNames,
-            GenreIds = patch.GenreIds,
-            GenreNames = patch.GenreNames,
             Year = patch.Year,
             Lyrics = patch.Lyrics,
             Rating = patch.Rating,
             Explicit = patch.Explicit,
             Cover = patch.Cover,
+            Album = patch.Album,
+            Artists = patch.Artists,
+            Genres = patch.Genres,
         };
 
     private static UpdateSongItem MapToDto(SongUpdateResult result)
@@ -1100,19 +1090,14 @@ public class SongsController(
         new()
         {
             Title = item.Title,
-            AlbumId = item.AlbumId,
-            AlbumName = item.AlbumName,
-            AlbumArtistId = item.AlbumArtistId,
-            AlbumArtistName = item.AlbumArtistName,
-            ArtistIds = item.ArtistIds,
-            ArtistNames = item.ArtistNames,
-            GenreIds = item.GenreIds,
-            GenreNames = item.GenreNames,
             Year = item.Year,
             Lyrics = item.Lyrics,
             Rating = item.Rating,
             Explicit = item.Explicit,
             Cover = item.Cover,
+            Album = item.Album,
+            Artists = item.Artists,
+            Genres = item.Genres,
         };
 
     private async Task EvaluateAndRemoveAuditNonConformitiesAsync(

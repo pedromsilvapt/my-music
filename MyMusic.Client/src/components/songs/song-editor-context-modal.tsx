@@ -35,6 +35,7 @@ import {useApplyMetadata} from "../../hooks/useApplyMetadata";
 import {useAutoFetchMetadata, usePrefetchMetadata} from "../../hooks/useAutoFetchMetadata";
 import type {GetSongResponseSong, SongMetadataDiff, UpdateSongRequest} from "../../model";
 import type {BatchMultiUpdateSongResult} from "../../model/batchMultiUpdateSongResult";
+import type {SongMultiUpdateItem} from "../../model/songMultiUpdateItem";
 import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
 import CoverUploadField from "./cover-upload-field.tsx";
 import MetadataSearchModal from "./metadata-search-modal.tsx";
@@ -395,66 +396,52 @@ export default function SongEditorContextModal({
         const updates = songsToSave.map((song) => {
             const state = editStates.get(song.id)!;
             const { song: songData, form, checkboxes, metadata } = state;
-            const update: Record<string, unknown> = { songId: songData.id };
+            const update: SongMultiUpdateItem = { songId: songData.id };
 
-            if (shouldSaveField(form, songData, metadata, checkboxes.title, "title") && form.title) {
-                update.title = form.title;
+            if (shouldSaveField(form, songData, metadata, checkboxes.title, "title")) {
+                update.title = { newValue: form.title };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.year, "year") && form.year !== undefined) {
-                update.year = form.year;
+            if (shouldSaveField(form, songData, metadata, checkboxes.year, "year")) {
+                update.year = { newValue: form.year };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.lyrics, "lyrics") && form.lyrics) {
-                update.lyrics = form.lyrics;
+            if (shouldSaveField(form, songData, metadata, checkboxes.lyrics, "lyrics")) {
+                update.lyrics = { newValue: form.lyrics || null };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.rating, "rating") && form.rating !== undefined) {
-                update.rating = form.rating;
+            if (shouldSaveField(form, songData, metadata, checkboxes.rating, "rating")) {
+                update.rating = { newValue: form.rating };
             }
             if (shouldSaveField(form, songData, metadata, checkboxes.explicit, "explicit")) {
-                update.explicit = form.explicit;
+                update.explicit = { newValue: form.explicit };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover") && form.cover) {
-                update.cover = form.cover;
+            if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover")) {
+                update.cover = { newValue: form.cover };
             }
             if (shouldSaveField(form, songData, metadata, checkboxes.album, "album") && form.album) {
-                if (form.album.id > 0) {
-                    update.albumId = form.album.id;
-                } else {
-                    update.albumName = form.album.name;
-                }
+                update.album = {
+                    newValue: {
+                        id: form.album.id > 0 ? form.album.id : null,
+                        name: form.album.id < 0 ? form.album.name : null,
+                    },
+                };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.albumArtist, "albumArtist") && form.albumArtist) {
-                if (form.albumArtist.id > 0) {
-                    update.albumArtistId = form.albumArtist.id;
-                } else {
-                    update.albumArtistName = form.albumArtist.name;
-                }
+            if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists")) {
+                update.artists = {
+                    newValue: form.artists.map(a => ({
+                        id: a.id > 0 ? a.id : null,
+                        name: a.id < 0 ? a.name : null,
+                    })),
+                };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists") && form.artists.length > 0) {
-                update.artistIds = form.artists.filter(a => a.id > 0).map(a => a.id);
-                update.artistNames = form.artists.filter(a => a.id < 0).map(a => a.name);
-            }
-            if (shouldSaveField(form, songData, metadata, checkboxes.genres, "genres") && form.genres.length > 0) {
-                update.genreIds = form.genres.filter(g => g.id > 0).map(g => g.id);
-                update.genreNames = form.genres.filter(g => g.id < 0).map(g => g.name);
+            if (shouldSaveField(form, songData, metadata, checkboxes.genres, "genres")) {
+                update.genres = {
+                    newValue: form.genres.map(g => ({
+                        id: g.id > 0 ? g.id : null,
+                        name: g.id < 0 ? g.name : null,
+                    })),
+                };
             }
 
-            return update as {
-                songId: number;
-                title?: string;
-                year?: number;
-                lyrics?: string;
-                rating?: number;
-                explicit?: boolean;
-                cover?: string;
-                albumId?: number;
-                albumName?: string;
-                albumArtistId?: number;
-                albumArtistName?: string;
-                artistIds?: number[];
-                artistNames?: string[];
-                genreIds?: number[];
-                genreNames?: string[];
-            };
+            return update;
         });
 
         batchMultiUpdateSongs.mutate({
@@ -469,45 +456,47 @@ export default function SongEditorContextModal({
 
         const update: UpdateSongRequest = { songId: song.id };
 
-        if (shouldSaveField(form, song, metadata, checkboxes.title, "title") && form.title) {
-            update.title = form.title;
+        if (shouldSaveField(form, song, metadata, checkboxes.title, "title")) {
+            update.title = { newValue: form.title };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.year, "year") && form.year !== undefined) {
-            update.year = form.year;
+        if (shouldSaveField(form, song, metadata, checkboxes.year, "year")) {
+            update.year = { newValue: form.year };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.lyrics, "lyrics") && form.lyrics) {
-            update.lyrics = form.lyrics;
+        if (shouldSaveField(form, song, metadata, checkboxes.lyrics, "lyrics")) {
+            update.lyrics = { newValue: form.lyrics || null };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.rating, "rating") && form.rating !== undefined) {
-            update.rating = form.rating;
+        if (shouldSaveField(form, song, metadata, checkboxes.rating, "rating")) {
+            update.rating = { newValue: form.rating };
         }
         if (shouldSaveField(form, song, metadata, checkboxes.explicit, "explicit")) {
-            update.explicit = form.explicit;
+            update.explicit = { newValue: form.explicit };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.cover, "cover") && form.cover) {
-            update.cover = form.cover;
+        if (shouldSaveField(form, song, metadata, checkboxes.cover, "cover")) {
+            update.cover = { newValue: form.cover };
         }
         if (shouldSaveField(form, song, metadata, checkboxes.album, "album") && form.album) {
-            if (form.album.id > 0) {
-                update.albumId = form.album.id;
-            } else {
-                update.albumName = form.album.name;
-            }
+            update.album = {
+                newValue: {
+                    id: form.album.id > 0 ? form.album.id : null,
+                    name: form.album.id < 0 ? form.album.name : null,
+                },
+            };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.albumArtist, "albumArtist") && form.albumArtist) {
-            if (form.albumArtist.id > 0) {
-                update.albumArtistId = form.albumArtist.id;
-            } else {
-                update.albumArtistName = form.albumArtist.name;
-            }
+        if (shouldSaveField(form, song, metadata, checkboxes.artists, "artists")) {
+            update.artists = {
+                newValue: form.artists.map(a => ({
+                    id: a.id > 0 ? a.id : null,
+                    name: a.id < 0 ? a.name : null,
+                })),
+            };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.artists, "artists") && form.artists.length > 0) {
-            update.artistIds = form.artists.filter(a => a.id > 0).map(a => a.id);
-            update.artistNames = form.artists.filter(a => a.id < 0).map(a => a.name);
-        }
-        if (shouldSaveField(form, song, metadata, checkboxes.genres, "genres") && form.genres.length > 0) {
-            update.genreIds = form.genres.filter(g => g.id > 0).map(g => g.id);
-            update.genreNames = form.genres.filter(g => g.id < 0).map(g => g.name);
+        if (shouldSaveField(form, song, metadata, checkboxes.genres, "genres")) {
+            update.genres = {
+                newValue: form.genres.map(g => ({
+                    id: g.id > 0 ? g.id : null,
+                    name: g.id < 0 ? g.name : null,
+                })),
+            };
         }
 
         if (Object.keys(update).length > 1) {
@@ -531,66 +520,52 @@ export default function SongEditorContextModal({
         const updates = songsToSave.map((song) => {
             const state = editStates.get(song.id)!;
             const { song: songData, form, checkboxes, metadata } = state;
-            const update: Record<string, unknown> = { songId: songData.id };
+            const update: SongMultiUpdateItem = { songId: songData.id };
 
-            if (shouldSaveField(form, songData, metadata, checkboxes.title, "title") && form.title) {
-                update.title = form.title;
+            if (shouldSaveField(form, songData, metadata, checkboxes.title, "title")) {
+                update.title = { newValue: form.title };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.year, "year") && form.year !== undefined) {
-                update.year = form.year;
+            if (shouldSaveField(form, songData, metadata, checkboxes.year, "year")) {
+                update.year = { newValue: form.year };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.lyrics, "lyrics") && form.lyrics) {
-                update.lyrics = form.lyrics;
+            if (shouldSaveField(form, songData, metadata, checkboxes.lyrics, "lyrics")) {
+                update.lyrics = { newValue: form.lyrics || null };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.rating, "rating") && form.rating !== undefined) {
-                update.rating = form.rating;
+            if (shouldSaveField(form, songData, metadata, checkboxes.rating, "rating")) {
+                update.rating = { newValue: form.rating };
             }
             if (shouldSaveField(form, songData, metadata, checkboxes.explicit, "explicit")) {
-                update.explicit = form.explicit;
+                update.explicit = { newValue: form.explicit };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover") && form.cover) {
-                update.cover = form.cover;
+            if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover")) {
+                update.cover = { newValue: form.cover };
             }
             if (shouldSaveField(form, songData, metadata, checkboxes.album, "album") && form.album) {
-                if (form.album.id > 0) {
-                    update.albumId = form.album.id;
-                } else {
-                    update.albumName = form.album.name;
-                }
+                update.album = {
+                    newValue: {
+                        id: form.album.id > 0 ? form.album.id : null,
+                        name: form.album.id < 0 ? form.album.name : null,
+                    },
+                };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.albumArtist, "albumArtist") && form.albumArtist) {
-                if (form.albumArtist.id > 0) {
-                    update.albumArtistId = form.albumArtist.id;
-                } else {
-                    update.albumArtistName = form.albumArtist.name;
-                }
+            if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists")) {
+                update.artists = {
+                    newValue: form.artists.map(a => ({
+                        id: a.id > 0 ? a.id : null,
+                        name: a.id < 0 ? a.name : null,
+                    })),
+                };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists") && form.artists.length > 0) {
-                update.artistIds = form.artists.filter(a => a.id > 0).map(a => a.id);
-                update.artistNames = form.artists.filter(a => a.id < 0).map(a => a.name);
-            }
-            if (shouldSaveField(form, songData, metadata, checkboxes.genres, "genres") && form.genres.length > 0) {
-                update.genreIds = form.genres.filter(g => g.id > 0).map(g => g.id);
-                update.genreNames = form.genres.filter(g => g.id < 0).map(g => g.name);
+            if (shouldSaveField(form, songData, metadata, checkboxes.genres, "genres")) {
+                update.genres = {
+                    newValue: form.genres.map(g => ({
+                        id: g.id > 0 ? g.id : null,
+                        name: g.id < 0 ? g.name : null,
+                    })),
+                };
             }
 
-            return update as {
-                songId: number;
-                title?: string;
-                year?: number;
-                lyrics?: string;
-                rating?: number;
-                explicit?: boolean;
-                cover?: string;
-                albumId?: number;
-                albumName?: string;
-                albumArtistId?: number;
-                albumArtistName?: string;
-                artistIds?: number[];
-                artistNames?: string[];
-                genreIds?: number[];
-                genreNames?: string[];
-            };
+            return update;
         });
 
         batchMultiUpdateSongs.mutate({
@@ -1075,9 +1050,8 @@ export default function SongEditorContextModal({
                         <Box style={{flex: 1}}>
                             <CoverUploadField
                                 label={hasMetadata && currentState.metadata?.cover ? "Cover (new)" : "Cover"}
-                                value={currentState.form.cover || ""}
+                                value={currentState.form.cover}
                                 onChange={(val, dimensions) => handleFormChange({cover: val, coverDimensions: dimensions})}
-                                currentCoverId={currentState.song.cover}
                                 currentDimensions={currentState.form.coverDimensions}
                                 diffMode={hasMetadata && !!currentState.metadata?.cover}
                                 isChecked={currentState.checkboxes.cover}

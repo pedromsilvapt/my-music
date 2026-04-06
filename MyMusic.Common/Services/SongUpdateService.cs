@@ -105,54 +105,115 @@ public class SongUpdateService(
     private async Task ApplyUpdatesAsync(MusicDbContext db, Song song, SongUpdateModel update,
         CancellationToken cancellationToken)
     {
-        if (update.Title != null)
+        if (update.Title is not null)
         {
-            song.Title = update.Title;
+            if (string.IsNullOrWhiteSpace(update.Title.NewValue))
+            {
+                throw new ValidationException("Title cannot be empty");
+            }
+            song.Title = update.Title.NewValue;
         }
 
-        if (update.Year.HasValue)
+        if (update.Year is not null)
         {
-            song.Year = update.Year;
+            song.Year = update.Year.NewValue;
         }
 
-        if (update.Lyrics != null)
+        if (update.Lyrics is not null)
         {
-            song.Lyrics = update.Lyrics;
+            song.Lyrics = string.IsNullOrWhiteSpace(update.Lyrics.NewValue) ? null : update.Lyrics.NewValue;
         }
 
-        if (update.Rating.HasValue)
+        if (update.Rating is not null)
         {
-            song.Rating = update.Rating;
+            song.Rating = update.Rating.NewValue;
         }
 
-        if (update.Explicit.HasValue)
+        if (update.Explicit is not null)
         {
-            song.Explicit = update.Explicit.Value;
+            song.Explicit = update.Explicit.NewValue ?? false;
         }
 
-        if (update.Cover != null)
+        if (update.Cover is not null)
         {
-            await UpdateCoverAsync(db, song, update.Cover, cancellationToken);
+            var artworkRef = update.Cover.NewValue;
+            if (artworkRef is null)
+            {
+                await RemoveCoverAsync(db, song);
+            }
+            else if (artworkRef.Id.HasValue)
+            {
+                var existingCover = await db.Artworks.FindAsync([artworkRef.Id.Value], cancellationToken);
+                if (existingCover is not null)
+                {
+                    if (song.CoverId != existingCover.Id)
+                    {
+                        var oldArtwork = song.Cover;
+                        song.Cover = existingCover;
+                        song.CoverId = existingCover.Id;
+                        if (oldArtwork is not null)
+                        {
+                            await TryDeleteArtworkAsync(db, oldArtwork);
+                        }
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(artworkRef.Base64))
+            {
+                await UpdateCoverAsync(db, song, artworkRef.Base64, cancellationToken);
+            }
+            else
+            {
+                await RemoveCoverAsync(db, song);
+            }
         }
 
-        if (update.AlbumId.HasValue || update.AlbumName != null)
+        if (update.Album is not null)
         {
-            await UpdateAlbumAsync(db, song, update.AlbumId, update.AlbumName, update.AlbumArtistId,
-                update.AlbumArtistName, cancellationToken);
+            await UpdateAlbumAsync(db, song, update.Album.NewValue, cancellationToken);
         }
 
-        if (update.ArtistIds != null || update.ArtistNames != null)
+        if (update.Artists is not null)
         {
-            await UpdateArtistsAsync(db, song, update.ArtistIds, update.ArtistNames, cancellationToken);
+            var artists = update.Artists.NewValue ?? [];
+            if (artists.Count == 0)
+            {
+                throw new ValidationException("Song must have at least one artist");
+            }
+            await UpdateArtistsAsync(db, song, artists, cancellationToken);
         }
 
-        if (update.GenreIds != null || update.GenreNames != null)
+        if (update.Genres is not null)
         {
-            await UpdateGenresAsync(db, song, update.GenreIds, update.GenreNames, cancellationToken);
+            await UpdateGenresAsync(db, song, update.Genres.NewValue ?? [], cancellationToken);
         }
 
         song.ModifiedAt = DateTime.UtcNow;
         song.Label = SongLabelBuilder.Build(song);
+    }
+
+    private async Task RemoveCoverAsync(MusicDbContext db, Song song)
+    {
+        if (song.Cover is not null)
+        {
+            var artwork = song.Cover;
+            song.Cover = null;
+            song.CoverId = null;
+            await TryDeleteArtworkAsync(db, artwork);
+        }
+    }
+
+    private async Task TryDeleteArtworkAsync(MusicDbContext db, Artwork artwork)
+    {
+        var isUsedBySong = await db.Songs.AnyAsync(s => s.CoverId == artwork.Id);
+        var isUsedByAlbum = await db.Albums.AnyAsync(a => a.CoverId == artwork.Id);
+        var isUsedByArtistPhoto = await db.Artists.AnyAsync(a => a.PhotoId == artwork.Id);
+        var isUsedByArtistBackground = await db.Artists.AnyAsync(a => a.BackgroundId == artwork.Id);
+
+        if (!isUsedBySong && !isUsedByAlbum && !isUsedByArtistPhoto && !isUsedByArtistBackground)
+        {
+            db.Artworks.Remove(artwork);
+        }
     }
 
     private async Task UpdateCoverAsync(MusicDbContext db, Song song, string coverDataUrl,
@@ -166,6 +227,7 @@ public class SongUpdateService(
             return;
         }
 
+        var oldArtwork = song.Cover;
         song.Cover = new Artwork
         {
             Data = newImageBuffer.Data,
@@ -173,34 +235,46 @@ public class SongUpdateService(
             Width = newSize.Width,
             Height = newSize.Height,
         };
+        song.CoverId = null;
         await db.AddAsync(song.Cover, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        song.CoverId = song.Cover.Id;
+
+        if (oldArtwork is not null)
+        {
+            await TryDeleteArtworkAsync(db, oldArtwork);
+        }
     }
 
-    private async Task UpdateAlbumAsync(MusicDbContext db, Song song, long? albumId, string? albumName,
-        long? albumArtistId, string? albumArtistName, CancellationToken cancellationToken)
+    private async Task UpdateAlbumAsync(MusicDbContext db, Song song, AlbumRef? albumRef, CancellationToken cancellationToken)
     {
+        if (albumRef is null)
+        {
+            throw new ValidationException("Song must belong to an album");
+        }
+
         Album? album = null;
 
-        if (albumId.HasValue)
+        if (albumRef.Id.HasValue)
         {
-            album = await db.Albums.FindAsync([albumId.Value], cancellationToken);
+            album = await db.Albums.FindAsync([albumRef.Id.Value], cancellationToken);
+            if (album is null)
+            {
+                throw new ValidationException($"Album with ID {albumRef.Id.Value} not found");
+            }
         }
-        else if (albumName != null)
+        else if (!string.IsNullOrEmpty(albumRef.Name))
         {
             album = await db.Albums
-                .FirstOrDefaultAsync(a => a.Name == albumName && a.OwnerId == song.OwnerId, cancellationToken);
+                .FirstOrDefaultAsync(a => a.Name == albumRef.Name && a.OwnerId == song.OwnerId, cancellationToken);
 
             if (album == null)
             {
                 Artist? albumArtist = null;
 
-                if (albumArtistId.HasValue)
+                if (!string.IsNullOrEmpty(albumRef.ArtistName))
                 {
-                    albumArtist = await db.Artists.FindAsync([albumArtistId.Value], cancellationToken);
-                }
-                else if (albumArtistName != null)
-                {
-                    albumArtist = await GetOrCreateArtistAsync(db, albumArtistName, song.OwnerId, cancellationToken);
+                    albumArtist = await GetOrCreateArtistAsync(db, albumRef.ArtistName, song.OwnerId, cancellationToken);
                 }
                 else if (song.Album.Artist != null)
                 {
@@ -215,14 +289,13 @@ public class SongUpdateService(
                     }
                     else
                     {
-                        albumArtist =
-                            await GetOrCreateArtistAsync(db, "Unknown Artist", song.OwnerId, cancellationToken);
+                        albumArtist = await GetOrCreateArtistAsync(db, "Unknown Artist", song.OwnerId, cancellationToken);
                     }
                 }
 
                 album = new Album
                 {
-                    Name = albumName,
+                    Name = albumRef.Name,
                     Artist = albumArtist!,
                     ArtistId = albumArtist!.Id,
                     OwnerId = song.OwnerId,
@@ -233,41 +306,42 @@ public class SongUpdateService(
                 await db.AddAsync(album, cancellationToken);
             }
         }
-
-        if (album != null)
+        else
         {
-            song.Album = album;
-            song.AlbumId = album.Id;
+            throw new ValidationException("Album reference must have either Id or Name");
         }
+
+        song.Album = album;
+        song.AlbumId = album.Id;
     }
 
-    private async Task UpdateArtistsAsync(MusicDbContext db, Song song, List<long>? artistIds,
-        List<string>? artistNames, CancellationToken cancellationToken)
+    private async Task UpdateArtistsAsync(MusicDbContext db, Song song, List<ArtistRef> artistRefs,
+        CancellationToken cancellationToken)
     {
         var artists = new List<Artist>();
 
-        if (artistIds != null)
+        foreach (var artistRef in artistRefs)
         {
-            foreach (var artistId in artistIds)
+            Artist? artist = null;
+
+            if (artistRef.Id.HasValue)
             {
-                var artist = await db.Artists.FindAsync([artistId], cancellationToken);
-                if (artist != null)
-                {
-                    artists.Add(artist);
-                }
+                artist = await db.Artists.FindAsync([artistRef.Id.Value], cancellationToken);
+            }
+            else if (!string.IsNullOrEmpty(artistRef.Name))
+            {
+                artist = await GetOrCreateArtistAsync(db, artistRef.Name, song.OwnerId, cancellationToken);
+            }
+
+            if (artist is not null && !artists.Any(a => a.Id == artist.Id))
+            {
+                artists.Add(artist);
             }
         }
 
-        if (artistNames != null)
+        if (artists.Count == 0)
         {
-            foreach (var artistName in artistNames)
-            {
-                var artist = await GetOrCreateArtistAsync(db, artistName, song.OwnerId, cancellationToken);
-                if (!artists.Any(a => a.Id == artist.Id))
-                {
-                    artists.Add(artist);
-                }
-            }
+            throw new ValidationException("Song must have at least one valid artist");
         }
 
         db.SongArtists.RemoveRange(song.Artists);
@@ -286,32 +360,27 @@ public class SongUpdateService(
         }
     }
 
-    private async Task UpdateGenresAsync(MusicDbContext db, Song song, List<long>? genreIds, List<string>? genreNames,
+    private async Task UpdateGenresAsync(MusicDbContext db, Song song, List<GenreRef> genreRefs,
         CancellationToken cancellationToken)
     {
         var genres = new List<Genre>();
 
-        if (genreIds != null)
+        foreach (var genreRef in genreRefs)
         {
-            foreach (var genreId in genreIds)
-            {
-                var genre = await db.Genres.FindAsync([genreId], cancellationToken);
-                if (genre != null)
-                {
-                    genres.Add(genre);
-                }
-            }
-        }
+            Genre? genre = null;
 
-        if (genreNames != null)
-        {
-            foreach (var genreName in genreNames)
+            if (genreRef.Id.HasValue)
             {
-                var genre = await GetOrCreateGenreAsync(db, genreName, song.OwnerId, cancellationToken);
-                if (!genres.Any(g => g.Id == genre.Id))
-                {
-                    genres.Add(genre);
-                }
+                genre = await db.Genres.FindAsync([genreRef.Id.Value], cancellationToken);
+            }
+            else if (!string.IsNullOrEmpty(genreRef.Name))
+            {
+                genre = await GetOrCreateGenreAsync(db, genreRef.Name, song.OwnerId, cancellationToken);
+            }
+
+            if (genre is not null && !genres.Any(g => g.Id == genre.Id))
+            {
+                genres.Add(genre);
             }
         }
 

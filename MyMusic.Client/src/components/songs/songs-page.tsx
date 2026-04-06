@@ -1,8 +1,8 @@
-import {useQuery, useQueryClient} from "@tanstack/react-query";
+import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListSongsResponse} from "../../model";
+import {useListSongs} from "../../client/songs.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
@@ -24,23 +24,15 @@ export default function SongsPage() {
     const [importFiles, setImportFiles] = useState<File[]>([]);
     const [showImportProgress, setShowImportProgress] = useState(false);
 
-    const songsQuery = useQuery({
-        queryKey: ["songs", appliedSearch, appliedFilter],
-        queryFn: async (): Promise<ListSongsResponse> => {
-            const params = new URLSearchParams();
-            if (appliedSearch) params.set("search", appliedSearch);
-            if (appliedFilter) params.set("filter", appliedFilter);
-
-            const url = `/api/songs${params.toString() ? `?${params.toString()}` : ""}`;
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error("Failed to fetch songs");
-            }
-
-            return response.json();
-        },
-    });
+    const songsQuery = useListSongs(
+        { search: appliedSearch, filter: appliedFilter },
+        { 
+            query: { 
+                enabled: true,
+                select: (response) => response.data
+            } 
+        }
+    );
 
     const songs = useQueryData(songsQuery, "Failed to fetch songs") ?? {songs: []};
 
@@ -63,7 +55,7 @@ export default function SongsPage() {
     const handleImportClose = () => {
         setShowImportProgress(false);
         setImportFiles([]);
-        queryClient.invalidateQueries({queryKey: ["songs"]});
+        queryClient.invalidateQueries({queryKey: ["api", "songs"]});
     };
 
     const elements = songs?.songs ?? [];

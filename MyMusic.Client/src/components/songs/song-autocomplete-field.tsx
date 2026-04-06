@@ -34,7 +34,7 @@ export default function SongAutocompleteField({
     }, []);
 
     const handleChange = (newValue: AutocompleteItem | string | null) => {
-        if (newValue === null || typeof newValue === "string") {
+        if (newValue === null || typeof newValue === "string" || (typeof newValue === "object" && newValue.id < 0)) {
             onChange(null);
         } else {
             onChange(newValue);

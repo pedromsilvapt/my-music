@@ -5,10 +5,10 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type SyncRecordSource = typeof SyncRecordSource[keyof typeof SyncRecordSource];
-
+export type SyncRecordSource =
+	(typeof SyncRecordSource)[keyof typeof SyncRecordSource];
 
 export const SyncRecordSource = {
-  Device: 'Device',
-  Server: 'Server',
+	Device: "Device",
+	Server: "Server",
 } as const;

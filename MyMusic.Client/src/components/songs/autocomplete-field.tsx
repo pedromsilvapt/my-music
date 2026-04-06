@@ -115,7 +115,7 @@ export default function AutocompleteField({
         return (
             <Group gap="sm" wrap="nowrap">
                 <Artwork
-                    id={item.coverId ?? item.id}
+                    id={item.coverId}
                     size={32}
                     placeholderIcon={<IconDisc size={16}/>}
                 />

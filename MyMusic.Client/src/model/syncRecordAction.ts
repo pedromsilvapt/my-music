@@ -5,14 +5,14 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type SyncRecordAction = typeof SyncRecordAction[keyof typeof SyncRecordAction];
-
+export type SyncRecordAction =
+	(typeof SyncRecordAction)[keyof typeof SyncRecordAction];
 
 export const SyncRecordAction = {
-  Created: 'Created',
-  Updated: 'Updated',
-  Skipped: 'Skipped',
-  Downloaded: 'Downloaded',
-  Removed: 'Removed',
-  Error: 'Error',
+	Created: "Created",
+	Updated: "Updated",
+	Skipped: "Skipped",
+	Downloaded: "Downloaded",
+	Removed: "Removed",
+	Error: "Error",
 } as const;

@@ -5,10 +5,10 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type WishlistItemStatus = typeof WishlistItemStatus[keyof typeof WishlistItemStatus];
-
+export type WishlistItemStatus =
+	(typeof WishlistItemStatus)[keyof typeof WishlistItemStatus];
 
 export const WishlistItemStatus = {
-  Active: 'Active',
-  Updated: 'Updated',
+	Active: "Active",
+	Updated: "Updated",
 } as const;

@@ -6,11 +6,11 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface GetSongResponseCover {
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  id: number;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  width: number;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  height: number;
-  mimeType: string;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	id: number;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	width: number;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	height: number;
+	mimeType: string;
 }

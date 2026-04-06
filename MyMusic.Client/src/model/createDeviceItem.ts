@@ -6,14 +6,14 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface CreateDeviceItem {
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  id: number;
-  name: string;
-  /** @nullable */
-  icon?: string | null;
-  /** @nullable */
-  color?: string | null;
-  /** @nullable */
-  namingTemplate?: string | null;
-  importOnPurchase?: boolean;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	id: number;
+	name: string;
+	/** @nullable */
+	icon?: string | null;
+	/** @nullable */
+	color?: string | null;
+	/** @nullable */
+	namingTemplate?: string | null;
+	importOnPurchase?: boolean;
 }

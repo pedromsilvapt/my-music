@@ -1,4 +1,5 @@
 import type { GetSongResponseSong } from "../../model/getSongResponseSong";
+import type { ArtworkRef } from "../../model/artworkRef";
 import type {
     SongMetadataDiff,
 } from "../../model/songMetadataDiff";
@@ -42,11 +43,11 @@ export interface TagsAutocompleteItem {
 
 export interface FormState {
     title: string;
-    year: number | undefined;
+    year: number | null;
     lyrics: string;
-    rating: number | undefined;
+    rating: number | null;
     explicit: boolean;
-    cover: string | null;
+    cover: ArtworkRef | null;
     coverDimensions: { width: number; height: number } | null;
     album: AutocompleteItem | null;
     albumArtist: AutocompleteItem | null;
@@ -64,9 +65,9 @@ export interface SongEditState {
 export function createInitialFormState(): FormState {
     return {
         title: "",
-        year: undefined,
+        year: null,
         lyrics: "",
-        rating: undefined,
+        rating: null,
         explicit: false,
         cover: null,
         coverDimensions: null,
@@ -95,11 +96,11 @@ export function createInitialCheckboxes(): FieldCheckboxes {
 export function formStateFromSong(song: GetSongResponseSong): FormState {
     return {
         title: song.title,
-        year: song.year ?? undefined,
+        year: song.year ?? null,
         lyrics: song.lyrics ?? "",
-        rating: song.rating ?? undefined,
+        rating: song.rating ?? null,
         explicit: song.isExplicit,
-        cover: null,
+        cover: song.cover ? { id: song.cover } : null,
         coverDimensions: song.coverDetails
             ? { width: song.coverDetails.width, height: song.coverDetails.height }
             : null,
@@ -134,7 +135,7 @@ export function formStateFromMetadata(
         form.explicit = metadata.explicit.new ?? false;
     }
     if (metadata.cover) {
-        form.cover = metadata.cover.new ?? null;
+        form.cover = metadata.cover.new ? { base64: metadata.cover.new } : null;
     }
     if (metadata.album) {
         form.album = {
@@ -212,15 +213,24 @@ export function isFieldDifferentFromSong(
         case "title":
             return form.title !== song.title;
         case "year":
-            return form.year !== (song.year ?? undefined);
-        case "lyrics":
-            return form.lyrics !== (song.lyrics ?? "");
+            if (form.year === null && song.year != null) return true;
+            if (form.year !== null && song.year == null) return true;
+            return form.year !== song.year;
+        case "lyrics": {
+            const formLyrics = form.lyrics || null;
+            const songLyrics = song.lyrics || null;
+            return formLyrics !== songLyrics;
+        }
         case "rating":
-            return form.rating !== (song.rating ?? undefined);
+            if (form.rating === null && song.rating != null) return true;
+            if (form.rating !== null && song.rating == null) return true;
+            return form.rating !== song.rating;
         case "explicit":
             return form.explicit !== song.isExplicit;
         case "cover":
-            return form.cover != null;
+            if (form.cover === null && song.cover == null) return false;
+            if (form.cover?.id != null && form.cover.id === song.cover) return false;
+            return true;
         case "album": {
             if (!form.album && !song.album) return false;
             if (!form.album || !song.album) return true;

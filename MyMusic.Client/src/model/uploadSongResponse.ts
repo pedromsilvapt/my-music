@@ -6,12 +6,12 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface UploadSongResponse {
-  success: boolean;
-  /**
-     * @nullable
-     * @pattern ^-?(?:0|[1-9]\d*)$
-     */
-  songId?: number | null;
-  /** @nullable */
-  error?: string | null;
+	success: boolean;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	songId?: number | null;
+	/** @nullable */
+	error?: string | null;
 }

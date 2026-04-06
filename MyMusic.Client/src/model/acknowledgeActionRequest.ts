@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface AcknowledgeActionRequest {
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  songId: number;
-  /** @nullable */
-  modifiedAt?: string | null;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	songId: number;
+	/** @nullable */
+	modifiedAt?: string | null;
 }

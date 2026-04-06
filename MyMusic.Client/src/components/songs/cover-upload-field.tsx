@@ -6,6 +6,7 @@ import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
 import {fetchArtworkAsDataUrl} from "../../utils/artwork.ts";
 import {autocompleteSongs} from "../../client/songs.ts";
 import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
+import type {ArtworkRef} from "../../model/artworkRef";
 
 interface CoverDimensions {
     width: number;
@@ -14,9 +15,8 @@ interface CoverDimensions {
 
 interface CoverUploadFieldProps {
     label?: string;
-    value: string | null;
-    onChange: (value: string | null, dimensions: CoverDimensions | null) => void;
-    currentCoverId?: number | null;
+    value: ArtworkRef | null;
+    onChange: (value: ArtworkRef | null, dimensions: CoverDimensions | null) => void;
     currentDimensions?: CoverDimensions | null;
     disabled?: boolean;
     diffMode?: boolean;
@@ -29,7 +29,6 @@ export default function CoverUploadField({
                                              label = "Cover Artwork",
                                              value,
                                              onChange,
-                                             currentCoverId,
                                              currentDimensions,
                                              disabled,
                                              diffMode,
@@ -47,7 +46,7 @@ export default function CoverUploadField({
     const {openLightbox} = useArtworkLightbox();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const hasChanged = diffMode && value !== null;
+    const hasChanged = diffMode && value !== null && value?.base64 !== undefined;
 
     const loadImageDimensions = useCallback((src: string): Promise<CoverDimensions | null> => {
         return new Promise((resolve) => {
@@ -67,20 +66,20 @@ export default function CoverUploadField({
     }, [diffMode, oldCoverUrl, loadImageDimensions]);
 
     useEffect(() => {
-        if (diffMode && value) {
-            loadImageDimensions(value).then(setNewCoverDimensions);
-        } else if (diffMode && currentCoverId) {
-            loadImageDimensions(`/api/artwork/${currentCoverId}`).then(setNewCoverDimensions);
+        if (diffMode && value?.base64) {
+            loadImageDimensions(value.base64).then(setNewCoverDimensions);
+        } else if (diffMode && value?.id) {
+            loadImageDimensions(`/api/artwork/${value.id}`).then(setNewCoverDimensions);
         } else {
             setNewCoverDimensions(null);
         }
-    }, [diffMode, value, currentCoverId, loadImageDimensions]);
+    }, [diffMode, value, loadImageDimensions]);
 
     useEffect(() => {
-        if (!diffMode && currentCoverId && !previewDimensions) {
-            loadImageDimensions(`/api/artwork/${currentCoverId}`).then(setPreviewDimensions);
+        if (!diffMode && value?.id && !previewDimensions) {
+            loadImageDimensions(`/api/artwork/${value.id}`).then(setPreviewDimensions);
         }
-    }, [diffMode, currentCoverId, previewDimensions, loadImageDimensions]);
+    }, [diffMode, value?.id, previewDimensions, loadImageDimensions]);
 
     const loadImageFromBase64 = useCallback((base64: string): Promise<CoverDimensions> => {
         return new Promise((resolve, reject) => {
@@ -106,7 +105,7 @@ export default function CoverUploadField({
                 const base64 = e.target?.result as string;
                 const dimensions = await loadImageFromBase64(base64);
                 setPreviewDimensions(dimensions);
-                onChange(base64, dimensions);
+                onChange({ base64 }, dimensions);
             };
             reader.readAsDataURL(file);
         } catch {
@@ -173,7 +172,7 @@ export default function CoverUploadField({
     }, []);
 
     const handleSongSelect = useCallback(async (song: AutocompleteItem | string | null) => {
-        if (song === null || typeof song === "string") {
+        if (song === null || typeof song === "string" || (typeof song === "object" && song.id < 0)) {
             setSelectedSong(null);
             return;
         }
@@ -187,9 +186,9 @@ export default function CoverUploadField({
 
         setLoading(true);
         try {
-            const { dataUrl, dimensions } = await fetchArtworkAsDataUrl(song.coverId);
+            const { dimensions } = await fetchArtworkAsDataUrl(song.coverId);
             setPreviewDimensions(dimensions);
-            onChange(dataUrl, dimensions);
+            onChange({ id: song.coverId }, dimensions);
         } catch {
             notifications.show({ title: "Error", message: "Failed to load cover from selected song", color: "red" });
         } finally {
@@ -201,7 +200,7 @@ export default function CoverUploadField({
         openLightbox(src);
     }, [openLightbox]);
 
-    const previewSrc = value || (currentCoverId ? `/api/artwork/${currentCoverId}` : null);
+    const previewSrc = value?.base64 || (value?.id ? `/api/artwork/${value.id}` : null);
     const showSideBySide = diffMode && oldCoverUrl;
 
     const oldBorderColor = isChecked ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-5)';
@@ -347,7 +346,7 @@ export default function CoverUploadField({
                             >
                                 <IconMusic/>
                             </ActionIcon>
-                            {(value || currentCoverId) && (
+                            {value && (
                                 <ActionIcon
                                     variant="light"
                                     size="lg"
@@ -481,7 +480,7 @@ export default function CoverUploadField({
                             >
                                 <IconMusic/>
                             </ActionIcon>
-                            {(value || currentCoverId) && (
+                            {value && (
                                 <ActionIcon
                                     variant="light"
                                     size="lg"
