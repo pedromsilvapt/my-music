@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Extensions;
 
 namespace MyMusic.Common.Services;
 
@@ -25,14 +26,7 @@ public class AuditService(IEnumerable<IAuditRule> rules) : IAuditService
         CancellationToken cancellationToken = default)
     {
         return await db.AuditNonConformities
-            .Include(nc => nc.Song)
-            .ThenInclude(s => s.Album)
-            .Include(nc => nc.Song)
-            .ThenInclude(s => s.Artists)
-            .ThenInclude(sa => sa.Artist)
-            .Include(nc => nc.Song)
-            .ThenInclude(s => s.Genres)
-            .ThenInclude(sg => sg.Genre)
+            .IncludeSongMetadata("Song")
             .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == ownerId)
             .OrderByDescending(nc => nc.CreatedAt)
             .AsSplitQuery()
