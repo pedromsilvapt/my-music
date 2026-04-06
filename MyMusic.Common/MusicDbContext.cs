@@ -90,6 +90,21 @@ public class MusicDbContext : DbContext
             entity.HasIndex(e => new { e.SongId, e.Status });
         });
 
+        // AuditNonConformity entity configuration
+        modelBuilder.Entity<AuditNonConformity>(entity =>
+        {
+            // Value converter for Data to support cross-database JSON storage
+            // Works with both SQLite (tests) and PostgreSQL (production)
+            var jsonConverter = new ValueConverter<JsonElement?, string>(
+                v => v.HasValue ? v.Value.GetRawText() : "null",
+                v => v == "null" ? null : JsonDocument.Parse(v).RootElement);
+            entity.Property(e => e.Data).HasConversion(jsonConverter);
+
+            // Index on SongId + AuditRuleId - uniqueness enforced in application code
+            // (Partial index filter syntax differs between SQLite and PostgreSQL)
+            entity.HasIndex(e => new { e.SongId, e.AuditRuleId });
+        });
+
         // PlaylistSong entity configuration
         modelBuilder.Entity<PlaylistSong>(entity =>
         {

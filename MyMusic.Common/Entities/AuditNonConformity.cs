@@ -1,17 +1,18 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace MyMusic.Common.Entities;
 
-[Index(nameof(SongId), nameof(AuditRuleId), IsUnique = true)]
 public class AuditNonConformity
 {
     public long Id { get; set; }
 
-    public Song Song { get; set; } = null!;
-    public long SongId { get; set; }
+    public Song? Song { get; set; }
+    public long? SongId { get; set; }
 
     public long AuditRuleId { get; set; }
+
+    public JsonElement? Data { get; set; }
 
     public bool HasWaiver { get; set; }
 

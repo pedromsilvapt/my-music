@@ -63,6 +63,9 @@ pkill -f "dotnet watch"
 `mutationInvalidates` array in `orval.config.cjs`. This ensures TanStack Query automatically invalidates the relevant
 queries after the mutation completes.
 
+## Tool calling
+Avoid making one tool call at a time. If possible, try to read or write multiple files at once (unless they are really, really big).
+
 ## Code Style Guidelines
 
 ### General Conventions
@@ -270,7 +273,7 @@ public record GetPlaylistSong : ListSongsItem
 Use this pattern when a service in `MyMusic.Common` needs access to configuration or values only available in `MyMusic.Server`:
 
 1. **Define interface in Common** - Declare the required values
-2. **Implement in Server** - Access actual configuration source  
+2. **Implement in Server** - Access actual configuration source
 3. **Register in DI** - Simple type registration
 
 #### Existing Examples (see code for implementation details)
@@ -713,7 +716,7 @@ The project maintains a **TECHDEBT.md** file that tracks all identified code qua
 **All technical debt tasks MUST include test creation BEFORE implementing changes**, with these exceptions:
 
 - Typo fixes in comments or strings
-- Comment additions or updates  
+- Comment additions or updates
 - Whitespace/formatting changes
 - File renames without logic changes
 - Simple code moves without behavior changes

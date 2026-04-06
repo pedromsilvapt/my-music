@@ -29,6 +29,7 @@ public class AuditsController(
                 Name = rule.Name,
                 Icon = rule.Icon,
                 Description = rule.Description,
+                CustomPageRoute = rule.CustomPageRoute,
                 NonConformityCount = count,
             });
         }
@@ -55,6 +56,7 @@ public class AuditsController(
                 Name = rule.Name,
                 Icon = rule.Icon,
                 Description = rule.Description,
+                CustomPageRoute = rule.CustomPageRoute,
                 NonConformityCount = count,
             },
         };

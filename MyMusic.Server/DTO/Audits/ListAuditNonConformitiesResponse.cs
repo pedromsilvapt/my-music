@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MyMusic.Common.Entities;
 using MyMusic.Server.DTO.Songs;
 
@@ -11,8 +12,9 @@ public record ListAuditNonConformitiesResponse
 public record ListAuditNonConformityItem
 {
     public required long Id { get; set; }
-    public required long SongId { get; set; }
-    public required ListSongItem Song { get; set; }
+    public long? SongId { get; set; }
+    public ListSongItem? Song { get; set; }
+    public JsonElement? Data { get; set; }
     public required bool HasWaiver { get; set; }
     public string? WaiverReason { get; set; }
     public required DateTime CreatedAt { get; set; }
@@ -22,7 +24,8 @@ public record ListAuditNonConformityItem
         {
             Id = nc.Id,
             SongId = nc.SongId,
-            Song = ListSongItem.FromEntity(nc.Song),
+            Song = nc.Song != null ? ListSongItem.FromEntity(nc.Song) : null,
+            Data = nc.Data,
             HasWaiver = nc.HasWaiver,
             WaiverReason = nc.WaiverReason,
             CreatedAt = nc.CreatedAt,

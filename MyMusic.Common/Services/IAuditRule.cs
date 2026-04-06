@@ -1,3 +1,6 @@
+using System.Runtime.CompilerServices;
+using MyMusic.Common.Entities;
+
 namespace MyMusic.Common.Services;
 
 public interface IAuditRule
@@ -6,6 +9,7 @@ public interface IAuditRule
     string Name { get; }
     string Icon { get; }
     string Description { get; }
-    Task<int> Scan(MusicDbContext db, long ownerId, CancellationToken cancellationToken = default);
+    string? CustomPageRoute { get; }
+    IAsyncEnumerable<AuditNonConformity> Scan(MusicDbContext db, long ownerId, CancellationToken cancellationToken = default);
     Task Patch(MusicDbContext db, long songId, CancellationToken cancellationToken = default);
 }

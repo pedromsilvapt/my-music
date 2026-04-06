@@ -41,6 +41,18 @@ public class AuditRulesSpecs : IDisposable
         _keepAliveConnection.Dispose();
     }
 
+    private async Task<int> ScanAndSaveAsync(IAuditRule rule, long ownerId)
+    {
+        var count = 0;
+        await foreach (var nc in rule.Scan(_db, ownerId))
+        {
+            _db.AuditNonConformities.Add(nc);
+            await _db.SaveChangesAsync();
+            count++;
+        }
+        return count;
+    }
+
     private User CreateUser(string name, string username)
     {
         var user = new User
@@ -158,7 +170,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -179,7 +191,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -196,12 +208,12 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingCoverAuditRule();
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
         var firstCount = await _db.AuditNonConformities.CountAsync();
         firstCount.ShouldBe(1);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync()).ShouldBe(1);
     }
@@ -218,7 +230,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(3);
@@ -238,7 +250,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingYearAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -257,7 +269,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingYearAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -273,10 +285,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingYearAuditRule();
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 2)).ShouldBe(1);
     }
@@ -295,7 +307,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingGenresAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -315,7 +327,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingGenresAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -331,10 +343,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingGenresAuditRule();
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 3)).ShouldBe(1);
     }
@@ -353,7 +365,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingLyricsAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -372,7 +384,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingLyricsAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -388,7 +400,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingLyricsAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -404,10 +416,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingLyricsAuditRule();
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 4)).ShouldBe(1);
     }
@@ -428,7 +440,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -449,7 +461,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -467,7 +479,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -484,7 +496,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -502,10 +514,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 5)).ShouldBe(1);
     }
@@ -526,7 +538,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -547,7 +559,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -565,7 +577,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -582,7 +594,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -600,10 +612,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 6)).ShouldBe(1);
     }
@@ -634,7 +646,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonJpegCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -654,7 +666,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonJpegCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -670,7 +682,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonJpegCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -687,10 +699,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonJpegCoverAuditRule();
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 7)).ShouldBe(1);
     }
@@ -710,7 +722,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonSquareCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -730,7 +742,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonSquareCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -746,7 +758,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonSquareCoverAuditRule();
 
         // Act
-        var count = await rule.Scan(_db, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -763,10 +775,10 @@ public class AuditRulesSpecs : IDisposable
         var rule = new NonSquareCoverAuditRule();
 
         // First scan
-        await rule.Scan(_db, _owner.Id);
+        await ScanAndSaveAsync(rule, _owner.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await rule.Scan(_db, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 8)).ShouldBe(1);
     }
@@ -853,10 +865,10 @@ public class AuditRulesSpecs : IDisposable
         var missingLyricsRule = new MissingLyricsAuditRule();
 
         // Act
-        var coverCount = await missingCoverRule.Scan(_db, _owner.Id);
-        var yearCount = await missingYearRule.Scan(_db, _owner.Id);
-        var genresCount = await missingGenresRule.Scan(_db, _owner.Id);
-        var lyricsCount = await missingLyricsRule.Scan(_db, _owner.Id);
+        var coverCount = await ScanAndSaveAsync(missingCoverRule, _owner.Id);
+        var yearCount = await ScanAndSaveAsync(missingYearRule, _owner.Id);
+        var genresCount = await ScanAndSaveAsync(missingGenresRule, _owner.Id);
+        var lyricsCount = await ScanAndSaveAsync(missingLyricsRule, _owner.Id);
 
         // Assert
         coverCount.ShouldBe(1);
@@ -940,8 +952,8 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var owner1Count = await rule.Scan(_db, _owner.Id);
-        var owner2Count = await rule.Scan(_db, owner2.Id);
+        var owner1Count = await ScanAndSaveAsync(rule, _owner.Id);
+        var owner2Count = await ScanAndSaveAsync(rule, owner2.Id);
 
         // Assert
         owner1Count.ShouldBe(1);

@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 
 namespace MyMusic.Common.Services;
 
-public class AuditService(IEnumerable<IAuditRule> rules) : IAuditService
+public class AuditService(
+    IEnumerable<IAuditRule> rules,
+    ILogger<AuditService> logger) : IAuditService
 {
     private readonly Dictionary<long, IAuditRule> _rules = rules.ToDictionary(r => r.Id);
 
@@ -16,7 +19,25 @@ public class AuditService(IEnumerable<IAuditRule> rules) : IAuditService
         CancellationToken cancellationToken = default)
     {
         var rule = GetRule(ruleId) ?? throw new Exception($"Audit rule not found with id {ruleId}");
-        return await rule.Scan(db, ownerId, cancellationToken);
+        
+        var count = 0;
+        
+        await foreach (var nc in rule.Scan(db, ownerId, cancellationToken))
+        {
+            if (rule.CustomPageRoute == null && nc.SongId == null)
+            {
+                logger.LogError(
+                    "Rule {RuleId} '{RuleName}' produced non-conformity without SongId but has no CustomPageRoute defined",
+                    rule.Id, rule.Name);
+                continue;
+            }
+            
+            db.AuditNonConformities.Add(nc);
+            await db.SaveChangesAsync(cancellationToken);
+            count++;
+        }
+
+        return count;
     }
 
     public async Task<IReadOnlyList<AuditNonConformity>> GetNonConformities(
