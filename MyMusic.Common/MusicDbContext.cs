@@ -57,6 +57,10 @@ public class MusicDbContext : DbContext
 
     public DbSet<MetadataFetchTask> MetadataFetchTasks { get; set; } = null!;
 
+    public DbSet<SongAcousticFingerprint> SongAcousticFingerprints { get; set; } = null!;
+
+    public DbSet<ExcludedDuplicatePair> ExcludedDuplicatePairs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -112,6 +116,15 @@ public class MusicDbContext : DbContext
             entity.HasIndex(e => new { e.PlaylistId, e.Order });
         });
 
+        // Playlist entity configuration for CurrentSong relationship
+        modelBuilder.Entity<Playlist>(entity =>
+        {
+            entity.HasOne(e => e.CurrentSong)
+                .WithMany()
+                .HasForeignKey(e => e.CurrentSongId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // User entity configuration for CurrentQueue relationship
         // User has one optional CurrentQueue (Playlist), but Playlist can be owned by many users
         // This is a one-way navigation - User.CurrentQueue points to a Playlist
@@ -120,6 +133,36 @@ public class MusicDbContext : DbContext
             entity.HasOne(e => e.CurrentQueue)
                 .WithOne()
                 .HasForeignKey<User>(e => e.CurrentQueueId);
+        });
+
+        // SongAcousticFingerprint entity configuration
+        modelBuilder.Entity<SongAcousticFingerprint>(entity =>
+        {
+            entity.HasKey(e => new { e.Checksum, e.ChecksumAlgorithm, e.OwnerId });
+            
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId);
+
+            entity.HasIndex(e => e.OwnerId);
+        });
+
+        // ExcludedDuplicatePair entity configuration
+        modelBuilder.Entity<ExcludedDuplicatePair>(entity =>
+        {
+            entity.HasIndex(e => new { e.SongAId, e.SongBId, e.OwnerId }).IsUnique();
+
+            entity.HasOne(e => e.SongA)
+                .WithMany()
+                .HasForeignKey(e => e.SongAId);
+
+            entity.HasOne(e => e.SongB)
+                .WithMany()
+                .HasForeignKey(e => e.SongBId);
+
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId);
         });
     }
 }

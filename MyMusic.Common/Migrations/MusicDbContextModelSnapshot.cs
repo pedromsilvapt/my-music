@@ -506,6 +506,51 @@ namespace MyMusic.Common.Migrations
                     b.ToTable("device_sync_session_records", (string)null);
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.ExcludedDuplicatePair", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long>("OwnerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("Reason")
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<long>("SongAId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_a_id");
+
+                    b.Property<long>("SongBId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_b_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_excluded_duplicate_pairs");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_excluded_duplicate_pairs_owner_id");
+
+                    b.HasIndex("SongBId")
+                        .HasDatabaseName("ix_excluded_duplicate_pairs_song_b_id");
+
+                    b.HasIndex("SongAId", "SongBId", "OwnerId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_excluded_duplicate_pairs_song_a_id_song_b_id_owner_id");
+
+                    b.ToTable("excluded_duplicate_pairs", (string)null);
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.Genre", b =>
                 {
                     b.Property<long>("Id")
@@ -811,6 +856,10 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("album_id");
 
+                    b.Property<int?>("Bitrate")
+                        .HasColumnType("integer")
+                        .HasColumnName("bitrate");
+
                     b.Property<string>("Checksum")
                         .IsRequired()
                         .HasMaxLength(88)
@@ -909,6 +958,54 @@ namespace MyMusic.Common.Migrations
                     b.ToTable("songs", (string)null);
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.SongAcousticFingerprint", b =>
+                {
+                    b.Property<string>("Checksum")
+                        .HasColumnType("text")
+                        .HasColumnName("checksum");
+
+                    b.Property<string>("ChecksumAlgorithm")
+                        .HasColumnType("text")
+                        .HasColumnName("checksum_algorithm");
+
+                    b.Property<long>("OwnerId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("owner_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<double>("Duration")
+                        .HasColumnType("double precision")
+                        .HasColumnName("duration");
+
+                    b.Property<byte[]>("Fingerprint")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("fingerprint");
+
+                    b.Property<int>("FingerprintAlgorithm")
+                        .HasColumnType("integer")
+                        .HasColumnName("fingerprint_algorithm");
+
+                    b.Property<double>("FingerprintLength")
+                        .HasColumnType("double precision")
+                        .HasColumnName("fingerprint_length");
+
+                    b.Property<DateTime>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.HasKey("Checksum", "ChecksumAlgorithm", "OwnerId")
+                        .HasName("pk_song_acoustic_fingerprints");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_song_acoustic_fingerprints_owner_id");
+
+                    b.ToTable("song_acoustic_fingerprints", (string)null);
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.SongArtist", b =>
                 {
                     b.Property<long>("Id")
@@ -966,7 +1063,7 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_synced_modified_at");
 
-                    b.Property<long>("SongId")
+                    b.Property<long?>("SongId")
                         .HasColumnType("bigint")
                         .HasColumnName("song_id");
 
@@ -1391,6 +1488,36 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Song");
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.ExcludedDuplicatePair", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_excluded_duplicate_pairs_users_owner_id");
+
+                    b.HasOne("MyMusic.Common.Entities.Song", "SongA")
+                        .WithMany()
+                        .HasForeignKey("SongAId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_excluded_duplicate_pairs_songs_song_a_id");
+
+                    b.HasOne("MyMusic.Common.Entities.Song", "SongB")
+                        .WithMany()
+                        .HasForeignKey("SongBId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_excluded_duplicate_pairs_songs_song_b_id");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("SongA");
+
+                    b.Navigation("SongB");
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.Genre", b =>
                 {
                     b.HasOne("MyMusic.Common.Entities.User", "Owner")
@@ -1448,6 +1575,7 @@ namespace MyMusic.Common.Migrations
                     b.HasOne("MyMusic.Common.Entities.Song", "CurrentSong")
                         .WithMany()
                         .HasForeignKey("CurrentSongId")
+                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_playlists_songs_current_song_id");
 
                     b.HasOne("MyMusic.Common.Entities.User", "Owner")
@@ -1539,6 +1667,18 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.SongAcousticFingerprint", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_song_acoustic_fingerprints_users_owner_id");
+
+                    b.Navigation("Owner");
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.SongArtist", b =>
                 {
                     b.HasOne("MyMusic.Common.Entities.Artist", "Artist")
@@ -1572,8 +1712,6 @@ namespace MyMusic.Common.Migrations
                     b.HasOne("MyMusic.Common.Entities.Song", "Song")
                         .WithMany("Devices")
                         .HasForeignKey("SongId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
                         .HasConstraintName("fk_song_devices_songs_song_id");
 
                     b.Navigation("Device");

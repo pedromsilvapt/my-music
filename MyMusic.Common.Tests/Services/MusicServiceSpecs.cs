@@ -75,6 +75,26 @@ public class MusicServiceSpecs
             .ShouldBe(["Genre A", "Genre B"], ignoreOrder: true);
     }
 
+    [Fact]
+    public async Task ImportMusic_ExtractsAndStoresBitrate()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "Album", ["Artist"], ["Genre"]);
+
+        // Act
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        // Assert
+        var songs = LoadSongs(scenario.DbContext);
+        songs.Count.ShouldBe(1);
+        songs[0].Bitrate.ShouldNotBeNull();
+        songs[0].Bitrate!.Value.ShouldBeGreaterThan(0);
+    }
+
     private static List<Song> LoadSongs(MusicDbContext context)
     {
         return context.Songs

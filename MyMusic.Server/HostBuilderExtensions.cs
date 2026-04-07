@@ -72,6 +72,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();
         builder.Services.AddScoped<IThumbnailProxyService, ThumbnailProxyService>();
         builder.Services.AddScoped<IImageComparisonService, ImageComparisonService>();
+        builder.Services.AddScoped<ISoundalikeMergeService, SoundalikeMergeService>();
 
         builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
         builder.Services.Configure<ThumbnailCacheConfig>(builder.Configuration.GetSection("ThumbnailCache"));

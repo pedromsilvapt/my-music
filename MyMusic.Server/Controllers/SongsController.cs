@@ -345,10 +345,10 @@ public class SongsController(
                 device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
             var existingSongDevices = await context.SongDevices
-                .Where(sd => request.SongIds.Contains(sd.SongId) && sd.DeviceId == update.DeviceId)
+                .Where(sd => sd.SongId != null && request.SongIds.Contains(sd.SongId.Value) && sd.DeviceId == update.DeviceId)
                 .ToListAsync(cancellationToken);
 
-            var existingDict = existingSongDevices.ToDictionary(sd => sd.SongId);
+            var existingDict = existingSongDevices.Where(sd => sd.SongId.HasValue).ToDictionary(sd => sd.SongId!.Value);
 
             var allExistingPaths = await context.SongDevices
                 .Where(sd => sd.DeviceId == update.DeviceId)

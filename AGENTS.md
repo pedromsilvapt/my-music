@@ -359,6 +359,7 @@ public async Task ImportMusic_EmptyDatabase()
 - Use **Include(...).ThenInclude(...)** for related entities
 - Use **AsSplitQuery()** for complex queries with includes
 - Follow existing migration pattern in `MyMusic.Common/Migrations/`
+- **SongDevice Records:** When deleting songs that have been synced to devices, always mark SongDevice records for removal (set SongId = null, SyncAction = Remove) instead of deleting them. This allows the sync system to track and remove files from devices during the next sync operation. See AuditsController.ResolveSoundalikes for example.
 
 ### Dependencies
 

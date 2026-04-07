@@ -5,6 +5,10 @@ import {IconCheck, IconEdit, IconTrash, IconX} from "@tabler/icons-react";
 import {useMemo} from "react";
 import type {ListAuditNonConformityItem, ListSongsArtist} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection";
+
+export type ListAuditNonConformityItemWithSong = ListAuditNonConformityItem & {
+    song: NonNullable<ListAuditNonConformityItem['song']>;
+};
 import SongAlbum from "../common/fields/song-album";
 import SongArtists from "../common/fields/song-artists";
 import SongArtwork from "../common/fields/song-artwork";
@@ -13,7 +17,7 @@ import SongTitle from "../common/fields/song-title";
 export function useAuditNonConformitiesSchema(
     onSetWaiver: (ids: number[], hasWaiver: boolean, reason?: string | null) => void,
     onDelete: (ids: number[]) => void
-): CollectionSchema<ListAuditNonConformityItem> {
+): CollectionSchema<ListAuditNonConformityItemWithSong> {
     return useMemo(() => ({
         key: row => row.id,
         searchVector: nc => `${nc.song.title} - ${nc.song.artists.map((a: ListSongsArtist) => a.name).join(', ')} - ${nc.song.album.name}`,
@@ -147,5 +151,5 @@ export function useAuditNonConformitiesSchema(
                 )}
             </Group>
         ),
-    }) as CollectionSchema<ListAuditNonConformityItem>, [onSetWaiver, onDelete]);
+    }) as CollectionSchema<ListAuditNonConformityItemWithSong>, [onSetWaiver, onDelete]);
 }

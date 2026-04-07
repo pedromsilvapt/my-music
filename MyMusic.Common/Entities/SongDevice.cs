@@ -8,8 +8,8 @@ public class SongDevice
 {
     public long Id { get; set; }
 
-    public Song Song { get; set; } = null!;
-    public long SongId { get; set; }
+    public Song? Song { get; set; }
+    public long? SongId { get; set; }
 
     public Device Device { get; set; } = null!;
     public long DeviceId { get; set; }

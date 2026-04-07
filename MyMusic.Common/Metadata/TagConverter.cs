@@ -47,6 +47,7 @@ public static class TagConverter
             Year = tag.Year > 0 ? (int)tag.Year : null,
             Lyrics = tag.Lyrics,
             Duration = properties.Duration,
+            Bitrate = properties.AudioBitrate > 0 ? properties.AudioBitrate : null,
             Rating = rating,
             Track = tag.Track > 0 ? (int)tag.Track : null
         };

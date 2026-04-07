@@ -39,7 +39,7 @@ docker:
     ARG IMAGE='silvas/my-music'
     ARG TAG='dev'
 
-    RUN apt-get update && apt-get install -y libgdiplus curl && \
+    RUN apt-get update && apt-get install -y libgdiplus curl libchromaprint-tools && \
         rm -rf /var/lib/apt/lists/*
 
     COPY +build/publish ./bin

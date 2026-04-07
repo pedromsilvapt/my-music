@@ -15,7 +15,7 @@ public abstract class AuditRuleBase : IAuditRule
     public abstract string Name { get; }
     public abstract string Icon { get; }
     public abstract string Description { get; }
-    public virtual string? CustomPageRoute => null;
+    public virtual string? CustomPage => null;
 
     /// <summary>
     /// Returns the predicate that identifies songs violating this audit rule.

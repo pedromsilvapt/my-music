@@ -13,7 +13,7 @@ public record SyncPotentialConflictItem
     public required DateTime LocalModifiedAt { get; init; }
     public required DateTime ServerModifiedAt { get; init; }
     public required DateTime? LastSyncedAt { get; init; }
-    public required long SongId { get; init; }
+    public required long? SongId { get; init; }
     public required string ServerChecksum { get; init; }
     public required string ServerChecksumAlgorithm { get; init; }
 }

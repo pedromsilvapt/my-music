@@ -11,8 +11,11 @@ export interface SyncPotentialConflictItem {
 	serverModifiedAt: string;
 	/** @nullable */
 	lastSyncedAt: string | null;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songId: number;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	songId: number | null;
 	serverChecksum: string;
 	serverChecksumAlgorithm: string;
 }

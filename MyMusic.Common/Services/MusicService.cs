@@ -592,6 +592,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     song.Rating = metadata.Rating;
                     song.Track = metadata.Track;
                     song.Duration = duration;
+                    song.Bitrate = metadata.Bitrate;
                     // Checksum
                     song.Checksum = checksum;
                     song.ChecksumAlgorithm = checksumAlgorithmName;

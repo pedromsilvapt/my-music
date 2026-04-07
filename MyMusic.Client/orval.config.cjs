@@ -81,6 +81,14 @@ module.exports = {
                             onMutations: ['createWishlist', 'updateWishlist', 'deleteWishlist'],
                             invalidates: ['listWishlist'],
                         },
+                        {
+                            onMutations: ['resolveSoundalikes'],
+                            invalidates: ['getSoundalikeDuplicates', 'listAuditRules'],
+                        },
+                        {
+                            onMutations: ['updateSoundalikeSelection'],
+                            invalidates: ['getSoundalikeDuplicates'],
+                        },
                     ],
                 }
             }

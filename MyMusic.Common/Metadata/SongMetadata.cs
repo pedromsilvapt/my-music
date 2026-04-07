@@ -22,6 +22,8 @@ public class SongMetadata
 
     public TimeSpan Duration { get; set; } = TimeSpan.Zero;
 
+    public int? Bitrate { get; set; } = null;
+
     public bool Explicit { get; set; } = false;
 
     public string? Lyrics { get; set; } = null;
@@ -134,7 +136,8 @@ public class SongMetadata
             Genres = genresMetadata,
             Year = Year,
             Explicit = Explicit,
-            Lyrics = Lyrics
+            Lyrics = Lyrics,
+            Bitrate = Bitrate
         };
     }
 }

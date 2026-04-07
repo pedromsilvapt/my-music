@@ -3,16 +3,17 @@ import {IconRefresh} from '@tabler/icons-react';
 import {useParams} from "@tanstack/react-router";
 import {useCallback, useEffect, useState} from "react";
 import {
-    useBatchDeleteAuditNonConformities,
-    useBatchSetAuditWaiver,
     useGetAuditRule,
     useListAuditNonConformities,
     useScanAuditRule
 } from "../../client/audits.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import Collection from "../common/collection/collection.tsx";
-import GrantWaiverModal from "./grant-waiver-modal.tsx";
-import {useAuditNonConformitiesSchema} from "./useAuditNonConformitiesSchema.tsx";
+import AuditDefaultComponent from "./audit-default-component.tsx";
+import SoundalikePage from "./soundalike-page.tsx";
+
+const AUDIT_CUSTOM_COMPONENTS: Record<string, React.ComponentType<{onToolbarChange: (toolbar: React.ReactNode) => void}>> = {
+    'soundalike': SoundalikePage,
+};
 
 export default function AuditDetailPage() {
     const {auditId} = useParams({from: '/audits/$auditId'});
@@ -30,15 +31,12 @@ export default function AuditDetailPage() {
     const refetchNonConformities = nonConformitiesQuery.refetch;
 
     const scanMutation = useScanAuditRule();
-    const batchSetWaiverMutation = useBatchSetAuditWaiver();
-    const batchDeleteMutation = useBatchDeleteAuditNonConformities();
 
     const [scanning, setScanning] = useState(false);
-    const [waiverModalOpen, setWaiverModalOpen] = useState(false);
-    const [pendingWaiverIds, setPendingWaiverIds] = useState<number[]>([]);
+    const [customToolbar, setCustomToolbar] = useState<React.ReactNode>(null);
 
     const rule = ruleResponse?.data?.rule;
-    const nonConformities = nonConformitiesResponse?.data?.nonConformities ?? [];
+    const allNonConformities = nonConformitiesResponse?.data?.nonConformities ?? [];
 
     useEffect(() => {
         void refetchNonConformities();
@@ -54,43 +52,8 @@ export default function AuditDetailPage() {
         }
     }, [id, scanMutation, refetchNonConformities]);
 
-    const handleSetWaiver = useCallback(async (ids: number[], hasWaiver: boolean, _reason?: string | null) => {
-        if (hasWaiver) {
-            setPendingWaiverIds(ids);
-            setWaiverModalOpen(true);
-        } else {
-            await batchSetWaiverMutation.mutateAsync({
-                data: {
-                    ids,
-                    hasWaiver: false,
-                    waiverReason: null
-                }
-            });
-            await refetchNonConformities();
-        }
-    }, [batchSetWaiverMutation, refetchNonConformities]);
-
-    const handleWaiverConfirm = useCallback(async (reason: string | null) => {
-        await batchSetWaiverMutation.mutateAsync({
-            data: {
-                ids: pendingWaiverIds,
-                hasWaiver: true,
-                waiverReason: reason
-            }
-        });
-        setWaiverModalOpen(false);
-        setPendingWaiverIds([]);
-        await refetchNonConformities();
-    }, [batchSetWaiverMutation, pendingWaiverIds, refetchNonConformities]);
-
-    const handleDelete = useCallback(async (ids: number[]) => {
-        await batchDeleteMutation.mutateAsync({
-            data: {ids}
-        });
-        await refetchNonConformities();
-    }, [batchDeleteMutation, refetchNonConformities]);
-
-    const schema = useAuditNonConformitiesSchema(handleSetWaiver, handleDelete);
+    const hasCustomPage = !!rule?.customPage;
+    const CustomComponent = hasCustomPage ? AUDIT_CUSTOM_COMPONENTS[rule!.customPage!] : null;
 
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
@@ -101,37 +64,27 @@ export default function AuditDetailPage() {
                         {rule?.nonConformityCount ?? 0} issues
                     </Badge>
                 </Group>
-                <Button
-                    leftSection={<IconRefresh size={16}/>}
-                    onClick={handleScan}
-                    loading={scanning}
-                >
-                    Run Scan
-                </Button>
+                <Group>
+                    {customToolbar}
+                    <Button
+                        leftSection={<IconRefresh size={16}/>}
+                        onClick={handleScan}
+                        loading={scanning}
+                    >
+                        Run Scan
+                    </Button>
+                </Group>
             </Group>
 
             <Text c="dimmed" mb="md">{rule?.description}</Text>
 
             <div style={{flex: 1, minHeight: 0}}>
-                <Collection
-                    stateKey="audit-detail"
-                    items={nonConformities}
-                    schema={schema}
-                    filterMode="client"
-                    searchPlaceholder="Search non-conformities..."
-                />
+                {CustomComponent ? (
+                    <CustomComponent onToolbarChange={setCustomToolbar} />
+                ) : (
+                    <AuditDefaultComponent nonConformities={allNonConformities} refetchNonConformities={refetchNonConformities} />
+                )}
             </div>
-
-            <GrantWaiverModal
-                opened={waiverModalOpen}
-                onClose={() => {
-                    setWaiverModalOpen(false);
-                    setPendingWaiverIds([]);
-                }}
-                onConfirm={handleWaiverConfirm}
-                count={pendingWaiverIds.length}
-                loading={batchSetWaiverMutation.isPending}
-            />
         </div>
     );
 }

@@ -13,6 +13,7 @@ import type {
 	DefinedUseQueryResult,
 	InvalidateOptions,
 	MutationFunction,
+	MutationFunctionContext,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
@@ -22,19 +23,27 @@ import type {
 	UseQueryOptions,
 	UseQueryResult,
 } from "@tanstack/react-query";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RequestHandlerOptions } from "msw";
 
 import { HttpResponse, http } from "msw";
 import type {
 	BatchDeleteNonConformitiesRequest,
 	BatchSetWaiverRequest,
+	ExcludeDuplicatePairRequest,
 	GetAuditRuleResponse,
+	GetSoundalikeDuplicatesResponse,
 	ListAuditNonConformitiesResponse,
 	ListAuditRulesResponse,
+	ListExcludedPairsResponse,
+	ListSongItem,
+	ResolveSoundalikesRequest,
+	ResolveSoundalikesResponse,
 	ScanAuditRuleResponse,
 	SetWaiverRequest,
+	UpdateSoundalikeSelectionRequest,
 } from "../model";
+import { SecondaryAction } from "../model";
 
 export type listAuditRulesResponse200TextPlain = {
 	data: ListAuditRulesResponse;
@@ -1146,6 +1155,857 @@ export const useBatchDeleteAuditNonConformities = <
 		queryClient,
 	);
 };
+export type getSoundalikeDuplicatesResponse200TextPlain = {
+	data: GetSoundalikeDuplicatesResponse;
+	status: 200;
+};
+
+export type getSoundalikeDuplicatesResponse200ApplicationJson = {
+	data: GetSoundalikeDuplicatesResponse;
+	status: 200;
+};
+
+export type getSoundalikeDuplicatesResponse200TextJson = {
+	data: GetSoundalikeDuplicatesResponse;
+	status: 200;
+};
+
+export type getSoundalikeDuplicatesResponseSuccess = (
+	| getSoundalikeDuplicatesResponse200TextPlain
+	| getSoundalikeDuplicatesResponse200ApplicationJson
+	| getSoundalikeDuplicatesResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type getSoundalikeDuplicatesResponse =
+	getSoundalikeDuplicatesResponseSuccess;
+
+export const getGetSoundalikeDuplicatesUrl = () => {
+	return `/api/audits/soundalike`;
+};
+
+export const getSoundalikeDuplicates = async (
+	options?: RequestInit,
+): Promise<getSoundalikeDuplicatesResponse> => {
+	const res = await fetch(getGetSoundalikeDuplicatesUrl(), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: getSoundalikeDuplicatesResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as getSoundalikeDuplicatesResponse;
+};
+
+export const getGetSoundalikeDuplicatesQueryKey = () => {
+	return ["api", "audits", "soundalike"] as const;
+};
+
+export const getGetSoundalikeDuplicatesQueryOptions = <
+	TData = Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+	TError = unknown,
+>(options?: {
+	query?: Partial<
+		UseQueryOptions<
+			Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+			TError,
+			TData
+		>
+	>;
+	fetch?: RequestInit;
+}) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey =
+		queryOptions?.queryKey ?? getGetSoundalikeDuplicatesQueryKey();
+
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof getSoundalikeDuplicates>>
+	> = ({ signal }) => getSoundalikeDuplicates({ signal, ...fetchOptions });
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+		Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSoundalikeDuplicatesQueryResult = NonNullable<
+	Awaited<ReturnType<typeof getSoundalikeDuplicates>>
+>;
+export type GetSoundalikeDuplicatesQueryError = unknown;
+
+export function useGetSoundalikeDuplicates<
+	TData = Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+	TError = unknown,
+>(
+	options: {
+		query: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+					TError,
+					Awaited<ReturnType<typeof getSoundalikeDuplicates>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSoundalikeDuplicates<
+	TData = Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+					TError,
+					Awaited<ReturnType<typeof getSoundalikeDuplicates>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetSoundalikeDuplicates<
+	TData = Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetSoundalikeDuplicates<
+	TData = Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getSoundalikeDuplicates>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getGetSoundalikeDuplicatesQueryOptions(options);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateGetSoundalikeDuplicates = async (
+	queryClient: QueryClient,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getGetSoundalikeDuplicatesQueryKey() },
+		options,
+	);
+
+	return queryClient;
+};
+
+export type updateSoundalikeSelectionResponse200 = {
+	data: void;
+	status: 200;
+};
+
+export type updateSoundalikeSelectionResponseSuccess =
+	updateSoundalikeSelectionResponse200 & {
+		headers: Headers;
+	};
+
+export type updateSoundalikeSelectionResponse =
+	updateSoundalikeSelectionResponseSuccess;
+
+export const getUpdateSoundalikeSelectionUrl = (nonConformityId: number) => {
+	return `/api/audits/soundalike/${nonConformityId}/selection`;
+};
+
+export const updateSoundalikeSelection = async (
+	nonConformityId: number,
+	updateSoundalikeSelectionRequest: UpdateSoundalikeSelectionRequest,
+	options?: RequestInit,
+): Promise<updateSoundalikeSelectionResponse> => {
+	const res = await fetch(getUpdateSoundalikeSelectionUrl(nonConformityId), {
+		...options,
+		method: "PATCH",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(updateSoundalikeSelectionRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: updateSoundalikeSelectionResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as updateSoundalikeSelectionResponse;
+};
+
+export const getUpdateSoundalikeSelectionMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+		TError,
+		{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+	TError,
+	{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
+	TContext
+> => {
+	const mutationKey = ["updateSoundalikeSelection"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+		{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest }
+	> = (props) => {
+		const { nonConformityId, data } = props ?? {};
+
+		return updateSoundalikeSelection(nonConformityId, data, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSoundalikeSelectionMutationResult = NonNullable<
+	Awaited<ReturnType<typeof updateSoundalikeSelection>>
+>;
+export type UpdateSoundalikeSelectionMutationBody =
+	UpdateSoundalikeSelectionRequest;
+export type UpdateSoundalikeSelectionMutationError = unknown;
+
+export const useUpdateSoundalikeSelection = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+			TError,
+			{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+	TError,
+	{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
+	TContext
+> => {
+	return useMutation(
+		getUpdateSoundalikeSelectionMutationOptions(options),
+		queryClient,
+	);
+};
+export type excludeDuplicatePairResponse200 = {
+	data: void;
+	status: 200;
+};
+
+export type excludeDuplicatePairResponseSuccess =
+	excludeDuplicatePairResponse200 & {
+		headers: Headers;
+	};
+
+export type excludeDuplicatePairResponse = excludeDuplicatePairResponseSuccess;
+
+export const getExcludeDuplicatePairUrl = () => {
+	return `/api/audits/soundalike/exclude`;
+};
+
+export const excludeDuplicatePair = async (
+	excludeDuplicatePairRequest: ExcludeDuplicatePairRequest,
+	options?: RequestInit,
+): Promise<excludeDuplicatePairResponse> => {
+	const res = await fetch(getExcludeDuplicatePairUrl(), {
+		...options,
+		method: "POST",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(excludeDuplicatePairRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: excludeDuplicatePairResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as excludeDuplicatePairResponse;
+};
+
+export const getExcludeDuplicatePairMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof excludeDuplicatePair>>,
+		TError,
+		{ data: ExcludeDuplicatePairRequest },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof excludeDuplicatePair>>,
+	TError,
+	{ data: ExcludeDuplicatePairRequest },
+	TContext
+> => {
+	const mutationKey = ["excludeDuplicatePair"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof excludeDuplicatePair>>,
+		{ data: ExcludeDuplicatePairRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return excludeDuplicatePair(data, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type ExcludeDuplicatePairMutationResult = NonNullable<
+	Awaited<ReturnType<typeof excludeDuplicatePair>>
+>;
+export type ExcludeDuplicatePairMutationBody = ExcludeDuplicatePairRequest;
+export type ExcludeDuplicatePairMutationError = unknown;
+
+export const useExcludeDuplicatePair = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof excludeDuplicatePair>>,
+			TError,
+			{ data: ExcludeDuplicatePairRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof excludeDuplicatePair>>,
+	TError,
+	{ data: ExcludeDuplicatePairRequest },
+	TContext
+> => {
+	return useMutation(
+		getExcludeDuplicatePairMutationOptions(options),
+		queryClient,
+	);
+};
+export type listExcludedPairsResponse200TextPlain = {
+	data: ListExcludedPairsResponse;
+	status: 200;
+};
+
+export type listExcludedPairsResponse200ApplicationJson = {
+	data: ListExcludedPairsResponse;
+	status: 200;
+};
+
+export type listExcludedPairsResponse200TextJson = {
+	data: ListExcludedPairsResponse;
+	status: 200;
+};
+
+export type listExcludedPairsResponseSuccess = (
+	| listExcludedPairsResponse200TextPlain
+	| listExcludedPairsResponse200ApplicationJson
+	| listExcludedPairsResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type listExcludedPairsResponse = listExcludedPairsResponseSuccess;
+
+export const getListExcludedPairsUrl = () => {
+	return `/api/audits/soundalike/excluded`;
+};
+
+export const listExcludedPairs = async (
+	options?: RequestInit,
+): Promise<listExcludedPairsResponse> => {
+	const res = await fetch(getListExcludedPairsUrl(), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: listExcludedPairsResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as listExcludedPairsResponse;
+};
+
+export const getListExcludedPairsQueryKey = () => {
+	return ["api", "audits", "soundalike", "excluded"] as const;
+};
+
+export const getListExcludedPairsQueryOptions = <
+	TData = Awaited<ReturnType<typeof listExcludedPairs>>,
+	TError = unknown,
+>(options?: {
+	query?: Partial<
+		UseQueryOptions<
+			Awaited<ReturnType<typeof listExcludedPairs>>,
+			TError,
+			TData
+		>
+	>;
+	fetch?: RequestInit;
+}) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey = queryOptions?.queryKey ?? getListExcludedPairsQueryKey();
+
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof listExcludedPairs>>
+	> = ({ signal }) => listExcludedPairs({ signal, ...fetchOptions });
+
+	return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+		Awaited<ReturnType<typeof listExcludedPairs>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListExcludedPairsQueryResult = NonNullable<
+	Awaited<ReturnType<typeof listExcludedPairs>>
+>;
+export type ListExcludedPairsQueryError = unknown;
+
+export function useListExcludedPairs<
+	TData = Awaited<ReturnType<typeof listExcludedPairs>>,
+	TError = unknown,
+>(
+	options: {
+		query: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof listExcludedPairs>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof listExcludedPairs>>,
+					TError,
+					Awaited<ReturnType<typeof listExcludedPairs>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListExcludedPairs<
+	TData = Awaited<ReturnType<typeof listExcludedPairs>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof listExcludedPairs>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof listExcludedPairs>>,
+					TError,
+					Awaited<ReturnType<typeof listExcludedPairs>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useListExcludedPairs<
+	TData = Awaited<ReturnType<typeof listExcludedPairs>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof listExcludedPairs>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useListExcludedPairs<
+	TData = Awaited<ReturnType<typeof listExcludedPairs>>,
+	TError = unknown,
+>(
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof listExcludedPairs>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getListExcludedPairsQueryOptions(options);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateListExcludedPairs = async (
+	queryClient: QueryClient,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getListExcludedPairsQueryKey() },
+		options,
+	);
+
+	return queryClient;
+};
+
+export type removeExcludedPairResponse200 = {
+	data: void;
+	status: 200;
+};
+
+export type removeExcludedPairResponseSuccess =
+	removeExcludedPairResponse200 & {
+		headers: Headers;
+	};
+
+export type removeExcludedPairResponse = removeExcludedPairResponseSuccess;
+
+export const getRemoveExcludedPairUrl = (id: number) => {
+	return `/api/audits/soundalike/excluded/${id}`;
+};
+
+export const removeExcludedPair = async (
+	id: number,
+	options?: RequestInit,
+): Promise<removeExcludedPairResponse> => {
+	const res = await fetch(getRemoveExcludedPairUrl(id), {
+		...options,
+		method: "DELETE",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: removeExcludedPairResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as removeExcludedPairResponse;
+};
+
+export const getRemoveExcludedPairMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof removeExcludedPair>>,
+		TError,
+		{ id: number },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof removeExcludedPair>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const mutationKey = ["removeExcludedPair"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof removeExcludedPair>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+
+		return removeExcludedPair(id, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveExcludedPairMutationResult = NonNullable<
+	Awaited<ReturnType<typeof removeExcludedPair>>
+>;
+
+export type RemoveExcludedPairMutationError = unknown;
+
+export const useRemoveExcludedPair = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof removeExcludedPair>>,
+			TError,
+			{ id: number },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof removeExcludedPair>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	return useMutation(
+		getRemoveExcludedPairMutationOptions(options),
+		queryClient,
+	);
+};
+export type resolveSoundalikesResponse200TextPlain = {
+	data: ResolveSoundalikesResponse;
+	status: 200;
+};
+
+export type resolveSoundalikesResponse200ApplicationJson = {
+	data: ResolveSoundalikesResponse;
+	status: 200;
+};
+
+export type resolveSoundalikesResponse200TextJson = {
+	data: ResolveSoundalikesResponse;
+	status: 200;
+};
+
+export type resolveSoundalikesResponseSuccess = (
+	| resolveSoundalikesResponse200TextPlain
+	| resolveSoundalikesResponse200ApplicationJson
+	| resolveSoundalikesResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type resolveSoundalikesResponse = resolveSoundalikesResponseSuccess;
+
+export const getResolveSoundalikesUrl = () => {
+	return `/api/audits/soundalike/resolve`;
+};
+
+export const resolveSoundalikes = async (
+	resolveSoundalikesRequest: ResolveSoundalikesRequest,
+	options?: RequestInit,
+): Promise<resolveSoundalikesResponse> => {
+	const res = await fetch(getResolveSoundalikesUrl(), {
+		...options,
+		method: "POST",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(resolveSoundalikesRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: resolveSoundalikesResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as resolveSoundalikesResponse;
+};
+
+export const getResolveSoundalikesMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof resolveSoundalikes>>,
+			TError,
+			{ data: ResolveSoundalikesRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof resolveSoundalikes>>,
+	TError,
+	{ data: ResolveSoundalikesRequest },
+	TContext
+> => {
+	const mutationKey = ["resolveSoundalikes"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof resolveSoundalikes>>,
+		{ data: ResolveSoundalikesRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return resolveSoundalikes(data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof resolveSoundalikes>>,
+		variables: { data: ResolveSoundalikesRequest },
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({
+				queryKey: getGetSoundalikeDuplicatesQueryKey(),
+			});
+			queryClient.invalidateQueries({ queryKey: getListAuditRulesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
+};
+
+export type ResolveSoundalikesMutationResult = NonNullable<
+	Awaited<ReturnType<typeof resolveSoundalikes>>
+>;
+export type ResolveSoundalikesMutationBody = ResolveSoundalikesRequest;
+export type ResolveSoundalikesMutationError = unknown;
+
+export const useResolveSoundalikes = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof resolveSoundalikes>>,
+			TError,
+			{ data: ResolveSoundalikesRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof resolveSoundalikes>>,
+	TError,
+	{ data: ResolveSoundalikesRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getResolveSoundalikesMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
 
 export const getListAuditRulesResponseMock = (
 	overrideResponse: Partial<Extract<ListAuditRulesResponse, object>> = {},
@@ -1160,6 +2020,13 @@ export const getListAuditRulesResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				customPage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
 				nonConformityCount: faker.number.int(),
 			})),
 			...overrideResponse,
@@ -1173,6 +2040,13 @@ export const getListAuditRulesResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				customPage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
 				nonConformityCount: faker.number.int(),
 			})),
 			...overrideResponse,
@@ -1186,6 +2060,13 @@ export const getListAuditRulesResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				customPage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
 				nonConformityCount: faker.number.int(),
 			})),
 			...overrideResponse,
@@ -1202,6 +2083,13 @@ export const getGetAuditRuleResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				customPage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
 				nonConformityCount: faker.number.int(),
 			},
 			...overrideResponse,
@@ -1212,6 +2100,13 @@ export const getGetAuditRuleResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				customPage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
 				nonConformityCount: faker.number.int(),
 			},
 			...overrideResponse,
@@ -1222,6 +2117,13 @@ export const getGetAuditRuleResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				customPage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
 				nonConformityCount: faker.number.int(),
 			},
 			...overrideResponse,
@@ -1237,6 +2139,74 @@ export const getScanAuditRuleResponseMock = (
 		{ nonConformitiesCreated: faker.number.int(), ...overrideResponse },
 	]);
 
+export const getListAuditNonConformitiesResponseListSongItemMock = (
+	overrideResponse: Partial<ListSongItem> = {},
+): ListSongItem => ({
+	...{
+		id: faker.number.int(),
+		cover: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([faker.number.int(), null]),
+			null,
+		]),
+		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		artists: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		})),
+		album: {
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		},
+		genres: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		})),
+		year: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([faker.number.int(), null]),
+			null,
+		]),
+		duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		devices: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			id: faker.number.int(),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			icon: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			color: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+		})),
+		isFavorite: faker.datatype.boolean(),
+		isExplicit: faker.datatype.boolean(),
+		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+		addedAt: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.date.past().toISOString().slice(0, 19) + "Z",
+				null,
+			]),
+			undefined,
+		]),
+	},
+	...overrideResponse,
+});
+
 export const getListAuditNonConformitiesResponseMock = (
 	overrideResponse: Partial<
 		Extract<ListAuditNonConformitiesResponse, object>
@@ -1249,69 +2219,21 @@ export const getListAuditNonConformitiesResponseMock = (
 				(_, i) => i + 1,
 			).map(() => ({
 				id: faker.number.int(),
-				songId: faker.number.int(),
-				song: {
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				song: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
 						null,
+						{ ...getListAuditNonConformitiesResponseListSongItemMock() },
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				},
+					undefined,
+				]),
+				data: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([null]),
+					undefined,
+				]),
 				hasWaiver: faker.datatype.boolean(),
 				waiverReason: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -1330,69 +2252,21 @@ export const getListAuditNonConformitiesResponseMock = (
 				(_, i) => i + 1,
 			).map(() => ({
 				id: faker.number.int(),
-				songId: faker.number.int(),
-				song: {
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				song: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
 						null,
+						{ ...getListAuditNonConformitiesResponseListSongItemMock() },
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				},
+					undefined,
+				]),
+				data: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([null]),
+					undefined,
+				]),
 				hasWaiver: faker.datatype.boolean(),
 				waiverReason: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -1411,8 +2285,294 @@ export const getListAuditNonConformitiesResponseMock = (
 				(_, i) => i + 1,
 			).map(() => ({
 				id: faker.number.int(),
-				songId: faker.number.int(),
-				song: {
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				song: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getListAuditNonConformitiesResponseListSongItemMock() },
+					]),
+					undefined,
+				]),
+				data: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([null]),
+					undefined,
+				]),
+				hasWaiver: faker.datatype.boolean(),
+				waiverReason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getGetSoundalikeDuplicatesResponseMock = (
+	overrideResponse: Partial<
+		Extract<GetSoundalikeDuplicatesResponse, object>
+	> = {},
+): GetSoundalikeDuplicatesResponse =>
+	faker.helpers.arrayElement([
+		{
+			groups: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				nonConformityId: faker.number.int(),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				matchScore: faker.number.float({ fractionDigits: 2 }),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					coverWidth: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					coverHeight: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					bitrate: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					size: faker.number.int(),
+					hasLyrics: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+				primarySongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				secondaryActions: faker.helpers.arrayElement([
+					{
+						[faker.string.alphanumeric(5)]: faker.helpers.arrayElement(
+							Object.values(SecondaryAction),
+						),
+					},
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			groups: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				nonConformityId: faker.number.int(),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				matchScore: faker.number.float({ fractionDigits: 2 }),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					coverWidth: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					coverHeight: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					bitrate: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					size: faker.number.int(),
+					hasLyrics: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+				primarySongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				secondaryActions: faker.helpers.arrayElement([
+					{
+						[faker.string.alphanumeric(5)]: faker.helpers.arrayElement(
+							Object.values(SecondaryAction),
+						),
+					},
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			groups: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				nonConformityId: faker.number.int(),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				matchScore: faker.number.float({ fractionDigits: 2 }),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					coverWidth: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					coverHeight: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					bitrate: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					size: faker.number.int(),
+					hasLyrics: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				})),
+				primarySongId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				secondaryActions: faker.helpers.arrayElement([
+					{
+						[faker.string.alphanumeric(5)]: faker.helpers.arrayElement(
+							Object.values(SecondaryAction),
+						),
+					},
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getListExcludedPairsResponseMock = (
+	overrideResponse: Partial<Extract<ListExcludedPairsResponse, object>> = {},
+): ListExcludedPairsResponse =>
+	faker.helpers.arrayElement([
+		{
+			pairs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				songA: {
 					id: faker.number.int(),
 					cover: faker.helpers.arrayElement([
 						faker.helpers.arrayElement([faker.number.int(), null]),
@@ -1474,18 +2634,370 @@ export const getListAuditNonConformitiesResponseMock = (
 						undefined,
 					]),
 				},
-				hasWaiver: faker.datatype.boolean(),
-				waiverReason: faker.helpers.arrayElement([
+				songB: {
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				},
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
 						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
 					undefined,
 				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 			})),
 			...overrideResponse,
 		},
+		{
+			pairs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				songA: {
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				},
+				songB: {
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				},
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			pairs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				songA: {
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				},
+				songB: {
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					addedAt: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.date.past().toISOString().slice(0, 19) + "Z",
+							null,
+						]),
+						undefined,
+					]),
+				},
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getResolveSoundalikesResponseMock = (
+	overrideResponse: Partial<Extract<ResolveSoundalikesResponse, object>> = {},
+): ResolveSoundalikesResponse =>
+	faker.helpers.arrayElement([
+		{ resolvedCount: faker.number.int(), ...overrideResponse },
+		{ resolvedCount: faker.number.int(), ...overrideResponse },
+		{ resolvedCount: faker.number.int(), ...overrideResponse },
 	]);
 
 export const getListAuditRulesMockHandler = (
@@ -1669,6 +3181,143 @@ export const getBatchDeleteAuditNonConformitiesMockHandler = (
 		options,
 	);
 };
+
+export const getGetSoundalikeDuplicatesMockHandler = (
+	overrideResponse?:
+		| GetSoundalikeDuplicatesResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) =>
+				| Promise<GetSoundalikeDuplicatesResponse>
+				| GetSoundalikeDuplicatesResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/audits/soundalike",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getGetSoundalikeDuplicatesResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getUpdateSoundalikeSelectionMockHandler = (
+	overrideResponse?:
+		| void
+		| ((
+				info: Parameters<Parameters<typeof http.patch>[1]>[0],
+		  ) => Promise<void> | void),
+	options?: RequestHandlerOptions,
+) => {
+	return http.patch(
+		"*/audits/soundalike/:nonConformityId/selection",
+		async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+			if (typeof overrideResponse === "function") {
+				await overrideResponse(info);
+			}
+
+			return new HttpResponse(null, { status: 200 });
+		},
+		options,
+	);
+};
+
+export const getExcludeDuplicatePairMockHandler = (
+	overrideResponse?:
+		| void
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<void> | void),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/audits/soundalike/exclude",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			if (typeof overrideResponse === "function") {
+				await overrideResponse(info);
+			}
+
+			return new HttpResponse(null, { status: 200 });
+		},
+		options,
+	);
+};
+
+export const getListExcludedPairsMockHandler = (
+	overrideResponse?:
+		| ListExcludedPairsResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<ListExcludedPairsResponse> | ListExcludedPairsResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/audits/soundalike/excluded",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getListExcludedPairsResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getRemoveExcludedPairMockHandler = (
+	overrideResponse?:
+		| void
+		| ((
+				info: Parameters<Parameters<typeof http.delete>[1]>[0],
+		  ) => Promise<void> | void),
+	options?: RequestHandlerOptions,
+) => {
+	return http.delete(
+		"*/audits/soundalike/excluded/:id",
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			if (typeof overrideResponse === "function") {
+				await overrideResponse(info);
+			}
+
+			return new HttpResponse(null, { status: 200 });
+		},
+		options,
+	);
+};
+
+export const getResolveSoundalikesMockHandler = (
+	overrideResponse?:
+		| ResolveSoundalikesResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<ResolveSoundalikesResponse> | ResolveSoundalikesResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/audits/soundalike/resolve",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getResolveSoundalikesResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
 export const getAuditsMock = () => [
 	getListAuditRulesMockHandler(),
 	getGetAuditRuleMockHandler(),
@@ -1678,4 +3327,10 @@ export const getAuditsMock = () => [
 	getDeleteAuditNonConformityMockHandler(),
 	getBatchSetAuditWaiverMockHandler(),
 	getBatchDeleteAuditNonConformitiesMockHandler(),
+	getGetSoundalikeDuplicatesMockHandler(),
+	getUpdateSoundalikeSelectionMockHandler(),
+	getExcludeDuplicatePairMockHandler(),
+	getListExcludedPairsMockHandler(),
+	getRemoveExcludedPairMockHandler(),
+	getResolveSoundalikesMockHandler(),
 ];

@@ -12,4 +12,6 @@ public class Config
     public int WishlistCheckIntervalMinutes { get; set; } = 60;
 
     public int WishlistMaxResultsToHash { get; set; } = 50;
+
+    public bool BitrateBackfillEnabled { get; set; }
 }

@@ -5105,7 +5105,10 @@ export const getGetDevicesDeviceIdSyncPendingActionsResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			})),
@@ -5116,7 +5119,10 @@ export const getGetDevicesDeviceIdSyncPendingActionsResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			})),
@@ -5127,7 +5133,10 @@ export const getGetDevicesDeviceIdSyncPendingActionsResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			})),
@@ -5144,7 +5153,10 @@ export const getGetDevicesDeviceIdSyncSongsResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				action: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -5161,7 +5173,10 @@ export const getGetDevicesDeviceIdSyncSongsResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				action: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -5178,7 +5193,10 @@ export const getGetDevicesDeviceIdSyncSongsResponseMock = (
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				action: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -5250,7 +5268,10 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					]),
 					null,
 				]),
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				serverChecksumAlgorithm: faker.string.alpha({
 					length: { min: 10, max: 20 },
@@ -5303,7 +5324,10 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					]),
 					null,
 				]),
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				serverChecksumAlgorithm: faker.string.alpha({
 					length: { min: 10, max: 20 },
@@ -5356,7 +5380,10 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					]),
 					null,
 				]),
-				songId: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				serverChecksumAlgorithm: faker.string.alpha({
 					length: { min: 10, max: 20 },

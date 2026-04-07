@@ -16,6 +16,7 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<PurchasesQueue>();
         builder.Services.AddSingleton<MetadataFetchQueue>();
         builder.Services.AddHostedService<MetadataFetchCleanupService>();
+        builder.Services.AddHostedService<BitrateBackfillService>();
         builder.Services.AddHostedService<WishlistBackgroundService>();
         builder.Services.AddSingleton<IFileSystem, FileSystem>();
         builder.Services.AddScoped<IMusicService, MusicService>();
@@ -36,6 +37,10 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAuditRule, SmallCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, NonJpegCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, NonSquareCoverAuditRule>();
+        builder.Services.AddScoped<IAuditRule, SoundalikeAuditRule>();
+
+        builder.Services.AddSingleton<IFpcalcService, FpcalcService>();
+        builder.Services.AddScoped<AcousticFingerprintService>();
 
         builder.Services.AddScoped<IAuditRuleFieldMapper, AuditRuleFieldMapper>();
 

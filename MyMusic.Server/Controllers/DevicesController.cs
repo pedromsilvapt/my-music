@@ -951,6 +951,11 @@ public class DevicesController(
                     Reason = $"No matching SongDevice found on server for path '{clientFile.Path}'",
                 });
             }
+            else if (existingSongDevice.Song == null)
+            {
+                // Song was deleted, SongDevice is kept for tracking removal
+                // Skip this in sync check - the sync complete flow handles removals
+            }
             else if (request.Force)
             {
                 toUpdate.Add(new SyncFileInfoItem

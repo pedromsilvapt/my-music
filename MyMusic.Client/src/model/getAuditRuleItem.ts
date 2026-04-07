@@ -11,6 +11,8 @@ export interface GetAuditRuleItem {
 	name: string;
 	icon: string;
 	description: string;
+	/** @nullable */
+	customPage?: string | null;
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	nonConformityCount: number;
 }

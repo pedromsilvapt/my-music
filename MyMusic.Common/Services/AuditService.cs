@@ -24,10 +24,10 @@ public class AuditService(
         
         await foreach (var nc in rule.Scan(db, ownerId, cancellationToken))
         {
-            if (rule.CustomPageRoute == null && nc.SongId == null)
+            if (rule.CustomPage == null && nc.SongId == null)
             {
                 logger.LogError(
-                    "Rule {RuleId} '{RuleName}' produced non-conformity without SongId but has no CustomPageRoute defined",
+                    "Rule {RuleId} '{RuleName}' produced non-conformity without SongId but has no CustomPage defined",
                     rule.Id, rule.Name);
                 continue;
             }

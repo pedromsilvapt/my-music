@@ -29,6 +29,8 @@ public class Song
 
     public TimeSpan Duration { get; set; }
 
+    public int? Bitrate { get; set; }
+
     public required User Owner { get; set; }
     public long OwnerId { get; set; }
 
