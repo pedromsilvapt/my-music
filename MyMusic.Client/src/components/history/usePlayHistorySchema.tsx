@@ -1,9 +1,9 @@
 import {Anchor, Text} from "@mantine/core";
-import {IconDisc} from "@tabler/icons-react";
+
 import {useNavigate} from "@tanstack/react-router";
 import {useMemo} from "react";
 import type {ListPlayHistoryItem} from "../../model";
-import Artwork from "../common/artwork";
+import SongArtwork from "../common/fields/song-artwork";
 import type {CollectionSchema} from "../common/collection/collection";
 
 export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
@@ -19,10 +19,9 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
                 name: 'artwork',
                 displayName: '',
                 render: row => (
-                    <Artwork
-                        id={row.coverId ?? row.albumId}
+                    <SongArtwork
+                        id={row.coverId}
                         size={40}
-                        placeholderIcon={<IconDisc size={20}/>}
                     />
                 ),
                 width: 52,
@@ -93,10 +92,9 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
 
         estimateListRowHeight: () => 84,
         renderListArtwork: (row) => (
-            <Artwork
-                id={row.coverId ?? row.albumId}
+            <SongArtwork
+                id={row.coverId}
                 size={64}
-                placeholderIcon={<IconDisc/>}
             />
         ),
         renderListTitle: (row) => (
