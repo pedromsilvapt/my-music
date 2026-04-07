@@ -38,6 +38,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAuditRule, NonJpegCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, NonSquareCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, SoundalikeAuditRule>();
+        builder.Services.AddScoped<IAuditRule, MissingFileAuditRule>();
 
         builder.Services.AddSingleton<IFpcalcService, FpcalcService>();
         builder.Services.AddScoped<AcousticFingerprintService>();

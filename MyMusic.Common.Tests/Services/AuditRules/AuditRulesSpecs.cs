@@ -1,3 +1,4 @@
+using System.IO.Abstractions.TestingHelpers;
 using EntityFrameworkCore.Projectables;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -95,7 +96,7 @@ public class AuditRulesSpecs : IDisposable
         return album;
     }
 
-    private Song CreateSong(string title, Album album, Artwork? cover = null, int? year = null, string? lyrics = null, List<SongGenre>? genres = null)
+    private Song CreateSong(string title, Album album, Artwork? cover = null, int? year = null, string? lyrics = null, List<SongGenre>? genres = null, string? repositoryPath = null)
     {
         var song = new Song
         {
@@ -109,7 +110,7 @@ public class AuditRulesSpecs : IDisposable
             Artists = [],
             Devices = [],
             Sources = [],
-            RepositoryPath = $"/test/{title}.mp3",
+            RepositoryPath = repositoryPath ?? $"/test/{title}.mp3",
             Checksum = Guid.NewGuid().ToString(),
             ChecksumAlgorithm = "SHA256",
             AddedAt = DateTime.UtcNow,
@@ -781,6 +782,121 @@ public class AuditRulesSpecs : IDisposable
         var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
         secondScanCount.ShouldBe(0);
         (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 8)).ShouldBe(1);
+    }
+
+    #endregion
+
+    #region MissingFileAuditRule Tests
+
+    [Fact]
+    public async Task MissingFileAuditRule_Scan_SongWithMissingFile_ReturnsOne()
+    {
+        // Arrange
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        var song = CreateSong("Missing File Song", album, repositoryPath: "/music/missing.mp3");
+        var fileSystem = new MockFileSystem();
+        var rule = new MissingFileAuditRule(fileSystem);
+
+        // Act
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
+
+        // Assert
+        count.ShouldBe(1);
+        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 10);
+        nonConformity.ShouldNotBeNull();
+        nonConformity.SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task MissingFileAuditRule_Scan_SongWithExistingFile_ReturnsZero()
+    {
+        // Arrange
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        var existingPath = "/music/existing.mp3";
+        CreateSong("Existing File Song", album, repositoryPath: existingPath);
+        var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            [existingPath] = new MockFileData("audio data"),
+        });
+        var rule = new MissingFileAuditRule(fileSystem);
+
+        // Act
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
+
+        // Assert
+        count.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task MissingFileAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
+    {
+        // Arrange
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        CreateSong("Missing File Song", album, repositoryPath: "/music/missing.mp3");
+        var fileSystem = new MockFileSystem();
+        var rule = new MissingFileAuditRule(fileSystem);
+
+        // First scan
+        await ScanAndSaveAsync(rule, _owner.Id);
+        var firstCount = await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 10);
+        firstCount.ShouldBe(1);
+
+        // Second scan - should not create duplicate
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        secondScanCount.ShouldBe(0);
+        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 10)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task MissingFileAuditRule_Scan_MultipleMissingFiles_ReturnsCorrectCount()
+    {
+        // Arrange
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        var existingPath = "/music/exists.mp3";
+        CreateSong("Missing 1", album, repositoryPath: "/music/missing1.mp3");
+        CreateSong("Missing 2", album, repositoryPath: "/music/missing2.mp3");
+        CreateSong("Existing", album, repositoryPath: existingPath);
+        var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            [existingPath] = new MockFileData("audio data"),
+        });
+        var rule = new MissingFileAuditRule(fileSystem);
+
+        // Act
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
+
+        // Assert
+        count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task MissingFileAuditRule_Patch_ThrowsNotSupportedException()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem();
+        var rule = new MissingFileAuditRule(fileSystem);
+
+        // Act & Assert
+        await Should.ThrowAsync<NotSupportedException>(() => rule.Patch(_db, 1));
+    }
+
+    [Fact]
+    public void MissingFileAuditRule_Properties_AreCorrect()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem();
+        var rule = new MissingFileAuditRule(fileSystem);
+
+        // Assert
+        rule.Id.ShouldBe(10L);
+        rule.Name.ShouldBe("Missing Files");
+        rule.Icon.ShouldBe("IconFileOff");
+        rule.Description.ShouldNotBeNullOrEmpty();
+        rule.CustomPage.ShouldBeNull();
     }
 
     #endregion

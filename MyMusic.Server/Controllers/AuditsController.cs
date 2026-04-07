@@ -16,7 +16,7 @@ public class AuditsController(
     ICurrentUser currentUser,
     IAuditService auditService,
     AcousticFingerprintService fingerprintService,
-    ISoundalikeMergeService mergeService) : ControllerBase
+    ISoundalikeResolutionService resolutionService) : ControllerBase
 {
     [HttpGet("rules", Name = "ListAuditRules")]
     public async Task<ListAuditRulesResponse> ListRules(
@@ -337,109 +337,32 @@ public class AuditsController(
         CancellationToken cancellationToken)
     {
         var ownerId = currentUser.Id;
-        var resolvedCount = 0;
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            foreach (var resolution in request.Resolutions)
+            var resolutions = request.Resolutions.Select(r => new GroupResolutionInput
             {
-                var allSongIds = new List<long> { resolution.PrimarySongId }
-                    .Concat(resolution.SecondaryActions.Select(a => a.SongId))
-                    .ToList();
-
-                var songs = await db.Songs
-                    .Where(s => allSongIds.Contains(s.Id))
-                    .Include(s => s.Artists).ThenInclude(sa => sa.Artist)
-                    .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
-                    .Include(s => s.Cover)
-                    .ToListAsync(cancellationToken);
-
-                var primarySong = songs.FirstOrDefault(s => s.Id == resolution.PrimarySongId);
-                if (primarySong == null)
-                    continue;
-
-                if (primarySong.OwnerId != ownerId)
-                    return Forbid();
-
-                var mergeActions = resolution.SecondaryActions
-                    .Where(a => a.Action == SecondaryAction.Merge)
-                    .ToList();
-                var deleteActions = resolution.SecondaryActions
-                    .Where(a => a.Action == SecondaryAction.Delete || a.Action == SecondaryAction.Merge)
-                    .ToList();
-
-                foreach (var action in resolution.SecondaryActions)
+                NonConformityId = r.NonConformityId,
+                PrimarySongId = r.PrimarySongId,
+                SecondaryActions = r.SecondaryActions.Select(a => new SecondarySongActionInput
                 {
-                    var song = songs.FirstOrDefault(s => s.Id == action.SongId);
-                    if (song == null) continue;
-                    if (song.OwnerId != ownerId) return Forbid();
-                }
+                    SongId = a.SongId,
+                    Action = a.Action,
+                }).ToList(),
+            }).ToList();
 
-                if (mergeActions.Count > 0)
-                {
-                    var mergeSongs = songs
-                        .Where(s => mergeActions.Any(a => a.SongId == s.Id))
-                        .ToList();
-                    await mergeService.MergeMetadataAsync(db, primarySong, mergeSongs, cancellationToken);
-                }
+            var resolvedCount = await resolutionService.ResolveAsync(db, ownerId, resolutions, cancellationToken);
 
-                foreach (var action in deleteActions)
-                {
-                    var secondary = songs.FirstOrDefault(s => s.Id == action.SongId);
-                    if (secondary == null) continue;
-
-                    var affectedPlaylists = await db.Playlists
-                        .Where(p => p.CurrentSongId == secondary.Id)
-                        .Include(p => p.PlaylistSongs)
-                        .ToListAsync(cancellationToken);
-
-                    foreach (var playlist in affectedPlaylists)
-                    {
-                        var currentPs = playlist.PlaylistSongs.FirstOrDefault(ps => ps.SongId == secondary.Id);
-                        var removedOrder = currentPs?.Order ?? 0;
-                        var nextSong = playlist.PlaylistSongs
-                            .OrderBy(ps => ps.Order)
-                            .FirstOrDefault(ps => ps.Order > removedOrder);
-                        playlist.CurrentSongId = nextSong?.SongId ?? playlist.PlaylistSongs
-                            .OrderBy(ps => ps.Order)
-                            .FirstOrDefault(ps => ps.SongId != secondary.Id)?.SongId;
-                    }
-
-                    var playlistSongs = await db.PlaylistSongs
-                        .Where(ps => ps.SongId == secondary.Id)
-                        .ToListAsync(cancellationToken);
-                    db.PlaylistSongs.RemoveRange(playlistSongs);
-
-                    var songDevices = await db.SongDevices
-                        .Where(sd => sd.SongId == secondary.Id)
-                        .ToListAsync(cancellationToken);
-                    foreach (var sd in songDevices)
-                    {
-                        sd.SongId = null;
-                        sd.SyncAction = SongSyncAction.Remove;
-                        db.Update(sd);
-                    }
-
-                    db.Songs.Remove(secondary);
-                }
-
-                var nonConformity = await db.AuditNonConformities
-                    .FirstOrDefaultAsync(nc => nc.Id == resolution.NonConformityId && nc.OwnerId == ownerId,
-                        cancellationToken);
-                if (nonConformity != null)
-                {
-                    db.AuditNonConformities.Remove(nonConformity);
-                }
-
-                resolvedCount++;
-            }
-
-            await db.SaveChangesAsync(cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
             return Ok(new ResolveSoundalikesResponse { ResolvedCount = resolvedCount });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return Forbid();
         }
         catch
         {
