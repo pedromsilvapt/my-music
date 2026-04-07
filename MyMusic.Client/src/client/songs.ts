@@ -3801,6 +3801,11 @@ export const getGetLocalSongResponseMock = (
 				duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				isFavorite: faker.datatype.boolean(),
 				isExplicit: faker.datatype.boolean(),
+				size: faker.number.int(),
+				bitrate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
 				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 				addedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -3917,6 +3922,11 @@ export const getGetLocalSongResponseMock = (
 				duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				isFavorite: faker.datatype.boolean(),
 				isExplicit: faker.datatype.boolean(),
+				size: faker.number.int(),
+				bitrate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
 				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 				addedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -4033,6 +4043,11 @@ export const getGetLocalSongResponseMock = (
 				duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				isFavorite: faker.datatype.boolean(),
 				isExplicit: faker.datatype.boolean(),
+				size: faker.number.int(),
+				bitrate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
 				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 				addedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([

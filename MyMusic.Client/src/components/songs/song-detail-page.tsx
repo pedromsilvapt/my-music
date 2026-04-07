@@ -1,4 +1,4 @@
-import {ActionIcon, Alert, Anchor, Box, Button, Flex, Group, Stack, Text} from "@mantine/core";
+import {ActionIcon, Alert, Anchor, Box, Button, Flex, Group, Stack, Text, Tooltip} from "@mantine/core";
 import {
     IconArrowBack,
     IconArrowForward,
@@ -26,6 +26,8 @@ import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context
 import {useQueueMutations} from "../../contexts/player-context.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
+import {formatFileSize} from "../../utils/format-file-size.ts";
+import {formatRelativeDate} from "../../utils/format-relative-date.ts";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
 import DeviceBadge from "../devices/device-badge.tsx";
@@ -77,6 +79,13 @@ export default function SongDetailPage() {
                             </Group>
                             {song.year && <Text size="sm" c="dimmed">{song.year}</Text>}
                             <Text size="sm" c="dimmed">{song.duration}</Text>
+                            {song.bitrate && <Text size="sm" c="dimmed">{song.bitrate} kbps</Text>}
+                            {song.size > 0 && <Text size="sm" c="dimmed">{formatFileSize(song.size)}</Text>}
+                            {song.createdAt && (
+                                <Tooltip label={new Date(song.createdAt).toLocaleString()} openDelay={500}>
+                                    <Text size="sm" c="dimmed">{formatRelativeDate(song.createdAt)}</Text>
+                                </Tooltip>
+                            )}
                             {song.isExplicit &&
                                 <ExplicitLabel visible={true}><Text size="sm">Explicit</Text></ExplicitLabel>}
                         </Group>

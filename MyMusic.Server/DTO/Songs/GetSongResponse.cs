@@ -22,6 +22,8 @@ public record GetSongResponseSong
     public required string Duration { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
+    public required long Size { get; set; }
+    public int? Bitrate { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime? AddedAt { get; set; }
     public string? Lyrics { get; set; }
@@ -45,6 +47,8 @@ public record GetSongResponseSong
             Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
             IsFavorite = song.IsFavorite,
             IsExplicit = song.Explicit,
+            Size = song.Size,
+            Bitrate = song.Bitrate,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,
             Lyrics = song.Lyrics,

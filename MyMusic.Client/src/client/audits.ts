@@ -1398,15 +1398,19 @@ export const updateSoundalikeSelection = async (
 export const getUpdateSoundalikeSelectionMutationOptions = <
 	TError = unknown,
 	TContext = unknown,
->(options?: {
-	mutation?: UseMutationOptions<
-		Awaited<ReturnType<typeof updateSoundalikeSelection>>,
-		TError,
-		{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
-		TContext
-	>;
-	fetch?: RequestInit;
-}): UseMutationOptions<
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+			TError,
+			{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
+			TContext
+		>;
+		skipInvalidation?: boolean;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
 	Awaited<ReturnType<typeof updateSoundalikeSelection>>,
 	TError,
 	{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
@@ -1430,7 +1434,24 @@ export const getUpdateSoundalikeSelectionMutationOptions = <
 		return updateSoundalikeSelection(nonConformityId, data, fetchOptions);
 	};
 
-	return { mutationFn, ...mutationOptions };
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof updateSoundalikeSelection>>,
+		variables: {
+			nonConformityId: number;
+			data: UpdateSoundalikeSelectionRequest;
+		},
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
+	) => {
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({
+				queryKey: getGetSoundalikeDuplicatesQueryKey(),
+			});
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+	};
+
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type UpdateSoundalikeSelectionMutationResult = NonNullable<
@@ -1451,6 +1472,7 @@ export const useUpdateSoundalikeSelection = <
 			{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1460,8 +1482,12 @@ export const useUpdateSoundalikeSelection = <
 	{ nonConformityId: number; data: UpdateSoundalikeSelectionRequest },
 	TContext
 > => {
+	const backupQueryClient = useQueryClient();
 	return useMutation(
-		getUpdateSoundalikeSelectionMutationOptions(options),
+		getUpdateSoundalikeSelectionMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
 		queryClient,
 	);
 };

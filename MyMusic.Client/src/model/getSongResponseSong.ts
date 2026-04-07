@@ -33,6 +33,13 @@ export interface GetSongResponseSong {
 	duration: string;
 	isFavorite: boolean;
 	isExplicit: boolean;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	size: number;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	bitrate?: number | null;
 	createdAt: string;
 	/** @nullable */
 	addedAt?: string | null;
