@@ -4,6 +4,7 @@ public record ManagePlaylistSongsRequest
 {
     public required List<long> SongIds { get; init; }
     public required List<PlaylistSongAction> Playlists { get; init; }
+    public List<string> NewPlaylists { get; init; } = [];
 }
 
 public record PlaylistSongAction

@@ -9,4 +9,5 @@ OpenAPI spec version: 1.0.0
 export interface ManagePlaylistSongsRequest {
 	songIds: number[];
 	playlists: PlaylistSongAction[];
+	newPlaylists?: string[];
 }

@@ -234,6 +234,26 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
+        foreach (var name in request.NewPlaylists.Where(n => !string.IsNullOrWhiteSpace(n)))
+        {
+            var playlist = new Playlist
+            {
+                Name = name.Trim(),
+                Type = PlaylistType.Playlist,
+                OwnerId = currentUser.Id,
+                CreatedAt = DateTime.UtcNow,
+                ModifiedAt = DateTime.UtcNow,
+                PlaylistSongs = request.SongIds.Select((songId, index) => new PlaylistSong
+                {
+                    SongId = songId,
+                    Order = index * 1000.0,
+                    AddedAt = DateTime.UtcNow,
+                }).ToList(),
+            };
+
+            context.Playlists.Add(playlist);
+        }
+
         foreach (var playlistAction in request.Playlists)
         {
             var playlist = await context.Playlists
