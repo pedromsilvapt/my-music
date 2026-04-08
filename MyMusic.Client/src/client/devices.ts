@@ -4153,6 +4153,13 @@ export const getGetDevicesResponseMock = (
 					undefined,
 				]),
 				songCount: faker.number.int(),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				})),
 				importOnPurchase: faker.helpers.arrayElement([
 					faker.datatype.boolean(),
 					undefined,
@@ -4189,6 +4196,13 @@ export const getGetDevicesResponseMock = (
 					undefined,
 				]),
 				songCount: faker.number.int(),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				})),
 				importOnPurchase: faker.helpers.arrayElement([
 					faker.datatype.boolean(),
 					undefined,
@@ -4225,6 +4239,13 @@ export const getGetDevicesResponseMock = (
 					undefined,
 				]),
 				songCount: faker.number.int(),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				})),
 				importOnPurchase: faker.helpers.arrayElement([
 					faker.datatype.boolean(),
 					undefined,

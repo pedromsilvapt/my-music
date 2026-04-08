@@ -12,7 +12,7 @@ namespace MyMusic.Common.Services;
 /// <summary>
 /// One-shot background service that backfills the bitrate field for songs where it is null.
 /// Runs once on startup (after a 30s delay), processes all null-bitrate songs in batches, then stops.
-/// Controlled by Config.BitrateBackfillEnabled — does nothing when disabled.
+/// Controlled by Config.BitrateBackfillEnabled - does nothing when disabled.
 /// </summary>
 public class BitrateBackfillService(
     IServiceScopeFactory serviceScopeFactory,

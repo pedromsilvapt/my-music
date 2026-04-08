@@ -301,7 +301,7 @@ function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps
                                 size="xs"
                                 c={isInPlaylist ? "green" : "dimmed"}
                             >
-                                {song.title} — {song.artists.map(a => a.name).join(', ')}
+                                {song.title} - {song.artists.map(a => a.name).join(', ')}
                             </Text>
                         );
                     })}

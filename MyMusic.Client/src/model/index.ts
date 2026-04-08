@@ -70,6 +70,7 @@ export * from "./deleteSessionResponse";
 export * from "./deleteSourceItem";
 export * from "./deleteSourceResponse";
 export * from "./deviceSongItem";
+export * from "./deviceSongRef";
 export * from "./excludeDuplicatePairRequest";
 export * from "./excludedPairItem";
 export * from "./failedTaskDetailResponse";

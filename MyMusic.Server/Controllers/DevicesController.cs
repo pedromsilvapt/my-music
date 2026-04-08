@@ -49,14 +49,20 @@ public class DevicesController(
 
         var devices = await query.ToListAsync(cancellationToken);
 
-        var songCounts = await context.SongDevices
+        var songDeviceGroups = await context.SongDevices
+            .Where(sd => devices.Select(d => d.Id).Contains(sd.DeviceId))
             .GroupBy(sd => sd.DeviceId)
-            .Select(g => new { DeviceId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.DeviceId, x => x.Count, cancellationToken);
+            .Select(g => new { DeviceId = g.Key, Count = g.Count(), SongRefs = g.Select(sd => new { sd.SongId, sd.DevicePath }).ToList() })
+            .ToDictionaryAsync(x => x.DeviceId, x => x, cancellationToken);
 
         return new ListDevicesResponse
         {
-            Devices = devices.Select(d => ListDeviceItem.FromEntity(d, songCounts.GetValueOrDefault(d.Id, 0))).ToList(),
+            Devices = devices.Select(d =>
+            {
+                var group = songDeviceGroups.GetValueOrDefault(d.Id);
+                var songs = group?.SongRefs.Select(sr => new DeviceSongRef { Id = sr.SongId!.Value, Path = sr.DevicePath }).ToList() ?? [];
+                return ListDeviceItem.FromEntity(d, group?.Count ?? 0, songs);
+            }).ToList(),
         };
     }
 

@@ -1,12 +1,16 @@
-import {Button, Code, Group, Modal, ScrollArea, Stack, Switch, Text} from "@mantine/core";
+import {Badge, Box, Button, Code, Collapse, Group, Modal, ScrollArea, SegmentedControl, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
-import {useEffect, useState} from "react";
-import {useGetSongDevices, useUpdateSongDevices} from "../../client/songs.ts";
+import {useState} from "react";
+import {IconChevronDown, IconChevronUp} from "@tabler/icons-react";
+import {useGetDevices} from "../../client/devices.ts";
+import {useListSongs, useUpdateSongDevices} from "../../client/songs.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {SongDeviceItem} from "../../model";
+import type {ListDeviceItem, ListSongItem} from "../../model";
 import DeviceBadge from "./device-badge.tsx";
+
+type DeviceSelection = "none" | "add" | "remove";
 
 interface ManageDevicesDialogProps {
     opened: boolean;
@@ -15,36 +19,26 @@ interface ManageDevicesDialogProps {
     onSuccess?: () => void;
 }
 
-type SwitchState = boolean | 'indeterminate';
-
 export default function ManageDevicesDialog({
-                                                opened,
-                                                onClose,
-                                                songIds,
-                                                onSuccess
-                                            }: ManageDevicesDialogProps) {
-    const devicesQuery = useGetSongDevices(songIds[0]!, {query: {enabled: opened && songIds.length > 0}});
+                                               opened,
+                                               onClose,
+                                               songIds,
+                                               onSuccess
+                                           }: ManageDevicesDialogProps) {
+    const devicesQuery = useGetDevices(undefined, {query: {enabled: opened}});
     const devicesResponse = useQueryData(devicesQuery, "Failed to fetch devices") ?? {data: {devices: []}};
-    const devices = devicesResponse.data.devices;
+    const devices = devicesResponse.data.devices ?? [];
+
+    const songsQuery = useListSongs(
+        songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
+        {query: {enabled: opened && songIds.length > 0}}
+    );
+    const songsResponse = useQueryData(songsQuery, "Failed to fetch songs") ?? {data: {songs: []}};
+    const managedSongs = songsResponse?.data?.songs ?? [];
 
     const queryClient = useQueryClient();
-
-    const [switchStates, setSwitchStates] = useState<Map<number, {
-        state: SwitchState;
-        hasChanged: boolean
-    }>>(new Map());
-
-    useEffect(() => {
-        if (devices.length > 0) {
-            const initialStates = new Map<number, { state: SwitchState; hasChanged: boolean }>();
-            devices.forEach(device => {
-                const isOnDevice = device.syncAction === "Download" ||
-                    (device.syncAction !== "Remove" && device.path !== null);
-                initialStates.set(device.deviceId, {state: isOnDevice, hasChanged: false});
-            });
-            setSwitchStates(initialStates);
-        }
-    }, [devices]);
+    const [selections, setSelections] = useState<Map<number, DeviceSelection>>(new Map());
+    const [expandedDevices, setExpandedDevices] = useState<Set<number>>(new Set());
 
     const updateDevices = useUpdateSongDevices({
         mutation: {
@@ -52,14 +46,16 @@ export default function ManageDevicesDialog({
                 songIds.forEach(id => {
                     queryClient.invalidateQueries({queryKey: ['api', 'songs', id]});
                 });
-                setSwitchStates(new Map());
+                queryClient.invalidateQueries({queryKey: ['api', 'devices']});
+                setSelections(new Map());
+                setExpandedDevices(new Set());
                 onClose();
                 onSuccess?.();
             },
             onError: (error: unknown) => {
                 const errorResponse = error as { response?: { data?: { detail?: string } }; message?: string } | null;
-                const errorMessage = errorResponse?.response?.data?.detail 
-                    ?? errorResponse?.message 
+                const errorMessage = errorResponse?.response?.data?.detail
+                    ?? errorResponse?.message
                     ?? 'Failed to update devices. Please try again.';
                 notifications.show({
                     title: 'Error',
@@ -71,20 +67,39 @@ export default function ManageDevicesDialog({
         }
     });
 
-    const handleSwitchChange = (deviceId: number, checked: boolean) => {
-        setSwitchStates(prev => {
+    const handleSelectionChange = (deviceId: number, value: string) => {
+        setSelections(prev => {
             const newMap = new Map(prev);
-            newMap.set(deviceId, {state: checked, hasChanged: true});
+            const valueEnum = value as DeviceSelection;
+            if (valueEnum === "none") {
+                newMap.delete(deviceId);
+            } else {
+                newMap.set(deviceId, valueEnum);
+            }
             return newMap;
+        });
+    };
+
+    const handleToggleExpand = (deviceId: number) => {
+        setExpandedDevices(prev => {
+            const next = new Set(prev);
+            if (next.has(deviceId)) {
+                next.delete(deviceId);
+            } else {
+                next.add(deviceId);
+            }
+            return next;
         });
     };
 
     const handleApply = () => {
         const updates: { deviceId: number; include: boolean }[] = [];
 
-        switchStates.forEach((value, deviceId) => {
-            if (value.hasChanged && typeof value.state === 'boolean') {
-                updates.push({deviceId, include: value.state});
+        selections.forEach((selection, deviceId) => {
+            if (selection === "add") {
+                updates.push({deviceId, include: true});
+            } else if (selection === "remove") {
+                updates.push({deviceId, include: false});
             }
         });
 
@@ -98,35 +113,36 @@ export default function ManageDevicesDialog({
     };
 
     const handleCancel = () => {
-        setSwitchStates(new Map());
+        setSelections(new Map());
+        setExpandedDevices(new Set());
         onClose();
     };
 
-    const isMultiple = songIds.length > 1;
-
     return (
-        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Devices" centered zIndex={ZINDEX_MODAL}>
+        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Devices" centered
+               zIndex={ZINDEX_MODAL}>
             <Stack>
                 <Text size="sm" c="dimmed">
-                    {isMultiple
-                        ? `Managing ${songIds.length} songs`
-                        : "Select which devices should have this song"}
+                    Managing {songIds.length} song{songIds.length !== 1 ? "s" : ""}
                 </Text>
 
-                <ScrollArea h={300}>
+                <ScrollArea h={400}>
                     <Stack gap="sm">
                         {devices.map(device => (
                             <DeviceRow
-                                key={device.deviceId}
+                                key={device.id}
                                 device={device}
-                                switchState={switchStates.get(device.deviceId)?.state ?? false}
-                                onChange={(checked) => handleSwitchChange(device.deviceId, checked)}
+                                managedSongs={managedSongs}
+                                value={selections.get(device.id) ?? "none"}
+                                expanded={expandedDevices.has(device.id)}
+                                onToggleExpand={() => handleToggleExpand(device.id)}
+                                onChange={(value) => handleSelectionChange(device.id, value)}
                             />
                         ))}
                     </Stack>
                 </ScrollArea>
 
-                <Group justify="space-between">
+                <Group justify="flex-end">
                     <Button variant="default" onClick={handleCancel}>
                         Cancel
                     </Button>
@@ -140,30 +156,71 @@ export default function ManageDevicesDialog({
 }
 
 interface DeviceRowProps {
-    device: SongDeviceItem;
-    switchState: SwitchState;
-    onChange: (checked: boolean) => void;
+    device: ListDeviceItem;
+    managedSongs: ListSongItem[];
+    value: DeviceSelection;
+    expanded: boolean;
+    onToggleExpand: () => void;
+    onChange: (value: DeviceSelection) => void;
 }
 
-function DeviceRow({device, switchState, onChange}: DeviceRowProps) {
+function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onChange}: DeviceRowProps) {
+    const deviceSongIdSet = new Set(device.songs.map(s => s.id));
+    const deviceSongPathMap = new Map(device.songs.map(s => [s.id, s.path]));
+    const matchingCount = managedSongs.filter(s => deviceSongIdSet.has(s.id)).length;
+
     return (
-        <Group justify="space-between" align="center">
-            <Group gap="sm" align="center" style={{flex: 1}}>
-                <DeviceBadge
-                    name={device.deviceName}
-                    icon={device.deviceIcon}
-                    color={device.deviceColor}
-                    syncAction={device.syncAction}
-                    showTooltip={false}
-                />
-                {device.path && (
-                    <Code>{device.path}</Code>
-                )}
+        <Box>
+            <Group justify="space-between" wrap="nowrap">
+                <Group gap="sm" align="center" style={{flex: 1, minWidth: 0}}>
+                    <DeviceBadge
+                        name={device.name}
+                        icon={device.icon}
+                        color={device.color}
+                        showTooltip={false}
+                    />
+                </Group>
+                <Group gap="xs" wrap="nowrap">
+                    <Badge
+                        size="sm"
+                        variant="light"
+                        color={matchingCount > 0 ? "green" : "gray"}
+                        onClick={onToggleExpand}
+                        style={{cursor: 'pointer'}}
+                        leftSection={
+                            expanded ? <IconChevronUp size={12}/> : <IconChevronDown size={12}/>
+                        }
+                    >
+                        {matchingCount}/{managedSongs.length}
+                    </Badge>
+                    <SegmentedControl
+                        value={value}
+                        onChange={(v) => onChange(v as DeviceSelection)}
+                        data={[
+                            {label: <Text inherit c="gray">None</Text>, value: 'none'},
+                            {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
+                            {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>Remove</Text>, value: 'remove'},
+                        ]}
+                        size="xs"
+                    />
+                </Group>
             </Group>
-            <Switch
-                checked={switchState === true}
-                onChange={(e) => onChange(e.currentTarget.checked)}
-            />
-        </Group>
+            <Collapse in={expanded}>
+                <Stack gap={2} pl="sm" pt={4}>
+                    {managedSongs.map(song => {
+                        const isOnDevice = deviceSongIdSet.has(song.id);
+                        const path = deviceSongPathMap.get(song.id);
+                        return (
+                            <Group key={song.id}>
+                                <Text size="xs" c={isOnDevice ? "green" : "dimmed"}>
+                                    {song.title} - {song.artists.map(a => a.name).join(', ')}
+                                </Text>
+                                {isOnDevice && path && <Code>{path}</Code>}
+                            </Group>
+                        );
+                    })}
+                </Stack>
+            </Collapse>
+        </Box>
     );
 }
