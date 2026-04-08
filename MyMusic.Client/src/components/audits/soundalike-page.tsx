@@ -18,7 +18,7 @@ import {formatRelativeDate} from "../../utils/format-relative-date.ts";
 type SongAction = typeof SecondaryAction.Delete | typeof SecondaryAction.Merge | typeof SecondaryAction.Keep;
 
 interface GroupSelection {
-    primaryId: number;
+    primaryId: number | null;
     actions: Map<number, SongAction>;
 }
 
@@ -96,12 +96,12 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
             if (existing) {
                 if (existing.primaryId === songId) {
                     newMap.delete(nonConformityId);
-                    persistSelection(nonConformityId, {primaryId: songId, actions: new Map()});
+                    persistSelection(nonConformityId, {primaryId: null, actions: new Map()});
                     return newMap;
                 }
                 const newActions = new Map(existing.actions);
                 newActions.delete(songId);
-                newActions.set(existing.primaryId, SecondaryAction.Delete);
+                newActions.set(existing.primaryId!, SecondaryAction.Delete);
                 newSelection = {
                     primaryId: songId,
                     actions: newActions
@@ -150,9 +150,11 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
     const handleResolve = async () => {
         setConfirmModalOpen(false);
 
-        const resolutions = Array.from(selectedGroups.entries()).map(([nonConformityId, selection]) => ({
+        const resolutions = Array.from(selectedGroups.entries())
+            .filter(([, selection]) => selection.primaryId != null)
+            .map(([nonConformityId, selection]) => ({
             nonConformityId,
-            primarySongId: selection.primaryId,
+            primarySongId: selection.primaryId!,
             secondaryActions: Array.from(selection.actions.entries()).map(([songId, action]) => ({
                 songId,
                 action
