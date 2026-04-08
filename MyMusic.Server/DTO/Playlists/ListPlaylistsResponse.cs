@@ -13,6 +13,7 @@ public record ListPlaylistItem
     public required string Name { get; set; }
     public required PlaylistType Type { get; set; }
     public required int SongCount { get; set; }
+    public required List<long> SongIds { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime? ModifiedAt { get; set; }
 
@@ -23,6 +24,7 @@ public record ListPlaylistItem
             Name = playlist.Name,
             Type = playlist.Type,
             SongCount = playlist.PlaylistSongs.Count,
+            SongIds = playlist.PlaylistSongs.Select(ps => ps.SongId).ToList(),
             CreatedAt = playlist.CreatedAt,
             ModifiedAt = playlist.ModifiedAt,
         };

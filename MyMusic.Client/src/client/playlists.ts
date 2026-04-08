@@ -3770,6 +3770,10 @@ export const getListPlaylistsResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
 				songCount: faker.number.int(),
+				songIds: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.number.int()),
 				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 				modifiedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -3790,6 +3794,10 @@ export const getListPlaylistsResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
 				songCount: faker.number.int(),
+				songIds: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.number.int()),
 				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 				modifiedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
@@ -3810,6 +3818,10 @@ export const getListPlaylistsResponseMock = (
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
 				songCount: faker.number.int(),
+				songIds: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.number.int()),
 				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
 				modifiedAt: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([

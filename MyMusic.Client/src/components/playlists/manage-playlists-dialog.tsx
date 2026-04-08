@@ -1,11 +1,12 @@
-import {ActionIcon, Button, Group, Modal, ScrollArea, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
+import {ActionIcon, Badge, Box, Button, Collapse, Group, Modal, ScrollArea, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
 import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
-import {IconPlus, IconX} from "@tabler/icons-react";
+import {IconChevronDown, IconChevronUp, IconPlus, IconX} from "@tabler/icons-react";
 import {useListPlaylists, useManagePlaylistSongs} from "../../client/playlists.ts";
+import {useListSongs} from "../../client/songs.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListPlaylistItem, PlaylistAction, PlaylistSongAction} from "../../model";
+import type {ListPlaylistItem, ListSongItem, PlaylistAction, PlaylistSongAction} from "../../model";
 
 type PlaylistSelection = "none" | "add" | "remove";
 
@@ -26,6 +27,13 @@ export default function ManagePlaylistsDialog({
     const playlistsResponse = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {data: {playlists: []}};
 
     const playlists = playlistsResponse?.data?.playlists ?? [];
+
+    const songsQuery = useListSongs(
+        songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
+        {query: {enabled: songIds.length > 0}}
+    );
+    const songsResponse = useQueryData(songsQuery, "Failed to fetch songs") ?? {data: {songs: []}};
+    const managedSongs = songsResponse?.data?.songs ?? [];
 
     const queryClient = useQueryClient();
     const [selections, setSelections] = useState<Map<number, PlaylistSelection>>(new Map());
@@ -134,12 +142,13 @@ export default function ManagePlaylistsDialog({
                     Managing {songIds.length} song{songIds.length !== 1 ? "s" : ""}
                 </Text>
 
-                <ScrollArea h={300}>
+                <ScrollArea h={400}>
                     <Stack gap="sm">
                         {playlists.map(playlist => (
                             <PlaylistRow
                                 key={playlist.id}
                                 playlist={playlist}
+                                managedSongs={managedSongs}
                                 value={selections.get(playlist.id) ?? "none"}
                                 onChange={(value) => handleSelectionChange(playlist.id, value)}
                             />
@@ -242,24 +251,62 @@ function NewPlaylistRow({entry, onNameChange, onSelectionChange, onRemove}: NewP
 
 interface PlaylistRowProps {
     playlist: ListPlaylistItem;
+    managedSongs: ListSongItem[];
     value: PlaylistSelection;
     onChange: (value: PlaylistSelection) => void;
 }
 
-function PlaylistRow({playlist, value, onChange}: PlaylistRowProps) {
+function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps) {
+    const [expanded, setExpanded] = useState(false);
+
+    const playlistSongIdSet = new Set(playlist.songIds);
+    const matchingCount = managedSongs.filter(s => playlistSongIdSet.has(s.id)).length;
+
     return (
-        <Group justify="space-between">
-            <Text fw={500}>{playlist.name}</Text>
-            <SegmentedControl
-                value={value}
-                onChange={(v) => onChange(v as PlaylistSelection)}
-                data={[
-                    {label: <Text inherit c="gray">None</Text>, value: 'none'},
-                    {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
-                    {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>Remove</Text>, value: 'remove'},
-                ]}
-                size="xs"
-            />
-        </Group>
+        <Box>
+            <Group justify="space-between" wrap="nowrap">
+                <Text fw={500} truncate style={{flex: 1, minWidth: 0}}>{playlist.name}</Text>
+                <Group gap="xs" wrap="nowrap">
+                    <Badge
+                        size="sm"
+                        variant="light"
+                        color={matchingCount > 0 ? "green" : "gray"}
+                        onClick={() => setExpanded(e => !e)}
+                        style={{cursor: 'pointer'}}
+                        leftSection={
+                            expanded ? <IconChevronUp size={12}/> : <IconChevronDown size={12}/>
+                        }
+                    >
+                        {matchingCount}/{managedSongs.length}
+                    </Badge>
+                    <SegmentedControl
+                    value={value}
+                    onChange={(v) => onChange(v as PlaylistSelection)}
+                    data={[
+                        {label: <Text inherit c="gray">None</Text>, value: 'none'},
+                        {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
+                        {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>Remove</Text>, value: 'remove'},
+                    ]}
+                    size="xs"
+                />
+                </Group>
+            </Group>
+            <Collapse in={expanded}>
+                <Stack gap={2} pl="sm" pt={4}>
+                    {managedSongs.map(song => {
+                        const isInPlaylist = playlistSongIdSet.has(song.id);
+                        return (
+                            <Text
+                                key={song.id}
+                                size="xs"
+                                c={isInPlaylist ? "green" : "dimmed"}
+                            >
+                                {song.title} — {song.artists.map(a => a.name).join(', ')}
+                            </Text>
+                        );
+                    })}
+                </Stack>
+            </Collapse>
+        </Box>
     );
 }

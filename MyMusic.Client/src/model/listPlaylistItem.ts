@@ -13,6 +13,7 @@ export interface ListPlaylistItem {
 	type: PlaylistType;
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	songCount: number;
+	songIds: number[];
 	createdAt: string;
 	/** @nullable */
 	modifiedAt?: string | null;
