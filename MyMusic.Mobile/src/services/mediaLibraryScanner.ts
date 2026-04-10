@@ -75,7 +75,20 @@ export async function scanFromDirectory(
         let processedCount = 0;
 
         // Get the normalized repository path for filtering
+        // If the directory URI is a SAF content URI, decode it to a filesystem path
+        // so that isWithinDirectory and relativePath calculations work correctly
         const repoPath = normalizePath(directoryUri);
+        const repoFsPath = isContentUri(directoryUri)
+            ? decodeSafUriToFilesystemPath(directoryUri)
+            : repoPath;
+
+        if (isContentUri(directoryUri) && !repoFsPath) {
+            console.warn(
+                'Could not decode SAF URI to filesystem path. ' +
+                'Directory filtering will be skipped and all audio files will be included. ' +
+                `URI: ${directoryUri}`
+            );
+        }
 
         // Paginate through all audio files
         while (hasMore) {
@@ -117,8 +130,10 @@ export async function scanFromDirectory(
                     const filePath = normalizePath(sourceUri);
 
                     // Check if file is within the repository directory
-                    // Skip this check for content URIs since they can't be matched to file system paths
-                    if (!isContentUri(sourceUri) && !isWithinDirectory(filePath, repoPath)) {
+                    // When repoPath is a SAF URI, use the decoded filesystem path for matching
+                    // If decoding failed (empty repoFsPath), skip the directory filter since
+                    // MediaLibrary already returns audio files and we can't verify the directory
+                    if (!isContentUri(sourceUri) && repoFsPath && !isWithinDirectory(filePath, repoFsPath)) {
                         continue;
                     }
 
@@ -137,10 +152,31 @@ export async function scanFromDirectory(
                     }
 
                     // Calculate relative path from repository root
-                    // For content URIs, use the filename since we can't determine the directory structure
-                    const relativePath = isContentUri(sourceUri)
-                        ? filename
-                        : filePath.substring(repoPath.length);
+                    // Use the decoded filesystem path when available to preserve directory structure
+                    // Fall back to filename only if we can't determine the relative path
+                    let relativePath: string;
+                    if (isContentUri(sourceUri)) {
+                        if (repoFsPath && isWithinDirectory(filePath, repoFsPath)) {
+                            relativePath = filePath.substring(repoFsPath.length);
+                        } else if (repoPath && isWithinDirectory(filePath, repoPath)) {
+                            relativePath = filePath.substring(repoPath.length);
+                        } else {
+                            relativePath = filename;
+                        }
+                    } else {
+                        if (repoFsPath && isWithinDirectory(filePath, repoFsPath)) {
+                            relativePath = filePath.substring(repoFsPath.length);
+                        } else if (repoPath && isWithinDirectory(filePath, repoPath)) {
+                            relativePath = filePath.substring(repoPath.length);
+                        } else {
+                            relativePath = filename;
+                        }
+                    }
+
+                    // Strip leading slash from relative path
+                    if (relativePath.startsWith('/')) {
+                        relativePath = relativePath.slice(1);
+                    }
 
                     // Get file size
                     let size = 0;
@@ -212,6 +248,70 @@ function isContentUri(path: string): boolean {
 }
 
 /**
+ * Decode a SAF (Storage Access Framework) content URI to a filesystem path.
+ * SAF URIs on Android follow patterns like:
+ *   content://com.android.providers.media.documents/document/primary%3AMusic
+ *   content://com.android.providers.media.documents/document/primary%3AMusic%2FSubFolder
+ *
+ * The "primary" segment maps to /storage/emulated/0/
+ * %3A is URL-encoded colon (:) which separates the volume from the path
+ * %2F is URL-encoded forward slash (/)
+ *
+ * Returns the decoded filesystem path, or empty string if decoding fails.
+ */
+function decodeSafUriToFilesystemPath(uri: string): string {
+    try {
+        if (!isContentUri(uri)) {
+            return '';
+        }
+
+        const parsed = new URL(uri);
+        const pathSegments = parsed.pathname.split('/').filter(Boolean);
+
+        // Find the document path segment in the SAF URI
+        // Pattern: .../document/<volume>:<path>
+        const docIndex = pathSegments.indexOf('document');
+        if (docIndex === -1 || docIndex + 1 >= pathSegments.length) {
+            return '';
+        }
+
+        const docPath = decodeURIComponent(pathSegments[docIndex + 1]);
+
+        // Handle "primary:" prefix which maps to /storage/emulated/0/
+        if (docPath.startsWith('primary:')) {
+            const relativePath = docPath.substring('primary:'.length);
+            return relativePath.length > 0
+                ? `/storage/emulated/0/${relativePath}`
+                : '/storage/emulated/0';
+        }
+
+        // Handle "home:" prefix which maps to /storage/emulated/0/
+        if (docPath.startsWith('home:')) {
+            const relativePath = docPath.substring('home:'.length);
+            return relativePath.length > 0
+                ? `/storage/emulated/0/${relativePath}`
+                : '/storage/emulated/0';
+        }
+
+        // Try to handle other volume patterns like "XXXX-XXXX:" (external storage)
+        const colonIndex = docPath.indexOf(':');
+        if (colonIndex !== -1) {
+            const volume = docPath.substring(0, colonIndex);
+            const relativePath = docPath.substring(colonIndex + 1);
+            // External SD cards appear as /storage/<volume>/
+            if (relativePath.length > 0) {
+                return `/storage/${volume}/${relativePath}`;
+            }
+            return `/storage/${volume}`;
+        }
+
+        return '';
+    } catch {
+        return '';
+    }
+}
+
+/**
  * Normalize a path by removing file:// prefix and trailing slash.
  * Content URIs are preserved as-is since expo-file-system can handle them.
  */
@@ -235,6 +335,9 @@ function normalizePath(path: string): string {
  * Check if a file path is within a directory
  */
 function isWithinDirectory(filePath: string, directoryPath: string): boolean {
+    if (!directoryPath) {
+        return false;
+    }
     // Ensure directory path ends with / for proper prefix matching
     const normalizedDir = directoryPath.endsWith('/')
         ? directoryPath
