@@ -38,8 +38,9 @@ export default function HistoryListScreen() {
                 status: err?.status,
                 message: err?.message || 'Failed to load sessions',
                 url: err?.url,
-                responseBody: err?.details || err?.responseBody,
+                responseBody: err?.responseBody,
                 stack: err?.stack,
+                validationErrors: err?.details?.errors,
             });
         } finally {
             setLoading(false);
@@ -78,8 +79,9 @@ export default function HistoryListScreen() {
                 status: err?.status,
                 message: err?.message || 'Failed to prune sessions',
                 url: err?.url,
-                responseBody: err?.details || err?.responseBody,
+                responseBody: err?.responseBody,
                 stack: err?.stack,
+                validationErrors: err?.details?.errors,
             };
             Alert.alert(
                 'Error',
@@ -99,6 +101,14 @@ export default function HistoryListScreen() {
         if (err.status) details += `Status: ${err.status}\n`;
         if (err.message) details += `Message: ${err.message}\n`;
         if (err.url) details += `URL: ${err.url}\n`;
+        if (err.validationErrors && Object.keys(err.validationErrors).length > 0) {
+            details += 'Validation Errors:\n';
+            for (const [field, messages] of Object.entries(err.validationErrors)) {
+                for (const msg of messages) {
+                    details += `  ${field}: ${msg}\n`;
+                }
+            }
+        }
         if (err.responseBody) details += `Response: ${err.responseBody}\n`;
         if (err.stack) details += `Stack: ${err.stack}\n`;
         return details || 'No details available';

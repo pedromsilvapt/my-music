@@ -11,6 +11,7 @@ export interface ErrorDetails {
     responseBody?: string;
     stack?: string;
     cause?: string;
+    validationErrors?: Record<string, string[]>;
 }
 
 interface ErrorDisplayProps {
@@ -170,6 +171,50 @@ export function ErrorDisplay({error, onRetry, onDismiss}: ErrorDisplayProps) {
                         >
                             {error.url}
                         </Text>
+                    </View>
+                )}
+
+                {error.validationErrors && Object.keys(error.validationErrors).length > 0 && (
+                    <View style={{marginBottom: spacing.md}}>
+                        <Text
+                            style={{
+                                fontFamily: fontFamily.monospace,
+                                fontSize: fontSize.xs,
+                                color: colors.textSecondary,
+                                textTransform: 'uppercase',
+                                marginBottom: spacing.xs,
+                            }}
+                        >
+                            Validation Errors
+                        </Text>
+                        <View style={{
+                            backgroundColor: colors.backgroundSecondary,
+                            padding: spacing.sm,
+                            borderRadius: borderRadius.sm,
+                        }}>
+                            {Object.entries(error.validationErrors).map(([field, messages]) => (
+                                <View key={field} style={{marginBottom: spacing.xs}}>
+                                    <Text style={{
+                                        fontFamily: fontFamily.monospace,
+                                        fontSize: fontSize.xs,
+                                        color: colors.error,
+                                        fontWeight: '600',
+                                    }}>
+                                        {field}:
+                                    </Text>
+                                    {messages.map((msg, idx) => (
+                                        <Text key={idx} style={{
+                                            fontFamily: fontFamily.monospace,
+                                            fontSize: fontSize.xs,
+                                            color: colors.textSecondary,
+                                            marginLeft: spacing.sm,
+                                        }}>
+                                            {msg}
+                                        </Text>
+                                    ))}
+                                </View>
+                            ))}
+                        </View>
                     </View>
                 )}
 

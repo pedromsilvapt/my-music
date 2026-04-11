@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
 import {apiMultipartRequest, apiRequest} from './client';
+import {ApiError} from './types';
 import type {AcknowledgeActionRequest, PruneSessionsRequest, SyncCheckRequest, SyncRecordsRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
 import {
     AcknowledgeActionResponseSchema,
@@ -135,7 +136,11 @@ export async function downloadSong(songId: number): Promise<Blob> {
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to download song: ${response.status}`);
+        throw new ApiError({
+            status: response.status,
+            message: `Failed to download song: ${response.status}`,
+            url: `${getServerUrl()}/songs/${songId}/download`,
+        });
     }
 
     return response.blob();

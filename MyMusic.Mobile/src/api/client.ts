@@ -1,6 +1,17 @@
 import {ZodError, ZodSchema} from 'zod';
 import {getServerUrl, getUserId, getUserName} from '../services/configService';
-import type {ApiError, ProblemDetails} from './types';
+import {ApiError} from './types';
+import type {ProblemDetails} from './types';
+
+function buildErrorMessage(parsed: ProblemDetails, fallback: string): string {
+    if (parsed.errors && Object.keys(parsed.errors).length > 0) {
+        const validationLines = Object.entries(parsed.errors)
+            .flatMap(([field, messages]) => messages.map((msg: string) => `${field}: ${msg}`))
+            .join('\n');
+        return `${parsed.title || 'Validation failed'}\n${validationLines}`;
+    }
+    return parsed.detail || parsed.title || fallback;
+}
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
@@ -47,20 +58,26 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
         let detail = `Request failed with status ${response.status}`;
+        let problemDetails: ProblemDetails | undefined;
+        let rawBody: string | undefined;
 
         try {
             const errorData = await response.json();
+            rawBody = JSON.stringify(errorData);
             const parsed = errorData as ProblemDetails;
-            detail = parsed.detail || parsed.title || detail;
+            problemDetails = parsed;
+            detail = buildErrorMessage(parsed, detail);
         } catch {
             // Response wasn't JSON
         }
 
-        const error: ApiError = {
+        throw new ApiError({
             status: response.status,
             message: detail,
-        };
-        throw error;
+            details: problemDetails,
+            responseBody: rawBody,
+            url,
+        });
     }
 
     if (response.status === 204) {
@@ -73,10 +90,10 @@ export async function apiRequest<T>(
     } catch (error) {
         if (error instanceof ZodError) {
             console.error('Response validation failed:', error.issues);
-            throw {
+            throw new ApiError({
                 status: response.status,
-                message: 'Response validation failed',
-            } as ApiError;
+                message: `Response validation failed: ${error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
+            });
         }
         throw error;
     }
@@ -100,20 +117,26 @@ export async function apiMultipartRequest<T>(
 
     if (!response.ok) {
         let detail = `Request failed with status ${response.status}`;
+        let problemDetails: ProblemDetails | undefined;
+        let rawBody: string | undefined;
 
         try {
             const errorData = await response.json();
+            rawBody = JSON.stringify(errorData);
             const parsed = errorData as ProblemDetails;
-            detail = parsed.detail || parsed.title || detail;
+            problemDetails = parsed;
+            detail = buildErrorMessage(parsed, detail);
         } catch {
             // Response wasn't JSON
         }
 
-        const error: ApiError = {
+        throw new ApiError({
             status: response.status,
             message: detail,
-        };
-        throw error;
+            details: problemDetails,
+            responseBody: rawBody,
+            url,
+        });
     }
 
     const data = await response.json();
@@ -128,7 +151,27 @@ export async function downloadSong(songId: number): Promise<Blob> {
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to download song: ${response.status}`);
+        let detail = `Failed to download song: ${response.status}`;
+        let problemDetails: ProblemDetails | undefined;
+        let rawBody: string | undefined;
+
+        try {
+            const errorData = await response.json();
+            rawBody = JSON.stringify(errorData);
+            const parsed = errorData as ProblemDetails;
+            problemDetails = parsed;
+            detail = buildErrorMessage(parsed, detail);
+        } catch {
+            // Response wasn't JSON
+        }
+
+        throw new ApiError({
+            status: response.status,
+            message: detail,
+            details: problemDetails,
+            responseBody: rawBody,
+            url: `${serverUrl}/songs/${songId}/download`,
+        });
     }
 
     return response.blob();

@@ -257,11 +257,21 @@ export const ProblemDetailsSchema = z.object({
 
 export type ProblemDetails = z.infer<typeof ProblemDetailsSchema>;
 
-export type ApiError = {
+export class ApiError extends Error {
     status: number;
-    message: string;
     details?: ProblemDetails;
-};
+    responseBody?: string;
+    url?: string;
+
+    constructor(opts: { status: number; message: string; details?: ProblemDetails; responseBody?: string; url?: string }) {
+        super(opts.message);
+        this.name = 'ApiError';
+        this.status = opts.status;
+        this.details = opts.details;
+        this.responseBody = opts.responseBody;
+        this.url = opts.url;
+    }
+}
 
 export const PruneSessionsRequestSchema = z.object({
     all: z.boolean(),

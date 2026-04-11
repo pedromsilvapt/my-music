@@ -127,8 +127,9 @@ export default function SyncProgressScreen() {
                     status: err?.status,
                     message: err.message || 'Sync failed',
                     url: err?.url,
-                    responseBody: err?.details || err?.responseBody,
+                    responseBody: err?.responseBody,
                     stack: err?.stack,
+                    validationErrors: err?.details?.errors,
                 };
                 setSyncError(err.message || 'Sync failed');
                 setErrorDetails(detailedError);
@@ -182,7 +183,7 @@ export default function SyncProgressScreen() {
 
     if (syncError || progress.phase === 'error') {
         return (
-            <View style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+            <View style={[styles.container, {backgroundColor: colors.backgroundSecondary, justifyContent: 'center', alignItems: 'center'}]}>
                 <View style={[styles.errorContainer, {padding: spacing.lg, width: '90%'}]}>
                     <Ionicons name="alert-circle" size={64} color={colors.error}/>
                     <Text style={[styles.errorTitle, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text, marginTop: spacing.md}]}>Sync Failed</Text>
