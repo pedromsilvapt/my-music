@@ -174,26 +174,24 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var songDevices = await context.SongDevices
+        await context.SongDevices
             .Where(sd => sd.DeviceId == deviceId)
-            .ToListAsync(cancellationToken);
-        context.SongDevices.RemoveRange(songDevices);
+            .ExecuteDeleteAsync(cancellationToken);
 
-        var sessions = await context.DeviceSyncSessions
+        await context.DeviceSyncSessionRecords
+            .Where(r => context.DeviceSyncSessions
+                .Where(s => s.DeviceId == deviceId)
+                .Select(s => s.Id)
+                .Contains(r.SessionId))
+            .ExecuteDeleteAsync(cancellationToken);
+
+        await context.DeviceSyncSessions
             .Where(s => s.DeviceId == deviceId)
-            .ToListAsync(cancellationToken);
-        foreach (var session in sessions)
-        {
-            var records = await context.DeviceSyncSessionRecords
-                .Where(r => r.SessionId == session.Id)
-                .ToListAsync(cancellationToken);
-            context.DeviceSyncSessionRecords.RemoveRange(records);
-        }
+            .ExecuteDeleteAsync(cancellationToken);
 
-        context.DeviceSyncSessions.RemoveRange(sessions);
-
-        context.Devices.Remove(device);
-        await context.SaveChangesAsync(cancellationToken);
+        await context.Devices
+            .Where(d => d.Id == deviceId)
+            .ExecuteDeleteAsync(cancellationToken);
 
         logger.LogInformation("Deleted device {DeviceId} for user {UserId}", deviceId, currentUser.Id);
 
@@ -273,15 +271,15 @@ public class DevicesController(
             throw new Exception("Cannot delete a session that is currently in progress");
         }
 
-        var records = await context.DeviceSyncSessionRecords
+        var recordsDeleted = await context.DeviceSyncSessionRecords
             .Where(r => r.SessionId == sessionId)
-            .ToListAsync(cancellationToken);
-        context.DeviceSyncSessionRecords.RemoveRange(records);
+            .ExecuteDeleteAsync(cancellationToken);
 
-        context.DeviceSyncSessions.Remove(session);
-        await context.SaveChangesAsync(cancellationToken);
+        await context.DeviceSyncSessions
+            .Where(s => s.Id == sessionId)
+            .ExecuteDeleteAsync(cancellationToken);
 
-        logger.LogInformation("Deleted sync session {SessionId} and {RecordCount} records", sessionId, records.Count);
+        logger.LogInformation("Deleted sync session {SessionId} and {RecordCount} records", sessionId, recordsDeleted);
 
         return new DeleteSessionResponse { Success = true };
     }
@@ -333,23 +331,19 @@ public class DevicesController(
             return olderThanOneDay || olderThanThreshold;
         }).ToList();
 
-        var deletedCount = 0;
-        foreach (var session in sessionsToDelete)
-        {
-            var records = await context.DeviceSyncSessionRecords
-                .Where(r => r.SessionId == session.Id)
-                .ToListAsync(cancellationToken);
-            context.DeviceSyncSessionRecords.RemoveRange(records);
+        var sessionIds = sessionsToDelete.Select(s => s.Id).ToList();
 
-            context.DeviceSyncSessions.Remove(session);
-            deletedCount++;
-        }
+        var recordsDeleted = await context.DeviceSyncSessionRecords
+            .Where(r => sessionIds.Contains(r.SessionId))
+            .ExecuteDeleteAsync(cancellationToken);
 
-        await context.SaveChangesAsync(cancellationToken);
+        var sessionsDeleted = await context.DeviceSyncSessions
+            .Where(s => sessionIds.Contains(s.Id))
+            .ExecuteDeleteAsync(cancellationToken);
 
-        logger.LogInformation("Pruned {DeletedCount} sync sessions for device {DeviceId}", deletedCount, deviceId);
+        logger.LogInformation("Pruned {DeletedCount} sync sessions and {RecordsDeleted} records for device {DeviceId}", sessionsDeleted, recordsDeleted, deviceId);
 
-        return new PruneSessionsResponse { DeletedCount = deletedCount };
+        return new PruneSessionsResponse { DeletedCount = sessionsDeleted };
     }
 
     [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records")]

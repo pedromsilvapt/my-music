@@ -24,6 +24,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\MyMusic.Common\MyMusic.Common.csproj" />
+      <ProjectReference Include="..\MyMusic.Server\MyMusic.Server.csproj" />
     </ItemGroup>
 
     <ItemGroup>
