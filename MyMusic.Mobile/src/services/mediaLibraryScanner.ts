@@ -32,6 +32,10 @@ const YIELD_INTERVAL_MS = 16;
 const IDLE_CALLBACK_TIMEOUT_MS = 10;
 const PAGE_SIZE = 1000;
 
+function safeDate(d: Date): Date {
+    return isNaN(d.getTime()) ? new Date() : d;
+}
+
 // Helper to yield control to the UI thread using requestIdleCallback with fallback
 function yieldToUI(): Promise<void> {
     return new Promise((resolve) => {
@@ -191,12 +195,12 @@ export async function scanFromDirectory(
                     files.push({
                         relativePath,
                         fullPath: filePath,
-                        modifiedAt: asset.modificationTime
+                        modifiedAt: safeDate(asset.modificationTime
                             ? new Date(asset.modificationTime * 1000)
-                            : new Date(),
-                        createdAt: asset.creationTime
+                            : new Date()),
+                        createdAt: safeDate(asset.creationTime
                             ? new Date(asset.creationTime * 1000)
-                            : new Date(),
+                            : new Date()),
                         size,
                     });
 

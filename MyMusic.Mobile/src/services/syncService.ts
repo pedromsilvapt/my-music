@@ -14,7 +14,12 @@ import {
     startSync,
     uploadFile
 } from '../api/sync';
-import type {SyncFileInfoItem, SyncConflictResolveItem, SyncConflictErrorItem, SyncPotentialConflictItem} from '../api/types';
+import type {SyncFileInfoItemRequest, SyncConflictResolveItem, SyncConflictErrorItem, SyncPotentialConflictItem} from '../api/types';
+
+function safeToIsoString(date: Date | undefined): string | undefined {
+    if (!date) return undefined;
+    return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
 import {type SyncProgress, useSyncStore} from '../stores/syncStore';
 import {
     getChunkSize,
@@ -188,10 +193,10 @@ export async function runSync(
                 errorMessage?: string;
             }> = [];
 
-            const syncFiles: SyncFileInfoItem[] = chunk.map(f => ({
+            const syncFiles: SyncFileInfoItemRequest[] = chunk.map(f => ({
                 path: f.relativePath,
-                modifiedAt: f.modifiedAt,
-                createdAt: f.createdAt,
+                modifiedAt: safeToIsoString(f.modifiedAt)!,
+                createdAt: safeToIsoString(f.createdAt)!,
             }));
 
             const syncResponse = await checkSync(deviceId, {files: syncFiles, force: options.force});
@@ -227,7 +232,7 @@ export async function runSync(
                                 path: conflict.path,
                                 songId: conflict.songId,
                                 fileContentBase64,
-                                localModifiedAt: conflict.localModifiedAt,
+                                localModifiedAt: safeToIsoString(conflict.localModifiedAt)!,
                             });
                         } catch (e) {
                             console.error('Failed to read file for conflict resolution:', conflict.path, e);
@@ -304,8 +309,8 @@ export async function runSync(
                                     type: 'audio/mpeg'
                                 },
                                 fileToCreate.path,
-                                fileToCreate.modifiedAt.toISOString(),
-                                fileToCreate.createdAt.toISOString()
+                                safeToIsoString(fileToCreate.modifiedAt)!,
+                                safeToIsoString(fileToCreate.createdAt)!
                             );
                             result.created++;
                             recordItems.push({
@@ -367,8 +372,8 @@ export async function runSync(
                                     type: 'audio/mpeg'
                                 },
                                 fileToUpdate.path,
-                                fileToUpdate.modifiedAt.toISOString(),
-                                fileToUpdate.createdAt.toISOString()
+                                safeToIsoString(fileToUpdate.modifiedAt)!,
+                                safeToIsoString(fileToUpdate.createdAt)!
                             );
                             result.updated++;
                             recordItems.push({
@@ -461,7 +466,7 @@ export async function runSync(
                         const fileInfo = new File(fullPath);
                         await acknowledgeAction(deviceId, {
                             songId: action.songId,
-                            modifiedAt: fileInfo.modificationTime ? new Date(fileInfo.modificationTime) : undefined,
+                            modifiedAt: fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined,
                         });
                     }
                     result.downloaded++;
@@ -480,7 +485,7 @@ export async function runSync(
                             await file.write(new Uint8Array(bytes));
 
                             const fileInfo = new File(fullPath);
-                            const modifiedAt = fileInfo.modificationTime ? new Date(fileInfo.modificationTime) : undefined;
+                            const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
 
                             await acknowledgeAction(deviceId, {
                                 songId: action.songId,
@@ -597,7 +602,7 @@ async function handleDownloadConflict(
             await file.write(new Uint8Array(bytes));
 
             const fileInfo = new File(fullPath);
-            const modifiedAt = fileInfo.modificationTime ? new Date(fileInfo.modificationTime) : undefined;
+            const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
 
             await acknowledgeAction(deviceId, {
                 songId: conflict.songId,

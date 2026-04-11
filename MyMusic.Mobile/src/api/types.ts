@@ -1,5 +1,14 @@
 import {z} from 'zod';
 
+export const SyncFileInfoItemRequestSchema = z.object({
+    path: z.string(),
+    modifiedAt: z.string(),
+    createdAt: z.string(),
+    reason: z.string().optional(),
+});
+
+export type SyncFileInfoItemRequest = z.infer<typeof SyncFileInfoItemRequestSchema>;
+
 export const SyncFileInfoItemSchema = z.object({
     path: z.string(),
     modifiedAt: z.coerce.date(),
@@ -25,7 +34,7 @@ export type SyncStartResponse = z.infer<typeof SyncStartResponseSchema>;
 export const SyncFileInfoSchema = SyncFileInfoItemSchema;
 
 export const SyncCheckRequestSchema = z.object({
-    files: z.array(SyncFileInfoItemSchema),
+    files: z.array(SyncFileInfoItemRequestSchema),
     force: z.boolean(),
 });
 
@@ -104,7 +113,7 @@ export type GetPendingActionsResponse = z.infer<typeof GetPendingActionsResponse
 
 export const AcknowledgeActionRequestSchema = z.object({
     songId: z.number(),
-    modifiedAt: z.coerce.date().optional(),
+    modifiedAt: z.string().optional(),
 });
 
 export type AcknowledgeActionRequest = z.infer<typeof AcknowledgeActionRequestSchema>;
@@ -295,7 +304,7 @@ export const SyncConflictResolveItemSchema = z.object({
     path: z.string(),
     songId: z.number(),
     fileContentBase64: z.string(),
-    localModifiedAt: z.coerce.date(),
+    localModifiedAt: z.string(),
 });
 
 export type SyncConflictResolveItem = z.infer<typeof SyncConflictResolveItemSchema>;

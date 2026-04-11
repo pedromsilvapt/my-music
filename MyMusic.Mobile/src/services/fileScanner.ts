@@ -31,6 +31,10 @@ const PROGRESS_INTERVAL_MS = 100;
 const YIELD_INTERVAL_MS = 16;
 const IDLE_CALLBACK_TIMEOUT_MS = 10;
 
+function safeDate(d: Date): Date {
+    return isNaN(d.getTime()) ? new Date() : d;
+}
+
 // Helper to yield control to the UI thread using requestIdleCallback with fallback
 function yieldToUI(): Promise<void> {
     return new Promise((resolve) => {
@@ -76,8 +80,8 @@ export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult>
             files.push({
                 relativePath,
                 fullPath: uri,
-                modifiedAt: asset.modificationTime ? new Date(asset.modificationTime * 1000) : new Date(),
-                createdAt: asset.creationTime ? new Date(asset.creationTime * 1000) : new Date(),
+                modifiedAt: safeDate(asset.modificationTime ? new Date(asset.modificationTime * 1000) : new Date()),
+                createdAt: safeDate(asset.creationTime ? new Date(asset.creationTime * 1000) : new Date()),
                 size: asset.duration || 0,
             });
         }
@@ -151,8 +155,8 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                         const fileMetadata: FileMetadata = {
                             relativePath,
                             fullPath: item.uri,
-                            modifiedAt: item.modificationTime ? new Date(item.modificationTime) : new Date(),
-                            createdAt: item.creationTime ? new Date(item.creationTime) : new Date(),
+                            modifiedAt: safeDate(item.modificationTime ? new Date(item.modificationTime) : new Date()),
+                            createdAt: safeDate(item.creationTime ? new Date(item.creationTime) : new Date()),
                             size: item.size || 0,
                         };
 
