@@ -35,6 +35,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_SongOnDevice_SetsSyncActionToDownload()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -44,8 +45,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id);
         songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
     }
@@ -53,6 +56,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_SongOnMultipleDevices_SetsSyncActionToDownloadForAll()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -64,8 +68,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         var songDevices = scenario.DbContext.SongDevices
             .Where(sd => sd.SongId == song.Id)
             .ToList();
@@ -76,6 +82,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_SongNotOnAnyDevice_DoesNotCreateSongDevices()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -83,14 +90,17 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         scenario.DbContext.SongDevices.Count().ShouldBe(0);
     }
 
     [Fact]
     public async Task UpdateSong_SongDevicePendingRemove_DoesNotChangeSyncAction()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -101,8 +111,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id);
         songDevice.SyncAction.ShouldBe(SongSyncAction.Remove);
     }
@@ -110,6 +122,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_SongDeviceAlreadyPendingDownload_StaysDownload()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -120,8 +133,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id);
         songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
     }
@@ -129,6 +144,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_SyncedSongDevice_GetsMarkedForDownload()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -139,8 +155,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Lyrics = new ValueUpdate<string>("New lyrics") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id);
         songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
     }
@@ -148,6 +166,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task BatchUpdateSong_SongOnDevice_SetsSyncActionToDownload()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -157,8 +176,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         var result = await service.BatchUpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         result.Success.ShouldBeTrue();
         var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id);
         songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
@@ -167,6 +188,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_SameFileContent_DoesNotSetSyncAction()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -187,8 +209,11 @@ public class SongUpdateServiceSpecs
         scenario.DbContext.SaveChanges();
 
         var secondUpdate = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
+
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, secondUpdate);
 
+        // Assert
         var songAfterSecond = scenario.DbContext.Songs.First(s => s.Id == song.Id);
         songAfterSecond.Checksum.ShouldBe(checksumAfterFirst);
 
@@ -199,6 +224,7 @@ public class SongUpdateServiceSpecs
     [Fact]
     public async Task UpdateSong_MixedDevices_OnlyNonRemoveDevicesGetDownload()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
@@ -212,8 +238,10 @@ public class SongUpdateServiceSpecs
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
+        // Act
         await service.UpdateSong(scenario.DbContext, song.Id, update);
 
+        // Assert
         var songDevices = scenario.DbContext.SongDevices
             .Where(sd => sd.SongId == song.Id)
             .ToList();

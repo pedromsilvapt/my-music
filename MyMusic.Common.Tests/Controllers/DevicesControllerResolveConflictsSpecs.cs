@@ -127,6 +127,7 @@ public class DevicesControllerResolveConflictsSpecs
     [Fact]
     public async Task ResolveConflicts_ChecksumsMatch_ReturnsInResolvedNotToUpload()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -150,8 +151,10 @@ public class DevicesControllerResolveConflictsSpecs
             ]
         };
 
+        // Act
         var response = await controller.ResolveConflicts(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToUpload.ShouldBeEmpty();
         response.Conflicts.ShouldBeEmpty();
         response.Resolved.Count.ShouldBe(1);
@@ -161,6 +164,7 @@ public class DevicesControllerResolveConflictsSpecs
     [Fact]
     public async Task ResolveConflicts_ChecksumsMatch_AdvancesLastSyncedModifiedAt()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -184,8 +188,10 @@ public class DevicesControllerResolveConflictsSpecs
             ]
         };
 
+        // Act
         await controller.ResolveConflicts(device.Id, request, CancellationToken.None);
 
+        // Assert
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         var expected = localModifiedAt > song.ModifiedAt ? localModifiedAt : song.ModifiedAt;
         updatedSd.LastSyncedModifiedAt.ShouldNotBeNull();
@@ -195,6 +201,7 @@ public class DevicesControllerResolveConflictsSpecs
     [Fact]
     public async Task ResolveConflicts_ChecksumsDiffer_ReturnsInConflicts()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -218,8 +225,10 @@ public class DevicesControllerResolveConflictsSpecs
             ]
         };
 
+        // Act
         var response = await controller.ResolveConflicts(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToUpload.ShouldBeEmpty();
         response.Resolved.ShouldBeEmpty();
         response.Conflicts.Count.ShouldBe(1);

@@ -306,6 +306,7 @@ Order: System → Microsoft → Third-party → MyMusic (or use implicit usings)
 - Use **NSubstitute** for mocking: `Substitute.For<ILogger<MusicService>>()`
 - Use **Scenario** class for test setup (in-memory SQLite + MockFileSystem)
 - Follow naming: `<MethodName>_<Scenario>_<ExpectedOutcome>`
+- **Arrange-Act-Assert (AAA) pattern**: Every test method must clearly delineate its sections with `// Arrange`, `// Act`, and `// Assert` comments. When Act and Assert are trivially combined (e.g., a single expression that both calls and asserts), they may be merged as `// Act & Assert`. When there is no Arrange step and the test jumps straight to assertions on static data, use `// Arrange` followed by `// Assert` (skipping Act).
 
 #### Assertion Style Guidelines
 

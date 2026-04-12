@@ -115,10 +115,13 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public void CompareFingerprints_IdenticalFingerprints_Returns1()
     {
+        // Arrange
         var fingerprint = new uint[] { 0x12345678, 0xABCDEF00, 0x55555555, 0xFFFFFFFF };
 
+        // Act
         var (score, offsetA, offsetB) = _service.CompareFingerprints(fingerprint, fingerprint, false);
 
+        // Assert
         score.ShouldBe(1.0);
         offsetA.ShouldBe(0);
         offsetB.ShouldBe(0);
@@ -127,33 +130,42 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public void CompareFingerprints_CompletelyDifferent_ReturnsLowScore()
     {
+        // Arrange
         var fingerprintA = new uint[] { 0x00000000, 0x00000000, 0x00000000, 0x00000000 };
         var fingerprintB = new uint[] { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
 
+        // Act
         var (score, _, _) = _service.CompareFingerprints(fingerprintA, fingerprintB, false);
 
+        // Assert
         score.ShouldBe(0.0);
     }
 
     [Fact]
     public void CompareFingerprints_SimilarFingerprints_ReturnsHighScore()
     {
+        // Arrange
         var fingerprintA = new uint[] { 0x12345678, 0xABCDEF00, 0x55555555, 0xFFFFFFFF };
         var fingerprintB = new uint[] { 0x12345678, 0xABCDEF00, 0x55555555, 0xFFFFFFFF };
 
+        // Act
         var (score, _, _) = _service.CompareFingerprints(fingerprintA, fingerprintB, false);
 
+        // Assert
         score.ShouldBe(1.0);
     }
 
     [Fact]
     public void CompareFingerprints_OffsetFingerprints_FindsBestAlignment()
     {
+        // Arrange
         var fingerprintA = new uint[] { 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
         var fingerprintB = new uint[] { 0x00000000, 0x11111111, 0x22222222, 0x33333333, 0x44444444 };
 
+        // Act
         var (score, offsetA, offsetB) = _service.CompareFingerprints(fingerprintA, fingerprintB, false);
 
+        // Assert
         offsetA.ShouldBe(0);
         offsetB.ShouldBe(1);
         score.ShouldBeGreaterThanOrEqualTo(0.8);
@@ -162,13 +174,16 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public void CompareFingerprints_EmptyFingerprints_ReturnsZero()
     {
+        // Arrange
         var emptyFingerprint = Array.Empty<uint>();
         var fingerprint = new uint[] { 0x12345678 };
 
+        // Act
         var (scoreA, _, _) = _service.CompareFingerprints(emptyFingerprint, fingerprint, false);
         var (scoreB, _, _) = _service.CompareFingerprints(fingerprint, emptyFingerprint, false);
         var (scoreC, _, _) = _service.CompareFingerprints(emptyFingerprint, emptyFingerprint, false);
 
+        // Assert
         scoreA.ShouldBe(0.0);
         scoreB.ShouldBe(0.0);
         scoreC.ShouldBe(0.0);
@@ -177,9 +192,11 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public void CompareFingerprints_MinLength_UsesShorterLength()
     {
+        // Arrange
         var fingerprintA = new uint[] { 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF };
         var fingerprintB = new uint[] { 0xFFFFFFFF, 0xFFFFFFFF };
 
+        // Act & Assert
         // With minLength=true, use the shorter length (2 values = 64 bits)
         var (scoreMinLength, _, _) = _service.CompareFingerprints(fingerprintA, fingerprintB, true);
         scoreMinLength.ShouldBe(1.0);
@@ -193,19 +210,23 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public async Task GetOrCreateFingerprintAsync_WhenFpcalcNotAvailable_ReturnsNull()
     {
+        // Arrange
         _fpcalc.IsAvailable().Returns(false);
         var artist = CreateArtist("Test Artist");
         var album = CreateAlbum("Test Album", artist);
         var song = CreateSong("Test Song", album);
 
+        // Act
         var result = await _service.GetOrCreateFingerprintAsync(song);
 
+        // Assert
         result.ShouldBeNull();
     }
 
     [Fact]
     public async Task FindDuplicatesAsync_WithSimilarFingerprints_FindsDuplicates()
     {
+        // Arrange
         // Real fingerprint data captured from two "Bleeding Love" files
         var fingerprintA = new uint[]
         {
@@ -266,8 +287,10 @@ public class AcousticFingerprintServiceSpecs : IDisposable
         var songA = CreateSong("Song A", album);
         var songB = CreateSong("Song B", album);
 
+        // Act
         var groups = await _service.FindDuplicatesAsync(_owner.Id, 0.25, 0.95);
 
+        // Assert
         groups.Count.ShouldBe(1);
         groups[0].Count.ShouldBe(2);
         groups[0].Select(s => s.Id).ShouldContain(songA.Id);
@@ -277,13 +300,16 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public async Task ExcludePairAsync_ExcludesPairCorrectly()
     {
+        // Arrange
         var artist = CreateArtist("Test Artist");
         var album = CreateAlbum("Test Album", artist);
         var songA = CreateSong("Song A", album);
         var songB = CreateSong("Song B", album);
 
+        // Act
         await _service.ExcludePairAsync(songA.Id, songB.Id, _owner.Id, "Test reason");
 
+        // Assert
         var isExcluded = await _service.IsExcludedPairAsync(songA.Id, songB.Id, _owner.Id);
         isExcluded.ShouldBeTrue();
 
@@ -297,14 +323,17 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public async Task ExcludePairAsync_NormalizesOrder()
     {
+        // Arrange
         var artist = CreateArtist("Test Artist");
         var album = CreateAlbum("Test Album", artist);
         var songA = CreateSong("Song A", album);
         var songB = CreateSong("Song B", album);
 
+        // Act
         // Exclude with reversed IDs
         await _service.ExcludePairAsync(songB.Id, songA.Id, _owner.Id);
 
+        // Assert
         var pairs = await _service.GetExcludedPairsAsync(_owner.Id);
         pairs.Count.ShouldBe(1);
         // Should always store with lower ID first
@@ -315,15 +344,18 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     [Fact]
     public async Task ExcludePairAsync_DoesNotDuplicate()
     {
+        // Arrange
         var artist = CreateArtist("Test Artist");
         var album = CreateAlbum("Test Album", artist);
         var songA = CreateSong("Song A", album);
         var songB = CreateSong("Song B", album);
 
+        // Act
         await _service.ExcludePairAsync(songA.Id, songB.Id, _owner.Id);
         await _service.ExcludePairAsync(songA.Id, songB.Id, _owner.Id);
         await _service.ExcludePairAsync(songB.Id, songA.Id, _owner.Id);
 
+        // Assert
         var pairs = await _service.GetExcludedPairsAsync(_owner.Id);
         pairs.Count.ShouldBe(1);
     }

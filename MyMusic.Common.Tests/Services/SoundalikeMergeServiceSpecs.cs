@@ -12,14 +12,17 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_FillsMissingYearFromSecondary()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", year: null);
         var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary", year: 2020);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Year.ShouldBe(2020);
     }
@@ -27,14 +30,17 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_KeepsExistingYear()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", year: 2019);
         var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary", year: 2020);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Year.ShouldBe(2019);
     }
@@ -42,14 +48,17 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_FillsMissingLyricsFromSecondary()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", lyrics: null);
         var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary", lyrics: "Test lyrics");
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Lyrics.ShouldBe("Test lyrics");
     }
@@ -57,14 +66,17 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_KeepsExistingLyrics()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", lyrics: "Primary lyrics");
         var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary", lyrics: "Secondary lyrics");
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Lyrics.ShouldBe("Primary lyrics");
     }
@@ -72,14 +84,17 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_FillsMissingBitrateFromSecondary()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", bitrate: null);
         var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary", bitrate: 320);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Bitrate.ShouldBe(320);
     }
@@ -87,14 +102,17 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_KeepsExistingBitrate()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", bitrate: 128);
         var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary", bitrate: 320);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Bitrate.ShouldBe(128);
     }
@@ -102,6 +120,7 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_MergesUniqueArtistsFromSecondaries()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
@@ -113,8 +132,10 @@ public class SoundalikeMergeServiceSpecs
         var secondary1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 1", artists: new List<Artist> { artistB });
         var secondary2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 2", artists: new List<Artist> { artistC });
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary1, secondary2]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         scenario.DbContext.Entry(primary).Collection(s => s.Artists).Load();
         
@@ -124,6 +145,7 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_DoesNotDuplicateExistingArtists()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
@@ -135,8 +157,10 @@ public class SoundalikeMergeServiceSpecs
         
         scenario.DbContext.Entry(primary).Collection(s => s.Artists).Load();
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         scenario.DbContext.Entry(primary).Collection(s => s.Artists).Load();
         
@@ -146,6 +170,7 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_MergesUniqueGenresFromSecondaries()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
@@ -157,8 +182,10 @@ public class SoundalikeMergeServiceSpecs
         var secondary1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 1", genres: new List<Genre> { genreB });
         var secondary2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 2", genres: new List<Genre> { genreC });
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary1, secondary2]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         scenario.DbContext.Entry(primary).Collection(s => s.Genres).Load();
         
@@ -168,6 +195,7 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_DoesNotDuplicateExistingGenres()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
@@ -179,8 +207,10 @@ public class SoundalikeMergeServiceSpecs
         
         scenario.DbContext.Entry(primary).Collection(s => s.Genres).Load();
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         scenario.DbContext.Entry(primary).Collection(s => s.Genres).Load();
         
@@ -190,6 +220,7 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_UsesFirstSecondaryWithMetadata()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
@@ -198,8 +229,10 @@ public class SoundalikeMergeServiceSpecs
         var secondary2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 2", year: 2020);
         var secondary3 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 3", year: 2021);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary1, secondary2, secondary3]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Year.ShouldBe(2020);
     }
@@ -207,6 +240,7 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_UsesFirstSecondaryWithArtwork()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
@@ -224,8 +258,10 @@ public class SoundalikeMergeServiceSpecs
         var secondary1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 1", coverId: null);
         var secondary2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary 2", coverId: artwork.Id);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary1, secondary2]);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.CoverId.ShouldBe(artwork.Id);
     }
@@ -233,13 +269,16 @@ public class SoundalikeMergeServiceSpecs
     [Fact]
     public async Task MergeMetadata_ReturnsEarlyWhenNoSecondaries()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
         
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary", year: null);
         
+        // Act
         await mergeService.MergeMetadataAsync(scenario.DbContext, primary, []);
         
+        // Assert
         scenario.DbContext.Entry(primary).Reload();
         primary.Year.ShouldBeNull();
     }

@@ -60,6 +60,7 @@ public class DevicesControllerCompleteSyncSpecs
     [Fact]
     public async Task CompleteSync_UpdatesDeviceLastSyncAt()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -68,9 +69,11 @@ public class DevicesControllerCompleteSyncSpecs
         var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
         var beforeComplete = DateTime.UtcNow;
 
+        // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
             new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
 
+        // Assert
         var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
         updatedDevice.LastSyncAt.ShouldNotBeNull();
         updatedDevice.LastSyncAt.Value.ShouldBeGreaterThanOrEqualTo(beforeComplete);
@@ -79,6 +82,7 @@ public class DevicesControllerCompleteSyncSpecs
     [Fact]
     public async Task CompleteSync_DryRun_DoesNotUpdateDeviceLastSyncAt()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -86,9 +90,11 @@ public class DevicesControllerCompleteSyncSpecs
 
         var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, isDryRun: true);
 
+        // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
             new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
 
+        // Assert
         var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
         updatedDevice.LastSyncAt.ShouldBeNull();
     }
@@ -96,6 +102,7 @@ public class DevicesControllerCompleteSyncSpecs
     [Fact]
     public async Task CompleteSync_DownDirection_UpdatesDeviceLastSyncAt()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -103,9 +110,11 @@ public class DevicesControllerCompleteSyncSpecs
         var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
         var beforeComplete = DateTime.UtcNow;
 
+        // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
             new SyncCompleteRequest { Direction = "down" }, CancellationToken.None);
 
+        // Assert
         var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
         updatedDevice.LastSyncAt.ShouldNotBeNull();
         updatedDevice.LastSyncAt.Value.ShouldBeGreaterThanOrEqualTo(beforeComplete);
@@ -114,6 +123,7 @@ public class DevicesControllerCompleteSyncSpecs
     [Fact]
     public async Task CompleteSync_UpDirection_UpdatesDeviceLastSyncAt()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -121,9 +131,11 @@ public class DevicesControllerCompleteSyncSpecs
         var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
         var beforeComplete = DateTime.UtcNow;
 
+        // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
             new SyncCompleteRequest { Direction = "up" }, CancellationToken.None);
 
+        // Assert
         var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
         updatedDevice.LastSyncAt.ShouldNotBeNull();
         updatedDevice.LastSyncAt.Value.ShouldBeGreaterThanOrEqualTo(beforeComplete);

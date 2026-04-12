@@ -114,6 +114,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_SetsDownloadAction()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -134,8 +135,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();
@@ -147,6 +150,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerAndClientUnchanged_SkipsFile()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -167,8 +171,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();
@@ -180,6 +186,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerNewer_AlreadyDownloadAction_RemainsDownload()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -200,8 +207,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();
@@ -213,6 +222,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerNewer_Has5SecondTolerance()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -233,8 +243,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();
@@ -246,6 +258,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerNewer_SyncActionUpload_NotOverridden()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -266,8 +279,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();
@@ -279,6 +294,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerNewerBeyondTolerance_SetsDownloadAction()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -299,8 +315,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();
@@ -312,6 +330,7 @@ public class DevicesControllerSyncCheckSpecs
     [Fact]
     public async Task CheckSync_ServerNewer_SyncActionRemove_NotOverridden()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -332,8 +351,10 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
+        // Act
         var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
 
+        // Assert
         response.ToCreate.ShouldBeEmpty();
         response.ToUpdate.ShouldBeEmpty();
         response.PotentialConflicts.ShouldBeEmpty();

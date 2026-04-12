@@ -11,6 +11,7 @@ public class TagConverterSpecs
     [Fact]
     public void ToSong_ExtractsBitrateFromProperties()
     {
+        // Arrange
         var fs = new MockFileSystem();
         var filePath = "/test/song.mp3";
         
@@ -19,8 +20,10 @@ public class TagConverterSpecs
         var fileInfo = new FileSystemFileAbstraction(fs.FileInfo.New(filePath));
         using var tfile = TagLib.File.Create(fileInfo);
         
+        // Act
         var metadata = TagConverter.ToSong(tfile.Tag, tfile.Properties);
         
+        // Assert
         metadata.Bitrate.ShouldNotBeNull();
         metadata.Bitrate.Value.ShouldBeGreaterThan(0);
     }
@@ -28,6 +31,7 @@ public class TagConverterSpecs
     [Fact]
     public void ToSong_ExtractsOtherMetadata()
     {
+        // Arrange
         var fs = new MockFileSystem();
         var filePath = "/test/song.mp3";
         
@@ -36,8 +40,10 @@ public class TagConverterSpecs
         var fileInfo = new FileSystemFileAbstraction(fs.FileInfo.New(filePath));
         using var tfile = TagLib.File.Create(fileInfo);
         
+        // Act
         var metadata = TagConverter.ToSong(tfile.Tag, tfile.Properties);
         
+        // Assert
         metadata.Title.ShouldBe("Test Song");
         metadata.Album?.Name.ShouldBe("Test Album");
         metadata.Artists?.Select(a => a.Name).ShouldBe(["Test Artist"]);

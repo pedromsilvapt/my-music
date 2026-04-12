@@ -23,6 +23,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryInPlaylist_PrimaryNotInPlaylist_AddsPrimaryToPlaylist()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -37,8 +38,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var playlistSongs = scenario.DbContext.PlaylistSongs
             .Where(ps => ps.PlaylistId == playlist.Id)
             .OrderBy(ps => ps.Order)
@@ -51,6 +54,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryInPlaylist_PrimaryAlreadyInPlaylist_DoesNotDuplicate()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -66,8 +70,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var playlistSongs = scenario.DbContext.PlaylistSongs
             .Where(ps => ps.PlaylistId == playlist.Id)
             .ToList();
@@ -78,6 +84,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryInMultiplePlaylists_PrimaryNotInAny_AddsToAll()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -94,8 +101,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var ps1 = scenario.DbContext.PlaylistSongs.Where(ps => ps.PlaylistId == playlist1.Id).ToList();
         var ps2 = scenario.DbContext.PlaylistSongs.Where(ps => ps.PlaylistId == playlist2.Id).ToList();
         ps1.Count.ShouldBe(1);
@@ -107,6 +116,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryInPlaylist_PrimaryInSome_AddsOnlyToMissing()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -124,8 +134,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var ps1 = scenario.DbContext.PlaylistSongs.Where(ps => ps.PlaylistId == playlist1.Id).ToList();
         var ps2 = scenario.DbContext.PlaylistSongs.Where(ps => ps.PlaylistId == playlist2.Id).ToList();
         ps1.Count.ShouldBe(1);
@@ -137,6 +149,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_PlaylistCurrentSongIsSecondary_RedirectsToPrimary()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -152,8 +165,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         scenario.DbContext.Entry(playlist).Reload();
         playlist.CurrentSongId.ShouldBe(primary.Id);
     }
@@ -161,6 +176,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_MultipleSecondariesInSamePlaylist_AddsPrimaryOnceAtLowestOrder()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -181,8 +197,10 @@ public class SoundalikeResolutionSpecs
             ]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var playlistSongs = scenario.DbContext.PlaylistSongs
             .Where(ps => ps.PlaylistId == playlist.Id)
             .OrderBy(ps => ps.Order)
@@ -195,6 +213,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryOnDevice_PrimaryNotOnDevice_CreatesSongDeviceForPrimary()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -209,8 +228,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var primaryDevice = scenario.DbContext.SongDevices
             .FirstOrDefault(sd => sd.SongId == primary.Id && sd.DeviceId == device.Id);
         primaryDevice.ShouldNotBeNull();
@@ -227,6 +248,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryOnDevice_PrimaryAlreadyOnDevice_MarksSecondaryForRemove()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -242,8 +264,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var primaryDevices = scenario.DbContext.SongDevices
             .Where(sd => sd.SongId == primary.Id && sd.DeviceId == device.Id)
             .ToList();
@@ -259,6 +283,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_SecondaryOnMultipleDevices_PrimaryNotOnAny_CreatesSongDevicesForAll()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -275,8 +300,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var primaryDevices = scenario.DbContext.SongDevices
             .Where(sd => sd.SongId == primary.Id)
             .ToList();
@@ -287,6 +314,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_MixedPlaylistAndDeviceTransfer()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -303,8 +331,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var playlistSongs = scenario.DbContext.PlaylistSongs
             .Where(ps => ps.PlaylistId == playlist.Id).ToList();
         playlistSongs.Count.ShouldBe(1);
@@ -319,6 +349,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_MergeAction_MergesMetadataBeforeTransfer()
     {
+        // Arrange
         var scenario = new Scenario();
         var mergeService = Substitute.For<ISoundalikeMergeService>();
         var service = CreateService(mergeService);
@@ -334,8 +365,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Merge }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         await mergeService.Received(1).MergeMetadataAsync(
             scenario.DbContext,
             Arg.Is<Song>(s => s.Id == primary.Id),
@@ -351,6 +384,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_KeepAction_DoesNotDeleteOrTransfer()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -365,8 +399,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Keep }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var playlistSongs = scenario.DbContext.PlaylistSongs
             .Where(ps => ps.PlaylistId == playlist.Id).ToList();
         playlistSongs.Count.ShouldBe(1);
@@ -379,6 +415,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_DeletesSecondarySongs()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -391,8 +428,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         scenario.DbContext.Songs.Any(s => s.Id == secondary.Id).ShouldBeFalse();
         scenario.DbContext.Songs.Any(s => s.Id == primary.Id).ShouldBeTrue();
     }
@@ -400,6 +439,7 @@ public class SoundalikeResolutionSpecs
     [Fact]
     public async Task Resolve_RemovesNonConformity()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -413,14 +453,17 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         scenario.DbContext.AuditNonConformities.Any(nc => nc.Id == nc.Id).ShouldBeFalse();
     }
 
     [Fact]
     public async Task Resolve_ReturnsResolvedCount()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var p1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary1");
@@ -430,6 +473,7 @@ public class SoundalikeResolutionSpecs
         var nc1 = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
         var nc2 = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
 
+        // Act
         var result = await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id,
         [
             new GroupResolutionInput
@@ -444,12 +488,14 @@ public class SoundalikeResolutionSpecs
             }
         ]);
 
+        // Assert
         result.ShouldBe(2);
     }
 
     [Fact]
     public async Task Resolve_PrimaryOnDevice_SecondaryOnDifferentDevice_AddsPrimaryToSecondaryDevice()
     {
+        // Arrange
         var scenario = new Scenario();
         var service = CreateService();
         var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
@@ -466,8 +512,10 @@ public class SoundalikeResolutionSpecs
             SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
         };
 
+        // Act
         await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
 
+        // Assert
         var primaryDevices = scenario.DbContext.SongDevices
             .Where(sd => sd.SongId == primary.Id)
             .ToList();

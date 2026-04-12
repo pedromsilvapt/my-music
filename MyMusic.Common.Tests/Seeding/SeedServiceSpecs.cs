@@ -9,11 +9,14 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_NoSeedPath_DoesNothing()
     {
+        // Arrange
         var scenario = new Scenario();
         var seedService = scenario.CreateSeedService(seedPath: null);
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Users.Count().ShouldBe(1);
         scenario.DbContext.Sources.Count().ShouldBe(0);
     }
@@ -21,24 +24,30 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_FileNotFound_DoesNothing()
     {
+        // Arrange
         var scenario = new Scenario();
         var seedService = scenario.CreateSeedService(seedPath: "/nonexistent/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Users.Count().ShouldBe(1);
     }
 
     [Fact]
     public async Task SeedAsync_NewUsers_CreatesUsers()
     {
+        // Arrange
         var scenario = new Scenario();
         var seedJson = """{"users":[{"username":"testuser","name":"Test User"},{"username":"another","name":"Another User"}]}""";
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Users.Count().ShouldBe(3);
         var users = await scenario.DbContext.Users.Where(u => u.Username != "admin").ToListAsync();
         users.ShouldContain(u => u.Username == "testuser" && u.Name == "Test User");
@@ -48,6 +57,7 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_UsersWithDevices_CreatesUsersAndDevices()
     {
+        // Arrange
         var scenario = new Scenario();
         var seedJson = """
             {
@@ -64,8 +74,10 @@ public class SeedServiceSpecs
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         var user = await scenario.DbContext.Users
             .FirstOrDefaultAsync(u => u.Username == "testuser");
 
@@ -83,6 +95,7 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_NewSources_CreatesSources()
     {
+        // Arrange
         var scenario = new Scenario();
         var seedJson = """
             {
@@ -95,8 +108,10 @@ public class SeedServiceSpecs
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Sources.Count().ShouldBe(2);
         var sources = await scenario.DbContext.Sources.ToListAsync();
         sources.ShouldContain(s => s.Name == "Spotify" && s.Icon == "spotify" && s.IsPaid);
@@ -106,14 +121,17 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_UserWithId_UpdatesExistingUser()
     {
+        // Arrange
         var scenario = new Scenario();
         var existingUser = scenario.AdminUser;
         var seedJson = $$"""{"users":[{"id":{{existingUser.Id}},"username":"admin","name":"Updated Name"}]}""";
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Users.Count().ShouldBe(1);
         var user = await scenario.DbContext.Users.FindAsync(existingUser.Id);
         user.ShouldNotBeNull();
@@ -123,13 +141,16 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_UserByUsername_UpdatesExistingUser()
     {
+        // Arrange
         var scenario = new Scenario();
         var seedJson = """{"users":[{"username":"admin","name":"Updated Admin"}]}""";
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Users.Count().ShouldBe(1);
         var user = await scenario.DbContext.Users.FirstOrDefaultAsync(u => u.Username == "admin");
         user.ShouldNotBeNull();
@@ -139,6 +160,7 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_DeviceByOwnerAndName_UpdatesExisting()
     {
+        // Arrange
         var scenario = new Scenario();
         var existingDevice = new Device
         {
@@ -163,8 +185,10 @@ public class SeedServiceSpecs
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Devices.Count().ShouldBe(1);
         var device = await scenario.DbContext.Devices.FirstOrDefaultAsync(d => d.Name == "iPhone");
         device.ShouldNotBeNull();
@@ -175,6 +199,7 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_SourceWithId_UpdatesExisting()
     {
+        // Arrange
         var scenario = new Scenario();
         var existingSource = new Source
         {
@@ -200,8 +225,10 @@ public class SeedServiceSpecs
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Sources.Count().ShouldBe(1);
         var source = await scenario.DbContext.Sources.FindAsync(existingSource.Id);
         source.ShouldNotBeNull();
@@ -213,6 +240,7 @@ public class SeedServiceSpecs
     [Fact]
     public async Task SeedAsync_SourceByName_UpdatesExisting()
     {
+        // Arrange
         var scenario = new Scenario();
         var existingSource = new Source
         {
@@ -237,8 +265,10 @@ public class SeedServiceSpecs
         scenario.FileSystem.File.WriteAllText("/seed.json", seedJson);
         var seedService = scenario.CreateSeedService(seedPath: "/seed.json");
 
+        // Act
         await seedService.SeedAsync();
 
+        // Assert
         scenario.DbContext.Sources.Count().ShouldBe(1);
         var source = await scenario.DbContext.Sources.FirstOrDefaultAsync(s => s.Name == "Spotify");
         source.ShouldNotBeNull();
