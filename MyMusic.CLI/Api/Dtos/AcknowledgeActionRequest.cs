@@ -2,7 +2,7 @@ namespace MyMusic.CLI.Api.Dtos;
 
 public record AcknowledgeActionRequest
 {
-    public required long SongId { get; init; }
+    public required string DevicePath { get; init; }
     public DateTime? ModifiedAt { get; init; }
 }
 

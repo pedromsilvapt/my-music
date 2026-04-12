@@ -795,6 +795,16 @@ public class DevicesController(
 
         session.CompletedAt = DateTime.UtcNow;
         session.Status = SyncSessionStatus.Completed;
+
+        if (!session.IsDryRun)
+        {
+            var device = await context.Devices.FindAsync([deviceId], cancellationToken);
+            if (device != null)
+            {
+                device.LastSyncAt = DateTime.UtcNow;
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
@@ -888,11 +898,11 @@ public class DevicesController(
         }
 
         var songDevice = await context.SongDevices
-            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == request.SongId, cancellationToken);
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == request.DevicePath, cancellationToken);
 
         if (songDevice == null)
         {
-            throw new Exception($"SongDevice not found for device {deviceId} and song {request.SongId}");
+            throw new Exception($"SongDevice not found for device {deviceId} and path {request.DevicePath}");
         }
 
         if (songDevice.SyncAction == SongSyncAction.Remove)
@@ -907,7 +917,7 @@ public class DevicesController(
 
         await context.SaveChangesAsync(cancellationToken);
 
-        logger.LogInformation("Acknowledged action for song {SongId} on device {DeviceId}", request.SongId, deviceId);
+        logger.LogInformation("Acknowledged action for path {DevicePath} on device {DeviceId}", request.DevicePath, deviceId);
 
         return new AcknowledgeActionResponse { Success = true };
     }
@@ -1032,7 +1042,16 @@ public class DevicesController(
                     });
                 }
             }
+            else if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value, syncTimestampTolerance))
+            {
+                if (existingSongDevice.SyncAction == null)
+                {
+                    existingSongDevice.SyncAction = SongSyncAction.Download;
+                }
+            }
         }
+
+        await context.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update, {PotentialConflicts} potential conflicts",
@@ -1062,6 +1081,7 @@ public class DevicesController(
         }
 
         var toUpload = new List<SyncFileInfoItem>();
+        var resolved = new List<SyncFileInfoItem>();
         var conflicts = new List<SyncConflictErrorItem>();
 
         foreach (var conflict in request.Conflicts)
@@ -1114,7 +1134,7 @@ public class DevicesController(
                 songDevice.LastSyncedModifiedAt = newLastSynced;
                 context.SongDevices.Update(songDevice);
 
-                toUpload.Add(new SyncFileInfoItem
+                resolved.Add(new SyncFileInfoItem
                 {
                     Path = conflict.Path,
                     ModifiedAt = conflict.LocalModifiedAt,
@@ -1143,12 +1163,13 @@ public class DevicesController(
         await context.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Resolved conflicts for device {DeviceId}: {ToUpload} resolved, {Conflicts} conflicts",
-            deviceId, toUpload.Count, conflicts.Count);
+            "Resolved conflicts for device {DeviceId}: {Resolved} resolved, {ToUpload} to upload, {Conflicts} conflicts",
+            deviceId, resolved.Count, toUpload.Count, conflicts.Count);
 
         return new SyncResolveConflictsResponse
         {
             ToUpload = toUpload,
+            Resolved = resolved,
             Conflicts = conflicts,
         };
     }

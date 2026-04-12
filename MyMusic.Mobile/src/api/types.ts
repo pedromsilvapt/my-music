@@ -98,7 +98,7 @@ export const SyncUploadResponseSchema = z.object({
 export type SyncUploadResponse = z.infer<typeof SyncUploadResponseSchema>;
 
 export const PendingActionItemSchema = z.object({
-    songId: z.number(),
+    songId: z.number().nullable(),
     path: z.string(),
     action: z.string(),
 });
@@ -112,7 +112,7 @@ export const GetPendingActionsResponseSchema = z.object({
 export type GetPendingActionsResponse = z.infer<typeof GetPendingActionsResponseSchema>;
 
 export const AcknowledgeActionRequestSchema = z.object({
-    songId: z.number(),
+    devicePath: z.string(),
     modifiedAt: z.string().optional(),
 });
 
@@ -324,6 +324,7 @@ export type SyncConflictErrorItem = z.infer<typeof SyncConflictErrorItemSchema>;
 
 export const SyncResolveConflictsResponseSchema = z.object({
     toUpload: z.array(SyncFileInfoItemSchema),
+    resolved: z.array(SyncFileInfoItemSchema),
     conflicts: z.array(SyncConflictErrorItemSchema),
 });
 

@@ -84,7 +84,7 @@ public class SyncService(
                     logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
 
                     var syncFiles = chunk.Select(f => new SyncFileInfoItem
-                            { Path = f.RelativePath, ModifiedAt = f.ModifiedAt, CreatedAt = f.CreatedAt })
+                    { Path = f.RelativePath, ModifiedAt = f.ModifiedAt, CreatedAt = f.CreatedAt })
                         .ToList();
                     var syncRequest = new SyncCheckRequest { Files = syncFiles, Force = force };
 
@@ -160,11 +160,15 @@ public class SyncService(
                                     var resolveResponse = await client.ResolveConflictsAsync(deviceId.Value,
                                         new SyncResolveConflictsRequest { Conflicts = resolveItems }, ct);
 
-                                    foreach (var resolved in resolveResponse.ToUpload)
+                                    foreach (var resolved in resolveResponse.Resolved)
                                     {
-                                        toUpdatePaths.Add(resolved.Path);
                                         logger.LogInformation("Resolved conflict for {Path}: {Reason}",
                                             resolved.Path, resolved.Reason);
+                                    }
+
+                                    foreach (var toUploadItem in resolveResponse.ToUpload)
+                                    {
+                                        toUpdatePaths.Add(toUploadItem.Path);
                                     }
 
                                     foreach (var conflictError in resolveResponse.Conflicts)
@@ -199,7 +203,9 @@ public class SyncService(
                                 created++;
                                 recordItems.Add(new SyncRecordRequestItem
                                 {
-                                    FilePath = fileToCreate.Path, Action = "Created", Source = "Device",
+                                    FilePath = fileToCreate.Path,
+                                    Action = "Created",
+                                    Source = "Device",
                                     Reason = fileToCreate.Reason,
                                 });
                             }
@@ -209,9 +215,11 @@ public class SyncService(
                                 failed++;
                                 recordItems.Add(new SyncRecordRequestItem
                                 {
-                                    FilePath = fileToCreate.Path, Action = "Error",
+                                    FilePath = fileToCreate.Path,
+                                    Action = "Error",
                                     ErrorMessage = ExtractErrorMessage(ex),
-                                    Source = "Device", Reason = fileToCreate.Reason,
+                                    Source = "Device",
+                                    Reason = fileToCreate.Reason,
                                 });
                             }
                         }
@@ -220,7 +228,9 @@ public class SyncService(
                             created++;
                             recordItems.Add(new SyncRecordRequestItem
                             {
-                                FilePath = fileToCreate.Path, Action = "Created", Source = "Device",
+                                FilePath = fileToCreate.Path,
+                                Action = "Created",
+                                Source = "Device",
                                 Reason = fileToCreate.Reason,
                             });
                         }
@@ -241,7 +251,9 @@ public class SyncService(
                                 updated++;
                                 recordItems.Add(new SyncRecordRequestItem
                                 {
-                                    FilePath = fileToUpdate.Path, Action = "Updated", Source = "Device",
+                                    FilePath = fileToUpdate.Path,
+                                    Action = "Updated",
+                                    Source = "Device",
                                     Reason = fileToUpdate.Reason,
                                 });
                             }
@@ -251,9 +263,11 @@ public class SyncService(
                                 failed++;
                                 recordItems.Add(new SyncRecordRequestItem
                                 {
-                                    FilePath = fileToUpdate.Path, Action = "Error",
+                                    FilePath = fileToUpdate.Path,
+                                    Action = "Error",
                                     ErrorMessage = ExtractErrorMessage(ex),
-                                    Source = "Device", Reason = fileToUpdate.Reason,
+                                    Source = "Device",
+                                    Reason = fileToUpdate.Reason,
                                 });
                             }
                         }
@@ -262,7 +276,9 @@ public class SyncService(
                             updated++;
                             recordItems.Add(new SyncRecordRequestItem
                             {
-                                FilePath = fileToUpdate.Path, Action = "Updated", Source = "Device",
+                                FilePath = fileToUpdate.Path,
+                                Action = "Updated",
+                                Source = "Device",
                                 Reason = fileToUpdate.Reason,
                             });
                         }
@@ -281,7 +297,9 @@ public class SyncService(
                         {
                             recordItems.Add(new SyncRecordRequestItem
                             {
-                                FilePath = file.RelativePath, Action = "Skipped", Source = "Device",
+                                FilePath = file.RelativePath,
+                                Action = "Skipped",
+                                Source = "Device",
                                 Reason = $"File unchanged (modified at {file.ModifiedAt:O})",
                             });
                         }
@@ -305,9 +323,9 @@ public class SyncService(
             {
                 logger.LogInformation("Fetching pending actions from server");
                 var pendingActionsResponse = await client.GetPendingActionsAsync(deviceId.Value, ct);
-                
+
                 List<PendingActionItem> actionsToProcess;
-                
+
                 if (direction == SyncDirection.Down)
                 {
                     logger.LogInformation("Direction is 'down' - fetching all device songs");
@@ -339,12 +357,13 @@ public class SyncService(
                     serverProcessed++;
 
                     // Skip files we just uploaded - they're already current
-                    if (uploadedPaths.Contains(action.Path))
+                    // Exception: explicit Download actions should always re-download
+                    if (uploadedPaths.Contains(action.Path) && action.Action != "Download")
                     {
                         if (!dryRun)
                         {
                             await client.AcknowledgeActionAsync(deviceId.Value,
-                                new AcknowledgeActionRequest { SongId = action.SongId }, ct);
+                                new AcknowledgeActionRequest { DevicePath = action.Path }, ct);
                         }
 
                         progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
@@ -354,159 +373,177 @@ public class SyncService(
 
                     if (action.Action == "Download")
                     {
-                    var fileExists = fileSystem.File.Exists(fullPath);
+                        var fileExists = fileSystem.File.Exists(fullPath);
 
-                    // Prompt for confirmation only if not dry-run, file exists, and not auto-confirm
-                    if (!dryRun && fileExists && !autoConfirm)
-                    {
-                        if (!PromptUser($"Replace '{action.Path}'?"))
+                        // Prompt for confirmation only if not dry-run, file exists, and not auto-confirm
+                        if (!dryRun && fileExists && !autoConfirm)
                         {
-                            progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created,
-                                updated, skipped, downloaded, removed, failed, "server", conflicts));
-                            continue; // Leave pending
-                        }
-                    }
-
-                    if (!dryRun)
-                    {
-                        var tempPath = fullPath + ".tmp";
-                        try
-                        {
-                            EnsureDirectoryExists(fullPath);
-                            await DownloadAndWriteFileAsync(action.SongId, tempPath, ct);
-
-                            if (fileExists)
+                            if (!PromptUser($"Replace '{action.Path}'?"))
                             {
-                                fileSystem.File.Delete(fullPath);
+                                progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created,
+                                    updated, skipped, downloaded, removed, failed, "server", conflicts));
+                                continue; // Leave pending
                             }
+                        }
 
-                            fileSystem.File.Move(tempPath, fullPath);
+                        if (!dryRun)
+                        {
+                            var tempPath = fullPath + ".tmp";
+                            try
+                            {
+                                EnsureDirectoryExists(fullPath);
+                                await DownloadAndWriteFileAsync(action.SongId!.Value, tempPath, ct);
 
-                            var fileInfo = fileSystem.FileInfo.New(fullPath);
-                            await client.AcknowledgeActionAsync(deviceId.Value,
-                                new AcknowledgeActionRequest { SongId = action.SongId, ModifiedAt = fileInfo.LastWriteTimeUtc }, ct);
+                                if (fileExists)
+                                {
+                                    fileSystem.File.Delete(fullPath);
+                                }
+
+                                fileSystem.File.Move(tempPath, fullPath);
+
+                                var fileInfo = fileSystem.FileInfo.New(fullPath);
+                                await client.AcknowledgeActionAsync(deviceId.Value,
+                                    new AcknowledgeActionRequest { DevicePath = action.Path, ModifiedAt = fileInfo.LastWriteTimeUtc }, ct);
+                                downloaded++;
+                                serverRecordItems.Add(new SyncRecordRequestItem
+                                {
+                                    FilePath = action.Path,
+                                    Action = "Downloaded",
+                                    SongId = action.SongId,
+                                    Source = "Server",
+                                    Reason = "Server-initiated download",
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogError(ex, "Failed to download file: {Path}", action.Path);
+                                failed++;
+                                serverRecordItems.Add(new SyncRecordRequestItem
+                                {
+                                    FilePath = action.Path,
+                                    Action = "Error",
+                                    SongId = action.SongId,
+                                    ErrorMessage = ex.Message,
+                                    Source = "Server",
+                                    Reason = "Server-initiated download failed",
+                                });
+                            }
+                            finally
+                            {
+                                if (fileSystem.File.Exists(tempPath))
+                                {
+                                    fileSystem.File.Delete(tempPath);
+                                }
+                            }
+                        }
+                        else
+                        {
                             downloaded++;
                             serverRecordItems.Add(new SyncRecordRequestItem
                             {
-                                FilePath = action.Path, Action = "Downloaded", SongId = action.SongId,
-                                Source = "Server", Reason = "Server-initiated download",
+                                FilePath = action.Path,
+                                Action = "Downloaded",
+                                SongId = action.SongId,
+                                Source = "Server",
+                                Reason = "Server-initiated download",
                             });
                         }
-                        catch (Exception ex)
+                    }
+                    else if (action.Action == "Remove")
+                    {
+                        var fileExists = fileSystem.File.Exists(fullPath);
+
+                        if (!fileExists)
                         {
-                            logger.LogError(ex, "Failed to download file: {Path}", action.Path);
-                            failed++;
-                            serverRecordItems.Add(new SyncRecordRequestItem
+                            if (!dryRun)
                             {
-                                FilePath = action.Path, Action = "Error", SongId = action.SongId,
-                                ErrorMessage = ex.Message, Source = "Server",
-                                Reason = "Server-initiated download failed",
-                            });
+                                await client.AcknowledgeActionAsync(deviceId.Value,
+                                    new AcknowledgeActionRequest { DevicePath = action.Path }, ct);
+                            }
+
+                            progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
+                                skipped, downloaded, removed, failed, "server", conflicts));
+                            continue; // Already gone
                         }
-                        finally
+
+                        // Prompt for confirmation only if not dry-run and not auto-confirm
+                        if (!dryRun && !autoConfirm)
                         {
-                            if (fileSystem.File.Exists(tempPath))
+                            if (!PromptUser($"Delete '{action.Path}'?"))
                             {
-                                fileSystem.File.Delete(tempPath);
+                                progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created,
+                                    updated, skipped, downloaded, removed, failed, "server", conflicts));
+                                continue; // Leave pending
                             }
                         }
-                    }
-                    else
-                    {
-                        downloaded++;
-                        serverRecordItems.Add(new SyncRecordRequestItem
-                        {
-                            FilePath = action.Path, Action = "Downloaded", SongId = action.SongId, Source = "Server",
-                            Reason = "Server-initiated download",
-                        });
-                    }
-                }
-                else if (action.Action == "Remove")
-                {
-                    var fileExists = fileSystem.File.Exists(fullPath);
 
-                    if (!fileExists)
-                    {
                         if (!dryRun)
                         {
-                            await client.AcknowledgeActionAsync(deviceId.Value,
-                                new AcknowledgeActionRequest { SongId = action.SongId }, ct);
+                            try
+                            {
+                                fileSystem.File.Delete(fullPath);
+                                await client.AcknowledgeActionAsync(deviceId.Value,
+                                    new AcknowledgeActionRequest { DevicePath = action.Path }, ct);
+                                removed++;
+                                serverRecordItems.Add(new SyncRecordRequestItem
+                                {
+                                    FilePath = action.Path,
+                                    Action = "Removed",
+                                    SongId = action.SongId,
+                                    Source = "Server",
+                                    Reason = "Server-initiated removal",
+                                });
+                            }
+                            catch (Exception ex)
+                            {
+                                logger.LogError(ex, "Failed to delete file: {Path}", action.Path);
+                                failed++;
+                                serverRecordItems.Add(new SyncRecordRequestItem
+                                {
+                                    FilePath = action.Path,
+                                    Action = "Error",
+                                    SongId = action.SongId,
+                                    ErrorMessage = ex.Message,
+                                    Source = "Server",
+                                    Reason = "Server-initiated removal failed",
+                                });
+                            }
                         }
-
-                        progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated,
-                            skipped, downloaded, removed, failed, "server", conflicts));
-                        continue; // Already gone
-                    }
-
-                    // Prompt for confirmation only if not dry-run and not auto-confirm
-                    if (!dryRun && !autoConfirm)
-                    {
-                        if (!PromptUser($"Delete '{action.Path}'?"))
+                        else
                         {
-                            progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created,
-                                updated, skipped, downloaded, removed, failed, "server", conflicts));
-                            continue; // Leave pending
-                        }
-                    }
-
-                    if (!dryRun)
-                    {
-                        try
-                        {
-                            fileSystem.File.Delete(fullPath);
-                            await client.AcknowledgeActionAsync(deviceId.Value,
-                                new AcknowledgeActionRequest { SongId = action.SongId }, ct);
                             removed++;
                             serverRecordItems.Add(new SyncRecordRequestItem
                             {
-                                FilePath = action.Path, Action = "Removed", SongId = action.SongId, Source = "Server",
+                                FilePath = action.Path,
+                                Action = "Removed",
+                                SongId = action.SongId,
+                                Source = "Server",
                                 Reason = "Server-initiated removal",
                             });
                         }
-                        catch (Exception ex)
-                        {
-                            logger.LogError(ex, "Failed to delete file: {Path}", action.Path);
-                            failed++;
-                            serverRecordItems.Add(new SyncRecordRequestItem
-                            {
-                                FilePath = action.Path, Action = "Error", SongId = action.SongId,
-                                ErrorMessage = ex.Message, Source = "Server",
-                                Reason = "Server-initiated removal failed",
-                            });
-                        }
                     }
-                    else
-                    {
-                        removed++;
-                        serverRecordItems.Add(new SyncRecordRequestItem
-                        {
-                            FilePath = action.Path, Action = "Removed", SongId = action.SongId, Source = "Server",
-                            Reason = "Server-initiated removal",
-                        });
-                    }
+
+                    progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated, skipped,
+                        downloaded, removed, failed, "server", conflicts));
                 }
 
-                progress?.Report(new SyncProgress(serverTotal, serverProcessed, action.Path, created, updated, skipped,
-                    downloaded, removed, failed, "server", conflicts));
-            }
-
-            // Record server actions
-            if (serverRecordItems.Count > 0)
-            {
-                var serverRecordsRequest = new SyncRecordsRequest { Records = serverRecordItems };
-                await client.RecordChunkAsync(deviceId.Value, sessionId, serverRecordsRequest, ct);
-            }
+                // Record server actions
+                if (serverRecordItems.Count > 0)
+                {
+                    var serverRecordsRequest = new SyncRecordsRequest { Records = serverRecordItems };
+                    await client.RecordChunkAsync(deviceId.Value, sessionId, serverRecordsRequest, ct);
+                }
             }
 
             // === COMPLETE ===
             var directionString = direction == SyncDirection.Up ? "up" : direction == SyncDirection.Down ? "down" : "both";
-            var completeResponse = await client.CompleteSyncAsync(deviceId.Value, sessionId, 
+            var completeResponse = await client.CompleteSyncAsync(deviceId.Value, sessionId,
                 new SyncCompleteRequest { Direction = directionString }, ct);
 
             logger.LogInformation(
                 "Sync complete: {Created} created, {Updated} updated, {Skipped} skipped, {Downloaded} downloaded, {Removed} removed, {Error} error",
                 completeResponse.CreatedCount, completeResponse.UpdatedCount, completeResponse.SkippedCount,
-                completeResponse.DownloadedCount, completeResponse.RemovedCount, 
+                completeResponse.DownloadedCount, completeResponse.RemovedCount,
                 completeResponse.ErrorCount);
 
             return new SyncResult(

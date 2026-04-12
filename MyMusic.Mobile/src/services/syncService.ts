@@ -33,6 +33,7 @@ import {
 } from './configService';
 import {type ScanResult} from './fileScanner';
 import {getScanner} from './scannerRegistry';
+import {decodeToFsPath} from './pathUtils';
 
 export class SyncCancelledError extends Error {
     constructor() {
@@ -97,6 +98,8 @@ export async function runSync(
     if (!deviceId || !repositoryPath) {
         throw new Error('Device not configured');
     }
+
+    const decodedRepoPath = decodeToFsPath(repositoryPath);
 
     try {
         await activateKeepAwakeAsync();
@@ -180,6 +183,17 @@ export async function runSync(
             });
         }
 
+        onProgress({phase: 'server'});
+
+        const pendingActions = await getPendingActions(deviceId);
+
+        const pendingDownloadPaths = new Set<string>();
+        for (const action of pendingActions.actions) {
+            if (action.action === 'Download') {
+                pendingDownloadPaths.add(action.path);
+            }
+        }
+
         const chunks = chunkArray(files, chunkSize);
 
         for (let i = 0; i < chunks.length; i++) {
@@ -243,8 +257,12 @@ export async function runSync(
                         try {
                             const resolveResponse = await resolveConflicts(deviceId, {conflicts: resolveItems});
 
-                            for (const resolved of resolveResponse.toUpload) {
-                                toUpdatePaths.add(resolved.path);
+                            for (const resolved of resolveResponse.resolved) {
+                                console.log('Resolved conflict for', resolved.path, ':', resolved.reason);
+                            }
+
+                            for (const toUploadItem of resolveResponse.toUpload) {
+                                toUpdatePaths.add(toUploadItem.path);
                             }
 
                             for (const conflict of resolveResponse.conflicts) {
@@ -266,7 +284,7 @@ export async function runSync(
                                                 await handleDownloadConflict(
                                                     deviceId,
                                                     conflictInfo,
-                                                    repositoryPath,
+                                                    decodedRepoPath,
                                                     sessionId,
                                                     result,
                                                     options.dryRun
@@ -408,11 +426,15 @@ export async function runSync(
                 });
             }
 
-            result.skipped += chunk.length - syncResponse.toCreate.length - syncResponse.toUpdate.length - syncResponse.potentialConflicts.length;
+            let skippedInChunk = 0;
 
-            // Add skipped files to records
             for (const file of chunk) {
-                if (!toCreatePaths.has(file.relativePath) && !toUpdatePaths.has(file.relativePath)) {
+                const inCreate = toCreatePaths.has(file.relativePath);
+                const inUpdate = toUpdatePaths.has(file.relativePath);
+                const isPendingDownload = pendingDownloadPaths.has(file.relativePath);
+
+                if (!inCreate && !inUpdate && !isPendingDownload) {
+                    skippedInChunk++;
                     recordItems.push({
                         filePath: file.relativePath,
                         action: 'Skipped',
@@ -422,14 +444,12 @@ export async function runSync(
                 }
             }
 
+            result.skipped += skippedInChunk;
+
             await recordChunk(deviceId, sessionId, {records: recordItems});
         }
 
         checkCancelled();
-
-        onProgress({phase: 'server'});
-
-        const pendingActions = await getPendingActions(deviceId);
 
         function confirmDeletion(filePath: string): Promise<boolean> {
             return new Promise((resolve) => {
@@ -454,60 +474,85 @@ export async function runSync(
             }
         }
 
+        const downloadRecordItems: Array<{
+            filePath: string;
+            action: string;
+            source: string;
+            songId?: number;
+            reason?: string;
+            errorMessage?: string;
+        }> = [];
+
         for (const action of pendingActions.actions) {
             checkCancelled();
 
             if (action.action === 'Download') {
-                const fullPath = `${repositoryPath}/${action.path}`;
+                const fullPath = `${decodedRepoPath}/${action.path}`;
                 const fileExists = new File(fullPath).exists;
 
-                if (uploadedPaths.has(action.path)) {
-                    if (!options.dryRun) {
+                if (!options.dryRun) {
+                    try {
+                        const dir = new File(fullPath).parentDirectory;
+                        if (dir && !dir.exists) {
+                            dir.create();
+                        }
+
+                        if (fileExists) {
+                            await new File(fullPath).delete();
+                        }
+
+                        const blob = await downloadSong(action.songId!);
+
+                        const file = new File(fullPath);
+                        const bytes = await blob.arrayBuffer();
+                        await file.write(new Uint8Array(bytes));
+
                         const fileInfo = new File(fullPath);
+                        const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
+
                         await acknowledgeAction(deviceId, {
-                            songId: action.songId,
-                            modifiedAt: fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined,
+                            devicePath: action.path,
+                            modifiedAt,
+                        });
+
+                        result.downloaded++;
+                        downloadRecordItems.push({
+                            filePath: action.path,
+                            action: 'Downloaded',
+                            source: 'Server',
+                            songId: action.songId ?? undefined,
+                            reason: 'Server-initiated download',
+                        });
+                    } catch (e) {
+                        result.failed++;
+                        const errorMessage = e instanceof Error ? e.message : String(e);
+                        console.error('Download failed:', errorMessage);
+                        downloadRecordItems.push({
+                            filePath: action.path,
+                            action: 'Error',
+                            source: 'Server',
+                            songId: action.songId ?? undefined,
+                            reason: 'Server-initiated download failed',
+                            errorMessage,
                         });
                     }
-                    result.downloaded++;
                 } else {
-                    if (!options.dryRun) {
-                        try {
-                            const blob = await downloadSong(action.songId);
-
-                            const dir = new File(fullPath).parentDirectory;
-                            if (dir && !dir.exists) {
-                                dir.create();
-                            }
-
-                            const file = new File(fullPath);
-                            const bytes = await blob.arrayBuffer();
-                            await file.write(new Uint8Array(bytes));
-
-                            const fileInfo = new File(fullPath);
-                            const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
-
-                            await acknowledgeAction(deviceId, {
-                                songId: action.songId,
-                                modifiedAt,
-                            });
-
-                            result.downloaded++;
-                        } catch (e) {
-                            result.failed++;
-                            console.error('Download failed:', e);
-                        }
-                    } else {
-                        result.downloaded++;
-                    }
+                    result.downloaded++;
+                    downloadRecordItems.push({
+                        filePath: action.path,
+                        action: 'Downloaded',
+                        source: 'Server',
+                        songId: action.songId ?? undefined,
+                        reason: 'Server-initiated download',
+                    });
                 }
             } else if (action.action === 'Remove') {
-                const filePath = `${repositoryPath}/${action.path}`;
+                const filePath = `${decodedRepoPath}/${action.path}`;
                 const file = new File(filePath);
 
                 if (!file.exists) {
                     if (!options.dryRun) {
-                        await acknowledgeAction(deviceId, {songId: action.songId});
+                        await acknowledgeAction(deviceId, {devicePath: action.path});
                     }
                     onProgress({
                         removed: result.removed,
@@ -529,10 +574,14 @@ export async function runSync(
 
                 if (!options.dryRun) {
                     await file.delete();
-                    await acknowledgeAction(deviceId, {songId: action.songId});
+                    await acknowledgeAction(deviceId, {devicePath: action.path});
                 }
-                await recordChunk(deviceId, sessionId, {
-                    records: [{filePath: action.path, action: 'Removed', source: 'Device', songId: action.songId}],
+                downloadRecordItems.push({
+                    filePath: action.path,
+                    action: 'Removed',
+                    source: 'Server',
+                    songId: action.songId ?? undefined,
+                    reason: 'Server-initiated removal',
                 });
                 result.removed++;
             }
@@ -543,6 +592,10 @@ export async function runSync(
                 processedFiles: pendingActions.actions.indexOf(action) + 1,
                 totalFiles: pendingActions.actions.length,
             });
+        }
+
+        if (downloadRecordItems.length > 0) {
+            await recordChunk(deviceId, sessionId, {records: downloadRecordItems});
         }
 
         onProgress({phase: 'completing'});
@@ -581,21 +634,26 @@ export async function runSync(
 async function handleDownloadConflict(
     deviceId: number,
     conflict: SyncPotentialConflictItem,
-    repositoryPath: string,
+    decodedRepoPath: string,
     sessionId: number,
     result: SyncResult,
     dryRun: boolean
 ) {
-    const fullPath = `${repositoryPath}/${conflict.path}`;
+    const fullPath = `${decodedRepoPath}/${conflict.path}`;
 
     if (!dryRun) {
         try {
-            const blob = await downloadSong(conflict.songId);
-
             const dir = new File(fullPath).parentDirectory;
             if (dir && !dir.exists) {
                 dir.create();
             }
+
+            const fileExists = new File(fullPath).exists;
+            if (fileExists) {
+                await new File(fullPath).delete();
+            }
+
+            const blob = await downloadSong(conflict.songId);
 
             const file = new File(fullPath);
             const bytes = await blob.arrayBuffer();
@@ -605,7 +663,7 @@ async function handleDownloadConflict(
             const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
 
             await acknowledgeAction(deviceId, {
-                songId: conflict.songId,
+                devicePath: conflict.path,
                 modifiedAt,
             });
 

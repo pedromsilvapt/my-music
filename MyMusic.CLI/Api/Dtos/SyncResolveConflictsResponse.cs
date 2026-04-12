@@ -9,5 +9,6 @@ public record SyncConflictErrorItem
 public record SyncResolveConflictsResponse
 {
     public required List<SyncFileInfoItem> ToUpload { get; init; }
+    public required List<SyncFileInfoItem> Resolved { get; init; }
     public required List<SyncConflictErrorItem> Conflicts { get; init; }
 }

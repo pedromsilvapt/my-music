@@ -7,7 +7,7 @@ public record GetDeviceSongsResponse
 
 public record DeviceSongItem
 {
-    public required long SongId { get; init; }
+    public required long? SongId { get; init; }
     public required string Path { get; init; }
     public string? Action { get; init; }
 }
