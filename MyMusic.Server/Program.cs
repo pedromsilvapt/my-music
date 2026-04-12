@@ -2,6 +2,7 @@ using MyMusic.Common;
 using MyMusic.Server;
 
 var builder = WebApplication.CreateBuilder(args)
+    .UseMyMusicConfiguration()
     .UseMyMusicCommon()
     .UseMyMusicServer();
 

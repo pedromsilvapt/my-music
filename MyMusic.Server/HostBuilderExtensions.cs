@@ -19,6 +19,21 @@ namespace MyMusic.Server;
 
 public static class HostBuilderExtensions
 {
+    public static T UseMyMusicConfiguration<T>(this T builder) where T : IHostApplicationBuilder
+    {
+        var env = builder.Environment.EnvironmentName;
+
+        // Load additional configuration from MYMUSIC_CONFIG_FOLDER if set
+        var configFolder = Environment.GetEnvironmentVariable("MYMUSIC_CONFIG_FOLDER");
+        if (!string.IsNullOrEmpty(configFolder))
+        {
+            builder.Configuration.AddJsonFile(Path.Combine(configFolder, "appsettings.json"), optional: true, reloadOnChange: true);
+            builder.Configuration.AddJsonFile(Path.Combine(configFolder, $"appsettings.{env}.json"), optional: true, reloadOnChange: true);
+        }
+
+        return builder;
+    }
+
     public static T UseMyMusicServer<T>(this T builder) where T : IHostApplicationBuilder
     {
         builder.Configuration.AddEnvironmentVariables("MYMUSIC_");

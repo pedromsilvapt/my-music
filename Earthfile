@@ -49,6 +49,7 @@ docker:
 
     ENV DOTNET_NOLOGO=true
     ENV ASPNETCORE_URLS=http://+:8080
+    ENV MYMUSIC_CONFIG_FOLDER=/app/config
 
     WORKDIR /app/bin
     ENTRYPOINT ["dotnet", "MyMusic.Server.dll"]
