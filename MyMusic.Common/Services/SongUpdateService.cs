@@ -37,7 +37,13 @@ public class SongUpdateService(
         await ApplyUpdatesAsync(db, song, update, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
+        var previousChecksum = song.Checksum;
         await UpdateFileAndChecksumAsync(song, cancellationToken);
+
+        if (song.Checksum != previousChecksum)
+        {
+            await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
+        }
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -64,7 +70,13 @@ public class SongUpdateService(
             await ApplyUpdatesAsync(db, song, update, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
 
+            var previousChecksum = song.Checksum;
             await UpdateFileAndChecksumAsync(song, cancellationToken);
+
+            if (song.Checksum != previousChecksum)
+            {
+                await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
+            }
 
             await db.SaveChangesAsync(cancellationToken);
 
@@ -438,6 +450,19 @@ public class SongUpdateService(
         await db.AddAsync(genre, cancellationToken);
 
         return genre;
+    }
+
+    private static async Task MarkSongDevicesForDownloadAsync(MusicDbContext db, long songId,
+        CancellationToken cancellationToken)
+    {
+        var songDevices = await db.SongDevices
+            .Where(sd => sd.SongId == songId && sd.SyncAction != SongSyncAction.Remove)
+            .ToListAsync(cancellationToken);
+
+        foreach (var songDevice in songDevices)
+        {
+            songDevice.SyncAction = SongSyncAction.Download;
+        }
     }
 
     private async Task UpdateFileAndChecksumAsync(Song song, CancellationToken cancellationToken)
