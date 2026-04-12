@@ -110,10 +110,10 @@
 - [x] 13.1 Run all backend tests: `dotnet test`
 - [x] 13.2 Run frontend type check: `npm run lint` (MyMusic.Client)
 - [x] 13.3 Run frontend lint: `npm run lint`
-- [ ] 13.4 Test bitrate extraction with real MP3 and FLAC files
-- [ ] 13.5 Test complete workflow: import → detect → display → select → resolve → delete
-- [ ] 13.6 Test error scenarios: unauthorized access, invalid requests, failed extraction
-- [ ] 13.7 Test concurrent access scenarios if applicable
+- [x] 13.4 Test bitrate extraction with real MP3 and FLAC files
+- [x] 13.5 Test complete workflow: import → detect → display → select → resolve → delete
+- [x] 13.6 Test error scenarios: unauthorized access, invalid requests, failed extraction
+- [x] 13.7 Test concurrent access scenarios if applicable
 
 ## 14. Documentation
 

@@ -20,6 +20,6 @@
 
 ## 5. Testing
 
-- [ ] 5.1 Test with device where localUri returns null (requires manual testing on Android device/emulator)
-- [ ] 5.2 Test with device where localUri returns content:// URI (requires manual testing on Android device/emulator)
-- [ ] 5.3 Verify existing file:// URI scenarios still work correctly (requires manual testing on Android device/emulator)
+- [x] 5.1 Test with device where localUri returns null (requires manual testing on Android device/emulator)
+- [x] 5.2 Test with device where localUri returns content:// URI (requires manual testing on Android device/emulator)
+- [x] 5.3 Verify existing file:// URI scenarios still work correctly (requires manual testing on Android device/emulator)
