@@ -33,7 +33,7 @@ import {
 } from './configService';
 import {type ScanResult} from './fileScanner';
 import {getScanner} from './scannerRegistry';
-import {decodeToFsPath} from './pathUtils';
+import {decodeToFsPath, toFileUri} from './pathUtils';
 
 export class SyncCancelledError extends Error {
     constructor() {
@@ -240,7 +240,7 @@ export async function runSync(
                         if (!file) continue;
 
                         try {
-                            const localFile = new File(file.fullPath);
+                            const localFile = new File(toFileUri(file.fullPath));
                             const fileContentBase64 = await localFile.base64();
                             resolveItems.push({
                                 path: conflict.path,
@@ -488,26 +488,26 @@ export async function runSync(
 
             if (action.action === 'Download') {
                 const fullPath = `${decodedRepoPath}/${action.path}`;
-                const fileExists = new File(fullPath).exists;
+                const fileExists = new File(toFileUri(fullPath)).exists;
 
                 if (!options.dryRun) {
                     try {
-                        const dir = new File(fullPath).parentDirectory;
+                        const dir = new File(toFileUri(fullPath)).parentDirectory;
                         if (dir && !dir.exists) {
                             dir.create();
                         }
 
                         if (fileExists) {
-                            await new File(fullPath).delete();
+                            await new File(toFileUri(fullPath)).delete();
                         }
 
                         const blob = await downloadSong(action.songId!);
 
-                        const file = new File(fullPath);
+                        const file = new File(toFileUri(fullPath));
                         const bytes = await blob.arrayBuffer();
                         await file.write(new Uint8Array(bytes));
 
-                        const fileInfo = new File(fullPath);
+                        const fileInfo = new File(toFileUri(fullPath));
                         const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
 
                         await acknowledgeAction(deviceId, {
@@ -548,7 +548,7 @@ export async function runSync(
                 }
             } else if (action.action === 'Remove') {
                 const filePath = `${decodedRepoPath}/${action.path}`;
-                const file = new File(filePath);
+                const file = new File(toFileUri(filePath));
 
                 if (!file.exists) {
                     if (!options.dryRun) {
@@ -643,23 +643,23 @@ async function handleDownloadConflict(
 
     if (!dryRun) {
         try {
-            const dir = new File(fullPath).parentDirectory;
+            const dir = new File(toFileUri(fullPath)).parentDirectory;
             if (dir && !dir.exists) {
                 dir.create();
             }
 
-            const fileExists = new File(fullPath).exists;
+            const fileExists = new File(toFileUri(fullPath)).exists;
             if (fileExists) {
-                await new File(fullPath).delete();
+                await new File(toFileUri(fullPath)).delete();
             }
 
             const blob = await downloadSong(conflict.songId);
 
-            const file = new File(fullPath);
+            const file = new File(toFileUri(fullPath));
             const bytes = await blob.arrayBuffer();
             await file.write(new Uint8Array(bytes));
 
-            const fileInfo = new File(fullPath);
+            const fileInfo = new File(toFileUri(fullPath));
             const modifiedAt = fileInfo.modificationTime ? safeToIsoString(new Date(fileInfo.modificationTime)) : undefined;
 
             await acknowledgeAction(deviceId, {

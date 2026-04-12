@@ -1,6 +1,6 @@
 import * as MediaLibrary from 'expo-media-library';
 import { File } from 'expo-file-system';
-import { computeRelativePath, decodeSafUriToFilesystemPath, decodeToFsPath, isContentUri, isWithinDirectory } from './pathUtils';
+import { computeRelativePath, decodeSafUriToFilesystemPath, decodeToFsPath, isContentUri, isWithinDirectory, toFileUri } from './pathUtils';
 
 export interface FileMetadata {
     relativePath: string;
@@ -162,7 +162,7 @@ export async function scanFromDirectory (
                     // Get file size
                     let size = 0;
                     try {
-                        const file = new File(filePath);
+                        const file = new File(toFileUri(filePath));
                         size = file.size || 0;
                     } catch (e) {
                         // Size is not critical, continue with 0

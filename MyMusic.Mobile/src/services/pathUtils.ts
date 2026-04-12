@@ -88,3 +88,18 @@ export function computeRelativePath(filePath: string, repoFsPath: string, fallba
     }
     return fallbackFilename;
 }
+
+/**
+ * Converts a filesystem path to a file:// URI with proper encoding.
+ * If the path is already a URI (starts with protocol://), returns it as-is.
+ * This is required for expo-file-system File class which expects URIs.
+ */
+export function toFileUri(path: string): string {
+    // If already a URI (has protocol), return as-is
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path)) {
+        return path;
+    }
+    // Convert filesystem path to file:// URI with encoded special characters
+    // encodeURIComponent then restore forward slashes
+    return 'file://' + encodeURIComponent(path).replace(/%2F/g, '/');
+}
