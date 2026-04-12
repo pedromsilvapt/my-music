@@ -1,5 +1,6 @@
 import * as MediaLibrary from 'expo-media-library';
-import {File} from 'expo-file-system';
+import { File } from 'expo-file-system';
+import { computeRelativePath, decodeSafUriToFilesystemPath, decodeToFsPath, isContentUri, isWithinDirectory } from './pathUtils';
 
 export interface FileMetadata {
     relativePath: string;
@@ -32,15 +33,18 @@ const YIELD_INTERVAL_MS = 16;
 const IDLE_CALLBACK_TIMEOUT_MS = 10;
 const PAGE_SIZE = 1000;
 
-function safeDate(d: Date): Date {
+function fromEpochTimestamp (value: number | null | undefined): Date {
+    if (!value) return new Date();
+    const ms = value > 1e11 ? value : value * 1000;
+    const d = new Date(ms);
     return isNaN(d.getTime()) ? new Date() : d;
 }
 
 // Helper to yield control to the UI thread using requestIdleCallback with fallback
-function yieldToUI(): Promise<void> {
+function yieldToUI (): Promise<void> {
     return new Promise((resolve) => {
         if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => resolve(), {timeout: IDLE_CALLBACK_TIMEOUT_MS});
+            requestIdleCallback(() => resolve(), { timeout: IDLE_CALLBACK_TIMEOUT_MS });
         } else {
             setTimeout(resolve, 0);
         }
@@ -52,24 +56,24 @@ function yieldToUI(): Promise<void> {
  * This is much faster than file system scanning on Android because it uses
  * the indexed MediaStore database instead of walking the directory tree.
  */
-export async function scanFromDirectory(
+export async function scanFromDirectory (
     directoryUri: string,
     options: ScanOptions
 ): Promise<ScanResult> {
     const files: FileMetadata[] = [];
     const errors: ScanError[] = [];
-    const {onProgress, onError} = options;
+    const { onProgress, onError } = options;
 
     try {
         // Request permissions when starting scan (user requirement #3)
-        const {status} = await MediaLibrary.requestPermissionsAsync();
+        const { status } = await MediaLibrary.requestPermissionsAsync();
         if (status !== 'granted') {
             const errorMsg = 'Media library permission not granted';
             if (onError) {
                 onError('media-library', errorMsg);
             }
-            errors.push({path: 'media-library', error: errorMsg});
-            return {files, errors};
+            errors.push({ path: 'media-library', error: errorMsg });
+            return { files, errors };
         }
 
         let lastProgressTime = Date.now();
@@ -78,13 +82,9 @@ export async function scanFromDirectory(
         let cursor: string | undefined = undefined;
         let processedCount = 0;
 
-        // Get the normalized repository path for filtering
-        // If the directory URI is a SAF content URI, decode it to a filesystem path
-        // so that isWithinDirectory and relativePath calculations work correctly
-        const repoPath = normalizePath(directoryUri);
         const repoFsPath = isContentUri(directoryUri)
             ? decodeSafUriToFilesystemPath(directoryUri)
-            : repoPath;
+            : decodeToFsPath(directoryUri);
 
         if (isContentUri(directoryUri) && !repoFsPath) {
             console.warn(
@@ -130,13 +130,8 @@ export async function scanFromDirectory(
                         continue;
                     }
 
-                    // Normalize the URI (preserves content:// URIs, converts file:// to path)
-                    const filePath = normalizePath(sourceUri);
+                    const filePath = decodeToFsPath(sourceUri);
 
-                    // Check if file is within the repository directory
-                    // When repoPath is a SAF URI, use the decoded filesystem path for matching
-                    // If decoding failed (empty repoFsPath), skip the directory filter since
-                    // MediaLibrary already returns audio files and we can't verify the directory
                     if (!isContentUri(sourceUri) && repoFsPath && !isWithinDirectory(filePath, repoFsPath)) {
                         continue;
                     }
@@ -155,32 +150,14 @@ export async function scanFromDirectory(
                         continue;
                     }
 
-                    // Calculate relative path from repository root
-                    // Use the decoded filesystem path when available to preserve directory structure
-                    // Fall back to filename only if we can't determine the relative path
-                    let relativePath: string;
-                    if (isContentUri(sourceUri)) {
-                        if (repoFsPath && isWithinDirectory(filePath, repoFsPath)) {
-                            relativePath = filePath.substring(repoFsPath.length);
-                        } else if (repoPath && isWithinDirectory(filePath, repoPath)) {
-                            relativePath = filePath.substring(repoPath.length);
-                        } else {
-                            relativePath = filename;
-                        }
-                    } else {
-                        if (repoFsPath && isWithinDirectory(filePath, repoFsPath)) {
-                            relativePath = filePath.substring(repoFsPath.length);
-                        } else if (repoPath && isWithinDirectory(filePath, repoPath)) {
-                            relativePath = filePath.substring(repoPath.length);
-                        } else {
-                            relativePath = filename;
-                        }
-                    }
+                    const relativePath = computeRelativePath(filePath, repoFsPath, filename);
 
-                    // Strip leading slash from relative path
-                    if (relativePath.startsWith('/')) {
-                        relativePath = relativePath.slice(1);
-                    }
+                    console.log('[mediaLibraryScanner] sourceUri:', sourceUri);
+                    console.log('[mediaLibraryScanner] filePath:', filePath);
+                    console.log('[mediaLibraryScanner] directoryUri:', directoryUri);
+                    console.log('[mediaLibraryScanner] repoFsPath:', repoFsPath);
+                    console.log('[mediaLibraryScanner] isWithinDirectory:', isWithinDirectory(filePath, repoFsPath));
+                    console.log('[mediaLibraryScanner] relativePath:', relativePath);
 
                     // Get file size
                     let size = 0;
@@ -194,20 +171,16 @@ export async function scanFromDirectory(
                     // Add to results
                     files.push({
                         relativePath,
-                        fullPath: filePath,
-                        modifiedAt: safeDate(asset.modificationTime
-                            ? new Date(asset.modificationTime * 1000)
-                            : new Date()),
-                        createdAt: safeDate(asset.creationTime
-                            ? new Date(asset.creationTime * 1000)
-                            : new Date()),
+                        fullPath: sourceUri,
+                        modifiedAt: fromEpochTimestamp(asset.modificationTime),
+                        createdAt: fromEpochTimestamp(asset.creationTime),
                         size,
                     });
 
                     // Update progress every PROGRESS_INTERVAL_MS
                     const now = Date.now();
                     if (onProgress && now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
-                        onProgress(files.length, repoPath);
+                        onProgress(files.length, repoFsPath);
                         lastProgressTime = now;
                     }
 
@@ -222,14 +195,14 @@ export async function scanFromDirectory(
                     if (onError) {
                         onError(asset.uri, errorMsg);
                     }
-                    errors.push({path: asset.uri, error: errorMsg});
+                    errors.push({ path: asset.uri, error: errorMsg });
                 }
             }
         }
 
         // Final progress update
         if (onProgress) {
-            onProgress(files.length, repoPath);
+            onProgress(files.length, repoFsPath);
         }
     } catch (error) {
         const errorMsg =
@@ -238,121 +211,13 @@ export async function scanFromDirectory(
         if (onError) {
             onError('media-library', errorMsg);
         }
-        errors.push({path: 'media-library', error: errorMsg});
+        errors.push({ path: 'media-library', error: errorMsg });
     }
 
-    return {files, errors};
+    return { files, errors };
 }
 
-/**
- * Check if a path is a content URI
- */
-function isContentUri(path: string): boolean {
-    return path.startsWith('content://');
-}
-
-/**
- * Decode a SAF (Storage Access Framework) content URI to a filesystem path.
- * SAF URIs on Android follow patterns like:
- *   content://com.android.providers.media.documents/document/primary%3AMusic
- *   content://com.android.providers.media.documents/document/primary%3AMusic%2FSubFolder
- *
- * The "primary" segment maps to /storage/emulated/0/
- * %3A is URL-encoded colon (:) which separates the volume from the path
- * %2F is URL-encoded forward slash (/)
- *
- * Returns the decoded filesystem path, or empty string if decoding fails.
- */
-function decodeSafUriToFilesystemPath(uri: string): string {
-    try {
-        if (!isContentUri(uri)) {
-            return '';
-        }
-
-        const parsed = new URL(uri);
-        const pathSegments = parsed.pathname.split('/').filter(Boolean);
-
-        // Find the document path segment in the SAF URI
-        // Pattern: .../document/<volume>:<path>
-        const docIndex = pathSegments.indexOf('document');
-        if (docIndex === -1 || docIndex + 1 >= pathSegments.length) {
-            return '';
-        }
-
-        const docPath = decodeURIComponent(pathSegments[docIndex + 1]);
-
-        // Handle "primary:" prefix which maps to /storage/emulated/0/
-        if (docPath.startsWith('primary:')) {
-            const relativePath = docPath.substring('primary:'.length);
-            return relativePath.length > 0
-                ? `/storage/emulated/0/${relativePath}`
-                : '/storage/emulated/0';
-        }
-
-        // Handle "home:" prefix which maps to /storage/emulated/0/
-        if (docPath.startsWith('home:')) {
-            const relativePath = docPath.substring('home:'.length);
-            return relativePath.length > 0
-                ? `/storage/emulated/0/${relativePath}`
-                : '/storage/emulated/0';
-        }
-
-        // Try to handle other volume patterns like "XXXX-XXXX:" (external storage)
-        const colonIndex = docPath.indexOf(':');
-        if (colonIndex !== -1) {
-            const volume = docPath.substring(0, colonIndex);
-            const relativePath = docPath.substring(colonIndex + 1);
-            // External SD cards appear as /storage/<volume>/
-            if (relativePath.length > 0) {
-                return `/storage/${volume}/${relativePath}`;
-            }
-            return `/storage/${volume}`;
-        }
-
-        return '';
-    } catch {
-        return '';
-    }
-}
-
-/**
- * Normalize a path by removing file:// prefix and trailing slash.
- * Content URIs are preserved as-is since expo-file-system can handle them.
- */
-function normalizePath(path: string): string {
-    // Preserve content:// URIs as-is (expo-file-system File class can handle them)
-    if (isContentUri(path)) {
-        return path;
-    }
-    // Remove file:// prefix
-    if (path.startsWith('file://')) {
-        path = path.substring(7);
-    }
-    // Remove trailing slash
-    if (path.endsWith('/')) {
-        path = path.slice(0, -1);
-    }
-    return path;
-}
-
-/**
- * Check if a file path is within a directory
- */
-function isWithinDirectory(filePath: string, directoryPath: string): boolean {
-    if (!directoryPath) {
-        return false;
-    }
-    // Ensure directory path ends with / for proper prefix matching
-    const normalizedDir = directoryPath.endsWith('/')
-        ? directoryPath
-        : directoryPath + '/';
-    return filePath.startsWith(normalizedDir) || filePath === directoryPath;
-}
-
-/**
- * Check if a filename matches any exclude pattern
- */
-function shouldExclude(filename: string, patterns: string[]): boolean {
+function shouldExclude (filename: string, patterns: string[]): boolean {
     for (const pattern of patterns) {
         const regex = globToRegex(pattern);
         if (regex.test(filename)) return true;
@@ -364,30 +229,30 @@ function shouldExclude(filename: string, patterns: string[]): boolean {
 /**
  * Convert glob pattern to regex
  */
-function globToRegex(glob: string): RegExp {
+function globToRegex (glob: string): RegExp {
     let regex = '^';
     for (const c of glob) {
         regex +=
             c === '*'
                 ? '.*'
                 : c === '?'
-                  ? '.'
-                  : c === '.'
-                    ? '\\.'
-                    : c === '/'
-                      ? '[\\/]'
-                      : c === '\\'
-                        ? '[\\/]'
-                        : c === '['
-                          ? '['
-                          : c === ']'
-                            ? ']'
-                            : escapeRegExp(c);
+                    ? '.'
+                    : c === '.'
+                        ? '\\.'
+                        : c === '/'
+                            ? '[\\/]'
+                            : c === '\\'
+                                ? '[\\/]'
+                                : c === '['
+                                    ? '['
+                                    : c === ']'
+                                        ? ']'
+                                        : escapeRegExp(c);
     }
     regex += '$';
     return new RegExp(regex, 'i');
 }
 
-function escapeRegExp(str: string): string {
+function escapeRegExp (str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

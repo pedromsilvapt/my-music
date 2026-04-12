@@ -1,5 +1,6 @@
 import { Directory, File } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
+import { computeRelativePath, decodeToFsPath, isWithinDirectory } from './pathUtils';
 
 export interface FileMetadata {
     relativePath: string;
@@ -31,12 +32,15 @@ const PROGRESS_INTERVAL_MS = 100;
 const YIELD_INTERVAL_MS = 16;
 const IDLE_CALLBACK_TIMEOUT_MS = 10;
 
-function safeDate(d: Date): Date {
+function fromEpochTimestamp (value: number | null | undefined): Date {
+    if (!value) return new Date();
+    const ms = value > 1e11 ? value : value * 1000;
+    const d = new Date(ms);
     return isNaN(d.getTime()) ? new Date() : d;
 }
 
 // Helper to yield control to the UI thread using requestIdleCallback with fallback
-function yieldToUI(): Promise<void> {
+function yieldToUI (): Promise<void> {
     return new Promise((resolve) => {
         if (typeof requestIdleCallback === 'function') {
             requestIdleCallback(() => resolve(), { timeout: IDLE_CALLBACK_TIMEOUT_MS });
@@ -57,13 +61,14 @@ export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult>
             return { files, errors };
         }
 
+        const repoFsPath = decodeToFsPath(options.basePath);
+
         const media = await MediaLibrary.getAssetsAsync({
             mediaType: MediaLibrary.MediaType.audio,
             first: 10000,
         });
 
         for (const asset of media.assets) {
-            const uri = asset.uri;
             const filename = asset.filename;
             const ext = '.' + filename.split('.').pop()?.toLowerCase();
 
@@ -71,19 +76,49 @@ export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult>
                 continue;
             }
 
-            const relativePath = filename;
-
-            if (shouldExclude(relativePath, options.excludePatterns)) {
+            if (shouldExclude(filename, options.excludePatterns)) {
                 continue;
             }
 
-            files.push({
-                relativePath,
-                fullPath: uri,
-                modifiedAt: safeDate(asset.modificationTime ? new Date(asset.modificationTime * 1000) : new Date()),
-                createdAt: safeDate(asset.creationTime ? new Date(asset.creationTime * 1000) : new Date()),
-                size: asset.duration || 0,
-            });
+            try {
+                const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
+                const sourceUri = assetInfo.localUri || asset.uri;
+
+                if (!sourceUri) {
+                    if (options.onError) {
+                        options.onError(asset.uri, 'Could not get any valid URI for media asset');
+                    }
+                    errors.push({ path: asset.uri, error: 'Could not get any valid URI for media asset' });
+                    continue;
+                }
+
+                const filePath = decodeToFsPath(sourceUri);
+                const relativePath = computeRelativePath(filePath, repoFsPath, filename);
+
+                console.log('[scanMusicFiles] sourceUri:', sourceUri);
+                console.log('[scanMusicFiles] filePath:', filePath);
+                console.log('[scanMusicFiles] repoFsPath:', repoFsPath);
+                console.log('[scanMusicFiles] isWithinDirectory:', isWithinDirectory(filePath, repoFsPath));
+                console.log('[scanMusicFiles] relativePath:', relativePath);
+
+                if (repoFsPath && !isWithinDirectory(filePath, repoFsPath)) {
+                    continue;
+                }
+
+                files.push({
+                    relativePath,
+                    fullPath: sourceUri,
+                    modifiedAt: fromEpochTimestamp(asset.modificationTime),
+                    createdAt: fromEpochTimestamp(asset.creationTime),
+                    size: asset.duration || 0,
+                });
+            } catch (error) {
+                const errorMsg = error instanceof Error ? error.message : 'Failed to process asset';
+                if (options.onError) {
+                    options.onError(asset.uri, errorMsg);
+                }
+                errors.push({ path: asset.uri, error: errorMsg });
+            }
         }
     } catch (error) {
         console.error('Error scanning music files:', error);
@@ -109,6 +144,8 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
             }
             return { files, errors };
         }
+
+        const repoFsPath = decodeToFsPath(directoryUri);
 
         let lastProgressTime = Date.now();
         let lastYieldTime = Date.now();
@@ -150,13 +187,21 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                     }
 
                     try {
-                        const relativePath = item.uri.replace(directoryUri + '/', '');
+                        const fileFsPath = decodeToFsPath(item.uri);
+                        const relativePath = computeRelativePath(fileFsPath, repoFsPath, filename);
+
+                        console.log('[fileScanner:scanFromDirectory] item.uri:', item.uri);
+                        console.log('[fileScanner:scanFromDirectory] fileFsPath:', fileFsPath);
+                        console.log('[fileScanner:scanFromDirectory] directoryUri:', directoryUri);
+                        console.log('[fileScanner:scanFromDirectory] repoFsPath:', repoFsPath);
+                        console.log('[fileScanner:scanFromDirectory] isWithinDirectory:', isWithinDirectory(fileFsPath, repoFsPath));
+                        console.log('[fileScanner:scanFromDirectory] relativePath:', relativePath);
 
                         const fileMetadata: FileMetadata = {
                             relativePath,
                             fullPath: item.uri,
-                            modifiedAt: safeDate(item.modificationTime ? new Date(item.modificationTime) : new Date()),
-                            createdAt: safeDate(item.creationTime ? new Date(item.creationTime) : new Date()),
+                            modifiedAt: fromEpochTimestamp(item.modificationTime),
+                            createdAt: fromEpochTimestamp(item.creationTime),
                             size: item.size || 0,
                         };
 

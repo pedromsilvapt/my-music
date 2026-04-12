@@ -39,7 +39,7 @@ export default function SyncOptionsScreen() {
                             </Text>
                         </View>
                     </View>
-                    <View style={[styles.segmentedControl, {marginTop: spacing.md, flexDirection: 'row', backgroundColor: colors.cardSecondary, borderRadius: borderRadius.md, padding: 4}]}>
+                    <View style={[styles.segmentedControl, {marginTop: spacing.md, flexDirection: 'row', backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: 4}]}>
                         {scannerOptions.map((option) => (
                             <TouchableOpacity
                                 key={option.value}
@@ -61,7 +61,7 @@ export default function SyncOptionsScreen() {
                                         {
                                             fontSize: fontSize.sm,
                                             fontWeight: fontWeight.medium,
-                                            color: options.scannerType === option.value ? colors.cardText : colors.cardTextSecondary,
+                                            color: options.scannerType === option.value ? colors.onPrimary : colors.textSecondary,
                                             textAlign: 'center',
                                         },
                                     ]}
@@ -84,8 +84,8 @@ export default function SyncOptionsScreen() {
                         <Switch
                             value={options.force}
                             onValueChange={(value) => setOptions({force: value})}
-                            trackColor={{false: colors.cardBorder, true: colors.primary}}
-                            thumbColor={colors.cardText}
+                            trackColor={{false: colors.borderSecondary, true: colors.primary}}
+                            thumbColor={colors.onPrimary}
                         />
                     </View>
                 </View>
@@ -101,8 +101,8 @@ export default function SyncOptionsScreen() {
                         <Switch
                             value={options.dryRun}
                             onValueChange={(value) => setOptions({dryRun: value})}
-                            trackColor={{false: colors.cardBorder, true: colors.primary}}
-                            thumbColor={colors.cardText}
+                            trackColor={{false: colors.borderSecondary, true: colors.primary}}
+                            thumbColor={colors.onPrimary}
                         />
                     </View>
                     {options.dryRun && (
@@ -124,8 +124,8 @@ export default function SyncOptionsScreen() {
                         <Switch
                             value={options.autoConfirm}
                             onValueChange={(value) => setOptions({autoConfirm: value})}
-                            trackColor={{false: colors.cardBorder, true: colors.primary}}
-                            thumbColor={colors.cardText}
+                            trackColor={{false: colors.borderSecondary, true: colors.primary}}
+                            thumbColor={colors.onPrimary}
                         />
                     </View>
                     {!options.autoConfirm && (
@@ -147,8 +147,8 @@ export default function SyncOptionsScreen() {
                         <Switch
                             value={options.treatConflictsAsErrors}
                             onValueChange={(value) => setOptions({treatConflictsAsErrors: value})}
-                            trackColor={{false: colors.cardBorder, true: colors.primary}}
-                            thumbColor={colors.cardText}
+                            trackColor={{false: colors.borderSecondary, true: colors.primary}}
+                            thumbColor={colors.onPrimary}
                         />
                     </View>
                     {!options.treatConflictsAsErrors && (

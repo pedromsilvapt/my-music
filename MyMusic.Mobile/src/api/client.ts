@@ -1,9 +1,9 @@
-import {ZodError, ZodSchema} from 'zod';
-import {getServerUrl, getUserId, getUserName} from '../services/configService';
-import {ApiError} from './types';
-import type {ProblemDetails} from './types';
+import { ZodError, ZodSchema } from 'zod';
+import { getServerUrl, getUserId, getUserName } from '../services/configService';
+import { ApiError } from './types';
+import type { ProblemDetails } from './types';
 
-function buildErrorMessage(parsed: ProblemDetails, fallback: string): string {
+function buildErrorMessage (parsed: ProblemDetails, fallback: string): string {
     if (parsed.errors && Object.keys(parsed.errors).length > 0) {
         const validationLines = Object.entries(parsed.errors)
             .flatMap(([field, messages]) => messages.map((msg: string) => `${field}: ${msg}`))
@@ -13,7 +13,7 @@ function buildErrorMessage(parsed: ProblemDetails, fallback: string): string {
     return parsed.detail || parsed.title || fallback;
 }
 
-async function getAuthHeaders(): Promise<Record<string, string>> {
+async function getAuthHeaders (): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
@@ -35,7 +35,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     return headers;
 }
 
-export async function apiRequest<T>(
+export async function apiRequest<T> (
     endpoint: string,
     options: {
         method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -47,7 +47,7 @@ export async function apiRequest<T>(
     const serverUrl = getServerUrl();
     const url = `${serverUrl}${endpoint}`;
     const headers = options.skipAuth
-        ? {'Content-Type': 'application/json'}
+        ? { 'Content-Type': 'application/json' }
         : await getAuthHeaders();
 
     const response = await fetch(url, {
@@ -99,7 +99,7 @@ export async function apiRequest<T>(
     }
 }
 
-export async function apiMultipartRequest<T>(
+export async function apiMultipartRequest<T> (
     endpoint: string,
     formData: FormData,
     schema: ZodSchema<T>
@@ -143,7 +143,7 @@ export async function apiMultipartRequest<T>(
     return schema.parse(data);
 }
 
-export async function downloadSong(songId: number): Promise<Blob> {
+export async function downloadSong (songId: number): Promise<Blob> {
     const headers = await getAuthHeaders();
     const serverUrl = getServerUrl();
     const response = await fetch(`${serverUrl}/songs/${songId}/download`, {
@@ -186,13 +186,13 @@ export interface ConnectionTestResult {
     stack?: string;
 }
 
-export async function testConnection(url?: string): Promise<ConnectionTestResult> {
+export async function testConnection (url?: string): Promise<ConnectionTestResult> {
     const testUrl = url || getServerUrl();
     const requestUrl = `${testUrl}/ping`;
 
     try {
         const headers = await getAuthHeaders();
-        const response = await fetch(requestUrl, {headers});
+        const response = await fetch(requestUrl, { headers });
 
         let responseBody: string | undefined;
         try {
@@ -220,11 +220,11 @@ export async function testConnection(url?: string): Promise<ConnectionTestResult
         };
     } catch (error: any) {
         const networkError = error.message?.includes('Network request failed') || error.message?.includes('ENOTFOUND') || error.message?.includes('ECONNREFUSED');
-        
+
         return {
             success: false,
-            message: networkError 
-                ? 'Cannot connect to server. Check URL and network.' 
+            message: networkError
+                ? 'Cannot connect to server. Check URL and network.'
                 : error.message || 'Connection failed',
             url: requestUrl,
             stack: error.stack,
