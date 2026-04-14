@@ -835,16 +835,7 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        var pendingActions = await context.SongDevices
-            .Include(sd => sd.Song)
-            .Where(sd => sd.DeviceId == deviceId && sd.SyncAction != null && sd.SyncAction != SongSyncAction.Upload)
-            .Select(sd => new PendingActionItem
-            {
-                SongId = sd.SongId,
-                Path = sd.DevicePath,
-                Action = sd.SyncAction!.Value.ToString(),
-            })
-            .ToListAsync(cancellationToken);
+        var pendingActions = await GetPendingActionsForDevice(deviceId, cancellationToken);
 
         logger.LogInformation("Found {Count} pending actions for device {DeviceId}", pendingActions.Count, deviceId);
 
@@ -946,6 +937,7 @@ public class DevicesController(
         var toCreate = new List<SyncFileInfoItem>();
         var toUpdate = new List<SyncFileInfoItem>();
         var potentialConflicts = new List<SyncPotentialConflictItem>();
+        var newPendingActions = new List<PendingActionItem>();
 
         foreach (var clientFile in request.Files)
         {
@@ -1047,6 +1039,12 @@ public class DevicesController(
                 if (existingSongDevice.SyncAction == null)
                 {
                     existingSongDevice.SyncAction = SongSyncAction.Download;
+                    newPendingActions.Add(new PendingActionItem
+                    {
+                        SongId = existingSongDevice.SongId,
+                        Path = existingSongDevice.DevicePath,
+                        Action = SongSyncAction.Download.ToString(),
+                    });
                 }
             }
         }
@@ -1054,14 +1052,15 @@ public class DevicesController(
         await context.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update, {PotentialConflicts} potential conflicts",
-            deviceId, toCreate.Count, toUpdate.Count, potentialConflicts.Count);
+            "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update, {PotentialConflicts} potential conflicts, {NewPendingActions} new pending actions",
+            deviceId, toCreate.Count, toUpdate.Count, potentialConflicts.Count, newPendingActions.Count);
 
         return new SyncCheckResponse
         {
             ToCreate = toCreate,
             ToUpdate = toUpdate,
             PotentialConflicts = potentialConflicts,
+            PendingActions = newPendingActions,
         };
     }
 
@@ -1279,6 +1278,7 @@ public class DevicesController(
             {
                 Success = true,
                 SongId = importedSong.Id,
+                PendingActions = [],
             };
         }
         finally
@@ -1288,6 +1288,20 @@ public class DevicesController(
                 fileSystem.Directory.Delete(tempPath, true);
             }
         }
+    }
+
+    private async Task<List<PendingActionItem>> GetPendingActionsForDevice(long deviceId, CancellationToken cancellationToken)
+    {
+        return await context.SongDevices
+            .Include(sd => sd.Song)
+            .Where(sd => sd.DeviceId == deviceId && sd.SyncAction != null && sd.SyncAction != SongSyncAction.Upload)
+            .Select(sd => new PendingActionItem
+            {
+                SongId = sd.SongId,
+                Path = sd.DevicePath,
+                Action = sd.SyncAction!.Value.ToString(),
+            })
+            .ToListAsync(cancellationToken);
     }
 
     private static string FormatLogMessage(string template, object[] args)

@@ -5,6 +5,7 @@ public record SyncCheckResponse
     public required List<SyncFileInfoItem> ToCreate { get; init; }
     public required List<SyncFileInfoItem> ToUpdate { get; init; }
     public required List<SyncPotentialConflictItem> PotentialConflicts { get; init; }
+    public required List<PendingActionItem> PendingActions { get; init; }
 }
 
 public record SyncPotentialConflictItem

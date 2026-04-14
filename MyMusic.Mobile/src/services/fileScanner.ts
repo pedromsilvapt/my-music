@@ -1,54 +1,11 @@
 import { Directory, File } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { computeRelativePath, decodeToFsPath, isWithinDirectory } from './pathUtils';
-
-export interface FileMetadata {
-    relativePath: string;
-    fullPath: string;
-    modifiedAt: Date;
-    createdAt: Date;
-    size: number;
-}
-
-export interface ScanError {
-    path: string;
-    error: string;
-}
-
-export interface ScanOptions {
-    extensions: string[];
-    excludePatterns: string[];
-    basePath: string;
-    onProgress?: (scannedCount: number, currentDir: string) => void;
-    onError?: (path: string, error: string) => void;
-}
-
-export interface ScanResult {
-    files: FileMetadata[];
-    errors: ScanError[];
-}
+import { type FileMetadata, type ScanError, type ScanOptions, type ScanResult } from './scanner/types';
+import { fromEpochTimestamp, shouldExclude, yieldToUI } from './scanner/utils';
 
 const PROGRESS_INTERVAL_MS = 100;
 const YIELD_INTERVAL_MS = 16;
-const IDLE_CALLBACK_TIMEOUT_MS = 10;
-
-function fromEpochTimestamp (value: number | null | undefined): Date {
-    if (!value) return new Date();
-    const ms = value > 1e11 ? value : value * 1000;
-    const d = new Date(ms);
-    return isNaN(d.getTime()) ? new Date() : d;
-}
-
-// Helper to yield control to the UI thread using requestIdleCallback with fallback
-function yieldToUI (): Promise<void> {
-    return new Promise((resolve) => {
-        if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => resolve(), { timeout: IDLE_CALLBACK_TIMEOUT_MS });
-        } else {
-            setTimeout(resolve, 0);
-        }
-    });
-}
 
 export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult> {
     const files: FileMetadata[] = [];
@@ -150,7 +107,6 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
         let lastProgressTime = Date.now();
         let lastYieldTime = Date.now();
 
-        // Async generator that yields files as they're found
         async function* scanDirectoryGenerator (dir: Directory, currentPath: string): AsyncGenerator<FileMetadata | null, void, unknown> {
             let items: (Directory | File)[] = [];
 
@@ -170,7 +126,6 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                 const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name;
 
                 if (item instanceof Directory) {
-                    // Recursively scan subdirectory
                     yield* scanDirectoryGenerator(item, itemPath);
                 } else if (item instanceof File) {
                     const filename = item.name;
@@ -216,7 +171,6 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                     }
                 }
 
-                // Yield to UI thread every YIELD_INTERVAL_MS to prevent freezing
                 const now = Date.now();
                 if (now - lastYieldTime >= YIELD_INTERVAL_MS) {
                     await yieldToUI();
@@ -225,13 +179,11 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
             }
         }
 
-        // Process files from generator with time-based progress updates
         for await (const file of scanDirectoryGenerator(directory, '')) {
             if (file) {
                 files.push(file);
             }
 
-            // Update progress every PROGRESS_INTERVAL_MS
             const now = Date.now();
             if (onProgress && now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
                 onProgress(files.length, directoryUri);
@@ -239,7 +191,6 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
             }
         }
 
-        // Final progress update
         if (onProgress) {
             onProgress(files.length, directoryUri);
         }
@@ -255,38 +206,4 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
     return { files, errors };
 }
 
-function shouldExclude (filename: string, patterns: string[]): boolean {
-    for (const pattern of patterns) {
-        const regex = globToRegex(pattern);
-        if (regex.test(filename)) return true;
-        if (regex.test('/' + filename)) return true;
-    }
-    return false;
-}
-
-function globToRegex (glob: string): RegExp {
-    let regex = '^';
-    for (const c of glob) {
-        regex += c === '*'
-            ? '.*'
-            : c === '?'
-                ? '.'
-                : c === '.'
-                    ? '\\.'
-                    : c === '/'
-                        ? '[\\\\/]'
-                        : c === '\\'
-                            ? '[\\\\/]'
-                            : c === '['
-                                ? '['
-                                : c === ']'
-                                    ? ']'
-                                    : escapeRegExp(c);
-    }
-    regex += '$';
-    return new RegExp(regex, 'i');
-}
-
-function escapeRegExp (str: string): string {
-    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+export { type ScanOptions, type ScanResult } from './scanner/types';

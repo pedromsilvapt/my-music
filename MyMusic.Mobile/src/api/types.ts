@@ -52,10 +52,29 @@ export const SyncPotentialConflictItemSchema = z.object({
 
 export type SyncPotentialConflictItem = z.infer<typeof SyncPotentialConflictItemSchema>;
 
+/** Represents pending actions that come from the server (e.g., files to download or remove). */
+export const SyncActionSchema = z.enum(['Download', 'Upload', 'Remove']);
+
+export type SyncAction = z.infer<typeof SyncActionSchema>;
+
+/** Represents the result of what action was performed during a specific sync session. */
+export const SyncRecordActionSchema = z.enum(['Created', 'Updated', 'Skipped', 'Downloaded', 'Removed', 'Error', 'Conflict']);
+
+export type SyncRecordAction = z.infer<typeof SyncRecordActionSchema>;
+
+export const PendingActionItemSchema = z.object({
+    songId: z.number().nullable(),
+    path: z.string(),
+    action: SyncActionSchema,
+});
+
+export type PendingActionItem = z.infer<typeof PendingActionItemSchema>;
+
 export const SyncCheckResponseSchema = z.object({
     toCreate: z.array(SyncFileInfoItemSchema),
     toUpdate: z.array(SyncFileInfoSchema),
     potentialConflicts: z.array(SyncPotentialConflictItemSchema),
+    pendingActions: z.array(PendingActionItemSchema),
 });
 
 export type SyncCheckResponse = z.infer<typeof SyncCheckResponseSchema>;
@@ -63,7 +82,7 @@ export type SyncCheckResponse = z.infer<typeof SyncCheckResponseSchema>;
 export const SyncRecordsRequestSchema = z.object({
     records: z.array(z.object({
         filePath: z.string(),
-        action: z.string(),
+        action: SyncRecordActionSchema,
         source: z.string().optional(),
         songId: z.number().optional(),
         errorMessage: z.string().optional(),
@@ -93,17 +112,10 @@ export type SyncCompleteResponse = z.infer<typeof SyncCompleteResponseSchema>;
 export const SyncUploadResponseSchema = z.object({
     success: z.boolean(),
     songId: z.number(),
+    pendingActions: z.array(PendingActionItemSchema),
 });
 
 export type SyncUploadResponse = z.infer<typeof SyncUploadResponseSchema>;
-
-export const PendingActionItemSchema = z.object({
-    songId: z.number().nullable(),
-    path: z.string(),
-    action: z.string(),
-});
-
-export type PendingActionItem = z.infer<typeof PendingActionItemSchema>;
 
 export const GetPendingActionsResponseSchema = z.object({
     actions: z.array(PendingActionItemSchema),
@@ -237,7 +249,7 @@ export type ListSyncSessionsResponse = z.infer<typeof ListSyncSessionsResponseSc
 
 export const SyncRecordResponseItemSchema = z.object({
     filePath: z.string(),
-    action: z.string(),
+    action: SyncRecordActionSchema,
     source: z.string(),
     songId: z.number().nullable(),
     errorMessage: z.string().nullable(),

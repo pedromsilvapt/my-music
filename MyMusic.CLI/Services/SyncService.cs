@@ -67,10 +67,24 @@ public class SyncService(
         var removed = 0;
         var failed = 0;
         var uploadedPaths = new HashSet<string>();
+        var pendingDownloadPaths = new HashSet<string>();
+        List<PendingActionItem> pendingActions = [];
 
         try
         {
             // === PHASE 1: Upload (Device -> Server) ===
+            logger.LogInformation("Fetching pending actions from server");
+            var initialPendingResponse = await client.GetPendingActionsAsync(deviceId.Value, ct);
+            pendingActions = initialPendingResponse.Actions;
+            foreach (var action in pendingActions)
+            {
+                if (action.Action == "Download")
+                {
+                    pendingDownloadPaths.Add(action.Path);
+                }
+            }
+            logger.LogInformation("Found {Count} pending actions", pendingActions.Count);
+
             if (files.Count > 0)
             {
                 var chunks = files.Chunk(options.Value.Sync.ChunkSize).ToList();
@@ -101,6 +115,32 @@ public class SyncService(
                         progress?.Report(new SyncProgress(totalFiles, processedFiles, "", created, updated, skipped,
                             downloaded, removed, failed, "upload", conflicts));
                         continue;
+                    }
+
+                    if (syncResponse.PendingActions.Count > 0)
+                    {
+                        var existingPaths = pendingActions.Select(a => a.Path).ToHashSet();
+                        foreach (var newAction in syncResponse.PendingActions)
+                        {
+                            if (existingPaths.Contains(newAction.Path))
+                            {
+                                var existingIdx = pendingActions.FindIndex(a => a.Path == newAction.Path);
+                                pendingActions[existingIdx] = newAction;
+                            }
+                            else
+                            {
+                                pendingActions.Add(newAction);
+                            }
+                        }
+
+                        pendingDownloadPaths.Clear();
+                        foreach (var action in pendingActions)
+                        {
+                            if (action.Action == "Download")
+                            {
+                                pendingDownloadPaths.Add(action.Path);
+                            }
+                        }
                     }
 
                     var toCreatePaths = syncResponse.ToCreate.Select(f => f.Path).ToHashSet();
@@ -175,7 +215,6 @@ public class SyncService(
                                     {
                                         logger.LogError("Conflict for {Path}: {Reason}", conflictError.Path, conflictError.Reason);
                                         conflicts++;
-                                        skipped++;
                                     }
                                 }
                                 catch (Exception ex)
@@ -187,9 +226,10 @@ public class SyncService(
                     }
 
                     logger.LogInformation(
-                        "Chunk {ChunkNumber}: {ToCreate} to create, {ToUpdate} to update, {ToSkip} to skip",
+                        "Chunk {ChunkNumber}: {ToCreate} to create, {ToUpdate} to update, {Conflicts} conflicts, {PendingDownloads} pending downloads",
                         chunkNumber, syncResponse.ToCreate.Count, syncResponse.ToUpdate.Count,
-                        chunk.Length - syncResponse.ToCreate.Count - syncResponse.ToUpdate.Count - syncResponse.PotentialConflicts.Count);
+                        syncResponse.PotentialConflicts.Count,
+                        chunk.Count(f => pendingDownloadPaths.Contains(f.RelativePath)));
 
                     var processedInChunk = 0;
 
@@ -289,12 +329,18 @@ public class SyncService(
                             fileToUpdate.Path, created, updated, skipped, downloaded, removed, failed, "upload", conflicts));
                     }
 
-                    skipped += chunk.Length - syncResponse.ToCreate.Count - syncResponse.ToUpdate.Count;
+                    var conflictPaths = syncResponse.PotentialConflicts.Select(c => c.Path).ToHashSet();
 
                     foreach (var file in chunk)
                     {
-                        if (!toCreatePaths.Contains(file.RelativePath) && !toUpdatePaths.Contains(file.RelativePath))
+                        var inCreate = toCreatePaths.Contains(file.RelativePath);
+                        var inUpdate = toUpdatePaths.Contains(file.RelativePath);
+                        var isPendingDownload = pendingDownloadPaths.Contains(file.RelativePath);
+                        var isConflict = conflictPaths.Contains(file.RelativePath);
+
+                        if (!inCreate && !inUpdate && !isPendingDownload && !isConflict)
                         {
+                            skipped++;
                             recordItems.Add(new SyncRecordRequestItem
                             {
                                 FilePath = file.RelativePath,
@@ -321,9 +367,6 @@ public class SyncService(
             }
             else
             {
-                logger.LogInformation("Fetching pending actions from server");
-                var pendingActionsResponse = await client.GetPendingActionsAsync(deviceId.Value, ct);
-
                 List<PendingActionItem> actionsToProcess;
 
                 if (direction == SyncDirection.Down)
@@ -343,8 +386,8 @@ public class SyncService(
                 }
                 else
                 {
-                    actionsToProcess = pendingActionsResponse.Actions;
-                    logger.LogInformation("Found {Count} pending actions", actionsToProcess.Count);
+                    actionsToProcess = pendingActions;
+                    logger.LogInformation("Processing {Count} pending actions", actionsToProcess.Count);
                 }
 
                 var serverTotal = actionsToProcess.Count;

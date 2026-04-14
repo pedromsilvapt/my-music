@@ -71,7 +71,7 @@ export async function completeSync(deviceId: number, sessionId: number) {
 
 export async function uploadFile(
     deviceId: number,
-    file: { uri: string; name: string; type: string },
+    file: { uri: string; name: string },
     path: string,
     modifiedAt: string,
     createdAt: string

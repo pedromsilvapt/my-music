@@ -4,4 +4,5 @@ public record SyncUploadResponse
 {
     public required bool Success { get; init; }
     public long? SongId { get; init; }
+    public required List<PendingActionItem> PendingActions { get; init; }
 }
