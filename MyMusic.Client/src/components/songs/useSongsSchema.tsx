@@ -27,7 +27,6 @@ import {useQueueList} from "../../hooks/use-queues";
 import type {ListSongItem} from "../../model";
 import {usePlaybackActions, usePlaybackStore} from "../../stores/playback-store";
 import {TEXT_COLOR} from "../../utils/colors.ts";
-import {isGetPlaylistSong} from "../../utils/type-guards";
 import Artwork from "../common/artwork";
 import type {CollectionSchema} from "../common/collection/collection";
 import SongAlbum from "../common/fields/song-album";
@@ -48,9 +47,9 @@ export interface UseSongsSchemaOptions {
 }
 
 export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
-    const {play, playNext, playLast, removeByIndices, shuffleByIndices} = useQueueMutations();
+    const {play, playNext, playLast, removeBySongIds, shuffleByIndices} = useQueueMutations();
     const {setIsFavorite} = usePlaybackActions(s => ({setIsFavorite: s.setIsFavorite}));
-    const {currentSongId: queueCurrentSongId} = useQueue();
+    const {queue, currentSongId: queueCurrentSongId} = useQueue();
     const {queues} = useQueueList();
 
     const effectiveVisibleQueueId = options?.visibleQueueId ?? null;
@@ -286,8 +285,9 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         renderIcon: () => <IconArrowsShuffle/>,
                         renderLabel: () => "Shuffle",
                         onClick: (songs: ListSongItem[]) => {
-                            const indices = songs
-                                .map(s => isGetPlaylistSong(s) ? s.order : -1)
+                            const songIds = new Set(songs.map(s => s.id));
+                            const indices = queue
+                                .map((s, i) => songIds.has(s.id) ? i : -1)
                                 .filter((i): i is number => i >= 0);
                             shuffleByIndices(indices);
                         },
@@ -297,10 +297,8 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         renderIcon: () => <IconX/>,
                         renderLabel: () => "Remove from Queue",
                         onClick: (songs: ListSongItem[]) => {
-                            const indices = songs
-                                .map(s => isGetPlaylistSong(s) ? s.order : -1)
-                                .filter((i): i is number => i >= 0);
-                            removeByIndices(indices, queueCurrentSongId);
+                            const songIds = songs.map(s => s.id);
+                            removeBySongIds(songIds, queueCurrentSongId);
                         },
                     }
                 ] : [])
@@ -317,5 +315,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
         renderListTitle: (row, lineClamp) => <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
                                                         lineClamp={lineClamp}/>,
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeByIndices, shuffleByIndices, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId]);
 }
