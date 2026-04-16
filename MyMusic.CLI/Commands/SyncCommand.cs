@@ -3,9 +3,10 @@ using System.Globalization;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services;
+using MyMusic.Common.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using SyncDirection = MyMusic.CLI.Services.SyncDirection;
+using SyncDirection = MyMusic.Common.Services.Sync.Types.SyncDirection;
 
 namespace MyMusic.CLI.Commands;
 
@@ -25,7 +26,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
 
         try
         {
-            SyncResult syncResult = new(0, 0, 0, 0, 0, 0);
+            SyncResult syncResult = new();
 
             await AnsiConsole.Progress()
                 .AutoClear(false)
@@ -93,16 +94,32 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         var eta = CalculateEta(elapsed, p.ProcessedFiles, p.TotalFiles);
         var phaseLabel = p.Phase == "server" ? "Server actions" : "Uploading";
 
-        return $"{phaseLabel}: {p.ProcessedFiles}/{p.TotalFiles} | " +
-               $"{ColorizeCounter(p.Created, "green", "↑")} " +
-               $"{ColorizeCounter(p.Updated, "teal", "↑")} " +
-               $"{ColorizeCounter(p.Skipped, "grey", "-")} " +
-               $"{ColorizeCounter(p.Downloaded, "blue", "↓")} " +
-               $"{ColorizeCounter(p.Removed, "red", "×")} " +
-               $"{ColorizeCounter(p.Failed, "red", "!")} " +
-               $"{ColorizeCounter(p.Conflicts, "yellow", "⚠")} | " +
-               $"[magenta]{FormatElapsedTime(elapsed)}[/] | " +
-               $"[cyan]ETA: {eta}[/]";
+        var status = $"{phaseLabel}: {p.ProcessedFiles}/{p.TotalFiles} | " +
+                     $"{ColorizeCounter(p.Result.Created, "green", "↑")} " +
+                     $"{ColorizeCounter(p.Result.Updated, "teal", "↑")} " +
+                     $"{ColorizeCounter(p.Result.Skipped, "grey", "-")} " +
+                     $"{ColorizeCounter(p.Result.Downloaded, "blue", "↓")} " +
+                     $"{ColorizeCounter(p.Result.Removed, "red", "×")} " +
+                     $"{ColorizeCounter(p.Result.Failed, "red", "!")} " +
+                     $"{ColorizeCounter(p.Result.Conflicts, "yellow", "⚠")} | " +
+                     $"[magenta]{FormatElapsedTime(elapsed)}[/] | " +
+                     $"[cyan]ETA: {eta}[/]";
+
+        if (!string.IsNullOrEmpty(p.ErrorMessage))
+        {
+            status += $"\n  [red]Error: {EscapeMarkup(p.ErrorMessage)}[/]";
+        }
+        else if (!string.IsNullOrEmpty(p.CurrentFile) && p.Phase != "scanning")
+        {
+            status += $"\n  [dim]{EscapeMarkup(p.CurrentFile)}[/]";
+        }
+
+        return status;
+    }
+
+    private static string EscapeMarkup(string text)
+    {
+        return text.Replace("[", "[[").Replace("]", "]]");
     }
 
     private static string CalculateEta(TimeSpan elapsed, int processed, int total)

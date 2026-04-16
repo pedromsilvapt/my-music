@@ -1,3 +1,5 @@
+// @TODO: CLI has --verbose option for detailed logging during sync.
+// Mobile uses progress callbacks instead. Consider adding verbose mode for debugging.
 import {getSessions, getSessionRecords} from '../api/sync';
 import type {SyncDeps} from './sync/types';
 import {

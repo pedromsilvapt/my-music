@@ -8,6 +8,8 @@ using MyMusic.CLI.Api;
 using MyMusic.CLI.Commands;
 using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services;
+using MyMusic.CLI.Services.Sync;
+using MyMusic.Common.Services.Sync;
 using Refit;
 using Spectre.Console.Cli;
 
@@ -109,6 +111,15 @@ static void ConfigureServices(IServiceCollection services, string[] args)
         })
         .AddHttpMessageHandler<AuthenticatedHttpClientHandler>();
 
+    services.AddSingleton<IFileSystemScanner, CliFileSystemScanner>();
+    services.AddSingleton<IFileOps, CliFileOps>();
+    services.AddSingleton<IKeepAwake, CliKeepAwake>();
+    services.AddSingleton<IUserPrompt, CliUserPrompt>();
+    services.AddSingleton<ISyncConfig, CliSyncConfig>();
+    services.AddSingleton<ISyncApiClient, CliSyncApiClient>();
+
+    services.AddScoped<Phases>();
+    services.AddScoped<Orchestrator>();
     services.AddScoped<ISyncService, SyncService>();
 }
 

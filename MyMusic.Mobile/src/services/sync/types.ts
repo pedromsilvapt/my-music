@@ -1,3 +1,9 @@
+// @TODO: Mobile has treatConflictsAsErrors option, but CLI uses checksum-based conflict resolution.
+// CLI sends file content to server for checksum comparison to auto-resolve conflicts.
+// Consider aligning conflict resolution strategies between platforms.
+//
+// @TODO: CLI has Verbose option for detailed logging output during sync. Mobile doesn't have
+// this option. Consider adding verbose mode for debugging sync operations.
 import type { SyncPhase, SyncProgress } from '../../stores/syncStore';
 import type { ScannerType } from '../../services/scannerRegistry';
 import type { SyncAction, SyncRecordAction } from '../../api/types';
