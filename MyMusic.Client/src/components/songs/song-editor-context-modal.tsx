@@ -649,6 +649,12 @@ export default function SongEditorContextModal({
         return Object.values(currentState.metadata).filter(v => v != null).length;
     }, [currentState?.metadata]);
 
+    const lyricsMinRows = useMemo(() => {
+        const oldRows = (currentState?.metadata?.lyrics?.old ?? '').split('\n').length;
+        const newRows = (currentState?.form?.lyrics ?? '').split('\n').length;
+        return Math.min(12, Math.max(3, Math.max(oldRows, newRows)));
+    }, [currentState?.metadata?.lyrics, currentState?.form?.lyrics]);
+
     const getMetadataDiffFields = useCallback(() => {
         if (!currentState?.metadata) return [];
         const allFields = Object.keys(currentState.checkboxes) as (keyof FieldCheckboxes)[];
@@ -939,7 +945,9 @@ export default function SongEditorContextModal({
                                     <Textarea
                                         value={currentState.metadata.lyrics.old ?? ""}
                                         readOnly
-                                        minRows={3}
+                                        minRows={lyricsMinRows}
+                                        autosize
+                                        maxRows={12}
                                         styles={{
                                             input: {
                                                 borderColor: currentState.checkboxes.lyrics
@@ -961,7 +969,9 @@ export default function SongEditorContextModal({
                                 placeholder="Song lyrics"
                                 value={currentState.form.lyrics}
                                 onChange={(e) => handleFormChange({lyrics: e.target.value})}
-                                minRows={3}
+                                minRows={lyricsMinRows}
+                                autosize
+                                maxRows={12}
                                 disabled={hasMetadata && !!currentState.metadata?.lyrics && !currentState.checkboxes.lyrics}
                                 styles={hasMetadata && currentState.metadata?.lyrics ? {
                                     input: {
