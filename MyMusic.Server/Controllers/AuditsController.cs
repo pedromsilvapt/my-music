@@ -3,9 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Extensions;
+using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
 using MyMusic.Server.DTO.Audits;
+using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Songs;
 
 namespace MyMusic.Server.Controllers;
@@ -82,9 +85,34 @@ public class AuditsController(
     public async Task<ListAuditNonConformitiesResponse> ListNonConformities(
         [FromRoute] long id,
         MusicDbContext db,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] string? filter = null,
+        [FromQuery] string? search = null)
     {
-        var nonConformities = await auditService.GetNonConformities(db, id, currentUser.Id, cancellationToken);
+        var query = db.AuditNonConformities
+            .IncludeSongMetadata("Song")
+            .Where(nc => nc.AuditRuleId == id && nc.OwnerId == currentUser.Id)
+            .AsSplitQuery();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = FuzzySearchHelper.ApplyFuzzySearch(query, search, nc => nc.Song!.SearchableText);
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            try
+            {
+                var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<AuditNonConformity>(filter, GetAuditNonConformityFieldMappings());
+                query = query.Where(filterExpression);
+            }
+            catch (Exception ex)
+            {
+                throw new BadHttpRequestException($"Invalid filter expression: {ex.Message}");
+            }
+        }
+
+        var nonConformities = await query.ToListAsync(cancellationToken);
         return new ListAuditNonConformitiesResponse
         {
             NonConformities = nonConformities.Select(ListAuditNonConformityItem.FromEntity),
@@ -330,6 +358,70 @@ public class AuditsController(
         return Ok();
     }
 
+    [HttpGet("rules/{id:long}/non-conformities/filter-metadata", Name = "GetAuditNonConformityFilterMetadata")]
+    public Task<FilterMetadataResponse> GetNonConformityFilterMetadata(
+        [FromRoute] long id,
+        CancellationToken cancellationToken)
+    {
+        var operators = FilterMetadataHelper.GetOperatorMetadata();
+        var fields = GetAuditNonConformityFieldMetadata();
+
+        return Task.FromResult(new FilterMetadataResponse
+        {
+            Fields = fields,
+            Operators = operators,
+        });
+    }
+
+    [HttpGet("rules/{id:long}/non-conformities/filter-values", Name = "GetAuditNonConformityFilterValues")]
+    public async Task<FilterValuesResponse> GetNonConformityFilterValues(
+        [FromRoute] long id,
+        [FromQuery] string field,
+        MusicDbContext db,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 15)
+    {
+        var query = field switch
+        {
+            "title" => db.Songs
+                .Where(s => s.OwnerId == currentUser.Id)
+                .Select(s => s.Title)
+                .Distinct(),
+            "album.name" => db.Albums
+                .Where(a => a.OwnerId == currentUser.Id)
+                .Select(a => a.Name)
+                .Distinct(),
+            "artist.name" => db.Artists
+                .Where(a => a.OwnerId == currentUser.Id)
+                .Select(a => a.Name)
+                .Distinct(),
+            "genre.name" => db.Genres
+                .Where(g => g.OwnerId == currentUser.Id)
+                .Select(g => g.Name)
+                .Distinct(),
+            _ => null as IQueryable<string>,
+        };
+
+        if (query == null)
+        {
+            return new FilterValuesResponse { Values = [] };
+        }
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var searchLower = search.ToLower();
+            query = query.Where(v => v.ToLower().Contains(searchLower));
+        }
+
+        var values = await query
+            .OrderBy(v => v)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return new FilterValuesResponse { Values = values };
+    }
+
     [HttpPost("soundalike/resolve", Name = "ResolveSoundalikes")]
     public async Task<ActionResult<ResolveSoundalikesResponse>> ResolveSoundalikes(
         [FromBody] ResolveSoundalikesRequest request,
@@ -369,5 +461,115 @@ public class AuditsController(
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+    }
+
+    private static List<FilterFieldMetadata> GetAuditNonConformityFieldMetadata() =>
+    [
+        new()
+        {
+            Name = "title",
+            Type = "string",
+            Description = "Song title",
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+            SupportsDynamicValues = true,
+        },
+        new()
+        {
+            Name = "album.name",
+            Type = "string",
+            Description = "Album name",
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith", "isNull", "isNotNull"],
+            SupportsDynamicValues = true,
+        },
+        new()
+        {
+            Name = "artist.name",
+            EntityPath = "Song.Artists.Artist.Name",
+            Type = "string",
+            Description = "Artist name",
+            IsCollection = true,
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+            SupportsDynamicValues = true,
+        },
+        new()
+        {
+            Name = "genre.name",
+            EntityPath = "Song.Genres.Genre.Name",
+            Type = "string",
+            Description = "Genre name",
+            IsCollection = true,
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+            SupportsDynamicValues = true,
+        },
+        new()
+        {
+            Name = "year",
+            EntityPath = "Song.Year",
+            Type = "number",
+            Description = "Release year",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between", "isNull", "isNotNull", "in", "notIn"],
+        },
+        new()
+        {
+            Name = "explicit",
+            EntityPath = "Song.Explicit",
+            Type = "boolean",
+            Description = "Has explicit content",
+            SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
+        },
+        new()
+        {
+            Name = "isFavorite",
+            EntityPath = "Song.IsFavorite",
+            Type = "boolean",
+            Description = "Is favorited",
+            SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
+        },
+        new()
+        {
+            Name = "hasWaiver",
+            Type = "boolean",
+            Description = "Has waiver",
+            SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
+        },
+        new()
+        {
+            Name = "createdAt",
+            Type = "date",
+            Description = "Detection date",
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between", "isNull", "isNotNull"],
+        },
+    ];
+
+    private static Dictionary<string, string> GetAuditNonConformityFieldMappings()
+    {
+        var mappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var field in GetAuditNonConformityFieldMetadata())
+        {
+            if (!string.IsNullOrEmpty(field.EntityPath))
+            {
+                mappings[field.Name] = field.EntityPath;
+            }
+            else
+            {
+                var path = field.Name switch
+                {
+                    "title" => "Song.Title",
+                    "album.name" => "Song.Album.Name",
+                    "year" => "Song.Year",
+                    "explicit" => "Song.Explicit",
+                    "isFavorite" => "Song.IsFavorite",
+                    "hasWaiver" => "HasWaiver",
+                    "createdAt" => "CreatedAt",
+                    _ => null
+                };
+                if (path != null)
+                {
+                    mappings[field.Name] = path;
+                }
+            }
+        }
+
+        return mappings;
     }
 }

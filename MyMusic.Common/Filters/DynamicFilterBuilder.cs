@@ -7,6 +7,25 @@ namespace MyMusic.Common.Filters;
 
 public static class DynamicFilterBuilder
 {
+    public static Expression<Func<T, bool>> BuildFilterFromDsl<T>(
+        string? dsl,
+        Dictionary<string, string>? fieldMappings = null)
+    {
+        if (string.IsNullOrWhiteSpace(dsl))
+        {
+            return x => true;
+        }
+
+        var request = FilterDslParser.Parse(dsl);
+
+        if (fieldMappings != null)
+        {
+            ResolveEntityPaths(request, fieldMappings);
+        }
+
+        return BuildFilter<T>(request);
+    }
+
     public static void ResolveEntityPaths(FilterRequest request, Dictionary<string, string> fieldMappings)
     {
         ResolveEntityPathsInRules(request.Rules, fieldMappings);

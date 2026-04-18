@@ -31,8 +31,12 @@ import type {
 	BatchDeleteNonConformitiesRequest,
 	BatchSetWaiverRequest,
 	ExcludeDuplicatePairRequest,
+	FilterMetadataResponse,
+	FilterValuesResponse,
+	GetAuditNonConformityFilterValuesParams,
 	GetAuditRuleResponse,
 	GetSoundalikeDuplicatesResponse,
+	ListAuditNonConformitiesParams,
 	ListAuditNonConformitiesResponse,
 	ListAuditRulesResponse,
 	ListExcludedPairsResponse,
@@ -546,15 +550,31 @@ export type listAuditNonConformitiesResponseSuccess = (
 export type listAuditNonConformitiesResponse =
 	listAuditNonConformitiesResponseSuccess;
 
-export const getListAuditNonConformitiesUrl = (id: number) => {
-	return `/api/audits/rules/${id}/non-conformities`;
+export const getListAuditNonConformitiesUrl = (
+	id: number,
+	params?: ListAuditNonConformitiesParams,
+) => {
+	const normalizedParams = new URLSearchParams();
+
+	Object.entries(params || {}).forEach(([key, value]) => {
+		if (value !== undefined) {
+			normalizedParams.append(key, value === null ? "null" : value.toString());
+		}
+	});
+
+	const stringifiedParams = normalizedParams.toString();
+
+	return stringifiedParams.length > 0
+		? `/api/audits/rules/${id}/non-conformities?${stringifiedParams}`
+		: `/api/audits/rules/${id}/non-conformities`;
 };
 
 export const listAuditNonConformities = async (
 	id: number,
+	params?: ListAuditNonConformitiesParams,
 	options?: RequestInit,
 ): Promise<listAuditNonConformitiesResponse> => {
-	const res = await fetch(getListAuditNonConformitiesUrl(id), {
+	const res = await fetch(getListAuditNonConformitiesUrl(id, params), {
 		...options,
 		method: "GET",
 	});
@@ -571,8 +591,18 @@ export const listAuditNonConformities = async (
 	} as listAuditNonConformitiesResponse;
 };
 
-export const getListAuditNonConformitiesQueryKey = (id: number) => {
-	return ["api", "audits", "rules", id, "non-conformities"] as const;
+export const getListAuditNonConformitiesQueryKey = (
+	id: number,
+	params?: ListAuditNonConformitiesParams,
+) => {
+	return [
+		"api",
+		"audits",
+		"rules",
+		id,
+		"non-conformities",
+		...(params ? [params] : []),
+	] as const;
 };
 
 export const getListAuditNonConformitiesQueryOptions = <
@@ -580,6 +610,7 @@ export const getListAuditNonConformitiesQueryOptions = <
 	TError = unknown,
 >(
 	id: number,
+	params?: ListAuditNonConformitiesParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
@@ -594,11 +625,12 @@ export const getListAuditNonConformitiesQueryOptions = <
 	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
 
 	const queryKey =
-		queryOptions?.queryKey ?? getListAuditNonConformitiesQueryKey(id);
+		queryOptions?.queryKey ?? getListAuditNonConformitiesQueryKey(id, params);
 
 	const queryFn: QueryFunction<
 		Awaited<ReturnType<typeof listAuditNonConformities>>
-	> = ({ signal }) => listAuditNonConformities(id, { signal, ...fetchOptions });
+	> = ({ signal }) =>
+		listAuditNonConformities(id, params, { signal, ...fetchOptions });
 
 	return {
 		queryKey,
@@ -622,6 +654,7 @@ export function useListAuditNonConformities<
 	TError = unknown,
 >(
 	id: number,
+	params: undefined | ListAuditNonConformitiesParams,
 	options: {
 		query: Partial<
 			UseQueryOptions<
@@ -649,6 +682,7 @@ export function useListAuditNonConformities<
 	TError = unknown,
 >(
 	id: number,
+	params?: ListAuditNonConformitiesParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
@@ -676,6 +710,7 @@ export function useListAuditNonConformities<
 	TError = unknown,
 >(
 	id: number,
+	params?: ListAuditNonConformitiesParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
@@ -696,6 +731,7 @@ export function useListAuditNonConformities<
 	TError = unknown,
 >(
 	id: number,
+	params?: ListAuditNonConformitiesParams,
 	options?: {
 		query?: Partial<
 			UseQueryOptions<
@@ -710,7 +746,11 @@ export function useListAuditNonConformities<
 ): UseQueryResult<TData, TError> & {
 	queryKey: DataTag<QueryKey, TData, TError>;
 } {
-	const queryOptions = getListAuditNonConformitiesQueryOptions(id, options);
+	const queryOptions = getListAuditNonConformitiesQueryOptions(
+		id,
+		params,
+		options,
+	);
 
 	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
 		TData,
@@ -723,10 +763,11 @@ export function useListAuditNonConformities<
 export const invalidateListAuditNonConformities = async (
 	queryClient: QueryClient,
 	id: number,
+	params?: ListAuditNonConformitiesParams,
 	options?: InvalidateOptions,
 ): Promise<QueryClient> => {
 	await queryClient.invalidateQueries(
-		{ queryKey: getListAuditNonConformitiesQueryKey(id) },
+		{ queryKey: getListAuditNonConformitiesQueryKey(id, params) },
 		options,
 	);
 
@@ -1892,6 +1933,483 @@ export const useRemoveExcludedPair = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
+export type getAuditNonConformityFilterMetadataResponse200TextPlain = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getAuditNonConformityFilterMetadataResponse200ApplicationJson = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getAuditNonConformityFilterMetadataResponse200TextJson = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getAuditNonConformityFilterMetadataResponseSuccess = (
+	| getAuditNonConformityFilterMetadataResponse200TextPlain
+	| getAuditNonConformityFilterMetadataResponse200ApplicationJson
+	| getAuditNonConformityFilterMetadataResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type getAuditNonConformityFilterMetadataResponse =
+	getAuditNonConformityFilterMetadataResponseSuccess;
+
+export const getGetAuditNonConformityFilterMetadataUrl = (id: number) => {
+	return `/api/audits/rules/${id}/non-conformities/filter-metadata`;
+};
+
+export const getAuditNonConformityFilterMetadata = async (
+	id: number,
+	options?: RequestInit,
+): Promise<getAuditNonConformityFilterMetadataResponse> => {
+	const res = await fetch(getGetAuditNonConformityFilterMetadataUrl(id), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: getAuditNonConformityFilterMetadataResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as getAuditNonConformityFilterMetadataResponse;
+};
+
+export const getGetAuditNonConformityFilterMetadataQueryKey = (id: number) => {
+	return [
+		"api",
+		"audits",
+		"rules",
+		id,
+		"non-conformities",
+		"filter-metadata",
+	] as const;
+};
+
+export const getGetAuditNonConformityFilterMetadataQueryOptions = <
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+	TError = unknown,
+>(
+	id: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey =
+		queryOptions?.queryKey ??
+		getGetAuditNonConformityFilterMetadataQueryKey(id);
+
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>
+	> = ({ signal }) =>
+		getAuditNonConformityFilterMetadata(id, { signal, ...fetchOptions });
+
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!id,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAuditNonConformityFilterMetadataQueryResult = NonNullable<
+	Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>
+>;
+export type GetAuditNonConformityFilterMetadataQueryError = unknown;
+
+export function useGetAuditNonConformityFilterMetadata<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+	TError = unknown,
+>(
+	id: number,
+	options: {
+		query: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+					TError,
+					Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuditNonConformityFilterMetadata<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+	TError = unknown,
+>(
+	id: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+					TError,
+					Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuditNonConformityFilterMetadata<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+	TError = unknown,
+>(
+	id: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetAuditNonConformityFilterMetadata<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+	TError = unknown,
+>(
+	id: number,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getGetAuditNonConformityFilterMetadataQueryOptions(
+		id,
+		options,
+	);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateGetAuditNonConformityFilterMetadata = async (
+	queryClient: QueryClient,
+	id: number,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getGetAuditNonConformityFilterMetadataQueryKey(id) },
+		options,
+	);
+
+	return queryClient;
+};
+
+export type getAuditNonConformityFilterValuesResponse200TextPlain = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getAuditNonConformityFilterValuesResponse200ApplicationJson = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getAuditNonConformityFilterValuesResponse200TextJson = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getAuditNonConformityFilterValuesResponseSuccess = (
+	| getAuditNonConformityFilterValuesResponse200TextPlain
+	| getAuditNonConformityFilterValuesResponse200ApplicationJson
+	| getAuditNonConformityFilterValuesResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type getAuditNonConformityFilterValuesResponse =
+	getAuditNonConformityFilterValuesResponseSuccess;
+
+export const getGetAuditNonConformityFilterValuesUrl = (
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+) => {
+	const normalizedParams = new URLSearchParams();
+
+	Object.entries(params || {}).forEach(([key, value]) => {
+		if (value !== undefined) {
+			normalizedParams.append(key, value === null ? "null" : value.toString());
+		}
+	});
+
+	const stringifiedParams = normalizedParams.toString();
+
+	return stringifiedParams.length > 0
+		? `/api/audits/rules/${id}/non-conformities/filter-values?${stringifiedParams}`
+		: `/api/audits/rules/${id}/non-conformities/filter-values`;
+};
+
+export const getAuditNonConformityFilterValues = async (
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+	options?: RequestInit,
+): Promise<getAuditNonConformityFilterValuesResponse> => {
+	const res = await fetch(getGetAuditNonConformityFilterValuesUrl(id, params), {
+		...options,
+		method: "GET",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: getAuditNonConformityFilterValuesResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as getAuditNonConformityFilterValuesResponse;
+};
+
+export const getGetAuditNonConformityFilterValuesQueryKey = (
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+) => {
+	return [
+		"api",
+		"audits",
+		"rules",
+		id,
+		"non-conformities",
+		"filter-values",
+		...(params ? [params] : []),
+	] as const;
+};
+
+export const getGetAuditNonConformityFilterValuesQueryOptions = <
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+	TError = unknown,
+>(
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+) => {
+	const { query: queryOptions, fetch: fetchOptions } = options ?? {};
+
+	const queryKey =
+		queryOptions?.queryKey ??
+		getGetAuditNonConformityFilterValuesQueryKey(id, params);
+
+	const queryFn: QueryFunction<
+		Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>
+	> = ({ signal }) =>
+		getAuditNonConformityFilterValues(id, params, { signal, ...fetchOptions });
+
+	return {
+		queryKey,
+		queryFn,
+		enabled: !!id,
+		...queryOptions,
+	} as UseQueryOptions<
+		Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+		TError,
+		TData
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetAuditNonConformityFilterValuesQueryResult = NonNullable<
+	Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>
+>;
+export type GetAuditNonConformityFilterValuesQueryError = unknown;
+
+export function useGetAuditNonConformityFilterValues<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+	TError = unknown,
+>(
+	id: number,
+	params: undefined | GetAuditNonConformityFilterValuesParams,
+	options: {
+		query: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				DefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+					TError,
+					Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuditNonConformityFilterValues<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+	TError = unknown,
+>(
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+				TError,
+				TData
+			>
+		> &
+			Pick<
+				UndefinedInitialDataOptions<
+					Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+					TError,
+					Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>
+				>,
+				"initialData"
+			>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+export function useGetAuditNonConformityFilterValues<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+	TError = unknown,
+>(
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+};
+
+export function useGetAuditNonConformityFilterValues<
+	TData = Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+	TError = unknown,
+>(
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+	options?: {
+		query?: Partial<
+			UseQueryOptions<
+				Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>,
+				TError,
+				TData
+			>
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+	queryKey: DataTag<QueryKey, TData, TError>;
+} {
+	const queryOptions = getGetAuditNonConformityFilterValuesQueryOptions(
+		id,
+		params,
+		options,
+	);
+
+	const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+		TData,
+		TError
+	> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+	return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const invalidateGetAuditNonConformityFilterValues = async (
+	queryClient: QueryClient,
+	id: number,
+	params?: GetAuditNonConformityFilterValuesParams,
+	options?: InvalidateOptions,
+): Promise<QueryClient> => {
+	await queryClient.invalidateQueries(
+		{ queryKey: getGetAuditNonConformityFilterValuesQueryKey(id, params) },
+		options,
+	);
+
+	return queryClient;
+};
+
 export type resolveSoundalikesResponse200TextPlain = {
 	data: ResolveSoundalikesResponse;
 	status: 200;
@@ -3017,6 +3535,201 @@ export const getListExcludedPairsResponseMock = (
 		},
 	]);
 
+export const getGetAuditNonConformityFilterMetadataResponseMock = (
+	overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
+): FilterMetadataResponse =>
+	faker.helpers.arrayElement([
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getGetAuditNonConformityFilterValuesResponseMock = (
+	overrideResponse: Partial<Extract<FilterValuesResponse, object>> = {},
+): FilterValuesResponse =>
+	faker.helpers.arrayElement([
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+	]);
+
 export const getResolveSoundalikesResponseMock = (
 	overrideResponse: Partial<Extract<ResolveSoundalikesResponse, object>> = {},
 ): ResolveSoundalikesResponse =>
@@ -3321,6 +4034,54 @@ export const getRemoveExcludedPairMockHandler = (
 	);
 };
 
+export const getGetAuditNonConformityFilterMetadataMockHandler = (
+	overrideResponse?:
+		| FilterMetadataResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<FilterMetadataResponse> | FilterMetadataResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/audits/rules/:id/non-conformities/filter-metadata",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getGetAuditNonConformityFilterMetadataResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getGetAuditNonConformityFilterValuesMockHandler = (
+	overrideResponse?:
+		| FilterValuesResponse
+		| ((
+				info: Parameters<Parameters<typeof http.get>[1]>[0],
+		  ) => Promise<FilterValuesResponse> | FilterValuesResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.get(
+		"*/audits/rules/:id/non-conformities/filter-values",
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getGetAuditNonConformityFilterValuesResponseMock(),
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
 export const getResolveSoundalikesMockHandler = (
 	overrideResponse?:
 		| ResolveSoundalikesResponse
@@ -3358,5 +4119,7 @@ export const getAuditsMock = () => [
 	getExcludeDuplicatePairMockHandler(),
 	getListExcludedPairsMockHandler(),
 	getRemoveExcludedPairMockHandler(),
+	getGetAuditNonConformityFilterMetadataMockHandler(),
+	getGetAuditNonConformityFilterValuesMockHandler(),
 	getResolveSoundalikesMockHandler(),
 ];

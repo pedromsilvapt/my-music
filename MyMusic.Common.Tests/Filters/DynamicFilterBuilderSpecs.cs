@@ -1873,4 +1873,171 @@ public class DynamicFilterBuilderSpecs
     }
 
     #endregion
+
+    #region BuildFilterFromDsl Unified Method
+
+    [Fact]
+    public void BuildFilterFromDsl_EmptyString_ReturnsTrueFilter()
+    {
+        // Arrange
+        var (context, owner, _, _, _, _) = SetupTestData();
+        var song = CreateSong(999, "Test", 2020, false, false, null, context.Albums.First(), owner, [], []);
+
+        // Act
+        var filter = DynamicFilterBuilder.BuildFilterFromDsl<Song>("");
+
+        // Assert
+        var compiled = filter.Compile();
+        var result = compiled(song);
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_WhitespaceString_ReturnsTrueFilter()
+    {
+        // Arrange
+        var (context, owner, _, _, _, _) = SetupTestData();
+        var song = CreateSong(999, "Test", 2020, false, false, null, context.Albums.First(), owner, [], []);
+
+        // Act
+        var filter = DynamicFilterBuilder.BuildFilterFromDsl<Song>("   ");
+
+        // Assert
+        var compiled = filter.Compile();
+        var result = compiled(song);
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_NullString_ReturnsTrueFilter()
+    {
+        // Arrange
+        var (context, owner, _, _, _, _) = SetupTestData();
+        var song = CreateSong(999, "Test", 2020, false, false, null, context.Albums.First(), owner, [], []);
+
+        // Act
+        var filter = DynamicFilterBuilder.BuildFilterFromDsl<Song>(null);
+
+        // Assert
+        var compiled = filter.Compile();
+        var result = compiled(song);
+        result.ShouldBeTrue();
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_WithoutMappings_ParsesFilter()
+    {
+        // Arrange
+        var (context, _, songs, _, _, _) = SetupTestData();
+
+        // Act
+        var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Song>(@"title = ""Echoes""");
+        var results = context.Songs
+            .Where(filterExpression)
+            .ToList();
+
+        // Assert
+        results.Count.ShouldBe(1);
+        results[0].Title.ShouldBe("Echoes");
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_WithMappings_ResolvesEntityPaths()
+    {
+        // Arrange
+        var (context, _, songs, _, _, _) = SetupTestData();
+
+        // Act
+        var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Song>(
+            @"artist.name = ""Pink Floyd""",
+            FieldMappings);
+        var results = context.Songs
+            .Include(s => s.Artists).ThenInclude(sa => sa.Artist)
+            .Where(filterExpression)
+            .ToList();
+
+        // Assert
+        results.Count.ShouldBe(4);
+        results.Select(s => s.Id).OrderBy(id => id).ShouldBe([1, 2, 5, 10]);
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_WithMappings_ComplexFilter()
+    {
+        // Arrange
+        var (context, _, songs, _, _, _) = SetupTestData();
+
+        // Act
+        var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Song>(
+            @"artist.name = ""Pink Floyd"" and genre.name = ""Rock""",
+            FieldMappings);
+        var results = context.Songs
+            .Include(s => s.Album)
+            .Include(s => s.Artists).ThenInclude(sa => sa.Artist)
+            .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
+            .AsSplitQuery()
+            .Where(filterExpression)
+            .ToList();
+
+        // Assert
+        results.Count.ShouldBe(4);
+        results.Select(s => s.Id).OrderBy(id => id).ShouldBe([1, 2, 5, 10]);
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_WithoutMappings_ComparesWithOldPattern()
+    {
+        // Arrange
+        var (context, _, songs, _, _, _) = SetupTestData();
+        var dsl = @"title contains ""the"" and year > 1970";
+
+        // Old pattern
+        var oldRequest = FilterDslParser.Parse(dsl);
+        var oldFilter = DynamicFilterBuilder.BuildFilter<Song>(oldRequest);
+
+        // New unified method
+        var newFilter = DynamicFilterBuilder.BuildFilterFromDsl<Song>(dsl);
+
+        // Act
+        var oldResults = context.Songs.Where(oldFilter).OrderBy(s => s.Id).ToList();
+        var newResults = context.Songs.Where(newFilter).OrderBy(s => s.Id).ToList();
+
+        // Assert
+        oldResults.Count.ShouldBe(newResults.Count);
+        oldResults.Select(s => s.Id).ShouldBe(newResults.Select(s => s.Id));
+    }
+
+    [Fact]
+    public void BuildFilterFromDsl_WithMappings_ComparesWithOldPattern()
+    {
+        // Arrange
+        var (context, _, songs, _, _, _) = SetupTestData();
+        var dsl = @"genre[all].name != ""Unknown""";
+
+        // Old pattern
+        var oldRequest = FilterDslParser.Parse(dsl);
+        DynamicFilterBuilder.ResolveEntityPaths(oldRequest, FieldMappings);
+        var oldFilter = DynamicFilterBuilder.BuildFilter<Song>(oldRequest);
+
+        // New unified method
+        var newFilter = DynamicFilterBuilder.BuildFilterFromDsl<Song>(dsl, FieldMappings);
+
+        // Act
+        var oldResults = context.Songs
+            .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
+            .Where(oldFilter)
+            .OrderBy(s => s.Id)
+            .ToList();
+        var newResults = context.Songs
+            .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
+            .Where(newFilter)
+            .OrderBy(s => s.Id)
+            .ToList();
+
+        // Assert
+        oldResults.Count.ShouldBe(newResults.Count);
+        oldResults.Select(s => s.Id).ShouldBe(newResults.Select(s => s.Id));
+    }
+
+    #endregion
 }

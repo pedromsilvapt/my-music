@@ -33,13 +33,19 @@ const ENTITY_ENDPOINTS: Record<FilterEntity, string> = {
     playlists: '/api/playlists/filter-metadata',
     devices: '/api/devices/filter-metadata',
     sources: '/api/sources/songs/filter-metadata',
+    audits: '/api/audits/rules/{id}/non-conformities/filter-metadata',
 };
 
-export function useFilterMetadata(entityType: FilterEntity) {
+export function useFilterMetadata(entityType: FilterEntity, resourceId?: number | string) {
     return useQuery({
-        queryKey: ["filter-metadata", entityType],
+        queryKey: resourceId != null
+            ? ["filter-metadata", entityType, resourceId]
+            : ["filter-metadata", entityType],
         queryFn: async (): Promise<FilterMetadataResponse> => {
-            const endpoint = ENTITY_ENDPOINTS[entityType];
+            let endpoint = ENTITY_ENDPOINTS[entityType];
+            if (resourceId != null) {
+                endpoint = endpoint.replace('{id}', String(resourceId));
+            }
             const response = await fetch(endpoint);
             if (!response.ok) {
                 throw new Error(`Failed to fetch filter metadata for ${entityType}`);

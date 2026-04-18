@@ -5,8 +5,7 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface AcknowledgeActionRequest {
-	devicePath: string;
-	/** @nullable */
-	modifiedAt?: string | null;
-}
+export type ListAuditNonConformitiesParams = {
+	filter?: string;
+	search?: string;
+};

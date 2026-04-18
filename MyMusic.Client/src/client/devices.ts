@@ -5298,6 +5298,17 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					length: { min: 10, max: 20 },
 				}),
 			})),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
 			...overrideResponse,
 		},
 		{
@@ -5354,6 +5365,17 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 					length: { min: 10, max: 20 },
 				}),
 			})),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
 			...overrideResponse,
 		},
 		{
@@ -5409,6 +5431,17 @@ export const getPostDevicesDeviceIdSyncCheckResponseMock = (
 				serverChecksumAlgorithm: faker.string.alpha({
 					length: { min: 10, max: 20 },
 				}),
+			})),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			})),
 			...overrideResponse,
 		},
@@ -5434,17 +5467,7 @@ export const getPostDevicesDeviceIdSyncResolveConflictsResponseMock = (
 					undefined,
 				]),
 			})),
-			conflicts: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			})),
-			...overrideResponse,
-		},
-		{
-			toUpload: Array.from(
+			resolved: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
@@ -5470,6 +5493,61 @@ export const getPostDevicesDeviceIdSyncResolveConflictsResponseMock = (
 		},
 		{
 			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			resolved: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			...overrideResponse,
+		},
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			resolved: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
@@ -5505,6 +5583,17 @@ export const getPostDevicesDeviceIdSyncUploadResponseMock = (
 				faker.helpers.arrayElement([faker.number.int(), null]),
 				undefined,
 			]),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
 			...overrideResponse,
 		},
 		{
@@ -5513,6 +5602,17 @@ export const getPostDevicesDeviceIdSyncUploadResponseMock = (
 				faker.helpers.arrayElement([faker.number.int(), null]),
 				undefined,
 			]),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
 			...overrideResponse,
 		},
 		{
@@ -5521,6 +5621,17 @@ export const getPostDevicesDeviceIdSyncUploadResponseMock = (
 				faker.helpers.arrayElement([faker.number.int(), null]),
 				undefined,
 			]),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
 			...overrideResponse,
 		},
 	]);

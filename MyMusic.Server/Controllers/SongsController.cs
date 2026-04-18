@@ -67,9 +67,7 @@ public class SongsController(
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterRequest = FilterDslParser.Parse(filter);
-            DynamicFilterBuilder.ResolveEntityPaths(filterRequest, GetSongFieldMappings());
-            var filterExpression = DynamicFilterBuilder.BuildFilter<Song>(filterRequest);
+            var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Song>(filter, GetSongFieldMappings());
             query = query.Where(filterExpression);
         }
 

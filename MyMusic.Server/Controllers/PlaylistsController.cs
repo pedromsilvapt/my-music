@@ -37,8 +37,7 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterRequest = FilterDslParser.Parse(filter);
-            var filterExpression = DynamicFilterBuilder.BuildFilter<Playlist>(filterRequest);
+            var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Playlist>(filter);
             query = query.Where(filterExpression);
         }
 

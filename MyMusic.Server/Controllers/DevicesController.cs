@@ -42,8 +42,7 @@ public class DevicesController(
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterRequest = FilterDslParser.Parse(filter);
-            var filterExpression = DynamicFilterBuilder.BuildFilter<Device>(filterRequest);
+            var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Device>(filter);
             query = query.Where(filterExpression);
         }
 
@@ -384,9 +383,7 @@ public class DevicesController(
         // Apply filter DSL if provided
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterRequest = FilterDslParser.Parse(filter);
-            DynamicFilterBuilder.ResolveEntityPaths(filterRequest, GetSessionRecordFieldMappings());
-            var filterExpression = DynamicFilterBuilder.BuildFilter<DeviceSyncSessionRecord>(filterRequest);
+            var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<DeviceSyncSessionRecord>(filter, GetSessionRecordFieldMappings());
             query = query.Where(filterExpression);
         }
 

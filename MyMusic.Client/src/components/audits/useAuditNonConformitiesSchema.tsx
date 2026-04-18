@@ -5,6 +5,9 @@ import {IconCheck, IconEdit, IconTrash, IconX} from "@tabler/icons-react";
 import {useMemo} from "react";
 import type {ListAuditNonConformityItem, ListSongsArtist} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection";
+import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
+import {getAuditNonConformityFilterValues} from "../../client/audits.ts";
+import {useFetchData} from "../../hooks/use-fetch-data.ts";
 
 export type ListAuditNonConformityItemWithSong = ListAuditNonConformityItem & {
     song: NonNullable<ListAuditNonConformityItem['song']>;
@@ -15,12 +18,29 @@ import SongArtwork from "../common/fields/song-artwork";
 import SongTitle from "../common/fields/song-title";
 
 export function useAuditNonConformitiesSchema(
+    ruleId: number,
     onSetWaiver: (ids: number[], hasWaiver: boolean, reason?: string | null) => void,
     onDelete: (ids: number[]) => void
 ): CollectionSchema<ListAuditNonConformityItemWithSong> {
+    const {data: filterMetadata} = useFilterMetadata('audits', ruleId);
+
+    const fetchFilterValues = useFetchData(
+        async (field: string, searchTerm: string) => {
+            const response = await getAuditNonConformityFilterValues(ruleId, {
+                field,
+                search: searchTerm || undefined,
+                limit: 15,
+            });
+            return response.data.values ?? [];
+        },
+        (field: string) => `Failed to fetch filter values for field "${field}"`
+    );
+
     return useMemo(() => ({
         key: row => row.id,
         searchVector: nc => `${nc.song.title} - ${nc.song.artists.map((a: ListSongsArtist) => a.name).join(', ')} - ${nc.song.album.name}`,
+        filterMetadata,
+        fetchFilterValues,
 
         estimateTableRowHeight: () => 47 * 2,
         columns: [
@@ -151,5 +171,5 @@ export function useAuditNonConformitiesSchema(
                 )}
             </Group>
         ),
-    }) as CollectionSchema<ListAuditNonConformityItemWithSong>, [onSetWaiver, onDelete]);
+    }) as CollectionSchema<ListAuditNonConformityItemWithSong>, [onSetWaiver, onDelete, filterMetadata, fetchFilterValues]);
 }

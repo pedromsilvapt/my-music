@@ -9,5 +9,6 @@ import type { SyncFileInfoItem } from "./syncFileInfoItem";
 
 export interface SyncResolveConflictsResponse {
 	toUpload: SyncFileInfoItem[];
+	resolved: SyncFileInfoItem[];
 	conflicts: SyncConflictErrorItem[];
 }

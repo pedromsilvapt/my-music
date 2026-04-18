@@ -1,1 +1,1 @@
-export type FilterEntity = 'songs' | 'artists' | 'albums' | 'playlists' | 'devices' | 'sources';
+export type FilterEntity = 'songs' | 'artists' | 'albums' | 'playlists' | 'devices' | 'sources' | 'audits';

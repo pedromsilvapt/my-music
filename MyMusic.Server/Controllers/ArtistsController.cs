@@ -33,8 +33,7 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
 
         if (!string.IsNullOrWhiteSpace(filter))
         {
-            var filterRequest = FilterDslParser.Parse(filter);
-            var filterExpression = DynamicFilterBuilder.BuildFilter<Artist>(filterRequest);
+            var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Artist>(filter);
             query = query.Where(filterExpression);
         }
 

@@ -12,10 +12,21 @@ import type {ListAuditNonConformityItemWithSong} from "./useAuditNonConformities
 
 interface AuditDefaultComponentProps {
     nonConformities: ListAuditNonConformityItem[];
+    ruleId: number;
     refetchNonConformities: () => void;
+    serverSearch?: string;
+    serverFilter?: string;
+    onServerFilterChange?: (search: string, filter: string) => void;
 }
 
-export default function AuditDefaultComponent({nonConformities, refetchNonConformities}: AuditDefaultComponentProps) {
+export default function AuditDefaultComponent({
+    nonConformities,
+    ruleId,
+    refetchNonConformities,
+    serverSearch,
+    serverFilter,
+    onServerFilterChange,
+}: AuditDefaultComponentProps) {
     const batchSetWaiverMutation = useBatchSetAuditWaiver();
     const batchDeleteMutation = useBatchDeleteAuditNonConformities();
 
@@ -79,7 +90,7 @@ export default function AuditDefaultComponent({nonConformities, refetchNonConfor
         await refetchNonConformities();
     }, [batchDeleteMutation, refetchNonConformities]);
 
-    const schema = useAuditNonConformitiesSchema(handleSetWaiver, handleDelete);
+    const schema = useAuditNonConformitiesSchema(ruleId, handleSetWaiver, handleDelete);
 
     return (
         <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
@@ -88,7 +99,10 @@ export default function AuditDefaultComponent({nonConformities, refetchNonConfor
                     stateKey="audit-detail"
                     items={nonConformitiesWithSongs}
                     schema={schema}
-                    filterMode="client"
+                    filterMode="server"
+                    serverSearch={serverSearch}
+                    serverFilter={serverFilter}
+                    onServerFilterChange={onServerFilterChange}
                     searchPlaceholder="Search non-conformities..."
                 />
             </div>

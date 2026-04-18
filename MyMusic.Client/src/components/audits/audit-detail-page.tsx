@@ -7,6 +7,7 @@ import {
     useListAuditNonConformities,
     useScanAuditRule
 } from "../../client/audits.ts";
+import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import AuditDefaultComponent from "./audit-default-component.tsx";
 import SoundalikePage from "./soundalike-page.tsx";
@@ -15,18 +16,33 @@ const AUDIT_CUSTOM_COMPONENTS: Record<string, React.ComponentType<{onToolbarChan
     'soundalike': SoundalikePage,
 };
 
+const AUDIT_STATE_KEY = "audit-detail";
+
 export default function AuditDetailPage() {
     const {auditId} = useParams({from: '/audits/$auditId'});
     const id = parseInt(auditId, 10);
 
+    const {setCollectionFilter} = useCollectionActions(state => ({
+        setCollectionFilter: state.setCollectionFilter,
+    }));
+    const collectionState = useCollectionStateByKey(AUDIT_STATE_KEY);
+    const appliedSearch = collectionState.filter.search;
+    const appliedFilter = collectionState.filter.expression;
+
     const ruleQuery = useGetAuditRule(id);
-    const nonConformitiesQuery = useListAuditNonConformities(id);
+    const nonConformitiesQuery = useListAuditNonConformities(
+        id,
+        { search: appliedSearch, filter: appliedFilter },
+        {
+            query: {
+                enabled: true,
+                select: (response) => response.data,
+            }
+        }
+    );
 
     const ruleResponse = useQueryData(ruleQuery, "Failed to fetch audit rule");
-    const nonConformitiesResponse = useQueryData(
-        nonConformitiesQuery,
-        "Failed to fetch non conformities"
-    ) ?? {data: {nonConformities: [], total: 0}};
+    const nonConformitiesResponse = nonConformitiesQuery.data ?? {nonConformities: [], total: 0};
 
     const refetchNonConformities = nonConformitiesQuery.refetch;
 
@@ -36,7 +52,7 @@ export default function AuditDetailPage() {
     const [customToolbar, setCustomToolbar] = useState<React.ReactNode>(null);
 
     const rule = ruleResponse?.data?.rule;
-    const allNonConformities = nonConformitiesResponse?.data?.nonConformities ?? [];
+    const allNonConformities = nonConformitiesResponse?.nonConformities ?? [];
 
     useEffect(() => {
         void refetchNonConformities();
@@ -51,6 +67,10 @@ export default function AuditDetailPage() {
             setScanning(false);
         }
     }, [id, scanMutation, refetchNonConformities]);
+
+    const handleFilterChange = useCallback((newSearch: string, newFilter: string) => {
+        setCollectionFilter(AUDIT_STATE_KEY, { search: newSearch, expression: newFilter });
+    }, [setCollectionFilter]);
 
     const hasCustomPage = !!rule?.customPage;
     const CustomComponent = hasCustomPage ? AUDIT_CUSTOM_COMPONENTS[rule!.customPage!] : null;
@@ -82,7 +102,14 @@ export default function AuditDetailPage() {
                 {CustomComponent ? (
                     <CustomComponent onToolbarChange={setCustomToolbar} />
                 ) : (
-                    <AuditDefaultComponent nonConformities={allNonConformities} refetchNonConformities={refetchNonConformities} />
+                    <AuditDefaultComponent
+                        nonConformities={allNonConformities}
+                        ruleId={id}
+                        refetchNonConformities={refetchNonConformities}
+                        serverSearch={appliedSearch}
+                        serverFilter={appliedFilter}
+                        onServerFilterChange={handleFilterChange}
+                    />
                 )}
             </div>
         </div>
