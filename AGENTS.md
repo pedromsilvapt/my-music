@@ -4,7 +4,7 @@ This document provides guidelines for agentic coding agents working on this code
 
 ## Project Overview
 
-MyMusic is a .NET 9.0 music management system with:
+MyMusic is a .NET 10.0 music management system with:
 
 - **MyMusic.Common** - Shared library with entities, services, EF Core DbContext
 - **MyMusic.Server** - ASP.NET Core Web API (REST endpoints)
@@ -47,33 +47,11 @@ dotnet ef migrations add <MigrationName> --project MyMusic.Common
 # The server applies migrations automatically on startup
 ```
 
-## Generate Client API (Orval)
-
-```bash
-# Restart the server to ensure OpenAPI is updated
-pkill -f "dotnet watch" ; dotnet watch --project MyMusic.Server/MyMusic.Server.csproj
-
-# Then run Orval to regenerate client API
-devbox run orval
-
-pkill -f "dotnet watch"
-```
-
-**Important:** When adding new mutations that should trigger refetch/invalidation of queries, you must add them to the
-`mutationInvalidates` array in `orval.config.cjs`. This ensures TanStack Query automatically invalidates the relevant
-queries after the mutation completes.
-
 ## Tool calling
+
 Avoid making one tool call at a time. If possible, try to read or write multiple files at once (unless they are really, really big).
 
 ## Code Style Guidelines
-
-### General Conventions
-
-- **.NET 9.0** with `ImplicitUsings` and `Nullable` enabled in all projects
-- Use **file-scoped namespaces**: `namespace MyMusic.Common.Services;`
-- Use **primary constructors** for controller/service classes
-- Use **XML documentation comments** (`/// <summary>`) for public APIs
 
 ### Naming Conventions
 
@@ -141,567 +119,65 @@ public record ListSongsResponse
 }
 ```
 
-### DTO Patterns
-
-DTOs are organized by resource in `MyMusic.Server/DTO/<Resource>/`.
-
-#### File Organization Rules
-
-1. **Request DTOs** → Separate file per request
-    - `CreatePlaylistRequest.cs`
-    - `UpdatePlaylistRequest.cs`
-
-2. **Response DTOs** → Separate file per response
-    - `CreatePlaylistResponse.cs` - may contain nested `*Item` classes used only in this response
-    - `GetPlaylistResponse.cs` - may contain nested `*Item` classes used only in this response
-
-3. **Shared Data DTOs** → Defined in `Shared.cs` if used across multiple requests/responses
-    - `SyncFileInfoItem` used in both `SyncCheckRequest` and `SyncCheckResponse`
-
-#### Example: Devices Resource
-
-```
-DTO/Devices/
-  CreateDeviceRequest.cs       # Request only
-  CreateDeviceResponse.cs       # Response + CreateDeviceItem (nested)
-  ListDevicesResponse.cs        # Response + ListDeviceItem (nested)
-```
-
-#### Example: Sync Resource
-
-```
-DTO/Sync/
-  Shared.cs                    # SyncFileInfoItem (shared data)
-  SyncCheckRequest.cs          # Request (references Shared)
-  SyncCheckResponse.cs         # Response (references Shared)
-  SyncUploadResponse.cs        # Response only
-```
-
-#### Response DTO Structure
-
-```csharp
-using AgileObjects.AgileMapper;
-using Entities = MyMusic.Common.Entities;
-
-namespace MyMusic.Server.DTO.Playlists;
-
-public record CreatePlaylistResponse
-{
-    public required CreatePlaylistItem Playlist { get; init; }
-}
-
-public record CreatePlaylistItem
-{
-    public required long Id { get; init; }
-    public required string Name { get; init; }
-
-    public static CreatePlaylistItem FromEntity(Entities.Playlist playlist) =>
-        Mapper.Map(playlist).ToANew<CreatePlaylistItem>();
-}
-```
-
-#### Complex Response DTOs (with related entities)
-
-When mapping entities with relationships, use manual mapping to control the output:
-
-```csharp
-using MyMusic.Server.DTO.Songs;
-using Entities = MyMusic.Common.Entities;
-using SongEntity = MyMusic.Common.Entities.Song;
-
-namespace MyMusic.Server.DTO.Playlists;
-
-public record GetPlaylistResponse
-{
-    public required GetPlaylistItem Playlist { get; init; }
-}
-
-public record GetPlaylistItem
-{
-    public required long Id { get; init; }
-    public required string Name { get; init; }
-    public required List<GetPlaylistSong> Songs { get; init; }
-
-    public static GetPlaylistItem FromEntity(Entities.Playlist playlist) =>
-        new GetPlaylistItem
-        {
-            Id = playlist.Id,
-            Name = playlist.Name,
-            Songs = playlist.PlaylistSongs
-                .OrderBy(ps => ps.Order)
-                .Select(ps => GetPlaylistSong.FromEntity(ps.Song, ps.Order, ps.AddedAt))
-                .ToList()
-        };
-}
-
-public record GetPlaylistSong : ListSongsItem
-{
-    public required int Order { get; init; }
-    public DateTime? AddedAtPlaylist { get; init; }
-
-    public static GetPlaylistSong FromEntity(SongEntity song, int order, DateTime addedAt) =>
-        new GetPlaylistSong
-        {
-            Id = song.Id,
-            Cover = song.CoverId,
-            Title = song.Title,
-            Artists = song.Artists.Select(a => ListSongsArtist.FromEntity(a.Artist)).ToList(),
-            Album = ListSongsAlbum.FromEntity(song.Album),
-            Genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList(),
-            Year = song.Year,
-            Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
-            IsFavorite = false,
-            IsExplicit = song.Explicit,
-            CreatedAt = song.CreatedAt,
-            AddedAt = song.AddedAt,
-            Order = order,
-            AddedAtPlaylist = addedAt
-        };
-}
-```
-
-#### Guidelines
-
-- **Use AgileMapper** (`Mapper.Map(entity).ToANew<T>()`) for simple DTOs with direct property mappings
-- **Use manual mapping** when you need to transform, order, or include related entities
-- **Use inheritance** (e.g., `GetPlaylistSong : ListSongsItem`) to reuse common properties
-- **Use aliased imports** (`using Entities = ...`) to avoid ambiguity with domain entities
-- **Inherit from `ListSongsItem`** for song-related nested types to reuse its properties
-
-### Cross-Project Configuration Access Pattern
-
-Use this pattern when a service in `MyMusic.Common` needs access to configuration or values only available in `MyMusic.Server`:
-
-1. **Define interface in Common** - Declare the required values
-2. **Implement in Server** - Access actual configuration source
-3. **Register in DI** - Simple type registration
-
-#### Existing Examples (see code for implementation details)
-
-- **ICurrentUser / HttpCurrentUser** - Access to current user from HTTP context
-- **IApiPathResolver / ApiPathResolver** - Access to server configuration values
-
-### Imports
-
-```csharp
-using System.IO.Abstractions;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using MyMusic.Common.Entities;
-using MyMusic.Common.Services;
-```
-
-Order: System → Microsoft → Third-party → MyMusic (or use implicit usings)
-
-### Error Handling
-
-- Throw exceptions with descriptive messages: `throw new Exception($"User not found with id {ownerId}")`
-- Use try-catch for operations that may fail externally
-- Return appropriate HTTP status codes in controllers
-
-### Testing
-
-- Use **xUnit** with `[Fact]` attribute
-- Use **Shouldly** for assertions: `songs.Count.ShouldBe(3)`
-- Use **NSubstitute** for mocking: `Substitute.For<ILogger<MusicService>>()`
-- Use **Scenario** class for test setup (in-memory SQLite + MockFileSystem)
-- Follow naming: `<MethodName>_<Scenario>_<ExpectedOutcome>`
-- **Arrange-Act-Assert (AAA) pattern**: Every test method must clearly delineate its sections with `// Arrange`, `// Act`, and `// Assert` comments. When Act and Assert are trivially combined (e.g., a single expression that both calls and asserts), they may be merged as `// Act & Assert`. When there is no Arrange step and the test jumps straight to assertions on static data, use `// Arrange` followed by `// Assert` (skipping Act).
-
-#### Assertion Style Guidelines
-
-Prefer **direct assertions** over `ShouldSatisfyAllConditions` for clarity and better error messages:
-
-```csharp
-// Good - Direct assertions with clear failure messages
-songs.Count.ShouldBe(3);
-songs[0].Title.ShouldBe("Song Title");
-songs[0].Artists.Count.ShouldBe(2);
-
-// Avoid - Multiple conditions in one assertion
-songs.ShouldSatisfyAllConditions(
-    () => songs.Count.ShouldBe(3),
-    () => songs[0].Title.ShouldBe("Song Title"),
-    () => songs[0].Artists.Count.ShouldBe(2)
-);
-```
-
-Use `ShouldSatisfyAllConditions` only when you need to assert multiple independent conditions on the same object and want all failures reported at once:
-
-```csharp
-// Acceptable - When multiple unrelated properties need verification
-user.ShouldSatisfyAllConditions(
-    () => user.Name.ShouldNotBeNull(),
-    () => user.Email.ShouldContain("@"),
-    () => user.CreatedAt.ShouldBeGreaterThan(DateTime.MinValue)
-);
-```
-
-```csharp
-[Fact]
-public async Task ImportMusic_EmptyDatabase()
-{
-    var scenario = new Scenario();
-    var musicService = scenario.CreateMusicService();
-
-    // Act
-    await musicService.ImportRepositorySongs(...);
-
-    // Assert
-    job.SkipReasons.ShouldBeEmpty();
-    songs.Count.ShouldBe(3);
-}
-```
-
-### Database (EF Core)
-
-- Use **PostgreSQL** with `Npgsql.EntityFrameworkCore.PostgreSQL`
-- Use **EFCore.NamingConventions** for snake_case naming
-- Use **Include(...).ThenInclude(...)** for related entities
-- Use **AsSplitQuery()** for complex queries with includes
-- Follow existing migration pattern in `MyMusic.Common/Migrations/`
-- **SongDevice Records:** When deleting songs that have been synced to devices, always mark SongDevice records for removal (set SongId = null, SyncAction = Remove) instead of deleting them. This allows the sync system to track and remove files from devices during the next sync operation. See AuditsController.ResolveSoundalikes for example.
-
-### Dependencies
-
-Key packages used:
-
-- `Microsoft.EntityFrameworkCore` + `Npgsql.EntityFrameworkCore.PostgreSQL`
-- `xunit` + `xunit.runner.visualstudio`
-- `NSubstitute` for mocking
-- `Shouldly` for assertions
-- `Refit` for HTTP client generation
-- `taglib-sharp-netstandard2.0` for audio metadata
-- `System.IO.Abstractions` + `TestableIO.System.IO.Abstractions` for testable file I/O
-
-## Common Tasks
-
-### Adding a New Entity
-
-1. Create entity class in `MyMusic.Common/Entities/`
-2. Add to `MusicDbContext`
-3. Add migration: `dotnet ef migrations add AddNewEntity`
-4. Create DTOs in `MyMusic.Server/DTO/`
-5. Add controller endpoints
-
-### Adding a New API Endpoint
-
-1. Create DTOs in appropriate `MyMusic.Server/DTO/` folder
-2. Add method to service interface/implementation
-3. Add controller action with proper HTTP attribute
-4. Add test if applicable
-
-### Running the Application
-
-```bash
-# Development
-dotnet run --project MyMusic.Server
-
-# With Docker
-docker compose up
-```
-
-## MyMusic.Client (React/TypeScript)
-
-```bash
-# Install dependencies
-cd MyMusic.Client && npm install
-
-# Development server
-npm run dev
-
-# Build
-npm run build
-
-# Run linter
-npm run lint
-
-# Preview build
-npm run preview
-```
-
-### Important: Never Manually Edit Auto-Generated Files
-
-The files in `src/client/` and `src/model/` are **auto-generated by Orval** from the OpenAPI specification. **Never
-manually edit these files** - your changes will be overwritten the next time Orval runs.
-
-If you need to customize mutation behavior (e.g., add query invalidations), create a custom hook in `src/hooks/` that
-wraps the auto-generated mutation functions. For example:
-
-```typescript
-// src/hooks/use-custom-mutation.ts
-import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {useSomeGeneratedMutation} from "../client/some-api.ts";
-
-export function useCustomMutation() {
-    const queryClient = useQueryClient();
-
-    return useMutation(
-        {
-            ...useSomeGeneratedMutation({}),
-            onSuccess: () => {
-                // Custom invalidation logic here
-                queryClient.invalidateQueries({queryKey: ['some', 'queries']});
-            }
-        },
-        queryClient
-    );
-}
-```
-
-To regenerate the client API after backend changes, run:
-
-```bash
-devbox run orval
-```
-
-### Player Context Usage Guidelines
-
-When working with the player context (`src/contexts/player-context.tsx`), always follow these rules:
-
-1. **For performing actions** (play, pause, skip, add to queue, etc.):
-    - Always use `usePlayerActions()` hook
-    - Example: `const playerActions = usePlayerActions(); playerActions.play(songs);`
-
-2. **For reading properties** (current song, queue, volume, etc.):
-    - Always use `usePlayerContext(state => ...)` with a selector function
-    - Example: `const currentSong = usePlayerContext(state => state.current);`
-    - Never call `usePlayerContext()` without a selector - it returns the entire store API and causes excessive
-      re-renders
-
-This ensures proper reactivity and prevents unnecessary component re-renders.
-
-### Zustand Store Usage Guidelines
-
-When using Zustand stores with selectors, **always wrap your selector function with `useShallow`** to prevent
-unnecessary re-renders:
-
-```typescript
-import {useShallow} from 'zustand/react/shallow';
-
-// Good - useShallow prevents re-renders when selector returns a new object
-const {time, duration} = usePlaybackStore(
-    useShallow((state) => {
-        if (state.current.type === 'LOADED') {
-            return {time: state.current.time, duration: state.current.duration};
-        }
-        return {time: 0, duration: 0};
-    })
-);
-
-// Bad - returning complex objects without useShallow causes infinite re-renders
-const {time, duration} = usePlaybackStore((state) => {
-    return {time: state.current.time, duration: state.current.duration}; // new object every render!
-});
-```
-
-**Why?** Zustand compares selectors by reference. When your selector returns a new object/array on every render, React
-thinks the state changed every render, causing infinite update loops. `useShallow` performs a shallow equality check
-instead.
-
-### Known Issues
-
-The auto-generated files in `src/client/` and `src/model/` may contain TypeScript errors. These are pre-existing issues
-in the Orval-generated code and should be ignored. Focus on fixing TypeScript errors in manually written code under
-`src/routes/`, `src/components/`, `src/contexts/`, and `src/hooks/`.
-
-### Mantine Styles
-
-All Mantine package styles should be imported in `src/components/styles.ts`. When adding a new @mantine package that
-requires styles (e.g., `@mantine/dates`), add the import there instead of in individual components.
-
-### useUncontrolled Hook
-
-Use `useUncontrolled` from `@mantine/hooks` for props that can be either controlled or uncontrolled. It eliminates the
-need for `useState` + `useEffect` sync patterns and automatically calls the parent's `onChange` callback.
-
-### Debouncing Pattern
-
-When implementing search, filter, or other input-based functionality that requires debouncing, **always
-use `useDebouncedValue` from `@mantine/hooks`** instead of manual `useEffect` + `setTimeout` patterns:
-
-```typescript
-import {useDebouncedValue} from "@mantine/hooks";
-
-const SEARCH_DEBOUNCE_MS = 300;
-
-// Good - useDebouncedValue handles cleanup automatically
-const [debouncedSearch] = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
-
-useEffect(() => {
-    performSearch(debouncedSearch);
-}, [debouncedSearch]);
-
-// Bad - manual setTimeout requires manual cleanup
-useEffect(() => {
-    const timer = setTimeout(() => {
-        performSearch(searchQuery);
-    }, 300);
-    return () => clearTimeout(timer);
-}, [searchQuery]);
-```
-
-The Mantine hook is cleaner, avoids potential memory leaks from forgotten cleanup, and is consistent with existing
-codebase patterns.
-
-### API Client Usage (Orval)
-
-**ALWAYS use Orval-generated client APIs.** Manual `fetch()` calls are technical debt.
-
-The files in `src/client/` and `src/model/` are **auto-generated by Orval** from the OpenAPI specification. Never
-manually edit these files - your changes will be overwritten the next time Orval runs.
-
-**Process:**
-1. Check if the endpoint exists in `src/client/` files (e.g., `src/client/songs.ts`)
-2. If the endpoint is missing from the client, regenerate Orval to update the client:
-   ```bash
-   devbox run orval
-   ```
-3. Use the generated hooks/functions directly in your components:
-   - Queries: `useGetMetadataFetchSongSongId(songId)`, `useAutocompleteAlbums(params)`
-   - Mutations: `usePostMetadataFetchBatch()`, `useApplyMetadata()`
-4. Create custom hooks in `src/hooks/` **only when necessary**, and they should **always be wrappers around the hooks/functions generated by Orval**. Common reasons:
-   - Adding query invalidation logic
-   - Custom error handling
-   - Transforming data before returning
-
-**Example of a custom hook wrapping Orval:**
-```typescript
-// src/hooks/use-custom-mutation.ts
-import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {useSomeGeneratedMutation} from "../client/some-api.ts";
-
-export function useCustomMutation() {
-    const queryClient = useQueryClient();
-
-    return useMutation(
-        {
-            ...useSomeGeneratedMutation({}),
-            onSuccess: () => {
-                // Custom invalidation logic here
-                queryClient.invalidateQueries({queryKey: ['some', 'queries']});
-            }
-        },
-        queryClient
-    );
-}
-```
-
-**Never use manual `fetch()` in components or hooks** - if you find yourself writing `fetch()`, it means either:
-- The endpoint hasn't been regenerated yet (run `devbox run orval`)
-- The backend endpoint is missing (add it to the server first)
-
-## MyMusic.Mobile (React Native)
-
-MyMusic.Mobile is a React Native (Expo) mobile application that provides the same sync functionality as MyMusic.CLI but
-with a mobile-friendly interface.
-
-### Technology Stack
-
-- **Framework**: Expo SDK 55 with Expo Router for navigation
-- **Language**: TypeScript
-- **State Management**: Zustand for UI state only
-- **Config Management**: Centralized configService (single source of truth)
-- **UI**: React Native built-in components with custom styling
-- **API Client**: Manual fetch with Zod for validation
-- **Storage**: AsyncStorage for config, SecureStore for credentials
-
-### Project Structure
-
-```
-MyMusic.Mobile/
-├── app/                          # Expo Router routes (file-based routing)
-│   ├── _layout.tsx               # Root layout
-│   ├── index.tsx                 # Home/Dashboard screen
-│   ├── settings/
-│   │   ├── index.tsx             # Settings main
-│   │   └── device.tsx            # Device configuration
-│   ├── history/
-│   │   ├── index.tsx             # Sessions list
-│   │   └── [sessionId].tsx       # Session detail
-│   └── sync/
-│       └── progress.tsx          # Active sync screen
-├── src/
-│   ├── api/                      # API client & types
-│   │   ├── client.ts             # Base fetch wrapper with auth
-│   │   ├── devices.ts            # Device API functions
-│   │   ├── sync.ts               # Sync API functions
-│   │   └── types.ts              # Zod schemas
-│   ├── stores/                   # Zustand stores (UI state only)
-│   │   ├── configStore.ts        # UI loading state
-│   │   ├── authStore.ts          # Auth state
-│   │   └── syncStore.ts          # Sync progress state
-│   ├── services/                 # Business logic
-│   │   ├── configService.ts      # Centralized config management (single source of truth)
-│   │   ├── fileScanner.ts        # Music file scanner
-│   │   └── syncService.ts        # Core sync orchestration
-│   ├── components/ui/            # Reusable UI components
-│   └── constants/                # Theme & device icons
-└── app.json
-```
-
-### Important: Use configService for All Config Access
-
-All configuration (server URL, device settings, user info) should be accessed through `configService`. Never directly
-modify AsyncStorage or use separate stores for persisted config.
-
-```typescript
-// Good - use configService for all config access
-import { getServerUrl, setServerUrl, getUserName, getDeviceId, ... } from './services/configService';
-
-// Bad - don't use separate stores for persisted config
-import { useConfigStore } from './stores/configStore';  // Only for UI state
-```
-
-The configService provides:
-
-- **Single source of truth** - All config goes through one service
-- **Automatic sync** - Setting a value updates both runtime AND storage
-- **Type-safe** - All config access goes through proper getters/setters
-
-### Running the App
-
-```bash
-# Install dependencies
-cd MyMusic.Mobile && npm install
-
-# Start Metro bundler
-npm start
-
-# Run on iOS simulator
-npm run ios
-
-# Run on Android emulator
-npm run android
-
-# Build for production
-npx expo prebuild
-npx expo run:android
-```
-
-### Key Features
-
-1. **Configuration**: Set server URL, username, device name, device type, and repository path
-2. **Sync Music**: Upload local music to server, download server music to device
-3. **View History**: See past sync sessions with detailed records
-4. **Progress Tracking**: Real-time sync progress with counts and ETA
-
-### API Integration
-
-The mobile app uses the same API endpoints as the web client and CLI:
-
-- Device management: `/api/devices`
-- Sync operations: `/api/devices/{deviceId}/sync/*`
-- Sessions: `/api/devices/{deviceId}/sessions`
-
-Authentication is handled via headers (`X-MyMusic-UserId`, `X-MyMusic-UserName`) stored securely.
+## C# Rules
+
+<!--
+    NOTE: When adding/removing rules to this file, always keep them short (1 or 2 lines max for each rule).
+          Also, only add generally applicable rules here. Project-specific patterns (with examples and more detail)
+          should be added to the project-specific documentation MD file.
+-->
+
+- **.NET 10.0** with `ImplicitUsings` and `Nullable` enabled in all projects
+- Use **file-scoped namespaces**: `namespace MyMusic.Common.Services;`
+- Use **primary constructors** for controller/service classes
+- Use **XML documentation comments** (`/// <summary>`) for public APIs
+- Imports order: System → Microsoft → Third-party → MyMusic (or use implicit usings)
+- Throw exceptions with descriptive messages; return appropriate HTTP status codes in controllers
+- Use **PostgreSQL** with `Npgsql.EntityFrameworkCore.PostgreSQL`; `EFCore.NamingConventions` for snake_case
+- Use **Include().ThenInclude()** for related entities; **AsSplitQuery()** for complex queries
+- **SongDevice Records:** mark for removal (SyncAction = Remove), never delete
+- DTOs organized by resource in `MyMusic.Server/DTO/<Resource>/`; AgileMapper for simple, manual mapping for complex
+- **One Operation per Service**: naming pattern `<Resource><Operation>Service` (e.g., `SongEditService`, `SongBatchEditService`, `SongDeleteService`); group in folder/namespace `<ResourcePlural>/` when a resource has many services (e.g., `Songs/SongEditService`, `Songs/SongDeleteService`); define interface in Common, implement in Common/Server, register in DI
+- Controllers are thin: parse input, delegate to service, map entities↔DTOs, return output; **all business logic lives in services**
+
+## TypeScript Rules
+
+- **ALWAYS** use Orval-generated client APIs; manual `fetch()` is technical debt
+- Never manually edit auto-generated files in `src/client/` and `src/model/`
+- Customize mutations via hooks in `src/hooks/` wrapping Orval-generated functions
+- Ignore TS errors in auto-generated Orval files; fix errors in manually written code only
+- When adding mutations with query invalidation, add to `mutationInvalidates` in `orval.config.cjs`
+
+## React & Mantine Rules
+
+- Player Context: `usePlayerActions()` for actions; `usePlayerContext(state => ...)` with selector for reads
+- Zustand selectors: always wrap with `useShallow` from `zustand/react/shallow`
+- Mantine styles: import all `@mantine` package styles in `src/components/styles.ts` only
+- Use `useUncontrolled` from `@mantine/hooks` for controlled/uncontrolled props
+- Use `useDebouncedValue` from `@mantine/hooks` for debouncing, not manual `setTimeout`
+
+## React Native & Expo Rules
+
+- Use `configService` for all config access; never modify AsyncStorage or use stores for persisted config
+- Zustand for UI state only; `configService` for persisted config
+- API client: manual fetch + Zod for validation
+- Auth via headers (`X-MyMusic-UserId`, `X-MyMusic-UserName`) stored in SecureStore
+
+## Project Documentation
+
+Before working on any project, read its development guide first:
+
+- **Common** and **Server** → [docs/development/server.md](docs/development/server.md)
+- **Client** → [docs/development/client.md](docs/development/client.md)
+- **CLI** → [docs/development/cli.md](docs/development/cli.md)
+- **Mobile** → [docs/development/mobile.md](docs/development/mobile.md)
+
+These files contain information related to the creating and running automatic tests for each sub-project as well.
 
 ## Active Technologies
-- .NET 9.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit (003-metadata-auto-fetch)
-- PostgreSQL with EF Core, JsonElement for metadata patch storage (003-metadata-auto-fetch)
 
-## Recent Changes
-- 003-metadata-auto-fetch: Added .NET 9.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit
+- .NET 10.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit (003-metadata-auto-fetch)
+- PostgreSQL with EF Core, JsonElement for metadata patch storage (003-metadata-auto-fetch)
 
 ## Technical Debt Management
 
