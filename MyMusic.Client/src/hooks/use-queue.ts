@@ -1,4 +1,4 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef } from 'react';
 import {
     getGetQueueQueryKey,
@@ -11,12 +11,20 @@ import {
     useShuffleQueue,
 } from '../client/playlists';
 import { useUpdateCurrentUser } from '../client/users';
-import type { GetPlaylistItem, GetPlaylistSongItem, ListSongItem } from '../model';
+import type { GetPlaylistItem, GetPlaylistSongItem } from '../model';
 import { AddToQueuePosition } from '../model';
 import { usePlaybackActions } from '../stores/playback-store';
 import { useQueueManagerStore } from '../stores/queue-manager-store';
+import {
+    compactOrders,
+    filterOutSongIds,
+    playLastSongs,
+    playNextSongs,
+    reorderSongs,
+} from './queue-utils';
+import type { PlayableItem } from './queue-utils';
 
-export type PlayableItem = GetPlaylistSongItem | ListSongItem;
+export type { PlayableItem } from './queue-utils';
 
 interface QueueQueryData {
     data: {
@@ -40,70 +48,6 @@ function getQueueCache (queryClient: QueryClient): QueueCache {
         songs: previousData?.data?.playlist?.songs ?? [],
         currentSongId: previousData?.data?.playlist?.currentSongId,
     };
-}
-
-function isPlaylistSong (song: PlayableItem): song is GetPlaylistSongItem {
-    return 'order' in song;
-}
-
-function toPlaylistSong (song: PlayableItem, order: number): GetPlaylistSongItem {
-    if (isPlaylistSong(song)) {
-        return { ...song, order };
-    }
-    return {
-        ...song,
-        order,
-        addedAtPlaylist: new Date().toISOString(),
-    } as GetPlaylistSongItem;
-}
-
-function compactOrders (songs: GetPlaylistSongItem[]): GetPlaylistSongItem[] {
-    return songs.map((song, index) => ({
-        ...song,
-        order: index + 1,
-    }));
-}
-
-function insertAfterCurrent (
-    songs: GetPlaylistSongItem[],
-    newSongs: GetPlaylistSongItem[],
-    currentSongId: number | null | undefined
-): GetPlaylistSongItem[] {
-    if (!currentSongId || songs.length === 0) {
-        return compactOrders([...newSongs, ...songs]);
-    }
-
-    const currentIndex = songs.findIndex((s) => s.id === currentSongId);
-    if (currentIndex < 0) {
-        return compactOrders([...newSongs, ...songs]);
-    }
-
-    const beforeCurrent = songs.slice(0, currentIndex + 1);
-    const afterCurrent = songs.slice(currentIndex + 1);
-    return compactOrders([...beforeCurrent, ...newSongs, ...afterCurrent]);
-}
-
-function appendToEnd (songs: GetPlaylistSongItem[], newSongs: GetPlaylistSongItem[]): GetPlaylistSongItem[] {
-    return compactOrders([...songs, ...newSongs]);
-}
-
-function filterOutSongIds (songs: GetPlaylistSongItem[], songIdsToRemove: Set<number>): GetPlaylistSongItem[] {
-    return compactOrders(songs.filter((s) => !songIdsToRemove.has(s.id)));
-}
-
-function reorderSongs (
-    songs: GetPlaylistSongItem[],
-    fromIndex: number,
-    toIndex: number
-): GetPlaylistSongItem[] {
-    if (fromIndex < 0 || fromIndex >= songs.length || toIndex < 0 || toIndex >= songs.length) {
-        return songs;
-    }
-
-    const result = [...songs];
-    const [movedSong] = result.splice(fromIndex, 1);
-    result.splice(toIndex, 0, movedSong);
-    return compactOrders(result);
 }
 
 export function useQueue () {
@@ -187,8 +131,7 @@ export function useQueueMutations () {
             const songIds = songs.map((s) => s.id);
             const { queryKey, previousData, songs: currentQueue, currentSongId } = getQueueCache(queryClient);
 
-            const newSongs = songs.map((song, i) => toPlaylistSong(song, i + 1));
-            const optimisticQueue = insertAfterCurrent(currentQueue, newSongs, currentSongId);
+            const optimisticQueue = playNextSongs(currentQueue, songs, currentSongId);
 
             queryClient.setQueryData<QueueQueryData>(queryKey, {
                 data: {
@@ -223,8 +166,7 @@ export function useQueueMutations () {
             const songIds = songs.map((s) => s.id);
             const { queryKey, previousData, songs: currentQueue } = getQueueCache(queryClient);
 
-            const newSongs = songs.map((song, i) => toPlaylistSong(song, currentQueue.length + i + 1));
-            const optimisticQueue = appendToEnd(currentQueue, newSongs);
+            const optimisticQueue = playLastSongs(currentQueue, songs);
 
             queryClient.setQueryData<QueueQueryData>(queryKey, {
                 data: {
