@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import {
     getGetQueueQueryKey,
     useAddToQueue,
+    useBatchSetStopAfterPlayback,
     useGetQueue,
     useRemoveFromQueue,
     useReorderQueue,
@@ -21,6 +22,7 @@ import {
     playLastSongs,
     playNextSongs,
     reorderSongs,
+    toPlaylistSong,
 } from './queue-utils';
 import type { PlayableItem } from './queue-utils';
 
@@ -54,8 +56,9 @@ export function useQueue () {
     const { data, isLoading } = useGetQueue({});
     const queue = data?.data?.playlist?.songs ?? [];
     const currentSongId = data?.data?.playlist?.currentSongId;
+    const queueId = data?.data?.playlist?.id;
 
-    return { queue, currentSongId, isLoading };
+    return { queue, currentSongId, isLoading, queueId };
 }
 
 export function useQueueMutations () {
@@ -80,6 +83,7 @@ export function useQueueMutations () {
     const reorderQueueRef = useRef(useReorderQueue({}));
     const setCurrentSongRef = useRef(useSetQueueCurrentSong({}));
     const shuffleQueueRef = useRef(useShuffleQueue({}));
+    const batchSetStopAfterPlaybackRef = useRef(useBatchSetStopAfterPlayback({}));
 
     const setLoadingSong = useCallback((song: GetPlaylistSongItem) => {
         setLoadingSongAction(song, true);
@@ -391,6 +395,42 @@ export function useQueueMutations () {
         [queryClient]
     );
 
+    const toggleStopAfterPlayback = useCallback(
+        (songIds: number[], stopAfterPlayback: boolean, queueId: number) => {
+            const { queryKey, previousData, songs: queue } = getQueueCache(queryClient);
+
+            const songIdSet = new Set(songIds);
+
+            const optimisticQueue = queue.map((s) =>
+                songIdSet.has(s.id) ? { ...s, stopAfterPlayback } : s
+            );
+
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: optimisticQueue,
+                    },
+                },
+            });
+
+            batchSetStopAfterPlaybackRef.current.mutate(
+                { data: { playlistId: queueId, songIds, stopAfterPlayback } },
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({ queryKey });
+                    },
+                }
+            );
+        },
+        [queryClient]
+    );
+
     return useMemo(() => ({
         play,
         playNext,
@@ -401,5 +441,6 @@ export function useQueueMutations () {
         reorderBatch,
         updateCurrentSong,
         shuffleByIndices,
-    }), [play, playNext, playLast, removeBySongIds, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices]);
+        toggleStopAfterPlayback,
+    }), [play, playNext, playLast, removeBySongIds, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices, toggleStopAfterPlayback]);
 }

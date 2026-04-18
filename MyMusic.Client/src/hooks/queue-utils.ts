@@ -1,10 +1,9 @@
 import type { GetPlaylistSongItem, ListSongItem } from '../model';
+import { isPlaylistSong } from '../utils/type-guards';
 
 export type PlayableItem = GetPlaylistSongItem | ListSongItem;
 
-export function isPlaylistSong (song: PlayableItem): song is GetPlaylistSongItem {
-    return 'order' in song;
-}
+export { isPlaylistSong };
 
 export function toPlaylistSong (song: PlayableItem, order: number): GetPlaylistSongItem {
     if (isPlaylistSong(song)) {
@@ -14,6 +13,7 @@ export function toPlaylistSong (song: PlayableItem, order: number): GetPlaylistS
         ...song,
         order,
         addedAtPlaylist: new Date().toISOString(),
+        stopAfterPlayback: false,
     } as GetPlaylistSongItem;
 }
 

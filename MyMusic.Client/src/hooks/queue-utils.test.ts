@@ -4,16 +4,18 @@ import {
     compactOrders,
     filterOutSongIds,
     insertAfterCurrent,
+    isPlaylistSong,
     playLastSongs,
     playNextSongs,
 } from './queue-utils';
 import type { GetPlaylistSongItem, ListSongItem } from '../model';
 
-function makePlaylistSong (id: number, order: number): GetPlaylistSongItem {
+function makePlaylistSong (id: number, order: number, stopAfterPlayback = false): GetPlaylistSongItem {
     return {
         id,
         order,
         addedAtPlaylist: '2025-01-01T00:00:00Z',
+        stopAfterPlayback,
         cover: null,
         title: `Song ${id}`,
         artists: [],
@@ -280,5 +282,34 @@ describe('compactOrders', () => {
         const result = compactOrders(songs);
 
         expect(result.map((s) => s.order)).toEqual([1, 2, 3]);
+    });
+});
+
+describe('isPlaylistSong', () => {
+    it('returns true for a playlist song with order property', () => {
+        const playlistSong = makePlaylistSong(1, 1);
+
+        expect(isPlaylistSong(playlistSong)).toBe(true);
+    });
+
+    it('returns false for a plain list song without order property', () => {
+        const listSong = makeListSong(1);
+
+        expect(isPlaylistSong(listSong)).toBe(false);
+    });
+
+    it('enables access to stopAfterPlayback on playlist songs', () => {
+        const song = makePlaylistSong(1, 1, true);
+
+        if (isPlaylistSong(song)) {
+            expect(song.stopAfterPlayback).toBe(true);
+        }
+    });
+
+    it('returns false for list song even if stopAfterPlayback key is checked', () => {
+        const listSong = makeListSong(1);
+
+        expect(isPlaylistSong(listSong)).toBe(false);
+        expect('stopAfterPlayback' in listSong).toBe(false);
     });
 });

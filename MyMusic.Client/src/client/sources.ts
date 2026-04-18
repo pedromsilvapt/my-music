@@ -43,26 +43,12 @@ import type {
 	UpdateSourceResponse,
 } from "../model";
 
-export type listSourcesResponse200TextPlain = {
+export type listSourcesResponse200 = {
 	data: ListSourcesResponse;
 	status: 200;
 };
 
-export type listSourcesResponse200ApplicationJson = {
-	data: ListSourcesResponse;
-	status: 200;
-};
-
-export type listSourcesResponse200TextJson = {
-	data: ListSourcesResponse;
-	status: 200;
-};
-
-export type listSourcesResponseSuccess = (
-	| listSourcesResponse200TextPlain
-	| listSourcesResponse200ApplicationJson
-	| listSourcesResponse200TextJson
-) & {
+export type listSourcesResponseSuccess = listSourcesResponse200 & {
 	headers: Headers;
 };
 
@@ -218,26 +204,12 @@ export const invalidateListSources = async (
 	return queryClient;
 };
 
-export type createSourceResponse200TextPlain = {
+export type createSourceResponse200 = {
 	data: CreateSourceResponse;
 	status: 200;
 };
 
-export type createSourceResponse200ApplicationJson = {
-	data: CreateSourceResponse;
-	status: 200;
-};
-
-export type createSourceResponse200TextJson = {
-	data: CreateSourceResponse;
-	status: 200;
-};
-
-export type createSourceResponseSuccess = (
-	| createSourceResponse200TextPlain
-	| createSourceResponse200ApplicationJson
-	| createSourceResponse200TextJson
-) & {
+export type createSourceResponseSuccess = createSourceResponse200 & {
 	headers: Headers;
 };
 
@@ -331,26 +303,12 @@ export const useCreateSource = <TError = unknown, TContext = unknown>(
 > => {
 	return useMutation(getCreateSourceMutationOptions(options), queryClient);
 };
-export type getSourceResponse200TextPlain = {
+export type getSourceResponse200 = {
 	data: GetSourceResponse;
 	status: 200;
 };
 
-export type getSourceResponse200ApplicationJson = {
-	data: GetSourceResponse;
-	status: 200;
-};
-
-export type getSourceResponse200TextJson = {
-	data: GetSourceResponse;
-	status: 200;
-};
-
-export type getSourceResponseSuccess = (
-	| getSourceResponse200TextPlain
-	| getSourceResponse200ApplicationJson
-	| getSourceResponse200TextJson
-) & {
+export type getSourceResponseSuccess = getSourceResponse200 & {
 	headers: Headers;
 };
 
@@ -518,26 +476,12 @@ export const invalidateGetSource = async (
 	return queryClient;
 };
 
-export type updateSourceResponse200TextPlain = {
+export type updateSourceResponse200 = {
 	data: UpdateSourceResponse;
 	status: 200;
 };
 
-export type updateSourceResponse200ApplicationJson = {
-	data: UpdateSourceResponse;
-	status: 200;
-};
-
-export type updateSourceResponse200TextJson = {
-	data: UpdateSourceResponse;
-	status: 200;
-};
-
-export type updateSourceResponseSuccess = (
-	| updateSourceResponse200TextPlain
-	| updateSourceResponse200ApplicationJson
-	| updateSourceResponse200TextJson
-) & {
+export type updateSourceResponseSuccess = updateSourceResponse200 & {
 	headers: Headers;
 };
 
@@ -632,26 +576,12 @@ export const useUpdateSource = <TError = unknown, TContext = unknown>(
 > => {
 	return useMutation(getUpdateSourceMutationOptions(options), queryClient);
 };
-export type deleteSourceResponse200TextPlain = {
+export type deleteSourceResponse200 = {
 	data: DeleteSourceResponse;
 	status: 200;
 };
 
-export type deleteSourceResponse200ApplicationJson = {
-	data: DeleteSourceResponse;
-	status: 200;
-};
-
-export type deleteSourceResponse200TextJson = {
-	data: DeleteSourceResponse;
-	status: 200;
-};
-
-export type deleteSourceResponseSuccess = (
-	| deleteSourceResponse200TextPlain
-	| deleteSourceResponse200ApplicationJson
-	| deleteSourceResponse200TextJson
-) & {
+export type deleteSourceResponseSuccess = deleteSourceResponse200 & {
 	headers: Headers;
 };
 
@@ -919,26 +849,12 @@ export const invalidateProxyThumbnail = async (
 	return queryClient;
 };
 
-export type searchSongsResponse200TextPlain = {
+export type searchSongsResponse200 = {
 	data: SourceSong[];
 	status: 200;
 };
 
-export type searchSongsResponse200ApplicationJson = {
-	data: SourceSong[];
-	status: 200;
-};
-
-export type searchSongsResponse200TextJson = {
-	data: SourceSong[];
-	status: 200;
-};
-
-export type searchSongsResponseSuccess = (
-	| searchSongsResponse200TextPlain
-	| searchSongsResponse200ApplicationJson
-	| searchSongsResponse200TextJson
-) & {
+export type searchSongsResponseSuccess = searchSongsResponse200 & {
 	headers: Headers;
 };
 
@@ -1151,28 +1067,15 @@ export const invalidateSearchSongs = async (
 	return queryClient;
 };
 
-export type getSourceSongFilterMetadataResponse200TextPlain = {
+export type getSourceSongFilterMetadataResponse200 = {
 	data: FilterMetadataResponse;
 	status: 200;
 };
 
-export type getSourceSongFilterMetadataResponse200ApplicationJson = {
-	data: FilterMetadataResponse;
-	status: 200;
-};
-
-export type getSourceSongFilterMetadataResponse200TextJson = {
-	data: FilterMetadataResponse;
-	status: 200;
-};
-
-export type getSourceSongFilterMetadataResponseSuccess = (
-	| getSourceSongFilterMetadataResponse200TextPlain
-	| getSourceSongFilterMetadataResponse200ApplicationJson
-	| getSourceSongFilterMetadataResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type getSourceSongFilterMetadataResponseSuccess =
+	getSourceSongFilterMetadataResponse200 & {
+		headers: Headers;
+	};
 
 export type getSourceSongFilterMetadataResponse =
 	getSourceSongFilterMetadataResponseSuccess;
@@ -1350,26 +1253,12 @@ export const invalidateGetSourceSongFilterMetadata = async (
 	return queryClient;
 };
 
-export type getSongResponse200TextPlain = {
+export type getSongResponse200 = {
 	data: SourceSong;
 	status: 200;
 };
 
-export type getSongResponse200ApplicationJson = {
-	data: SourceSong;
-	status: 200;
-};
-
-export type getSongResponse200TextJson = {
-	data: SourceSong;
-	status: 200;
-};
-
-export type getSongResponseSuccess = (
-	| getSongResponse200TextPlain
-	| getSongResponse200ApplicationJson
-	| getSongResponse200TextJson
-) & {
+export type getSongResponseSuccess = getSongResponse200 & {
 	headers: Headers;
 };
 
@@ -1540,26 +1429,12 @@ export const invalidateGetSong = async (
 	return queryClient;
 };
 
-export type purchaseSongResponse200TextPlain = {
+export type purchaseSongResponse200 = {
 	data: Stream;
 	status: 200;
 };
 
-export type purchaseSongResponse200ApplicationJson = {
-	data: Stream;
-	status: 200;
-};
-
-export type purchaseSongResponse200TextJson = {
-	data: Stream;
-	status: 200;
-};
-
-export type purchaseSongResponseSuccess = (
-	| purchaseSongResponse200TextPlain
-	| purchaseSongResponse200ApplicationJson
-	| purchaseSongResponse200TextJson
-) & {
+export type purchaseSongResponseSuccess = purchaseSongResponse200 & {
 	headers: Headers;
 };
 
@@ -1737,26 +1612,12 @@ export const invalidatePurchaseSong = async (
 	return queryClient;
 };
 
-export type searchAlbumsResponse200TextPlain = {
+export type searchAlbumsResponse200 = {
 	data: SourceAlbum[];
 	status: 200;
 };
 
-export type searchAlbumsResponse200ApplicationJson = {
-	data: SourceAlbum[];
-	status: 200;
-};
-
-export type searchAlbumsResponse200TextJson = {
-	data: SourceAlbum[];
-	status: 200;
-};
-
-export type searchAlbumsResponseSuccess = (
-	| searchAlbumsResponse200TextPlain
-	| searchAlbumsResponse200ApplicationJson
-	| searchAlbumsResponse200TextJson
-) & {
+export type searchAlbumsResponseSuccess = searchAlbumsResponse200 & {
 	headers: Headers;
 };
 
@@ -1933,28 +1794,15 @@ export const invalidateSearchAlbums = async (
 	return queryClient;
 };
 
-export type searchMetadataAllSourcesResponse200TextPlain = {
+export type searchMetadataAllSourcesResponse200 = {
 	data: SearchMetadataResponse;
 	status: 200;
 };
 
-export type searchMetadataAllSourcesResponse200ApplicationJson = {
-	data: SearchMetadataResponse;
-	status: 200;
-};
-
-export type searchMetadataAllSourcesResponse200TextJson = {
-	data: SearchMetadataResponse;
-	status: 200;
-};
-
-export type searchMetadataAllSourcesResponseSuccess = (
-	| searchMetadataAllSourcesResponse200TextPlain
-	| searchMetadataAllSourcesResponse200ApplicationJson
-	| searchMetadataAllSourcesResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type searchMetadataAllSourcesResponseSuccess =
+	searchMetadataAllSourcesResponse200 & {
+		headers: Headers;
+	};
 
 export type searchMetadataAllSourcesResponse =
 	searchMetadataAllSourcesResponseSuccess;
@@ -2148,190 +1996,71 @@ export const invalidateSearchMetadataAllSources = async (
 };
 
 export const getListSourcesResponseMock = (
-	overrideResponse: Partial<Extract<ListSourcesResponse, object>> = {},
-): ListSourcesResponse =>
-	faker.helpers.arrayElement([
-		{
-			sources: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			})),
-			...overrideResponse,
-		},
-		{
-			sources: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			})),
-			...overrideResponse,
-		},
-		{
-			sources: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			})),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<ListSourcesResponse> = {},
+): ListSourcesResponse => ({
+	sources: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.number.int({ min: undefined, max: undefined }),
+		icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		isPaid: faker.datatype.boolean(),
+	})),
+	...overrideResponse,
+});
 
 export const getCreateSourceResponseMock = (
-	overrideResponse: Partial<Extract<CreateSourceResponse, object>> = {},
-): CreateSourceResponse =>
-	faker.helpers.arrayElement([
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<CreateSourceResponse> = {},
+): CreateSourceResponse => ({
+	source: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		isPaid: faker.datatype.boolean(),
+	},
+	...overrideResponse,
+});
 
 export const getGetSourceResponseMock = (
-	overrideResponse: Partial<Extract<GetSourceResponse, object>> = {},
-): GetSourceResponse =>
-	faker.helpers.arrayElement([
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<GetSourceResponse> = {},
+): GetSourceResponse => ({
+	source: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		isPaid: faker.datatype.boolean(),
+	},
+	...overrideResponse,
+});
 
 export const getUpdateSourceResponseMock = (
-	overrideResponse: Partial<Extract<UpdateSourceResponse, object>> = {},
-): UpdateSourceResponse =>
-	faker.helpers.arrayElement([
-		{
-			source: {
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<UpdateSourceResponse> = {},
+): UpdateSourceResponse => ({
+	source: {
+		icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		isPaid: faker.datatype.boolean(),
+	},
+	...overrideResponse,
+});
 
 export const getDeleteSourceResponseMock = (
-	overrideResponse: Partial<Extract<DeleteSourceResponse, object>> = {},
-): DeleteSourceResponse =>
-	faker.helpers.arrayElement([
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-		{
-			source: {
-				id: faker.number.int(),
-				icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				address: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				isPaid: faker.datatype.boolean(),
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<DeleteSourceResponse> = {},
+): DeleteSourceResponse => ({
+	source: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		isPaid: faker.datatype.boolean(),
+	},
+	...overrideResponse,
+});
 
 export const getSearchSongsResponseSourceArtworkMock = (
 	overrideResponse: Partial<SourceArtwork> = {},
@@ -2377,39 +2106,19 @@ export const getSearchSongsResponseSourceArtworkMock = (
 });
 
 export const getSearchSongsResponseMock = (): SourceSong[] =>
-	faker.helpers.arrayElement([
-		Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			album: faker.helpers.arrayElement([
-				{
+	Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		album: faker.helpers.arrayElement([
+			{
+				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				artist: {
 					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
 					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artist: {
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					},
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getSearchSongsResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
 					link: faker.helpers.arrayElement([
 						faker.helpers.arrayElement([
 							faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2418,45 +2127,20 @@ export const getSearchSongsResponseMock = (): SourceSong[] =>
 						undefined,
 					]),
 				},
-				undefined,
-			]),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getSearchSongsResponseSourceArtworkMock() },
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{ ...getSearchSongsResponseSourceArtworkMock() },
+					]),
+					undefined,
 				]),
-				undefined,
-			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			lyrics: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
+				year: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.number.int({ min: undefined, max: undefined }),
+						null,
+					]),
+					undefined,
 				]),
-				undefined,
-			]),
-			explicit: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			track: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			duration: faker.helpers.arrayElement([
-				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-				undefined,
-			]),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				link: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
 						faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2464,138 +2148,52 @@ export const getSearchSongsResponseMock = (): SourceSong[] =>
 					]),
 					undefined,
 				]),
-			})),
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			link: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
+			},
+			undefined,
+		]),
+		cover: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				null,
+				{ ...getSearchSongsResponseSourceArtworkMock() },
 			]),
-			price: faker.helpers.arrayElement([
-				faker.number.float({ fractionDigits: 2 }),
-				undefined,
+			undefined,
+		]),
+		year: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
 			]),
-			searchableText: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
+			undefined,
+		]),
+		lyrics: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
 			]),
-			durationSeconds: faker.helpers.arrayElement([
-				faker.number.int(),
-				undefined,
+			undefined,
+		]),
+		explicit: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+		size: faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			undefined,
+		]),
+		track: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
 			]),
-			durationCategory: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			hasLyrics: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			artistCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			genreCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-		})),
-		Array.from(
+			undefined,
+		]),
+		duration: faker.helpers.arrayElement([
+			faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
+			undefined,
+		]),
+		artists: Array.from(
 			{ length: faker.number.int({ min: 1, max: 10 }) },
 			(_, i) => i + 1,
 		).map(() => ({
 			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			album: faker.helpers.arrayElement([
-				{
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artist: {
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					},
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getSearchSongsResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-				},
-				undefined,
-			]),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getSearchSongsResponseSourceArtworkMock() },
-				]),
-				undefined,
-			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			lyrics: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			explicit: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			track: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			duration: faker.helpers.arrayElement([
-				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-				undefined,
-			]),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			link: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2603,331 +2201,110 @@ export const getSearchSongsResponseMock = (): SourceSong[] =>
 				]),
 				undefined,
 			]),
-			price: faker.helpers.arrayElement([
-				faker.number.float({ fractionDigits: 2 }),
-				undefined,
-			]),
-			searchableText: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			durationSeconds: faker.helpers.arrayElement([
-				faker.number.int(),
-				undefined,
-			]),
-			durationCategory: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			hasLyrics: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			artistCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			genreCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
 		})),
-		Array.from(
+		genres: Array.from(
 			{ length: faker.number.int({ min: 1, max: 10 }) },
 			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			album: faker.helpers.arrayElement([
-				{
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artist: {
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					},
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getSearchSongsResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-				},
-				undefined,
+		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+		link: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
 			]),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getSearchSongsResponseSourceArtworkMock() },
-				]),
-				undefined,
+			undefined,
+		]),
+		price: faker.helpers.arrayElement([
+			faker.number.float({ min: undefined, max: undefined, fractionDigits: 2 }),
+			undefined,
+		]),
+		searchableText: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
 			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
+			undefined,
+		]),
+		durationSeconds: faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			undefined,
+		]),
+		durationCategory: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
 			]),
-			lyrics: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			explicit: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			track: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			duration: faker.helpers.arrayElement([
-				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-				undefined,
-			]),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			link: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			price: faker.helpers.arrayElement([
-				faker.number.float({ fractionDigits: 2 }),
-				undefined,
-			]),
-			searchableText: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			durationSeconds: faker.helpers.arrayElement([
-				faker.number.int(),
-				undefined,
-			]),
-			durationCategory: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			hasLyrics: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			artistCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			genreCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-		})),
-	]);
+			undefined,
+		]),
+		hasLyrics: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+		artistCount: faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			undefined,
+		]),
+		genreCount: faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			undefined,
+		]),
+	}));
 
 export const getGetSourceSongFilterMetadataResponseMock = (
-	overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
-): FilterMetadataResponse =>
-	faker.helpers.arrayElement([
-		{
-			fields: Array.from(
+	overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+	fields: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		entityPath: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		supportedOperators: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+		isComputed: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+		isCollection: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+		nestedFields: faker.helpers.arrayElement([[], undefined]),
+		values: faker.helpers.arrayElement([
+			Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				entityPath: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				supportedOperators: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				isComputed: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				isCollection: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				nestedFields: faker.helpers.arrayElement([[], undefined]),
-				values: faker.helpers.arrayElement([
-					Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					undefined,
-				]),
-				supportsDynamicValues: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-			})),
-			operators: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				applicableTypes: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			})),
-			...overrideResponse,
-		},
-		{
-			fields: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				entityPath: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				supportedOperators: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				isComputed: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				isCollection: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				nestedFields: faker.helpers.arrayElement([[], undefined]),
-				values: faker.helpers.arrayElement([
-					Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					undefined,
-				]),
-				supportsDynamicValues: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-			})),
-			operators: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				applicableTypes: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			})),
-			...overrideResponse,
-		},
-		{
-			fields: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				entityPath: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				supportedOperators: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				isComputed: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				isCollection: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				nestedFields: faker.helpers.arrayElement([[], undefined]),
-				values: faker.helpers.arrayElement([
-					Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					undefined,
-				]),
-				supportsDynamicValues: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-			})),
-			operators: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				applicableTypes: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			})),
-			...overrideResponse,
-		},
-	]);
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			undefined,
+		]),
+		supportsDynamicValues: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+	})),
+	operators: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		applicableTypes: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+	})),
+	...overrideResponse,
+});
 
 export const getGetSongResponseSourceArtworkMock = (
 	overrideResponse: Partial<SourceArtwork> = {},
@@ -2973,83 +2350,15 @@ export const getGetSongResponseSourceArtworkMock = (
 });
 
 export const getGetSongResponseMock = (
-	overrideResponse: Partial<Extract<SourceSong, object>> = {},
-): SourceSong =>
-	faker.helpers.arrayElement([
+	overrideResponse: Partial<SourceSong> = {},
+): SourceSong => ({
+	id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	album: faker.helpers.arrayElement([
 		{
 			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			album: faker.helpers.arrayElement([
-				{
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artist: {
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					},
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getGetSongResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-				},
-				undefined,
-			]),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getGetSongResponseSourceArtworkMock() },
-				]),
-				undefined,
-			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			lyrics: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			explicit: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			track: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			duration: faker.helpers.arrayElement([
-				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-				undefined,
-			]),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
+			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artist: {
 				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 				link: faker.helpers.arrayElement([
@@ -3059,87 +2368,7 @@ export const getGetSongResponseMock = (
 					]),
 					undefined,
 				]),
-			})),
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			link: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			price: faker.helpers.arrayElement([
-				faker.number.float({ fractionDigits: 2 }),
-				undefined,
-			]),
-			searchableText: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			durationSeconds: faker.helpers.arrayElement([
-				faker.number.int(),
-				undefined,
-			]),
-			durationCategory: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			hasLyrics: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			artistCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			genreCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			...overrideResponse,
-		},
-		{
-			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			album: faker.helpers.arrayElement([
-				{
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artist: {
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					},
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getGetSongResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-				},
-				undefined,
-			]),
+			},
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					null,
@@ -3148,47 +2377,12 @@ export const getGetSongResponseMock = (
 				undefined,
 			]),
 			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			lyrics: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					faker.number.int({ min: undefined, max: undefined }),
 					null,
 				]),
 				undefined,
 			]),
-			explicit: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			track: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			duration: faker.helpers.arrayElement([
-				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-				undefined,
-			]),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
 			link: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -3196,169 +2390,107 @@ export const getGetSongResponseMock = (
 				]),
 				undefined,
 			]),
-			price: faker.helpers.arrayElement([
-				faker.number.float({ fractionDigits: 2 }),
-				undefined,
-			]),
-			searchableText: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			durationSeconds: faker.helpers.arrayElement([
-				faker.number.int(),
-				undefined,
-			]),
-			durationCategory: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			hasLyrics: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			artistCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			genreCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			...overrideResponse,
 		},
-		{
-			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			album: faker.helpers.arrayElement([
-				{
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artist: {
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					},
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getGetSongResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-				},
-				undefined,
+		undefined,
+	]),
+	cover: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			null,
+			{ ...getGetSongResponseSourceArtworkMock() },
+		]),
+		undefined,
+	]),
+	year: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			null,
+		]),
+		undefined,
+	]),
+	lyrics: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			null,
+		]),
+		undefined,
+	]),
+	explicit: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+	size: faker.helpers.arrayElement([
+		faker.number.int({ min: undefined, max: undefined }),
+		undefined,
+	]),
+	track: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			null,
+		]),
+		undefined,
+	]),
+	duration: faker.helpers.arrayElement([
+		faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
+		undefined,
+	]),
+	artists: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		link: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
 			]),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getGetSongResponseSourceArtworkMock() },
-				]),
-				undefined,
-			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			lyrics: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			explicit: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			track: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			duration: faker.helpers.arrayElement([
-				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-				undefined,
-			]),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			link: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			price: faker.helpers.arrayElement([
-				faker.number.float({ fractionDigits: 2 }),
-				undefined,
-			]),
-			searchableText: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			durationSeconds: faker.helpers.arrayElement([
-				faker.number.int(),
-				undefined,
-			]),
-			durationCategory: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			hasLyrics: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-			artistCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			genreCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			...overrideResponse,
-		},
-	]);
+			undefined,
+		]),
+	})),
+	genres: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+	link: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			null,
+		]),
+		undefined,
+	]),
+	price: faker.helpers.arrayElement([
+		faker.number.float({ min: undefined, max: undefined, fractionDigits: 2 }),
+		undefined,
+	]),
+	searchableText: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			null,
+		]),
+		undefined,
+	]),
+	durationSeconds: faker.helpers.arrayElement([
+		faker.number.int({ min: undefined, max: undefined }),
+		undefined,
+	]),
+	durationCategory: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			null,
+		]),
+		undefined,
+	]),
+	hasLyrics: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+	artistCount: faker.helpers.arrayElement([
+		faker.number.int({ min: undefined, max: undefined }),
+		undefined,
+	]),
+	genreCount: faker.helpers.arrayElement([
+		faker.number.int({ min: undefined, max: undefined }),
+		undefined,
+	]),
+	...overrideResponse,
+});
 
 export const getPurchaseSongResponseMock = (): Stream =>
-	faker.helpers.arrayElement([
-		new ArrayBuffer(faker.number.int({ min: 1, max: 64 })),
-		new ArrayBuffer(faker.number.int({ min: 1, max: 64 })),
-		new ArrayBuffer(faker.number.int({ min: 1, max: 64 })),
-	]);
+	new Blob(faker.helpers.arrayElements(faker.word.words(10).split(" ")));
 
 export const getSearchAlbumsResponseSourceArtworkMock = (
 	overrideResponse: Partial<SourceArtwork> = {},
@@ -3404,39 +2536,15 @@ export const getSearchAlbumsResponseSourceArtworkMock = (
 });
 
 export const getSearchAlbumsResponseMock = (): SourceAlbum[] =>
-	faker.helpers.arrayElement([
-		Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
+	Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		artist: {
 			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			artist: {
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			},
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getSearchAlbumsResponseSourceArtworkMock() },
-				]),
-				undefined,
-			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			songsCount: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
 			link: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -3444,88 +2552,36 @@ export const getSearchAlbumsResponseMock = (): SourceAlbum[] =>
 				]),
 				undefined,
 			]),
-		})),
-		Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			artist: {
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			},
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getSearchAlbumsResponseSourceArtworkMock() },
-				]),
-				undefined,
+		},
+		cover: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				null,
+				{ ...getSearchAlbumsResponseSourceArtworkMock() },
 			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
+			undefined,
+		]),
+		year: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
 			]),
-			songsCount: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
+			undefined,
+		]),
+		songsCount: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
 			]),
-			link: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
+			undefined,
+		]),
+		link: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
 			]),
-		})),
-		Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			artist: {
-				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				link: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			},
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getSearchAlbumsResponseSourceArtworkMock() },
-				]),
-				undefined,
-			]),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			songsCount: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([faker.number.int(), null]),
-				undefined,
-			]),
-			link: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-		})),
-	]);
+			undefined,
+		]),
+	}));
 
 export const getSearchMetadataAllSourcesResponseSourceArtworkMock = (
 	overrideResponse: Partial<SourceArtwork> = {},
@@ -3571,91 +2627,23 @@ export const getSearchMetadataAllSourcesResponseSourceArtworkMock = (
 });
 
 export const getSearchMetadataAllSourcesResponseMock = (
-	overrideResponse: Partial<Extract<SearchMetadataResponse, object>> = {},
-): SearchMetadataResponse =>
-	faker.helpers.arrayElement([
-		{
-			results: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				sourceId: faker.number.int(),
-				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				song: {
+	overrideResponse: Partial<SearchMetadataResponse> = {},
+): SearchMetadataResponse => ({
+	results: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		sourceId: faker.number.int({ min: undefined, max: undefined }),
+		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		song: {
+			id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			album: faker.helpers.arrayElement([
+				{
 					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					album: faker.helpers.arrayElement([
-						{
-							id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-							name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-							artist: {
-								id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-								name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-								link: faker.helpers.arrayElement([
-									faker.helpers.arrayElement([
-										faker.string.alpha({ length: { min: 10, max: 20 } }),
-										null,
-									]),
-									undefined,
-								]),
-							},
-							cover: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([
-									null,
-									{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
-								]),
-								undefined,
-							]),
-							year: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([faker.number.int(), null]),
-								undefined,
-							]),
-							link: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([
-									faker.string.alpha({ length: { min: 10, max: 20 } }),
-									null,
-								]),
-								undefined,
-							]),
-						},
-						undefined,
-					]),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					lyrics: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					explicit: faker.helpers.arrayElement([
-						faker.datatype.boolean(),
-						undefined,
-					]),
-					size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-					track: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					duration: faker.helpers.arrayElement([
-						faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-						undefined,
-					]),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artist: {
 						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
 						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
 						link: faker.helpers.arrayElement([
@@ -3665,103 +2653,7 @@ export const getSearchMetadataAllSourcesResponseMock = (
 							]),
 							undefined,
 						]),
-					})),
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					price: faker.helpers.arrayElement([
-						faker.number.float({ fractionDigits: 2 }),
-						undefined,
-					]),
-					searchableText: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					durationSeconds: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-					durationCategory: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					hasLyrics: faker.helpers.arrayElement([
-						faker.datatype.boolean(),
-						undefined,
-					]),
-					artistCount: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-					genreCount: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-				},
-			})),
-			...overrideResponse,
-		},
-		{
-			results: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				sourceId: faker.number.int(),
-				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				song: {
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					album: faker.helpers.arrayElement([
-						{
-							id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-							name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-							artist: {
-								id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-								name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-								link: faker.helpers.arrayElement([
-									faker.helpers.arrayElement([
-										faker.string.alpha({ length: { min: 10, max: 20 } }),
-										null,
-									]),
-									undefined,
-								]),
-							},
-							cover: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([
-									null,
-									{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
-								]),
-								undefined,
-							]),
-							year: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([faker.number.int(), null]),
-								undefined,
-							]),
-							link: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([
-									faker.string.alpha({ length: { min: 10, max: 20 } }),
-									null,
-								]),
-								undefined,
-							]),
-						},
-						undefined,
-					]),
+					},
 					cover: faker.helpers.arrayElement([
 						faker.helpers.arrayElement([
 							null,
@@ -3770,47 +2662,12 @@ export const getSearchMetadataAllSourcesResponseMock = (
 						undefined,
 					]),
 					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					lyrics: faker.helpers.arrayElement([
 						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							faker.number.int({ min: undefined, max: undefined }),
 							null,
 						]),
 						undefined,
 					]),
-					explicit: faker.helpers.arrayElement([
-						faker.datatype.boolean(),
-						undefined,
-					]),
-					size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-					track: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					duration: faker.helpers.arrayElement([
-						faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-						undefined,
-					]),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
 					link: faker.helpers.arrayElement([
 						faker.helpers.arrayElement([
 							faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -3818,186 +2675,116 @@ export const getSearchMetadataAllSourcesResponseMock = (
 						]),
 						undefined,
 					]),
-					price: faker.helpers.arrayElement([
-						faker.number.float({ fractionDigits: 2 }),
-						undefined,
-					]),
-					searchableText: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					durationSeconds: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-					durationCategory: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					hasLyrics: faker.helpers.arrayElement([
-						faker.datatype.boolean(),
-						undefined,
-					]),
-					artistCount: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-					genreCount: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
 				},
-			})),
-			...overrideResponse,
-		},
-		{
-			results: Array.from(
+				undefined,
+			]),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					null,
+					{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
+				]),
+				undefined,
+			]),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				undefined,
+			]),
+			lyrics: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			explicit: faker.helpers.arrayElement([
+				faker.datatype.boolean(),
+				undefined,
+			]),
+			size: faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				undefined,
+			]),
+			track: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				undefined,
+			]),
+			duration: faker.helpers.arrayElement([
+				faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
+				undefined,
+			]),
+			artists: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				sourceId: faker.number.int(),
-				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				song: {
-					id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					album: faker.helpers.arrayElement([
-						{
-							id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-							name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-							artist: {
-								id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-								name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-								link: faker.helpers.arrayElement([
-									faker.helpers.arrayElement([
-										faker.string.alpha({ length: { min: 10, max: 20 } }),
-										null,
-									]),
-									undefined,
-								]),
-							},
-							cover: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([
-									null,
-									{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
-								]),
-								undefined,
-							]),
-							year: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([faker.number.int(), null]),
-								undefined,
-							]),
-							link: faker.helpers.arrayElement([
-								faker.helpers.arrayElement([
-									faker.string.alpha({ length: { min: 10, max: 20 } }),
-									null,
-								]),
-								undefined,
-							]),
-						},
-						undefined,
+				id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				link: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
 					]),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							null,
-							{ ...getSearchMetadataAllSourcesResponseSourceArtworkMock() },
-						]),
-						undefined,
-					]),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					lyrics: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					explicit: faker.helpers.arrayElement([
-						faker.datatype.boolean(),
-						undefined,
-					]),
-					size: faker.helpers.arrayElement([faker.number.int(), undefined]),
-					track: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						undefined,
-					]),
-					duration: faker.helpers.arrayElement([
-						faker.helpers.fromRegExp("^-?(d+.)?d{2}:d{2}:d{2}(.d{1,7})?$"),
-						undefined,
-					]),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						link: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					link: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					price: faker.helpers.arrayElement([
-						faker.number.float({ fractionDigits: 2 }),
-						undefined,
-					]),
-					searchableText: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					durationSeconds: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-					durationCategory: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.string.alpha({ length: { min: 10, max: 20 } }),
-							null,
-						]),
-						undefined,
-					]),
-					hasLyrics: faker.helpers.arrayElement([
-						faker.datatype.boolean(),
-						undefined,
-					]),
-					artistCount: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-					genreCount: faker.helpers.arrayElement([
-						faker.number.int(),
-						undefined,
-					]),
-				},
+					undefined,
+				]),
 			})),
-			...overrideResponse,
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			link: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			price: faker.helpers.arrayElement([
+				faker.number.float({
+					min: undefined,
+					max: undefined,
+					fractionDigits: 2,
+				}),
+				undefined,
+			]),
+			searchableText: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			durationSeconds: faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				undefined,
+			]),
+			durationCategory: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			hasLyrics: faker.helpers.arrayElement([
+				faker.datatype.boolean(),
+				undefined,
+			]),
+			artistCount: faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				undefined,
+			]),
+			genreCount: faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				undefined,
+			]),
 		},
-	]);
+	})),
+	...overrideResponse,
+});
 
 export const getListSourcesMockHandler = (
 	overrideResponse?:
@@ -4009,14 +2796,14 @@ export const getListSourcesMockHandler = (
 ) => {
 	return http.get(
 		"*/sources",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListSourcesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4033,14 +2820,14 @@ export const getCreateSourceMockHandler = (
 ) => {
 	return http.post(
 		"*/sources",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getCreateSourceResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4057,14 +2844,14 @@ export const getGetSourceMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/:id",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetSourceResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4081,14 +2868,14 @@ export const getUpdateSourceMockHandler = (
 ) => {
 	return http.put(
 		"*/sources/:id",
-		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getUpdateSourceResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4105,14 +2892,14 @@ export const getDeleteSourceMockHandler = (
 ) => {
 	return http.delete(
 		"*/sources/:id",
-		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getDeleteSourceResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4129,11 +2916,10 @@ export const getProxyThumbnailMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/thumbnails/:encodedUrl",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+		async (info) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
-
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,
@@ -4150,14 +2936,14 @@ export const getSearchSongsMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/:id/songs/search/:query",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getSearchSongsResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4174,14 +2960,14 @@ export const getGetSourceSongFilterMetadataMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/songs/filter-metadata",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetSourceSongFilterMetadataResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4198,14 +2984,14 @@ export const getGetSongMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/:id/songs/:songId",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetSongResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4222,14 +3008,14 @@ export const getPurchaseSongMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/:id/songs/purchase/:songId",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPurchaseSongResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4246,14 +3032,14 @@ export const getSearchAlbumsMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/:id/albums/search/:query",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getSearchAlbumsResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -4270,14 +3056,14 @@ export const getSearchMetadataAllSourcesMockHandler = (
 ) => {
 	return http.get(
 		"*/sources/metadata/search/:query",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getSearchMetadataAllSourcesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,

@@ -227,6 +227,60 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         return await Get(id, context, cancellationToken);
     }
 
+    [HttpPut("{id:long}/songs/{songId:long}/stop-after-playback", Name = "SetStopAfterPlayback")]
+    public async Task<GetPlaylistResponse> SetStopAfterPlayback(
+        [FromRoute] long id,
+        [FromRoute] long songId,
+        [FromBody] SetStopAfterPlaybackRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var playlistSong = await context.PlaylistSongs
+            .Where(ps => ps.PlaylistId == id && ps.SongId == songId && ps.Playlist.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (playlistSong == null)
+        {
+            throw new Exception($"Song {songId} not found in playlist {id}");
+        }
+
+        playlistSong.StopAfterPlayback = request.StopAfterPlayback;
+        playlistSong.Playlist.ModifiedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return await Get(id, context, cancellationToken);
+    }
+
+    [HttpPut("songs/stop-after-playback/batch", Name = "BatchSetStopAfterPlayback")]
+    public async Task<GetPlaylistResponse> BatchSetStopAfterPlayback(
+        [FromBody] BatchSetStopAfterPlaybackRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var playlist = await context.Playlists
+            .Where(p => p.Id == request.PlaylistId && p.OwnerId == currentUser.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (playlist == null)
+        {
+            throw new Exception($"Playlist not found with id {request.PlaylistId}");
+        }
+
+        var playlistSongs = await context.PlaylistSongs
+            .Where(ps => ps.PlaylistId == request.PlaylistId && request.SongIds.Contains(ps.SongId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var ps in playlistSongs)
+        {
+            ps.StopAfterPlayback = request.StopAfterPlayback;
+        }
+
+        playlist.ModifiedAt = DateTime.UtcNow;
+        await context.SaveChangesAsync(cancellationToken);
+
+        return await Get(request.PlaylistId, context, cancellationToken);
+    }
+
     [HttpPost("manage-songs", Name = "ManagePlaylistSongs")]
     public async Task ManageSongs(
         [FromBody] ManagePlaylistSongsRequest request,

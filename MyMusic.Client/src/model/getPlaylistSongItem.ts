@@ -14,6 +14,7 @@ export interface GetPlaylistSongItem {
 	order: number;
 	/** @nullable */
 	addedAtPlaylist?: string | null;
+	stopAfterPlayback: boolean;
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	id: number;
 	/**

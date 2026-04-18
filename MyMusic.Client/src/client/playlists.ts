@@ -13,7 +13,6 @@ import type {
 	DefinedUseQueryResult,
 	InvalidateOptions,
 	MutationFunction,
-	MutationFunctionContext,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
@@ -30,6 +29,7 @@ import { HttpResponse, http } from "msw";
 import type {
 	AddSongsToPlaylistRequest,
 	AddToQueueRequest,
+	BatchSetStopAfterPlaybackRequest,
 	CreatePlaylistRequest,
 	CreatePlaylistResponse,
 	CreateQueueRequest,
@@ -48,32 +48,19 @@ import type {
 	ReorderQueueRequest,
 	ReplaceQueueRequest,
 	SetCurrentSongRequest,
+	SetStopAfterPlaybackRequest,
 	ShuffleQueueRequest,
 	UpdatePlaylistRequest,
 	UpdatePlaylistResponse,
 } from "../model";
 import { PlaylistType } from "../model";
 
-export type listPlaylistsResponse200TextPlain = {
+export type listPlaylistsResponse200 = {
 	data: ListPlaylistsResponse;
 	status: 200;
 };
 
-export type listPlaylistsResponse200ApplicationJson = {
-	data: ListPlaylistsResponse;
-	status: 200;
-};
-
-export type listPlaylistsResponse200TextJson = {
-	data: ListPlaylistsResponse;
-	status: 200;
-};
-
-export type listPlaylistsResponseSuccess = (
-	| listPlaylistsResponse200TextPlain
-	| listPlaylistsResponse200ApplicationJson
-	| listPlaylistsResponse200TextJson
-) & {
+export type listPlaylistsResponseSuccess = listPlaylistsResponse200 & {
 	headers: Headers;
 };
 
@@ -250,26 +237,12 @@ export const invalidateListPlaylists = async (
 	return queryClient;
 };
 
-export type createPlaylistResponse200TextPlain = {
+export type createPlaylistResponse200 = {
 	data: CreatePlaylistResponse;
 	status: 200;
 };
 
-export type createPlaylistResponse200ApplicationJson = {
-	data: CreatePlaylistResponse;
-	status: 200;
-};
-
-export type createPlaylistResponse200TextJson = {
-	data: CreatePlaylistResponse;
-	status: 200;
-};
-
-export type createPlaylistResponseSuccess = (
-	| createPlaylistResponse200TextPlain
-	| createPlaylistResponse200ApplicationJson
-	| createPlaylistResponse200TextJson
-) & {
+export type createPlaylistResponseSuccess = createPlaylistResponse200 & {
 	headers: Headers;
 };
 
@@ -312,7 +285,6 @@ export const getCreatePlaylistMutationOptions = <
 			{ data: CreatePlaylistRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -342,16 +314,13 @@ export const getCreatePlaylistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof createPlaylist>>,
 		variables: { data: CreatePlaylistRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type CreatePlaylistMutationResult = NonNullable<
@@ -368,7 +337,6 @@ export const useCreatePlaylist = <TError = unknown, TContext = unknown>(
 			{ data: CreatePlaylistRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -384,26 +352,12 @@ export const useCreatePlaylist = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type getPlaylistResponse200TextPlain = {
+export type getPlaylistResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type getPlaylistResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type getPlaylistResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type getPlaylistResponseSuccess = (
-	| getPlaylistResponse200TextPlain
-	| getPlaylistResponse200ApplicationJson
-	| getPlaylistResponse200TextJson
-) & {
+export type getPlaylistResponseSuccess = getPlaylistResponse200 & {
 	headers: Headers;
 };
 
@@ -573,26 +527,12 @@ export const invalidateGetPlaylist = async (
 	return queryClient;
 };
 
-export type updatePlaylistResponse200TextPlain = {
+export type updatePlaylistResponse200 = {
 	data: UpdatePlaylistResponse;
 	status: 200;
 };
 
-export type updatePlaylistResponse200ApplicationJson = {
-	data: UpdatePlaylistResponse;
-	status: 200;
-};
-
-export type updatePlaylistResponse200TextJson = {
-	data: UpdatePlaylistResponse;
-	status: 200;
-};
-
-export type updatePlaylistResponseSuccess = (
-	| updatePlaylistResponse200TextPlain
-	| updatePlaylistResponse200ApplicationJson
-	| updatePlaylistResponse200TextJson
-) & {
+export type updatePlaylistResponseSuccess = updatePlaylistResponse200 & {
 	headers: Headers;
 };
 
@@ -733,7 +673,6 @@ export const getDeletePlaylistMutationOptions = <
 			{ id: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -763,16 +702,13 @@ export const getDeletePlaylistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof deletePlaylist>>,
 		variables: { id: number },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type DeletePlaylistMutationResult = NonNullable<
@@ -789,7 +725,6 @@ export const useDeletePlaylist = <TError = unknown, TContext = unknown>(
 			{ id: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -805,28 +740,15 @@ export const useDeletePlaylist = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type addSongsToPlaylistResponse200TextPlain = {
+export type addSongsToPlaylistResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type addSongsToPlaylistResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type addSongsToPlaylistResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type addSongsToPlaylistResponseSuccess = (
-	| addSongsToPlaylistResponse200TextPlain
-	| addSongsToPlaylistResponse200ApplicationJson
-	| addSongsToPlaylistResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type addSongsToPlaylistResponseSuccess =
+	addSongsToPlaylistResponse200 & {
+		headers: Headers;
+	};
 
 export type addSongsToPlaylistResponse = addSongsToPlaylistResponseSuccess;
 
@@ -868,7 +790,6 @@ export const getAddSongsToPlaylistMutationOptions = <
 			{ id: number; data: AddSongsToPlaylistRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -898,17 +819,14 @@ export const getAddSongsToPlaylistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof addSongsToPlaylist>>,
 		variables: { id: number; data: AddSongsToPlaylistRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
-			queryClient.invalidateQueries({ queryKey: getGetPlaylistQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
+		queryClient.invalidateQueries({ queryKey: getGetPlaylistQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type AddSongsToPlaylistMutationResult = NonNullable<
@@ -925,7 +843,6 @@ export const useAddSongsToPlaylist = <TError = unknown, TContext = unknown>(
 			{ id: number; data: AddSongsToPlaylistRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -944,28 +861,15 @@ export const useAddSongsToPlaylist = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type removeSongFromPlaylistResponse200TextPlain = {
+export type removeSongFromPlaylistResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type removeSongFromPlaylistResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type removeSongFromPlaylistResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type removeSongFromPlaylistResponseSuccess = (
-	| removeSongFromPlaylistResponse200TextPlain
-	| removeSongFromPlaylistResponse200ApplicationJson
-	| removeSongFromPlaylistResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type removeSongFromPlaylistResponseSuccess =
+	removeSongFromPlaylistResponse200 & {
+		headers: Headers;
+	};
 
 export type removeSongFromPlaylistResponse =
 	removeSongFromPlaylistResponseSuccess;
@@ -1008,7 +912,6 @@ export const getRemoveSongFromPlaylistMutationOptions = <
 			{ id: number; songId: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -1038,17 +941,14 @@ export const getRemoveSongFromPlaylistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof removeSongFromPlaylist>>,
 		variables: { id: number; songId: number },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
-			queryClient.invalidateQueries({ queryKey: getGetPlaylistQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
+		queryClient.invalidateQueries({ queryKey: getGetPlaylistQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type RemoveSongFromPlaylistMutationResult = NonNullable<
@@ -1065,7 +965,6 @@ export const useRemoveSongFromPlaylist = <TError = unknown, TContext = unknown>(
 			{ id: number; songId: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1078,6 +977,133 @@ export const useRemoveSongFromPlaylist = <TError = unknown, TContext = unknown>(
 	const backupQueryClient = useQueryClient();
 	return useMutation(
 		getRemoveSongFromPlaylistMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
+export type setStopAfterPlaybackResponse200 = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type setStopAfterPlaybackResponseSuccess =
+	setStopAfterPlaybackResponse200 & {
+		headers: Headers;
+	};
+
+export type setStopAfterPlaybackResponse = setStopAfterPlaybackResponseSuccess;
+
+export const getSetStopAfterPlaybackUrl = (id: number, songId: number) => {
+	return `/api/playlists/${id}/songs/${songId}/stop-after-playback`;
+};
+
+export const setStopAfterPlayback = async (
+	id: number,
+	songId: number,
+	setStopAfterPlaybackRequest: SetStopAfterPlaybackRequest,
+	options?: RequestInit,
+): Promise<setStopAfterPlaybackResponse> => {
+	const res = await fetch(getSetStopAfterPlaybackUrl(id, songId), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(setStopAfterPlaybackRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: setStopAfterPlaybackResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as setStopAfterPlaybackResponse;
+};
+
+export const getSetStopAfterPlaybackMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof setStopAfterPlayback>>,
+			TError,
+			{ id: number; songId: number; data: SetStopAfterPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof setStopAfterPlayback>>,
+	TError,
+	{ id: number; songId: number; data: SetStopAfterPlaybackRequest },
+	TContext
+> => {
+	const mutationKey = ["setStopAfterPlayback"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof setStopAfterPlayback>>,
+		{ id: number; songId: number; data: SetStopAfterPlaybackRequest }
+	> = (props) => {
+		const { id, songId, data } = props ?? {};
+
+		return setStopAfterPlayback(id, songId, data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof setStopAfterPlayback>>,
+		variables: {
+			id: number;
+			songId: number;
+			data: SetStopAfterPlaybackRequest;
+		},
+		context: TContext,
+	) => {
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
+	};
+
+	return { mutationFn, onSuccess, ...mutationOptions };
+};
+
+export type SetStopAfterPlaybackMutationResult = NonNullable<
+	Awaited<ReturnType<typeof setStopAfterPlayback>>
+>;
+export type SetStopAfterPlaybackMutationBody = SetStopAfterPlaybackRequest;
+export type SetStopAfterPlaybackMutationError = unknown;
+
+export const useSetStopAfterPlayback = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof setStopAfterPlayback>>,
+			TError,
+			{ id: number; songId: number; data: SetStopAfterPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof setStopAfterPlayback>>,
+	TError,
+	{ id: number; songId: number; data: SetStopAfterPlaybackRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getSetStopAfterPlaybackMutationOptions(
 			queryClient ?? backupQueryClient,
 			options,
 		),
@@ -1135,7 +1161,6 @@ export const getManagePlaylistSongsMutationOptions = <
 			{ data: ManagePlaylistSongsRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -1165,17 +1190,14 @@ export const getManagePlaylistSongsMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof managePlaylistSongs>>,
 		variables: { data: ManagePlaylistSongsRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
-			queryClient.invalidateQueries({ queryKey: getGetPlaylistQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListPlaylistsQueryKey() });
+		queryClient.invalidateQueries({ queryKey: getGetPlaylistQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type ManagePlaylistSongsMutationResult = NonNullable<
@@ -1192,7 +1214,6 @@ export const useManagePlaylistSongs = <TError = unknown, TContext = unknown>(
 			{ data: ManagePlaylistSongsRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1211,26 +1232,12 @@ export const useManagePlaylistSongs = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type getQueueResponse200TextPlain = {
+export type getQueueResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type getQueueResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type getQueueResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type getQueueResponseSuccess = (
-	| getQueueResponse200TextPlain
-	| getQueueResponse200ApplicationJson
-	| getQueueResponse200TextJson
-) & {
+export type getQueueResponseSuccess = getQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -1382,26 +1389,12 @@ export const invalidateGetQueue = async (
 	return queryClient;
 };
 
-export type replaceQueueResponse200TextPlain = {
+export type replaceQueueResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type replaceQueueResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type replaceQueueResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type replaceQueueResponseSuccess = (
-	| replaceQueueResponse200TextPlain
-	| replaceQueueResponse200ApplicationJson
-	| replaceQueueResponse200TextJson
-) & {
+export type replaceQueueResponseSuccess = replaceQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -1444,7 +1437,6 @@ export const getReplaceQueueMutationOptions = <
 			{ data: ReplaceQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -1474,16 +1466,13 @@ export const getReplaceQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof replaceQueue>>,
 		variables: { data: ReplaceQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type ReplaceQueueMutationResult = NonNullable<
@@ -1500,7 +1489,6 @@ export const useReplaceQueue = <TError = unknown, TContext = unknown>(
 			{ data: ReplaceQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1516,28 +1504,15 @@ export const useReplaceQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type setQueueCurrentSongByIdResponse200TextPlain = {
+export type setQueueCurrentSongByIdResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type setQueueCurrentSongByIdResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type setQueueCurrentSongByIdResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type setQueueCurrentSongByIdResponseSuccess = (
-	| setQueueCurrentSongByIdResponse200TextPlain
-	| setQueueCurrentSongByIdResponse200ApplicationJson
-	| setQueueCurrentSongByIdResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type setQueueCurrentSongByIdResponseSuccess =
+	setQueueCurrentSongByIdResponse200 & {
+		headers: Headers;
+	};
 
 export type setQueueCurrentSongByIdResponse =
 	setQueueCurrentSongByIdResponseSuccess;
@@ -1639,28 +1614,15 @@ export const useSetQueueCurrentSongById = <
 		queryClient,
 	);
 };
-export type setQueueCurrentSongResponse200TextPlain = {
+export type setQueueCurrentSongResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type setQueueCurrentSongResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type setQueueCurrentSongResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type setQueueCurrentSongResponseSuccess = (
-	| setQueueCurrentSongResponse200TextPlain
-	| setQueueCurrentSongResponse200ApplicationJson
-	| setQueueCurrentSongResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type setQueueCurrentSongResponseSuccess =
+	setQueueCurrentSongResponse200 & {
+		headers: Headers;
+	};
 
 export type setQueueCurrentSongResponse = setQueueCurrentSongResponseSuccess;
 
@@ -1703,7 +1665,6 @@ export const getSetQueueCurrentSongMutationOptions = <
 			{ data: SetCurrentSongRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -1733,16 +1694,13 @@ export const getSetQueueCurrentSongMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof setQueueCurrentSong>>,
 		variables: { data: SetCurrentSongRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type SetQueueCurrentSongMutationResult = NonNullable<
@@ -1759,7 +1717,6 @@ export const useSetQueueCurrentSong = <TError = unknown, TContext = unknown>(
 			{ data: SetCurrentSongRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1778,26 +1735,12 @@ export const useSetQueueCurrentSong = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type addToQueueResponse200TextPlain = {
+export type addToQueueResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type addToQueueResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type addToQueueResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type addToQueueResponseSuccess = (
-	| addToQueueResponse200TextPlain
-	| addToQueueResponse200ApplicationJson
-	| addToQueueResponse200TextJson
-) & {
+export type addToQueueResponseSuccess = addToQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -1840,7 +1783,6 @@ export const getAddToQueueMutationOptions = <
 			{ data: AddToQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -1870,16 +1812,13 @@ export const getAddToQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof addToQueue>>,
 		variables: { data: AddToQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type AddToQueueMutationResult = NonNullable<
@@ -1896,7 +1835,6 @@ export const useAddToQueue = <TError = unknown, TContext = unknown>(
 			{ data: AddToQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -1912,26 +1850,12 @@ export const useAddToQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type removeFromQueueResponse200TextPlain = {
+export type removeFromQueueResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type removeFromQueueResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type removeFromQueueResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type removeFromQueueResponseSuccess = (
-	| removeFromQueueResponse200TextPlain
-	| removeFromQueueResponse200ApplicationJson
-	| removeFromQueueResponse200TextJson
-) & {
+export type removeFromQueueResponseSuccess = removeFromQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -1974,7 +1898,6 @@ export const getRemoveFromQueueMutationOptions = <
 			{ data: RemoveFromQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -2004,16 +1927,13 @@ export const getRemoveFromQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof removeFromQueue>>,
 		variables: { data: RemoveFromQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type RemoveFromQueueMutationResult = NonNullable<
@@ -2030,7 +1950,6 @@ export const useRemoveFromQueue = <TError = unknown, TContext = unknown>(
 			{ data: RemoveFromQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -2049,26 +1968,12 @@ export const useRemoveFromQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type reorderQueueResponse200TextPlain = {
+export type reorderQueueResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type reorderQueueResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type reorderQueueResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type reorderQueueResponseSuccess = (
-	| reorderQueueResponse200TextPlain
-	| reorderQueueResponse200ApplicationJson
-	| reorderQueueResponse200TextJson
-) & {
+export type reorderQueueResponseSuccess = reorderQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -2111,7 +2016,6 @@ export const getReorderQueueMutationOptions = <
 			{ data: ReorderQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -2141,16 +2045,13 @@ export const getReorderQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof reorderQueue>>,
 		variables: { data: ReorderQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type ReorderQueueMutationResult = NonNullable<
@@ -2167,7 +2068,6 @@ export const useReorderQueue = <TError = unknown, TContext = unknown>(
 			{ data: ReorderQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -2183,26 +2083,12 @@ export const useReorderQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type shuffleQueueResponse200TextPlain = {
+export type shuffleQueueResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type shuffleQueueResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type shuffleQueueResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type shuffleQueueResponseSuccess = (
-	| shuffleQueueResponse200TextPlain
-	| shuffleQueueResponse200ApplicationJson
-	| shuffleQueueResponse200TextJson
-) & {
+export type shuffleQueueResponseSuccess = shuffleQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -2245,7 +2131,6 @@ export const getShuffleQueueMutationOptions = <
 			{ data: ShuffleQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -2275,16 +2160,13 @@ export const getShuffleQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof shuffleQueue>>,
 		variables: { data: ShuffleQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type ShuffleQueueMutationResult = NonNullable<
@@ -2301,7 +2183,6 @@ export const useShuffleQueue = <TError = unknown, TContext = unknown>(
 			{ data: ShuffleQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -2317,26 +2198,12 @@ export const useShuffleQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type getFavoritesResponse200TextPlain = {
+export type getFavoritesResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type getFavoritesResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type getFavoritesResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type getFavoritesResponseSuccess = (
-	| getFavoritesResponse200TextPlain
-	| getFavoritesResponse200ApplicationJson
-	| getFavoritesResponse200TextJson
-) & {
+export type getFavoritesResponseSuccess = getFavoritesResponse200 & {
 	headers: Headers;
 };
 
@@ -2492,26 +2359,12 @@ export const invalidateGetFavorites = async (
 	return queryClient;
 };
 
-export type addToFavoritesResponse200TextPlain = {
+export type addToFavoritesResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type addToFavoritesResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type addToFavoritesResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type addToFavoritesResponseSuccess = (
-	| addToFavoritesResponse200TextPlain
-	| addToFavoritesResponse200ApplicationJson
-	| addToFavoritesResponse200TextJson
-) & {
+export type addToFavoritesResponseSuccess = addToFavoritesResponse200 & {
 	headers: Headers;
 };
 
@@ -2554,7 +2407,6 @@ export const getAddToFavoritesMutationOptions = <
 			{ data: AddSongsToPlaylistRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -2584,16 +2436,13 @@ export const getAddToFavoritesMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof addToFavorites>>,
 		variables: { data: AddSongsToPlaylistRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type AddToFavoritesMutationResult = NonNullable<
@@ -2610,7 +2459,6 @@ export const useAddToFavorites = <TError = unknown, TContext = unknown>(
 			{ data: AddSongsToPlaylistRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -2626,28 +2474,15 @@ export const useAddToFavorites = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type removeFromFavoritesResponse200TextPlain = {
+export type removeFromFavoritesResponse200 = {
 	data: GetPlaylistResponse;
 	status: 200;
 };
 
-export type removeFromFavoritesResponse200ApplicationJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type removeFromFavoritesResponse200TextJson = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type removeFromFavoritesResponseSuccess = (
-	| removeFromFavoritesResponse200TextPlain
-	| removeFromFavoritesResponse200ApplicationJson
-	| removeFromFavoritesResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type removeFromFavoritesResponseSuccess =
+	removeFromFavoritesResponse200 & {
+		headers: Headers;
+	};
 
 export type removeFromFavoritesResponse = removeFromFavoritesResponseSuccess;
 
@@ -2688,7 +2523,6 @@ export const getRemoveFromFavoritesMutationOptions = <
 			{ songId: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -2718,16 +2552,13 @@ export const getRemoveFromFavoritesMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof removeFromFavorites>>,
 		variables: { songId: number },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type RemoveFromFavoritesMutationResult = NonNullable<
@@ -2744,7 +2575,6 @@ export const useRemoveFromFavorites = <TError = unknown, TContext = unknown>(
 			{ songId: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -2763,26 +2593,12 @@ export const useRemoveFromFavorites = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type listQueuesResponse200TextPlain = {
+export type listQueuesResponse200 = {
 	data: ListQueuesResponse;
 	status: 200;
 };
 
-export type listQueuesResponse200ApplicationJson = {
-	data: ListQueuesResponse;
-	status: 200;
-};
-
-export type listQueuesResponse200TextJson = {
-	data: ListQueuesResponse;
-	status: 200;
-};
-
-export type listQueuesResponseSuccess = (
-	| listQueuesResponse200TextPlain
-	| listQueuesResponse200ApplicationJson
-	| listQueuesResponse200TextJson
-) & {
+export type listQueuesResponseSuccess = listQueuesResponse200 & {
 	headers: Headers;
 };
 
@@ -2938,26 +2754,12 @@ export const invalidateListQueues = async (
 	return queryClient;
 };
 
-export type createQueueResponse200TextPlain = {
+export type createQueueResponse200 = {
 	data: CreateQueueResponse;
 	status: 200;
 };
 
-export type createQueueResponse200ApplicationJson = {
-	data: CreateQueueResponse;
-	status: 200;
-};
-
-export type createQueueResponse200TextJson = {
-	data: CreateQueueResponse;
-	status: 200;
-};
-
-export type createQueueResponseSuccess = (
-	| createQueueResponse200TextPlain
-	| createQueueResponse200ApplicationJson
-	| createQueueResponse200TextJson
-) & {
+export type createQueueResponseSuccess = createQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -3000,7 +2802,6 @@ export const getCreateQueueMutationOptions = <
 			{ data: CreateQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -3030,17 +2831,14 @@ export const getCreateQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof createQueue>>,
 		variables: { data: CreateQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type CreateQueueMutationResult = NonNullable<
@@ -3057,7 +2855,6 @@ export const useCreateQueue = <TError = unknown, TContext = unknown>(
 			{ data: CreateQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -3073,26 +2870,12 @@ export const useCreateQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type renameQueueResponse200TextPlain = {
+export type renameQueueResponse200 = {
 	data: RenameQueueResponse;
 	status: 200;
 };
 
-export type renameQueueResponse200ApplicationJson = {
-	data: RenameQueueResponse;
-	status: 200;
-};
-
-export type renameQueueResponse200TextJson = {
-	data: RenameQueueResponse;
-	status: 200;
-};
-
-export type renameQueueResponseSuccess = (
-	| renameQueueResponse200TextPlain
-	| renameQueueResponse200ApplicationJson
-	| renameQueueResponse200TextJson
-) & {
+export type renameQueueResponseSuccess = renameQueueResponse200 & {
 	headers: Headers;
 };
 
@@ -3136,7 +2919,6 @@ export const getRenameQueueMutationOptions = <
 			{ id: number; data: RenameQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -3166,17 +2948,14 @@ export const getRenameQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof renameQueue>>,
 		variables: { id: number; data: RenameQueueRequest },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type RenameQueueMutationResult = NonNullable<
@@ -3193,7 +2972,6 @@ export const useRenameQueue = <TError = unknown, TContext = unknown>(
 			{ id: number; data: RenameQueueRequest },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -3255,7 +3033,6 @@ export const getDeleteQueueMutationOptions = <
 			{ id: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -3285,17 +3062,14 @@ export const getDeleteQueueMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof deleteQueue>>,
 		variables: { id: number },
-		onMutateResult: TContext,
-		context: MutationFunctionContext,
+		context: TContext,
 	) => {
-		if (!options?.skipInvalidation) {
-			queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
-			queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		}
-		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+		queryClient.invalidateQueries({ queryKey: getListQueuesQueryKey() });
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
 	};
 
-	return { ...mutationOptions, mutationFn, onSuccess };
+	return { mutationFn, onSuccess, ...mutationOptions };
 };
 
 export type DeleteQueueMutationResult = NonNullable<
@@ -3312,7 +3086,6 @@ export const useDeleteQueue = <TError = unknown, TContext = unknown>(
 			{ id: number },
 			TContext
 		>;
-		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -3328,28 +3101,15 @@ export const useDeleteQueue = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type getPlaylistFilterMetadataResponse200TextPlain = {
+export type getPlaylistFilterMetadataResponse200 = {
 	data: FilterMetadataResponse;
 	status: 200;
 };
 
-export type getPlaylistFilterMetadataResponse200ApplicationJson = {
-	data: FilterMetadataResponse;
-	status: 200;
-};
-
-export type getPlaylistFilterMetadataResponse200TextJson = {
-	data: FilterMetadataResponse;
-	status: 200;
-};
-
-export type getPlaylistFilterMetadataResponseSuccess = (
-	| getPlaylistFilterMetadataResponse200TextPlain
-	| getPlaylistFilterMetadataResponse200ApplicationJson
-	| getPlaylistFilterMetadataResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type getPlaylistFilterMetadataResponseSuccess =
+	getPlaylistFilterMetadataResponse200 & {
+		headers: Headers;
+	};
 
 export type getPlaylistFilterMetadataResponse =
 	getPlaylistFilterMetadataResponseSuccess;
@@ -3527,28 +3287,15 @@ export const invalidateGetPlaylistFilterMetadata = async (
 	return queryClient;
 };
 
-export type getPlaylistFilterValuesResponse200TextPlain = {
+export type getPlaylistFilterValuesResponse200 = {
 	data: FilterValuesResponse;
 	status: 200;
 };
 
-export type getPlaylistFilterValuesResponse200ApplicationJson = {
-	data: FilterValuesResponse;
-	status: 200;
-};
-
-export type getPlaylistFilterValuesResponse200TextJson = {
-	data: FilterValuesResponse;
-	status: 200;
-};
-
-export type getPlaylistFilterValuesResponseSuccess = (
-	| getPlaylistFilterValuesResponse200TextPlain
-	| getPlaylistFilterValuesResponse200ApplicationJson
-	| getPlaylistFilterValuesResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type getPlaylistFilterValuesResponseSuccess =
+	getPlaylistFilterValuesResponse200 & {
+		headers: Headers;
+	};
 
 export type getPlaylistFilterValuesResponse =
 	getPlaylistFilterValuesResponseSuccess;
@@ -3757,4346 +3504,1953 @@ export const invalidateGetPlaylistFilterValues = async (
 	return queryClient;
 };
 
+export type batchSetStopAfterPlaybackResponse200 = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type batchSetStopAfterPlaybackResponseSuccess =
+	batchSetStopAfterPlaybackResponse200 & {
+		headers: Headers;
+	};
+
+export type batchSetStopAfterPlaybackResponse =
+	batchSetStopAfterPlaybackResponseSuccess;
+
+export const getBatchSetStopAfterPlaybackUrl = () => {
+	return `/api/playlists/songs/stop-after-playback/batch`;
+};
+
+export const batchSetStopAfterPlayback = async (
+	batchSetStopAfterPlaybackRequest: BatchSetStopAfterPlaybackRequest,
+	options?: RequestInit,
+): Promise<batchSetStopAfterPlaybackResponse> => {
+	const res = await fetch(getBatchSetStopAfterPlaybackUrl(), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(batchSetStopAfterPlaybackRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: batchSetStopAfterPlaybackResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as batchSetStopAfterPlaybackResponse;
+};
+
+export const getBatchSetStopAfterPlaybackMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+			TError,
+			{ data: BatchSetStopAfterPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+	TError,
+	{ data: BatchSetStopAfterPlaybackRequest },
+	TContext
+> => {
+	const mutationKey = ["batchSetStopAfterPlayback"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+		{ data: BatchSetStopAfterPlaybackRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return batchSetStopAfterPlayback(data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+		variables: { data: BatchSetStopAfterPlaybackRequest },
+		context: TContext,
+	) => {
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
+	};
+
+	return { mutationFn, onSuccess, ...mutationOptions };
+};
+
+export type BatchSetStopAfterPlaybackMutationResult = NonNullable<
+	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>
+>;
+export type BatchSetStopAfterPlaybackMutationBody =
+	BatchSetStopAfterPlaybackRequest;
+export type BatchSetStopAfterPlaybackMutationError = unknown;
+
+export const useBatchSetStopAfterPlayback = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+			TError,
+			{ data: BatchSetStopAfterPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+	TError,
+	{ data: BatchSetStopAfterPlaybackRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getBatchSetStopAfterPlaybackMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
+
 export const getListPlaylistsResponseMock = (
-	overrideResponse: Partial<Extract<ListPlaylistsResponse, object>> = {},
-): ListPlaylistsResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				songCount: faker.number.int(),
-				songIds: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.number.int()),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				modifiedAt: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.date.past().toISOString().slice(0, 19) + "Z",
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			...overrideResponse,
-		},
-		{
-			playlists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				songCount: faker.number.int(),
-				songIds: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.number.int()),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				modifiedAt: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.date.past().toISOString().slice(0, 19) + "Z",
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			...overrideResponse,
-		},
-		{
-			playlists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				songCount: faker.number.int(),
-				songIds: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.number.int()),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				modifiedAt: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.date.past().toISOString().slice(0, 19) + "Z",
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<ListPlaylistsResponse> = {},
+): ListPlaylistsResponse => ({
+	playlists: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		songCount: faker.number.int({ min: undefined, max: undefined }),
+		songIds: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => faker.number.int({ min: undefined, max: undefined })),
+		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+		modifiedAt: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.date.past().toISOString().slice(0, 19) + "Z",
+				null,
+			]),
+			undefined,
+		]),
+	})),
+	...overrideResponse,
+});
 
 export const getCreatePlaylistResponseMock = (
-	overrideResponse: Partial<Extract<CreatePlaylistResponse, object>> = {},
-): CreatePlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<CreatePlaylistResponse> = {},
+): CreatePlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	},
+	...overrideResponse,
+});
 
 export const getGetPlaylistResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getUpdatePlaylistResponseMock = (
-	overrideResponse: Partial<Extract<UpdatePlaylistResponse, object>> = {},
-): UpdatePlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<UpdatePlaylistResponse> = {},
+): UpdatePlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	},
+	...overrideResponse,
+});
 
 export const getAddSongsToPlaylistResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getRemoveSongFromPlaylistResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
+
+export const getSetStopAfterPlaybackResponseMock = (
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+					undefined,
+				]),
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getGetQueueResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getReplaceQueueResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getSetQueueCurrentSongByIdResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getSetQueueCurrentSongResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getAddToQueueResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getRemoveFromQueueResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getReorderQueueResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getShuffleQueueResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getGetFavoritesResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getAddToFavoritesResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getRemoveFromFavoritesResponseMock = (
-	overrideResponse: Partial<Extract<GetPlaylistResponse, object>> = {},
-): GetPlaylistResponse =>
-	faker.helpers.arrayElement([
-		{
-			playlist: {
-				id: faker.number.int(),
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			playlist: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getListQueuesResponseMock = (
-	overrideResponse: Partial<Extract<ListQueuesResponse, object>> = {},
-): ListQueuesResponse =>
-	faker.helpers.arrayElement([
-		{
-			queues: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				songCount: faker.number.int(),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			})),
-			...overrideResponse,
-		},
-		{
-			queues: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				songCount: faker.number.int(),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			})),
-			...overrideResponse,
-		},
-		{
-			queues: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				songCount: faker.number.int(),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			})),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<ListQueuesResponse> = {},
+): ListQueuesResponse => ({
+	queues: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		songCount: faker.number.int({ min: undefined, max: undefined }),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+	})),
+	...overrideResponse,
+});
 
 export const getCreateQueueResponseMock = (
-	overrideResponse: Partial<Extract<CreateQueueResponse, object>> = {},
-): CreateQueueResponse =>
-	faker.helpers.arrayElement([
-		{
-			queue: {
-				id: faker.number.int(),
+	overrideResponse: Partial<CreateQueueResponse> = {},
+): CreateQueueResponse => ({
+	queue: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			queue: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
 					undefined,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-		{
-			queue: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
 				]),
-				songs: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => ({
-					order: faker.number.int(),
-					addedAtPlaylist: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-					id: faker.number.int(),
-					cover: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					artists: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					album: {
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					},
-					genres: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					})),
-					year: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([faker.number.int(), null]),
-						null,
-					]),
-					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-					devices: Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => ({
-						id: faker.number.int(),
-						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-						icon: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-						color: faker.helpers.arrayElement([
-							faker.helpers.arrayElement([
-								faker.string.alpha({ length: { min: 10, max: 20 } }),
-								null,
-							]),
-							undefined,
-						]),
-					})),
-					isFavorite: faker.datatype.boolean(),
-					isExplicit: faker.datatype.boolean(),
-					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-					addedAt: faker.helpers.arrayElement([
-						faker.helpers.arrayElement([
-							faker.date.past().toISOString().slice(0, 19) + "Z",
-							null,
-						]),
-						undefined,
-					]),
-				})),
-			},
-			...overrideResponse,
-		},
-	]);
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getRenameQueueResponseMock = (
-	overrideResponse: Partial<Extract<RenameQueueResponse, object>> = {},
-): RenameQueueResponse =>
-	faker.helpers.arrayElement([
-		{
-			queue: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				songCount: faker.number.int(),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			},
-			...overrideResponse,
-		},
-		{
-			queue: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				songCount: faker.number.int(),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			},
-			...overrideResponse,
-		},
-		{
-			queue: {
-				id: faker.number.int(),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				songCount: faker.number.int(),
-				currentSongId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			},
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<RenameQueueResponse> = {},
+): RenameQueueResponse => ({
+	queue: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		songCount: faker.number.int({ min: undefined, max: undefined }),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+	},
+	...overrideResponse,
+});
 
 export const getGetPlaylistFilterMetadataResponseMock = (
-	overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
-): FilterMetadataResponse =>
-	faker.helpers.arrayElement([
-		{
-			fields: Array.from(
+	overrideResponse: Partial<FilterMetadataResponse> = {},
+): FilterMetadataResponse => ({
+	fields: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		entityPath: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		supportedOperators: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+		isComputed: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+		isCollection: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+		nestedFields: faker.helpers.arrayElement([[], undefined]),
+		values: faker.helpers.arrayElement([
+			Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				entityPath: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				supportedOperators: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				isComputed: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				isCollection: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				nestedFields: faker.helpers.arrayElement([[], undefined]),
-				values: faker.helpers.arrayElement([
-					Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					undefined,
-				]),
-				supportsDynamicValues: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-			})),
-			operators: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				applicableTypes: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			})),
-			...overrideResponse,
-		},
-		{
-			fields: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				entityPath: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				supportedOperators: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				isComputed: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				isCollection: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				nestedFields: faker.helpers.arrayElement([[], undefined]),
-				values: faker.helpers.arrayElement([
-					Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					undefined,
-				]),
-				supportsDynamicValues: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-			})),
-			operators: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				applicableTypes: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			})),
-			...overrideResponse,
-		},
-		{
-			fields: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				entityPath: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				supportedOperators: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				isComputed: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				isCollection: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-				nestedFields: faker.helpers.arrayElement([[], undefined]),
-				values: faker.helpers.arrayElement([
-					Array.from(
-						{ length: faker.number.int({ min: 1, max: 10 }) },
-						(_, i) => i + 1,
-					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-					undefined,
-				]),
-				supportsDynamicValues: faker.helpers.arrayElement([
-					faker.datatype.boolean(),
-					undefined,
-				]),
-			})),
-			operators: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				applicableTypes: Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			})),
-			...overrideResponse,
-		},
-	]);
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			undefined,
+		]),
+		supportsDynamicValues: faker.helpers.arrayElement([
+			faker.datatype.boolean(),
+			undefined,
+		]),
+	})),
+	operators: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		applicableTypes: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+	})),
+	...overrideResponse,
+});
 
 export const getGetPlaylistFilterValuesResponseMock = (
-	overrideResponse: Partial<Extract<FilterValuesResponse, object>> = {},
-): FilterValuesResponse =>
-	faker.helpers.arrayElement([
-		{
-			values: Array.from(
+	overrideResponse: Partial<FilterValuesResponse> = {},
+): FilterValuesResponse => ({
+	values: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+	...overrideResponse,
+});
+
+export const getBatchSetStopAfterPlaybackResponseMock = (
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			...overrideResponse,
-		},
-		{
-			values: Array.from(
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			...overrideResponse,
-		},
-		{
-			values: Array.from(
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			...overrideResponse,
-		},
-	]);
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
 
 export const getListPlaylistsMockHandler = (
 	overrideResponse?:
@@ -8108,14 +5462,14 @@ export const getListPlaylistsMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListPlaylistsResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8132,14 +5486,14 @@ export const getCreatePlaylistMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getCreatePlaylistResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8156,14 +5510,14 @@ export const getGetPlaylistMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists/:id",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetPlaylistResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8180,14 +5534,14 @@ export const getUpdatePlaylistMockHandler = (
 ) => {
 	return http.put(
 		"*/playlists/:id",
-		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getUpdatePlaylistResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8204,11 +5558,10 @@ export const getDeletePlaylistMockHandler = (
 ) => {
 	return http.delete(
 		"*/playlists/:id",
-		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+		async (info) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
-
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,
@@ -8225,14 +5578,14 @@ export const getAddSongsToPlaylistMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/:id/songs",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getAddSongsToPlaylistResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8249,14 +5602,38 @@ export const getRemoveSongFromPlaylistMockHandler = (
 ) => {
 	return http.delete(
 		"*/playlists/:id/songs/:songId",
-		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRemoveSongFromPlaylistResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
+			);
+		},
+		options,
+	);
+};
+
+export const getSetStopAfterPlaybackMockHandler = (
+	overrideResponse?:
+		| GetPlaylistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/:id/songs/:songId/stop-after-playback",
+		async (info) => {
+			return new HttpResponse(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getSetStopAfterPlaybackResponseMock(),
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8273,11 +5650,10 @@ export const getManagePlaylistSongsMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/manage-songs",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+		async (info) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
-
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,
@@ -8294,14 +5670,14 @@ export const getGetQueueMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists/queue",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8318,14 +5694,14 @@ export const getReplaceQueueMockHandler = (
 ) => {
 	return http.put(
 		"*/playlists/queue",
-		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getReplaceQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8342,14 +5718,14 @@ export const getSetQueueCurrentSongByIdMockHandler = (
 ) => {
 	return http.put(
 		"*/playlists/queues/:id/current-song",
-		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getSetQueueCurrentSongByIdResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8366,14 +5742,14 @@ export const getSetQueueCurrentSongMockHandler = (
 ) => {
 	return http.put(
 		"*/playlists/queue/current-song",
-		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getSetQueueCurrentSongResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8390,14 +5766,14 @@ export const getAddToQueueMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/queue/songs",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getAddToQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8414,14 +5790,14 @@ export const getRemoveFromQueueMockHandler = (
 ) => {
 	return http.delete(
 		"*/playlists/queue/songs",
-		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRemoveFromQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8438,14 +5814,14 @@ export const getReorderQueueMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/queue/reorder",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getReorderQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8462,14 +5838,14 @@ export const getShuffleQueueMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/queue/shuffle",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getShuffleQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8486,14 +5862,14 @@ export const getGetFavoritesMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists/favorites",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetFavoritesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8510,14 +5886,14 @@ export const getAddToFavoritesMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/favorites/songs",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getAddToFavoritesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8534,14 +5910,14 @@ export const getRemoveFromFavoritesMockHandler = (
 ) => {
 	return http.delete(
 		"*/playlists/favorites/songs/:songId",
-		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRemoveFromFavoritesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8558,14 +5934,14 @@ export const getListQueuesMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists/queues",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListQueuesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8582,14 +5958,14 @@ export const getCreateQueueMockHandler = (
 ) => {
 	return http.post(
 		"*/playlists/queues",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getCreateQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8606,14 +5982,14 @@ export const getRenameQueueMockHandler = (
 ) => {
 	return http.put(
 		"*/playlists/queues/:id",
-		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRenameQueueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8630,11 +6006,10 @@ export const getDeleteQueueMockHandler = (
 ) => {
 	return http.delete(
 		"*/playlists/queues/:id",
-		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+		async (info) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
-
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,
@@ -8651,14 +6026,14 @@ export const getGetPlaylistFilterMetadataMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists/filter-metadata",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetPlaylistFilterMetadataResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8675,14 +6050,38 @@ export const getGetPlaylistFilterValuesMockHandler = (
 ) => {
 	return http.get(
 		"*/playlists/filter-values",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetPlaylistFilterValuesResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
+			);
+		},
+		options,
+	);
+};
+
+export const getBatchSetStopAfterPlaybackMockHandler = (
+	overrideResponse?:
+		| GetPlaylistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/songs/stop-after-playback/batch",
+		async (info) => {
+			return new HttpResponse(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getBatchSetStopAfterPlaybackResponseMock(),
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -8696,6 +6095,7 @@ export const getPlaylistsMock = () => [
 	getDeletePlaylistMockHandler(),
 	getAddSongsToPlaylistMockHandler(),
 	getRemoveSongFromPlaylistMockHandler(),
+	getSetStopAfterPlaybackMockHandler(),
 	getManagePlaylistSongsMockHandler(),
 	getGetQueueMockHandler(),
 	getReplaceQueueMockHandler(),
@@ -8714,4 +6114,5 @@ export const getPlaylistsMock = () => [
 	getDeleteQueueMockHandler(),
 	getGetPlaylistFilterMetadataMockHandler(),
 	getGetPlaylistFilterValuesMockHandler(),
+	getBatchSetStopAfterPlaybackMockHandler(),
 ];

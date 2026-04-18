@@ -1,5 +1,5 @@
 import {Anchor, Tooltip} from "@mantine/core";
-import {IconPlayerPauseFilled, IconPlayerPlayFilled} from "@tabler/icons-react";
+import {IconPlayerPauseFilled, IconPlayerPlayFilled, IconPlayerStop} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {TEXT_COLOR} from "../../../utils/colors.ts";
 import ExplicitLabel from "../explicit-label.tsx";
@@ -12,6 +12,7 @@ export interface SongTitleProps {
     lineClamp?: number;
     isPlaying?: boolean;
     currentSongIndicator?: 'playing' | 'paused' | null;
+    stopAfterPlayback?: boolean;
 }
 
 export default function SongTitle(props: SongTitleProps) {
@@ -28,6 +29,11 @@ export default function SongTitle(props: SongTitleProps) {
     }
 
     return <ExplicitLabel visible={props.isExplicit ?? false}>
+        {props.stopAfterPlayback && (
+            <Tooltip label="Playback will stop after this song" openDelay={500}>
+                <IconPlayerStop size={16} style={{marginRight: 4}} color="var(--mantine-color-red-5)"/>
+            </Tooltip>
+        )}
         {(props.isPlaying || props.currentSongIndicator === 'playing') &&
             <IconPlayerPlayFilled size={16} style={{marginRight: 4}} color="var(--mantine-primary-color-3)"/>}
         {props.currentSongIndicator === 'paused' &&

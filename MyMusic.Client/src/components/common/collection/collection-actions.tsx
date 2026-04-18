@@ -3,6 +3,7 @@ import {useUncontrolled} from "@mantine/hooks";
 import {IconDotsVertical} from "@tabler/icons-react";
 import {useCallback} from "react";
 import type {CollectionSchemaAction, CollectionSchemaActionButton} from "./collection-schema.tsx";
+import {getCollectionActionKey} from "./collection-action-utils.ts";
 import {useSelectionStoreContext} from "./selection-store.ts";
 
 export interface CollectionActionsProps<M> {
@@ -28,12 +29,6 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
 
     const primaryActions = props.actions.filter(isPrimary);
     const secondaryActions = props.actions.filter(isSecondary);
-
-    const getActionKey = (action: CollectionSchemaAction<M>): string => {
-        if ('divider' in action) return 'divider';
-        if ('group' in action) return `group-${action.group}`;
-        return action.name;
-    };
 
     return <>
         <Group gap="xs">
@@ -61,7 +56,7 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                     </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
-                    {secondaryActions.map((action) => <CollectionActionMenu key={getActionKey(action)} action={action}
+                    {secondaryActions.map((action, index) => <CollectionActionMenu key={getCollectionActionKey(action, index)} action={action}
                                                                                selection={props.selection}/>)}
                 </Menu.Dropdown>
             </Menu>}

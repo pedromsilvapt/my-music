@@ -12,12 +12,12 @@ import {useDisclosure} from "@mantine/hooks";
 
 export default function NowPlayingPage() {
     const {reorder, reorderBatch} = useQueueMutations();
-    const {queue, currentSongId: visibleQueueCurrentSongId} = useVisibleQueue();
+    const {queue, currentSongId: visibleQueueCurrentSongId, queueId} = useVisibleQueue();
     const scrollToCurrentRequestId = usePlaybackStore((s: { scrollToCurrentRequestId: number }) => s.scrollToCurrentRequestId);
     const {viewQueue} = useQueuesMutations();
     const {queues, visibleQueueId, currentQueueId} = useQueueList();
 
-    const songsSchema = useSongsSchema(true, {visibleQueueId, currentQueueId, visibleQueueCurrentSongId});
+    const songsSchema = useSongsSchema(true, {visibleQueueId, currentQueueId, visibleQueueCurrentSongId, queueId});
 
     const [popoverOpened, {open: openPopover, close: closePopover, toggle: togglePopover}] = useDisclosure(false);
 

@@ -1,11 +1,14 @@
 import {useRef} from 'react';
 import {useShallow} from 'zustand/react/shallow';
+import {notifications} from '@mantine/notifications';
 import {useMediaSession} from "../../hooks/use-media-session";
 import {usePlayHistoryTracker} from "../../hooks/use-play-history.ts";
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
+import {useQueue} from '../../hooks/use-queue';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerTimeline from './player-timeline';
 import {useWavesurferRef} from './wavesurfer-context';
+import {useBatchSetStopAfterPlayback} from '../../client/playlists';
 
 const TIME_UPDATE_DEBOUNCE_INTERVAL_SECONDS = .25;
 
@@ -16,11 +19,13 @@ export default function PlayerTimelineContainer() {
     const previousIntervalRef = useRef<number>(-1);
     const wavesurferRef = useWavesurferRef();
     const {goForward} = usePlayerNavigation();
+    const {queue, currentSongId, queueId} = useQueue();
     const {setIsPlaying, setCurrentTime, load} = usePlaybackActions((s) => ({
         setIsPlaying: s.setIsPlaying,
         setCurrentTime: s.setCurrentTime,
         load: s.load,
     }));
+    const clearStopAfterPlaybackRef = useRef(useBatchSetStopAfterPlayback({}));
 
     const {time, duration, songUrl, autoplay, volume, muted, playbackKey} = usePlaybackStore(
         useShallow((s) => {
@@ -72,6 +77,41 @@ export default function PlayerTimelineContainer() {
         }
     };
 
+    const handleFinish = () => {
+        const currentSong = queue.find(s => s.id === currentSongId);
+        if (currentSong?.stopAfterPlayback) {
+            setIsPlaying(false);
+            notifications.show({
+                title: 'Stopped after this song',
+                message: `Stopped after "${currentSong.title}"`,
+                autoClose: 4000,
+            });
+            if (queueId != null && currentSongId != null) {
+                clearStopAfterPlaybackRef.current.mutate(
+                    {
+                        data: {
+                            playlistId: queueId,
+                            songIds: [currentSongId],
+                            stopAfterPlayback: false,
+                        },
+                    },
+                    {
+                        onError: () => {
+                            notifications.show({
+                                title: 'Error',
+                                message: 'Failed to clear stop-after flag. The flag may still be set.',
+                                color: 'red',
+                                autoClose: 4000,
+                            });
+                        },
+                    }
+                );
+            }
+            return;
+        }
+        goForward();
+    };
+
     if (!songUrl) return null;
 
     return (
@@ -83,7 +123,7 @@ export default function PlayerTimelineContainer() {
             setTime={handleTimeUpdate}
             setIsPlaying={setIsPlaying}
             onLoad={handleLoad}
-            onFinish={goForward}
+            onFinish={handleFinish}
         />
     );
 }

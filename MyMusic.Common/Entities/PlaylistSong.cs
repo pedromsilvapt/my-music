@@ -12,5 +12,7 @@ public class PlaylistSong
 
     public double Order { get; set; }
 
+    public bool StopAfterPlayback { get; set; }
+
     public DateTime AddedAt { get; set; }
 }

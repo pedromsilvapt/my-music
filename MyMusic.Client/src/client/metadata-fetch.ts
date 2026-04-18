@@ -49,28 +49,15 @@ import type {
 } from "../model";
 import { MetadataFetchFailureReason } from "../model";
 
-export type postMetadataFetchBatchResponse200TextPlain = {
+export type postMetadataFetchBatchResponse200 = {
 	data: BatchMetadataFetchResponse;
 	status: 200;
 };
 
-export type postMetadataFetchBatchResponse200ApplicationJson = {
-	data: BatchMetadataFetchResponse;
-	status: 200;
-};
-
-export type postMetadataFetchBatchResponse200TextJson = {
-	data: BatchMetadataFetchResponse;
-	status: 200;
-};
-
-export type postMetadataFetchBatchResponseSuccess = (
-	| postMetadataFetchBatchResponse200TextPlain
-	| postMetadataFetchBatchResponse200ApplicationJson
-	| postMetadataFetchBatchResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type postMetadataFetchBatchResponseSuccess =
+	postMetadataFetchBatchResponse200 & {
+		headers: Headers;
+	};
 
 export type postMetadataFetchBatchResponse =
 	postMetadataFetchBatchResponseSuccess;
@@ -169,28 +156,15 @@ export const usePostMetadataFetchBatch = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type getMetadataFetchSongSongIdResponse200TextPlain = {
+export type getMetadataFetchSongSongIdResponse200 = {
 	data: AutoFetchedMetadataResponse;
 	status: 200;
 };
 
-export type getMetadataFetchSongSongIdResponse200ApplicationJson = {
-	data: AutoFetchedMetadataResponse;
-	status: 200;
-};
-
-export type getMetadataFetchSongSongIdResponse200TextJson = {
-	data: AutoFetchedMetadataResponse;
-	status: 200;
-};
-
-export type getMetadataFetchSongSongIdResponseSuccess = (
-	| getMetadataFetchSongSongIdResponse200TextPlain
-	| getMetadataFetchSongSongIdResponse200ApplicationJson
-	| getMetadataFetchSongSongIdResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type getMetadataFetchSongSongIdResponseSuccess =
+	getMetadataFetchSongSongIdResponse200 & {
+		headers: Headers;
+	};
 
 export type getMetadataFetchSongSongIdResponse =
 	getMetadataFetchSongSongIdResponseSuccess;
@@ -386,28 +360,15 @@ export const invalidateGetMetadataFetchSongSongId = async (
 	return queryClient;
 };
 
-export type postMetadataFetchSongSongIdApplyResponse200TextPlain = {
+export type postMetadataFetchSongSongIdApplyResponse200 = {
 	data: ApplyMetadataResponse;
 	status: 200;
 };
 
-export type postMetadataFetchSongSongIdApplyResponse200ApplicationJson = {
-	data: ApplyMetadataResponse;
-	status: 200;
-};
-
-export type postMetadataFetchSongSongIdApplyResponse200TextJson = {
-	data: ApplyMetadataResponse;
-	status: 200;
-};
-
-export type postMetadataFetchSongSongIdApplyResponseSuccess = (
-	| postMetadataFetchSongSongIdApplyResponse200TextPlain
-	| postMetadataFetchSongSongIdApplyResponse200ApplicationJson
-	| postMetadataFetchSongSongIdApplyResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type postMetadataFetchSongSongIdApplyResponseSuccess =
+	postMetadataFetchSongSongIdApplyResponse200 & {
+		headers: Headers;
+	};
 
 export type postMetadataFetchSongSongIdApplyResponse =
 	postMetadataFetchSongSongIdApplyResponseSuccess;
@@ -510,28 +471,15 @@ export const usePostMetadataFetchSongSongIdApply = <
 		queryClient,
 	);
 };
-export type getMetadataFetchQueueStatusResponse200TextPlain = {
+export type getMetadataFetchQueueStatusResponse200 = {
 	data: MetadataQueueStatusResponse;
 	status: 200;
 };
 
-export type getMetadataFetchQueueStatusResponse200ApplicationJson = {
-	data: MetadataQueueStatusResponse;
-	status: 200;
-};
-
-export type getMetadataFetchQueueStatusResponse200TextJson = {
-	data: MetadataQueueStatusResponse;
-	status: 200;
-};
-
-export type getMetadataFetchQueueStatusResponseSuccess = (
-	| getMetadataFetchQueueStatusResponse200TextPlain
-	| getMetadataFetchQueueStatusResponse200ApplicationJson
-	| getMetadataFetchQueueStatusResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type getMetadataFetchQueueStatusResponseSuccess =
+	getMetadataFetchQueueStatusResponse200 & {
+		headers: Headers;
+	};
 
 export type getMetadataFetchQueueStatusResponse =
 	getMetadataFetchQueueStatusResponseSuccess;
@@ -709,28 +657,15 @@ export const invalidateGetMetadataFetchQueueStatus = async (
 	return queryClient;
 };
 
-export type postMetadataFetchRequeueResponse200TextPlain = {
+export type postMetadataFetchRequeueResponse200 = {
 	data: RequeueFailedMetadataResponse;
 	status: 200;
 };
 
-export type postMetadataFetchRequeueResponse200ApplicationJson = {
-	data: RequeueFailedMetadataResponse;
-	status: 200;
-};
-
-export type postMetadataFetchRequeueResponse200TextJson = {
-	data: RequeueFailedMetadataResponse;
-	status: 200;
-};
-
-export type postMetadataFetchRequeueResponseSuccess = (
-	| postMetadataFetchRequeueResponse200TextPlain
-	| postMetadataFetchRequeueResponse200ApplicationJson
-	| postMetadataFetchRequeueResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type postMetadataFetchRequeueResponseSuccess =
+	postMetadataFetchRequeueResponse200 & {
+		headers: Headers;
+	};
 
 export type postMetadataFetchRequeueResponse =
 	postMetadataFetchRequeueResponseSuccess;
@@ -832,28 +767,15 @@ export const usePostMetadataFetchRequeue = <
 		queryClient,
 	);
 };
-export type getMetadataFetchFailedTasksResponse200TextPlain = {
+export type getMetadataFetchFailedTasksResponse200 = {
 	data: FailedTaskDetailResponse[];
 	status: 200;
 };
 
-export type getMetadataFetchFailedTasksResponse200ApplicationJson = {
-	data: FailedTaskDetailResponse[];
-	status: 200;
-};
-
-export type getMetadataFetchFailedTasksResponse200TextJson = {
-	data: FailedTaskDetailResponse[];
-	status: 200;
-};
-
-export type getMetadataFetchFailedTasksResponseSuccess = (
-	| getMetadataFetchFailedTasksResponse200TextPlain
-	| getMetadataFetchFailedTasksResponse200ApplicationJson
-	| getMetadataFetchFailedTasksResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type getMetadataFetchFailedTasksResponseSuccess =
+	getMetadataFetchFailedTasksResponse200 & {
+		headers: Headers;
+	};
 
 export type getMetadataFetchFailedTasksResponse =
 	getMetadataFetchFailedTasksResponseSuccess;
@@ -1031,28 +953,15 @@ export const invalidateGetMetadataFetchFailedTasks = async (
 	return queryClient;
 };
 
-export type postMetadataFetchClearAllResponse200TextPlain = {
+export type postMetadataFetchClearAllResponse200 = {
 	data: ClearAllTasksResponse;
 	status: 200;
 };
 
-export type postMetadataFetchClearAllResponse200ApplicationJson = {
-	data: ClearAllTasksResponse;
-	status: 200;
-};
-
-export type postMetadataFetchClearAllResponse200TextJson = {
-	data: ClearAllTasksResponse;
-	status: 200;
-};
-
-export type postMetadataFetchClearAllResponseSuccess = (
-	| postMetadataFetchClearAllResponse200TextPlain
-	| postMetadataFetchClearAllResponse200ApplicationJson
-	| postMetadataFetchClearAllResponse200TextJson
-) & {
-	headers: Headers;
-};
+export type postMetadataFetchClearAllResponseSuccess =
+	postMetadataFetchClearAllResponse200 & {
+		headers: Headers;
+	};
 
 export type postMetadataFetchClearAllResponse =
 	postMetadataFetchClearAllResponseSuccess;
@@ -1150,25 +1059,12 @@ export const usePostMetadataFetchClearAll = <
 };
 
 export const getPostMetadataFetchBatchResponseMock = (
-	overrideResponse: Partial<Extract<BatchMetadataFetchResponse, object>> = {},
-): BatchMetadataFetchResponse =>
-	faker.helpers.arrayElement([
-		{
-			tasksCreated: faker.number.int(),
-			message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			...overrideResponse,
-		},
-		{
-			tasksCreated: faker.number.int(),
-			message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			...overrideResponse,
-		},
-		{
-			tasksCreated: faker.number.int(),
-			message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<BatchMetadataFetchResponse> = {},
+): BatchMetadataFetchResponse => ({
+	tasksCreated: faker.number.int({ min: undefined, max: undefined }),
+	message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	...overrideResponse,
+});
 
 export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock =
 	(
@@ -1196,7 +1092,10 @@ export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfstringMock 
 export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfintMock = (
 	overrideResponse: Partial<SongMetadataFieldOfint> = {},
 ): SongMetadataFieldOfint => ({
-	...{ old: faker.number.int(), new: faker.number.int() },
+	...{
+		old: faker.number.int({ min: undefined, max: undefined }),
+		new: faker.number.int({ min: undefined, max: undefined }),
+	},
 	...overrideResponse,
 });
 
@@ -1205,8 +1104,16 @@ export const getGetMetadataFetchSongSongIdResponseSongMetadataFieldOfdecimalMock
 		overrideResponse: Partial<SongMetadataFieldOfdecimal> = {},
 	): SongMetadataFieldOfdecimal => ({
 		...{
-			old: faker.number.float({ fractionDigits: 2 }),
-			new: faker.number.float({ fractionDigits: 2 }),
+			old: faker.number.float({
+				min: undefined,
+				max: undefined,
+				fractionDigits: 2,
+			}),
+			new: faker.number.float({
+				min: undefined,
+				max: undefined,
+				fractionDigits: 2,
+			}),
 		},
 		...overrideResponse,
 	});
@@ -1410,269 +1317,101 @@ export const getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock = (
 });
 
 export const getGetMetadataFetchSongSongIdResponseMock = (
-	overrideResponse: Partial<Extract<AutoFetchedMetadataResponse, object>> = {},
-): AutoFetchedMetadataResponse =>
-	faker.helpers.arrayElement([
-		{
-			hasMetadata: faker.datatype.boolean(),
-			metadata: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
-				]),
-				undefined,
-			]),
-			fetchedAt: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			sourceName: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			preSelectedFields: faker.helpers.arrayElement([
-				Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				undefined,
-			]),
-			...overrideResponse,
-		},
-		{
-			hasMetadata: faker.datatype.boolean(),
-			metadata: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
-				]),
-				undefined,
-			]),
-			fetchedAt: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			sourceName: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			preSelectedFields: faker.helpers.arrayElement([
-				Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				undefined,
-			]),
-			...overrideResponse,
-		},
-		{
-			hasMetadata: faker.datatype.boolean(),
-			metadata: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					null,
-					{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
-				]),
-				undefined,
-			]),
-			fetchedAt: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			sourceName: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
-				]),
-				undefined,
-			]),
-			preSelectedFields: faker.helpers.arrayElement([
-				Array.from(
-					{ length: faker.number.int({ min: 1, max: 10 }) },
-					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				undefined,
-			]),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<AutoFetchedMetadataResponse> = {},
+): AutoFetchedMetadataResponse => ({
+	hasMetadata: faker.datatype.boolean(),
+	metadata: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			null,
+			{ ...getGetMetadataFetchSongSongIdResponseSongMetadataDiffMock() },
+		]),
+		undefined,
+	]),
+	fetchedAt: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.date.past().toISOString().slice(0, 19) + "Z",
+			null,
+		]),
+		undefined,
+	]),
+	sourceName: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.string.alpha({ length: { min: 10, max: 20 } }),
+			null,
+		]),
+		undefined,
+	]),
+	preSelectedFields: faker.helpers.arrayElement([
+		Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+		undefined,
+	]),
+	...overrideResponse,
+});
 
 export const getPostMetadataFetchSongSongIdApplyResponseMock = (
-	overrideResponse: Partial<Extract<ApplyMetadataResponse, object>> = {},
-): ApplyMetadataResponse =>
-	faker.helpers.arrayElement([
-		{
-			success: faker.datatype.boolean(),
-			message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			...overrideResponse,
-		},
-		{
-			success: faker.datatype.boolean(),
-			message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			...overrideResponse,
-		},
-		{
-			success: faker.datatype.boolean(),
-			message: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<ApplyMetadataResponse> = {},
+): ApplyMetadataResponse => ({
+	success: faker.datatype.boolean(),
+	message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	...overrideResponse,
+});
 
 export const getGetMetadataFetchQueueStatusResponseMock = (
-	overrideResponse: Partial<Extract<MetadataQueueStatusResponse, object>> = {},
-): MetadataQueueStatusResponse =>
-	faker.helpers.arrayElement([
-		{
-			queued: faker.number.int(),
-			processing: faker.number.int(),
-			completed: faker.number.int(),
-			failed: faker.number.int(),
-			total: faker.number.int(),
-			estimatedCompletion: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			...overrideResponse,
-		},
-		{
-			queued: faker.number.int(),
-			processing: faker.number.int(),
-			completed: faker.number.int(),
-			failed: faker.number.int(),
-			total: faker.number.int(),
-			estimatedCompletion: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			...overrideResponse,
-		},
-		{
-			queued: faker.number.int(),
-			processing: faker.number.int(),
-			completed: faker.number.int(),
-			failed: faker.number.int(),
-			total: faker.number.int(),
-			estimatedCompletion: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<MetadataQueueStatusResponse> = {},
+): MetadataQueueStatusResponse => ({
+	queued: faker.number.int({ min: undefined, max: undefined }),
+	processing: faker.number.int({ min: undefined, max: undefined }),
+	completed: faker.number.int({ min: undefined, max: undefined }),
+	failed: faker.number.int({ min: undefined, max: undefined }),
+	total: faker.number.int({ min: undefined, max: undefined }),
+	estimatedCompletion: faker.helpers.arrayElement([
+		faker.helpers.arrayElement([
+			faker.date.past().toISOString().slice(0, 19) + "Z",
+			null,
+		]),
+		undefined,
+	]),
+	...overrideResponse,
+});
 
 export const getPostMetadataFetchRequeueResponseMock = (
-	overrideResponse: Partial<
-		Extract<RequeueFailedMetadataResponse, object>
-	> = {},
-): RequeueFailedMetadataResponse =>
-	faker.helpers.arrayElement([
-		{
-			requeuedCount: faker.number.int(),
-			failedCount: faker.number.int(),
-			...overrideResponse,
-		},
-		{
-			requeuedCount: faker.number.int(),
-			failedCount: faker.number.int(),
-			...overrideResponse,
-		},
-		{
-			requeuedCount: faker.number.int(),
-			failedCount: faker.number.int(),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<RequeueFailedMetadataResponse> = {},
+): RequeueFailedMetadataResponse => ({
+	requeuedCount: faker.number.int({ min: undefined, max: undefined }),
+	failedCount: faker.number.int({ min: undefined, max: undefined }),
+	...overrideResponse,
+});
 
 export const getGetMetadataFetchFailedTasksResponseMock =
 	(): FailedTaskDetailResponse[] =>
-		faker.helpers.arrayElement([
-			Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				taskId: faker.number.int(),
-				songId: faker.number.int(),
-				songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				reason: faker.helpers.arrayElement(
-					Object.values(MetadataFetchFailureReason),
-				),
-				errorMessage: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				failedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				retryCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			})),
-			Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				taskId: faker.number.int(),
-				songId: faker.number.int(),
-				songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				reason: faker.helpers.arrayElement(
-					Object.values(MetadataFetchFailureReason),
-				),
-				errorMessage: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				failedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				retryCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			})),
-			Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				taskId: faker.number.int(),
-				songId: faker.number.int(),
-				songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				reason: faker.helpers.arrayElement(
-					Object.values(MetadataFetchFailureReason),
-				),
-				errorMessage: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				failedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-				retryCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
-			})),
-		]);
+		Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			taskId: faker.number.int({ min: undefined, max: undefined }),
+			songId: faker.number.int({ min: undefined, max: undefined }),
+			songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			reason: faker.helpers.arrayElement(
+				Object.values(MetadataFetchFailureReason),
+			),
+			errorMessage: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			failedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			retryCount: faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				undefined,
+			]),
+		}));
 
 export const getPostMetadataFetchClearAllResponseMock = (
-	overrideResponse: Partial<Extract<ClearAllTasksResponse, object>> = {},
-): ClearAllTasksResponse =>
-	faker.helpers.arrayElement([
-		{
-			tasksDeleted: faker.number.int(),
-			metadataDeleted: faker.number.int(),
-			...overrideResponse,
-		},
-		{
-			tasksDeleted: faker.number.int(),
-			metadataDeleted: faker.number.int(),
-			...overrideResponse,
-		},
-		{
-			tasksDeleted: faker.number.int(),
-			metadataDeleted: faker.number.int(),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<ClearAllTasksResponse> = {},
+): ClearAllTasksResponse => ({
+	tasksDeleted: faker.number.int({ min: undefined, max: undefined }),
+	metadataDeleted: faker.number.int({ min: undefined, max: undefined }),
+	...overrideResponse,
+});
 
 export const getPostMetadataFetchBatchMockHandler = (
 	overrideResponse?:
@@ -1684,14 +1423,14 @@ export const getPostMetadataFetchBatchMockHandler = (
 ) => {
 	return http.post(
 		"*/metadata-fetch/batch",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostMetadataFetchBatchResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -1708,14 +1447,14 @@ export const getGetMetadataFetchSongSongIdMockHandler = (
 ) => {
 	return http.get(
 		"*/metadata-fetch/song/:songId",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetMetadataFetchSongSongIdResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -1732,14 +1471,14 @@ export const getPostMetadataFetchSongSongIdApplyMockHandler = (
 ) => {
 	return http.post(
 		"*/metadata-fetch/song/:songId/apply",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostMetadataFetchSongSongIdApplyResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -1756,14 +1495,14 @@ export const getGetMetadataFetchQueueStatusMockHandler = (
 ) => {
 	return http.get(
 		"*/metadata-fetch/queue-status",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetMetadataFetchQueueStatusResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -1782,14 +1521,14 @@ export const getPostMetadataFetchRequeueMockHandler = (
 ) => {
 	return http.post(
 		"*/metadata-fetch/requeue",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostMetadataFetchRequeueResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -1806,14 +1545,14 @@ export const getGetMetadataFetchFailedTasksMockHandler = (
 ) => {
 	return http.get(
 		"*/metadata-fetch/failed-tasks",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetMetadataFetchFailedTasksResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -1830,14 +1569,14 @@ export const getPostMetadataFetchClearAllMockHandler = (
 ) => {
 	return http.post(
 		"*/metadata-fetch/clear-all",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostMetadataFetchClearAllResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,

@@ -13,6 +13,7 @@ import {ContextMenuPortal} from "../context-menu-portal.tsx";
 import type {CollectionFilterMode, CollectionSchema, CollectionSchemaAction, CollectionSort} from "./collection-schema.tsx";
 import CollectionToolbar, {type CollectionToolbarProps, type CollectionView} from "./collection-toolbar.tsx";
 import {CollectionActionMenu} from "./collection-actions.tsx";
+import {getCollectionActionKey} from "./collection-action-utils.ts";
 import {createSelectionStore, SelectionStoreProvider} from "./selection-store.ts";
 import SelectionFloatingBar from "./selection-floating-bar.tsx";
 import CollectionGrid from "./views/collection-grid.tsx";
@@ -414,20 +415,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
         </Box>
 
         <ContextMenuPortal menuId={contextMenuId} content={() => {
-            let dividerCount = 0;
-            return contextMenuActionsRef.current.map((action) => {
-                // Handle divider
-                if ('divider' in action) {
-                    dividerCount++;
-                    return <div key={`divider-${dividerCount}`} className="context-menu-divider" />;
-                }
-                // Handle group
-                if ('group' in action) {
-                    return <div key={`group-${action.group}`} className="context-menu-group">{action.group}</div>;
-                }
-                // Handle action button
-                return <CollectionActionMenu key={`action-${action.name}`} action={action} selection={contextMenuSelectionRef.current} />;
-            });
+            return contextMenuActionsRef.current.map((action, index) =>
+                <CollectionActionMenu key={getCollectionActionKey(action, index)} action={action} selection={contextMenuSelectionRef.current} />);
         }} />
 
         <SelectionFloatingBar

@@ -33,26 +33,12 @@ import type {
 	ListPlayHistoryResponse,
 } from "../model";
 
-export type recordPlayHistoryResponse200TextPlain = {
+export type recordPlayHistoryResponse200 = {
 	data: CreatePlayHistoryResponse;
 	status: 200;
 };
 
-export type recordPlayHistoryResponse200ApplicationJson = {
-	data: CreatePlayHistoryResponse;
-	status: 200;
-};
-
-export type recordPlayHistoryResponse200TextJson = {
-	data: CreatePlayHistoryResponse;
-	status: 200;
-};
-
-export type recordPlayHistoryResponseSuccess = (
-	| recordPlayHistoryResponse200TextPlain
-	| recordPlayHistoryResponse200ApplicationJson
-	| recordPlayHistoryResponse200TextJson
-) & {
+export type recordPlayHistoryResponseSuccess = recordPlayHistoryResponse200 & {
 	headers: Headers;
 };
 
@@ -146,26 +132,12 @@ export const useRecordPlayHistory = <TError = unknown, TContext = unknown>(
 > => {
 	return useMutation(getRecordPlayHistoryMutationOptions(options), queryClient);
 };
-export type listPlayHistoryResponse200TextPlain = {
+export type listPlayHistoryResponse200 = {
 	data: ListPlayHistoryResponse;
 	status: 200;
 };
 
-export type listPlayHistoryResponse200ApplicationJson = {
-	data: ListPlayHistoryResponse;
-	status: 200;
-};
-
-export type listPlayHistoryResponse200TextJson = {
-	data: ListPlayHistoryResponse;
-	status: 200;
-};
-
-export type listPlayHistoryResponseSuccess = (
-	| listPlayHistoryResponse200TextPlain
-	| listPlayHistoryResponse200ApplicationJson
-	| listPlayHistoryResponse200TextJson
-) & {
+export type listPlayHistoryResponseSuccess = listPlayHistoryResponse200 & {
 	headers: Headers;
 };
 
@@ -363,154 +335,65 @@ export const invalidateListPlayHistory = async (
 };
 
 export const getRecordPlayHistoryResponseMock = (
-	overrideResponse: Partial<Extract<CreatePlayHistoryResponse, object>> = {},
-): CreatePlayHistoryResponse =>
-	faker.helpers.arrayElement([
-		{
-			created: faker.datatype.boolean(),
-			id: faker.number.int(),
-			songPlayCount: faker.number.int(),
-			...overrideResponse,
-		},
-		{
-			created: faker.datatype.boolean(),
-			id: faker.number.int(),
-			songPlayCount: faker.number.int(),
-			...overrideResponse,
-		},
-		{
-			created: faker.datatype.boolean(),
-			id: faker.number.int(),
-			songPlayCount: faker.number.int(),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<CreatePlayHistoryResponse> = {},
+): CreatePlayHistoryResponse => ({
+	created: faker.datatype.boolean(),
+	id: faker.number.int({ min: undefined, max: undefined }),
+	songPlayCount: faker.number.int({ min: undefined, max: undefined }),
+	...overrideResponse,
+});
 
 export const getListPlayHistoryResponseMock = (
-	overrideResponse: Partial<Extract<ListPlayHistoryResponse, object>> = {},
-): ListPlayHistoryResponse =>
-	faker.helpers.arrayElement([
-		{
-			items: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				songId: faker.number.int(),
-				songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				albumId: faker.number.int(),
-				albumName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				coverId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				artistId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				artistName: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				deviceId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				deviceName: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				playedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			})),
-			...overrideResponse,
-		},
-		{
-			items: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				songId: faker.number.int(),
-				songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				albumId: faker.number.int(),
-				albumName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				coverId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				artistId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				artistName: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				deviceId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				deviceName: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				playedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			})),
-			...overrideResponse,
-		},
-		{
-			items: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int(),
-				songId: faker.number.int(),
-				songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				albumId: faker.number.int(),
-				albumName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				coverId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				artistId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				artistName: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				deviceId: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([faker.number.int(), null]),
-					undefined,
-				]),
-				deviceName: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				playedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			})),
-			...overrideResponse,
-		},
-	]);
+	overrideResponse: Partial<ListPlayHistoryResponse> = {},
+): ListPlayHistoryResponse => ({
+	items: Array.from(
+		{ length: faker.number.int({ min: 1, max: 10 }) },
+		(_, i) => i + 1,
+	).map(() => ({
+		id: faker.number.int({ min: undefined, max: undefined }),
+		songId: faker.number.int({ min: undefined, max: undefined }),
+		songTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		albumId: faker.number.int({ min: undefined, max: undefined }),
+		albumName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		coverId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		artistId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		artistName: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		deviceId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		deviceName: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		playedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+	})),
+	...overrideResponse,
+});
 
 export const getRecordPlayHistoryMockHandler = (
 	overrideResponse?:
@@ -522,14 +405,14 @@ export const getRecordPlayHistoryMockHandler = (
 ) => {
 	return http.post(
 		"*/play-history",
-		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRecordPlayHistoryResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
@@ -546,14 +429,14 @@ export const getListPlayHistoryMockHandler = (
 ) => {
 	return http.get(
 		"*/play-history",
-		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
-			return HttpResponse.json(
+		async (info) => {
+			return new HttpResponse(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListPlayHistoryResponseMock(),
-				{ status: 200 },
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
 		options,
