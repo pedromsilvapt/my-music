@@ -93,7 +93,8 @@ export function usePlayHandler(
                 });
             } else {
                 // Already viewing the current queue - use normal navigation
-                goTo(rows[0].order);
+                // order is 1-indexed, goTo expects 0-indexed array position
+                goTo(rows[0].order - 1);
             }
         } else if (ev.ctrlKey) {
             playLast(rows);

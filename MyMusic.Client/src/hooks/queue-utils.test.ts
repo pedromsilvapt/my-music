@@ -286,6 +286,35 @@ describe('compactOrders', () => {
     });
 });
 
+describe('order to array index conversion', () => {
+    it('converts 1-indexed order to 0-indexed array position', () => {
+        const queue = [
+            makePlaylistSong(1, 1),
+            makePlaylistSong(2, 2),
+            makePlaylistSong(3, 3),
+        ];
+
+        // When navigating to a song with order N, use index N-1
+        // This is critical for goTo() and similar functions expecting array indices
+        const songWithOrder1 = queue[0];
+        const songWithOrder2 = queue[1];
+        const songWithOrder3 = queue[2];
+
+        expect(songWithOrder1.order).toBe(1);
+        expect(songWithOrder2.order).toBe(2);
+        expect(songWithOrder3.order).toBe(3);
+
+        // Verify: order N corresponds to array index N-1
+        expect(queue[songWithOrder1.order - 1]).toBe(songWithOrder1);
+        expect(queue[songWithOrder2.order - 1]).toBe(songWithOrder2);
+        expect(queue[songWithOrder3.order - 1]).toBe(songWithOrder3);
+
+        // Common bug: using order directly as index plays the wrong song
+        // queue[songWithOrder1.order] would give songWithOrder2 (wrong!)
+        expect(queue[songWithOrder1.order]).toBe(songWithOrder2);
+    });
+});
+
 describe('isPlaylistSong', () => {
     it('returns true for a playlist song with order property', () => {
         const playlistSong = makePlaylistSong(1, 1);
