@@ -109,7 +109,18 @@ export default function PlayerTimelineContainer() {
             }
             return;
         }
-        goForward();
+
+        const result = goForward();
+
+        if (result?.allRemainingSkipped) {
+            wavesurferRef.current?.stop();
+            setIsPlaying(false);
+            notifications.show({
+                title: 'Playback stopped',
+                message: 'All remaining songs in the queue are flagged to skip.',
+                autoClose: 4000,
+            });
+        }
     };
 
     if (!songUrl) return null;

@@ -2,17 +2,20 @@ import {useCallback, useMemo, useRef} from 'react';
 import {useSetQueueCurrentSong} from '../client/playlists';
 import type {GetPlaylistSongItem} from '../model';
 import {usePlaybackActions} from '../stores/playback-store';
-import {useQueue} from './use-queue';
+import {useQueue, useQueueMutations} from './use-queue';
 
-// useSetQueueCurrentSong returns a new object every render.
-// Wrap in useRef so callbacks don't need it in dependency arrays.
+export interface GoForwardResult {
+    skippedSongIds: number[];
+    allRemainingSkipped: boolean;
+}
+
 export function usePlayerNavigation() {
-    const {queue, currentSongId} = useQueue();
+    const {queue, currentSongId, queueId} = useQueue();
+    const {clearSkipNextPlayback} = useQueueMutations();
     const {setLoadingSong} = usePlaybackActions(s => ({setLoadingSong: s.setLoadingSong}));
     const setCurrentSongRef = useRef(useSetQueueCurrentSong({}));
 
-    const currentSong = queue.find((s) => s.id === currentSongId);
-    const currentIndex = currentSong?.order ?? -1;
+    const currentIndex = queue.findIndex((s) => s.id === currentSongId);
     const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
     const hasPrevious = currentIndex > 0;
 
@@ -21,23 +24,49 @@ export function usePlayerNavigation() {
 
         setLoadingSong(song, true);
         setCurrentSongRef.current.mutate({data: {currentSongId: song.id}});
-    }, [setLoadingSong]);
 
-    const goForward = useCallback(() => {
-        if (!hasNext) return;
-        const nextSong = queue.find((s) => s.order === currentIndex + 1);
-        navigateToSong(nextSong);
-    }, [hasNext, queue, currentIndex, navigateToSong]);
+        if (song.skipNextPlayback && queueId != null) {
+            clearSkipNextPlayback([song.id], queueId);
+        }
+    }, [setLoadingSong, queueId, clearSkipNextPlayback]);
+
+    const goForward = useCallback((): GoForwardResult | null => {
+        if (!hasNext) return null;
+
+        const skippedSongIds: number[] = [];
+        let nextSong: GetPlaylistSongItem | undefined;
+
+        for (let i = currentIndex + 1; i < queue.length; i++) {
+            const candidate = queue[i];
+            if (candidate.skipNextPlayback) {
+                skippedSongIds.push(candidate.id);
+            } else {
+                nextSong = candidate;
+                break;
+            }
+        }
+
+        const allRemainingSkipped = !nextSong;
+
+        if (nextSong) {
+            navigateToSong(nextSong);
+        }
+
+        if (skippedSongIds.length > 0 && queueId != null) {
+            clearSkipNextPlayback(skippedSongIds, queueId);
+        }
+
+        return {skippedSongIds, allRemainingSkipped};
+    }, [hasNext, queue, currentIndex, navigateToSong, queueId, clearSkipNextPlayback]);
 
     const goBackward = useCallback(() => {
         if (!hasPrevious) return;
-        const prevSong = queue.find((s) => s.order === currentIndex - 1);
-        navigateToSong(prevSong);
+        navigateToSong(queue[currentIndex - 1]);
     }, [hasPrevious, queue, currentIndex, navigateToSong]);
 
     const goTo = useCallback((index: number) => {
-        const song = queue.find((s) => s.order === index);
-        navigateToSong(song);
+        if (index < 0 || index >= queue.length) return;
+        navigateToSong(queue[index]);
     }, [queue, navigateToSong]);
 
     return useMemo(() => ({

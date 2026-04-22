@@ -106,7 +106,6 @@ function createPlaybackStore(): StoreApi<PlaybackStore> {
                 }),
             incrementPlaybackKey: () =>
                 set((state) => {
-                    console.log(state.playbackKey)
                     state.playbackKey += 1;
                 }),
             requestScrollToCurrent: () =>

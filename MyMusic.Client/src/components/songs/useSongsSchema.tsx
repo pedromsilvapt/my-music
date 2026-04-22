@@ -10,6 +10,7 @@ import {
     IconHeartFilled,
     IconMusic,
     IconPlayerPlayFilled,
+    IconPlayerSkipForward,
     IconPlayerStop,
     IconPlaylistAdd,
     IconX
@@ -50,7 +51,7 @@ export interface UseSongsSchemaOptions {
 }
 
 export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
-    const {play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback} = useQueueMutations();
+    const {play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback} = useQueueMutations();
     const {setIsFavorite} = usePlaybackActions(s => ({setIsFavorite: s.setIsFavorite}));
     const {queue, currentSongId: queueCurrentSongId} = useQueue();
     const {queues} = useQueueList();
@@ -136,6 +137,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                             : 'paused')
                         : null;
                     const stopAfterPlayback = isPlaylistSong(row) ? row.stopAfterPlayback : false;
+                    const skipNextPlayback = isPlaylistSong(row) ? row.skipNextPlayback : false;
 
                     return <SongTitle
                         title={row.title}
@@ -143,6 +145,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         isExplicit={row.isExplicit}
                         currentSongIndicator={currentSongIndicator}
                         stopAfterPlayback={stopAfterPlayback}
+                        skipNextPlayback={skipNextPlayback}
                     />;
                 },
                 width: '2fr',
@@ -304,6 +307,23 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         },
                     },
                     {
+                        name: "skip-next-playback",
+                        renderIcon: () => {
+                            const allHaveFlag = elems.every(s => isPlaylistSong(s) && s.skipNextPlayback);
+                            return allHaveFlag
+                                ? <IconPlayerSkipForward color="var(--mantine-color-yellow-5)"/>
+                                : <IconPlayerSkipForward style={{opacity: 0.4}}/>;
+                        },
+                        renderLabel: () => "Skip This Song",
+                        onClick: (songs: ListSongItem[]) => {
+                            if (!effectiveQueueId) return;
+                            const allHaveFlag = songs.every(s => isPlaylistSong(s) && s.skipNextPlayback);
+                            const newValue = !allHaveFlag;
+                            const songIds = songs.map(s => s.id);
+                            toggleSkipNextPlayback(songIds, newValue, effectiveQueueId);
+                        },
+                    },
+                    {
                         name: "shuffle",
                         renderIcon: () => <IconArrowsShuffle/>,
                         renderLabel: () => "Shuffle",
@@ -337,9 +357,10 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
         />,
         renderListTitle: (row, lineClamp) => {
             const stopAfterPlayback = 'stopAfterPlayback' in row ? (row as GetPlaylistSongItem).stopAfterPlayback : false;
+            const skipNextPlayback = 'skipNextPlayback' in row ? (row as GetPlaylistSongItem).skipNextPlayback : false;
             return <SongTitle title={row.title} songId={row.id} isExplicit={row.isExplicit}
-                              lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback}/>;
+                              lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
 }

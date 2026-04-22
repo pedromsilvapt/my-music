@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.PlaylistSongs;
 using MyMusic.Server.Controllers;
 using MyMusic.Server.DTO.Playlists;
 using NSubstitute;
@@ -15,7 +16,9 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        return new PlaylistsController(currentUser);
+        var playlistSongSkipService = new PlaylistSongSkipService();
+
+        return new PlaylistsController(currentUser, playlistSongSkipService);
     }
 
     private Song CreateSong(MusicDbContext db, long ownerId, string title)

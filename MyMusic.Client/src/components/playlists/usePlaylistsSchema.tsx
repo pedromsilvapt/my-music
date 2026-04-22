@@ -84,7 +84,6 @@ export function usePlaylistsSchema() {
                     renderIcon: () => <IconTrash/>,
                     renderLabel: () => "Delete",
                     onClick: (playlists: ListPlaylistItem[]) => {
-                        console.log(playlists);
                         for (const playlist of playlists) {
                             deletePlaylist.mutate({id: playlist.id});
                         }

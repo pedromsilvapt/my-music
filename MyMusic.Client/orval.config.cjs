@@ -38,7 +38,7 @@ module.exports = {
                             invalidates: ['getPlaylist'],
                         },
                         {
-                            onMutations: ['replaceQueue', 'addToQueue', 'removeFromQueue', 'reorderQueue', 'shuffleQueue', 'setQueueCurrentSong', 'setStopAfterPlayback', 'batchSetStopAfterPlayback'],
+                            onMutations: ['replaceQueue', 'addToQueue', 'removeFromQueue', 'reorderQueue', 'shuffleQueue', 'setQueueCurrentSong', 'setStopAfterPlayback', 'batchSetStopAfterPlayback', 'setSkipNextPlayback', 'batchSetSkipNextPlayback'],
                             invalidates: ['getQueue'],
                         },
                         {

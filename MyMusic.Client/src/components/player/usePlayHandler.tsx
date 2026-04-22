@@ -77,7 +77,7 @@ export function usePlayHandler(
         ev.stopPropagation();
 
         if (nowPlaying && rows.length === 1 && 'order' in rows[0]) {
-            const clickedSong = rows[0] as PlayableItem & { order: number };
+            const clickedSong = rows[0] as import('../../model').GetPlaylistSongItem;
 
             if (visibleQueueId && visibleQueueId !== currentQueueId) {
                 // Switch to the different queue and play the song in a single atomic request

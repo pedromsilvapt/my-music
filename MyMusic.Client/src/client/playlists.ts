@@ -29,6 +29,7 @@ import { HttpResponse, http } from "msw";
 import type {
 	AddSongsToPlaylistRequest,
 	AddToQueueRequest,
+	BatchSetSkipNextPlaybackRequest,
 	BatchSetStopAfterPlaybackRequest,
 	CreatePlaylistRequest,
 	CreatePlaylistResponse,
@@ -48,6 +49,7 @@ import type {
 	ReorderQueueRequest,
 	ReplaceQueueRequest,
 	SetCurrentSongRequest,
+	SetSkipNextPlaybackRequest,
 	SetStopAfterPlaybackRequest,
 	ShuffleQueueRequest,
 	UpdatePlaylistRequest,
@@ -1104,6 +1106,381 @@ export const useSetStopAfterPlayback = <TError = unknown, TContext = unknown>(
 	const backupQueryClient = useQueryClient();
 	return useMutation(
 		getSetStopAfterPlaybackMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
+export type batchSetStopAfterPlaybackResponse200 = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type batchSetStopAfterPlaybackResponseSuccess =
+	batchSetStopAfterPlaybackResponse200 & {
+		headers: Headers;
+	};
+
+export type batchSetStopAfterPlaybackResponse =
+	batchSetStopAfterPlaybackResponseSuccess;
+
+export const getBatchSetStopAfterPlaybackUrl = () => {
+	return `/api/playlists/songs/stop-after-playback/batch`;
+};
+
+export const batchSetStopAfterPlayback = async (
+	batchSetStopAfterPlaybackRequest: BatchSetStopAfterPlaybackRequest,
+	options?: RequestInit,
+): Promise<batchSetStopAfterPlaybackResponse> => {
+	const res = await fetch(getBatchSetStopAfterPlaybackUrl(), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(batchSetStopAfterPlaybackRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: batchSetStopAfterPlaybackResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as batchSetStopAfterPlaybackResponse;
+};
+
+export const getBatchSetStopAfterPlaybackMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+			TError,
+			{ data: BatchSetStopAfterPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+	TError,
+	{ data: BatchSetStopAfterPlaybackRequest },
+	TContext
+> => {
+	const mutationKey = ["batchSetStopAfterPlayback"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+		{ data: BatchSetStopAfterPlaybackRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return batchSetStopAfterPlayback(data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+		variables: { data: BatchSetStopAfterPlaybackRequest },
+		context: TContext,
+	) => {
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
+	};
+
+	return { mutationFn, onSuccess, ...mutationOptions };
+};
+
+export type BatchSetStopAfterPlaybackMutationResult = NonNullable<
+	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>
+>;
+export type BatchSetStopAfterPlaybackMutationBody =
+	BatchSetStopAfterPlaybackRequest;
+export type BatchSetStopAfterPlaybackMutationError = unknown;
+
+export const useBatchSetStopAfterPlayback = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+			TError,
+			{ data: BatchSetStopAfterPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
+	TError,
+	{ data: BatchSetStopAfterPlaybackRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getBatchSetStopAfterPlaybackMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
+export type setSkipNextPlaybackResponse200 = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type setSkipNextPlaybackResponseSuccess =
+	setSkipNextPlaybackResponse200 & {
+		headers: Headers;
+	};
+
+export type setSkipNextPlaybackResponse = setSkipNextPlaybackResponseSuccess;
+
+export const getSetSkipNextPlaybackUrl = (id: number, songId: number) => {
+	return `/api/playlists/${id}/songs/${songId}/skip-next-playback`;
+};
+
+export const setSkipNextPlayback = async (
+	id: number,
+	songId: number,
+	setSkipNextPlaybackRequest: SetSkipNextPlaybackRequest,
+	options?: RequestInit,
+): Promise<setSkipNextPlaybackResponse> => {
+	const res = await fetch(getSetSkipNextPlaybackUrl(id, songId), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(setSkipNextPlaybackRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: setSkipNextPlaybackResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as setSkipNextPlaybackResponse;
+};
+
+export const getSetSkipNextPlaybackMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof setSkipNextPlayback>>,
+			TError,
+			{ id: number; songId: number; data: SetSkipNextPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof setSkipNextPlayback>>,
+	TError,
+	{ id: number; songId: number; data: SetSkipNextPlaybackRequest },
+	TContext
+> => {
+	const mutationKey = ["setSkipNextPlayback"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof setSkipNextPlayback>>,
+		{ id: number; songId: number; data: SetSkipNextPlaybackRequest }
+	> = (props) => {
+		const { id, songId, data } = props ?? {};
+
+		return setSkipNextPlayback(id, songId, data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof setSkipNextPlayback>>,
+		variables: { id: number; songId: number; data: SetSkipNextPlaybackRequest },
+		context: TContext,
+	) => {
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
+	};
+
+	return { mutationFn, onSuccess, ...mutationOptions };
+};
+
+export type SetSkipNextPlaybackMutationResult = NonNullable<
+	Awaited<ReturnType<typeof setSkipNextPlayback>>
+>;
+export type SetSkipNextPlaybackMutationBody = SetSkipNextPlaybackRequest;
+export type SetSkipNextPlaybackMutationError = unknown;
+
+export const useSetSkipNextPlayback = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof setSkipNextPlayback>>,
+			TError,
+			{ id: number; songId: number; data: SetSkipNextPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof setSkipNextPlayback>>,
+	TError,
+	{ id: number; songId: number; data: SetSkipNextPlaybackRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getSetSkipNextPlaybackMutationOptions(
+			queryClient ?? backupQueryClient,
+			options,
+		),
+		queryClient,
+	);
+};
+export type batchSetSkipNextPlaybackResponse200 = {
+	data: GetPlaylistResponse;
+	status: 200;
+};
+
+export type batchSetSkipNextPlaybackResponseSuccess =
+	batchSetSkipNextPlaybackResponse200 & {
+		headers: Headers;
+	};
+
+export type batchSetSkipNextPlaybackResponse =
+	batchSetSkipNextPlaybackResponseSuccess;
+
+export const getBatchSetSkipNextPlaybackUrl = () => {
+	return `/api/playlists/songs/skip-next-playback/batch`;
+};
+
+export const batchSetSkipNextPlayback = async (
+	batchSetSkipNextPlaybackRequest: BatchSetSkipNextPlaybackRequest,
+	options?: RequestInit,
+): Promise<batchSetSkipNextPlaybackResponse> => {
+	const res = await fetch(getBatchSetSkipNextPlaybackUrl(), {
+		...options,
+		method: "PUT",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(batchSetSkipNextPlaybackRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: batchSetSkipNextPlaybackResponse["data"] = body
+		? JSON.parse(body)
+		: {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as batchSetSkipNextPlaybackResponse;
+};
+
+export const getBatchSetSkipNextPlaybackMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	queryClient: QueryClient,
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchSetSkipNextPlayback>>,
+			TError,
+			{ data: BatchSetSkipNextPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+): UseMutationOptions<
+	Awaited<ReturnType<typeof batchSetSkipNextPlayback>>,
+	TError,
+	{ data: BatchSetSkipNextPlaybackRequest },
+	TContext
+> => {
+	const mutationKey = ["batchSetSkipNextPlayback"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof batchSetSkipNextPlayback>>,
+		{ data: BatchSetSkipNextPlaybackRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return batchSetSkipNextPlayback(data, fetchOptions);
+	};
+
+	const onSuccess = (
+		data: Awaited<ReturnType<typeof batchSetSkipNextPlayback>>,
+		variables: { data: BatchSetSkipNextPlaybackRequest },
+		context: TContext,
+	) => {
+		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
+		mutationOptions?.onSuccess?.(data, variables, context);
+	};
+
+	return { mutationFn, onSuccess, ...mutationOptions };
+};
+
+export type BatchSetSkipNextPlaybackMutationResult = NonNullable<
+	Awaited<ReturnType<typeof batchSetSkipNextPlayback>>
+>;
+export type BatchSetSkipNextPlaybackMutationBody =
+	BatchSetSkipNextPlaybackRequest;
+export type BatchSetSkipNextPlaybackMutationError = unknown;
+
+export const useBatchSetSkipNextPlayback = <
+	TError = unknown,
+	TContext = unknown,
+>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof batchSetSkipNextPlayback>>,
+			TError,
+			{ data: BatchSetSkipNextPlaybackRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof batchSetSkipNextPlayback>>,
+	TError,
+	{ data: BatchSetSkipNextPlaybackRequest },
+	TContext
+> => {
+	const backupQueryClient = useQueryClient();
+	return useMutation(
+		getBatchSetSkipNextPlaybackMutationOptions(
 			queryClient ?? backupQueryClient,
 			options,
 		),
@@ -3504,133 +3881,6 @@ export const invalidateGetPlaylistFilterValues = async (
 	return queryClient;
 };
 
-export type batchSetStopAfterPlaybackResponse200 = {
-	data: GetPlaylistResponse;
-	status: 200;
-};
-
-export type batchSetStopAfterPlaybackResponseSuccess =
-	batchSetStopAfterPlaybackResponse200 & {
-		headers: Headers;
-	};
-
-export type batchSetStopAfterPlaybackResponse =
-	batchSetStopAfterPlaybackResponseSuccess;
-
-export const getBatchSetStopAfterPlaybackUrl = () => {
-	return `/api/playlists/songs/stop-after-playback/batch`;
-};
-
-export const batchSetStopAfterPlayback = async (
-	batchSetStopAfterPlaybackRequest: BatchSetStopAfterPlaybackRequest,
-	options?: RequestInit,
-): Promise<batchSetStopAfterPlaybackResponse> => {
-	const res = await fetch(getBatchSetStopAfterPlaybackUrl(), {
-		...options,
-		method: "PUT",
-		headers: { "Content-Type": "application/json", ...options?.headers },
-		body: JSON.stringify(batchSetStopAfterPlaybackRequest),
-	});
-
-	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-
-	const data: batchSetStopAfterPlaybackResponse["data"] = body
-		? JSON.parse(body)
-		: {};
-	return {
-		data,
-		status: res.status,
-		headers: res.headers,
-	} as batchSetStopAfterPlaybackResponse;
-};
-
-export const getBatchSetStopAfterPlaybackMutationOptions = <
-	TError = unknown,
-	TContext = unknown,
->(
-	queryClient: QueryClient,
-	options?: {
-		mutation?: UseMutationOptions<
-			Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
-			TError,
-			{ data: BatchSetStopAfterPlaybackRequest },
-			TContext
-		>;
-		fetch?: RequestInit;
-	},
-): UseMutationOptions<
-	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
-	TError,
-	{ data: BatchSetStopAfterPlaybackRequest },
-	TContext
-> => {
-	const mutationKey = ["batchSetStopAfterPlayback"];
-	const { mutation: mutationOptions, fetch: fetchOptions } = options
-		? options.mutation &&
-			"mutationKey" in options.mutation &&
-			options.mutation.mutationKey
-			? options
-			: { ...options, mutation: { ...options.mutation, mutationKey } }
-		: { mutation: { mutationKey }, fetch: undefined };
-
-	const mutationFn: MutationFunction<
-		Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
-		{ data: BatchSetStopAfterPlaybackRequest }
-	> = (props) => {
-		const { data } = props ?? {};
-
-		return batchSetStopAfterPlayback(data, fetchOptions);
-	};
-
-	const onSuccess = (
-		data: Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
-		variables: { data: BatchSetStopAfterPlaybackRequest },
-		context: TContext,
-	) => {
-		queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
-	};
-
-	return { mutationFn, onSuccess, ...mutationOptions };
-};
-
-export type BatchSetStopAfterPlaybackMutationResult = NonNullable<
-	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>
->;
-export type BatchSetStopAfterPlaybackMutationBody =
-	BatchSetStopAfterPlaybackRequest;
-export type BatchSetStopAfterPlaybackMutationError = unknown;
-
-export const useBatchSetStopAfterPlayback = <
-	TError = unknown,
-	TContext = unknown,
->(
-	options?: {
-		mutation?: UseMutationOptions<
-			Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
-			TError,
-			{ data: BatchSetStopAfterPlaybackRequest },
-			TContext
-		>;
-		fetch?: RequestInit;
-	},
-	queryClient?: QueryClient,
-): UseMutationResult<
-	Awaited<ReturnType<typeof batchSetStopAfterPlayback>>,
-	TError,
-	{ data: BatchSetStopAfterPlaybackRequest },
-	TContext
-> => {
-	const backupQueryClient = useQueryClient();
-	return useMutation(
-		getBatchSetStopAfterPlaybackMutationOptions(
-			queryClient ?? backupQueryClient,
-			options,
-		),
-		queryClient,
-	);
-};
-
 export const getListPlaylistsResponseMock = (
 	overrideResponse: Partial<ListPlaylistsResponse> = {},
 ): ListPlaylistsResponse => ({
@@ -3695,6 +3945,7 @@ export const getGetPlaylistResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -3803,6 +4054,7 @@ export const getAddSongsToPlaylistResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -3901,6 +4153,7 @@ export const getRemoveSongFromPlaylistResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -3999,6 +4252,304 @@ export const getSetStopAfterPlaybackResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
+
+export const getBatchSetStopAfterPlaybackResponseMock = (
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
+
+export const getSetSkipNextPlaybackResponseMock = (
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
+			id: faker.number.int({ min: undefined, max: undefined }),
+			cover: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			album: {
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			genres: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			year: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.number.int({ min: undefined, max: undefined }),
+					null,
+				]),
+				null,
+			]),
+			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int({ min: undefined, max: undefined }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			isFavorite: faker.datatype.boolean(),
+			isExplicit: faker.datatype.boolean(),
+			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			addedAt: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+		})),
+	},
+	...overrideResponse,
+});
+
+export const getBatchSetSkipNextPlaybackResponseMock = (
+	overrideResponse: Partial<GetPlaylistResponse> = {},
+): GetPlaylistResponse => ({
+	playlist: {
+		id: faker.number.int({ min: undefined, max: undefined }),
+		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
+		currentSongId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		songs: Array.from(
+			{ length: faker.number.int({ min: 1, max: 10 }) },
+			(_, i) => i + 1,
+		).map(() => ({
+			order: faker.number.int({ min: undefined, max: undefined }),
+			addedAtPlaylist: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					null,
+				]),
+				undefined,
+			]),
+			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4097,6 +4648,7 @@ export const getGetQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4195,6 +4747,7 @@ export const getReplaceQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4293,6 +4846,7 @@ export const getSetQueueCurrentSongByIdResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4391,6 +4945,7 @@ export const getSetQueueCurrentSongResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4489,6 +5044,7 @@ export const getAddToQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4587,6 +5143,7 @@ export const getRemoveFromQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4685,6 +5242,7 @@ export const getReorderQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4783,6 +5341,7 @@ export const getShuffleQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4881,6 +5440,7 @@ export const getGetFavoritesResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -4979,6 +5539,7 @@ export const getAddToFavoritesResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -5077,6 +5638,7 @@ export const getRemoveFromFavoritesResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -5197,6 +5759,7 @@ export const getCreateQueueResponseMock = (
 				undefined,
 			]),
 			stopAfterPlayback: faker.datatype.boolean(),
+			skipNextPlayback: faker.datatype.boolean(),
 			id: faker.number.int({ min: undefined, max: undefined }),
 			cover: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
@@ -5351,104 +5914,6 @@ export const getGetPlaylistFilterValuesResponseMock = (
 		{ length: faker.number.int({ min: 1, max: 10 }) },
 		(_, i) => i + 1,
 	).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-	...overrideResponse,
-});
-
-export const getBatchSetStopAfterPlaybackResponseMock = (
-	overrideResponse: Partial<GetPlaylistResponse> = {},
-): GetPlaylistResponse => ({
-	playlist: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		type: faker.helpers.arrayElement(Object.values(PlaylistType)),
-		currentSongId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		songs: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			order: faker.number.int({ min: undefined, max: undefined }),
-			addedAtPlaylist: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-			stopAfterPlayback: faker.datatype.boolean(),
-			id: faker.number.int({ min: undefined, max: undefined }),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.number.int({ min: undefined, max: undefined }),
-					null,
-				]),
-				null,
-			]),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			artists: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			})),
-			album: {
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			})),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.number.int({ min: undefined, max: undefined }),
-					null,
-				]),
-				null,
-			]),
-			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			devices: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				icon: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-				color: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
-					undefined,
-				]),
-			})),
-			isFavorite: faker.datatype.boolean(),
-			isExplicit: faker.datatype.boolean(),
-			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			addedAt: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.date.past().toISOString().slice(0, 19) + "Z",
-					null,
-				]),
-				undefined,
-			]),
-		})),
-	},
 	...overrideResponse,
 });
 
@@ -5633,6 +6098,78 @@ export const getSetStopAfterPlaybackMockHandler = (
 						? await overrideResponse(info)
 						: overrideResponse
 					: getSetStopAfterPlaybackResponseMock(),
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
+			);
+		},
+		options,
+	);
+};
+
+export const getBatchSetStopAfterPlaybackMockHandler = (
+	overrideResponse?:
+		| GetPlaylistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/songs/stop-after-playback/batch",
+		async (info) => {
+			return new HttpResponse(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getBatchSetStopAfterPlaybackResponseMock(),
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
+			);
+		},
+		options,
+	);
+};
+
+export const getSetSkipNextPlaybackMockHandler = (
+	overrideResponse?:
+		| GetPlaylistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/:id/songs/:songId/skip-next-playback",
+		async (info) => {
+			return new HttpResponse(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getSetSkipNextPlaybackResponseMock(),
+				{ status: 200, headers: { "Content-Type": "text/plain" } },
+			);
+		},
+		options,
+	);
+};
+
+export const getBatchSetSkipNextPlaybackMockHandler = (
+	overrideResponse?:
+		| GetPlaylistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.put>[1]>[0],
+		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.put(
+		"*/playlists/songs/skip-next-playback/batch",
+		async (info) => {
+			return new HttpResponse(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getBatchSetSkipNextPlaybackResponseMock(),
 				{ status: 200, headers: { "Content-Type": "text/plain" } },
 			);
 		},
@@ -6063,30 +6600,6 @@ export const getGetPlaylistFilterValuesMockHandler = (
 		options,
 	);
 };
-
-export const getBatchSetStopAfterPlaybackMockHandler = (
-	overrideResponse?:
-		| GetPlaylistResponse
-		| ((
-				info: Parameters<Parameters<typeof http.put>[1]>[0],
-		  ) => Promise<GetPlaylistResponse> | GetPlaylistResponse),
-	options?: RequestHandlerOptions,
-) => {
-	return http.put(
-		"*/playlists/songs/stop-after-playback/batch",
-		async (info) => {
-			return new HttpResponse(
-				overrideResponse !== undefined
-					? typeof overrideResponse === "function"
-						? await overrideResponse(info)
-						: overrideResponse
-					: getBatchSetStopAfterPlaybackResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
-			);
-		},
-		options,
-	);
-};
 export const getPlaylistsMock = () => [
 	getListPlaylistsMockHandler(),
 	getCreatePlaylistMockHandler(),
@@ -6096,6 +6609,9 @@ export const getPlaylistsMock = () => [
 	getAddSongsToPlaylistMockHandler(),
 	getRemoveSongFromPlaylistMockHandler(),
 	getSetStopAfterPlaybackMockHandler(),
+	getBatchSetStopAfterPlaybackMockHandler(),
+	getSetSkipNextPlaybackMockHandler(),
+	getBatchSetSkipNextPlaybackMockHandler(),
 	getManagePlaylistSongsMockHandler(),
 	getGetQueueMockHandler(),
 	getReplaceQueueMockHandler(),
@@ -6114,5 +6630,4 @@ export const getPlaylistsMock = () => [
 	getDeleteQueueMockHandler(),
 	getGetPlaylistFilterMetadataMockHandler(),
 	getGetPlaylistFilterValuesMockHandler(),
-	getBatchSetStopAfterPlaybackMockHandler(),
 ];

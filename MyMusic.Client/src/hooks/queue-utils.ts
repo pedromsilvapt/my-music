@@ -14,6 +14,7 @@ export function toPlaylistSong (song: PlayableItem, order: number): GetPlaylistS
         order,
         addedAtPlaylist: new Date().toISOString(),
         stopAfterPlayback: false,
+        skipNextPlayback: false,
     } as GetPlaylistSongItem;
 }
 

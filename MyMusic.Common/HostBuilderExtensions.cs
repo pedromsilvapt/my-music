@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
+using MyMusic.Common.Services.PlaylistSongs;
 
 namespace MyMusic.Common;
 
@@ -21,6 +22,7 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<IFileSystem, FileSystem>();
         builder.Services.AddScoped<IMusicService, MusicService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
+        builder.Services.AddScoped<IPlaylistSongSkipService, PlaylistSongSkipService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
         builder.Services.AddScoped<IWishlistService, WishlistService>();
         builder.Services.AddScoped<IPurchasesSearchService, PurchasesSearchService>();

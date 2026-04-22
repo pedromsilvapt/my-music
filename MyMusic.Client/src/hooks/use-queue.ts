@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from 'react';
 import {
     getGetQueueQueryKey,
     useAddToQueue,
+    useBatchSetSkipNextPlayback,
     useBatchSetStopAfterPlayback,
     useGetQueue,
     useRemoveFromQueue,
@@ -84,6 +85,7 @@ export function useQueueMutations () {
     const setCurrentSongRef = useRef(useSetQueueCurrentSong({}));
     const shuffleQueueRef = useRef(useShuffleQueue({}));
     const batchSetStopAfterPlaybackRef = useRef(useBatchSetStopAfterPlayback({}));
+    const batchSetSkipNextPlaybackRef = useRef(useBatchSetSkipNextPlayback({}));
 
     const setLoadingSong = useCallback((song: GetPlaylistSongItem) => {
         setLoadingSongAction(song, true);
@@ -401,9 +403,14 @@ export function useQueueMutations () {
 
             const songIdSet = new Set(songIds);
 
-            const optimisticQueue = queue.map((s) =>
-                songIdSet.has(s.id) ? { ...s, stopAfterPlayback } : s
-            );
+            const optimisticQueue = queue.map((s) => {
+                if (!songIdSet.has(s.id)) return s;
+                const updated = { ...s, stopAfterPlayback };
+                if (stopAfterPlayback) {
+                    updated.skipNextPlayback = false;
+                }
+                return updated;
+            });
 
             queryClient.setQueryData<QueueQueryData>(queryKey, {
                 data: {
@@ -431,6 +438,56 @@ export function useQueueMutations () {
         [queryClient]
     );
 
+    const toggleSkipNextPlayback = useCallback(
+        (songIds: number[], skipNextPlayback: boolean, queueId: number) => {
+            if (songIds.length === 0) return;
+
+            const { queryKey, previousData, songs: queue } = getQueueCache(queryClient);
+
+            const songIdSet = new Set(songIds);
+
+            const optimisticQueue = queue.map((s) => {
+                if (!songIdSet.has(s.id)) return s;
+                const updated = { ...s, skipNextPlayback };
+                if (skipNextPlayback) {
+                    updated.stopAfterPlayback = false;
+                }
+                return updated;
+            });
+
+            queryClient.setQueryData<QueueQueryData>(queryKey, {
+                data: {
+                    playlist: {
+                        ...previousData!.data.playlist,
+                        songs: optimisticQueue,
+                    },
+                },
+            });
+
+            batchSetSkipNextPlaybackRef.current.mutate(
+                { data: { playlistId: queueId, songIds, skipNextPlayback } },
+                {
+                    onError: () => {
+                        if (previousData) {
+                            queryClient.setQueryData<QueueQueryData>(queryKey, previousData);
+                        }
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({ queryKey });
+                    },
+                }
+            );
+        },
+        [queryClient]
+    );
+
+    const clearSkipNextPlayback = useCallback(
+        (songIds: number[], queueId: number) => {
+            toggleSkipNextPlayback(songIds, false, queueId);
+        },
+        [toggleSkipNextPlayback]
+    );
+
     return useMemo(() => ({
         play,
         playNext,
@@ -442,5 +499,7 @@ export function useQueueMutations () {
         updateCurrentSong,
         shuffleByIndices,
         toggleStopAfterPlayback,
-    }), [play, playNext, playLast, removeBySongIds, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices, toggleStopAfterPlayback]);
+        toggleSkipNextPlayback,
+        clearSkipNextPlayback,
+    }), [play, playNext, playLast, removeBySongIds, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, clearSkipNextPlayback]);
 }

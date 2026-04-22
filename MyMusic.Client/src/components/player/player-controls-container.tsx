@@ -1,3 +1,4 @@
+import {notifications} from '@mantine/notifications';
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerControls from './player-controls';
@@ -24,6 +25,18 @@ export default function PlayerControlsContainer() {
         }
     };
 
+    const handlePlayNext = () => {
+        const result = goForward();
+        if (result?.allRemainingSkipped) {
+            setIsPlaying(false);
+            notifications.show({
+                title: 'Playback stopped',
+                message: 'All remaining songs in the queue are flagged to skip.',
+                autoClose: 4000,
+            });
+        }
+    };
+
     return (
         <PlayerControls
             isPlaying={isPlaying}
@@ -31,7 +44,7 @@ export default function PlayerControlsContainer() {
             hasNext={hasNext}
             hasPrevious={hasPrevious}
             playPrevious={goBackward}
-            playNext={goForward}
+            playNext={handlePlayNext}
         />
     );
 }

@@ -14,5 +14,7 @@ public class PlaylistSong
 
     public bool StopAfterPlayback { get; set; }
 
+    public bool SkipNextPlayback { get; set; }
+
     public DateTime AddedAt { get; set; }
 }

@@ -5,6 +5,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.PlaylistSongs;
 using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Playlists;
 
@@ -12,7 +13,7 @@ namespace MyMusic.Server.Controllers;
 
 [ApiController]
 [Route("playlists")]
-public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
+public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipService playlistSongSkipService) : ControllerBase
 {
     [HttpGet(Name = "ListPlaylists")]
     public async Task<ListPlaylistsResponse> List(
@@ -245,6 +246,10 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         }
 
         playlistSong.StopAfterPlayback = request.StopAfterPlayback;
+        if (request.StopAfterPlayback)
+        {
+            playlistSong.SkipNextPlayback = false;
+        }
         playlistSong.Playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
 
@@ -273,10 +278,64 @@ public class PlaylistsController(ICurrentUser currentUser) : ControllerBase
         foreach (var ps in playlistSongs)
         {
             ps.StopAfterPlayback = request.StopAfterPlayback;
+            if (request.StopAfterPlayback)
+            {
+                ps.SkipNextPlayback = false;
+            }
         }
 
         playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
+
+        return await Get(request.PlaylistId, context, cancellationToken);
+    }
+
+    [HttpPut("{id:long}/songs/{songId:long}/skip-next-playback", Name = "SetSkipNextPlayback")]
+    public async Task<ActionResult<GetPlaylistResponse>> SetSkipNextPlayback(
+        [FromRoute] long id,
+        [FromRoute] long songId,
+        [FromBody] SetSkipNextPlaybackRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await playlistSongSkipService.SetSkipNextPlayback(context, id, songId, request.SkipNextPlayback, currentUser.Id, cancellationToken);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+
+        return await Get(id, context, cancellationToken);
+    }
+
+    [HttpPut("songs/skip-next-playback/batch", Name = "BatchSetSkipNextPlayback")]
+    public async Task<ActionResult<GetPlaylistResponse>> BatchSetSkipNextPlayback(
+        [FromBody] BatchSetSkipNextPlaybackRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await playlistSongSkipService.BatchSetSkipNextPlayback(context, request.PlaylistId, request.SongIds, request.SkipNextPlayback, currentUser.Id, cancellationToken);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
 
         return await Get(request.PlaylistId, context, cancellationToken);
     }

@@ -15,6 +15,7 @@ export interface GetPlaylistSongItem {
 	/** @nullable */
 	addedAtPlaylist?: string | null;
 	stopAfterPlayback: boolean;
+	skipNextPlayback: boolean;
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	id: number;
 	/**

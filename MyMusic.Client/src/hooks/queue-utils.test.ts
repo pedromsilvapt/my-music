@@ -16,6 +16,7 @@ function makePlaylistSong (id: number, order: number, stopAfterPlayback = false)
         order,
         addedAtPlaylist: '2025-01-01T00:00:00Z',
         stopAfterPlayback,
+        skipNextPlayback: false,
         cover: null,
         title: `Song ${id}`,
         artists: [],
