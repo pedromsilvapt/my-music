@@ -79,16 +79,18 @@ export default function NowPlayingPage() {
                 </Popover>
             </Group>
 
-            <Collection
-                stateKey="now-playing"
-                items={queue}
-                schema={songsSchema}
-                sortable={true}
-                onReorder={handleReorder}
-                onReorderBatch={handleReorderBatch}
-                scrollToSongId={visibleQueueCurrentSongId ?? undefined}
-                scrollRequestId={scrollToCurrentRequestId}
-            />
+            <div style={{flex: 1, minHeight: 0}}>
+                <Collection
+                    stateKey="now-playing"
+                    items={queue}
+                    schema={songsSchema}
+                    sortable={true}
+                    onReorder={handleReorder}
+                    onReorderBatch={handleReorderBatch}
+                    scrollToSongId={visibleQueueCurrentSongId ?? undefined}
+                    scrollRequestId={scrollToCurrentRequestId}
+                />
+            </div>
         </Stack>
     );
 }
