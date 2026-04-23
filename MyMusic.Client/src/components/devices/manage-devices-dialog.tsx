@@ -1,4 +1,4 @@
-import {Badge, Box, Button, Code, Collapse, Group, Modal, ScrollArea, SegmentedControl, Stack, Text} from "@mantine/core";
+import {Badge, Box, Button, Collapse, Group, Modal, ScrollArea, SegmentedControl, Stack, Text} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
@@ -9,6 +9,7 @@ import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListDeviceItem, ListSongItem} from "../../model";
 import DeviceBadge from "./device-badge.tsx";
+import ManageSongItem from "../common/manage-song-item.tsx";
 
 type DeviceSelection = "none" | "add" | "remove";
 
@@ -167,6 +168,7 @@ interface DeviceRowProps {
 function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onChange}: DeviceRowProps) {
     const deviceSongIdSet = new Set(device.songs.map(s => s.id));
     const deviceSongPathMap = new Map(device.songs.map(s => [s.id, s.path]));
+    const deviceSongSyncActionMap = new Map(device.songs.map(s => [s.id, s.syncAction]));
     const matchingCount = managedSongs.filter(s => deviceSongIdSet.has(s.id)).length;
 
     return (
@@ -206,17 +208,19 @@ function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onCha
                 </Group>
             </Group>
             <Collapse in={expanded}>
-                <Stack gap={2} pl="sm" pt={4}>
+                <Stack gap="xs" pl="sm" pt="xs">
                     {managedSongs.map(song => {
                         const isOnDevice = deviceSongIdSet.has(song.id);
                         const path = deviceSongPathMap.get(song.id);
+                        const syncAction = deviceSongSyncActionMap.get(song.id);
                         return (
-                            <Group key={song.id}>
-                                <Text size="xs" c={isOnDevice ? "green" : "dimmed"}>
-                                    {song.title} - {song.artists.map(a => a.name).join(', ')}
-                                </Text>
-                                {isOnDevice && path && <Code>{path}</Code>}
-                            </Group>
+                            <ManageSongItem
+                                key={song.id}
+                                song={song}
+                                isIncluded={isOnDevice}
+                                path={isOnDevice ? path : null}
+                                syncAction={isOnDevice ? syncAction : null}
+                            />
                         );
                     })}
                 </Stack>

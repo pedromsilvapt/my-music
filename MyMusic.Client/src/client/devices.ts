@@ -3855,6 +3855,13 @@ export const getGetDevicesResponseMock = (
 		).map(() => ({
 			id: faker.number.int({ min: undefined, max: undefined }),
 			path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			syncAction: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
 		})),
 		importOnPurchase: faker.helpers.arrayElement([
 			faker.datatype.boolean(),

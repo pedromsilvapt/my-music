@@ -9,4 +9,6 @@ export interface DeviceSongRef {
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	id: number;
 	path: string;
+	/** @nullable */
+	syncAction?: string | null;
 }

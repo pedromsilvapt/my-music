@@ -11,6 +11,7 @@ public record DeviceSongRef
 {
     public required long Id { get; init; }
     public required string Path { get; init; }
+    public string? SyncAction { get; init; }
 }
 
 public record ListDeviceItem

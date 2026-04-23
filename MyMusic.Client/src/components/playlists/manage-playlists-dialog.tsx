@@ -7,6 +7,7 @@ import {useListSongs} from "../../client/songs.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListPlaylistItem, ListSongItem, PlaylistAction, PlaylistSongAction} from "../../model";
+import ManageSongItem from "../common/manage-song-item.tsx";
 
 type PlaylistSelection = "none" | "add" | "remove";
 
@@ -292,17 +293,15 @@ function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps
                 </Group>
             </Group>
             <Collapse in={expanded}>
-                <Stack gap={2} pl="sm" pt={4}>
+                <Stack gap="xs" pl="sm" pt="xs">
                     {managedSongs.map(song => {
                         const isInPlaylist = playlistSongIdSet.has(song.id);
                         return (
-                            <Text
+                            <ManageSongItem
                                 key={song.id}
-                                size="xs"
-                                c={isInPlaylist ? "green" : "dimmed"}
-                            >
-                                {song.title} - {song.artists.map(a => a.name).join(', ')}
-                            </Text>
+                                song={song}
+                                isIncluded={isInPlaylist}
+                            />
                         );
                     })}
                 </Stack>

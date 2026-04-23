@@ -51,7 +51,7 @@ public class DevicesController(
         var songDeviceGroups = await context.SongDevices
             .Where(sd => devices.Select(d => d.Id).Contains(sd.DeviceId))
             .GroupBy(sd => sd.DeviceId)
-            .Select(g => new { DeviceId = g.Key, Count = g.Count(), SongRefs = g.Select(sd => new { sd.SongId, sd.DevicePath }).ToList() })
+            .Select(g => new { DeviceId = g.Key, Count = g.Count(), SongRefs = g.Select(sd => new { sd.SongId, sd.DevicePath, sd.SyncAction }).ToList() })
             .ToDictionaryAsync(x => x.DeviceId, x => x, cancellationToken);
 
         return new ListDevicesResponse
@@ -59,7 +59,7 @@ public class DevicesController(
             Devices = devices.Select(d =>
             {
                 var group = songDeviceGroups.GetValueOrDefault(d.Id);
-                var songs = group?.SongRefs.Select(sr => new DeviceSongRef { Id = sr.SongId!.Value, Path = sr.DevicePath }).ToList() ?? [];
+                var songs = group?.SongRefs.Select(sr => new DeviceSongRef { Id = sr.SongId!.Value, Path = sr.DevicePath, SyncAction = sr.SyncAction?.ToString() }).ToList() ?? [];
                 return ListDeviceItem.FromEntity(d, group?.Count ?? 0, songs);
             }).ToList(),
         };

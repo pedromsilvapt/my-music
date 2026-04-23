@@ -66,14 +66,26 @@
   "portsAttributes": {
     "80": {
       "label": "HTTP",
-      "onAutoForward": "silent"
+      "onAutoForward": "silent",
+      "elevateIfNeeded": false,
+      "requireLocalPort": false,
+      "protocol": "http"
     },
     "4096": {
       "label": "Open Code",
-      "onAutoForward": "silent"
+      "onAutoForward": "silent",
+      "elevateIfNeeded": false,
+      "requireLocalPort": false,
+      "protocol": "http"
     }
   },
-  "otherPortsAttributes": { "onAutoForward": "ignore" }
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore",
+    "label": "Application",
+    "elevateIfNeeded": false,
+    "protocol": "http",
+    "requireLocalPort": false
+  }
   // "runServices": ["postgres"],
   // "dockerComposeFile": "../docker-compose.yml",
   // "service": "devcontainer",
