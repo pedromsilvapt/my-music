@@ -554,7 +554,9 @@ public class SongsController(
             {
                 Id = a.Id,
                 Name = a.Name,
+                ArtistId = a.ArtistId,
                 ArtistName = a.Artist?.Name,
+                CoverId = a.CoverId,
             }).ToList(),
         };
     }
@@ -624,6 +626,9 @@ public class SongsController(
             {
                 Id = a.Id,
                 Name = a.Name,
+                CoverId = a.PhotoId,
+                AlbumCount = a.AlbumsCount,
+                SongCount = a.SongsCount,
             }).ToList(),
         };
     }

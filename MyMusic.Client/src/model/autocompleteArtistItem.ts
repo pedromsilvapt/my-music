@@ -9,4 +9,13 @@ export interface AutocompleteArtistItem {
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	id: number;
 	name: string;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	coverId?: number | null;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	albumCount?: number;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	songCount?: number;
 }

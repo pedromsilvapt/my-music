@@ -4,6 +4,10 @@ import type {
     SongMetadataDiff,
 } from "../../model/songMetadataDiff";
 import { convertArtworkUrlToBase64 } from "../../utils/artwork";
+import type { AutocompleteItem } from "./autocomplete-field";
+import type { TagsAutocompleteItem } from "./tags-autocomplete-field";
+
+export { type AutocompleteItem, type TagsAutocompleteItem };
 
 export interface SongEditMetadata {
     title?: string;
@@ -29,17 +33,6 @@ export interface FieldCheckboxes {
     albumArtist: boolean;
     artists: boolean;
     genres: boolean;
-}
-
-export interface AutocompleteItem {
-    id: number;
-    name: string;
-    subtitle?: string;
-}
-
-export interface TagsAutocompleteItem {
-    id: number;
-    name: string;
 }
 
 export interface FormState {

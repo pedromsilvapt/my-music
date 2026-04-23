@@ -20,6 +20,7 @@ export interface AutocompleteItem {
     name: string;
     subtitle?: string;
     coverId?: number | null;
+    artistId?: number | null;
     artistName?: string | null;
 }
 
@@ -87,15 +88,18 @@ export default function AutocompleteField({
     const hasChanged = diffMode && originalValue && value &&
         (originalValue.id !== value?.id || originalValue.name !== value?.name);
 
-    const itemsRecord = useMemo(() => {
-        const record: Record<string, AutocompleteItem> = {};
+    const itemsById = useMemo(() => {
+        const map = new Map<number, AutocompleteItem>();
         for (const item of items) {
-            record[item.name] = item;
+            map.set(item.id, item);
         }
-        return record;
+        return map;
     }, [items]);
 
-    const data = useMemo(() => items.map(item => item.name), [items]);
+    const data = useMemo(() => 
+        items.map(item => ({ value: String(item.id), label: item.name })),
+        [items]
+    );
 
     const handleBlur = () => {
         if (query === "") {
@@ -111,7 +115,9 @@ export default function AutocompleteField({
     };
 
     const renderOption: AutocompleteProps['renderOption'] = ({option}) => {
-        const item = itemsRecord[option.value];
+        const id = parseInt(option.value, 10);
+        const item = itemsById.get(id);
+        if (!item) return null;
         return (
             <Group gap="sm" wrap="nowrap">
                 <Artwork
@@ -127,6 +133,19 @@ export default function AutocompleteField({
                 </div>
             </Group>
         );
+    };
+
+    const handleOptionSubmit = (val: string) => {
+        const id = parseInt(val, 10);
+        if (isNaN(id)) {
+            setQuery(val);
+            return;
+        }
+        const item = itemsById.get(id);
+        if (item) {
+            setQuery(item.name);
+            onChange(item);
+        }
     };
 
     if (diffMode && originalDisplayValue != null) {
@@ -167,13 +186,7 @@ export default function AutocompleteField({
                                 value={query}
                                 onChange={setQuery}
                                 onBlur={handleBlur}
-                                onOptionSubmit={(val) => {
-                                    setQuery(val);
-                                    const existingItem = items.find(item => item.name === val);
-                                    if (existingItem) {
-                                        onChange(existingItem);
-                                    }
-                                }}
+                                onOptionSubmit={handleOptionSubmit}
                                 comboboxProps={{withinPortal: false}}
                                 data={data}
                                 disabled={disabled || !isChecked}
@@ -206,13 +219,7 @@ export default function AutocompleteField({
                 value={query}
                 onChange={setQuery}
                 onBlur={handleBlur}
-                onOptionSubmit={(val) => {
-                    setQuery(val);
-                    const existingItem = items.find(item => item.name === val);
-                    if (existingItem) {
-                        onChange(existingItem);
-                    }
-                }}
+                onOptionSubmit={handleOptionSubmit}
                 comboboxProps={{withinPortal: false}}
                 data={data}
                 disabled={disabled}

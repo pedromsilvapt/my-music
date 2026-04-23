@@ -120,6 +120,26 @@ export default function SongEditorContextModal({
     const isMultiSong = songs.length > 1;
     const currentState = currentIndex < songs.length ? editStates.get(songs[currentIndex]?.id) : null;
 
+    const albumArtistMismatch = useMemo(() => {
+        if (!currentState) return null;
+        
+        const songArtists = currentState.form.artists;
+        const albumArtist = currentState.form.albumArtist;
+        
+        if (!albumArtist?.name) return null;
+        if (songArtists.length === 0) return null;
+        
+        let isMatch: boolean;
+        
+        if (albumArtist.id > 0) {
+            isMatch = songArtists.some(a => a.id === albumArtist.id && a.id > 0);
+        } else {
+            isMatch = songArtists.some(a => a.id <= 0 && a.name === albumArtist.name);
+        }
+        
+        return isMatch ? null : albumArtist.name;
+    }, [currentState]);
+
     const modifiedSongIds = useMemo(() => {
         const modified = new Set<number>();
         editStates.forEach((state, id) => {
@@ -373,12 +393,33 @@ export default function SongEditorContextModal({
             id: a.id,
             name: a.name,
             subtitle: a.artistName ?? undefined,
+            artistId: a.artistId,
+            artistName: a.artistName,
+            coverId: a.coverId,
         }));
     }, []);
 
     const searchArtists = useCallback(async (query: string): Promise<TagsAutocompleteItem[]> => {
         const response = await autocompleteArtists({ search: query });
-        return response.data.artists.map((a) => ({ id: a.id, name: a.name }));
+        return response.data.artists.map((a) => ({
+            id: a.id,
+            name: a.name,
+            coverId: a.coverId,
+            albumCount: a.albumCount,
+            songCount: a.songCount,
+        }));
+    }, []);
+
+    const searchArtistsForAutocomplete = useCallback(async (query: string): Promise<AutocompleteItem[]> => {
+        const response = await autocompleteArtists({ search: query });
+        return response.data.artists.map((a) => ({
+            id: a.id,
+            name: a.name,
+            coverId: a.coverId,
+            subtitle: a.albumCount && a.songCount 
+                ? `${a.albumCount} albums, ${a.songCount} songs`
+                : undefined,
+        }));
     }, []);
 
     const searchGenres = useCallback(async (query: string): Promise<TagsAutocompleteItem[]> => {
@@ -424,6 +465,7 @@ export default function SongEditorContextModal({
                     newValue: {
                         id: form.album.id > 0 ? form.album.id : null,
                         name: form.album.id < 0 ? form.album.name : null,
+                        artistName: form.album.id < 0 ? form.albumArtist?.name : null,
                     },
                 };
             }
@@ -482,6 +524,7 @@ export default function SongEditorContextModal({
                 newValue: {
                     id: form.album.id > 0 ? form.album.id : null,
                     name: form.album.id < 0 ? form.album.name : null,
+                    artistName: form.album.id < 0 ? form.albumArtist?.name : null,
                 },
             };
         }
@@ -548,6 +591,7 @@ export default function SongEditorContextModal({
                     newValue: {
                         id: form.album.id > 0 ? form.album.id : null,
                         name: form.album.id < 0 ? form.album.name : null,
+                        artistName: form.album.id < 0 ? form.albumArtist?.name : null,
                     },
                 };
             }
@@ -641,7 +685,44 @@ export default function SongEditorContextModal({
         });
     };
 
+    const handleAlbumChange = useCallback((item: AutocompleteItem | string | null) => {
+        if (item && typeof item !== 'string') {
+            const albumUpdate = {
+                id: item.id,
+                name: item.name,
+                artistId: item.artistId,
+                artistName: item.artistName,
+                coverId: item.coverId
+            };
+            const albumArtistUpdate = item.artistId && item.artistName
+                ? {id: item.artistId, name: item.artistName}
+                : undefined;
+            handleFormChange({
+                album: albumUpdate,
+                ...(albumArtistUpdate !== undefined && {albumArtist: albumArtistUpdate})
+            });
+        } else {
+            handleFormChange({album: {id: 0, name: ""}});
+        }
+    }, [handleFormChange]);
+
     const hasMetadata = currentState?.metadata != null;
+    
+    const isAlbumArtistDisabled = useMemo(() => {
+        if (!currentState) return true;
+        
+        if (hasMetadata && !!currentState.metadata?.albumArtist && !currentState.checkboxes.albumArtist) {
+            return true;
+        }
+        
+        const albumId = currentState.form.album?.id;
+        if (albumId && albumId > 0) {
+            return true;
+        }
+        
+        return false;
+    }, [hasMetadata, currentState]);
+    
     const metadataFieldCount = useMemo(() => {
         if (!currentState?.metadata) return 0;
         return Object.values(currentState.metadata).filter(v => v != null).length;
@@ -863,8 +944,9 @@ export default function SongEditorContextModal({
                                 label="Album"
                                 placeholder="Album name"
                                 value={currentState.form.album?.name ? {id: currentState.form.album.id, name: currentState.form.album.name} : null}
-                                onChange={(item) => handleFormChange({album: item && typeof item !== 'string' ? {id: item.id, name: item.name} : {id: 0, name: ""}})}
+                                onChange={handleAlbumChange}
                                 onSearch={searchAlbums}
+                                showArtwork
                                 disabled={hasMetadata && !!currentState.metadata?.album && !currentState.checkboxes.album}
                                 diffMode={hasMetadata && !!currentState.metadata?.album}
                                 originalValue={currentState.song.album ? { id: currentState.song.album.id, name: currentState.song.album.name } : null}
@@ -882,8 +964,10 @@ export default function SongEditorContextModal({
                                 placeholder="Album artist"
                                 value={currentState.form.albumArtist?.name ? {id: currentState.form.albumArtist.id, name: currentState.form.albumArtist.name} : null}
                                 onChange={(item) => handleFormChange({albumArtist: item && typeof item !== 'string' ? {id: item.id, name: item.name} : {id: 0, name: ""}})}
-                                onSearch={searchAlbums}
-                                disabled={hasMetadata && !!currentState.metadata?.albumArtist && !currentState.checkboxes.albumArtist}
+                                onSearch={searchArtistsForAutocomplete}
+                                showArtwork
+                                error={albumArtistMismatch ? `Not in the song's artists list` : undefined}
+                                disabled={isAlbumArtistDisabled}
                                 diffMode={hasMetadata && !!currentState.metadata?.albumArtist}
                                 originalValue={currentState.song.album?.artist ? { id: currentState.song.album.artist.id, name: currentState.song.album.artist.name } : null}
                                 isChecked={currentState.checkboxes.albumArtist}
@@ -901,6 +985,7 @@ export default function SongEditorContextModal({
                                 onChange={(items) => handleFormChange({artists: items})}
                                 onSearch={searchArtists}
                                 placeholder="Add artist..."
+                                showArtwork
                                 disabled={hasMetadata && !!currentState.metadata?.artists && !currentState.checkboxes.artists}
                                 diffMode={hasMetadata && !!currentState.metadata?.artists}
                                 originalValue={currentState.song.artists.map(a => ({ id: a.id, name: a.name }))}

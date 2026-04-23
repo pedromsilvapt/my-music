@@ -9,6 +9,16 @@ export interface AutocompleteAlbumItem {
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	id: number;
 	name: string;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	artistId?: number | null;
 	/** @nullable */
 	artistName?: string | null;
+	/**
+	 * @nullable
+	 * @pattern ^-?(?:0|[1-9]\d*)$
+	 */
+	coverId?: number | null;
 }

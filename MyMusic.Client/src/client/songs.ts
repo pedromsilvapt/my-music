@@ -3666,9 +3666,23 @@ export const getAutocompleteAlbumsResponseMock = (
 	).map(() => ({
 		id: faker.number.int({ min: undefined, max: undefined }),
 		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		artistId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
 		artistName: faker.helpers.arrayElement([
 			faker.helpers.arrayElement([
 				faker.string.alpha({ length: { min: 10, max: 20 } }),
+				null,
+			]),
+			undefined,
+		]),
+		coverId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
 				null,
 			]),
 			undefined,
@@ -3720,6 +3734,21 @@ export const getAutocompleteArtistsResponseMock = (
 	).map(() => ({
 		id: faker.number.int({ min: undefined, max: undefined }),
 		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+		coverId: faker.helpers.arrayElement([
+			faker.helpers.arrayElement([
+				faker.number.int({ min: undefined, max: undefined }),
+				null,
+			]),
+			undefined,
+		]),
+		albumCount: faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			undefined,
+		]),
+		songCount: faker.helpers.arrayElement([
+			faker.number.int({ min: undefined, max: undefined }),
+			undefined,
+		]),
 	})),
 	...overrideResponse,
 });

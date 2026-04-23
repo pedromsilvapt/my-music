@@ -9,7 +9,9 @@ public record AutocompleteAlbumItem
 {
     public required long Id { get; set; }
     public required string Name { get; set; }
+    public long? ArtistId { get; set; }
     public string? ArtistName { get; set; }
+    public long? CoverId { get; set; }
 }
 
 public record AutocompleteArtistsResponse
@@ -21,6 +23,9 @@ public record AutocompleteArtistItem
 {
     public required long Id { get; set; }
     public required string Name { get; set; }
+    public long? CoverId { get; set; }
+    public int AlbumCount { get; set; }
+    public int SongCount { get; set; }
 }
 
 public record AutocompleteGenresResponse
