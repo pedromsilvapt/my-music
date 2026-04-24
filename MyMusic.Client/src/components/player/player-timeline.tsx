@@ -12,10 +12,11 @@ export interface PlayerTimelineProps {
     setIsPlaying: (isPlaying: boolean) => void;
     onLoad: (duration: number) => void;
     onFinish: () => void;
+    onError: (error: Error) => void;
 }
 
 export default function PlayerTimeline(props: PlayerTimelineProps) {
-    const {song, time, duration, setTime, setIsPlaying, onLoad, onFinish} = props;
+    const {song, time, duration, setTime, setIsPlaying, onLoad, onFinish, onError} = props;
     const theme = useMantineTheme();
     const wavesurferRef = useWavesurferRef();
 
@@ -28,6 +29,11 @@ export default function PlayerTimeline(props: PlayerTimelineProps) {
     const onTimeUpdate = useCallback((_: WaveSurfer, newTime: number) => {
         setTime(newTime);
     }, [setTime]);
+
+    const handleError = useCallback((_: WaveSurfer, error: Error) => {
+        console.error('[PlayerTimeline] WaveSurfer error:', error);
+        onError(error);
+    }, [onError]);
 
     const timeDisplay = useMemo(() => {
         const minutes = Math.floor(time / 60).toString().padStart(2, "0");
@@ -69,6 +75,7 @@ export default function PlayerTimeline(props: PlayerTimelineProps) {
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
                 onFinish={() => onFinish()}
+                onError={handleError}
             />
         </Box>
         <Text>{durationDisplay}</Text>

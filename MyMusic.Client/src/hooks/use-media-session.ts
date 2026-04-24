@@ -120,9 +120,17 @@ export function useMediaSession () {
             return;
         }
 
-        const handlePlay = () => {
+        const handlePlay = async () => {
             setStoreIsPlayingRef.current(true);
-            wavesurferRef.current?.play();
+            try {
+                await wavesurferRef.current?.play();
+            } catch (err) {
+                if (err instanceof DOMException && err.name === 'NotAllowedError') {
+                    console.warn('[MediaSession] play() blocked from media session handler');
+                } else {
+                    console.error('[MediaSession] play() error:', err);
+                }
+            }
         };
 
         const handlePause = () => {

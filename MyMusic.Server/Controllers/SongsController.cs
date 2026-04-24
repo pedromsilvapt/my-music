@@ -104,15 +104,35 @@ public class SongsController(
     public async Task<IActionResult> Download(MusicDbContext context, IFileSystem fileSystem, long id,
         CancellationToken cancellationToken)
     {
-        var songs = await context.Songs
-            .SingleAsync(s => s.Id == id && s.OwnerId == currentUser.Id, cancellationToken);
+        var song = await context.Songs
+            .SingleOrDefaultAsync(s => s.Id == id && s.OwnerId == currentUser.Id, cancellationToken);
 
-        var fileStream = fileSystem.File.OpenRead(songs.RepositoryPath);
+        if (song == null)
+        {
+            logger.LogWarning("Song download requested but not found: SongId={SongId}, UserId={UserId}", id, currentUser.Id);
+            return NotFound($"Song with id {id} not found");
+        }
 
-        new FileExtensionContentTypeProvider().TryGetContentType(songs.RepositoryPath, out var contentType);
+        if (!fileSystem.File.Exists(song.RepositoryPath))
+        {
+            logger.LogError("Song file not found on disk: SongId={SongId}, RepositoryPath={RepositoryPath}", song.Id, song.RepositoryPath);
+            return NotFound($"Audio file not found on disk for song {id}");
+        }
 
-        return File(fileStream, contentType ?? "audio/mpeg", enableRangeProcessing: true,
-            fileDownloadName: fileSystem.Path.GetFileName(songs.RepositoryPath));
+        try
+        {
+            var fileStream = fileSystem.File.OpenRead(song.RepositoryPath);
+
+            new FileExtensionContentTypeProvider().TryGetContentType(song.RepositoryPath, out var contentType);
+
+            return File(fileStream, contentType ?? "audio/mpeg", enableRangeProcessing: true,
+                fileDownloadName: fileSystem.Path.GetFileName(song.RepositoryPath));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to open song file: SongId={SongId}, RepositoryPath={RepositoryPath}", song.Id, song.RepositoryPath);
+            return StatusCode(500, "Failed to read audio file");
+        }
     }
 
     [HttpPost("import", Name = "ImportSongs")]

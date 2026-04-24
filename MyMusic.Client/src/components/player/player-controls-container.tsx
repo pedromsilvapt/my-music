@@ -14,11 +14,25 @@ export default function PlayerControlsContainer() {
     }));
     const {goForward, goBackward, hasNext, hasPrevious} = usePlayerNavigation();
 
-    const setIsPlaying = (playing: boolean) => {
+    const setIsPlaying = async (playing: boolean) => {
         setStoreIsPlaying(playing);
         if (wavesurferRef.current) {
             if (playing) {
-                wavesurferRef.current.play();
+                try {
+                    await wavesurferRef.current.play();
+                } catch (err) {
+                    if (err instanceof DOMException && err.name === 'NotAllowedError') {
+                        console.warn('[PlayerControlsContainer] play() blocked - user interaction required');
+                        notifications.show({
+                            title: 'Playback blocked',
+                            message: 'Browser requires user interaction to play audio',
+                            color: 'yellow',
+                            autoClose: 4000,
+                        });
+                    } else {
+                        console.error('[PlayerControlsContainer] play() error:', err);
+                    }
+                }
             } else {
                 wavesurferRef.current.pause();
             }
