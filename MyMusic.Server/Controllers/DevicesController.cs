@@ -4,10 +4,13 @@ using System.IO.Hashing;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Filters;
+using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
+using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Devices;
 using MyMusic.Server.DTO.Filters;
@@ -23,6 +26,7 @@ public class DevicesController(
     MusicDbContext context,
     IMusicService musicService,
     IConfiguration configuration,
+    IOptions<Config> config,
     ILogger<MusicImportJob> importJobLogger,
     IFileSystem fileSystem) : ControllerBase
 {
@@ -724,7 +728,7 @@ public class DevicesController(
         // Both: Remove only songs with SyncAction == null not in validFilePaths
         // Down: Don't remove anything (server is not modified)
         List<SongDevice> orphanedSongDevices;
-        
+
         if (direction == "both")
         {
             orphanedSongDevices = await context.SongDevices
@@ -885,12 +889,13 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
+        var lookupPath = request.PreviousDevicePath ?? request.DevicePath;
         var songDevice = await context.SongDevices
-            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == request.DevicePath, cancellationToken);
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == lookupPath, cancellationToken);
 
         if (songDevice == null)
         {
-            throw new Exception($"SongDevice not found for device {deviceId} and path {request.DevicePath}");
+            throw new Exception($"SongDevice not found for device {deviceId} and path {lookupPath}");
         }
 
         if (songDevice.SyncAction == SongSyncAction.Remove)
@@ -899,6 +904,11 @@ public class DevicesController(
         }
         else
         {
+            if (request.PreviousDevicePath != null)
+            {
+                songDevice.DevicePath = request.DevicePath;
+            }
+
             songDevice.SyncAction = null;
             songDevice.LastSyncedModifiedAt = request.ModifiedAt ?? DateTime.UtcNow;
         }
@@ -923,9 +933,6 @@ public class DevicesController(
             throw new Exception($"Device not found with id {deviceId}");
         }
 
-        const int SyncTimestampToleranceSeconds = 5;
-        var syncTimestampTolerance = TimeSpan.FromSeconds(SyncTimestampToleranceSeconds);
-
         var existingSongDevices = await context.SongDevices
             .Include(sd => sd.Song)
             .Where(sd => sd.DeviceId == deviceId)
@@ -940,14 +947,14 @@ public class DevicesController(
         {
             var existingSongDevice = existingSongDevices.FirstOrDefault(sd => sd.DevicePath == clientFile.Path);
 
+            Console.WriteLine("Creating File: {0} (Created At: {1} - {2})", clientFile.Path, clientFile.CreatedAt,
+                clientFile.CreatedAt.Ticks);
+
             if (existingSongDevice == null)
             {
-                toCreate.Add(new SyncFileInfoItem
+                toCreate.Add(clientFile with
                 {
-                    Path = clientFile.Path,
-                    ModifiedAt = clientFile.ModifiedAt,
-                    CreatedAt = clientFile.CreatedAt,
-                    Reason = $"No matching SongDevice found on server for path '{clientFile.Path}'",
+                    Reason = $"No matching SongDevice found on server for path '{clientFile.Path}'"
                 });
             }
             else if (existingSongDevice.Song == null)
@@ -957,20 +964,14 @@ public class DevicesController(
             }
             else if (request.Force)
             {
-                toUpdate.Add(new SyncFileInfoItem
-                {
-                    Path = clientFile.Path,
-                    ModifiedAt = clientFile.ModifiedAt,
-                    CreatedAt = clientFile.CreatedAt,
-                    Reason = "Force flag was set",
-                });
+                toUpdate.Add(clientFile with { Reason = "Force flag was set" });
             }
             else if (existingSongDevice.LastSyncedModifiedAt == null)
             {
                 if (existingSongDevice.SyncAction == SongSyncAction.Download)
                 {
                     var referenceTime = existingSongDevice.AddedAt;
-                    if (IsNewerThan(existingSongDevice.Song.ModifiedAt, referenceTime, syncTimestampTolerance))
+                    if (IsNewerThan(existingSongDevice.Song.ModifiedAt, referenceTime))
                     {
                         potentialConflicts.Add(new SyncPotentialConflictItem
                         {
@@ -996,18 +997,12 @@ public class DevicesController(
                 }
                 else
                 {
-                    toUpdate.Add(new SyncFileInfoItem
-                    {
-                        Path = clientFile.Path,
-                        ModifiedAt = clientFile.ModifiedAt,
-                        CreatedAt = clientFile.CreatedAt,
-                        Reason = "Local file exists with no sync timestamp",
-                    });
+                    toUpdate.Add(clientFile with { Reason = "Local file exists with no sync timestamp" });
                 }
             }
-            else if (IsNewerThan(clientFile.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value, syncTimestampTolerance))
+            else if (IsNewerThan(clientFile.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
             {
-                if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value, syncTimestampTolerance))
+                if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
                 {
                     potentialConflicts.Add(new SyncPotentialConflictItem
                     {
@@ -1022,16 +1017,10 @@ public class DevicesController(
                 }
                 else
                 {
-                    toUpdate.Add(new SyncFileInfoItem
-                    {
-                        Path = clientFile.Path,
-                        ModifiedAt = clientFile.ModifiedAt,
-                        CreatedAt = clientFile.CreatedAt,
-                        Reason = $"File modified at {clientFile.ModifiedAt:O} is newer than last synced modified at {existingSongDevice.LastSyncedModifiedAt:O}",
-                    });
+                    toUpdate.Add(clientFile with { Reason = $"File modified at {clientFile.ModifiedAt:O} is newer than last synced modified at {existingSongDevice.LastSyncedModifiedAt:O}" });
                 }
             }
-            else if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value, syncTimestampTolerance))
+            else if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
             {
                 if (existingSongDevice.SyncAction == null)
                 {
@@ -1040,7 +1029,7 @@ public class DevicesController(
                     {
                         SongId = existingSongDevice.SongId,
                         Path = existingSongDevice.DevicePath,
-                        Action = SongSyncAction.Download.ToString(),
+                        Action = nameof(SongSyncAction.Download),
                     });
                 }
             }
@@ -1289,16 +1278,109 @@ public class DevicesController(
 
     private async Task<List<PendingActionItem>> GetPendingActionsForDevice(long deviceId, CancellationToken cancellationToken)
     {
-        return await context.SongDevices
+        var device = await context.Devices
+            .Where(d => d.Id == deviceId)
+            .Select(d => new { d.Id, d.NamingTemplate })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (device == null)
+        {
+            return [];
+        }
+
+        var songDevices = await context.SongDevices
             .Include(sd => sd.Song)
+                .ThenInclude(s => s.Album)
+                    .ThenInclude(a => a.Artist)
+            .Include(sd => sd.Song)
+                .ThenInclude(s => s.Artists)
+                    .ThenInclude(sa => sa.Artist)
             .Where(sd => sd.DeviceId == deviceId && sd.SyncAction != null && sd.SyncAction != SongSyncAction.Upload)
-            .Select(sd => new PendingActionItem
-            {
-                SongId = sd.SongId,
-                Path = sd.DevicePath,
-                Action = sd.SyncAction!.Value.ToString(),
-            })
             .ToListAsync(cancellationToken);
+
+        var allExistingPaths = await context.SongDevices
+            .Where(sd => sd.DeviceId == deviceId)
+            .Select(sd => sd.DevicePath)
+            .ToHashSetAsync(cancellationToken);
+
+        var namingStrategy = new TemplateNamingStrategy(
+            device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
+
+        var results = new List<PendingActionItem>();
+        var usedPaths = new HashSet<string>(allExistingPaths);
+
+        foreach (var sd in songDevices)
+        {
+            if (sd.SyncAction == SongSyncAction.Download && sd.Song != null)
+            {
+                var metadata = EntityConverter.ToSong(sd.Song);
+                var basePath = namingStrategy.Generate(metadata);
+                var newPath = basePath == sd.DevicePath
+                    ? basePath
+                    : GetUniquePath(basePath, usedPaths);
+
+                usedPaths.Add(newPath);
+
+                logger.LogInformation(
+                    "GetPendingActionsForDevice: SongId={SongId}, Title='{Title}', DevicePath='{DevicePath}', basePath='{BasePath}', newPath='{NewPath}', SamePath={SamePath}",
+                    sd.SongId, sd.Song.Title, sd.DevicePath, basePath, newPath, newPath == sd.DevicePath);
+
+                if (newPath != sd.DevicePath)
+                {
+                    results.Add(new PendingActionItem
+                    {
+                        SongId = sd.SongId,
+                        Path = newPath,
+                        Action = sd.SyncAction!.Value.ToString(),
+                        PreviousPath = sd.DevicePath,
+                    });
+                }
+                else
+                {
+                    results.Add(new PendingActionItem
+                    {
+                        SongId = sd.SongId,
+                        Path = sd.DevicePath,
+                        Action = sd.SyncAction!.Value.ToString(),
+                        PreviousPath = null,
+                    });
+                }
+            }
+            else
+            {
+                results.Add(new PendingActionItem
+                {
+                    SongId = sd.SongId,
+                    Path = sd.DevicePath,
+                    Action = sd.SyncAction!.Value.ToString(),
+                    PreviousPath = null,
+                });
+            }
+        }
+
+        return results;
+    }
+
+    private static string GetUniquePath(string basePath, HashSet<string> existingPaths)
+    {
+        if (!existingPaths.Contains(basePath))
+        {
+            return basePath;
+        }
+
+        var directory = Path.GetDirectoryName(basePath) ?? "";
+        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(basePath);
+        var extension = Path.GetExtension(basePath);
+
+        var counter = 2;
+        string newPath;
+        do
+        {
+            newPath = Path.Combine(directory, $"{fileNameWithoutExt} ({counter}){extension}");
+            counter++;
+        } while (existingPaths.Contains(newPath));
+
+        return newPath;
     }
 
     private static string FormatLogMessage(string template, object[] args)
@@ -1413,9 +1495,11 @@ public class DevicesController(
         return new FilterValuesResponse { Values = values };
     }
 
-    private static bool IsNewerThan(DateTime current, DateTime reference, TimeSpan tolerance)
+    private static bool IsNewerThan(DateTime current, DateTime reference)
     {
-        return (current - reference) > tolerance;
+        // The dates that are saved in the database by EF Core seem to lose the precision for the last digit
+        // it is always 0 (zero) when reading it back, so we make the comparison without it in both values
+        return current.Ticks / 10 > reference.Ticks / 10;
     }
 
     private static Dictionary<string, string> GetSessionRecordFieldMappings()

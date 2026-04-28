@@ -81,6 +81,7 @@ public static class HostBuilderExtensions
             // });
         });
         builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+        builder.Services.AddScoped<IUserDeleteService, UserDeleteService>();
 
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();

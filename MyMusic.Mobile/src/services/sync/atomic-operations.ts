@@ -60,9 +60,11 @@ export async function downloadOneFile (
     ctx: SyncContext,
     songId: number,
     path: string,
-    decodedRepoPath: string
+    decodedRepoPath: string,
+    previousPath?: string | null
 ): Promise<RecordItem | null> {
     const fullPath = `${decodedRepoPath}/${path}`;
+    const previousFullPath = previousPath ? `${decodedRepoPath}/${previousPath}` : null;
 
     if (ctx.options.dryRun) {
         ctx.result.downloaded++;
@@ -85,10 +87,16 @@ export async function downloadOneFile (
         const blob = await apiClient.downloadSong(songId);
         await fileOps.writeFile(fullPath, blob);
 
+        if (previousFullPath && fileOps.fileExists(previousFullPath)) {
+            await fileOps.deleteFile(previousFullPath);
+            await fileOps.deleteEmptyDirectories(previousFullPath, decodedRepoPath);
+        }
+
         const modifiedAt = fileOps.getModificationTime(fullPath);
         await apiClient.acknowledgeAction(ctx.deviceId, {
             devicePath: path,
             modifiedAt: modifiedAt ? safeToIsoString(modifiedAt) : undefined,
+            previousDevicePath: previousPath,
         });
 
         ctx.result.downloaded++;
@@ -97,7 +105,7 @@ export async function downloadOneFile (
             action: 'Downloaded',
             source: 'Server',
             songId,
-            reason: 'Server-initiated download',
+            reason: previousPath ? 'Server-initiated rename' : 'Server-initiated download',
         };
     } catch (e) {
         ctx.result.failed++;

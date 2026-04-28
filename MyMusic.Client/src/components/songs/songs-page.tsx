@@ -68,6 +68,7 @@ export default function SongsPage() {
                     stateKey={SONGS_STATE_KEY}
                     items={elements}
                     schema={songsSchema}
+                    isFetching={songsQuery.isFetching}
                     filterMode="server"
                     serverSearch={appliedSearch}
                     serverFilter={appliedFilter}

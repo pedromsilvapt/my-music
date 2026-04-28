@@ -100,6 +100,10 @@ public class Phases(
             .Where(a => a.Action == "Download")
             .Select(a => a.Path)
             .ToHashSet();
+        ctx.PendingDownloadPreviousPaths = pendingResponse.Actions
+            .Where(a => a.Action == "Download" && a.PreviousPath != null)
+            .Select(a => a.PreviousPath!)
+            .ToHashSet();
         logger.LogInformation("Found {Count} pending actions", ctx.PendingActions.Count);
 
         if (files.Count == 0)
@@ -127,12 +131,14 @@ public class Phases(
             var chunkNumber = i + 1;
             logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
 
-            var syncFiles = chunk.Select(f => new SyncFileInfo
-            {
-                Path = f.RelativePath,
-                ModifiedAt = f.ModifiedAt,
-                CreatedAt = f.CreatedAt
-            }).ToList();
+            var syncFiles = chunk
+                .Where(f => !ctx.PendingDownloadPreviousPaths.Contains(f.RelativePath))
+                .Select(f => new SyncFileInfo
+                {
+                    Path = f.RelativePath,
+                    ModifiedAt = f.ModifiedAt,
+                    CreatedAt = f.CreatedAt
+                }).ToList();
 
             var syncRequest = new CheckSyncRequest
             {
@@ -380,7 +386,9 @@ public class Phases(
 
             if (action.Action == "Download")
             {
-                var record = await DownloadOneFileAsync(ctx, action.SongId, fullPath, action.Path, ct);
+                logger.LogInformation("Downloading song {SongId} to {Path} (PreviousPath: {PreviousPath})", 
+                    action.SongId, action.Path, action.PreviousPath ?? "(null)");
+                var record = await DownloadOneFileAsync(ctx, action.SongId, fullPath, action.Path, ct, action.PreviousPath);
                 if (record != null)
                 {
                     if (record.Action == "Downloaded")
@@ -519,7 +527,8 @@ public class Phases(
         long? songId,
         string fullPath,
         string relativePath,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? previousPath = null)
     {
         var fileExists = fileOps.FileExists(fullPath);
 
@@ -559,11 +568,22 @@ public class Phases(
 
             fileSystem.File.Move(tempPath, fullPath);
 
+            if (previousPath != null)
+            {
+                var previousFullPath = Path.Combine(ctx.RepositoryPath, previousPath);
+                if (fileOps.FileExists(previousFullPath))
+                {
+                    await fileOps.DeleteFileAsync(previousFullPath, ct);
+                    fileOps.CleanupEmptyParentDirectories(previousFullPath, ctx.RepositoryPath);
+                }
+            }
+
             var fileInfo = fileSystem.FileInfo.New(fullPath);
             await apiClient.AcknowledgeActionAsync(ctx.DeviceId, new AcknowledgeActionRequest
             {
                 DevicePath = relativePath,
-                ModifiedAt = fileInfo.LastWriteTimeUtc
+                ModifiedAt = fileInfo.LastWriteTimeUtc,
+                PreviousDevicePath = previousPath
             }, ct);
 
             return new RecordItem
@@ -572,7 +592,7 @@ public class Phases(
                 Action = "Downloaded",
                 SongId = songId,
                 Source = "Server",
-                Reason = "Server-initiated download"
+                Reason = previousPath != null ? "Server-initiated download (renamed)" : "Server-initiated download"
             };
         }
         catch (Exception ex)
@@ -690,6 +710,10 @@ public class Phases(
         ctx.PendingDownloadPaths = ctx.PendingActions
             .Where(a => a.Action == "Download")
             .Select(a => a.Path)
+            .ToHashSet();
+        ctx.PendingDownloadPreviousPaths = ctx.PendingActions
+            .Where(a => a.Action == "Download" && a.PreviousPath != null)
+            .Select(a => a.PreviousPath!)
             .ToHashSet();
     }
 }

@@ -1,6 +1,8 @@
 import type {Property} from "csstype";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
 
+export type {FilterMetadataResponse};
+
 export type SortDirection = 'asc' | 'desc';
 
 export interface CollectionSortField<M> {

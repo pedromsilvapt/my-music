@@ -528,6 +528,7 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
             >
                 {columns.map(col =>
                     <Table.Td key={col.name}
+                              data-testid={`collection-cell-${col.name}-${itemId}`}
                               style={{
                                   borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)',
                                   textAlign: col.align ?? 'left'

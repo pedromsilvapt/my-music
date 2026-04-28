@@ -127,34 +127,43 @@ configs:
         handle /* {
           reverse_proxy localhost:5173
         }
-
-        # ${CADDYFILE_SOURCES}
-
-        # handle_path /api/* {
-        #   reverse_proxy http://server:8080 {
-        #     header_up X-MyMusic-UserName pedro
-        #   }
-        # }
-
-        # handle_path /pgadmin  {
-        #   import pgadmin
-        # }
-        # handle_path /pgadmin/* {
-        #   import pgadmin
-        # }
-
-        # handle /dozzle  {
-        #   import dozzle
-        # }
-        # handle /dozzle/* {
-        #   import dozzle
-        # }
-
-        # handle /* {
-        #   reverse_proxy http://client:8080
-        # }
       }
 
+      :5001 {
+        handle_path /api/* {
+          reverse_proxy localhost:5000
+        }
+
+        handle /* {
+          reverse_proxy localhost:5173
+        }
+      }
+
+  # ${CADDYFILE_SOURCES}
+
+  # handle_path /api/* {
+  #   reverse_proxy http://server:8080 {
+  #     header_up X-MyMusic-UserName pedro
+  #   }
+  # }
+
+  # handle_path /pgadmin  {
+  #   import pgadmin
+  # }
+  # handle_path /pgadmin/* {
+  #   import pgadmin
+  # }
+
+  # handle /dozzle  {
+  #   import dozzle
+  # }
+  # handle /dozzle/* {
+  #   import dozzle
+  # }
+
+  # handle /* {
+  #   reverse_proxy http://client:8080
+  # }
   pgadmin-servers:
     content: |
       {

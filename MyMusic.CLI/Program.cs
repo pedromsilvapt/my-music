@@ -47,12 +47,20 @@ static void ConfigureConfiguration(IServiceCollection services, string[] args)
         "my-music",
         "appsettings.json");
 
+    var configPath = Environment.GetEnvironmentVariable("MYMUSIC_CONFIG_PATH");
+
     var configurationBuilder = new ConfigurationBuilder()
         .SetBasePath(Directory.GetCurrentDirectory())
         .AddJsonFile("appsettings.json", true, true)
         .AddJsonFile($"appsettings.{environment.ToLower()}.json", true, true)
-        .AddJsonFile(userConfigPath, true, true)
-        .AddEnvironmentVariables();
+        .AddJsonFile(userConfigPath, true, true);
+
+    if (!string.IsNullOrEmpty(configPath))
+    {
+        configurationBuilder.AddJsonFile(configPath, true, true);
+    }
+
+    configurationBuilder.AddEnvironmentVariables();
 
     var configuration = configurationBuilder.Build();
 

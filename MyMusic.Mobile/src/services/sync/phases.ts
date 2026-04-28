@@ -210,7 +210,8 @@ async function handleDownloadConflict(
         ctx,
         conflictInfo.songId,
         conflictInfo.path,
-        ctx.decodedRepoPath
+        ctx.decodedRepoPath,
+        null
     );
 
     if (record) {
@@ -310,7 +311,8 @@ export async function serverActionsPhase(
                 ctx,
                 action.songId!,
                 action.path,
-                ctx.decodedRepoPath
+                ctx.decodedRepoPath,
+                action.previousPath
             );
             if (record) {
                 downloadRecordItems.push(record);

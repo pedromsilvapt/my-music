@@ -32,7 +32,7 @@ public class Orchestrator(
             return new SyncResult { Failed = 1 };
         }
 
-        if (!fileOps.FileExists(repositoryPath))
+        if (!fileOps.DirectoryExists(repositoryPath))
         {
             logger.LogError("Repository path does not exist: {Path}", repositoryPath);
             return new SyncResult { Failed = 1 };

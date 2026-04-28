@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <BROWSER></BROWSER>
+      <CLI_PATH></CLI_PATH>
+    </EnvironmentVariables>
+  </RunConfiguration>
+  <Playwright>
+    <BrowserName>chromium</BrowserName>
+  </Playwright>
+</RunSettings>

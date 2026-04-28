@@ -66,6 +66,7 @@ export const PendingActionItemSchema = z.object({
     songId: z.number().nullable(),
     path: z.string(),
     action: SyncActionSchema,
+    previousPath: z.string().nullable().optional(),
 });
 
 export type PendingActionItem = z.infer<typeof PendingActionItemSchema>;
@@ -126,6 +127,7 @@ export type GetPendingActionsResponse = z.infer<typeof GetPendingActionsResponse
 export const AcknowledgeActionRequestSchema = z.object({
     devicePath: z.string(),
     modifiedAt: z.string().optional(),
+    previousDevicePath: z.string().nullable().optional(),
 });
 
 export type AcknowledgeActionRequest = z.infer<typeof AcknowledgeActionRequestSchema>;

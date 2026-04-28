@@ -108,6 +108,25 @@ export function createDefaultFileOps(): IFileOps {
             const info = new File(toFileUri(path));
             return info.modificationTime ? new Date(info.modificationTime) : null;
         },
+        deleteEmptyDirectories: async (filePath: string, basePath: string) => {
+            const file = new File(toFileUri(filePath));
+            let dir = file.parentDirectory;
+            const baseDir = new File(toFileUri(basePath));
+
+            while (dir && dir.uri !== baseDir.uri) {
+                if (!dir.exists) {
+                    break;
+                }
+
+                const entries = await dir.list();
+                if (entries && entries.length > 0) {
+                    break;
+                }
+
+                await dir.delete();
+                dir = dir.parentDirectory;
+            }
+        },
     };
 }
 

@@ -24,6 +24,7 @@ function createMockFileOps(overrides: Partial<IFileOps> = {}): IFileOps {
         deleteFile: jest.fn().mockResolvedValue(undefined),
         readFileBase64: jest.fn().mockResolvedValue('base64content'),
         getModificationTime: jest.fn().mockReturnValue(new Date('2024-01-01T00:00:00Z')),
+        deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
         ...overrides,
     } as unknown as IFileOps;
 }
@@ -215,6 +216,54 @@ describe('downloadOneFile', () => {
         expect(ctx.result.downloaded).toBe(1);
         expect(apiClient.downloadSong).not.toHaveBeenCalled();
         expect(fileOps.writeFile).not.toHaveBeenCalled();
+    });
+
+    test('with previousPath deletes old file and cleans directories', async () => {
+        const blob = new Blob(['audio data']);
+        const apiClient = createMockApiClient({
+            downloadSong: jest.fn().mockResolvedValue(blob),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockImplementation((path: string) => path === '/music/old-song.mp3'),
+        });
+        const ctx = createContext();
+
+        const record = await downloadOneFile(apiClient, fileOps, ctx, 42, 'new-song.mp3', '/music', 'old-song.mp3');
+
+        expect(record).not.toBeNull();
+        expect(record!.action).toBe('Downloaded');
+        expect(record!.reason).toBe('Server-initiated rename');
+        expect(fileOps.writeFile).toHaveBeenCalledWith('/music/new-song.mp3', blob);
+        expect(fileOps.deleteFile).toHaveBeenCalledWith('/music/old-song.mp3');
+        expect(fileOps.deleteEmptyDirectories).toHaveBeenCalledWith('/music/old-song.mp3', '/music');
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, {
+            devicePath: 'new-song.mp3',
+            modifiedAt: expect.any(String),
+            previousDevicePath: 'old-song.mp3',
+        });
+    });
+
+    test('with previousPath but no old file skips delete', async () => {
+        const blob = new Blob(['audio data']);
+        const apiClient = createMockApiClient({
+            downloadSong: jest.fn().mockResolvedValue(blob),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(false),
+        });
+        const ctx = createContext();
+
+        const record = await downloadOneFile(apiClient, fileOps, ctx, 42, 'new-song.mp3', '/music', 'old-song.mp3');
+
+        expect(record).not.toBeNull();
+        expect(record!.action).toBe('Downloaded');
+        expect(fileOps.deleteFile).not.toHaveBeenCalled();
+        expect(fileOps.deleteEmptyDirectories).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, {
+            devicePath: 'new-song.mp3',
+            modifiedAt: expect.any(String),
+            previousDevicePath: 'old-song.mp3',
+        });
     });
 });
 

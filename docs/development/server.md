@@ -212,6 +212,125 @@ public async Task ImportMusic_EmptyDatabase()
 }
 ```
 
+## Integration Testing
+
+Integration tests in **MyMusic.IntegrationTests** verify end-user functionality through Playwright browser interactions. They focus on user-visible behavior, not implementation details.
+
+### Test Organization
+
+| Test Type | Location | Purpose |
+|-----------|----------|---------|
+| Unit Tests | MyMusic.Common.Tests | Business logic, services, algorithms |
+| Integration Tests | MyMusic.IntegrationTests | Playwright browser tests, end-user functionality |
+
+### Writing Integration Tests
+
+All integration tests should inherit from `IntegrationTestBase`, which provides:
+
+- **Automatic user lifecycle**: Creates a test user during initialization, deletes it during disposal
+- **APIRequestContext**: Pre-configured with auth headers (`X-MyMusic-UserName`)
+- **Protected properties**: `UserId` and `UserName` for the test user
+
+```csharp
+using Microsoft.Playwright.Xunit;
+using MyMusic.IntegrationTests.Fixtures;
+using MyMusic.IntegrationTests.Fixtures.Models;
+using MyMusic.IntegrationTests.Pages;
+using Shouldly;
+using Xunit;
+
+namespace MyMusic.IntegrationTests;
+
+public class MyTest : IntegrationTestBase
+{
+    [Fact]
+    public async Task ShouldDisplaySeededSongs()
+    {
+        // Arrange
+        var songs = new SongsFixture();
+        await songs.SeedAsync(RequestContext, UserId);
+
+        // Act
+        var home = new HomePage(Page);
+
+        // Navigate using page objects (already waits for initial data load)
+        var songsPage = await home.Navbar.GoToSongsAsync();
+
+        // Assert
+        var songTitles = await songsPage.Collection.GetTitleTextsAsync();
+        songTitles.ShouldContain("Test Song");
+    }
+}
+```
+
+**Key learnings:**
+
+- **Page Object Model**: Pages receive `IPage` in their constructor; components receive a scoped `ILocator`. This encapsulates selectors and interactions, making tests more maintainable.
+- **Fixtures for test data**: Use fixtures to seed test data via the REST API. Each fixture has a `Data` property to access the seeded entities. Fixtures can be reused across tests.
+- **Relative URLs in tests**: Always use relative URLs (e.g., `/api/songs`) instead of absolute URLs. The `IAPIRequestContext` is already configured with the base URL.
+- **Sample data as immutable records**: Use immutable C# records (e.g., `SampleSong`) for test data, not anonymous types. This provides type safety, reusability, and better IDE support.
+
+### Running Integration Tests
+
+```bash
+# Run all integration tests
+dotnet test MyMusic.IntegrationTests
+
+# Run specific test
+dotnet test --filter "FullyQualifiedName~TestUserDisplayTests"
+
+# Run with verbose output
+dotnet test MyMusic.IntegrationTests --verbosity detailed
+```
+
+### Integration Test Guidelines
+
+- **Test user-visible behavior**: Clicks, navigation, displayed content
+- **Don't test internals**: Service methods, database state directly
+- **Use stable selectors**: Prefer `data-testid` attributes over fragile CSS selectors
+- **Keep tests focused**: One user workflow per test
+- **Clean up automatically**: `IntegrationTestBase` handles user deletion
+- **Page Object Navigators**: Components and Pages should include `GoTo*` or `Open*` that navigate to other pages/models
+    - **Return the target object model** The new `Page` or `Component` (mostly for modals)
+    - **Wait for initial data load** in the naviation method itself, so callers receive an object when data is available in the browser (look for `CollectionComponent` for example)
+
+### Test Fixtures
+
+Use fixtures to seed test data via the REST API. Each fixture has a `Data` property with seeded entity data:
+
+```csharp
+public class MyTests : IntegrationTestBase
+{
+    [Fact]
+    public async Task Test_WithDevices()
+    {
+        var devices = new DevicesFixture();
+        await devices.SeedAsync(RequestContext, UserId);
+
+        // Use devices.Data to access seeded devices
+        devices.Data[0].Id.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task Test_WithAllData()
+    {
+        var allData = new AllDataFixture();
+        await allData.SeedAsync(RequestContext, UserId);
+
+        // All fixtures are seeded: Devices, Playlists, Songs, Artists, Albums, Genres
+    }
+}
+```
+
+**Available Fixtures:**
+- `DevicesFixture` - Creates test devices via `POST /api/devices`
+- `PlaylistsFixture` - Creates test playlists via `POST /api/playlists`
+- `SongsFixture` - Uploads test songs via `POST /api/songs/upload`
+- `ArtistsFixture` - Creates test artists via `POST /api/artists`
+- `AlbumsFixture` - Creates test albums via `POST /api/albums` (requires ArtistsFixture)
+- `GenresFixture` - Creates test genres via `POST /api/genres`
+- `AllDataFixture` - Composite fixture that seeds all the above
+
 ## Database (EF Core)
 
 - Use **PostgreSQL** with `Npgsql.EntityFrameworkCore.PostgreSQL`

@@ -10,4 +10,5 @@ public record PendingActionItem
     public required long? SongId { get; init; }
     public required string Path { get; init; }
     public required string Action { get; init; }
+    public string? PreviousPath { get; init; }
 }

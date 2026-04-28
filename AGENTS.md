@@ -38,6 +38,35 @@ dotnet test --verbosity detailed
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
+## Git Commands
+**CRITICAL** Do not, under any circunstance, execute git write commands (commit, stash, reset, checkout, etc..) without the user's explicit instruction.
+
+## Integration Tests
+
+- **MyMusic.IntegrationTests** - Playwright browser tests for end-user functionality; inherit from `IntegrationTestBase` for automatic user lifecycle
+- Run with: `dotnet test MyMusic.IntegrationTests` or filter by name: `dotnet test --filter "FullyQualifiedName~TestName"`
+- The default configured RunSettings file is `MyMusic.IntegrationTests/.runsettings`
+- All test classes should inherit from the base `IntegrationTestBase` and should be placed in `Tests/<Domain>/<Name>Tests.cs`
+- Fixtures should live in the folder `Fixtures/`. Do not set up data on the tests themselves!
+- Test classes should never have Playwright locators declared directly inside them. All locators should live in `Pages/<Name>Page.cs` and `Pages/Components/<Name>Component.cs` classes
+    - Page objects can be composed of other Component objects via Properties, but can never inherit them
+    - Page objects should receive an `IPage` in their constructor, example: `public class HomePage(IPage page) : BasePage(page)`
+    - Component objects should receive a scoped `ILocator` in their constructor, example: `public class ButtonComponent(ILocator locator) : BaseComponent(locator)`
+    - Prefer primary class constructors
+- Test cases should have very simple logic. Use helper methods, fixtures, component objects to hide implementation details.
+
+### Comment Style
+
+Integration tests should use comments with these characteristics: (example based on the test `Sync_ShouldUploadLocalChangesToServer` in [CliSyncTests.cs](./MyMusic.IntegrationTests/Tests/Cli/CliSyncTests.cs)):
+
+1. **Intent-focused**: Comments explain *what* and *why*, not just restating code
+2. **Block-level grouping**: Each logical section gets a comment marking its purpose
+3. **Expectation-driven**: Comments include expected outcomes ("should download", "should upload")
+4. **Narrative flow**: Comments tell a story, making the test readable without examining code
+5. **Concise but informative**: Not verbose, but provides essential context
+
+The pattern follows a typical test structure: **Setup → Action → Assert → Mutate → Action → Assert**, with each phase commented.
+
 ## Database Migrations
 
 ```bash
@@ -171,6 +200,7 @@ Before working on any project, read its development guide first:
 - **Client** → [docs/development/client.md](docs/development/client.md)
 - **CLI** → [docs/development/cli.md](docs/development/cli.md)
 - **Mobile** → [docs/development/mobile.md](docs/development/mobile.md)
+- **IntegrationTests** → [docs/development/server.md](docs/development/server.md) and [docs/development/playwright.md](docs/development/playwright.md)
 
 These files contain information related to the creating and running automatic tests for each sub-project as well.
 

@@ -15,7 +15,7 @@ $ARGUMENTS
 
 If the user gave specific instructions when executing this command, assess how those instructions relate to the comments above, and adjust accordingly.
 
-Group related comments by thread. For each group, sequentially spawn a sub-agent task to either:
+Group related comments by thread. For each group, spawn a sub-agent task to either:
 1. Propose a solution and reply via `./.localea/reviews/reply.sh <thread-id> open '<response>'`
 2. If user already approved, implement changes then reply via `./.localea/reviews/reply.sh <thread-id> <open|resolved> '<response>'`
    - If implementation is incomplete or has open points, leave the thread open.
@@ -24,6 +24,8 @@ Group related comments by thread. For each group, sequentially spawn a sub-agent
 **CRITICAL** In the sub-agent spawn, give the thread id and a brief one line **subject** of those threads.
 **CRITICAL** Always be explicit o the sub-agent regarding plan or implement: should they only propose a plan, or should they implement the fix? When in doubt if the user has approved or not, prefer to fallback to proposing a plan.
 **CRITICAL** Do not give a response for the sub-agent to reply. Tell him how to call the command, but let him build the appropriate response based on his findings.
+**CRITICAL** There are two types of sub-agents: planning and implementation. Always spawn implementation sub-agents sequentially, one after the other, never in parallel.
+   - Wait for the result message from each implementation sub-agent before spawning the next.
 
 ## Reactions
 

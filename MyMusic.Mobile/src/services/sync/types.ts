@@ -14,6 +14,7 @@ export interface PendingActionItem {
     songId: number | null;
     path: string;
     action: SyncAction;
+    previousPath?: string | null;
 }
 
 export interface SyncContext {
@@ -181,7 +182,7 @@ export interface ISyncApiClient {
 
     acknowledgeAction: (
         deviceId: number,
-        request: { devicePath: string; modifiedAt?: string }
+        request: { devicePath: string; modifiedAt?: string; previousDevicePath?: string | null }
     ) => Promise<{ success: boolean }>;
 
     resolveConflicts: (
@@ -259,6 +260,7 @@ export interface IFileOps {
     deleteFile: (path: string) => Promise<void>;
     readFileBase64: (path: string) => Promise<string>;
     getModificationTime: (path: string) => Date | null;
+    deleteEmptyDirectories: (filePath: string, basePath: string) => Promise<void>;
 }
 
 export interface IKeepAwake {

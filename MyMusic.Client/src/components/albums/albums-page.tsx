@@ -54,6 +54,7 @@ export default function AlbumsPage() {
                 stateKey={ALBUMS_STATE_KEY}
                 items={elements}
                 schema={albumsSchema}
+                isFetching={albumsQuery.isFetching}
                 filterMode="server"
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}

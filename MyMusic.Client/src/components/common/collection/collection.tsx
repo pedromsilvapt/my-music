@@ -378,7 +378,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const toolbar = props.toolbar ?? (p => <CollectionToolbar {...p} />);
 
-    return <Flex ref={containerRef} direction="column" style={{height: `100%`}}>
+    return <Flex ref={containerRef} direction="column" style={{height: `100%`}} data-testid="collection" data-loading={props.isFetching ? "true" : "false"}>
         <Box ref={toolbarRef}>
             {toolbar({
                 search: searchFilter.value,

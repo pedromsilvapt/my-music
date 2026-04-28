@@ -45,6 +45,41 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         };
     }
 
+    [HttpPost(Name = "CreateArtist")]
+    public async Task<CreateArtistResponse> Create(
+        [FromBody] CreateArtistRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken)
+            ?? throw new Exception("User not found");
+
+        var artist = new Artist
+        {
+            Name = request.Name,
+            Owner = user,
+            OwnerId = currentUser.Id,
+            SongsCount = 0,
+            AlbumsCount = 0,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        context.Artists.Add(artist);
+        await context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Created artist {ArtistName} with ID {ArtistId} for user {UserId}",
+            artist.Name, artist.Id, currentUser.Id);
+
+        return new CreateArtistResponse
+        {
+            Artist = new CreateArtistItem
+            {
+                Id = artist.Id,
+                Name = artist.Name,
+            },
+        };
+    }
+
     [HttpGet("{id:long}", Name = "GetArtist")]
     public async Task<GetArtistResponse> Get(long id, [FromQuery] ArtistSongFilter songFilter, MusicDbContext context,
         CancellationToken cancellationToken)

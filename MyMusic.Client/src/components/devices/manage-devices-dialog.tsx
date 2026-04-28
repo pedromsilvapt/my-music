@@ -172,7 +172,7 @@ function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onCha
     const matchingCount = managedSongs.filter(s => deviceSongIdSet.has(s.id)).length;
 
     return (
-        <Box>
+        <Box data-testid={`device-row-${device.id}`}>
             <Group justify="space-between" wrap="nowrap">
                 <Group gap="sm" align="center" style={{flex: 1, minWidth: 0}}>
                     <DeviceBadge

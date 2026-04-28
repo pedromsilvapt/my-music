@@ -22,6 +22,7 @@ public class DevicesControllerCompleteSyncSpecs
             scenario.DbContext,
             Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
+            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             Substitute.For<ILogger<MusicImportJob>>(),
             Substitute.For<System.IO.Abstractions.IFileSystem>()
         );

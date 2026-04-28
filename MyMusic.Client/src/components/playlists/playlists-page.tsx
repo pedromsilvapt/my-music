@@ -72,6 +72,7 @@ export default function PlaylistsPage() {
                     schema={playlistsSchema}
                     initialView="grid"
                     stateKey={PLAYLISTS_STATE_KEY}
+                    isFetching={playlistsQuery.isFetching}
                     filterMode="server"
                     serverSearch={appliedSearch}
                     serverFilter={appliedFilter}

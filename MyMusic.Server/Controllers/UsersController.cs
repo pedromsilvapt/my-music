@@ -121,4 +121,27 @@ public class UsersController(
             User = CreateUserItem.FromEntity(user),
         };
     }
+
+    [HttpDelete("{id}", Name = "DeleteUser")]
+    public async Task<ActionResult<DeleteUserResponse>> Delete(
+        long id,
+        [FromServices] IUserDeleteService userDeleteService,
+        CancellationToken cancellationToken)
+    {
+        var user = await userDeleteService.DeleteAsync(id, cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new DeleteUserResponse
+        {
+            User = new DeleteUserItem
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Name = user.Name,
+            },
+        });
+    }
 }

@@ -48,6 +48,7 @@ export default function ArtistsPage() {
                 stateKey="artists"
                 items={elements}
                 schema={artistsSchema}
+                isFetching={artistsQuery.isFetching}
                 filterMode="server"
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}

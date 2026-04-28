@@ -10,6 +10,17 @@ RUN apt-get update && apt-get install -y \
     pipx \
     libgdiplus \
     libchromaprint-tools \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libatspi2.0-0t64 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxkbcommon0 \
+    libasound2t64 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY certs/ /tmp/certs/
@@ -33,6 +44,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_24.x | bash - \
 RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN corepack enable && corepack install --global pnpm@latest
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/home/vscode/.cache/ms-playwright
+RUN npm install -g playwright && \
+    npx playwright install chromium && \
+    npm uninstall -g playwright && \
+    chown -R vscode:vscode /home/vscode/.cache
 
 RUN curl -fsSL https://get.docker.com -o get-docker.sh \
     && sh get-docker.sh \

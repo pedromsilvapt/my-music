@@ -46,6 +46,49 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         };
     }
 
+    [HttpPost(Name = "CreateAlbum")]
+    public async Task<CreateAlbumResponse> Create(
+        [FromBody] CreateAlbumRequest request,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken)
+            ?? throw new Exception("User not found");
+
+        var artist = await context.Artists
+            .FirstOrDefaultAsync(a => a.Id == request.ArtistId && a.OwnerId == currentUser.Id, cancellationToken)
+            ?? throw new Exception($"Artist not found with id {request.ArtistId}");
+
+        var album = new Album
+        {
+            Name = request.Name,
+            Artist = artist,
+            ArtistId = request.ArtistId,
+            Owner = user,
+            OwnerId = currentUser.Id,
+            Year = request.Year,
+            SongsCount = 0,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        context.Albums.Add(album);
+        await context.SaveChangesAsync(cancellationToken);
+
+        _logger.LogInformation("Created album {AlbumName} with ID {AlbumId} for user {UserId}",
+            album.Name, album.Id, currentUser.Id);
+
+        return new CreateAlbumResponse
+        {
+            Album = new CreateAlbumItem
+            {
+                Id = album.Id,
+                Name = album.Name,
+                Year = album.Year,
+                ArtistId = album.ArtistId,
+            },
+        };
+    }
+
     [HttpGet("{id:long}", Name = "GetAlbum")]
     public async Task<GetAlbumResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
     {

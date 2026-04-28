@@ -97,6 +97,7 @@ public record PendingActionItem
     public long? SongId { get; init; }
     public required string Path { get; init; }
     public required string Action { get; init; }
+    public string? PreviousPath { get; init; }
 }
 
 public record SyncFileInfo
@@ -194,6 +195,7 @@ public record AcknowledgeActionRequest
 {
     public required string DevicePath { get; init; }
     public DateTime? ModifiedAt { get; init; }
+    public string? PreviousDevicePath { get; init; }
 }
 
 public record ResolveConflictsRequest

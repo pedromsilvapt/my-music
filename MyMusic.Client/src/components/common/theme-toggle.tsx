@@ -17,6 +17,7 @@ export default function ThemeToggle() {
                     size="lg"
                     aria-label="Toggle color scheme"
                     loading={isUpdating}
+                    data-testid="topbar-theme-toggle"
                 >
                     {computedColorScheme === "dark" ? (
                         <IconMoon {...iconProps} />

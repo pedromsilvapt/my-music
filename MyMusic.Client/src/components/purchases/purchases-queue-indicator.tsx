@@ -46,6 +46,7 @@ export default function PurchasesQueueIndicator() {
             sections={sections}
             transitionDuration={250}
             label={<Center>{label}</Center>}
+            data-testid="topbar-purchases-indicator"
         />
     </>;
 }

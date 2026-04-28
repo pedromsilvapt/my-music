@@ -202,3 +202,52 @@ useEffect(() => {
 
 The Mantine hook is cleaner, avoids potential memory leaks from forgotten cleanup, and is consistent with existing
 codebase patterns.
+
+## Integration Testing
+
+Integration tests in **MyMusic.IntegrationTests** verify end-user functionality through Playwright browser interactions with the React frontend.
+
+### How Playwright Tests Interact with React
+
+Playwright tests run in a real browser and interact with the rendered React components, not the component code directly:
+
+```typescript
+// React component renders this:
+<Text size="sm" visibleFrom="sm">{user.name}</Text>
+
+// Playwright test verifies it appears:
+await Page.GotoAsync("http://localhost:5173");
+var element = Page.Locator("text=" + userName);
+await element.WaitForAsync();
+```
+
+### Integration Test Guidelines
+
+- **Test user-visible behavior**: What the user sees and clicks, not component internals
+- **Use stable selectors**: Prefer text content or `data-testid` attributes over fragile CSS selectors
+- **Server must be running**: Integration tests require the backend API at `http://localhost:5001`
+- **Frontend must be running**: Integration tests require the frontend at `http://localhost:5173`
+- **Keep tests focused**: One user workflow per test
+
+### Running Integration Tests
+
+```bash
+# Run all integration tests (requires both servers running)
+dotnet test MyMusic.IntegrationTests
+
+# Run specific test
+dotnet test --filter "FullyQualifiedName~TestUserDisplayTests"
+```
+
+### Adding data-testid Attributes
+
+For stable test selectors, add `data-testid` attributes to components:
+
+```typescript
+// Component
+<Text data-testid="username-display">{user.name}</Text>
+
+// Test
+var element = Page.GetByTestId("username-display");
+```
+

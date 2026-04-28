@@ -12,5 +12,6 @@ public record SyncContext
     public SyncResult Result { get; set; } = new();
     public HashSet<string> UploadedPaths { get; } = [];
     public HashSet<string> PendingDownloadPaths { get; set; } = [];
+    public HashSet<string> PendingDownloadPreviousPaths { get; set; } = [];
     public List<PendingActionItem> PendingActions { get; set; } = [];
 }

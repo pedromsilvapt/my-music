@@ -16,6 +16,7 @@ using AcknowledgeActionRequest = MyMusic.Common.Services.Sync.Types.AcknowledgeA
 public class CliFileOps(IFileSystem fileSystem) : IFileOps
 {
     public bool FileExists(string path) => fileSystem.File.Exists(path);
+    public bool DirectoryExists(string path) => fileSystem.Directory.Exists(path);
 
     public Task EnsureDirectoryAsync(string path, CancellationToken ct = default)
     {
@@ -56,6 +57,23 @@ public class CliFileOps(IFileSystem fileSystem) : IFileOps
         }
         var fileInfo = fileSystem.FileInfo.New(path);
         return Task.FromResult<DateTime?>(fileInfo.LastWriteTimeUtc);
+    }
+
+    public void CleanupEmptyParentDirectories(string filePath, string repositoryRoot)
+    {
+        var dir = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrEmpty(dir) && dir != repositoryRoot && dir.TrimEnd(Path.DirectorySeparatorChar).Length > repositoryRoot.Length)
+        {
+            if (fileSystem.Directory.Exists(dir) && !fileSystem.Directory.EnumerateFileSystemEntries(dir).Any())
+            {
+                fileSystem.Directory.Delete(dir);
+            }
+            else
+            {
+                break;
+            }
+            dir = Path.GetDirectoryName(dir);
+        }
     }
 }
 
@@ -220,7 +238,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             {
                 SongId = a.SongId,
                 Path = a.Path,
-                Action = a.Action
+                Action = a.Action,
+                PreviousPath = a.PreviousPath
             }).ToList()
         };
     }
@@ -237,7 +256,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             {
                 SongId = a.SongId,
                 Path = a.Path,
-                Action = a.Action
+                Action = a.Action,
+                PreviousPath = a.PreviousPath
             }).ToList()
         };
     }
@@ -280,7 +300,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             {
                 SongId = a.SongId,
                 Path = a.Path,
-                Action = a.Action
+                Action = a.Action,
+                PreviousPath = a.PreviousPath
             }).ToList()
         };
     }
@@ -290,7 +311,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         await client.AcknowledgeActionAsync(deviceId, new Api.Dtos.AcknowledgeActionRequest
         {
             DevicePath = request.DevicePath,
-            ModifiedAt = request.ModifiedAt
+            ModifiedAt = request.ModifiedAt,
+            PreviousDevicePath = request.PreviousDevicePath
         }, ct);
     }
 

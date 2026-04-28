@@ -65,6 +65,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         deleteFile: jest.fn().mockResolvedValue(undefined),
         readFileBase64: jest.fn().mockResolvedValue('base64'),
         getModificationTime: jest.fn().mockReturnValue(null),
+        deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
     };
 
     const mockKeepAwake: IKeepAwake = {

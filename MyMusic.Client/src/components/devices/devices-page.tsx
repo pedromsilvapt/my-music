@@ -34,6 +34,7 @@ export default function DevicesPage() {
                 stateKey="devices"
                 items={elements}
                 schema={devicesSchema}
+                isFetching={devicesQuery.isFetching}
                 filterMode="server"
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}

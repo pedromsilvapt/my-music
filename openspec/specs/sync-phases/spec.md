@@ -1,4 +1,8 @@
-## ADDED Requirements
+## Purpose
+
+Defines the phase functions that orchestrate the sync workflow for CLI and Mobile clients.
+
+## Requirements
 
 ### Requirement: Upload phase respects SyncDirection
 The upload phase SHALL only execute when SyncDirection is Both or Up. When SyncDirection is Down, the phase returns immediately without processing.
@@ -90,15 +94,37 @@ The system SHALL provide a `resolveConflictsPhase` function that takes potential
 - **AND** no user prompt is shown
 
 ### Requirement: Server actions phase processes pending downloads and removals
-The system SHALL provide a `serverActionsPhase` function that processes server-initiated pending actions (Download and Remove) after all client uploads complete.
+The system SHALL provide a `serverActionsPhase` function that processes server-initiated pending actions (Download and Remove) after all client uploads complete. Download actions that include a `PreviousPath` SHALL download to the new path, then remove the old file and clean up empty parent directories. This requirement applies to both CLI and Mobile implementations.
 
 #### Scenario: Download actions download and acknowledge
 - **WHEN** a pending action has action 'Download'
-- **THEN** the file is downloaded from the server, written to the local filesystem, and acknowledged
+- **THEN** the file is downloaded from the server, written to the local filesystem at the path specified in `Path`, and acknowledged
 - **AND** existing files at the path are replaced (always re-download per behavioral rule 14)
 - **AND** parent directories are created if they don't exist
 - **AND** the result.downloaded counter is incremented
 - **AND** a 'Downloaded' record with source 'Server' is created
+
+#### Scenario: Download with PreviousPath renames the file safely (CLI)
+- **WHEN** a pending Download action has a non-null PreviousPath in CLI
+- **THEN** the file is downloaded to the new path (Path) first
+- **AND** if a file exists at the old path (PreviousPath), it is deleted after the download succeeds
+- **AND** empty parent directories left by the old file are cleaned up
+- **AND** the acknowledge request includes PreviousDevicePath set to PreviousPath
+- **AND** DevicePath in the acknowledge request is set to the new Path
+
+#### Scenario: Download with PreviousPath renames the file safely (Mobile)
+- **WHEN** a pending Download action has a non-null previousPath in Mobile
+- **THEN** the file is downloaded to the new path (path) first
+- **AND** if a file exists at the old path (previousPath), it is deleted after the download succeeds
+- **AND** empty parent directories left by the old file are cleaned up
+- **AND** the acknowledge request includes previousDevicePath set to previousPath
+- **AND** devicePath in the acknowledge request is set to the new path
+
+#### Scenario: Download with PreviousPath where old file does not exist
+- **WHEN** a pending Download action has a non-null PreviousPath and no file exists at the old path
+- **THEN** the file is downloaded to the new path
+- **AND** no deletion of the old file is attempted
+- **AND** the acknowledge request still includes PreviousDevicePath
 
 #### Scenario: Remove actions delete local file and acknowledge
 - **WHEN** a pending action has action 'Remove'
@@ -150,7 +176,7 @@ The system SHALL provide an `uploadOneFile` function that uploads a single file 
 - **THEN** it returns a record item with action 'Error', source 'Device', and the error message
 
 ### Requirement: Atomic download operation handles single file download
-The system SHALL provide a `downloadOneFile` function that downloads a song from the server, writes it to the local filesystem, and acknowledges the action.
+The system SHALL provide a `downloadOneFile` function that downloads a song from the server, writes it to the local filesystem, and acknowledges the action. When a `previousPath` is provided, the function SHALL download to the new path first, then delete the old file and clean empty directories.
 
 #### Scenario: Successful download
 - **WHEN** `downloadOneFile` is called with a songId and local path
@@ -159,6 +185,14 @@ The system SHALL provide a `downloadOneFile` function that downloads a song from
 - **AND** it downloads the blob from the server
 - **AND** it writes the file bytes
 - **AND** it acknowledges the action with the file's modification time
+- **AND** it returns a 'Downloaded' record with source 'Server'
+
+#### Scenario: Successful download with rename (previousPath provided)
+- **WHEN** `downloadOneFile` is called with a previousPath and the download succeeds
+- **THEN** the new file is written to the new path first
+- **AND** if a file exists at previousPath, it is deleted
+- **AND** empty parent directories from previousPath are cleaned up
+- **AND** the acknowledge request includes PreviousDevicePath set to previousPath
 - **AND** it returns a 'Downloaded' record with source 'Server'
 
 #### Scenario: Failed download

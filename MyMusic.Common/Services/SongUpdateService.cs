@@ -40,9 +40,18 @@ public class SongUpdateService(
         var previousChecksum = song.Checksum;
         await UpdateFileAndChecksumAsync(song, cancellationToken);
 
+        logger.LogInformation("Song {SongId} update: previousChecksum={PreviousChecksum}, newChecksum={NewChecksum}",
+            songId, previousChecksum, song.Checksum);
+
         if (song.Checksum != previousChecksum)
         {
+            logger.LogInformation("Marking devices for download for song {SongId} (checksumChanged={ChecksumChanged}",
+                songId, song.Checksum != previousChecksum);
             await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
+        }
+        else
+        {
+            logger.LogWarning("No changes requiring device update for song {SongId}", songId);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -73,7 +82,9 @@ public class SongUpdateService(
             var previousChecksum = song.Checksum;
             await UpdateFileAndChecksumAsync(song, cancellationToken);
 
-            if (song.Checksum != previousChecksum)
+            var affectsDevicePath = update.Title is not null || update.Explicit is not null || update.Artists is not null || update.Album is not null;
+
+            if (song.Checksum != previousChecksum || affectsDevicePath)
             {
                 await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
             }
@@ -105,7 +116,7 @@ public class SongUpdateService(
             .Where(s => s.Id == songId)
             .Include(s => s.Owner)
             .Include(s => s.Album)
-            .ThenInclude(a => a!.Artist)
+            .ThenInclude(a => a.Artist)
             .Include(s => s.Artists)
             .ThenInclude(sa => sa.Artist)
             .Include(s => s.Genres)
