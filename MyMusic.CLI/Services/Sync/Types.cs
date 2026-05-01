@@ -1,4 +1,4 @@
-namespace MyMusic.Common.Services.Sync.Types;
+namespace MyMusic.CLI.Services.Sync.Types;
 
 public enum SyncDirection
 {

@@ -26,9 +26,6 @@ public class UserDeleteService(
         var username = user.Username;
         logger.LogInformation("Deleting user {UserId} ({Username})", id, username);
 
-        user.CurrentQueueId = null;
-        await db.SaveChangesAsync(cancellationToken);
-
         await DeleteDeviceSyncSessionRecordsAsync(id, cancellationToken);
         await DeleteDeviceSyncSessionsAsync(id, cancellationToken);
         await DeleteSongDevicesAsync(id, cancellationToken);
@@ -49,6 +46,10 @@ public class UserDeleteService(
         await DeleteArtistsWithArtworksAsync(id, cancellationToken);
         await DeleteGenresAsync(id, cancellationToken);
         await DeleteDevicesAsync(id, cancellationToken);
+
+        user.CurrentQueueId = null;
+        await db.SaveChangesAsync(cancellationToken);
+
         await DeletePlaylistsAsync(id, cancellationToken);
 
         db.Users.Remove(user);

@@ -1,7 +1,7 @@
 namespace MyMusic.CLI.Services;
 
-using MyMusic.Common.Services.Sync;
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync;
+using MyMusic.CLI.Services.Sync.Types;
 
 public interface ISyncService
 {

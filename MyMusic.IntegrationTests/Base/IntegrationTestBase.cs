@@ -7,8 +7,11 @@ namespace MyMusic.IntegrationTests.Base;
 
 public abstract class IntegrationTestBase : PageTest
 {
-    protected const string BaseUrl = "http://localhost:5001";
-    
+    public static readonly string BaseUrl =
+        Environment.GetEnvironmentVariable("BASE_URL") is { } envUrl && !string.IsNullOrEmpty(envUrl)
+            ? envUrl
+            : "http://localhost:5001";
+
     protected IAPIRequestContext RequestContext { get; private set; } = null!;
     protected string UserName { get; } = $"Test-{Guid.NewGuid()}";
     protected long UserId { get; private set; }

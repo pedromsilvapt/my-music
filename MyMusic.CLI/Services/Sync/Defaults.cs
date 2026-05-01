@@ -6,12 +6,12 @@ using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
-using MyMusic.Common.Services.Sync;
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync;
+using MyMusic.CLI.Services.Sync.Types;
 using Refit;
-using SyncOptions = MyMusic.Common.Services.Sync.Types.SyncOptions;
-using PendingActionItem = MyMusic.Common.Services.Sync.Types.PendingActionItem;
-using AcknowledgeActionRequest = MyMusic.Common.Services.Sync.Types.AcknowledgeActionRequest;
+using SyncOptions = MyMusic.CLI.Services.Sync.Types.SyncOptions;
+using PendingActionItem = MyMusic.CLI.Services.Sync.Types.PendingActionItem;
+using AcknowledgeActionRequest = MyMusic.CLI.Services.Sync.Types.AcknowledgeActionRequest;
 
 public class CliFileOps(IFileSystem fileSystem) : IFileOps
 {

@@ -2,8 +2,8 @@ namespace MyMusic.CLI.Services.Sync;
 
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
-using MyMusic.Common.Services.Sync;
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync;
+using MyMusic.CLI.Services.Sync.Types;
 
 public class Phases(
     ISyncApiClient apiClient,

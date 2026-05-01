@@ -1,0 +1,43 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - uses: earthly/actions/setup-earthly@v1
+        with:
+          version: v0.8.16
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set VERSION from commit SHA
+        run: echo "VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Build Server image
+        run: earthly --ci +docker --TAG="$VERSION"
+
+      - name: Build Client image
+        run: earthly --ci ./MyMusic.Client+docker --TAG="$VERSION"
+
+      - name: Build IntegrationTests image
+        run: earthly --ci +docker-integration-tests --TAG="$VERSION"
+
+      - name: Run integration tests
+        run: docker compose -f compose.integration.yaml up --exit-code-from integration-tests
+        env:
+          VERSION: ${{ env.VERSION }}
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f compose.integration.yaml down --volumes

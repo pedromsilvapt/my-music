@@ -1,4 +1,4 @@
-namespace MyMusic.Common.Services.Sync;
+namespace MyMusic.CLI.Services.Sync;
 
 public interface ISyncConfig
 {

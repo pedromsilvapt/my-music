@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using MyMusic.IntegrationTests.Flows;
 using Shouldly;
@@ -34,8 +35,10 @@ public class CliTestFixture : IAsyncDisposable
         IAPIRequestContext api,
         long userId,
         string userName,
-        string serverUrl = "http://localhost:5001")
+        string? serverUrl = null)
     {
+        serverUrl ??= IntegrationTestBase.BaseUrl;
+
         var deviceResponse = await api.PostAsync("/api/devices", new()
         {
             DataObject = new

@@ -3,10 +3,9 @@ using System.Globalization;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services;
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
-using SyncDirection = MyMusic.Common.Services.Sync.Types.SyncDirection;
 
 namespace MyMusic.CLI.Commands;
 

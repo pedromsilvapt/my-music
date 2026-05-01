@@ -5,7 +5,10 @@ namespace MyMusic.IntegrationTests.Fixtures;
 
 public static class CliRunner
 {
-    private static readonly string DefaultCliPath = Path.Combine(
+    // CLI_PATH env var takes precedence over the Debug build path.
+    // In containerized runs, CLI_PATH is set to /usr/local/bin/my-music (the .deb-installed binary).
+    // In local dev, CLI_PATH is typically empty and the Debug build path is used instead.
+    private static string DefaultCliPath() => Path.Combine(
         FindSolutionRoot(),
         "MyMusic.CLI",
         "bin",
@@ -16,7 +19,7 @@ public static class CliRunner
     private static readonly string CliPath =
         Environment.GetEnvironmentVariable("CLI_PATH") is { } envPath && !string.IsNullOrEmpty(envPath)
             ? envPath
-            : DefaultCliPath;
+            : DefaultCliPath();
 
     public static Task<CliResult> SyncAsync(
         CliTestFixture fixture,

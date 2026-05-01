@@ -2,8 +2,8 @@ namespace MyMusic.CLI.Tests.Services.Sync;
 
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync;
-using MyMusic.Common.Services.Sync;
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync;
+using MyMusic.CLI.Services.Sync.Types;
 using NSubstitute;
 using Shouldly;
 using Xunit;

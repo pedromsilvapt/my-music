@@ -1,6 +1,6 @@
-namespace MyMusic.Common.Services.Sync;
+namespace MyMusic.CLI.Services.Sync;
 
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync.Types;
 
 public interface ISyncApiClient
 {

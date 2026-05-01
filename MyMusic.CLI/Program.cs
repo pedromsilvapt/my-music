@@ -9,7 +9,6 @@ using MyMusic.CLI.Commands;
 using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services;
 using MyMusic.CLI.Services.Sync;
-using MyMusic.Common.Services.Sync;
 using Refit;
 using Spectre.Console.Cli;
 

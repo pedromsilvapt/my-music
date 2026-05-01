@@ -1,7 +1,7 @@
 namespace MyMusic.CLI.Services.Sync;
 
 using Microsoft.Extensions.DependencyInjection;
-using MyMusic.Common.Services.Sync.Types;
+using MyMusic.CLI.Services.Sync.Types;
 
 public class SyncService(IServiceProvider serviceProvider) : ISyncService
 {
