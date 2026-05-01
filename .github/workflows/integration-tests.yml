@@ -25,13 +25,13 @@ jobs:
         run: echo "VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Build Server image
-        run: earthly --ci +docker --TAG="$VERSION"
+        run: earthly --ci --output +docker --TAG="$VERSION"
 
       - name: Build Client image
-        run: earthly --ci ./MyMusic.Client+docker --TAG="$VERSION"
+        run: earthly --ci --output ./MyMusic.Client+docker --TAG="$VERSION"
 
       - name: Build IntegrationTests image
-        run: earthly --ci +docker-integration-tests --TAG="$VERSION"
+        run: earthly --ci --output +docker-integration-tests --TAG="$VERSION"
 
       - name: Run integration tests
         run: docker compose -f compose.integration.yaml up --pull missing --exit-code-from integration-tests
