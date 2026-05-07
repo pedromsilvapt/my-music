@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 using Refit;
 using SyncOptions = MyMusic.CLI.Services.Sync.Types.SyncOptions;

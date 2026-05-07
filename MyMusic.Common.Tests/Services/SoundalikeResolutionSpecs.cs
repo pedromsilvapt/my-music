@@ -1,7 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;

@@ -1,13 +1,20 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Text;
+using Microsoft.Extensions.Configuration;
+using MyMusic.OpenTelemetry.XUnit;
 
 namespace MyMusic.IntegrationTests.Fixtures;
 
-public static class CliRunner
+public enum SyncDirection
 {
-    // CLI_PATH env var takes precedence over the Debug build path.
-    // In containerized runs, CLI_PATH is set to /usr/local/bin/my-music (the .deb-installed binary).
-    // In local dev, CLI_PATH is typically empty and the Debug build path is used instead.
+    Up,
+    Down,
+    Both,
+}
+
+public class CliRunner(IConfiguration configuration, IntegrationTestTelemetry telemetry)
+{
     private static string DefaultCliPath() => Path.Combine(
         FindSolutionRoot(),
         "MyMusic.CLI",
@@ -21,40 +28,48 @@ public static class CliRunner
             ? envPath
             : DefaultCliPath();
 
-    public static Task<CliResult> SyncAsync(
+    public Task<CliResult> SyncAsync(
         CliTestFixture fixture,
         bool force = false,
         bool autoConfirm = true,
         bool dryRun = false,
-        bool verbose = true,
+        SyncDirection? direction = null,
         CancellationToken cancellationToken = default)
     {
         var args = new List<string> { "sync" };
 
         if (force) args.Add("--force");
         if (dryRun) args.Add("--dry-run");
+        if (direction is not null && direction != SyncDirection.Both)
+        {
+            args.Add("--direction");
+            args.Add(direction.Value.ToString().ToLowerInvariant());
+        }
         if (autoConfirm) args.Add("--yes");
-        if (verbose) args.Add("--verbose");
 
         return RunAsync(fixture, args.ToArray(), cancellationToken);
     }
 
-    public static async Task<CliResult> RunAsync(
-        CliTestFixture fixture,
-        params string[] args)
-    {
-        return await RunAsync(fixture, args, CancellationToken.None);
-    }
-
-    private static async Task<CliResult> RunAsync(
+    private async Task<CliResult> RunAsync(
         CliTestFixture fixture,
         string[] args,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken = default)
     {
+        // Spectre.Console requires global options AFTER the command name, not before.
+        // E.g., "sync --loglevel Debug --verbose --yes" is valid, but
+        // "--loglevel Debug --verbose sync --yes" causes CommandParseException.
+        var globalOptions = new[] { "--loglevel", "Debug", "--verbose" };
+        var allArgs = args.Take(1).Concat(globalOptions).Concat(args.Skip(1));
+        var argsString = string.Join(" ", allArgs);
+
+        using var span = telemetry.StartProcessSpan("my-music", argsString);
+
+        var traceparent = Activity.Current?.Id;
+
         var startInfo = new ProcessStartInfo
         {
             FileName = CliPath,
-            Arguments = string.Join(" ", args),
+            Arguments = argsString,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -64,6 +79,13 @@ public static class CliRunner
 
         startInfo.Environment["MYMUSIC_CONFIG_PATH"] = fixture.ConfigPath;
 
+        if (!string.IsNullOrEmpty(traceparent))
+        {
+            startInfo.Environment["OTEL_TRACE_PARENT"] = traceparent;
+        }
+
+        ForwardOpenTelemetryConfig(startInfo);
+
         using var process = new Process();
         process.StartInfo = startInfo;
 
@@ -72,12 +94,18 @@ public static class CliRunner
 
         process.OutputDataReceived += (_, e) =>
         {
-            if (e.Data != null) stdout.AppendLine(e.Data);
+            if (e.Data != null)
+            {
+                stdout.AppendLine(e.Data);
+            }
         };
 
         process.ErrorDataReceived += (_, e) =>
         {
-            if (e.Data != null) stderr.AppendLine(e.Data);
+            if (e.Data != null)
+            {
+                stderr.AppendLine(e.Data);
+            }
         };
 
         process.Start();
@@ -86,10 +114,35 @@ public static class CliRunner
 
         await process.WaitForExitAsync(cancellationToken);
 
+        span?.SetTag("exit_code", process.ExitCode);
+        span?.Stop();
+
         return new CliResult(
             process.ExitCode,
             stdout.ToString(),
             stderr.ToString());
+    }
+
+    private void ForwardOpenTelemetryConfig(ProcessStartInfo startInfo)
+    {
+        var otelConfigType = Type.GetType("MyMusic.OpenTelemetry.OtelConfig, MyMusic.OpenTelemetry")!;
+        var config = configuration.GetSection("OpenTelemetry").Get(otelConfigType);
+        if (config is null)
+        {
+            return;
+        }
+
+        foreach (var prop in otelConfigType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        {
+            var value = prop.GetValue(config);
+            if (value is null || (value is string s && string.IsNullOrEmpty(s)))
+            {
+                continue;
+            }
+
+            var envKey = $"OpenTelemetry__{prop.Name}";
+            startInfo.Environment[envKey] = value.ToString()!;
+        }
     }
 
     private static string FindSolutionRoot()

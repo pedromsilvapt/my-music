@@ -2,7 +2,6 @@ namespace MyMusic.CLI.Services.Sync;
 
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 
 public class Phases(
@@ -132,7 +131,7 @@ public class Phases(
             logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
 
             var syncFiles = chunk
-                .Where(f => !ctx.PendingDownloadPreviousPaths.Contains(f.RelativePath))
+                .Where(f => !ctx.PendingDownloadPaths.Contains(f.RelativePath))
                 .Select(f => new SyncFileInfo
                 {
                     Path = f.RelativePath,
@@ -272,6 +271,10 @@ public class Phases(
         {
             logger.LogInformation("Dry-run: {Count} potential conflicts detected (not resolved)", potentialConflicts.Count);
             ctx.Result = ctx.Result with { Conflicts = ctx.Result.Conflicts + potentialConflicts.Count };
+            foreach (var conflict in potentialConflicts)
+            {
+                ctx.ConflictedSongIds.Add(conflict.SongId);
+            }
             return;
         }
 
@@ -324,6 +327,11 @@ public class Phases(
             {
                 logger.LogError("Conflict for {Path}: {Reason}", conflictError.Path, conflictError.Reason);
                 ctx.Result = ctx.Result with { Conflicts = ctx.Result.Conflicts + 1 };
+                var potentialConflict = potentialConflicts.FirstOrDefault(c => c.Path == conflictError.Path);
+                if (potentialConflict != null)
+                {
+                    ctx.ConflictedSongIds.Add(potentialConflict.SongId);
+                }
             }
         }
         catch (Exception ex)
@@ -381,6 +389,12 @@ public class Phases(
                         DevicePath = action.Path
                     }, ct);
                 }
+                continue;
+            }
+
+            if (action.Action == "Download" && action.SongId.HasValue && ctx.ConflictedSongIds.Contains(action.SongId.Value))
+            {
+                logger.LogInformation("Skipping download for song {SongId} - unresolved conflict", action.SongId);
                 continue;
             }
 

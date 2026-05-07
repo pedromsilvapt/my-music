@@ -1,7 +1,5 @@
 using Microsoft.Playwright;
-using MyMusic.IntegrationTests.Pages;
-using System.Text.Json;
-using Shouldly;
+using MyMusic.IntegrationTests.Extensions;
 
 namespace MyMusic.IntegrationTests.Pages.Components;
 
@@ -17,7 +15,7 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
     public async Task<long> GetSongIdAsync(int rowIndex, IAPIRequestContext api, long userId)
     {
         var title = await GetCellValueAsync(rowIndex, "title");
-        var response = await api.GetAsync($"/api/songs?search={Uri.EscapeDataString(title)}");
+        var response = await api.GetWithTraceAsync($"/api/songs?search={Uri.EscapeDataString(title)}");
         var data = await response.JsonAsync();
         var songs = data!.Value.GetProperty("songs");
         return songs.EnumerateArray().First().GetProperty("id").GetInt64();
@@ -41,6 +39,18 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
         var titleCell = row.Locator("td[data-testid^='collection-cell-title-']");
         var anchor = titleCell.Locator("a");
         await anchor.ClickAsync();
+        var page = new SongDetailsPage(Root.Page);
+        await page.WaitForLoadedAsync();
+        return page;
+    }
+
+    /// <summary>
+    /// Finds a song by title and navigates to its details page.
+    /// Uses Playwright's auto-waiting and retry logic.
+    /// </summary>
+    public async Task<SongDetailsPage> GoToSongDetailsByTitleAsync(string title)
+    {
+        await GoToDetailsByCellTextAsync("title", title);
         var page = new SongDetailsPage(Root.Page);
         await page.WaitForLoadedAsync();
         return page;

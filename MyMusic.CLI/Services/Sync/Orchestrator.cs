@@ -1,7 +1,6 @@
 namespace MyMusic.CLI.Services.Sync;
 
 using Microsoft.Extensions.Logging;
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 
 public class Orchestrator(

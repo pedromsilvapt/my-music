@@ -18,7 +18,7 @@ The integration test SHALL verify that server-side edits are downloaded to the C
 - **THEN** the local MP3 file metadata contains the new title
 
 ### Requirement: Test Conciseness
-Each test step SHALL be implemented in one or two lines of code.
+Each test step SHALL be implemented in one or two lines of code. Tests in partial class files SHALL share the same fixture initialization pattern as the main `CliSyncTests` class.
 
 #### Scenario: Setup file step
 - **WHEN** test needs to create a test file

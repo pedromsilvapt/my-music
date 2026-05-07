@@ -2,10 +2,11 @@ using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Fixtures;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
+using Xunit;
 
 namespace MyMusic.IntegrationTests.Tests.Songs;
 
-public class SongsPageTests : IntegrationTestBase
+public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     [Fact]
     public async Task SongsPage_ShouldDisplayCollection()

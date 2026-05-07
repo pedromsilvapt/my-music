@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using Shouldly;
 
@@ -157,7 +158,7 @@ public class AlbumsFixture
         {
             var artistId = artists[index % artists.Count].Id;
 
-            var response = await api.PostAsync("/api/albums", new()
+            var response = await api.PostWithTraceAsync("/api/albums", new()
             {
                 DataObject = new
                 {

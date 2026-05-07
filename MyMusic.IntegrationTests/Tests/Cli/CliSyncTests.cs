@@ -1,26 +1,30 @@
 using MyMusic.IntegrationTests.Base;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures;
 using MyMusic.IntegrationTests.Flows;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
+using Xunit;
 
 namespace MyMusic.IntegrationTests.Tests.Cli;
 
-public class CliSyncTests : IntegrationTestBase
+public partial class CliSyncTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     private CliTestFixture _cli = null!;
     private SongsFixture _serverSongs = null!;
+    private PlaylistsFixture _playlists = null!;
 
-    public override async Task InitializeAsync()
+    public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
 
         _cli = new CliTestFixture();
         await _cli.InitializeAsync(RequestContext, UserId, UserName);
         _serverSongs = new SongsFixture();
+        _playlists = new PlaylistsFixture();
     }
 
-    public override async Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         await _cli.DisposeAsync();
         await base.DisposeAsync();
@@ -34,7 +38,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to upload the song to the server
         var result = await CliRunner.SyncAsync(_cli);
-        result.Success.ShouldBeTrue($"CLI failed (exit={result.ExitCode})\nStdOut: {result.StandardOutput}\nStdErr: {result.StandardError}");
+        result.ShouldBeSuccessful();
 
         // Verify the song appears on the server UI
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -45,7 +49,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync again to download the server changes
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Validate the local file has the updated title
         await FileValidator.AssertMetadataAsync(_cli.GetSongPath("Dylan/The Alibi/Updated Title - Dylan.mp3"), title: "Updated Title");
@@ -63,7 +67,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to merge device and server songs
         var result = await CliRunner.SyncAsync(_cli);
-        result.Success.ShouldBeTrue($"CLI failed (exit={result.ExitCode})\nStdOut: {result.StandardOutput}\nStdErr: {result.StandardError}");
+        result.ShouldBeSuccessful();
 
         // Verify the device song still exists locally
         _cli.FileExists("Sand.mp3").ShouldBeTrue();
@@ -86,7 +90,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to upload the song to the server
         var result1 = await CliRunner.SyncAsync(_cli);
-        result1.Success.ShouldBeTrue($"CLI failed (exit={result1.ExitCode})\nStdOut: {result1.StandardOutput}\nStdErr: {result1.StandardError}");
+        result1.ShouldBeSuccessful();
 
         // Verify the file still exists locally after upload
         _cli.FileExists("Girl across the street.mp3").ShouldBeTrue();
@@ -97,7 +101,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync again (idempotency check)
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Verify no changes were made on the second sync
         result2.TotalChanges.ShouldBe(0);
@@ -112,7 +116,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to download the song to the device
         var result1 = await CliRunner.SyncAsync(_cli);
-        result1.Success.ShouldBeTrue($"CLI failed (exit={result1.ExitCode})\nStdOut: {result1.StandardOutput}\nStdErr: {result1.StandardError}");
+        result1.ShouldBeSuccessful();
 
         // Verify the file was downloaded with correct metadata
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -122,7 +126,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync again (idempotency check)
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Verify no changes were made on the second sync
         result2.TotalChanges.ShouldBe(0);
@@ -137,7 +141,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to download the song to the device
         var result1 = await CliRunner.SyncAsync(_cli);
-        result1.Success.ShouldBeTrue($"CLI failed (exit={result1.ExitCode})\nStdOut: {result1.StandardOutput}\nStdErr: {result1.StandardError}");
+        result1.ShouldBeSuccessful();
 
         // Verify the file exists locally
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -149,7 +153,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to process the removal
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Verify the song still exists on the server (device association removed)
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -167,7 +171,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run the CLI sync command, should download the file to the local CLI folder
         var result1 = await CliRunner.SyncAsync(_cli);
-        result1.Success.ShouldBeTrue($"CLI failed (exit={result1.ExitCode})\nStdOut: {result1.StandardOutput}\nStdErr: {result1.StandardError}");
+        result1.ShouldBeSuccessful();
 
         // Validate the file was correctly downloaded
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -183,7 +187,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run the CLI sync command again, should upload the song
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Validate that the title of the song on the details page is updated now
         await new ValidateSongDetailsFlow(updatedTitle, new ValidateSongOptions(Title: updatedTitle))
@@ -203,7 +207,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync to download the song to the device
         var result = await CliRunner.SyncAsync(_cli);
-        result.Success.ShouldBeTrue($"CLI failed (exit={result.ExitCode})\nStdOut: {result.StandardOutput}\nStdErr: {result.StandardError}");
+        result.ShouldBeSuccessful();
         result.Downloaded.ShouldBe(1);
 
         // Verify file exists locally with correct metadata
@@ -225,7 +229,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync - verify file downloaded with original title
         var result1 = await CliRunner.SyncAsync(_cli);
-        result1.Success.ShouldBeTrue($"CLI failed (exit={result1.ExitCode})\nStdOut: {result1.StandardOutput}\nStdErr: {result1.StandardError}");
+        result1.ShouldBeSuccessful();
 
         var songData = songsData[0];
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -239,13 +243,13 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync again
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Verify: old file removed, new file exists with new title in filename
         var newDevicePath = "Freya Ridings/Wicker Woman/Updated Title - Freya Ridings.mp3";
         var newFileExists = _cli.FileExists(newDevicePath);
         var oldFileExists = _cli.FileExists(originalDevicePath);
-        oldFileExists.ShouldBeFalse($"Old file should be removed.\nNew file exists: {newFileExists}\nCLI stdout: {result2.StandardOutput}\nCLI stderr: {result2.StandardError}");
+        oldFileExists.ShouldBeFalse($"Old file should be removed.\nNew file exists: {newFileExists}");
         newFileExists.ShouldBeTrue("New file should exist");
         await FileValidator.AssertMetadataAsync(_cli.GetSongPath(newDevicePath), title: newTitle);
     }
@@ -259,7 +263,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync - verify file downloaded without "(Explicit)" in name
         var result1 = await CliRunner.SyncAsync(_cli);
-        result1.Success.ShouldBeTrue($"CLI failed (exit={result1.ExitCode})\nStdOut: {result1.StandardOutput}\nStdErr: {result1.StandardError}");
+        result1.ShouldBeSuccessful();
 
         var songData = songsData[0];
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3 (no Explicit suffix initially)
@@ -272,7 +276,7 @@ public class CliSyncTests : IntegrationTestBase
 
         // Run CLI sync again
         var result2 = await CliRunner.SyncAsync(_cli);
-        result2.Success.ShouldBeTrue($"CLI failed (exit={result2.ExitCode})\nStdOut: {result2.StandardOutput}\nStdErr: {result2.StandardError}");
+        result2.ShouldBeSuccessful();
 
         // Verify: old file removed, new file exists with "(Explicit)" in filename
         _cli.FileExists(originalDevicePath).ShouldBeFalse("Old file should be removed");

@@ -85,7 +85,7 @@ The system SHALL provide a clear visual indicator on songs marked with the `Stop
 - **THEN** the visual indicator SHALL immediately appear or disappear without requiring a page refresh
 
 ### Requirement: Pause playback after flagged song
-The system SHALL automatically pause playback when a song marked with `StopAfterPlayback` finishes playing, instead of advancing to the next song.
+The system SHALL automatically pause playback when a song marked with `StopAfterPlayback` finishes playing, instead of advancing to the next song. When advancing past songs with `SkipNextPlayback`, those songs SHALL be skipped over and their flags cleared.
 
 #### Scenario: Flagged song ends triggers pause
 - **WHEN** the currently playing song reaches its end
@@ -102,7 +102,8 @@ The system SHALL automatically pause playback when a song marked with `StopAfter
 
 #### Scenario: User manually skips flagged song
 - **WHEN** user manually skips to the next song while a flagged song is playing
-- **THEN** playback SHALL continue to the next song normally
+- **THEN** playback SHALL advance to the next non-skipped song (skipping over any `SkipNextPlayback` songs)
+- **AND** the `SkipNextPlayback` flags on skipped-past songs SHALL be cleared
 - **AND** the `StopAfterPlayback` flag SHALL remain on the skipped song (not cleared)
 
 #### Scenario: Flag on last song in queue
@@ -110,6 +111,16 @@ The system SHALL automatically pause playback when a song marked with `StopAfter
 - **AND** the song finishes playing
 - **THEN** playback SHALL pause (same behavior as middle of queue)
 - **AND** the flag SHALL be cleared
+
+#### Scenario: Setting StopAfterPlayback=true clears SkipNextPlayback
+- **WHEN** a user sets `StopAfterPlayback=true` on a song (via single or batch API, or collection action)
+- **AND** the song currently has `SkipNextPlayback=true`
+- **THEN** the server SHALL set `SkipNextPlayback=false` on that song in the same transaction
+- **AND** the response SHALL reflect both changes
+
+#### Scenario: Setting StopAfterPlayback=false does not affect SkipNextPlayback
+- **WHEN** a user sets `StopAfterPlayback=false` on a song
+- **THEN** the `SkipNextPlayback` flag SHALL remain unchanged
 
 ### Requirement: Queue operations preserve flags appropriately
 The system SHALL handle queue modifications while preserving stop-after flags appropriately.

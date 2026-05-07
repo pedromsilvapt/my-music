@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using Shouldly;
 
@@ -13,14 +15,14 @@ public class DevicesFixture
         new("Test Device 3", "tablet", "#5733FF"),
     ];
 
-    public async Task<List<DeviceData>> SeedAsync(IAPIRequestContext api, long userId, SampleDevice[]? devices = null)
+    public async Task<List<DeviceData>> SeedAsync(IAPIRequestContext api, long userId, SampleDevice[]? devices = null, ILogger? logger = null)
     {
         var sampleDevices = devices ?? DefaultDevices;
         var data = new List<DeviceData>();
 
         foreach (var device in sampleDevices)
         {
-            var response = await api.PostAsync("/api/devices", new()
+            var response = await api.PostWithTraceAsync("/api/devices", new()
             {
                 DataObject = new
                 {
@@ -48,6 +50,20 @@ public class DevicesFixture
             data.Add(new DeviceData(id, name, icon, color, namingTemplate));
         }
 
+        if (logger != null)
+        {
+            foreach (var device in data)
+            {
+                logger.LogInformation("Created device: Id={Id}, Name={Name}", device.Id, device.Name);
+            }
+        }
+
         return data;
+    }
+
+    public async Task<DeviceData> SeedAsync(IAPIRequestContext api, long userId, SampleDevice device, ILogger? logger = null)
+    {
+        var devices = await SeedAsync(api, userId, [device], logger);
+        return devices[0];
     }
 }

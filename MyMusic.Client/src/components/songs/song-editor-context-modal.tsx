@@ -872,6 +872,7 @@ export default function SongEditorContextModal({
                                 value={currentState.form.title}
                                 onChange={(e) => handleFormChange({title: e.target.value})}
                                 disabled={hasMetadata && !!currentState.metadata?.title && !currentState.checkboxes.title}
+                                data-testid="edit-song-title"
                                 styles={hasMetadata && currentState.metadata?.title ? {
                                     input: {
                                         borderColor: currentState.checkboxes.title
@@ -923,6 +924,7 @@ export default function SongEditorContextModal({
                                 value={currentState.form.year ?? undefined}
                                 onChange={(val) => handleFormChange({year: typeof val === 'number' ? val : undefined})}
                                 disabled={hasMetadata && !!currentState.metadata?.year && !currentState.checkboxes.year}
+                                data-testid="edit-song-year"
                                 styles={hasMetadata && currentState.metadata?.year ? {
                                     input: {
                                         borderColor: currentState.checkboxes.year
@@ -947,6 +949,7 @@ export default function SongEditorContextModal({
                                 onChange={handleAlbumChange}
                                 onSearch={searchAlbums}
                                 showArtwork
+                                testId="edit-song-album"
                                 disabled={hasMetadata && !!currentState.metadata?.album && !currentState.checkboxes.album}
                                 diffMode={hasMetadata && !!currentState.metadata?.album}
                                 originalValue={currentState.song.album ? { id: currentState.song.album.id, name: currentState.song.album.name } : null}
@@ -966,6 +969,7 @@ export default function SongEditorContextModal({
                                 onChange={(item) => handleFormChange({albumArtist: item && typeof item !== 'string' ? {id: item.id, name: item.name} : {id: 0, name: ""}})}
                                 onSearch={searchArtistsForAutocomplete}
                                 showArtwork
+                                testId="edit-song-album-artist"
                                 error={albumArtistMismatch ? `Not in the song's artists list` : undefined}
                                 disabled={isAlbumArtistDisabled}
                                 diffMode={hasMetadata && !!currentState.metadata?.albumArtist}
@@ -986,6 +990,7 @@ export default function SongEditorContextModal({
                                 onSearch={searchArtists}
                                 placeholder="Add artist..."
                                 showArtwork
+                                testId="edit-song-artists"
                                 disabled={hasMetadata && !!currentState.metadata?.artists && !currentState.checkboxes.artists}
                                 diffMode={hasMetadata && !!currentState.metadata?.artists}
                                 originalValue={currentState.song.artists.map(a => ({ id: a.id, name: a.name }))}
@@ -1004,6 +1009,7 @@ export default function SongEditorContextModal({
                                 onChange={(items) => handleFormChange({genres: items})}
                                 onSearch={searchGenres}
                                 placeholder="Add genre..."
+                                testId="edit-song-genres"
                                 disabled={hasMetadata && !!currentState.metadata?.genres && !currentState.checkboxes.genres}
                                 diffMode={hasMetadata && !!currentState.metadata?.genres}
                                 originalValue={currentState.song.genres.map(g => ({ id: g.id, name: g.name }))}
@@ -1056,6 +1062,7 @@ export default function SongEditorContextModal({
                                 autosize
                                 maxRows={12}
                                 disabled={hasMetadata && !!currentState.metadata?.lyrics && !currentState.checkboxes.lyrics}
+                                data-testid="edit-song-lyrics"
                                 styles={hasMetadata && currentState.metadata?.lyrics ? {
                                     input: {
                                         borderColor: currentState.checkboxes.lyrics
@@ -1099,6 +1106,7 @@ export default function SongEditorContextModal({
                         <Box style={{flex: 1}}>
                             <Input.Wrapper 
                                 label={hasMetadata && currentState.metadata?.rating ? "Rating (new)" : "Rating"}
+                                data-testid="edit-song-rating"
                             >
                                 <Rating
                                     value={currentState.form.rating ?? 0}
@@ -1141,6 +1149,7 @@ export default function SongEditorContextModal({
                                 checked={currentState.form.explicit}
                                 onChange={(e) => handleFormChange({explicit: e.currentTarget.checked})}
                                 disabled={hasMetadata && currentState.metadata?.explicit != undefined && !currentState.checkboxes.explicit}
+                                data-testid="edit-song-explicit"
                             />
                         </Box>
                     </Group>

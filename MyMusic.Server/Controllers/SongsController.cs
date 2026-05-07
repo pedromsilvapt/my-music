@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.IO.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
@@ -12,13 +11,10 @@ using MyMusic.Common.Filters;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
-using MyMusic.Common.Targets;
 using MyMusic.Common.Services;
 using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Songs;
-using MyMusic.Server.DTO.Sources;
 using MyMusic.Common.Sources;
-using MyMusic.Server;
 using MyMusic.Server.Mapping;
 
 namespace MyMusic.Server.Controllers;

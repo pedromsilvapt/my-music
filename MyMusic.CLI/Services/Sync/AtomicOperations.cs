@@ -2,7 +2,6 @@ namespace MyMusic.CLI.Services.Sync;
 
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 
 public class AtomicOperations(

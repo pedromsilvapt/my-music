@@ -1,10 +1,12 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Configuration;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
@@ -15,6 +17,8 @@ public class HistoryListCommand(
 {
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
+        using var activity = CliActivitySource.Instance.StartActivity("history ls");
+        
         try
         {
             var deviceId = await GetDeviceIdAsync();
@@ -116,7 +120,7 @@ public class HistoryListCommand(
 
     private static string FormatDateTime(DateTime dt) => dt.ToString("yyyy-MM-dd HH:mm:ss");
 
-    public class Settings : CommandSettings
+    public class Settings : GlobalSettings
     {
         [CommandOption("-n|--count")]
         [DefaultValue(5)]

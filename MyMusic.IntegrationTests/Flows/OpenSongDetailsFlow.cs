@@ -1,6 +1,5 @@
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Pages;
-using Shouldly;
 
 namespace MyMusic.IntegrationTests.Flows;
 
@@ -24,17 +23,13 @@ public class OpenSongDetailsFlow : IFlow<SongDetailsPage>
         var home = new HomePage(page);
         var songsPage = await home.Navbar.GoToSongsAsync();
 
-        int rowIndex;
         if (_rowIndex.HasValue)
         {
-            rowIndex = _rowIndex.Value;
+            return await songsPage.Collection.GoToSongDetailsAsync(_rowIndex.Value);
         }
         else
         {
-            rowIndex = await songsPage.Collection.FindRowByTitleAsync(_songTitle!);
-            rowIndex.ShouldBeGreaterThanOrEqualTo(0, $"Song '{_songTitle}' not found in collection");
+            return await songsPage.Collection.GoToSongDetailsByTitleAsync(_songTitle!);
         }
-
-        return await songsPage.Collection.GoToSongDetailsAsync(rowIndex);
     }
 }

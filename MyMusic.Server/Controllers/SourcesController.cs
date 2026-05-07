@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
-using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
 using MyMusic.Common.Sources;
 using MyMusic.Server.DTO.Filters;

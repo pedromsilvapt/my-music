@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,17 +10,45 @@ using MyMusic.CLI.Commands;
 using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services;
 using MyMusic.CLI.Services.Sync;
+using MyMusic.OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Trace;
 using Refit;
 using Spectre.Console.Cli;
+
+var traceParent = Environment.GetEnvironmentVariable("OTEL_TRACE_PARENT");
+ActivityContext? parentContext = null;
+if (ActivityContext.TryParse(traceParent, null, out ActivityContext context))
+{
+    parentContext = context;
+}
+var activityKind = parentContext.HasValue ? ActivityKind.Server : ActivityKind.Internal;
+var argsString = string.Join(' ', args);
+
+var logLevelOverride = ParseLogLevelOverride(args);
+var verbose = IsVerbose(args);
 
 var services = new ServiceCollection();
 
 ConfigureConfiguration(services, args);
-ConfigureServices(services, args);
+var configuration = services.BuildServiceProvider().GetRequiredService<IConfiguration>();
+
+var defaultLogLevel = configuration.GetValue<LogLevel>("Logging:LogLevel:Default", LogLevel.Information);
+var effectiveLogLevel = logLevelOverride ?? defaultLogLevel;
+
+ConfigureServices(services, args, effectiveLogLevel, verbose, configuration);
 
 var provider = services.BuildServiceProvider();
 
-var app = new CommandApp(new TypeRegistrar(services));
+var tracerProvider = provider.GetService<TracerProvider>();
+var loggerProvider = provider.GetService<LoggerProvider>();
+
+using var rootActivity = CliActivitySource.Instance.StartActivity(
+    $"my-music {argsString}",
+    activityKind,
+    parentContext ?? default);
+
+var app = new CommandApp(new TypeRegistrar(services, provider));
 
 app.Configure(config =>
 {
@@ -35,7 +64,36 @@ app.Configure(config =>
     config.PropagateExceptions();
 });
 
-return app.Run(args);
+var exitCode = app.Run(args);
+
+rootActivity?.Stop();
+
+tracerProvider?.ForceFlush(30000);
+loggerProvider?.ForceFlush(30000);
+
+tracerProvider?.Dispose();
+loggerProvider?.Dispose();
+provider.Dispose();
+
+return exitCode;
+
+static LogLevel? ParseLogLevelOverride(string[] args)
+{
+    var logLevelIndex = Array.FindIndex(args, a => a == "--loglevel" || a == "-l");
+    if (logLevelIndex >= 0 && logLevelIndex + 1 < args.Length)
+    {
+        var levelString = args[logLevelIndex + 1];
+        if (Enum.TryParse<LogLevel>(levelString, ignoreCase: true, out var level))
+        {
+            return level;
+        }
+    }
+
+    return null;
+}
+
+static bool IsVerbose(string[] args) =>
+    args.Contains("--verbose") || args.Contains("-v");
 
 static void ConfigureConfiguration(IServiceCollection services, string[] args)
 {
@@ -67,35 +125,28 @@ static void ConfigureConfiguration(IServiceCollection services, string[] args)
         .Bind(configuration.GetSection("MyMusic"))
         .ValidateDataAnnotations();
 
-    services.AddSingleton(configuration);
+    services.AddSingleton<IConfiguration>(configuration);
 }
 
-static void ConfigureServices(IServiceCollection services, string[] args)
+static void ConfigureServices(IServiceCollection services, string[] args, LogLevel effectiveLogLevel, bool verbose, IConfiguration configuration)
 {
     services.AddSingleton<IFileSystem, FileSystem>();
 
     var loggerOptions = new LoggingOptions();
-    var configuration = services.BuildServiceProvider().GetService<IConfiguration>();
-
-    if (configuration != null)
-    {
-        configuration.GetSection("MyMusic:Logging").Bind(loggerOptions);
-    }
-
-    var isVerbose = args.Contains("--verbose") || args.Contains("-v");
+    configuration.GetSection("MyMusic:Logging").Bind(loggerOptions);
 
     services.AddLogging(builder =>
     {
-        if (isVerbose)
+        builder.SetMinimumLevel(effectiveLogLevel);
+
+        if (verbose)
         {
             builder.AddConsole();
-            builder.SetMinimumLevel(LogLevel.Information);
         }
 
         if (loggerOptions.EnableFileLogging)
         {
-            builder.AddProvider(new FileLoggerProvider(loggerOptions.FilePath, new FileSystem()));
-            builder.SetMinimumLevel(LogLevel.Information);
+            builder.AddProvider(new FileLoggerProvider(loggerOptions.FilePath, new FileSystem(), effectiveLogLevel));
         }
     });
 
@@ -109,6 +160,7 @@ static void ConfigureServices(IServiceCollection services, string[] args)
     services.AddTransient<HistoryPruneCommand>();
 
     services.AddTransient<AuthenticatedHttpClientHandler>();
+    services.AddTransient<HttpLoggingHandler>();
 
     services.AddRefitClient<IMyMusicClient>(GetRefitSettings)
         .ConfigureHttpClient((sp, httpClient) =>
@@ -116,6 +168,7 @@ static void ConfigureServices(IServiceCollection services, string[] args)
             var options = sp.GetRequiredService<IOptions<MyMusicOptions>>().Value;
             httpClient.BaseAddress = new Uri(options.Server.BaseUrl);
         })
+        .AddHttpMessageHandler<HttpLoggingHandler>()
         .AddHttpMessageHandler<AuthenticatedHttpClientHandler>();
 
     services.AddSingleton<IFileSystemScanner, CliFileSystemScanner>();
@@ -128,6 +181,8 @@ static void ConfigureServices(IServiceCollection services, string[] args)
     services.AddScoped<Phases>();
     services.AddScoped<Orchestrator>();
     services.AddScoped<ISyncService, SyncService>();
+
+    services.AddMyMusicOpenTelemetry(configuration, "MyMusic.CLI");
 }
 
 static RefitSettings GetRefitSettings(IServiceProvider sp) =>
@@ -140,14 +195,16 @@ public class FileLoggerProvider : ILoggerProvider
 {
     private readonly string _filePath;
     private readonly IFileSystem _fileSystem;
+    private readonly LogLevel _minimumLevel;
 
-    public FileLoggerProvider(string filePath, IFileSystem fileSystem)
+    public FileLoggerProvider(string filePath, IFileSystem fileSystem, LogLevel minimumLevel)
     {
         _filePath = filePath;
         _fileSystem = fileSystem;
+        _minimumLevel = minimumLevel;
     }
 
-    public ILogger CreateLogger(string categoryName) => new FileLogger(_filePath, categoryName, _fileSystem);
+    public ILogger CreateLogger(string categoryName) => new FileLogger(_filePath, categoryName, _fileSystem, _minimumLevel);
 
     public void Dispose() { }
 }
@@ -158,17 +215,19 @@ public class FileLogger : ILogger
     private readonly string _categoryName;
     private readonly string _filePath;
     private readonly IFileSystem _fileSystem;
+    private readonly LogLevel _minimumLevel;
 
-    public FileLogger(string filePath, string categoryName, IFileSystem fileSystem)
+    public FileLogger(string filePath, string categoryName, IFileSystem fileSystem, LogLevel minimumLevel)
     {
         _filePath = filePath;
         _categoryName = categoryName;
         _fileSystem = fileSystem;
+        _minimumLevel = minimumLevel;
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
-    public bool IsEnabled(LogLevel logLevel) => logLevel >= LogLevel.Information;
+    public bool IsEnabled(LogLevel logLevel) => logLevel >= _minimumLevel;
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
         Func<TState, Exception?, string> formatter)

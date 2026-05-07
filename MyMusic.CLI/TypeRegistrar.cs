@@ -6,13 +6,20 @@ namespace MyMusic.CLI;
 public class TypeRegistrar : ITypeRegistrar
 {
     private readonly IServiceCollection _services;
+    private readonly IServiceProvider? _provider;
 
     public TypeRegistrar(IServiceCollection services)
     {
         _services = services;
     }
 
-    public ITypeResolver Build() => new TypeResolver(_services.BuildServiceProvider());
+    public TypeRegistrar(IServiceCollection services, IServiceProvider provider)
+    {
+        _services = services;
+        _provider = provider;
+    }
+
+    public ITypeResolver Build() => new TypeResolver(_provider ?? _services.BuildServiceProvider());
 
     public void Register(Type service, Type implementation)
     {

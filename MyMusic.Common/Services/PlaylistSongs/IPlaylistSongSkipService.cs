@@ -1,5 +1,3 @@
-using MyMusic.Common.Entities;
-
 namespace MyMusic.Common.Services.PlaylistSongs;
 
 public interface IPlaylistSongSkipService

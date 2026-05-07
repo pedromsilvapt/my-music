@@ -21,6 +21,7 @@ public static class HostBuilderExtensions
         builder.Services.AddHostedService<WishlistBackgroundService>();
         builder.Services.AddSingleton<IFileSystem, FileSystem>();
         builder.Services.AddScoped<IMusicService, MusicService>();
+        builder.Services.AddScoped<ISongMergeService, SongMergeService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<IPlaylistSongSkipService, PlaylistSongSkipService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();

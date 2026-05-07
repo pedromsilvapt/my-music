@@ -19,12 +19,17 @@ interface ManagePlaylistsDialogProps {
 }
 
 export default function ManagePlaylistsDialog({
-                                                  opened,
-                                                  onClose,
-                                                  songIds,
-                                                  onSuccess
-                                              }: ManagePlaylistsDialogProps) {
-    const playlistsQuery = useListPlaylists();
+                                                   opened,
+                                                   onClose,
+                                                   songIds,
+                                                   onSuccess
+                                               }: ManagePlaylistsDialogProps) {
+    const playlistsQuery = useListPlaylists(undefined, {
+        query: {
+            enabled: opened,
+            refetchOnMount: 'always'
+        }
+    });
     const playlistsResponse = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {data: {playlists: []}};
 
     const playlists = playlistsResponse?.data?.playlists ?? [];
@@ -224,7 +229,7 @@ interface NewPlaylistRowProps {
 
 function NewPlaylistRow({entry, onNameChange, onSelectionChange, onRemove}: NewPlaylistRowProps) {
     return (
-        <Group justify="space-between" wrap="nowrap">
+        <Group justify="space-between" wrap="nowrap" data-testid="playlist-row" data-playlist-id={-1} data-playlist-name={entry.name}>
             <TextInput
                 value={entry.name}
                 onChange={(e) => onNameChange(e.target.value)}
@@ -264,7 +269,7 @@ function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps
     const matchingCount = managedSongs.filter(s => playlistSongIdSet.has(s.id)).length;
 
     return (
-        <Box>
+        <Box data-testid="playlist-row" data-playlist-id={playlist.id} data-playlist-name={playlist.name}>
             <Group justify="space-between" wrap="nowrap">
                 <Text fw={500} truncate style={{flex: 1, minWidth: 0}}>{playlist.name}</Text>
                 <Group gap="xs" wrap="nowrap">

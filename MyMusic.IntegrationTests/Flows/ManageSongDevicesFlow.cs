@@ -1,5 +1,4 @@
 using Microsoft.Playwright;
-using MyMusic.IntegrationTests.Pages;
 using MyMusic.IntegrationTests.Pages.Components;
 
 namespace MyMusic.IntegrationTests.Flows;

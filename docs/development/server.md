@@ -378,3 +378,42 @@ dotnet run --project MyMusic.Server
 # With Docker
 docker compose up
 ```
+
+## OpenTelemetry
+
+The server supports OpenTelemetry tracing and logging, disabled by default.
+
+### Configuration
+
+Add to `appsettings.json` or set environment variables:
+
+```json
+{
+  "OpenTelemetry": {
+    "Enabled": false,
+    "Endpoint": "http://localhost:4317",
+    "Protocol": "grpc"
+  }
+}
+```
+
+| Environment Variable | Description | Default |
+| --- | --- | --- |
+| `OpenTelemetry__Enabled` | Enable OpenTelemetry | `false` |
+| `OpenTelemetry__Endpoint` | OTLP base endpoint | `http://localhost:4317` |
+| `OpenTelemetry__Protocol` | Export protocol (`grpc` or `http/protobuf`) | `grpc` |
+| `OpenTelemetry__TracesEndpoint` | Override traces endpoint (optional) | _(Endpoint + /v1/traces)_ |
+| `OpenTelemetry__LogsEndpoint` | Override logs endpoint (optional) | _(Endpoint + /v1/logs)_ |
+| `OpenTelemetry__MetricsEndpoint` | Override metrics endpoint (optional) | _(Endpoint + /v1/metrics)_ |
+
+### Setup
+
+1. Start a collector: Otelite (`docker compose up otelite` or `./tools/otelite server`)
+2. Set `OpenTelemetry__Enabled=true` (or set `OpenTelemetry:Enabled` to `true` in appsettings)
+3. For Otelite, also set `OpenTelemetry__Endpoint=http://localhost:4318` and `OpenTelemetry__Protocol=http/protobuf`
+4. Start the server
+5. Traces and logs will be sent to the configured collector
+
+### Graceful Degradation
+
+If the OTLP endpoint is unavailable, the server continues operating normally. No errors are thrown and no functionality is impacted.

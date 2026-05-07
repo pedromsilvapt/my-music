@@ -1,10 +1,12 @@
 using MyMusic.IntegrationTests.Base;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures;
 using Shouldly;
+using Xunit;
 
 namespace MyMusic.IntegrationTests.Tests.Fixtures;
 
-public class SongsFixtureTests : IntegrationTestBase
+public class SongsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     [Fact]
     public async Task SeedAsync_UploadsSong()
@@ -40,7 +42,7 @@ public class SongsFixtureTests : IntegrationTestBase
         var fixture = new SongsFixture();
         await fixture.SeedAsync(RequestContext, UserId);
 
-        var response = await RequestContext.GetAsync("/api/songs");
+        var response = await RequestContext.GetWithTraceAsync("/api/songs");
         response.Ok.ShouldBeTrue();
 
         var json = await response.JsonAsync();

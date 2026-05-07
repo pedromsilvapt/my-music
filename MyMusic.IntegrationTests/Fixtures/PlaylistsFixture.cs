@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using Shouldly;
 
@@ -20,7 +21,7 @@ public class PlaylistsFixture
 
         foreach (var playlistName in samplePlaylists)
         {
-            var response = await api.PostAsync("/api/playlists", new()
+            var response = await api.PostWithTraceAsync("/api/playlists", new()
             {
                 DataObject = new
                 {
@@ -40,5 +41,11 @@ public class PlaylistsFixture
         }
 
         return data;
+    }
+
+    public async Task<PlaylistData> SeedAsync(IAPIRequestContext api, long userId, string playlist)
+    {
+        var playlists = await SeedAsync(api, userId, [playlist]);
+        return playlists[0];
     }
 }

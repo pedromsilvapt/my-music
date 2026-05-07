@@ -32,6 +32,7 @@ public class UsersController(
         CancellationToken cancellationToken)
     {
         var user = await db.Users.FindAsync([currentUser.Id], cancellationToken);
+        _logger.LogDebug("User id {Id} found: {Found}", currentUser.Id, user != null);
         if (user == null)
         {
             return NotFound();

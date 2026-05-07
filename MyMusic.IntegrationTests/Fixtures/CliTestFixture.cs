@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Base;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using MyMusic.IntegrationTests.Flows;
 using Shouldly;
@@ -39,7 +40,7 @@ public class CliTestFixture : IAsyncDisposable
     {
         serverUrl ??= IntegrationTestBase.BaseUrl;
 
-        var deviceResponse = await api.PostAsync("/api/devices", new()
+        var deviceResponse = await api.PostWithTraceAsync("/api/devices", new()
         {
             DataObject = new
             {
@@ -56,9 +57,9 @@ public class CliTestFixture : IAsyncDisposable
         await WriteConfigAsync(serverUrl, userId, userName);
     }
 
-    public async Task<string> CreateSongAsync(SampleSong song)
+    public async Task<string> CreateSongAsync(SampleSong song, string? fileName = null)
     {
-        var fileName = $"{SanitizeFileName(song.Title)}.mp3";
+        fileName ??= $"{SanitizeFileName(song.Title)}.mp3";
         var filePath = Path.Combine(RepositoryPath, fileName);
 
         var bytes = TestFiles.CreateTestMusicFile(

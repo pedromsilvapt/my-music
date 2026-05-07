@@ -1,7 +1,7 @@
 import {Button, Group, Title} from "@mantine/core";
 import {IconPlus} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -40,10 +40,6 @@ export default function PlaylistsPage() {
     const playlists = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {playlists: []};
 
     const playlistsSchema = usePlaylistsSchema();
-
-    useEffect(() => {
-        void playlistsQuery.refetch();
-    }, [playlistsQuery, playlistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setCollectionFilter(PLAYLISTS_STATE_KEY, { search: newSearch, expression: newFilter });

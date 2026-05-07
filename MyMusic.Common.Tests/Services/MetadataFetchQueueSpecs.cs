@@ -1,8 +1,5 @@
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;
 using MyMusic.Common.Entities;
-using MyMusic.Common.Services;
-using NSubstitute;
 using Shouldly;
 
 namespace MyMusic.Common.Tests.Services;

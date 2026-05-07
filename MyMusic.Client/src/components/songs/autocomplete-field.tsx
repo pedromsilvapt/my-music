@@ -39,6 +39,7 @@ interface AutocompleteFieldProps {
     showArtwork?: boolean;
     originalDisplayValue?: string;
     leftSection?: React.ReactNode;
+    testId?: string;
 }
 
 export default function AutocompleteField({
@@ -53,10 +54,11 @@ export default function AutocompleteField({
                                                originalValue,
                                                isChecked = true,
                                                onCheckChange,
-                                               showArtwork = false,
-                                               originalDisplayValue,
-                                               leftSection,
-                                           }: AutocompleteFieldProps) {
+                                                showArtwork = false,
+                                                originalDisplayValue,
+                                                leftSection,
+                                                testId,
+                                            }: AutocompleteFieldProps) {
     const [query, setQuery] = useState(value?.name || "");
     const [items, setItems] = useState<AutocompleteItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -195,6 +197,7 @@ export default function AutocompleteField({
                                 limit={15}
                                 filter={({options}) => options}
                                 renderOption={showArtwork ? renderOption : undefined}
+                                data-testid={testId}
                                 styles={{
                                     input: {
                                         borderColor: newBorderColor,
@@ -229,6 +232,7 @@ export default function AutocompleteField({
                 limit={15}
                 filter={({options}) => options}
                 renderOption={showArtwork ? renderOption : undefined}
+                data-testid={testId}
                 styles={hasChanged ? {
                     input: {
                         borderColor: 'var(--mantine-color-green-6)',

@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0
 
 WORKDIR /app/MyMusic
 
-ARG --global projects = "MyMusic.Common MyMusic.Server"
+ARG --global projects = "MyMusic.Common MyMusic.OpenTelemetry MyMusic.Server"
 
 install:
     COPY MyMusic.sln ./
@@ -36,7 +36,7 @@ integration-tests:
 
     WORKDIR /app/MyMusic
 
-    FOR proj IN "MyMusic.Common" "MyMusic.IntegrationTests"
+    FOR proj IN "MyMusic.Common" "MyMusic.OpenTelemetry" "MyMusic.OpenTelemetry.XUnit" "MyMusic.IntegrationTests"
         RUN mkdir -p ./$proj/
 
         COPY ./$proj/$proj.csproj ./$proj/
@@ -44,7 +44,7 @@ integration-tests:
 
     RUN dotnet restore MyMusic.IntegrationTests/MyMusic.IntegrationTests.csproj
 
-    FOR proj IN "MyMusic.Common" "MyMusic.IntegrationTests"
+    FOR proj IN "MyMusic.Common" "MyMusic.OpenTelemetry" "MyMusic.OpenTelemetry.XUnit" "MyMusic.IntegrationTests"
         COPY ./$proj/ ./$proj/
     END
 
@@ -106,7 +106,7 @@ docker-integration-tests:
     RUN corepack enable && corepack install --global pnpm@latest
     ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
     ENV PNPM_HOME="/pnpm"
-    ENV PATH="$PNPM_HOME:$PATH"
+    ENV PATH="$PNPM_HOME/bin:$PATH"
 
     ENV PLAYWRIGHT_BROWSERS_PATH=/home/vscode/.cache/ms-playwright
     RUN pnpm install -g playwright && \

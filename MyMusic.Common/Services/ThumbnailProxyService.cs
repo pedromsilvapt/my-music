@@ -1,9 +1,6 @@
-using System.Net.Http;
-using System.Text;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MyMusic.Common;
 using MyMusic.Common.Sources;
 using MyMusic.Common.Utilities;
 

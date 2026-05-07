@@ -19,7 +19,6 @@ public record SyncOptions
     public bool Force { get; init; }
     public bool DryRun { get; init; }
     public bool AutoConfirm { get; init; }
-    public bool Verbose { get; init; }
     public SyncDirection Direction { get; init; } = SyncDirection.Both;
 }
 

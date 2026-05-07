@@ -5,4 +5,6 @@ public record EditSongOptions(
     int? Year = null,
     string? Lyrics = null,
     int? Rating = null,
-    bool? Explicit = null);
+    bool? Explicit = null,
+    string? Album = null,
+    string[]? Artists = null);

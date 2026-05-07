@@ -1,5 +1,4 @@
 using System.IO.Abstractions;
-using System.IO.Hashing;
 using DotNext.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,7 +11,11 @@ using MyMusic.Common.Targets;
 
 namespace MyMusic.Common.Services;
 
-public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogger<MusicService> logger)
+public class MusicService(
+    IFileSystem fileSystem,
+    IOptions<Config> config,
+    ISongMergeService songMergeService,
+    ILogger<MusicService> logger)
     : IMusicService
 {
     public const string MusicIgnoreFile = ".musicignore";
@@ -320,8 +323,28 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
 
                     var song = await repo.GetSongByChecksum(checksum, checksumAlgorithmName, cancellationToken);
 
-                    // If there is a song with the same checksum, it means all fields are the same. And since Naming Strategies should be pure functions,
-                    // we can safely assume that the file name will also be the same as well.
+                    if (song is not null &&
+                        importSongMetadata.SongId.HasValue &&
+                        importSongMetadata.SongId.Value != song.Id)
+                    {
+                        var mergeResult = await songMergeService.MergeSongsAsync(
+                            db,
+                            song.Id,
+                            importSongMetadata.SongId.Value,
+                            cancellationToken);
+
+                        if (!mergeResult.Success)
+                        {
+                            job.AddException(new Exception($"Failed to merge songs: {mergeResult.ErrorMessage}"));
+                            continue;
+                        }
+
+                        await dbTrans.CommitAsync(cancellationToken);
+
+                        job.AddSongMapping(importSongMetadata, song);
+                        continue;
+                    }
+
                     if (song is not null &&
                         File.Exists(song.RepositoryPath) &&
                         (duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip ||
@@ -333,11 +356,16 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                         continue;
                     }
 
-                    // Pre-calculate the path that will be used by the configured naming strategy
                     targetFile.EnsureFilePath(metadata);
 
-                    // If no match with the same checksum was found, try to find with the same target file path
                     song ??= await repo.GetSongByPath(targetFile.FilePath!, cancellationToken);
+
+                    if (song is null && importSongMetadata.SongId.HasValue)
+                    {
+                        song = await db.Songs
+                            .Include(s => s.Devices)
+                            .FirstOrDefaultAsync(s => s.Id == importSongMetadata.SongId.Value, cancellationToken);
+                    }
 
                     if (song is not null &&
                         File.Exists(song.RepositoryPath) &&
@@ -357,6 +385,7 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                             .Include(s => s.Cover)
                             .Include(s => s.Album)
                             .ThenInclude(a => a!.Artist)
+                            .Include(s => s.Devices)
                             .FirstAsync(s => s.Id == song.Id, cancellationToken);
                     }
 
@@ -593,15 +622,12 @@ public class MusicService(IFileSystem fileSystem, IOptions<Config> config, ILogg
                     song.Track = metadata.Track;
                     song.Duration = duration;
                     song.Bitrate = metadata.Bitrate;
-                    // Checksum
                     song.Checksum = checksum;
                     song.ChecksumAlgorithm = checksumAlgorithmName;
-                    // References
                     song.Album = songAlbum;
                     song.Genres = songGenres;
-                    song.Devices = songDevices;
+                    song.Devices = song.Devices is { Count: > 0 } ? song.Devices : songDevices;
                     song.Artists = songArtists;
-                    // Timestamps
                     song.ModifiedAt = importSongMetadata.CreatedAt.ToUniversalTime();
 
                     if (cover is not null)

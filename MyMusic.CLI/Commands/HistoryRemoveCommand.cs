@@ -1,10 +1,12 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Configuration;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
@@ -15,6 +17,8 @@ public class HistoryRemoveCommand(
 {
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
+        using var activity = CliActivitySource.Instance.StartActivity("history rm");
+        
         try
         {
             var deviceId = await GetDeviceIdAsync();
@@ -111,7 +115,7 @@ public class HistoryRemoveCommand(
         return response == "y";
     }
 
-    public class Settings : CommandSettings
+    public class Settings : GlobalSettings
     {
         [CommandArgument(0, "<ID>")]
         public List<long> SessionIds { get; set; } = [];

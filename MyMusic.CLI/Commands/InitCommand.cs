@@ -1,6 +1,8 @@
 using System.Text.Json;
+using System.Diagnostics;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
@@ -21,6 +23,8 @@ public class InitCommand : Command<InitCommand.Settings>
 
     public override int Execute(CommandContext context, Settings settings)
     {
+        using var activity = CliActivitySource.Instance.StartActivity("init");
+        
         var configPath = GetConfigPath();
         EnsureConfigDirectory(configPath);
 
@@ -292,7 +296,7 @@ public class InitCommand : Command<InitCommand.Settings>
         string? RepositoryPath
     );
 
-    public class Settings : CommandSettings
+    public class Settings : GlobalSettings
     {
         [CommandOption("-s|--server")] public string? Server { get; init; }
 

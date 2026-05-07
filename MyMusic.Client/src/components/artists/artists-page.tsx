@@ -1,5 +1,5 @@
 import {useQuery} from "@tanstack/react-query";
-import {useEffect, useState} from "react";
+import {useState} from "react";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import {useArtistsSchema} from "./useArtistsSchema.tsx";
@@ -29,10 +29,6 @@ export default function ArtistsPage() {
     const artists = useQueryData(artistsQuery, "Failed to fetch artists") ?? {artists: []};
 
     const artistsSchema = useArtistsSchema();
-
-    useEffect(() => {
-        void artistsQuery.refetch();
-    }, [artistsQuery, artistsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setAppliedSearch(newSearch);
