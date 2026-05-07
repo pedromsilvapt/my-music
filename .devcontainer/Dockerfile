@@ -92,3 +92,11 @@ RUN fish -c 'curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main
 RUN uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 ENV SHELL=/usr/bin/fish
+
+# Install Go 1.26.1
+RUN wget https://go.dev/dl/go1.26.1.linux-amd64.tar.gz -O /tmp/go.tar.gz && \
+    sudo tar -C /usr/local -xzf /tmp/go.tar.gz && \
+    rm /tmp/go.tar.gz
+
+# Add Go to PATH for all users
+ENV PATH=/usr/local/go/bin:${PATH}

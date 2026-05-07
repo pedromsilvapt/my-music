@@ -24,7 +24,7 @@ export default function DeviceBadge({name, icon, color, syncAction, showTooltip 
         : name;
 
     const badge = (
-        <Badge color={badgeColor}>
+        <Badge color={badgeColor} data-testid="device-badge" data-sync-action={syncAction ?? undefined}>
             <Group gap={4}>
                 {icon && <TablerIcon icon={icon} size={12} color={iconColor}/>}
                 <Text inherit c={iconColor}>{name}</Text>

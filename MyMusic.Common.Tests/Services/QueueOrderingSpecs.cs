@@ -1,4 +1,3 @@
-using MyMusic.Common.Entities;
 using Shouldly;
 
 namespace MyMusic.Common.Tests.Services;

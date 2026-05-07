@@ -1,7 +1,5 @@
-using System.IO;
 using System.Reflection;
 using MyMusic.Common.Metadata;
-using MyMusic.Common.Targets;
 
 namespace MyMusic.IntegrationTests.Fixtures;
 

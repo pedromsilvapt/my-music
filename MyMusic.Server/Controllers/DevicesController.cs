@@ -719,7 +719,7 @@ public class DevicesController(
 
         var validFilePaths = records
             .Where(r => r.Action is SyncRecordAction.Created or SyncRecordAction.Updated
-                or SyncRecordAction.Skipped or SyncRecordAction.Downloaded)
+                or SyncRecordAction.Skipped or SyncRecordAction.Downloaded or SyncRecordAction.Error)
             .Select(r => r.FilePath)
             .ToHashSet();
 
@@ -1194,7 +1194,14 @@ public class DevicesController(
             var modifiedAtDateTime = DateTime.Parse(modifiedAt, null, DateTimeStyles.RoundtripKind);
             var createdAtDateTime = DateTime.Parse(createdAt, null, DateTimeStyles.RoundtripKind);
 
-            var songImportMetadata = new SongImportMetadata(tempFilePath, createdAtDateTime, modifiedAtDateTime);
+            var songDeviceForImport = await context.SongDevices
+                .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == path, cancellationToken);
+
+            var songImportMetadata = new SongImportMetadata(
+                tempFilePath,
+                createdAtDateTime,
+                modifiedAtDateTime,
+                songDeviceForImport?.SongId);
 
             var job = new MusicImportJob(importJobLogger);
 

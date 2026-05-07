@@ -2,9 +2,21 @@
 <RunSettings>
   <RunConfiguration>
     <EnvironmentVariables>
+      <!-- Browser to use (chromium, firefox, webkit) -->
       <BROWSER></BROWSER>
+      <!-- Path to CLI executable for CLI integration tests -->
       <CLI_PATH></CLI_PATH>
+      <!-- Base URL for the server (default: http://localhost:5001) -->
       <BASE_URL></BASE_URL>
+      <!-- Enable video + trace recording for debugging (set to "true" to enable) -->
+      <!-- Videos saved to: test-results/videos/ -->
+      <!-- Traces saved to: test-results/traces/ -->
+      <!-- View traces with: npx playwright show-trace <trace-file> -->
+      <PLAYWRIGHT_RECORD_VIDEO>true</PLAYWRIGHT_RECORD_VIDEO>
+      <!-- OpenTelemetry configuration (Teley) -->
+      <OpenTelemetry__Enabled>true</OpenTelemetry__Enabled>
+      <OpenTelemetry__Endpoint>http://localhost:4318</OpenTelemetry__Endpoint>
+      <OpenTelemetry__Protocol>http/protobuf</OpenTelemetry__Protocol>
     </EnvironmentVariables>
   </RunConfiguration>
   <xUnit>

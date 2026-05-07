@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Filters;
 using Shouldly;

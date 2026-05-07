@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
@@ -6,6 +7,7 @@ using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
@@ -16,6 +18,8 @@ public class HistoryPruneCommand(
 {
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
+        using var activity = CliActivitySource.Instance.StartActivity("history prune");
+        
         try
         {
             var deviceId = await GetDeviceIdAsync();
@@ -115,7 +119,7 @@ public class HistoryPruneCommand(
         return response == "y";
     }
 
-    public class Settings : CommandSettings
+    public class Settings : GlobalSettings
     {
         [CommandOption("-a|--all")]
         [DefaultValue(false)]

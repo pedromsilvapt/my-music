@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
@@ -5,6 +6,7 @@ using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
@@ -15,6 +17,8 @@ public class HistoryShowCommand(
 {
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
+        using var activity = CliActivitySource.Instance.StartActivity("history show");
+        
         try
         {
             var deviceId = await GetDeviceIdAsync();
@@ -281,7 +285,7 @@ public class HistoryShowCommand(
         Server,
     }
 
-    public class Settings : CommandSettings
+    public class Settings : GlobalSettings
     {
         [CommandArgument(0, "[SESSION_ID]")] public long? SessionId { get; set; }
 

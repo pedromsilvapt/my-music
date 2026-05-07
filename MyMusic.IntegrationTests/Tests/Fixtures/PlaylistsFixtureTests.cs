@@ -1,10 +1,11 @@
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Fixtures;
 using Shouldly;
+using Xunit;
 
 namespace MyMusic.IntegrationTests.Tests.Fixtures;
 
-public class PlaylistsFixtureTests : IntegrationTestBase
+public class PlaylistsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     [Fact]
     public async Task SeedAsync_CreatesPlaylists()

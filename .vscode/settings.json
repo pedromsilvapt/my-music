@@ -48,6 +48,12 @@
       "task": "Backend",
       "tooltip": "Start .NET backend with hot reload",
       "description": "Start the .NET backend with dotnet watch"
+    },
+    {
+      "label": "OpenTelemetry",
+      "task": "OpenTelemetry",
+      "tooltip": "Start a OTLP Server to receive Traces/Logs",
+      "description": "Start a OTLP Server to receive Traces/Logs"
     }
   ]
 }

@@ -3,7 +3,6 @@ using System.IO.Hashing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Tests.Utilities;
@@ -248,6 +247,49 @@ public class SongUpdateServiceSpecs
         songDevices.Count.ShouldBe(2);
         songDevices.First(sd => sd.DeviceId == device1.Id).SyncAction.ShouldBe(SongSyncAction.Download);
         songDevices.First(sd => sd.DeviceId == device2.Id).SyncAction.ShouldBe(SongSyncAction.Remove);
+    }
+
+    [Fact]
+    public async Task UpdateSong_ChangeArtists_SetsSyncActionToDownload()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
+
+        var newArtist = new Artist
+        {
+            Name = "New Artist",
+            OwnerId = scenario.AdminUser.Id,
+            Owner = scenario.AdminUser,
+            SongsCount = 0,
+            AlbumsCount = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+        scenario.DbContext.Add(newArtist);
+        scenario.DbContext.SaveChanges();
+
+        var update = new SongUpdateModel
+        {
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(newArtist.Id, null)])
+        };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id);
+        songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
+
+        var updatedSong = scenario.DbContext.Songs
+            .Include(s => s.Artists)
+            .ThenInclude(sa => sa.Artist)
+            .First(s => s.Id == song.Id);
+        updatedSong.Artists.Count.ShouldBe(1);
+        updatedSong.Artists.First().Artist.Name.ShouldBe("New Artist");
     }
 
     #region Helpers

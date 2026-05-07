@@ -6,6 +6,7 @@ using MyMusic.CLI.Services;
 using MyMusic.CLI.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
+using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
@@ -13,6 +14,8 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
 {
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
+        using var activity = CliActivitySource.Instance.StartActivity("sync");
+        
         AnsiConsole.MarkupLine("[bold cyan]MyMusic Sync[/]");
         if (settings.DryRun)
         {
@@ -44,7 +47,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
                         }
                     });
 
-                    syncResult = await syncService.SyncAsync(settings.Force, settings.Verbose, settings.DryRun,
+                    syncResult = await syncService.SyncAsync(settings.Force, settings.DryRun,
                         settings.AutoConfirm, settings.Direction, progress);
                 });
 
@@ -166,11 +169,9 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         return $"{elapsed:mm\\:ss}";
     }
 
-    public class Settings : CommandSettings
+    public class Settings : GlobalSettings
     {
         [CommandOption("-f|--force")] public bool Force { get; set; }
-
-        [CommandOption("-v|--verbose")] public bool Verbose { get; set; }
 
         [CommandOption("--dry-run")] public bool DryRun { get; set; }
 

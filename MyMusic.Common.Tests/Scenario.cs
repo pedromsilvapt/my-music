@@ -1,4 +1,3 @@
-using EntityFrameworkCore.Projectables;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using Microsoft.Data.Sqlite;
@@ -71,7 +70,7 @@ public class Scenario
         new(FileSystem, Options.Create(new Config
         {
             MusicRepositoryPath = "/data",
-        }), Substitute.For<ILogger<MusicService>>());
+        }), Substitute.For<ISongMergeService>(), Substitute.For<ILogger<MusicService>>());
 
     public SeedService CreateSeedService(string? seedPath = null) =>
         new(FileSystem, DbContext, Options.Create(new Config 

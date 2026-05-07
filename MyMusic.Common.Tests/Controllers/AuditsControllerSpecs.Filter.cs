@@ -1,9 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
-using MyMusic.Common.Services.AuditRules;
 using MyMusic.Server.Controllers;
 using MyMusic.Server.DTO.Filters;
 using NSubstitute;

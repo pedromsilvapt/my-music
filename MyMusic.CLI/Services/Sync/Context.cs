@@ -1,6 +1,5 @@
 namespace MyMusic.CLI.Services.Sync;
 
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 
 public record SyncContext
@@ -13,5 +12,6 @@ public record SyncContext
     public HashSet<string> UploadedPaths { get; } = [];
     public HashSet<string> PendingDownloadPaths { get; set; } = [];
     public HashSet<string> PendingDownloadPreviousPaths { get; set; } = [];
+    public HashSet<long> ConflictedSongIds { get; } = [];
     public List<PendingActionItem> PendingActions { get; set; } = [];
 }

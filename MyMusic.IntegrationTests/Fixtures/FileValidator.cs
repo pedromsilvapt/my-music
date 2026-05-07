@@ -1,7 +1,3 @@
-using System.Text.Json;
-using MyMusic.Common.Metadata;
-using MyMusic.Common.Targets;
-
 namespace MyMusic.IntegrationTests.Fixtures;
 
 public static class FileValidator

@@ -60,6 +60,18 @@
         "reveal": "always",
         "panel": "shared"
       }
+    },
+    {
+      "label": "OpenTelemetry",
+      "type": "shell",
+      "command": "docker compose up otelite",
+      "isBackground": true,
+      "problemMatcher": [],
+      "group": "none",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
     }
   ]
 }

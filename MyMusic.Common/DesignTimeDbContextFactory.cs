@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 namespace MyMusic.Common;
 

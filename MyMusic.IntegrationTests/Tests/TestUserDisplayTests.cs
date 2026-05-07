@@ -1,10 +1,11 @@
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
+using Xunit;
 
 namespace MyMusic.IntegrationTests.Tests;
 
-public class TestUserDisplayTests : IntegrationTestBase
+public class TestUserDisplayTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     [Fact]
     public async Task Username_ShouldAppearInTopbar()

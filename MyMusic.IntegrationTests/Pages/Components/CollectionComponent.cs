@@ -23,4 +23,25 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         await WaitForVisibleAsync();
         await WaitForAttributeAsync("data-loading", "false", timeout);
     }
+
+    public async Task GoToDetailsAsync(int rowIndex, string linkSelector = "a")
+    {
+        var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");
+        var firstLink = row.Locator(linkSelector).First;
+        await firstLink.ClickAsync();
+    }
+
+    /// <summary>
+    /// Finds a cell by column name containing the specified text and clicks the link inside it.
+    /// Uses Playwright's auto-waiting and retry logic.
+    /// </summary>
+    public async Task GoToDetailsByCellTextAsync(string columnName, string cellText)
+    {
+        var cell = Root.Locator($"td[data-testid^='collection-cell-{columnName}-']")
+            .Filter(new LocatorFilterOptions { HasText = cellText })
+            .First;
+        
+        var link = cell.Locator("a");
+        await link.ClickAsync();
+    }
 }

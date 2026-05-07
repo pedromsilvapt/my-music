@@ -29,6 +29,7 @@ interface TagsAutocompleteFieldProps {
     onCheckChange?: (checked: boolean) => void;
     originalDisplayValue?: string;
     showArtwork?: boolean;
+    testId?: string;
 }
 
 export default function TagsAutocompleteField({
@@ -45,6 +46,7 @@ export default function TagsAutocompleteField({
                                                     onCheckChange,
                                                     originalDisplayValue,
                                                     showArtwork = false,
+                                                    testId,
                                                 }: TagsAutocompleteFieldProps) {
     const [items, setItems] = useState<TagsAutocompleteItem[]>([]);
     const [query, setQuery] = useState("");
@@ -199,6 +201,7 @@ export default function TagsAutocompleteField({
                                 disabled={disabled || !isChecked}
                                 splitChars={[',']}
                                 renderOption={showArtwork ? renderOption : undefined}
+                                data-testid={testId}
                                 styles={{
                                     input: {
                                         borderColor: newBorderColor,
@@ -230,6 +233,7 @@ export default function TagsAutocompleteField({
                 error={error}
                 splitChars={[',']}
                 renderOption={showArtwork ? renderOption : undefined}
+                data-testid={testId}
                 styles={hasChanged ? {
                     input: {
                         borderColor: 'var(--mantine-color-green-6)',

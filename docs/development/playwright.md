@@ -1,5 +1,58 @@
 # Playwright
 
+## Video and Trace Recording
+
+Integration tests support optional video and trace recording for debugging test failures.
+
+### Enable Recording
+
+Set the `PLAYWRIGHT_RECORD_VIDEO` environment variable to `true`:
+
+```bash
+# Run tests with recording enabled
+PLAYWRIGHT_RECORD_VIDEO=true dotnet test MyMusic.IntegrationTests
+
+# Or via runsettings
+dotnet test -- Playwright.LaunchOptions.Headless=false
+```
+
+Or add to `.runsettings`:
+```xml
+<EnvironmentVariables>
+  <PLAYWRIGHT_RECORD_VIDEO>true</PLAYWRIGHT_RECORD_VIDEO>
+</EnvironmentVariables>
+```
+
+### Output Location
+
+When enabled, recordings are saved to:
+- **Videos**: `MyMusic.IntegrationTests/test-results/videos/*.webm`
+- **Traces**: `MyMusic.IntegrationTests/test-results/traces/*.zip`
+
+### View Traces
+
+After recording, view traces with the Playwright trace viewer:
+
+```bash
+npx playwright show-trace MyMusic.IntegrationTests/test-results/traces/MyTestClass-20240502-123456.zip
+```
+
+The trace viewer shows:
+- Screenshots at each step
+- DOM snapshots
+- Network requests
+- Console logs
+
+### Videos
+
+Videos are in WebM format and can be played in any browser or media player (VLC, etc.).
+
+### Storage
+
+The `test-results/` directory is gitignored. Recordings are only created when the environment variable is set, so they won't fill up disk space during normal test runs.
+
+---
+
 ## Getting the Root Element (`<html>` or `<body>`)
 
 ```csharp

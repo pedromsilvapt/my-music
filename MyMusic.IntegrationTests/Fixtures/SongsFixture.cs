@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using Shouldly;
 
@@ -157,7 +159,7 @@ public class SongsFixture
         new("Two Faced", "Two Faced", ["Linkin Park"], [], 2024),
     ];
 
-    public async Task<List<SongData>> SeedAsync(IAPIRequestContext api, long userId, SampleSong[]? songs = null)
+    public async Task<List<SongData>> SeedAsync(IAPIRequestContext api, long userId, SampleSong[]? songs = null, ILogger? logger = null)
     {
         var sampleSongs = songs ?? DefaultSongs;
         var data = new List<SongData>();
@@ -183,7 +185,7 @@ public class SongsFixture
             multipart.Set("modifiedAt", modifiedAt);
             multipart.Set("createdAt", createdAt);
 
-            var response = await api.PostAsync("/api/songs/upload", new()
+            var response = await api.PostWithTraceAsync("/api/songs/upload", new()
             {
                 Multipart = multipart,
             });
@@ -206,7 +208,7 @@ public class SongsFixture
             if (song.DeviceIds != null && song.DeviceIds.Length > 0)
             {
                 var updates = song.DeviceIds.Select(d => new { DeviceId = d, Include = true }).ToArray();
-                var associateResponse = await api.PutAsync("/api/songs/devices", new()
+                var associateResponse = await api.PutWithTraceAsync("/api/songs/devices", new()
                 {
                     DataObject = new
                     {
@@ -223,7 +225,7 @@ public class SongsFixture
 
                 foreach (var deviceId in song.DeviceIds)
                 {
-                    var deviceSongsResponse = await api.GetAsync($"/api/devices/{deviceId}/sync/songs");
+                    var deviceSongsResponse = await api.GetWithTraceAsync($"/api/devices/{deviceId}/sync/songs");
                     if (deviceSongsResponse.Ok)
                     {
                         var deviceSongsData = await deviceSongsResponse.JsonAsync();
@@ -241,6 +243,40 @@ public class SongsFixture
             data.Add(new SongData(songId, song.Title, song.Year, devicePaths.Count > 0 ? devicePaths : null));
         }
 
+        if (logger != null)
+        {
+            foreach (var song in data)
+            {
+                var devicePathsStr = song.DevicePaths != null
+                    ? string.Join(", ", song.DevicePaths.Select(kvp => $"{kvp.Key}:{kvp.Value}"))
+                    : "";
+                logger.LogInformation("Seeded song: Id={Id}, Title={Title}, DevicePaths={DevicePaths}", song.Id, song.Title, devicePathsStr);
+            }
+        }
+
         return data;
+    }
+
+    public async Task<SongData> SeedAsync(IAPIRequestContext api, long userId, SampleSong song, ILogger? logger = null)
+    {
+        var songs = await SeedAsync(api, userId, [song], logger);
+        return songs[0];
+    }
+
+    public static async Task MarkSongForRemovalAsync(
+        IAPIRequestContext api,
+        long songId,
+        long deviceId)
+    {
+        var response = await api.PutWithTraceAsync("/api/songs/devices", new()
+        {
+            DataObject = new
+            {
+                SongIds = new[] { songId },
+                Updates = new[] { new { DeviceId = deviceId, Include = false } }
+            }
+        });
+
+        response.Ok.ShouldBeTrue($"Failed to mark song {songId} for removal from device {deviceId}: {response.Status} {response.StatusText}");
     }
 }

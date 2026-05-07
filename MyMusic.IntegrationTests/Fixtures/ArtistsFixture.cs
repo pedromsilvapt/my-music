@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using Shouldly;
 
@@ -119,7 +120,7 @@ public class ArtistsFixture
 
         foreach (var artistName in sampleArtists)
         {
-            var response = await api.PostAsync("/api/artists", new()
+            var response = await api.PostWithTraceAsync("/api/artists", new()
             {
                 DataObject = new
                 {
@@ -139,5 +140,11 @@ public class ArtistsFixture
         }
 
         return data;
+    }
+
+    public async Task<ArtistData> SeedAsync(IAPIRequestContext api, long userId, string artist)
+    {
+        var artists = await SeedAsync(api, userId, [artist]);
+        return artists[0];
     }
 }

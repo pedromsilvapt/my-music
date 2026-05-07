@@ -1,5 +1,4 @@
 import {useQuery} from "@tanstack/react-query";
-import {useEffect} from "react";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -36,10 +35,6 @@ export default function AlbumsPage() {
     const albums = useQueryData(albumsQuery, "Failed to fetch albums") ?? {albums: []};
 
     const albumsSchema = useAlbumsSchema();
-
-    useEffect(() => {
-        void albumsQuery.refetch();
-    }, [albumsQuery, albumsQuery.refetch]);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setCollectionFilter(ALBUMS_STATE_KEY, { search: newSearch, expression: newFilter });

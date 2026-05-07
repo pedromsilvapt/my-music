@@ -1,5 +1,4 @@
 using System.IO.Abstractions;
-using System.IO.Hashing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,6 +36,11 @@ public class SongUpdateService(
         await ApplyUpdatesAsync(db, song, update, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
+        // Reload the song to ensure navigation properties are correctly loaded after updates
+        // This is necessary because EF Core might not preserve navigation properties after SaveChanges
+        db.Entry(song).State = EntityState.Detached;
+        song = await LoadSongAsync(db, songId, cancellationToken);
+
         var previousChecksum = song.Checksum;
         await UpdateFileAndChecksumAsync(song, cancellationToken);
 
@@ -48,6 +52,7 @@ public class SongUpdateService(
             logger.LogInformation("Marking devices for download for song {SongId} (checksumChanged={ChecksumChanged}",
                 songId, song.Checksum != previousChecksum);
             await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
+            logger.LogInformation("Marked devices for download for song {SongId}, saving changes", songId);
         }
         else
         {
@@ -55,6 +60,7 @@ public class SongUpdateService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Saved changes for song {SongId}", songId);
 
         return MapToResult(song);
     }
@@ -82,9 +88,7 @@ public class SongUpdateService(
             var previousChecksum = song.Checksum;
             await UpdateFileAndChecksumAsync(song, cancellationToken);
 
-            var affectsDevicePath = update.Title is not null || update.Explicit is not null || update.Artists is not null || update.Album is not null;
-
-            if (song.Checksum != previousChecksum || affectsDevicePath)
+            if (song.Checksum != previousChecksum)
             {
                 await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
             }
@@ -365,6 +369,18 @@ public class SongUpdateService(
         if (artists.Count == 0)
         {
             throw new ValidationException("Song must have at least one valid artist");
+        }
+
+        // Validate that the album artist remains in the song's artist list
+        if (song.Album?.Artist != null)
+        {
+            var albumArtistInNewList = artists.Any(a => a.Id == song.Album.Artist.Id);
+            if (!albumArtistInNewList)
+            {
+                throw new ValidationException(
+                    $"Cannot remove the album artist '{song.Album.Artist.Name}' from the song's artist list. " +
+                    "The album artist must remain as one of the song's artists.");
+            }
         }
 
         db.SongArtists.RemoveRange(song.Artists);

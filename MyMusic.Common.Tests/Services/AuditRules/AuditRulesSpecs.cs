@@ -1,5 +1,4 @@
 using System.IO.Abstractions.TestingHelpers;
-using EntityFrameworkCore.Projectables;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -7,7 +6,6 @@ using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
-using NSubstitute;
 using Shouldly;
 
 namespace MyMusic.Common.Tests.Services.AuditRules;

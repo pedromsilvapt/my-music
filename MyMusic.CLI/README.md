@@ -10,6 +10,17 @@ dotnet build
 
 ## Commands
 
+### Global Options
+
+These options apply to all commands.
+
+| Option       | Shortcut | Description                                                    |
+|--------------|----------|----------------------------------------------------------------|
+| `--loglevel` | `-l`     | Minimum log level: Trace, Debug, Information, Warning, Error, Critical |
+| `--verbose`  | `-v`     | Enable console log output                                      |
+
+The default log level is `Information`, configured via `Logging:LogLevel:Default` in appsettings.
+
 ### init
 
 Initializes or updates the configuration file at `%APPDATA%/my-music/appsettings.json`.
@@ -54,7 +65,6 @@ my-music sync [OPTIONS]
 | Option      | Shortcut | Description                                      |
 |-------------|----------|--------------------------------------------------|
 | `--force`   | `-f`     | Force full sync                                  |
-| `--verbose` | `-v`     | Verbose output                                   |
 | `--dry-run` |          | Show what would be synced without making changes |
 | `--yes`     | `-y`     | Auto-confirm prompts                             |
 

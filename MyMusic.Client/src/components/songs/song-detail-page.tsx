@@ -77,7 +77,7 @@ export default function SongDetailPage() {
                                 <Anchor component={Link} to={`/albums/${song.album.id}`} c="blue"
                                         size="sm">{song.album.name}</Anchor>
                             </Group>
-                            {song.year && <Text size="sm" c="dimmed">{song.year}</Text>}
+                            {song.year && <Text size="sm" c="dimmed" data-testid="song-year">{song.year}</Text>}
                             <Text size="sm" c="dimmed">{song.duration}</Text>
                             {song.bitrate && <Text size="sm" c="dimmed">{song.bitrate} kbps</Text>}
                             {song.size > 0 && <Text size="sm" c="dimmed">{formatFileSize(song.size)}</Text>}
@@ -89,11 +89,11 @@ export default function SongDetailPage() {
                             {song.isExplicit &&
                                 <ExplicitLabel visible={true}><Text size="sm">Explicit</Text></ExplicitLabel>}
                         </Group>
-                        <Group gap="xs">
+                        <Group gap="xs" data-testid="song-genres">
                             <IconTag size={16}/>
                             {song.genres.length > 0 ? (
                                 song.genres.map(genre => (
-                                    <Text key={genre.id} size="sm" c="dimmed">{genre.name}</Text>
+                                    <Text key={genre.id} size="sm" c="dimmed" data-testid="genre-item">{genre.name}</Text>
                                 ))
                             ) : (
                                 <Text size="sm" c="dimmed">No genres</Text>

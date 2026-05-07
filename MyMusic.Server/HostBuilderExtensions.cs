@@ -1,16 +1,14 @@
 using System.Collections.Concurrent;
 using System.IO.Abstractions;
 using System.Text.Json.Serialization;
-using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.OpenApi;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using MyMusic.Common;
 using MyMusic.Common.Services;
+using MyMusic.OpenTelemetry;
 using MyMusic.Server.Services;
 using Scalar.AspNetCore;
 using MvcJsonOptions = Microsoft.AspNetCore.Mvc.JsonOptions;
@@ -39,6 +37,7 @@ public static class HostBuilderExtensions
         builder.Configuration.AddEnvironmentVariables("MYMUSIC_");
 
         builder.Logging.AddSimpleConsole(c => c.SingleLine = true);
+        builder.Services.AddMyMusicOpenTelemetry(builder.Configuration, "MyMusic.Server");
         // builder.Services.ConfigureHttpJsonOptions(opts =>
         // {
         //     var enumConverter = new JsonStringEnumConverter();
@@ -53,7 +52,7 @@ public static class HostBuilderExtensions
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi(options =>
         {
-            options.OpenApiVersion = Microsoft.OpenApi.OpenApiSpecVersion.OpenApi3_1;
+            options.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1;
 
             TypeTransformer.MapType<decimal>(new OpenApiSchema { Type = JsonSchemaType.Number, Format = "decimal" });
             TypeTransformer.MapType<decimal?>(new OpenApiSchema

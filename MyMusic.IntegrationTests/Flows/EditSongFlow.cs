@@ -1,5 +1,4 @@
 using Microsoft.Playwright;
-using MyMusic.IntegrationTests.Pages;
 
 namespace MyMusic.IntegrationTests.Flows;
 
@@ -52,6 +51,16 @@ public class EditSongFlow : IFlow
         if (_edit.Explicit is not null)
         {
             await editModal.SetExplicitAsync(_edit.Explicit.Value);
+        }
+
+        if (_edit.Album is not null)
+        {
+            await editModal.SetAlbumAsync(_edit.Album);
+        }
+
+        if (_edit.Artists is not null)
+        {
+            await editModal.SetArtistsAsync(_edit.Artists);
         }
 
         await editModal.SaveAsync();

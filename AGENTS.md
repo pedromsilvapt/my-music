@@ -36,7 +36,12 @@ dotnet test --verbosity detailed
 
 # Run with code coverage
 dotnet test --collect:"XPlat Code Coverage"
+
+# Run test project as standalone executable (xUnit v3 feature)
+dotnet run --project MyMusic.Common.Tests
 ```
+
+**Note:** Test projects use xUnit v3 and are standalone executables (`<OutputType>Exe</OutputType>`). They can be run via `dotnet test` (standard) or `dotnet run` (executable mode).
 
 ## Git Commands
 **CRITICAL** Do not, under any circunstance, execute git write commands (commit, stash, reset, checkout, etc..) without the user's explicit instruction.
@@ -48,12 +53,23 @@ dotnet test --collect:"XPlat Code Coverage"
 - The default configured RunSettings file is `MyMusic.IntegrationTests/.runsettings`
 - All test classes should inherit from the base `IntegrationTestBase` and should be placed in `Tests/<Domain>/<Name>Tests.cs`
 - Fixtures should live in the folder `Fixtures/`. Do not set up data on the tests themselves!
+- When instantiating fixture classes, prefer class variables over recreating the same fixture object in multiple tests on the same file.
 - Test classes should never have Playwright locators declared directly inside them. All locators should live in `Pages/<Name>Page.cs` and `Pages/Components/<Name>Component.cs` classes
     - Page objects can be composed of other Component objects via Properties, but can never inherit them
     - Page objects should receive an `IPage` in their constructor, example: `public class HomePage(IPage page) : BasePage(page)`
     - Component objects should receive a scoped `ILocator` in their constructor, example: `public class ButtonComponent(ILocator locator) : BaseComponent(locator)`
     - Prefer primary class constructors
-- Test cases should have very simple logic. Use helper methods, fixtures, component objects to hide implementation details.
+- Test cases should have very simple logic. Use helper methods, fixtures, component objects to hide implementation details. Make liberal use of flows to keep the logic in the test simple and expressive.
+
+### Concepts
+ - **Page Object**: Represents a route page in the Client application
+ - **Component Object**: Represents a sub-component of a page, or of another component. Should be reusable. Can be a button, modal dialog, etc...
+ - **Fixture**: An object intended to setup the environment with known data to allow the tests to run.
+ - **Flow**: A reusable, configurable, multi-step **action** or **validation** (optionally, containing flows as well) that can be reused across multiple tests to express user **intent** on what the test does. Optionally, can also return a value (a page object, a result, etc...)
+
+- When locating elements with Playwright, prefer:
+    - Simple `GetByRole` / `GetByLabel` when the elements are uniquely identifiable by such
+    - Otherwise, consider adding `GetByTestId(...)` / `data-testid="..."` over building complex & flaky locator queries in the tests
 
 ### Comment Style
 
@@ -66,6 +82,84 @@ Integration tests should use comments with these characteristics: (example based
 5. **Concise but informative**: Not verbose, but provides essential context
 
 The pattern follows a typical test structure: **Setup → Action → Assert → Mutate → Action → Assert**, with each phase commented.
+
+### Debugging with Otelite
+
+When OpenTelemetry is enabled (`OpenTelemetry__Enabled=true`), integration tests emit traces and logs to Otelite. Use these commands to debug failed tests:
+
+**Basic Queries:**
+```bash
+# List recent traces
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT service_name, span_name, trace_id FROM traces ORDER BY id DESC LIMIT 10"
+
+# View recent logs
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT service_name, severity_text, body FROM logs ORDER BY id DESC LIMIT 20"
+
+# Get all spans for a specific trace ID
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT span_name, start_time, end_time FROM traces WHERE trace_id = '<trace_id>' ORDER BY start_time"
+
+# Get integration test logs (includes CLI stdout)
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT body FROM logs WHERE service_name = 'MyMusic.IntegrationTests' ORDER BY id DESC LIMIT 20"
+```
+
+**Find Failed Traces (Errors):**
+```bash
+# Spans with errors (status_code = 2)
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, span_name FROM traces WHERE status_code = 2"
+
+# All logs for a failed trace
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT severity_text, body FROM logs WHERE trace_id = '<trace_id>' ORDER BY log_timestamp"
+```
+
+**Warning/Error Logs:**
+```bash
+# All warnings
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT body FROM logs WHERE severity_text = 'Warning' ORDER BY id DESC LIMIT 20"
+
+# Error level logs (severity_number >= 17)
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT body FROM logs WHERE severity_number >= 17"
+```
+
+**Text Search in Logs:**
+```bash
+# Logs containing specific text
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT body FROM logs WHERE body LIKE '%error%' LIMIT 20"
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT body FROM logs WHERE body LIKE '%<keyword>%' LIMIT 20"
+```
+
+**Performance Analysis (Slow Spans):**
+```bash
+# Slowest spans in a trace
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT span_name, (end_time - start_time) as duration_ns FROM traces WHERE trace_id = '<trace_id>' ORDER BY duration_ns DESC LIMIT 10"
+
+# Longest traces overall
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, COUNT(*) as span_count, (MAX(end_time) - MIN(start_time)) as duration_ns FROM traces GROUP BY trace_id ORDER BY duration_ns DESC LIMIT 10"
+```
+
+**Time-Based Filtering ("What happened after X"):**
+```bash
+# Traces after a specific timestamp
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, span_name, start_time FROM traces WHERE start_time > <timestamp> ORDER BY start_time LIMIT 20"
+
+# Logs after a specific timestamp
+# Get integration test logs (includes CLI stdout)
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT service_name, severity_text, body FROM logs WHERE log_timestamp > <timestamp> ORDER BY log_timestamp LIMIT 20"
+```
+
+**Correlate Logs with Spans:**
+```bash
+# All logs for a trace, with their span context
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT l.severity_text, l.body, t.span_name FROM logs l LEFT JOIN traces t ON l.trace_id = t.trace_id AND l.span_id = t.span_id WHERE l.trace_id = '<trace_id>' ORDER BY l.log_timestamp"
+```
+
+**Filter by HTTP Route/Method:**
+```bash
+# All spans for a specific endpoint
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, start_time FROM traces WHERE span_name LIKE 'POST%' ORDER BY start_time DESC LIMIT 20"
+
+# All DELETE operations
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, span_name, start_time FROM traces WHERE span_name LIKE 'DELETE%' ORDER BY start_time DESC LIMIT 10"
+```
 
 ## Database Migrations
 
@@ -168,6 +262,7 @@ public record ListSongsResponse
 - DTOs organized by resource in `MyMusic.Server/DTO/<Resource>/`; AgileMapper for simple, manual mapping for complex
 - **One Operation per Service**: naming pattern `<Resource><Operation>Service` (e.g., `SongEditService`, `SongBatchEditService`, `SongDeleteService`); group in folder/namespace `<ResourcePlural>/` when a resource has many services (e.g., `Songs/SongEditService`, `Songs/SongDeleteService`); define interface in Common, implement in Common/Server, register in DI
 - Controllers are thin: parse input, delegate to service, map entities↔DTOs, return output; **all business logic lives in services**
+- **ActivitySource naming**: `{ServiceName}` or `{ServiceName}.{Component}` or `{ServiceName}.{Component}.{SubComponent}` (e.g., `MyMusic.CLI`, `MyMusic.Client.Navigation`)
 
 ## TypeScript Rules
 
@@ -201,6 +296,7 @@ Before working on any project, read its development guide first:
 - **CLI** → [docs/development/cli.md](docs/development/cli.md)
 - **Mobile** → [docs/development/mobile.md](docs/development/mobile.md)
 - **IntegrationTests** → [docs/development/server.md](docs/development/server.md) and [docs/development/playwright.md](docs/development/playwright.md)
+- **Observability** → [docs/development/observability.md](docs/development/observability.md)
 
 These files contain information related to the creating and running automatic tests for each sub-project as well.
 
@@ -208,6 +304,18 @@ These files contain information related to the creating and running automatic te
 
 - .NET 10.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit (003-metadata-auto-fetch)
 - PostgreSQL with EF Core, JsonElement for metadata patch storage (003-metadata-auto-fetch)
+- OpenTelemetry with Otelite for distributed tracing and log aggregation (opt-in via `OpenTelemetry__Enabled=true`)
+
+## OpenTelemetry (Observability)
+
+- OpenTelemetry is **opt-in and disabled by default** — set `OpenTelemetry__Enabled=true` to enable
+- When enabled, traces and logs are exported to the OTLP endpoint (default: `http://localhost:4317` for gRPC, `http://localhost:4318` for HTTP)
+- **Otelite** is available via `docker compose up otelite` or `./tools/otelite server` — lightweight SQLite-based collector (HTTP only, port 4318)
+- Use `OpenTelemetry__Protocol=http/protobuf` and `OpenTelemetry__Endpoint=http://localhost:4318` when targeting Otelite (it only supports HTTP, not gRPC)
+- **Graceful degradation**: If the OTLP endpoint is unavailable, all components continue operating normally
+- Integration tests generate trace IDs and propagate via `traceparent` headers (Playwright, API requests) and `OTEL_TRACE_PARENT` env var (CLI processes)
+- For troubleshooting failed tests, enable OpenTelemetry and query Otelite by trace ID
+- See [docs/development/observability.md](docs/development/observability.md) for full documentation
 
 ## Technical Debt Management
 

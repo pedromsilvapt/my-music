@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using MyMusic.Common.Entities;
 
 namespace MyMusic.Common.Services.PlaylistSongs;
 

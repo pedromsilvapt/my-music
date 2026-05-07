@@ -95,9 +95,17 @@
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
+  otelite:
+    image: ghcr.io/pedromsilvapt/otelite:latest
+    ports:
+      - "4318:4318"
+    volumes:
+      - otelite-data:/data
+
 volumes:
   server-data: {}
   postgres-data: {}
+  otelite-data: {}
 
 configs:
   caddyfile:
@@ -120,7 +128,7 @@ configs:
       :80 {
         handle_path /api/* {
           reverse_proxy localhost:5000 {
-            header_up X-MyMusic-UserName pedro
+            header_up X-MyMusic-UserName admin
           }
         }
 
