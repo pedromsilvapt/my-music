@@ -117,6 +117,32 @@ public class UsersController(
         await db.AddAsync(user, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
+        var queuePlaylist = new Playlist
+        {
+            Name = $"Queue ({DateTime.UtcNow:MMM d, yyyy})",
+            Type = PlaylistType.Queue,
+            OwnerId = user.Id,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow,
+            PlaylistSongs = [],
+        };
+
+        var favoritesPlaylist = new Playlist
+        {
+            Name = "Favorites",
+            Type = PlaylistType.Favorites,
+            OwnerId = user.Id,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow,
+            PlaylistSongs = [],
+        };
+
+        db.Playlists.AddRange(queuePlaylist, favoritesPlaylist);
+        await db.SaveChangesAsync(cancellationToken);
+
+        user.CurrentQueueId = queuePlaylist.Id;
+        await db.SaveChangesAsync(cancellationToken);
+
         return new CreateUserResponse
         {
             User = CreateUserItem.FromEntity(user),
