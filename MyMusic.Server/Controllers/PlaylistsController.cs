@@ -422,11 +422,16 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpGet("queue", Name = "GetQueue")]
-    public async Task<GetPlaylistResponse> GetQueue(
+    public async Task<ActionResult<GetPlaylistResponse>> GetQueue(
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateCurrentQueue(context, cancellationToken);
+        var playlist = await GetCurrentQueue(context, cancellationToken);
+        if (playlist == null)
+        {
+            return NotFound("Queue not found");
+        }
+
         playlist = await LoadPlaylistWithSongs(context, playlist.Id, cancellationToken);
 
         return new GetPlaylistResponse
@@ -436,7 +441,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpPut("queue", Name = "ReplaceQueue")]
-    public async Task<GetPlaylistResponse> ReplaceQueue(
+    public async Task<ActionResult<GetPlaylistResponse>> ReplaceQueue(
         [FromBody] ReplaceQueueRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
@@ -502,7 +507,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpPut("queue/current-song", Name = "SetQueueCurrentSong")]
-    public async Task<GetPlaylistResponse> SetQueueCurrentSong(
+    public async Task<ActionResult<GetPlaylistResponse>> SetQueueCurrentSong(
         [FromBody] SetCurrentSongRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
@@ -516,7 +521,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpPost("queue/songs", Name = "AddToQueue")]
-    public async Task<GetPlaylistResponse> AddToQueue(
+    public async Task<ActionResult<GetPlaylistResponse>> AddToQueue(
         [FromBody] AddToQueueRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
@@ -691,7 +696,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpDelete("queue/songs", Name = "RemoveFromQueue")]
-    public async Task<GetPlaylistResponse> RemoveFromQueue(
+    public async Task<ActionResult<GetPlaylistResponse>> RemoveFromQueue(
         [FromBody] RemoveFromQueueRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
@@ -729,7 +734,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpPost("queue/reorder", Name = "ReorderQueue")]
-    public async Task<GetPlaylistResponse> ReorderQueue(
+    public async Task<ActionResult<GetPlaylistResponse>> ReorderQueue(
         [FromBody] ReorderQueueRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
@@ -805,7 +810,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpPost("queue/shuffle", Name = "ShuffleQueue")]
-    public async Task<GetPlaylistResponse> ShuffleQueue(
+    public async Task<ActionResult<GetPlaylistResponse>> ShuffleQueue(
         [FromBody] ShuffleQueueRequest request,
         MusicDbContext context,
         CancellationToken cancellationToken)
@@ -863,11 +868,16 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     }
 
     [HttpGet("favorites", Name = "GetFavorites")]
-    public async Task<GetPlaylistResponse> GetFavorites(
+    public async Task<ActionResult<GetPlaylistResponse>> GetFavorites(
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var playlist = await GetOrCreateSystemPlaylist(context, PlaylistType.Favorites, cancellationToken);
+        var playlist = await GetSystemPlaylist(context, PlaylistType.Favorites, cancellationToken);
+        if (playlist == null)
+        {
+            return NotFound("Favorites not found");
+        }
+
         playlist = await LoadPlaylistWithSongs(context, playlist.Id, cancellationToken);
 
         return new GetPlaylistResponse
@@ -1036,12 +1046,63 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
                 .Where(p => p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue && p.Id != queue.Id)
                 .OrderByDescending(p => p.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
-            user.CurrentQueueId = nextQueue?.Id;
+            
+            if (nextQueue != null)
+            {
+                user.CurrentQueueId = nextQueue.Id;
+            }
+            else
+            {
+                var replacementQueue = new Playlist
+                {
+                    Name = $"Queue ({DateTime.UtcNow:MMM d, yyyy})",
+                    Type = PlaylistType.Queue,
+                    OwnerId = currentUser.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    ModifiedAt = DateTime.UtcNow,
+                    PlaylistSongs = [],
+                };
+                
+                context.Playlists.Add(replacementQueue);
+                await context.SaveChangesAsync(cancellationToken);
+                
+                user.CurrentQueueId = replacementQueue.Id;
+            }
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
         return NoContent();
+    }
+
+    private async Task<Playlist?> GetCurrentQueue(
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken);
+        if (user == null)
+        {
+            return null;
+        }
+
+        if (!user.CurrentQueueId.HasValue)
+        {
+            return null;
+        }
+
+        return await context.Playlists
+            .Where(p => p.Id == user.CurrentQueueId.Value && p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private async Task<Playlist?> GetSystemPlaylist(
+        MusicDbContext context,
+        PlaylistType type,
+        CancellationToken cancellationToken)
+    {
+        return await context.Playlists
+            .Where(p => p.OwnerId == currentUser.Id && p.Type == type)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private async Task<Playlist> GetOrCreateCurrentQueue(
