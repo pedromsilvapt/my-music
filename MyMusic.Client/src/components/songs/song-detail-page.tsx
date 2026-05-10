@@ -43,11 +43,11 @@ export default function SongDetailPage() {
     const {open: openManageDevices} = useManageDevicesContext();
 
     if (!song) {
-        return <Box p="md">Loading...</Box>;
+        return <Box p="md" data-testid="song-detail" data-loading="true">Loading...</Box>;
     }
 
     return (
-        <>
+        <Box data-testid="song-detail" data-loading={songQuery.isFetching ? "true" : "false"}>
             <Stack gap="md">
                 <Link to="/songs">
                     <Group gap="xs">
@@ -180,6 +180,6 @@ export default function SongDetailPage() {
                     }
                 </Box>
             </Stack>
-        </>
+        </Box>
     );
 }

@@ -1,6 +1,8 @@
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Pages.Components;
 
+using static Microsoft.Playwright.Assertions;
+
 namespace MyMusic.IntegrationTests.Pages;
 
 public class SongDetailsPage(IPage page) : BasePage(page)
@@ -9,7 +11,9 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task WaitForLoadedAsync()
     {
-        await Title.WaitForAsync(new() { Timeout = 10000 });
+        var detailLocator = Page.Locator("[data-testid='song-detail']");
+        await detailLocator.WaitForAsync(new() { Timeout = 10000 });
+        await Assertions.Expect(detailLocator).ToHaveAttributeAsync("data-loading", "false", new() { Timeout = 10000 });
     }
 
     public async Task<string> GetTitleAsync()
