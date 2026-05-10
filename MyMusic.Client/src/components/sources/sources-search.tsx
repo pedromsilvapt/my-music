@@ -15,6 +15,7 @@ import SourcesSearchToolbar from "./sources-song-toolbar.tsx";
 import {useSourceSongsSchema} from "./useSourceSongsSchema.tsx";
 import WishlistModal from "../wishlist/wishlist-modal.tsx";
 import {useDisclosure} from "@mantine/hooks";
+import {usePurchasesStore} from "../../stores/purchases-store.ts";
 
 export default function SourcesSearch() {
     const queryClient = useQueryClient()
@@ -49,10 +50,16 @@ export default function SourcesSearch() {
         "Failed to search songs"
     ) ?? {data: []};
 
+    const {addPendingAutoDownload} = usePurchasesStore();
+
     const createPurchase = useCreatePurchase({
         mutation: {
-            onSuccess: () => {
+            onSuccess: async (response) => {
                 queryClient.invalidateQueries({queryKey: getListPurchasesQueryKey()})
+                const purchaseId = response.data.purchase.id;
+                if (purchaseId != null) {
+                    addPendingAutoDownload(purchaseId);
+                }
             }
         }
     });

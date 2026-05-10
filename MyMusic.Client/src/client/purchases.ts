@@ -13,6 +13,7 @@ import type {
 	DefinedUseQueryResult,
 	InvalidateOptions,
 	MutationFunction,
+	MutationFunctionContext,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
@@ -38,12 +39,26 @@ import type {
 } from "../model";
 import { PurchasedSongStatus } from "../model";
 
-export type listPurchasesResponse200 = {
+export type listPurchasesResponse200TextPlain = {
 	data: ListPurchasesResponse;
 	status: 200;
 };
 
-export type listPurchasesResponseSuccess = listPurchasesResponse200 & {
+export type listPurchasesResponse200ApplicationJson = {
+	data: ListPurchasesResponse;
+	status: 200;
+};
+
+export type listPurchasesResponse200TextJson = {
+	data: ListPurchasesResponse;
+	status: 200;
+};
+
+export type listPurchasesResponseSuccess = (
+	| listPurchasesResponse200TextPlain
+	| listPurchasesResponse200ApplicationJson
+	| listPurchasesResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -199,15 +214,28 @@ export const invalidateListPurchases = async (
 	return queryClient;
 };
 
-export type deleteManyPurchasesResponse200 = {
+export type deleteManyPurchasesResponse200TextPlain = {
 	data: DeleteManyPurchasesResponse;
 	status: 200;
 };
 
-export type deleteManyPurchasesResponseSuccess =
-	deleteManyPurchasesResponse200 & {
-		headers: Headers;
-	};
+export type deleteManyPurchasesResponse200ApplicationJson = {
+	data: DeleteManyPurchasesResponse;
+	status: 200;
+};
+
+export type deleteManyPurchasesResponse200TextJson = {
+	data: DeleteManyPurchasesResponse;
+	status: 200;
+};
+
+export type deleteManyPurchasesResponseSuccess = (
+	| deleteManyPurchasesResponse200TextPlain
+	| deleteManyPurchasesResponse200ApplicationJson
+	| deleteManyPurchasesResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type deleteManyPurchasesResponse = deleteManyPurchasesResponseSuccess;
 
@@ -262,6 +290,7 @@ export const getDeleteManyPurchasesMutationOptions = <
 			{ params?: DeleteManyPurchasesParams },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -291,13 +320,16 @@ export const getDeleteManyPurchasesMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof deleteManyPurchases>>,
 		variables: { params?: DeleteManyPurchasesParams },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type DeleteManyPurchasesMutationResult = NonNullable<
@@ -314,6 +346,7 @@ export const useDeleteManyPurchases = <TError = unknown, TContext = unknown>(
 			{ params?: DeleteManyPurchasesParams },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -332,12 +365,26 @@ export const useDeleteManyPurchases = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type createPurchaseResponse200 = {
+export type createPurchaseResponse200TextPlain = {
 	data: CreatePurchaseResponse;
 	status: 200;
 };
 
-export type createPurchaseResponseSuccess = createPurchaseResponse200 & {
+export type createPurchaseResponse200ApplicationJson = {
+	data: CreatePurchaseResponse;
+	status: 200;
+};
+
+export type createPurchaseResponse200TextJson = {
+	data: CreatePurchaseResponse;
+	status: 200;
+};
+
+export type createPurchaseResponseSuccess = (
+	| createPurchaseResponse200TextPlain
+	| createPurchaseResponse200ApplicationJson
+	| createPurchaseResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -379,6 +426,7 @@ export const getCreatePurchaseMutationOptions = <
 			{ sourceId: number; songId: string },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -408,13 +456,16 @@ export const getCreatePurchaseMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof createPurchase>>,
 		variables: { sourceId: number; songId: string },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type CreatePurchaseMutationResult = NonNullable<
@@ -431,6 +482,7 @@ export const useCreatePurchase = <TError = unknown, TContext = unknown>(
 			{ sourceId: number; songId: string },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -446,15 +498,28 @@ export const useCreatePurchase = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type requeueManyPurchasesResponse200 = {
+export type requeueManyPurchasesResponse200TextPlain = {
 	data: RequeueManyPurchasesResponse;
 	status: 200;
 };
 
-export type requeueManyPurchasesResponseSuccess =
-	requeueManyPurchasesResponse200 & {
-		headers: Headers;
-	};
+export type requeueManyPurchasesResponse200ApplicationJson = {
+	data: RequeueManyPurchasesResponse;
+	status: 200;
+};
+
+export type requeueManyPurchasesResponse200TextJson = {
+	data: RequeueManyPurchasesResponse;
+	status: 200;
+};
+
+export type requeueManyPurchasesResponseSuccess = (
+	| requeueManyPurchasesResponse200TextPlain
+	| requeueManyPurchasesResponse200ApplicationJson
+	| requeueManyPurchasesResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type requeueManyPurchasesResponse = requeueManyPurchasesResponseSuccess;
 
@@ -563,12 +628,26 @@ export const useRequeueManyPurchases = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type requeuePurchaseResponse200 = {
+export type requeuePurchaseResponse200TextPlain = {
 	data: RequeuePurchaseResponse;
 	status: 200;
 };
 
-export type requeuePurchaseResponseSuccess = requeuePurchaseResponse200 & {
+export type requeuePurchaseResponse200ApplicationJson = {
+	data: RequeuePurchaseResponse;
+	status: 200;
+};
+
+export type requeuePurchaseResponse200TextJson = {
+	data: RequeuePurchaseResponse;
+	status: 200;
+};
+
+export type requeuePurchaseResponseSuccess = (
+	| requeuePurchaseResponse200TextPlain
+	| requeuePurchaseResponse200ApplicationJson
+	| requeuePurchaseResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -609,6 +688,7 @@ export const getRequeuePurchaseMutationOptions = <
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -638,13 +718,16 @@ export const getRequeuePurchaseMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof requeuePurchase>>,
 		variables: { id: number },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type RequeuePurchaseMutationResult = NonNullable<
@@ -661,6 +744,7 @@ export const useRequeuePurchase = <TError = unknown, TContext = unknown>(
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -679,12 +763,26 @@ export const useRequeuePurchase = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type deletePurchaseResponse200 = {
+export type deletePurchaseResponse200TextPlain = {
 	data: DeletePurchaseResponse;
 	status: 200;
 };
 
-export type deletePurchaseResponseSuccess = deletePurchaseResponse200 & {
+export type deletePurchaseResponse200ApplicationJson = {
+	data: DeletePurchaseResponse;
+	status: 200;
+};
+
+export type deletePurchaseResponse200TextJson = {
+	data: DeletePurchaseResponse;
+	status: 200;
+};
+
+export type deletePurchaseResponseSuccess = (
+	| deletePurchaseResponse200TextPlain
+	| deletePurchaseResponse200ApplicationJson
+	| deletePurchaseResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -725,6 +823,7 @@ export const getDeletePurchaseMutationOptions = <
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -754,13 +853,16 @@ export const getDeletePurchaseMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof deletePurchase>>,
 		variables: { id: number },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListPurchasesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type DeletePurchaseMutationResult = NonNullable<
@@ -777,6 +879,7 @@ export const useDeletePurchase = <TError = unknown, TContext = unknown>(
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -794,253 +897,679 @@ export const useDeletePurchase = <TError = unknown, TContext = unknown>(
 };
 
 export const getListPurchasesResponseMock = (
-	overrideResponse: Partial<ListPurchasesResponse> = {},
-): ListPurchasesResponse => ({
-	purchases: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		userId: faker.number.int({ min: undefined, max: undefined }),
-		externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		cover: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
-		progress: faker.number.int({ min: undefined, max: undefined }),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<ListPurchasesResponse, object>> = {},
+): ListPurchasesResponse =>
+	faker.helpers.arrayElement([
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getDeleteManyPurchasesResponseMock = (
-	overrideResponse: Partial<DeleteManyPurchasesResponse> = {},
-): DeleteManyPurchasesResponse => ({
-	purchases: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		userId: faker.number.int({ min: undefined, max: undefined }),
-		externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		cover: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
-		progress: faker.number.int({ min: undefined, max: undefined }),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<DeleteManyPurchasesResponse, object>> = {},
+): DeleteManyPurchasesResponse =>
+	faker.helpers.arrayElement([
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getCreatePurchaseResponseMock = (
-	overrideResponse: Partial<CreatePurchaseResponse> = {},
-): CreatePurchaseResponse => ({
-	purchase: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		userId: faker.number.int({ min: undefined, max: undefined }),
-		externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		cover: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
-		progress: faker.number.int({ min: undefined, max: undefined }),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<CreatePurchaseResponse, object>> = {},
+): CreatePurchaseResponse =>
+	faker.helpers.arrayElement([
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getRequeueManyPurchasesResponseMock = (
-	overrideResponse: Partial<RequeueManyPurchasesResponse> = {},
-): RequeueManyPurchasesResponse => ({
-	purchases: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		userId: faker.number.int({ min: undefined, max: undefined }),
-		externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		cover: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
-		progress: faker.number.int({ min: undefined, max: undefined }),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<RequeueManyPurchasesResponse, object>> = {},
+): RequeueManyPurchasesResponse =>
+	faker.helpers.arrayElement([
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			purchases: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getRequeuePurchaseResponseMock = (
-	overrideResponse: Partial<RequeuePurchaseResponse> = {},
-): RequeuePurchaseResponse => ({
-	purchase: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		userId: faker.number.int({ min: undefined, max: undefined }),
-		externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		cover: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
-		progress: faker.number.int({ min: undefined, max: undefined }),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<RequeuePurchaseResponse, object>> = {},
+): RequeuePurchaseResponse =>
+	faker.helpers.arrayElement([
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getDeletePurchaseResponseMock = (
-	overrideResponse: Partial<DeletePurchaseResponse> = {},
-): DeletePurchaseResponse => ({
-	purchase: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		userId: faker.number.int({ min: undefined, max: undefined }),
-		externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		cover: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
-		progress: faker.number.int({ min: undefined, max: undefined }),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<DeletePurchaseResponse, object>> = {},
+): DeletePurchaseResponse =>
+	faker.helpers.arrayElement([
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+		{
+			purchase: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				sourceName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				sourceIcon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				userId: faker.number.int(),
+				externalId: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				cover: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				subTitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				status: faker.helpers.arrayElement(Object.values(PurchasedSongStatus)),
+				progress: faker.number.int(),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getListPurchasesMockHandler = (
 	overrideResponse?:
@@ -1052,14 +1581,14 @@ export const getListPurchasesMockHandler = (
 ) => {
 	return http.get(
 		"*/purchases",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListPurchasesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1076,14 +1605,14 @@ export const getDeleteManyPurchasesMockHandler = (
 ) => {
 	return http.delete(
 		"*/purchases",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getDeleteManyPurchasesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1100,14 +1629,14 @@ export const getCreatePurchaseMockHandler = (
 ) => {
 	return http.post(
 		"*/purchases/create/:sourceId/:songId",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getCreatePurchaseResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1126,14 +1655,14 @@ export const getRequeueManyPurchasesMockHandler = (
 ) => {
 	return http.post(
 		"*/purchases/requeue",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRequeueManyPurchasesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1150,14 +1679,14 @@ export const getRequeuePurchaseMockHandler = (
 ) => {
 	return http.post(
 		"*/purchases/:id/requeue",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getRequeuePurchaseResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1174,14 +1703,14 @@ export const getDeletePurchaseMockHandler = (
 ) => {
 	return http.delete(
 		"*/purchases/:id",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getDeletePurchaseResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,

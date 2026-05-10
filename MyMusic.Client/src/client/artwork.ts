@@ -426,10 +426,11 @@ export const getGetArtworkMockHandler = (
 ) => {
 	return http.get(
 		"*/artwork/:id",
-		async (info) => {
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
+
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,
@@ -446,10 +447,11 @@ export const getGetArtworkMetadataMockHandler = (
 ) => {
 	return http.get(
 		"*/artwork/:id/metadata",
-		async (info) => {
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
+
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,

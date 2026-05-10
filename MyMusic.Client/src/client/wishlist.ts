@@ -13,6 +13,7 @@ import type {
 	DefinedUseQueryResult,
 	InvalidateOptions,
 	MutationFunction,
+	MutationFunctionContext,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
@@ -35,12 +36,26 @@ import type {
 } from "../model";
 import { WishlistItemStatus } from "../model";
 
-export type listWishlistResponse200 = {
+export type listWishlistResponse200TextPlain = {
 	data: ListWishlistResponse;
 	status: 200;
 };
 
-export type listWishlistResponseSuccess = listWishlistResponse200 & {
+export type listWishlistResponse200ApplicationJson = {
+	data: ListWishlistResponse;
+	status: 200;
+};
+
+export type listWishlistResponse200TextJson = {
+	data: ListWishlistResponse;
+	status: 200;
+};
+
+export type listWishlistResponseSuccess = (
+	| listWishlistResponse200TextPlain
+	| listWishlistResponse200ApplicationJson
+	| listWishlistResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -217,12 +232,26 @@ export const invalidateListWishlist = async (
 	return queryClient;
 };
 
-export type createWishlistResponse200 = {
+export type createWishlistResponse200TextPlain = {
 	data: CreateWishlistResponse;
 	status: 200;
 };
 
-export type createWishlistResponseSuccess = createWishlistResponse200 & {
+export type createWishlistResponse200ApplicationJson = {
+	data: CreateWishlistResponse;
+	status: 200;
+};
+
+export type createWishlistResponse200TextJson = {
+	data: CreateWishlistResponse;
+	status: 200;
+};
+
+export type createWishlistResponseSuccess = (
+	| createWishlistResponse200TextPlain
+	| createWishlistResponse200ApplicationJson
+	| createWishlistResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -265,6 +294,7 @@ export const getCreateWishlistMutationOptions = <
 			{ data: CreateWishlistRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -294,13 +324,16 @@ export const getCreateWishlistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof createWishlist>>,
 		variables: { data: CreateWishlistRequest },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListWishlistQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListWishlistQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type CreateWishlistMutationResult = NonNullable<
@@ -317,6 +350,7 @@ export const useCreateWishlist = <TError = unknown, TContext = unknown>(
 			{ data: CreateWishlistRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -332,12 +366,26 @@ export const useCreateWishlist = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type updateWishlistResponse200 = {
+export type updateWishlistResponse200TextPlain = {
 	data: UpdateWishlistResponse;
 	status: 200;
 };
 
-export type updateWishlistResponseSuccess = updateWishlistResponse200 & {
+export type updateWishlistResponse200ApplicationJson = {
+	data: UpdateWishlistResponse;
+	status: 200;
+};
+
+export type updateWishlistResponse200TextJson = {
+	data: UpdateWishlistResponse;
+	status: 200;
+};
+
+export type updateWishlistResponseSuccess = (
+	| updateWishlistResponse200TextPlain
+	| updateWishlistResponse200ApplicationJson
+	| updateWishlistResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -378,6 +426,7 @@ export const getUpdateWishlistMutationOptions = <
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -407,13 +456,16 @@ export const getUpdateWishlistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof updateWishlist>>,
 		variables: { id: number },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListWishlistQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListWishlistQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type UpdateWishlistMutationResult = NonNullable<
@@ -430,6 +482,7 @@ export const useUpdateWishlist = <TError = unknown, TContext = unknown>(
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -491,6 +544,7 @@ export const getDeleteWishlistMutationOptions = <
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -520,13 +574,16 @@ export const getDeleteWishlistMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof deleteWishlist>>,
 		variables: { id: number },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getListWishlistQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getListWishlistQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type DeleteWishlistMutationResult = NonNullable<
@@ -543,6 +600,7 @@ export const useDeleteWishlist = <TError = unknown, TContext = unknown>(
 			{ id: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -560,109 +618,310 @@ export const useDeleteWishlist = <TError = unknown, TContext = unknown>(
 };
 
 export const getListWishlistResponseMock = (
-	overrideResponse: Partial<ListWishlistResponse> = {},
-): ListWishlistResponse => ({
-	items: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		query: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		filter: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
-		continuousFailedCount: faker.number.int({ min: undefined, max: undefined }),
-		lastErrorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		source: {
-			id: faker.number.int({ min: undefined, max: undefined }),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	overrideResponse: Partial<Extract<ListWishlistResponse, object>> = {},
+): ListWishlistResponse =>
+	faker.helpers.arrayElement([
+		{
+			items: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			})),
+			...overrideResponse,
 		},
-	})),
-	...overrideResponse,
-});
+		{
+			items: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			})),
+			...overrideResponse,
+		},
+		{
+			items: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getCreateWishlistResponseMock = (
-	overrideResponse: Partial<CreateWishlistResponse> = {},
-): CreateWishlistResponse => ({
-	item: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		query: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		filter: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
-		continuousFailedCount: faker.number.int({ min: undefined, max: undefined }),
-		lastErrorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		source: {
-			id: faker.number.int({ min: undefined, max: undefined }),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	overrideResponse: Partial<Extract<CreateWishlistResponse, object>> = {},
+): CreateWishlistResponse =>
+	faker.helpers.arrayElement([
+		{
+			item: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			},
+			...overrideResponse,
 		},
-	},
-	...overrideResponse,
-});
+		{
+			item: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			},
+			...overrideResponse,
+		},
+		{
+			item: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getUpdateWishlistResponseMock = (
-	overrideResponse: Partial<UpdateWishlistResponse> = {},
-): UpdateWishlistResponse => ({
-	item: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		sourceId: faker.number.int({ min: undefined, max: undefined }),
-		query: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		filter: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
-		continuousFailedCount: faker.number.int({ min: undefined, max: undefined }),
-		lastErrorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		source: {
-			id: faker.number.int({ min: undefined, max: undefined }),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	overrideResponse: Partial<Extract<UpdateWishlistResponse, object>> = {},
+): UpdateWishlistResponse =>
+	faker.helpers.arrayElement([
+		{
+			item: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			},
+			...overrideResponse,
 		},
-	},
-	...overrideResponse,
-});
+		{
+			item: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			},
+			...overrideResponse,
+		},
+		{
+			item: {
+				id: faker.number.int(),
+				sourceId: faker.number.int(),
+				query: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				filter: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(WishlistItemStatus)),
+				continuousFailedCount: faker.number.int(),
+				lastErrorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				updatedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				source: {
+					id: faker.number.int(),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					icon: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				},
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getListWishlistMockHandler = (
 	overrideResponse?:
@@ -674,14 +933,14 @@ export const getListWishlistMockHandler = (
 ) => {
 	return http.get(
 		"*/wishlist",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListWishlistResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -698,14 +957,14 @@ export const getCreateWishlistMockHandler = (
 ) => {
 	return http.post(
 		"*/wishlist",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getCreateWishlistResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -722,14 +981,14 @@ export const getUpdateWishlistMockHandler = (
 ) => {
 	return http.put(
 		"*/wishlist/:id",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getUpdateWishlistResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -746,10 +1005,11 @@ export const getDeleteWishlistMockHandler = (
 ) => {
 	return http.delete(
 		"*/wishlist/:id",
-		async (info) => {
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
+
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,

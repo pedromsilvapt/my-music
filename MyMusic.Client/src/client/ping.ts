@@ -181,10 +181,11 @@ export const getPingMockHandler = (
 ) => {
 	return http.get(
 		"*/ping",
-		async (info) => {
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
+
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,

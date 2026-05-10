@@ -82,6 +82,11 @@ public class UsersController(
             user.IsMuted = body.IsMuted.Value;
         }
 
+        if (body.AutoDownloadOnPurchase != null)
+        {
+            user.AutoDownloadOnPurchase = body.AutoDownloadOnPurchase.Value;
+        }
+
         if (body.CurrentQueueId.HasValue)
         {
             var queue = await db.Playlists

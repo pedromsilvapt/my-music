@@ -15,6 +15,7 @@ public record ListUserItem
     public required string ColorScheme { get; set; }
     public required double Volume { get; set; }
     public required bool IsMuted { get; set; }
+    public required bool AutoDownloadOnPurchase { get; set; }
 
     public static ListUserItem FromEntity(Entities.User user) =>
         new()
@@ -25,5 +26,6 @@ public record ListUserItem
             ColorScheme = user.ColorScheme,
             Volume = user.Volume,
             IsMuted = user.IsMuted,
+            AutoDownloadOnPurchase = user.AutoDownloadOnPurchase,
         };
 }

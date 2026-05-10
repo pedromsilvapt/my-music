@@ -5,19 +5,15 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface GetUserItem {
+export interface CreateAlbumItem {
 	/** @pattern ^-?(?:0|[1-9]\d*)$ */
 	id: number;
-	username: string;
 	name: string;
-	colorScheme: string;
-	/** @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$ */
-	volume: number;
-	isMuted: boolean;
-	autoDownloadOnPurchase: boolean;
 	/**
 	 * @nullable
 	 * @pattern ^-?(?:0|[1-9]\d*)$
 	 */
-	currentQueueId?: number | null;
+	year?: number | null;
+	/** @pattern ^-?(?:0|[1-9]\d*)$ */
+	artistId: number;
 }

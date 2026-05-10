@@ -9,4 +9,6 @@ export interface AcknowledgeActionRequest {
 	devicePath: string;
 	/** @nullable */
 	modifiedAt?: string | null;
+	/** @nullable */
+	previousDevicePath?: string | null;
 }

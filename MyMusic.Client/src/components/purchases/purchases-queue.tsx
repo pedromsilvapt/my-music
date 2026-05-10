@@ -1,8 +1,10 @@
 import {saveAs} from 'file-saver';
+import {Switch} from '@mantine/core';
 import {useDeleteManyPurchases, useDeletePurchase, useRequeuePurchase} from "../../client/purchases.ts";
 import {getDownloadSongUrl} from "../../client/songs.ts";
 import {type ListPurchaseItem} from "../../model";
 import PurchasesQueueList from "./purchases-queue-list.tsx";
+import {useUserPreferences} from "../../hooks/use-user-preferences.ts";
 
 export type PurchasesQueueProps = object;
 
@@ -10,6 +12,7 @@ export default function PurchasesQueue() {
     const requeuePurchase = useRequeuePurchase();
     const deletePurchase = useDeletePurchase();
     const deleteManyPurchases = useDeleteManyPurchases();
+    const {autoDownloadOnPurchase, updateAutoDownloadOnPurchase, isUpdating} = useUserPreferences();
 
     const handleRequeue = (purchases: ListPurchaseItem[]) => {
         for (const purchase of purchases) {
@@ -45,11 +48,13 @@ export default function PurchasesQueue() {
 
     return <>
         <div style={{height: '100%'}}>
-            {/*<Collection*/}
-            {/*    key="artists"*/}
-            {/*    items={elements}*/}
-            {/*    schema={albumsSchema}>*/}
-            {/*</Collection>*/}
+            <Switch
+                label="Auto-download purchased songs"
+                checked={autoDownloadOnPurchase}
+                onChange={(e) => updateAutoDownloadOnPurchase(e.currentTarget.checked)}
+                disabled={isUpdating}
+                mb="sm"
+            />
 
             <PurchasesQueueList
                 onRequeue={handleRequeue}

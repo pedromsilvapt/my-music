@@ -14,4 +14,5 @@ export interface ListUserItem {
 	/** @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$ */
 	volume: number;
 	isMuted: boolean;
+	autoDownloadOnPurchase: boolean;
 }

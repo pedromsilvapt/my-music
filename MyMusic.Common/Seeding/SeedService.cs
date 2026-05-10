@@ -59,11 +59,13 @@ public class SeedService(
                 {
                     Username = seedUser.Username,
                     Name = seedUser.Name,
+                    AutoDownloadOnPurchase = seedUser.AutoDownloadOnPurchase,
                 },
                 existing =>
                 {
                     existing.Name = seedUser.Name;
                     existing.Username = seedUser.Username;
+                    existing.AutoDownloadOnPurchase = seedUser.AutoDownloadOnPurchase;
                 },
                 cancellationToken);
 

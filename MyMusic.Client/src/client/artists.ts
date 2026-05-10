@@ -12,18 +12,23 @@ import type {
 	DefinedInitialDataOptions,
 	DefinedUseQueryResult,
 	InvalidateOptions,
+	MutationFunction,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
 	UndefinedInitialDataOptions,
+	UseMutationOptions,
+	UseMutationResult,
 	UseQueryOptions,
 	UseQueryResult,
 } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { RequestHandlerOptions } from "msw";
 
 import { HttpResponse, http } from "msw";
 import type {
+	CreateArtistRequest,
+	CreateArtistResponse,
 	FilterMetadataResponse,
 	FilterValuesResponse,
 	GetArtistFilterValuesParams,
@@ -33,12 +38,26 @@ import type {
 	ListArtistsResponse,
 } from "../model";
 
-export type listArtistsResponse200 = {
+export type listArtistsResponse200TextPlain = {
 	data: ListArtistsResponse;
 	status: 200;
 };
 
-export type listArtistsResponseSuccess = listArtistsResponse200 & {
+export type listArtistsResponse200ApplicationJson = {
+	data: ListArtistsResponse;
+	status: 200;
+};
+
+export type listArtistsResponse200TextJson = {
+	data: ListArtistsResponse;
+	status: 200;
+};
+
+export type listArtistsResponseSuccess = (
+	| listArtistsResponse200TextPlain
+	| listArtistsResponse200ApplicationJson
+	| listArtistsResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -215,12 +234,139 @@ export const invalidateListArtists = async (
 	return queryClient;
 };
 
-export type getArtistResponse200 = {
+export type createArtistResponse200TextPlain = {
+	data: CreateArtistResponse;
+	status: 200;
+};
+
+export type createArtistResponse200ApplicationJson = {
+	data: CreateArtistResponse;
+	status: 200;
+};
+
+export type createArtistResponse200TextJson = {
+	data: CreateArtistResponse;
+	status: 200;
+};
+
+export type createArtistResponseSuccess = (
+	| createArtistResponse200TextPlain
+	| createArtistResponse200ApplicationJson
+	| createArtistResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type createArtistResponse = createArtistResponseSuccess;
+
+export const getCreateArtistUrl = () => {
+	return `/api/artists`;
+};
+
+export const createArtist = async (
+	createArtistRequest: CreateArtistRequest,
+	options?: RequestInit,
+): Promise<createArtistResponse> => {
+	const res = await fetch(getCreateArtistUrl(), {
+		...options,
+		method: "POST",
+		headers: { "Content-Type": "application/json", ...options?.headers },
+		body: JSON.stringify(createArtistRequest),
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: createArtistResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as createArtistResponse;
+};
+
+export const getCreateArtistMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof createArtist>>,
+		TError,
+		{ data: CreateArtistRequest },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof createArtist>>,
+	TError,
+	{ data: CreateArtistRequest },
+	TContext
+> => {
+	const mutationKey = ["createArtist"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof createArtist>>,
+		{ data: CreateArtistRequest }
+	> = (props) => {
+		const { data } = props ?? {};
+
+		return createArtist(data, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type CreateArtistMutationResult = NonNullable<
+	Awaited<ReturnType<typeof createArtist>>
+>;
+export type CreateArtistMutationBody = CreateArtistRequest;
+export type CreateArtistMutationError = unknown;
+
+export const useCreateArtist = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof createArtist>>,
+			TError,
+			{ data: CreateArtistRequest },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof createArtist>>,
+	TError,
+	{ data: CreateArtistRequest },
+	TContext
+> => {
+	return useMutation(getCreateArtistMutationOptions(options), queryClient);
+};
+export type getArtistResponse200TextPlain = {
 	data: GetArtistResponse;
 	status: 200;
 };
 
-export type getArtistResponseSuccess = getArtistResponse200 & {
+export type getArtistResponse200ApplicationJson = {
+	data: GetArtistResponse;
+	status: 200;
+};
+
+export type getArtistResponse200TextJson = {
+	data: GetArtistResponse;
+	status: 200;
+};
+
+export type getArtistResponseSuccess = (
+	| getArtistResponse200TextPlain
+	| getArtistResponse200ApplicationJson
+	| getArtistResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -407,15 +553,28 @@ export const invalidateGetArtist = async (
 	return queryClient;
 };
 
-export type getArtistFilterMetadataResponse200 = {
+export type getArtistFilterMetadataResponse200TextPlain = {
 	data: FilterMetadataResponse;
 	status: 200;
 };
 
-export type getArtistFilterMetadataResponseSuccess =
-	getArtistFilterMetadataResponse200 & {
-		headers: Headers;
-	};
+export type getArtistFilterMetadataResponse200ApplicationJson = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getArtistFilterMetadataResponse200TextJson = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getArtistFilterMetadataResponseSuccess = (
+	| getArtistFilterMetadataResponse200TextPlain
+	| getArtistFilterMetadataResponse200ApplicationJson
+	| getArtistFilterMetadataResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getArtistFilterMetadataResponse =
 	getArtistFilterMetadataResponseSuccess;
@@ -593,15 +752,28 @@ export const invalidateGetArtistFilterMetadata = async (
 	return queryClient;
 };
 
-export type getArtistFilterValuesResponse200 = {
+export type getArtistFilterValuesResponse200TextPlain = {
 	data: FilterValuesResponse;
 	status: 200;
 };
 
-export type getArtistFilterValuesResponseSuccess =
-	getArtistFilterValuesResponse200 & {
-		headers: Headers;
-	};
+export type getArtistFilterValuesResponse200ApplicationJson = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getArtistFilterValuesResponse200TextJson = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getArtistFilterValuesResponseSuccess = (
+	| getArtistFilterValuesResponse200TextPlain
+	| getArtistFilterValuesResponse200ApplicationJson
+	| getArtistFilterValuesResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getArtistFilterValuesResponse =
 	getArtistFilterValuesResponseSuccess;
@@ -811,216 +983,583 @@ export const invalidateGetArtistFilterValues = async (
 };
 
 export const getListArtistsResponseMock = (
-	overrideResponse: Partial<ListArtistsResponse> = {},
-): ListArtistsResponse => ({
-	artists: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		photo: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		albumsCount: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		songsCount: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-	})),
-	...overrideResponse,
-});
-
-export const getGetArtistResponseMock = (
-	overrideResponse: Partial<GetArtistResponse> = {},
-): GetArtistResponse => ({
-	artist: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		photo: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		albumsCount: faker.number.int({ min: undefined, max: undefined }),
-		songsCount: faker.number.int({ min: undefined, max: undefined }),
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		albums: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.number.int({ min: undefined, max: undefined }),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.number.int({ min: undefined, max: undefined }),
-					null,
-				]),
-				null,
-			]),
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.number.int({ min: undefined, max: undefined }),
-					null,
-				]),
-				null,
-			]),
-			songsCount: faker.number.int({ min: undefined, max: undefined }),
-			createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-			artist: {
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-		})),
-		songs: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.number.int({ min: undefined, max: undefined }),
-			cover: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.number.int({ min: undefined, max: undefined }),
-					null,
-				]),
-				null,
-			]),
-			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+	overrideResponse: Partial<Extract<ListArtistsResponse, object>> = {},
+): ListArtistsResponse =>
+	faker.helpers.arrayElement([
+		{
 			artists: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			})),
-			album: {
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			},
-			genres: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => ({
-				id: faker.number.int({ min: undefined, max: undefined }),
-				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			})),
-			year: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.number.int({ min: undefined, max: undefined }),
+				id: faker.number.int(),
+				photo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
 					null,
 				]),
-				null,
-			]),
-			duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			devices: Array.from(
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				albumsCount: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				songsCount: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			artists: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => ({
-				id: faker.number.int({ min: undefined, max: undefined }),
+				id: faker.number.int(),
+				photo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
 				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-				icon: faker.helpers.arrayElement([
+				albumsCount: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				songsCount: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+		{
+			artists: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				photo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				albumsCount: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				songsCount: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getCreateArtistResponseMock = (
+	overrideResponse: Partial<Extract<CreateArtistResponse, object>> = {},
+): CreateArtistResponse =>
+	faker.helpers.arrayElement([
+		{
+			artist: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			...overrideResponse,
+		},
+		{
+			artist: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			...overrideResponse,
+		},
+		{
+			artist: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			...overrideResponse,
+		},
+	]);
+
+export const getGetArtistResponseMock = (
+	overrideResponse: Partial<Extract<GetArtistResponse, object>> = {},
+): GetArtistResponse =>
+	faker.helpers.arrayElement([
+		{
+			artist: {
+				id: faker.number.int(),
+				photo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				albumsCount: faker.number.int(),
+				songsCount: faker.number.int(),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				albums: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					songsCount: faker.number.int(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					artist: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+				})),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+				})),
+			},
+			...overrideResponse,
+		},
+		{
+			artist: {
+				id: faker.number.int(),
+				photo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				albumsCount: faker.number.int(),
+				songsCount: faker.number.int(),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				albums: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					songsCount: faker.number.int(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					artist: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+				})),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+				})),
+			},
+			...overrideResponse,
+		},
+		{
+			artist: {
+				id: faker.number.int(),
+				photo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				albumsCount: faker.number.int(),
+				songsCount: faker.number.int(),
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				albums: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					songsCount: faker.number.int(),
+					createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+					artist: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+				})),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					cover: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					artists: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					album: {
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					},
+					genres: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					})),
+					year: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([faker.number.int(), null]),
+						null,
+					]),
+					duration: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					devices: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => ({
+						id: faker.number.int(),
+						name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+						icon: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+						color: faker.helpers.arrayElement([
+							faker.helpers.arrayElement([
+								faker.string.alpha({ length: { min: 10, max: 20 } }),
+								null,
+							]),
+							undefined,
+						]),
+					})),
+					isFavorite: faker.datatype.boolean(),
+					isExplicit: faker.datatype.boolean(),
+				})),
+			},
+			...overrideResponse,
+		},
+	]);
+
+export const getGetArtistFilterMetadataResponseMock = (
+	overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
+): FilterMetadataResponse =>
+	faker.helpers.arrayElement([
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
 					faker.helpers.arrayElement([
 						faker.string.alpha({ length: { min: 10, max: 20 } }),
 						null,
 					]),
 					undefined,
 				]),
-				color: faker.helpers.arrayElement([
-					faker.helpers.arrayElement([
-						faker.string.alpha({ length: { min: 10, max: 20 } }),
-						null,
-					]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
 					undefined,
 				]),
 			})),
-			isFavorite: faker.datatype.boolean(),
-			isExplicit: faker.datatype.boolean(),
-		})),
-	},
-	...overrideResponse,
-});
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+	]);
 
-export const getGetArtistFilterMetadataResponseMock = (
-	overrideResponse: Partial<FilterMetadataResponse> = {},
-): FilterMetadataResponse => ({
-	fields: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		entityPath: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		supportedOperators: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-		isComputed: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-		isCollection: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-		nestedFields: faker.helpers.arrayElement([[], undefined]),
-		values: faker.helpers.arrayElement([
-			Array.from(
+export const getGetArtistFilterValuesResponseMock = (
+	overrideResponse: Partial<Extract<FilterValuesResponse, object>> = {},
+): FilterValuesResponse =>
+	faker.helpers.arrayElement([
+		{
+			values: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			undefined,
-		]),
-		supportsDynamicValues: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-	})),
-	operators: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		applicableTypes: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-	})),
-	...overrideResponse,
-});
-
-export const getGetArtistFilterValuesResponseMock = (
-	overrideResponse: Partial<FilterValuesResponse> = {},
-): FilterValuesResponse => ({
-	values: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-	...overrideResponse,
-});
+			...overrideResponse,
+		},
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+	]);
 
 export const getListArtistsMockHandler = (
 	overrideResponse?:
@@ -1032,14 +1571,38 @@ export const getListArtistsMockHandler = (
 ) => {
 	return http.get(
 		"*/artists",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListArtistsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getCreateArtistMockHandler = (
+	overrideResponse?:
+		| CreateArtistResponse
+		| ((
+				info: Parameters<Parameters<typeof http.post>[1]>[0],
+		  ) => Promise<CreateArtistResponse> | CreateArtistResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.post(
+		"*/artists",
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getCreateArtistResponseMock(),
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1056,14 +1619,14 @@ export const getGetArtistMockHandler = (
 ) => {
 	return http.get(
 		"*/artists/:id",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetArtistResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1080,14 +1643,14 @@ export const getGetArtistFilterMetadataMockHandler = (
 ) => {
 	return http.get(
 		"*/artists/filter-metadata",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetArtistFilterMetadataResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1104,14 +1667,14 @@ export const getGetArtistFilterValuesMockHandler = (
 ) => {
 	return http.get(
 		"*/artists/filter-values",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetArtistFilterValuesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -1119,6 +1682,7 @@ export const getGetArtistFilterValuesMockHandler = (
 };
 export const getArtistsMock = () => [
 	getListArtistsMockHandler(),
+	getCreateArtistMockHandler(),
 	getGetArtistMockHandler(),
 	getGetArtistFilterMetadataMockHandler(),
 	getGetArtistFilterValuesMockHandler(),

@@ -13,6 +13,7 @@ import type {
 	DefinedUseQueryResult,
 	InvalidateOptions,
 	MutationFunction,
+	MutationFunctionContext,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
@@ -29,17 +30,32 @@ import { HttpResponse, http } from "msw";
 import type {
 	CreateUserRequest,
 	CreateUserResponse,
+	DeleteUserResponse,
 	GetUserResponse,
 	ListUsersResponse,
 	UpdateUserRequest,
 } from "../model";
 
-export type listUsersResponse200 = {
+export type listUsersResponse200TextPlain = {
 	data: ListUsersResponse;
 	status: 200;
 };
 
-export type listUsersResponseSuccess = listUsersResponse200 & {
+export type listUsersResponse200ApplicationJson = {
+	data: ListUsersResponse;
+	status: 200;
+};
+
+export type listUsersResponse200TextJson = {
+	data: ListUsersResponse;
+	status: 200;
+};
+
+export type listUsersResponseSuccess = (
+	| listUsersResponse200TextPlain
+	| listUsersResponse200ApplicationJson
+	| listUsersResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -195,12 +211,26 @@ export const invalidateListUsers = async (
 	return queryClient;
 };
 
-export type createUserResponse200 = {
+export type createUserResponse200TextPlain = {
 	data: CreateUserResponse;
 	status: 200;
 };
 
-export type createUserResponseSuccess = createUserResponse200 & {
+export type createUserResponse200ApplicationJson = {
+	data: CreateUserResponse;
+	status: 200;
+};
+
+export type createUserResponse200TextJson = {
+	data: CreateUserResponse;
+	status: 200;
+};
+
+export type createUserResponseSuccess = (
+	| createUserResponse200TextPlain
+	| createUserResponse200ApplicationJson
+	| createUserResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -294,12 +324,26 @@ export const useCreateUser = <TError = unknown, TContext = unknown>(
 > => {
 	return useMutation(getCreateUserMutationOptions(options), queryClient);
 };
-export type getCurrentUserResponse200 = {
+export type getCurrentUserResponse200TextPlain = {
 	data: GetUserResponse;
 	status: 200;
 };
 
-export type getCurrentUserResponseSuccess = getCurrentUserResponse200 & {
+export type getCurrentUserResponse200ApplicationJson = {
+	data: GetUserResponse;
+	status: 200;
+};
+
+export type getCurrentUserResponse200TextJson = {
+	data: GetUserResponse;
+	status: 200;
+};
+
+export type getCurrentUserResponseSuccess = (
+	| getCurrentUserResponse200TextPlain
+	| getCurrentUserResponse200ApplicationJson
+	| getCurrentUserResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -455,12 +499,26 @@ export const invalidateGetCurrentUser = async (
 	return queryClient;
 };
 
-export type updateCurrentUserResponse200 = {
+export type updateCurrentUserResponse200TextPlain = {
 	data: GetUserResponse;
 	status: 200;
 };
 
-export type updateCurrentUserResponseSuccess = updateCurrentUserResponse200 & {
+export type updateCurrentUserResponse200ApplicationJson = {
+	data: GetUserResponse;
+	status: 200;
+};
+
+export type updateCurrentUserResponse200TextJson = {
+	data: GetUserResponse;
+	status: 200;
+};
+
+export type updateCurrentUserResponseSuccess = (
+	| updateCurrentUserResponse200TextPlain
+	| updateCurrentUserResponse200ApplicationJson
+	| updateCurrentUserResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -503,6 +561,7 @@ export const getUpdateCurrentUserMutationOptions = <
 			{ data: UpdateUserRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -532,13 +591,16 @@ export const getUpdateCurrentUserMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof updateCurrentUser>>,
 		variables: { data: UpdateUserRequest },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getGetCurrentUserQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type UpdateCurrentUserMutationResult = NonNullable<
@@ -555,6 +617,7 @@ export const useUpdateCurrentUser = <TError = unknown, TContext = unknown>(
 			{ data: UpdateUserRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -573,95 +636,348 @@ export const useUpdateCurrentUser = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
+export type deleteUserResponse200TextPlain = {
+	data: DeleteUserResponse;
+	status: 200;
+};
+
+export type deleteUserResponse200ApplicationJson = {
+	data: DeleteUserResponse;
+	status: 200;
+};
+
+export type deleteUserResponse200TextJson = {
+	data: DeleteUserResponse;
+	status: 200;
+};
+
+export type deleteUserResponseSuccess = (
+	| deleteUserResponse200TextPlain
+	| deleteUserResponse200ApplicationJson
+	| deleteUserResponse200TextJson
+) & {
+	headers: Headers;
+};
+
+export type deleteUserResponse = deleteUserResponseSuccess;
+
+export const getDeleteUserUrl = (id: number) => {
+	return `/api/users/${id}`;
+};
+
+export const deleteUser = async (
+	id: number,
+	options?: RequestInit,
+): Promise<deleteUserResponse> => {
+	const res = await fetch(getDeleteUserUrl(id), {
+		...options,
+		method: "DELETE",
+	});
+
+	const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+	const data: deleteUserResponse["data"] = body ? JSON.parse(body) : {};
+	return {
+		data,
+		status: res.status,
+		headers: res.headers,
+	} as deleteUserResponse;
+};
+
+export const getDeleteUserMutationOptions = <
+	TError = unknown,
+	TContext = unknown,
+>(options?: {
+	mutation?: UseMutationOptions<
+		Awaited<ReturnType<typeof deleteUser>>,
+		TError,
+		{ id: number },
+		TContext
+	>;
+	fetch?: RequestInit;
+}): UseMutationOptions<
+	Awaited<ReturnType<typeof deleteUser>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	const mutationKey = ["deleteUser"];
+	const { mutation: mutationOptions, fetch: fetchOptions } = options
+		? options.mutation &&
+			"mutationKey" in options.mutation &&
+			options.mutation.mutationKey
+			? options
+			: { ...options, mutation: { ...options.mutation, mutationKey } }
+		: { mutation: { mutationKey }, fetch: undefined };
+
+	const mutationFn: MutationFunction<
+		Awaited<ReturnType<typeof deleteUser>>,
+		{ id: number }
+	> = (props) => {
+		const { id } = props ?? {};
+
+		return deleteUser(id, fetchOptions);
+	};
+
+	return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteUserMutationResult = NonNullable<
+	Awaited<ReturnType<typeof deleteUser>>
+>;
+
+export type DeleteUserMutationError = unknown;
+
+export const useDeleteUser = <TError = unknown, TContext = unknown>(
+	options?: {
+		mutation?: UseMutationOptions<
+			Awaited<ReturnType<typeof deleteUser>>,
+			TError,
+			{ id: number },
+			TContext
+		>;
+		fetch?: RequestInit;
+	},
+	queryClient?: QueryClient,
+): UseMutationResult<
+	Awaited<ReturnType<typeof deleteUser>>,
+	TError,
+	{ id: number },
+	TContext
+> => {
+	return useMutation(getDeleteUserMutationOptions(options), queryClient);
+};
 
 export const getListUsersResponseMock = (
-	overrideResponse: Partial<ListUsersResponse> = {},
-): ListUsersResponse => ({
-	users: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		username: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		volume: faker.number.float({
-			min: undefined,
-			max: undefined,
-			fractionDigits: 2,
-		}),
-		isMuted: faker.datatype.boolean(),
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<ListUsersResponse, object>> = {},
+): ListUsersResponse =>
+	faker.helpers.arrayElement([
+		{
+			users: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+			})),
+			...overrideResponse,
+		},
+		{
+			users: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+			})),
+			...overrideResponse,
+		},
+		{
+			users: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getCreateUserResponseMock = (
-	overrideResponse: Partial<CreateUserResponse> = {},
-): CreateUserResponse => ({
-	user: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		username: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		volume: faker.number.float({
-			min: undefined,
-			max: undefined,
-			fractionDigits: 2,
-		}),
-		isMuted: faker.datatype.boolean(),
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<CreateUserResponse, object>> = {},
+): CreateUserResponse =>
+	faker.helpers.arrayElement([
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getGetCurrentUserResponseMock = (
-	overrideResponse: Partial<GetUserResponse> = {},
-): GetUserResponse => ({
-	user: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		username: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		volume: faker.number.float({
-			min: undefined,
-			max: undefined,
-			fractionDigits: 2,
-		}),
-		isMuted: faker.datatype.boolean(),
-		currentQueueId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<GetUserResponse, object>> = {},
+): GetUserResponse =>
+	faker.helpers.arrayElement([
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+				currentQueueId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+				currentQueueId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+				currentQueueId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getUpdateCurrentUserResponseMock = (
-	overrideResponse: Partial<GetUserResponse> = {},
-): GetUserResponse => ({
-	user: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		username: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		volume: faker.number.float({
-			min: undefined,
-			max: undefined,
-			fractionDigits: 2,
-		}),
-		isMuted: faker.datatype.boolean(),
-		currentQueueId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<GetUserResponse, object>> = {},
+): GetUserResponse =>
+	faker.helpers.arrayElement([
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+				currentQueueId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+				currentQueueId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				colorScheme: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				volume: faker.number.float({ fractionDigits: 2 }),
+				isMuted: faker.datatype.boolean(),
+				autoDownloadOnPurchase: faker.datatype.boolean(),
+				currentQueueId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+	]);
+
+export const getDeleteUserResponseMock = (
+	overrideResponse: Partial<Extract<DeleteUserResponse, object>> = {},
+): DeleteUserResponse =>
+	faker.helpers.arrayElement([
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			...overrideResponse,
+		},
+		{
+			user: {
+				id: faker.number.int(),
+				username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getListUsersMockHandler = (
 	overrideResponse?:
@@ -673,14 +989,14 @@ export const getListUsersMockHandler = (
 ) => {
 	return http.get(
 		"*/users",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getListUsersResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -697,14 +1013,14 @@ export const getCreateUserMockHandler = (
 ) => {
 	return http.post(
 		"*/users",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getCreateUserResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -721,14 +1037,14 @@ export const getGetCurrentUserMockHandler = (
 ) => {
 	return http.get(
 		"*/users/me",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetCurrentUserResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -745,14 +1061,38 @@ export const getUpdateCurrentUserMockHandler = (
 ) => {
 	return http.patch(
 		"*/users/me",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getUpdateCurrentUserResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
+			);
+		},
+		options,
+	);
+};
+
+export const getDeleteUserMockHandler = (
+	overrideResponse?:
+		| DeleteUserResponse
+		| ((
+				info: Parameters<Parameters<typeof http.delete>[1]>[0],
+		  ) => Promise<DeleteUserResponse> | DeleteUserResponse),
+	options?: RequestHandlerOptions,
+) => {
+	return http.delete(
+		"*/users/:id",
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			return HttpResponse.json(
+				overrideResponse !== undefined
+					? typeof overrideResponse === "function"
+						? await overrideResponse(info)
+						: overrideResponse
+					: getDeleteUserResponseMock(),
+				{ status: 200 },
 			);
 		},
 		options,
@@ -763,4 +1103,5 @@ export const getUsersMock = () => [
 	getCreateUserMockHandler(),
 	getGetCurrentUserMockHandler(),
 	getUpdateCurrentUserMockHandler(),
+	getDeleteUserMockHandler(),
 ];

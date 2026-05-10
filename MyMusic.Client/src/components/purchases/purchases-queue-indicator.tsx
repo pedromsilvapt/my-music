@@ -2,15 +2,26 @@
 import {ActionIcon, Center, Drawer, type MantineColor, RingProgress} from "@mantine/core";
 import {useDisclosure} from "@mantine/hooks";
 import {IconAlertTriangleFilled, IconCheck, IconLoader, IconPlayerPauseFilled,} from "@tabler/icons-react";
-import {useMemo} from "react";
+import {useCallback, useMemo} from "react";
+import {useQueryClient} from "@tanstack/react-query";
+import {getGetCurrentUserQueryKey} from "../../client/users.ts";
 import {ZINDEX_DRAWER, ZINDEX_MODAL} from "../../consts.ts";
 import PurchasesQueue from "./purchases-queue.tsx";
 import usePurchasedSongsQuery from "./usePurchasedSongsQuery.tsx";
+import {useAutoDownload} from "./use-auto-download.ts";
 
 export type PurchasesQueueIndicatorProps = object;
 
 export default function PurchasesQueueIndicator() {
     const [opened, {open, close}] = useDisclosure(false);
+    const queryClient = useQueryClient();
+
+    useAutoDownload();
+
+    const handleOpen = useCallback(() => {
+        queryClient.invalidateQueries({queryKey: getGetCurrentUserQueryKey()});
+        open();
+    }, [queryClient, open]);
 
     const {data: data} = usePurchasedSongsQuery();
 
@@ -27,7 +38,7 @@ export default function PurchasesQueueIndicator() {
 
     const total = counts.completed + counts.failed + counts.acquiring + counts.queued;
 
-    const label = usePurchasesQueueIndicatorIcon(counts, open, 13);
+    const label = usePurchasesQueueIndicatorIcon(counts, handleOpen, 13);
     const sections = usePurchasesQueueIndicatorSections(counts, total);
 
     return <>

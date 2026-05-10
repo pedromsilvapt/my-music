@@ -13,6 +13,7 @@ import type {
 	DefinedUseQueryResult,
 	InvalidateOptions,
 	MutationFunction,
+	MutationFunctionContext,
 	QueryClient,
 	QueryFunction,
 	QueryKey,
@@ -69,12 +70,26 @@ import {
 	SyncSessionStatus,
 } from "../model";
 
-export type getDevicesResponse200 = {
+export type getDevicesResponse200TextPlain = {
 	data: ListDevicesResponse;
 	status: 200;
 };
 
-export type getDevicesResponseSuccess = getDevicesResponse200 & {
+export type getDevicesResponse200ApplicationJson = {
+	data: ListDevicesResponse;
+	status: 200;
+};
+
+export type getDevicesResponse200TextJson = {
+	data: ListDevicesResponse;
+	status: 200;
+};
+
+export type getDevicesResponseSuccess = (
+	| getDevicesResponse200TextPlain
+	| getDevicesResponse200ApplicationJson
+	| getDevicesResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -251,12 +266,26 @@ export const invalidateGetDevices = async (
 	return queryClient;
 };
 
-export type postDevicesResponse200 = {
+export type postDevicesResponse200TextPlain = {
 	data: CreateDeviceResponse;
 	status: 200;
 };
 
-export type postDevicesResponseSuccess = postDevicesResponse200 & {
+export type postDevicesResponse200ApplicationJson = {
+	data: CreateDeviceResponse;
+	status: 200;
+};
+
+export type postDevicesResponse200TextJson = {
+	data: CreateDeviceResponse;
+	status: 200;
+};
+
+export type postDevicesResponseSuccess = (
+	| postDevicesResponse200TextPlain
+	| postDevicesResponse200ApplicationJson
+	| postDevicesResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -299,6 +328,7 @@ export const getPostDevicesMutationOptions = <
 			{ data: CreateDeviceRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -328,13 +358,16 @@ export const getPostDevicesMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof postDevices>>,
 		variables: { data: CreateDeviceRequest },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type PostDevicesMutationResult = NonNullable<
@@ -351,6 +384,7 @@ export const usePostDevices = <TError = unknown, TContext = unknown>(
 			{ data: CreateDeviceRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -366,15 +400,28 @@ export const usePostDevices = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type putDevicesDeviceIdResponse200 = {
+export type putDevicesDeviceIdResponse200TextPlain = {
 	data: UpdateDeviceResponse;
 	status: 200;
 };
 
-export type putDevicesDeviceIdResponseSuccess =
-	putDevicesDeviceIdResponse200 & {
-		headers: Headers;
-	};
+export type putDevicesDeviceIdResponse200ApplicationJson = {
+	data: UpdateDeviceResponse;
+	status: 200;
+};
+
+export type putDevicesDeviceIdResponse200TextJson = {
+	data: UpdateDeviceResponse;
+	status: 200;
+};
+
+export type putDevicesDeviceIdResponseSuccess = (
+	| putDevicesDeviceIdResponse200TextPlain
+	| putDevicesDeviceIdResponse200ApplicationJson
+	| putDevicesDeviceIdResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type putDevicesDeviceIdResponse = putDevicesDeviceIdResponseSuccess;
 
@@ -416,6 +463,7 @@ export const getPutDevicesDeviceIdMutationOptions = <
 			{ deviceId: number; data: UpdateDeviceRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -445,13 +493,16 @@ export const getPutDevicesDeviceIdMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof putDevicesDeviceId>>,
 		variables: { deviceId: number; data: UpdateDeviceRequest },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type PutDevicesDeviceIdMutationResult = NonNullable<
@@ -468,6 +519,7 @@ export const usePutDevicesDeviceId = <TError = unknown, TContext = unknown>(
 			{ deviceId: number; data: UpdateDeviceRequest },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -536,6 +588,7 @@ export const getDeleteDevicesDeviceIdMutationOptions = <
 			{ deviceId: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 ): UseMutationOptions<
@@ -565,13 +618,16 @@ export const getDeleteDevicesDeviceIdMutationOptions = <
 	const onSuccess = (
 		data: Awaited<ReturnType<typeof deleteDevicesDeviceId>>,
 		variables: { deviceId: number },
-		context: TContext,
+		onMutateResult: TContext,
+		context: MutationFunctionContext,
 	) => {
-		queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
-		mutationOptions?.onSuccess?.(data, variables, context);
+		if (!options?.skipInvalidation) {
+			queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
+		}
+		mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
 	};
 
-	return { mutationFn, onSuccess, ...mutationOptions };
+	return { ...mutationOptions, mutationFn, onSuccess };
 };
 
 export type DeleteDevicesDeviceIdMutationResult = NonNullable<
@@ -588,6 +644,7 @@ export const useDeleteDevicesDeviceId = <TError = unknown, TContext = unknown>(
 			{ deviceId: number },
 			TContext
 		>;
+		skipInvalidation?: boolean;
 		fetch?: RequestInit;
 	},
 	queryClient?: QueryClient,
@@ -606,12 +663,26 @@ export const useDeleteDevicesDeviceId = <TError = unknown, TContext = unknown>(
 		queryClient,
 	);
 };
-export type getDeviceResponse200 = {
+export type getDeviceResponse200TextPlain = {
 	data: GetDeviceResponse;
 	status: 200;
 };
 
-export type getDeviceResponseSuccess = getDeviceResponse200 & {
+export type getDeviceResponse200ApplicationJson = {
+	data: GetDeviceResponse;
+	status: 200;
+};
+
+export type getDeviceResponse200TextJson = {
+	data: GetDeviceResponse;
+	status: 200;
+};
+
+export type getDeviceResponseSuccess = (
+	| getDeviceResponse200TextPlain
+	| getDeviceResponse200ApplicationJson
+	| getDeviceResponse200TextJson
+) & {
 	headers: Headers;
 };
 
@@ -779,15 +850,28 @@ export const invalidateGetDevice = async (
 	return queryClient;
 };
 
-export type getDevicesDeviceIdSessionsResponse200 = {
+export type getDevicesDeviceIdSessionsResponse200TextPlain = {
 	data: ListSyncSessionsResponse;
 	status: 200;
 };
 
-export type getDevicesDeviceIdSessionsResponseSuccess =
-	getDevicesDeviceIdSessionsResponse200 & {
-		headers: Headers;
-	};
+export type getDevicesDeviceIdSessionsResponse200ApplicationJson = {
+	data: ListSyncSessionsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSessionsResponse200TextJson = {
+	data: ListSyncSessionsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSessionsResponseSuccess = (
+	| getDevicesDeviceIdSessionsResponse200TextPlain
+	| getDevicesDeviceIdSessionsResponse200ApplicationJson
+	| getDevicesDeviceIdSessionsResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getDevicesDeviceIdSessionsResponse =
 	getDevicesDeviceIdSessionsResponseSuccess;
@@ -1016,15 +1100,28 @@ export const invalidateGetDevicesDeviceIdSessions = async (
 	return queryClient;
 };
 
-export type deleteDevicesDeviceIdSessionsSessionIdResponse200 = {
+export type deleteDevicesDeviceIdSessionsSessionIdResponse200TextPlain = {
 	data: DeleteSessionResponse;
 	status: 200;
 };
 
-export type deleteDevicesDeviceIdSessionsSessionIdResponseSuccess =
-	deleteDevicesDeviceIdSessionsSessionIdResponse200 & {
-		headers: Headers;
-	};
+export type deleteDevicesDeviceIdSessionsSessionIdResponse200ApplicationJson = {
+	data: DeleteSessionResponse;
+	status: 200;
+};
+
+export type deleteDevicesDeviceIdSessionsSessionIdResponse200TextJson = {
+	data: DeleteSessionResponse;
+	status: 200;
+};
+
+export type deleteDevicesDeviceIdSessionsSessionIdResponseSuccess = (
+	| deleteDevicesDeviceIdSessionsSessionIdResponse200TextPlain
+	| deleteDevicesDeviceIdSessionsSessionIdResponse200ApplicationJson
+	| deleteDevicesDeviceIdSessionsSessionIdResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type deleteDevicesDeviceIdSessionsSessionIdResponse =
 	deleteDevicesDeviceIdSessionsSessionIdResponseSuccess;
@@ -1134,15 +1231,28 @@ export const useDeleteDevicesDeviceIdSessionsSessionId = <
 		queryClient,
 	);
 };
-export type postDevicesDeviceIdSessionsPruneResponse200 = {
+export type postDevicesDeviceIdSessionsPruneResponse200TextPlain = {
 	data: PruneSessionsResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSessionsPruneResponseSuccess =
-	postDevicesDeviceIdSessionsPruneResponse200 & {
-		headers: Headers;
-	};
+export type postDevicesDeviceIdSessionsPruneResponse200ApplicationJson = {
+	data: PruneSessionsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSessionsPruneResponse200TextJson = {
+	data: PruneSessionsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSessionsPruneResponseSuccess = (
+	| postDevicesDeviceIdSessionsPruneResponse200TextPlain
+	| postDevicesDeviceIdSessionsPruneResponse200ApplicationJson
+	| postDevicesDeviceIdSessionsPruneResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSessionsPruneResponse =
 	postDevicesDeviceIdSessionsPruneResponseSuccess;
@@ -1244,15 +1354,29 @@ export const usePostDevicesDeviceIdSessionsPrune = <
 		queryClient,
 	);
 };
-export type getDevicesDeviceIdSessionsSessionIdRecordsResponse200 = {
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponse200TextPlain = {
 	data: ListSyncRecordsResponse;
 	status: 200;
 };
 
-export type getDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess =
-	getDevicesDeviceIdSessionsSessionIdRecordsResponse200 & {
-		headers: Headers;
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponse200ApplicationJson =
+	{
+		data: ListSyncRecordsResponse;
+		status: 200;
 	};
+
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponse200TextJson = {
+	data: ListSyncRecordsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess = (
+	| getDevicesDeviceIdSessionsSessionIdRecordsResponse200TextPlain
+	| getDevicesDeviceIdSessionsSessionIdRecordsResponse200ApplicationJson
+	| getDevicesDeviceIdSessionsSessionIdRecordsResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getDevicesDeviceIdSessionsSessionIdRecordsResponse =
 	getDevicesDeviceIdSessionsSessionIdRecordsResponseSuccess;
@@ -1528,14 +1652,30 @@ export const invalidateGetDevicesDeviceIdSessionsSessionIdRecords = async (
 	return queryClient;
 };
 
-export type getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200 =
+export type getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200TextPlain =
+	{
+		data: FilterMetadataResponse;
+		status: 200;
+	};
+
+export type getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200ApplicationJson =
+	{
+		data: FilterMetadataResponse;
+		status: 200;
+	};
+
+export type getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200TextJson =
 	{
 		data: FilterMetadataResponse;
 		status: 200;
 	};
 
 export type getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponseSuccess =
-	getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200 & {
+	(
+		| getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200TextPlain
+		| getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200ApplicationJson
+		| getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponse200TextJson
+	) & {
 		headers: Headers;
 	};
 
@@ -1837,14 +1977,30 @@ export const invalidateGetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata 
 		return queryClient;
 	};
 
-export type getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200 =
+export type getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200TextPlain =
+	{
+		data: FilterValuesResponse;
+		status: 200;
+	};
+
+export type getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200ApplicationJson =
+	{
+		data: FilterValuesResponse;
+		status: 200;
+	};
+
+export type getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200TextJson =
 	{
 		data: FilterValuesResponse;
 		status: 200;
 	};
 
 export type getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponseSuccess =
-	getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200 & {
+	(
+		| getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200TextPlain
+		| getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200ApplicationJson
+		| getDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponse200TextJson
+	) & {
 		headers: Headers;
 	};
 
@@ -2174,15 +2330,28 @@ export const invalidateGetDevicesDeviceIdSessionsSessionIdRecordsFilterValues =
 		return queryClient;
 	};
 
-export type postDevicesDeviceIdSyncStartResponse200 = {
+export type postDevicesDeviceIdSyncStartResponse200TextPlain = {
 	data: SyncStartResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncStartResponseSuccess =
-	postDevicesDeviceIdSyncStartResponse200 & {
-		headers: Headers;
-	};
+export type postDevicesDeviceIdSyncStartResponse200ApplicationJson = {
+	data: SyncStartResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncStartResponse200TextJson = {
+	data: SyncStartResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncStartResponseSuccess = (
+	| postDevicesDeviceIdSyncStartResponse200TextPlain
+	| postDevicesDeviceIdSyncStartResponse200ApplicationJson
+	| postDevicesDeviceIdSyncStartResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncStartResponse =
 	postDevicesDeviceIdSyncStartResponseSuccess;
@@ -2284,15 +2453,29 @@ export const usePostDevicesDeviceIdSyncStart = <
 		queryClient,
 	);
 };
-export type postDevicesDeviceIdSyncSessionIdRecordsResponse200 = {
+export type postDevicesDeviceIdSyncSessionIdRecordsResponse200TextPlain = {
 	data: SyncRecordsResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncSessionIdRecordsResponseSuccess =
-	postDevicesDeviceIdSyncSessionIdRecordsResponse200 & {
-		headers: Headers;
+export type postDevicesDeviceIdSyncSessionIdRecordsResponse200ApplicationJson =
+	{
+		data: SyncRecordsResponse;
+		status: 200;
 	};
+
+export type postDevicesDeviceIdSyncSessionIdRecordsResponse200TextJson = {
+	data: SyncRecordsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncSessionIdRecordsResponseSuccess = (
+	| postDevicesDeviceIdSyncSessionIdRecordsResponse200TextPlain
+	| postDevicesDeviceIdSyncSessionIdRecordsResponse200ApplicationJson
+	| postDevicesDeviceIdSyncSessionIdRecordsResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncSessionIdRecordsResponse =
 	postDevicesDeviceIdSyncSessionIdRecordsResponseSuccess;
@@ -2407,15 +2590,29 @@ export const usePostDevicesDeviceIdSyncSessionIdRecords = <
 		queryClient,
 	);
 };
-export type postDevicesDeviceIdSyncSessionIdCompleteResponse200 = {
+export type postDevicesDeviceIdSyncSessionIdCompleteResponse200TextPlain = {
 	data: SyncCompleteResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncSessionIdCompleteResponseSuccess =
-	postDevicesDeviceIdSyncSessionIdCompleteResponse200 & {
-		headers: Headers;
+export type postDevicesDeviceIdSyncSessionIdCompleteResponse200ApplicationJson =
+	{
+		data: SyncCompleteResponse;
+		status: 200;
 	};
+
+export type postDevicesDeviceIdSyncSessionIdCompleteResponse200TextJson = {
+	data: SyncCompleteResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncSessionIdCompleteResponseSuccess = (
+	| postDevicesDeviceIdSyncSessionIdCompleteResponse200TextPlain
+	| postDevicesDeviceIdSyncSessionIdCompleteResponse200ApplicationJson
+	| postDevicesDeviceIdSyncSessionIdCompleteResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncSessionIdCompleteResponse =
 	postDevicesDeviceIdSyncSessionIdCompleteResponseSuccess;
@@ -2531,15 +2728,28 @@ export const usePostDevicesDeviceIdSyncSessionIdComplete = <
 		queryClient,
 	);
 };
-export type getDevicesDeviceIdSyncPendingActionsResponse200 = {
+export type getDevicesDeviceIdSyncPendingActionsResponse200TextPlain = {
 	data: GetPendingActionsResponse;
 	status: 200;
 };
 
-export type getDevicesDeviceIdSyncPendingActionsResponseSuccess =
-	getDevicesDeviceIdSyncPendingActionsResponse200 & {
-		headers: Headers;
-	};
+export type getDevicesDeviceIdSyncPendingActionsResponse200ApplicationJson = {
+	data: GetPendingActionsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncPendingActionsResponse200TextJson = {
+	data: GetPendingActionsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncPendingActionsResponseSuccess = (
+	| getDevicesDeviceIdSyncPendingActionsResponse200TextPlain
+	| getDevicesDeviceIdSyncPendingActionsResponse200ApplicationJson
+	| getDevicesDeviceIdSyncPendingActionsResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getDevicesDeviceIdSyncPendingActionsResponse =
 	getDevicesDeviceIdSyncPendingActionsResponseSuccess;
@@ -2743,15 +2953,28 @@ export const invalidateGetDevicesDeviceIdSyncPendingActions = async (
 	return queryClient;
 };
 
-export type getDevicesDeviceIdSyncSongsResponse200 = {
+export type getDevicesDeviceIdSyncSongsResponse200TextPlain = {
 	data: GetDeviceSongsResponse;
 	status: 200;
 };
 
-export type getDevicesDeviceIdSyncSongsResponseSuccess =
-	getDevicesDeviceIdSyncSongsResponse200 & {
-		headers: Headers;
-	};
+export type getDevicesDeviceIdSyncSongsResponse200ApplicationJson = {
+	data: GetDeviceSongsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncSongsResponse200TextJson = {
+	data: GetDeviceSongsResponse;
+	status: 200;
+};
+
+export type getDevicesDeviceIdSyncSongsResponseSuccess = (
+	| getDevicesDeviceIdSyncSongsResponse200TextPlain
+	| getDevicesDeviceIdSyncSongsResponse200ApplicationJson
+	| getDevicesDeviceIdSyncSongsResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getDevicesDeviceIdSyncSongsResponse =
 	getDevicesDeviceIdSyncSongsResponseSuccess;
@@ -2947,15 +3170,28 @@ export const invalidateGetDevicesDeviceIdSyncSongs = async (
 	return queryClient;
 };
 
-export type postDevicesDeviceIdSyncAcknowledgeResponse200 = {
+export type postDevicesDeviceIdSyncAcknowledgeResponse200TextPlain = {
 	data: AcknowledgeActionResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncAcknowledgeResponseSuccess =
-	postDevicesDeviceIdSyncAcknowledgeResponse200 & {
-		headers: Headers;
-	};
+export type postDevicesDeviceIdSyncAcknowledgeResponse200ApplicationJson = {
+	data: AcknowledgeActionResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncAcknowledgeResponse200TextJson = {
+	data: AcknowledgeActionResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncAcknowledgeResponseSuccess = (
+	| postDevicesDeviceIdSyncAcknowledgeResponse200TextPlain
+	| postDevicesDeviceIdSyncAcknowledgeResponse200ApplicationJson
+	| postDevicesDeviceIdSyncAcknowledgeResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncAcknowledgeResponse =
 	postDevicesDeviceIdSyncAcknowledgeResponseSuccess;
@@ -3058,15 +3294,28 @@ export const usePostDevicesDeviceIdSyncAcknowledge = <
 		queryClient,
 	);
 };
-export type postDevicesDeviceIdSyncCheckResponse200 = {
+export type postDevicesDeviceIdSyncCheckResponse200TextPlain = {
 	data: SyncCheckResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncCheckResponseSuccess =
-	postDevicesDeviceIdSyncCheckResponse200 & {
-		headers: Headers;
-	};
+export type postDevicesDeviceIdSyncCheckResponse200ApplicationJson = {
+	data: SyncCheckResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncCheckResponse200TextJson = {
+	data: SyncCheckResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncCheckResponseSuccess = (
+	| postDevicesDeviceIdSyncCheckResponse200TextPlain
+	| postDevicesDeviceIdSyncCheckResponse200ApplicationJson
+	| postDevicesDeviceIdSyncCheckResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncCheckResponse =
 	postDevicesDeviceIdSyncCheckResponseSuccess;
@@ -3168,15 +3417,29 @@ export const usePostDevicesDeviceIdSyncCheck = <
 		queryClient,
 	);
 };
-export type postDevicesDeviceIdSyncResolveConflictsResponse200 = {
+export type postDevicesDeviceIdSyncResolveConflictsResponse200TextPlain = {
 	data: SyncResolveConflictsResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncResolveConflictsResponseSuccess =
-	postDevicesDeviceIdSyncResolveConflictsResponse200 & {
-		headers: Headers;
+export type postDevicesDeviceIdSyncResolveConflictsResponse200ApplicationJson =
+	{
+		data: SyncResolveConflictsResponse;
+		status: 200;
 	};
+
+export type postDevicesDeviceIdSyncResolveConflictsResponse200TextJson = {
+	data: SyncResolveConflictsResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncResolveConflictsResponseSuccess = (
+	| postDevicesDeviceIdSyncResolveConflictsResponse200TextPlain
+	| postDevicesDeviceIdSyncResolveConflictsResponse200ApplicationJson
+	| postDevicesDeviceIdSyncResolveConflictsResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncResolveConflictsResponse =
 	postDevicesDeviceIdSyncResolveConflictsResponseSuccess;
@@ -3288,15 +3551,28 @@ export const usePostDevicesDeviceIdSyncResolveConflicts = <
 		queryClient,
 	);
 };
-export type postDevicesDeviceIdSyncUploadResponse200 = {
+export type postDevicesDeviceIdSyncUploadResponse200TextPlain = {
 	data: SyncUploadResponse;
 	status: 200;
 };
 
-export type postDevicesDeviceIdSyncUploadResponseSuccess =
-	postDevicesDeviceIdSyncUploadResponse200 & {
-		headers: Headers;
-	};
+export type postDevicesDeviceIdSyncUploadResponse200ApplicationJson = {
+	data: SyncUploadResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncUploadResponse200TextJson = {
+	data: SyncUploadResponse;
+	status: 200;
+};
+
+export type postDevicesDeviceIdSyncUploadResponseSuccess = (
+	| postDevicesDeviceIdSyncUploadResponse200TextPlain
+	| postDevicesDeviceIdSyncUploadResponse200ApplicationJson
+	| postDevicesDeviceIdSyncUploadResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type postDevicesDeviceIdSyncUploadResponse =
 	postDevicesDeviceIdSyncUploadResponseSuccess;
@@ -3415,15 +3691,28 @@ export const usePostDevicesDeviceIdSyncUpload = <
 		queryClient,
 	);
 };
-export type getDevicesFilterMetadataResponse200 = {
+export type getDevicesFilterMetadataResponse200TextPlain = {
 	data: FilterMetadataResponse;
 	status: 200;
 };
 
-export type getDevicesFilterMetadataResponseSuccess =
-	getDevicesFilterMetadataResponse200 & {
-		headers: Headers;
-	};
+export type getDevicesFilterMetadataResponse200ApplicationJson = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getDevicesFilterMetadataResponse200TextJson = {
+	data: FilterMetadataResponse;
+	status: 200;
+};
+
+export type getDevicesFilterMetadataResponseSuccess = (
+	| getDevicesFilterMetadataResponse200TextPlain
+	| getDevicesFilterMetadataResponse200ApplicationJson
+	| getDevicesFilterMetadataResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getDevicesFilterMetadataResponse =
 	getDevicesFilterMetadataResponseSuccess;
@@ -3601,15 +3890,28 @@ export const invalidateGetDevicesFilterMetadata = async (
 	return queryClient;
 };
 
-export type getDevicesFilterValuesResponse200 = {
+export type getDevicesFilterValuesResponse200TextPlain = {
 	data: FilterValuesResponse;
 	status: 200;
 };
 
-export type getDevicesFilterValuesResponseSuccess =
-	getDevicesFilterValuesResponse200 & {
-		headers: Headers;
-	};
+export type getDevicesFilterValuesResponse200ApplicationJson = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getDevicesFilterValuesResponse200TextJson = {
+	data: FilterValuesResponse;
+	status: 200;
+};
+
+export type getDevicesFilterValuesResponseSuccess = (
+	| getDevicesFilterValuesResponse200TextPlain
+	| getDevicesFilterValuesResponse200ApplicationJson
+	| getDevicesFilterValuesResponse200TextJson
+) & {
+	headers: Headers;
+};
 
 export type getDevicesFilterValuesResponse =
 	getDevicesFilterValuesResponseSuccess;
@@ -3819,217 +4121,594 @@ export const invalidateGetDevicesFilterValues = async (
 };
 
 export const getGetDevicesResponseMock = (
-	overrideResponse: Partial<ListDevicesResponse> = {},
-): ListDevicesResponse => ({
-	devices: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		icon: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		color: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		namingTemplate: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		songCount: faker.number.int({ min: undefined, max: undefined }),
-		songs: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			id: faker.number.int({ min: undefined, max: undefined }),
-			path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			syncAction: faker.helpers.arrayElement([
-				faker.helpers.arrayElement([
-					faker.string.alpha({ length: { min: 10, max: 20 } }),
-					null,
+	overrideResponse: Partial<Extract<ListDevicesResponse, object>> = {},
+): ListDevicesResponse =>
+	faker.helpers.arrayElement([
+		{
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
 				]),
-				undefined,
-			]),
-		})),
-		importOnPurchase: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-	})),
-	...overrideResponse,
-});
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				songCount: faker.number.int(),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					syncAction: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+				})),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				songCount: faker.number.int(),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					syncAction: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+				})),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			devices: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				songCount: faker.number.int(),
+				songs: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					id: faker.number.int(),
+					path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					syncAction: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+				})),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getPostDevicesResponseMock = (
-	overrideResponse: Partial<CreateDeviceResponse> = {},
-): CreateDeviceResponse => ({
-	device: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		icon: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		color: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		namingTemplate: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		importOnPurchase: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<CreateDeviceResponse, object>> = {},
+): CreateDeviceResponse =>
+	faker.helpers.arrayElement([
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getPutDevicesDeviceIdResponseMock = (
-	overrideResponse: Partial<UpdateDeviceResponse> = {},
-): UpdateDeviceResponse => ({
-	device: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		icon: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		color: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		namingTemplate: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		importOnPurchase: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<UpdateDeviceResponse, object>> = {},
+): UpdateDeviceResponse =>
+	faker.helpers.arrayElement([
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getGetDeviceResponseMock = (
-	overrideResponse: Partial<GetDeviceResponse> = {},
-): GetDeviceResponse => ({
-	device: {
-		id: faker.number.int({ min: undefined, max: undefined }),
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		icon: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		color: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		namingTemplate: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		songCount: faker.number.int({ min: undefined, max: undefined }),
-		importOnPurchase: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-	},
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<GetDeviceResponse, object>> = {},
+): GetDeviceResponse =>
+	faker.helpers.arrayElement([
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				songCount: faker.number.int(),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				songCount: faker.number.int(),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+		{
+			device: {
+				id: faker.number.int(),
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				icon: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				color: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				namingTemplate: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				songCount: faker.number.int(),
+				importOnPurchase: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			},
+			...overrideResponse,
+		},
+	]);
 
 export const getGetDevicesDeviceIdSessionsResponseMock = (
-	overrideResponse: Partial<ListSyncSessionsResponse> = {},
-): ListSyncSessionsResponse => ({
-	sessions: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		id: faker.number.int({ min: undefined, max: undefined }),
-		startedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		completedAt: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.date.past().toISOString().slice(0, 19) + "Z",
-				null,
-			]),
-			undefined,
-		]),
-		status: faker.helpers.arrayElement(Object.values(SyncSessionStatus)),
-		isDryRun: faker.datatype.boolean(),
-		createdCount: faker.number.int({ min: undefined, max: undefined }),
-		updatedCount: faker.number.int({ min: undefined, max: undefined }),
-		skippedCount: faker.number.int({ min: undefined, max: undefined }),
-		downloadedCount: faker.number.int({ min: undefined, max: undefined }),
-		removedCount: faker.number.int({ min: undefined, max: undefined }),
-		errorCount: faker.number.int({ min: undefined, max: undefined }),
-		repositoryPath: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<ListSyncSessionsResponse, object>> = {},
+): ListSyncSessionsResponse =>
+	faker.helpers.arrayElement([
+		{
+			sessions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				startedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				completedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(SyncSessionStatus)),
+				isDryRun: faker.datatype.boolean(),
+				createdCount: faker.number.int(),
+				updatedCount: faker.number.int(),
+				skippedCount: faker.number.int(),
+				downloadedCount: faker.number.int(),
+				removedCount: faker.number.int(),
+				errorCount: faker.number.int(),
+				repositoryPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			sessions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				startedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				completedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(SyncSessionStatus)),
+				isDryRun: faker.datatype.boolean(),
+				createdCount: faker.number.int(),
+				updatedCount: faker.number.int(),
+				skippedCount: faker.number.int(),
+				downloadedCount: faker.number.int(),
+				removedCount: faker.number.int(),
+				errorCount: faker.number.int(),
+				repositoryPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			sessions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				id: faker.number.int(),
+				startedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				completedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					undefined,
+				]),
+				status: faker.helpers.arrayElement(Object.values(SyncSessionStatus)),
+				isDryRun: faker.datatype.boolean(),
+				createdCount: faker.number.int(),
+				updatedCount: faker.number.int(),
+				skippedCount: faker.number.int(),
+				downloadedCount: faker.number.int(),
+				removedCount: faker.number.int(),
+				errorCount: faker.number.int(),
+				repositoryPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getDeleteDevicesDeviceIdSessionsSessionIdResponseMock = (
-	overrideResponse: Partial<DeleteSessionResponse> = {},
-): DeleteSessionResponse => ({
-	success: faker.datatype.boolean(),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<DeleteSessionResponse, object>> = {},
+): DeleteSessionResponse =>
+	faker.helpers.arrayElement([
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+	]);
 
 export const getPostDevicesDeviceIdSessionsPruneResponseMock = (
-	overrideResponse: Partial<PruneSessionsResponse> = {},
-): PruneSessionsResponse => ({
-	deletedCount: faker.number.int({ min: undefined, max: undefined }),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<PruneSessionsResponse, object>> = {},
+): PruneSessionsResponse =>
+	faker.helpers.arrayElement([
+		{ deletedCount: faker.number.int(), ...overrideResponse },
+		{ deletedCount: faker.number.int(), ...overrideResponse },
+		{ deletedCount: faker.number.int(), ...overrideResponse },
+	]);
 
 export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseSyncRecordSongInfoMock =
 	(overrideResponse: Partial<SyncRecordSongInfo> = {}): SyncRecordSongInfo => ({
 		...{
-			id: faker.number.int({ min: undefined, max: undefined }),
+			id: faker.number.int(),
 			title: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			artistNames: faker.string.alpha({ length: { min: 10, max: 20 } }),
 			coverId: faker.helpers.arrayElement([
@@ -4044,426 +4723,1197 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseSyncRecordSong
 	});
 
 export const getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock = (
-	overrideResponse: Partial<ListSyncRecordsResponse> = {},
-): ListSyncRecordsResponse => ({
-	records: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		filePath: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		action: faker.helpers.arrayElement(Object.values(SyncRecordAction)),
-		source: faker.helpers.arrayElement(Object.values(SyncRecordSource)),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			undefined,
-		]),
-		songInfo: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				null,
-				{
-					...getGetDevicesDeviceIdSessionsSessionIdRecordsResponseSyncRecordSongInfoMock(),
-				},
-			]),
-			undefined,
-		]),
-		errorMessage: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		reason: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		processedAt: faker.helpers.arrayElement([
-			faker.date.past().toISOString().slice(0, 19) + "Z",
-			undefined,
-		]),
-	})),
-	nextCursor: faker.helpers.arrayElement([
-		faker.helpers.arrayElement([
-			faker.string.alpha({ length: { min: 10, max: 20 } }),
-			null,
-		]),
-		undefined,
-	]),
-	hasMore: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
-	totalCount: faker.helpers.arrayElement([
-		faker.number.int({ min: undefined, max: undefined }),
-		undefined,
-	]),
-	...overrideResponse,
-});
-
-export const getGetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponseMock =
-	(
-		overrideResponse: Partial<FilterMetadataResponse> = {},
-	): FilterMetadataResponse => ({
-		fields: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			entityPath: faker.helpers.arrayElement([
+	overrideResponse: Partial<Extract<ListSyncRecordsResponse, object>> = {},
+): ListSyncRecordsResponse =>
+	faker.helpers.arrayElement([
+		{
+			records: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				filePath: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement(Object.values(SyncRecordAction)),
+				source: faker.helpers.arrayElement(Object.values(SyncRecordSource)),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songInfo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getGetDevicesDeviceIdSessionsSessionIdRecordsResponseSyncRecordSongInfoMock(),
+						},
+					]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				processedAt: faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					undefined,
+				]),
+			})),
+			nextCursor: faker.helpers.arrayElement([
 				faker.helpers.arrayElement([
 					faker.string.alpha({ length: { min: 10, max: 20 } }),
 					null,
 				]),
 				undefined,
 			]),
-			type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			supportedOperators: Array.from(
+			hasMore: faker.helpers.arrayElement([
+				faker.datatype.boolean(),
+				undefined,
+			]),
+			totalCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
+			...overrideResponse,
+		},
+		{
+			records: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			isComputed: faker.helpers.arrayElement([
+			).map(() => ({
+				filePath: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement(Object.values(SyncRecordAction)),
+				source: faker.helpers.arrayElement(Object.values(SyncRecordSource)),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songInfo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getGetDevicesDeviceIdSessionsSessionIdRecordsResponseSyncRecordSongInfoMock(),
+						},
+					]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				processedAt: faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					undefined,
+				]),
+			})),
+			nextCursor: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			hasMore: faker.helpers.arrayElement([
 				faker.datatype.boolean(),
 				undefined,
 			]),
-			isCollection: faker.helpers.arrayElement([
+			totalCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
+			...overrideResponse,
+		},
+		{
+			records: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				filePath: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement(Object.values(SyncRecordAction)),
+				source: faker.helpers.arrayElement(Object.values(SyncRecordSource)),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					undefined,
+				]),
+				songInfo: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						null,
+						{
+							...getGetDevicesDeviceIdSessionsSessionIdRecordsResponseSyncRecordSongInfoMock(),
+						},
+					]),
+					undefined,
+				]),
+				errorMessage: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				processedAt: faker.helpers.arrayElement([
+					faker.date.past().toISOString().slice(0, 19) + "Z",
+					undefined,
+				]),
+			})),
+			nextCursor: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([
+					faker.string.alpha({ length: { min: 10, max: 20 } }),
+					null,
+				]),
+				undefined,
+			]),
+			hasMore: faker.helpers.arrayElement([
 				faker.datatype.boolean(),
 				undefined,
 			]),
-			nestedFields: faker.helpers.arrayElement([[], undefined]),
-			values: faker.helpers.arrayElement([
-				Array.from(
+			totalCount: faker.helpers.arrayElement([faker.number.int(), undefined]),
+			...overrideResponse,
+		},
+	]);
+
+export const getGetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponseMock =
+	(
+		overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
+	): FilterMetadataResponse =>
+		faker.helpers.arrayElement([
+			{
+				fields: Array.from(
 					{ length: faker.number.int({ min: 1, max: 10 }) },
 					(_, i) => i + 1,
-				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-				undefined,
-			]),
-			supportsDynamicValues: faker.helpers.arrayElement([
-				faker.datatype.boolean(),
-				undefined,
-			]),
-		})),
-		operators: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => ({
-			name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-			applicableTypes: Array.from(
-				{ length: faker.number.int({ min: 1, max: 10 }) },
-				(_, i) => i + 1,
-			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-		})),
-		...overrideResponse,
-	});
+				).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					entityPath: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					supportedOperators: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					isComputed: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					isCollection: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					nestedFields: faker.helpers.arrayElement([[], undefined]),
+					values: faker.helpers.arrayElement([
+						Array.from(
+							{ length: faker.number.int({ min: 1, max: 10 }) },
+							(_, i) => i + 1,
+						).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+						undefined,
+					]),
+					supportsDynamicValues: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+				})),
+				operators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					applicableTypes: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				})),
+				...overrideResponse,
+			},
+			{
+				fields: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					entityPath: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					supportedOperators: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					isComputed: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					isCollection: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					nestedFields: faker.helpers.arrayElement([[], undefined]),
+					values: faker.helpers.arrayElement([
+						Array.from(
+							{ length: faker.number.int({ min: 1, max: 10 }) },
+							(_, i) => i + 1,
+						).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+						undefined,
+					]),
+					supportsDynamicValues: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+				})),
+				operators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					applicableTypes: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				})),
+				...overrideResponse,
+			},
+			{
+				fields: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					entityPath: faker.helpers.arrayElement([
+						faker.helpers.arrayElement([
+							faker.string.alpha({ length: { min: 10, max: 20 } }),
+							null,
+						]),
+						undefined,
+					]),
+					type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					supportedOperators: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					isComputed: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					isCollection: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+					nestedFields: faker.helpers.arrayElement([[], undefined]),
+					values: faker.helpers.arrayElement([
+						Array.from(
+							{ length: faker.number.int({ min: 1, max: 10 }) },
+							(_, i) => i + 1,
+						).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+						undefined,
+					]),
+					supportsDynamicValues: faker.helpers.arrayElement([
+						faker.datatype.boolean(),
+						undefined,
+					]),
+				})),
+				operators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => ({
+					name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+					applicableTypes: Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				})),
+				...overrideResponse,
+			},
+		]);
 
 export const getGetDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponseMock =
 	(
-		overrideResponse: Partial<FilterValuesResponse> = {},
-	): FilterValuesResponse => ({
-		values: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-		...overrideResponse,
-	});
+		overrideResponse: Partial<Extract<FilterValuesResponse, object>> = {},
+	): FilterValuesResponse =>
+		faker.helpers.arrayElement([
+			{
+				values: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				...overrideResponse,
+			},
+			{
+				values: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				...overrideResponse,
+			},
+			{
+				values: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				...overrideResponse,
+			},
+		]);
 
 export const getPostDevicesDeviceIdSyncStartResponseMock = (
-	overrideResponse: Partial<SyncStartResponse> = {},
-): SyncStartResponse => ({
-	sessionId: faker.number.int({ min: undefined, max: undefined }),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<SyncStartResponse, object>> = {},
+): SyncStartResponse =>
+	faker.helpers.arrayElement([
+		{ sessionId: faker.number.int(), ...overrideResponse },
+		{ sessionId: faker.number.int(), ...overrideResponse },
+		{ sessionId: faker.number.int(), ...overrideResponse },
+	]);
 
 export const getPostDevicesDeviceIdSyncSessionIdRecordsResponseMock = (
-	overrideResponse: Partial<SyncRecordsResponse> = {},
-): SyncRecordsResponse => ({
-	success: faker.datatype.boolean(),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<SyncRecordsResponse, object>> = {},
+): SyncRecordsResponse =>
+	faker.helpers.arrayElement([
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+	]);
 
 export const getPostDevicesDeviceIdSyncSessionIdCompleteResponseMock = (
-	overrideResponse: Partial<SyncCompleteResponse> = {},
-): SyncCompleteResponse => ({
-	createdCount: faker.number.int({ min: undefined, max: undefined }),
-	updatedCount: faker.number.int({ min: undefined, max: undefined }),
-	skippedCount: faker.number.int({ min: undefined, max: undefined }),
-	downloadedCount: faker.number.int({ min: undefined, max: undefined }),
-	removedCount: faker.number.int({ min: undefined, max: undefined }),
-	errorCount: faker.number.int({ min: undefined, max: undefined }),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<SyncCompleteResponse, object>> = {},
+): SyncCompleteResponse =>
+	faker.helpers.arrayElement([
+		{
+			createdCount: faker.number.int(),
+			updatedCount: faker.number.int(),
+			skippedCount: faker.number.int(),
+			downloadedCount: faker.number.int(),
+			removedCount: faker.number.int(),
+			errorCount: faker.number.int(),
+			...overrideResponse,
+		},
+		{
+			createdCount: faker.number.int(),
+			updatedCount: faker.number.int(),
+			skippedCount: faker.number.int(),
+			downloadedCount: faker.number.int(),
+			removedCount: faker.number.int(),
+			errorCount: faker.number.int(),
+			...overrideResponse,
+		},
+		{
+			createdCount: faker.number.int(),
+			updatedCount: faker.number.int(),
+			skippedCount: faker.number.int(),
+			downloadedCount: faker.number.int(),
+			removedCount: faker.number.int(),
+			errorCount: faker.number.int(),
+			...overrideResponse,
+		},
+	]);
 
 export const getGetDevicesDeviceIdSyncPendingActionsResponseMock = (
-	overrideResponse: Partial<GetPendingActionsResponse> = {},
-): GetPendingActionsResponse => ({
-	actions: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		action: faker.string.alpha({ length: { min: 10, max: 20 } }),
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<GetPendingActionsResponse, object>> = {},
+): GetPendingActionsResponse =>
+	faker.helpers.arrayElement([
+		{
+			actions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			actions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			actions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getGetDevicesDeviceIdSyncSongsResponseMock = (
-	overrideResponse: Partial<GetDeviceSongsResponse> = {},
-): GetDeviceSongsResponse => ({
-	songs: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		action: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<GetDeviceSongsResponse, object>> = {},
+): GetDeviceSongsResponse =>
+	faker.helpers.arrayElement([
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			songs: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getPostDevicesDeviceIdSyncAcknowledgeResponseMock = (
-	overrideResponse: Partial<AcknowledgeActionResponse> = {},
-): AcknowledgeActionResponse => ({
-	success: faker.datatype.boolean(),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<AcknowledgeActionResponse, object>> = {},
+): AcknowledgeActionResponse =>
+	faker.helpers.arrayElement([
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+		{ success: faker.datatype.boolean(), ...overrideResponse },
+	]);
 
 export const getPostDevicesDeviceIdSyncCheckResponseMock = (
-	overrideResponse: Partial<SyncCheckResponse> = {},
-): SyncCheckResponse => ({
-	toCreate: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		reason: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-	})),
-	toUpdate: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		reason: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-	})),
-	potentialConflicts: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		lastSyncedAt: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.date.past().toISOString().slice(0, 19) + "Z",
-				null,
-			]),
-			null,
-		]),
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		serverChecksumAlgorithm: faker.string.alpha({
-			length: { min: 10, max: 20 },
-		}),
-	})),
-	pendingActions: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
-			]),
-			null,
-		]),
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		action: faker.string.alpha({ length: { min: 10, max: 20 } }),
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<SyncCheckResponse, object>> = {},
+): SyncCheckResponse =>
+	faker.helpers.arrayElement([
+		{
+			toCreate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			toUpdate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			potentialConflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				lastSyncedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					null,
+				]),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				serverChecksumAlgorithm: faker.string.alpha({
+					length: { min: 10, max: 20 },
+				}),
+			})),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			toCreate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			toUpdate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			potentialConflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				lastSyncedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					null,
+				]),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				serverChecksumAlgorithm: faker.string.alpha({
+					length: { min: 10, max: 20 },
+				}),
+			})),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			toCreate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			toUpdate: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			potentialConflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				localModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				serverModifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				lastSyncedAt: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.date.past().toISOString().slice(0, 19) + "Z",
+						null,
+					]),
+					null,
+				]),
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				serverChecksum: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				serverChecksumAlgorithm: faker.string.alpha({
+					length: { min: 10, max: 20 },
+				}),
+			})),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getPostDevicesDeviceIdSyncResolveConflictsResponseMock = (
-	overrideResponse: Partial<SyncResolveConflictsResponse> = {},
-): SyncResolveConflictsResponse => ({
-	toUpload: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		reason: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-	})),
-	resolved: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
-		reason: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-	})),
-	conflicts: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
-	})),
-	...overrideResponse,
-});
+	overrideResponse: Partial<Extract<SyncResolveConflictsResponse, object>> = {},
+): SyncResolveConflictsResponse =>
+	faker.helpers.arrayElement([
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			resolved: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			...overrideResponse,
+		},
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			resolved: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			...overrideResponse,
+		},
+		{
+			toUpload: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			resolved: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				modifiedAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				createdAt: faker.date.past().toISOString().slice(0, 19) + "Z",
+				reason: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			conflicts: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getPostDevicesDeviceIdSyncUploadResponseMock = (
-	overrideResponse: Partial<SyncUploadResponse> = {},
-): SyncUploadResponse => ({
-	success: faker.datatype.boolean(),
-	songId: faker.helpers.arrayElement([
-		faker.helpers.arrayElement([
-			faker.number.int({ min: undefined, max: undefined }),
-			null,
-		]),
-		undefined,
-	]),
-	pendingActions: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		songId: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.number.int({ min: undefined, max: undefined }),
-				null,
+	overrideResponse: Partial<Extract<SyncUploadResponse, object>> = {},
+): SyncUploadResponse =>
+	faker.helpers.arrayElement([
+		{
+			success: faker.datatype.boolean(),
+			songId: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([faker.number.int(), null]),
+				undefined,
 			]),
-			null,
-		]),
-		path: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		action: faker.string.alpha({ length: { min: 10, max: 20 } }),
-	})),
-	...overrideResponse,
-});
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			success: faker.datatype.boolean(),
+			songId: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([faker.number.int(), null]),
+				undefined,
+			]),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+		{
+			success: faker.datatype.boolean(),
+			songId: faker.helpers.arrayElement([
+				faker.helpers.arrayElement([faker.number.int(), null]),
+				undefined,
+			]),
+			pendingActions: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				songId: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([faker.number.int(), null]),
+					null,
+				]),
+				path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				previousPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+			})),
+			...overrideResponse,
+		},
+	]);
 
 export const getGetDevicesFilterMetadataResponseMock = (
-	overrideResponse: Partial<FilterMetadataResponse> = {},
-): FilterMetadataResponse => ({
-	fields: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		entityPath: faker.helpers.arrayElement([
-			faker.helpers.arrayElement([
-				faker.string.alpha({ length: { min: 10, max: 20 } }),
-				null,
-			]),
-			undefined,
-		]),
-		type: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		supportedOperators: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-		isComputed: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-		isCollection: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-		nestedFields: faker.helpers.arrayElement([[], undefined]),
-		values: faker.helpers.arrayElement([
-			Array.from(
+	overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {},
+): FilterMetadataResponse =>
+	faker.helpers.arrayElement([
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+		{
+			fields: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				entityPath: faker.helpers.arrayElement([
+					faker.helpers.arrayElement([
+						faker.string.alpha({ length: { min: 10, max: 20 } }),
+						null,
+					]),
+					undefined,
+				]),
+				type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				supportedOperators: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+				isComputed: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				isCollection: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+				nestedFields: faker.helpers.arrayElement([[], undefined]),
+				values: faker.helpers.arrayElement([
+					Array.from(
+						{ length: faker.number.int({ min: 1, max: 10 }) },
+						(_, i) => i + 1,
+					).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+					undefined,
+				]),
+				supportsDynamicValues: faker.helpers.arrayElement([
+					faker.datatype.boolean(),
+					undefined,
+				]),
+			})),
+			operators: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => ({
+				name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+				applicableTypes: Array.from(
+					{ length: faker.number.int({ min: 1, max: 10 }) },
+					(_, i) => i + 1,
+				).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			})),
+			...overrideResponse,
+		},
+	]);
+
+export const getGetDevicesFilterValuesResponseMock = (
+	overrideResponse: Partial<Extract<FilterValuesResponse, object>> = {},
+): FilterValuesResponse =>
+	faker.helpers.arrayElement([
+		{
+			values: Array.from(
 				{ length: faker.number.int({ min: 1, max: 10 }) },
 				(_, i) => i + 1,
 			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-			undefined,
-		]),
-		supportsDynamicValues: faker.helpers.arrayElement([
-			faker.datatype.boolean(),
-			undefined,
-		]),
-	})),
-	operators: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => ({
-		name: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		displayName: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		description: faker.string.alpha({ length: { min: 10, max: 20 } }),
-		applicableTypes: Array.from(
-			{ length: faker.number.int({ min: 1, max: 10 }) },
-			(_, i) => i + 1,
-		).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-	})),
-	...overrideResponse,
-});
-
-export const getGetDevicesFilterValuesResponseMock = (
-	overrideResponse: Partial<FilterValuesResponse> = {},
-): FilterValuesResponse => ({
-	values: Array.from(
-		{ length: faker.number.int({ min: 1, max: 10 }) },
-		(_, i) => i + 1,
-	).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
-	...overrideResponse,
-});
+			...overrideResponse,
+		},
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+		{
+			values: Array.from(
+				{ length: faker.number.int({ min: 1, max: 10 }) },
+				(_, i) => i + 1,
+			).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+			...overrideResponse,
+		},
+	]);
 
 export const getGetDevicesMockHandler = (
 	overrideResponse?:
@@ -4475,14 +5925,14 @@ export const getGetDevicesMockHandler = (
 ) => {
 	return http.get(
 		"*/devices",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4499,14 +5949,14 @@ export const getPostDevicesMockHandler = (
 ) => {
 	return http.post(
 		"*/devices",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4523,14 +5973,14 @@ export const getPutDevicesDeviceIdMockHandler = (
 ) => {
 	return http.put(
 		"*/devices/:deviceId",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPutDevicesDeviceIdResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4547,10 +5997,11 @@ export const getDeleteDevicesDeviceIdMockHandler = (
 ) => {
 	return http.delete(
 		"*/devices/:deviceId",
-		async (info) => {
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
 			if (typeof overrideResponse === "function") {
 				await overrideResponse(info);
 			}
+
 			return new HttpResponse(null, { status: 200 });
 		},
 		options,
@@ -4567,14 +6018,14 @@ export const getGetDeviceMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/:deviceId",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDeviceResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4591,14 +6042,14 @@ export const getGetDevicesDeviceIdSessionsMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/:deviceId/sessions",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesDeviceIdSessionsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4615,14 +6066,14 @@ export const getDeleteDevicesDeviceIdSessionsSessionIdMockHandler = (
 ) => {
 	return http.delete(
 		"*/devices/:deviceId/sessions/:sessionId",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getDeleteDevicesDeviceIdSessionsSessionIdResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4639,14 +6090,14 @@ export const getPostDevicesDeviceIdSessionsPruneMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sessions/prune",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSessionsPruneResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4663,14 +6114,14 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/:deviceId/sessions/:sessionId/records",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesDeviceIdSessionsSessionIdRecordsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4688,14 +6139,14 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataMockHand
 	) => {
 		return http.get(
 			"*/devices/:deviceId/sessions/:sessionId/records/filter-metadata",
-			async (info) => {
-				return new HttpResponse(
+			async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+				return HttpResponse.json(
 					overrideResponse !== undefined
 						? typeof overrideResponse === "function"
 							? await overrideResponse(info)
 							: overrideResponse
 						: getGetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataResponseMock(),
-					{ status: 200, headers: { "Content-Type": "text/plain" } },
+					{ status: 200 },
 				);
 			},
 			options,
@@ -4713,14 +6164,14 @@ export const getGetDevicesDeviceIdSessionsSessionIdRecordsFilterValuesMockHandle
 	) => {
 		return http.get(
 			"*/devices/:deviceId/sessions/:sessionId/records/filter-values",
-			async (info) => {
-				return new HttpResponse(
+			async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+				return HttpResponse.json(
 					overrideResponse !== undefined
 						? typeof overrideResponse === "function"
 							? await overrideResponse(info)
 							: overrideResponse
 						: getGetDevicesDeviceIdSessionsSessionIdRecordsFilterValuesResponseMock(),
-					{ status: 200, headers: { "Content-Type": "text/plain" } },
+					{ status: 200 },
 				);
 			},
 			options,
@@ -4737,14 +6188,14 @@ export const getPostDevicesDeviceIdSyncStartMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/start",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncStartResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4761,14 +6212,14 @@ export const getPostDevicesDeviceIdSyncSessionIdRecordsMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/:sessionId/records",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncSessionIdRecordsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4785,14 +6236,14 @@ export const getPostDevicesDeviceIdSyncSessionIdCompleteMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/:sessionId/complete",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncSessionIdCompleteResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4809,14 +6260,14 @@ export const getGetDevicesDeviceIdSyncPendingActionsMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/:deviceId/sync/pending-actions",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesDeviceIdSyncPendingActionsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4833,14 +6284,14 @@ export const getGetDevicesDeviceIdSyncSongsMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/:deviceId/sync/songs",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesDeviceIdSyncSongsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4857,14 +6308,14 @@ export const getPostDevicesDeviceIdSyncAcknowledgeMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/acknowledge",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncAcknowledgeResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4881,14 +6332,14 @@ export const getPostDevicesDeviceIdSyncCheckMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/check",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncCheckResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4907,14 +6358,14 @@ export const getPostDevicesDeviceIdSyncResolveConflictsMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/resolve-conflicts",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncResolveConflictsResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4931,14 +6382,14 @@ export const getPostDevicesDeviceIdSyncUploadMockHandler = (
 ) => {
 	return http.post(
 		"*/devices/:deviceId/sync/upload",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getPostDevicesDeviceIdSyncUploadResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4955,14 +6406,14 @@ export const getGetDevicesFilterMetadataMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/filter-metadata",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesFilterMetadataResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,
@@ -4979,14 +6430,14 @@ export const getGetDevicesFilterValuesMockHandler = (
 ) => {
 	return http.get(
 		"*/devices/filter-values",
-		async (info) => {
-			return new HttpResponse(
+		async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+			return HttpResponse.json(
 				overrideResponse !== undefined
 					? typeof overrideResponse === "function"
 						? await overrideResponse(info)
 						: overrideResponse
 					: getGetDevicesFilterValuesResponseMock(),
-				{ status: 200, headers: { "Content-Type": "text/plain" } },
+				{ status: 200 },
 			);
 		},
 		options,

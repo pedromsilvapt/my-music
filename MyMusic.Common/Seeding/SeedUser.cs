@@ -13,6 +13,9 @@ public class SeedUser
     [JsonPropertyName("name")]
     public required string Name { get; set; }
 
+    [JsonPropertyName("autoDownloadOnPurchase")]
+    public bool AutoDownloadOnPurchase { get; set; } = false;
+
     [JsonPropertyName("devices")]
     public List<SeedDevice>? Devices { get; set; }
 }

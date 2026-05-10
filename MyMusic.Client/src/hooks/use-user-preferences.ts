@@ -10,6 +10,7 @@ const DEFAULT_USER: GetUserItem = {
     colorScheme: "auto",
     volume: 1.0,
     isMuted: false,
+    autoDownloadOnPurchase: false,
 };
 
 export function useUserPreferences() {
@@ -48,15 +49,21 @@ export function useUserPreferences() {
         await updateMutation.mutateAsync({data: {isMuted}});
     };
 
+    const updateAutoDownloadOnPurchase = async (autoDownloadOnPurchase: boolean) => {
+        await updateMutation.mutateAsync({data: {autoDownloadOnPurchase}});
+    };
+
     return {
         user,
         isLoading,
         colorScheme: user.colorScheme as "light" | "dark" | "auto",
         volume: user.volume,
         isMuted: user.isMuted,
+        autoDownloadOnPurchase: user.autoDownloadOnPurchase,
         updateColorScheme,
         updateVolume,
         updateIsMuted,
+        updateAutoDownloadOnPurchase,
         isUpdating: updateMutation.isPending,
     };
 }

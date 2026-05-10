@@ -18,5 +18,6 @@ public record CreateUserItem : ListUserItem
             ColorScheme = user.ColorScheme,
             Volume = user.Volume,
             IsMuted = user.IsMuted,
+            AutoDownloadOnPurchase = user.AutoDownloadOnPurchase,
         };
 }
