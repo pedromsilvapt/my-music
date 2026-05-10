@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using MyMusic.OpenTelemetry.XUnit.Telemetry;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Xunit;
@@ -20,6 +22,7 @@ public class IntegrationTestTelemetry : IDisposable
     private bool _disposed;
     private ActivityContext _rootContext;
     private TracerProvider? _clientTracerProvider;
+    private ILoggerFactory? _clientLoggerFactory;
 
     public ILogger TestsLogger { get; }
     public ILogger PlaywrightLogger { get; }
@@ -35,7 +38,6 @@ public class IntegrationTestTelemetry : IDisposable
 
         _loggerFactory = framework.Services!.GetRequiredService<ILoggerFactory>();
         TestsLogger = _loggerFactory.CreateLogger("MyMusic.IntegrationTests");
-        PlaywrightLogger = _loggerFactory.CreateLogger("MyMusic.Playwright");
 
         _rootContext = Activity.Current!.Context;
 
@@ -50,6 +52,21 @@ public class IntegrationTestTelemetry : IDisposable
                     options.Protocol = otelConfig.GetProtocol();
                 })
                 .Build();
+
+            _clientLoggerFactory = LoggerFactory.Create(builder => builder
+                .AddOpenTelemetry(logging => logging
+                    .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("MyMusic.Client"))
+                    .AddOtlpExporter(options =>
+                    {
+                        options.Endpoint = otelConfig.GetLogsEndpoint();
+                        options.Protocol = otelConfig.GetProtocol();
+                    })));
+
+            PlaywrightLogger = _clientLoggerFactory.CreateLogger("MyMusic.Client");
+        }
+        else
+        {
+            PlaywrightLogger = _loggerFactory.CreateLogger("MyMusic.Playwright");
         }
     }
 
@@ -62,10 +79,10 @@ public class IntegrationTestTelemetry : IDisposable
     }
 
     public Activity? StartParallelRequestSpan(
-        string requestId, 
-        string method, 
-        string url, 
-        string resourceType, 
+        string requestId,
+        string method,
+        string url,
+        string resourceType,
         bool isNavigationRequest)
     {
         var previousCurrent = Activity.Current;
@@ -80,7 +97,7 @@ public class IntegrationTestTelemetry : IDisposable
         if (span != null)
         {
             _inflightRequests[requestId] = span;
-            
+
             span.SetTag("http.method", method);
             span.SetTag("http.url", url);
             span.SetTag("request.resource_type", resourceType);
@@ -95,12 +112,12 @@ public class IntegrationTestTelemetry : IDisposable
         if (_inflightRequests.TryRemove(requestId, out var activity))
         {
             activity.SetTag("http.status_code", statusCode);
-            
+
             if (contentLength.HasValue)
             {
                 activity.SetTag("http.response_content_length", contentLength.Value);
             }
-            
+
             activity.Stop();
             activity.Dispose();
         }
@@ -291,6 +308,11 @@ public class IntegrationTestTelemetry : IDisposable
             {
                 _clientTracerProvider.ForceFlush(timeoutMs);
                 _clientTracerProvider.Dispose();
+            }
+
+            if (_clientLoggerFactory != null)
+            {
+                _clientLoggerFactory.Dispose();
             }
 
             _disposed = true;
