@@ -6,13 +6,13 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface GetAuditRuleItem {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	name: string;
-	icon: string;
-	description: string;
-	/** @nullable */
-	customPage?: string | null;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	nonConformityCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  name: string;
+  icon: string;
+  description: string;
+  /** @nullable */
+  customPage?: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  nonConformityCount: number;
 }

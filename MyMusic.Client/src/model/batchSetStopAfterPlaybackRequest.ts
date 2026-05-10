@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface BatchSetStopAfterPlaybackRequest {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	playlistId: number;
-	songIds: number[];
-	stopAfterPlayback: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  playlistId: number;
+  songIds: number[];
+  stopAfterPlayback: boolean;
 }

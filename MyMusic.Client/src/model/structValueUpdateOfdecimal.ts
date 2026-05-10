@@ -6,9 +6,9 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface StructValueUpdateOfdecimal {
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
-	 */
-	newValue?: number | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
+  newValue?: number | null;
 }

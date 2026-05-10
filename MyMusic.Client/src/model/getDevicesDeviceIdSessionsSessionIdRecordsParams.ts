@@ -6,19 +6,19 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export type GetDevicesDeviceIdSessionsSessionIdRecordsParams = {
-	actions?: string;
-	source?: string;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	limit?: number | null;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	offset?: number | null;
-	sort?: string;
-	includeSongInfo?: boolean;
-	filter?: string;
+actions?: string;
+source?: string;
+/**
+ * @nullable
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+limit?: number | null;
+/**
+ * @nullable
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+offset?: number | null;
+sort?: string;
+includeSongInfo?: boolean;
+filter?: string;
 };

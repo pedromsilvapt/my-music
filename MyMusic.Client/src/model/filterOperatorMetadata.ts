@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface FilterOperatorMetadata {
-	name: string;
-	displayName: string;
-	description: string;
-	applicableTypes: string[];
+  name: string;
+  displayName: string;
+  description: string;
+  applicableTypes: string[];
 }

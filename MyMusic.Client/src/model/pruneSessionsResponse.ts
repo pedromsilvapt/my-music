@@ -6,6 +6,6 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface PruneSessionsResponse {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	deletedCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  deletedCount: number;
 }

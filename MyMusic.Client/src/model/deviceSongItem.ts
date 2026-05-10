@@ -6,12 +6,12 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface DeviceSongItem {
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	songId: number | null;
-	path: string;
-	/** @nullable */
-	action?: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  songId: number | null;
+  path: string;
+  /** @nullable */
+  action?: string | null;
 }

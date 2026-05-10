@@ -6,7 +6,7 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SyncStartRequest {
-	dryRun?: boolean;
-	/** @nullable */
-	repositoryPath?: string | null;
+  dryRun?: boolean;
+  /** @nullable */
+  repositoryPath?: string | null;
 }

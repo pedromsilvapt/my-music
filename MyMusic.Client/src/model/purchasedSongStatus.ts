@@ -5,12 +5,12 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type PurchasedSongStatus =
-	(typeof PurchasedSongStatus)[keyof typeof PurchasedSongStatus];
+export type PurchasedSongStatus = typeof PurchasedSongStatus[keyof typeof PurchasedSongStatus];
+
 
 export const PurchasedSongStatus = {
-	Queued: "Queued",
-	Acquiring: "Acquiring",
-	Completed: "Completed",
-	Failed: "Failed",
+  Queued: 'Queued',
+  Acquiring: 'Acquiring',
+  Completed: 'Completed',
+  Failed: 'Failed',
 } as const;

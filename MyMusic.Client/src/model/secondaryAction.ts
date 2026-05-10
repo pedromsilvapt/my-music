@@ -5,11 +5,11 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type SecondaryAction =
-	(typeof SecondaryAction)[keyof typeof SecondaryAction];
+export type SecondaryAction = typeof SecondaryAction[keyof typeof SecondaryAction];
+
 
 export const SecondaryAction = {
-	Delete: "Delete",
-	Merge: "Merge",
-	Keep: "Keep",
+  Delete: 'Delete',
+  Merge: 'Merge',
+  Keep: 'Keep',
 } as const;

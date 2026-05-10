@@ -6,23 +6,23 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface ListArtistItem {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	photo: number | null;
-	name: string;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	albumsCount: number | null;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	songsCount: number | null;
-	createdAt: string;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  photo: number | null;
+  name: string;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  albumsCount: number | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  songsCount: number | null;
+  createdAt: string;
 }

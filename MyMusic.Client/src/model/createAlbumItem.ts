@@ -6,14 +6,14 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface CreateAlbumItem {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	id: number;
-	name: string;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	year?: number | null;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	artistId: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  id: number;
+  name: string;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  year?: number | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  artistId: number;
 }

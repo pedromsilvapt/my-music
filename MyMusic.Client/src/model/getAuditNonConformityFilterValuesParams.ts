@@ -6,10 +6,10 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export type GetAuditNonConformityFilterValuesParams = {
-	field?: string;
-	search?: string;
-	/**
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	limit?: number;
+field?: string;
+search?: string;
+/**
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+limit?: number;
 };

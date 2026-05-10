@@ -6,8 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface SongMetadataFieldOfstring {
-	/** @nullable */
-	old: string | null;
-	/** @nullable */
-	new: string | null;
+  /** @nullable */
+  old: string | null;
+  /** @nullable */
+  new: string | null;
 }

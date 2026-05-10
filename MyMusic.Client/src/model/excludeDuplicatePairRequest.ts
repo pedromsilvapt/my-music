@@ -6,10 +6,10 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface ExcludeDuplicatePairRequest {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songAId: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	songBId: number;
-	/** @nullable */
-	reason?: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songAId: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songBId: number;
+  /** @nullable */
+  reason?: string | null;
 }

@@ -6,16 +6,16 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface MetadataQueueStatusResponse {
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	queued: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	processing: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	completed: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	failed: number;
-	/** @pattern ^-?(?:0|[1-9]\d*)$ */
-	total: number;
-	/** @nullable */
-	estimatedCompletion?: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  queued: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  processing: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  completed: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  failed: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  total: number;
+  /** @nullable */
+  estimatedCompletion?: string | null;
 }

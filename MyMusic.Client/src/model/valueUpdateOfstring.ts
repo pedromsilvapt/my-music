@@ -6,6 +6,6 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface ValueUpdateOfstring {
-	/** @nullable */
-	newValue?: string | null;
+  /** @nullable */
+  newValue?: string | null;
 }

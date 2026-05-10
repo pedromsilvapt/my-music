@@ -6,20 +6,20 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
 export interface UpdateUserRequest {
-	/** @nullable */
-	colorScheme?: string | null;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$
-	 */
-	volume?: number | null;
-	/** @nullable */
-	isMuted?: boolean | null;
-	/** @nullable */
-	autoDownloadOnPurchase?: boolean | null;
-	/**
-	 * @nullable
-	 * @pattern ^-?(?:0|[1-9]\d*)$
-	 */
-	currentQueueId?: number | null;
+  /** @nullable */
+  colorScheme?: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$
+     */
+  volume?: number | null;
+  /** @nullable */
+  isMuted?: boolean | null;
+  /** @nullable */
+  autoDownloadOnPurchase?: boolean | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  currentQueueId?: number | null;
 }
