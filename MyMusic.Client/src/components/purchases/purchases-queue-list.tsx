@@ -32,8 +32,8 @@ export default function PurchasesQueueList({
 
     const purchases = data?.data?.purchases ?? [];
 
-    const hasCompletedOrFailed = purchases.some(
-        (song) => song.status === 'Completed' || song.status === 'Failed'
+    const hasCompleted = purchases.some(
+        (song) => song.status === 'Completed'
     );
 
     const hasAnySongs = purchases.some(
@@ -54,7 +54,7 @@ export default function PurchasesQueueList({
                                        variant="light"
                                        color="gray"
                                        onClick={onClearCompleted}
-                                       disabled={!hasCompletedOrFailed}
+                                        disabled={!hasCompleted}
                                        leftSection={<IconShoppingCartX/>}
                                    >
                                        Clear Completed
@@ -82,7 +82,7 @@ export default function PurchasesQueueList({
                     variant="light"
                     color="gray"
                     onClick={onClearCompleted}
-                    disabled={!hasCompletedOrFailed}
+                    disabled={!hasCompleted}
                 >
                     Clear Completed
                 </Button>

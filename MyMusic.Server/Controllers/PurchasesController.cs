@@ -160,7 +160,7 @@ public class PurchasesController(
         CancellationToken cancellationToken = default)
     {
         PurchasedSongStatus[] status = onlyFinished
-            ? [PurchasedSongStatus.Completed, PurchasedSongStatus.Failed]
+            ? [PurchasedSongStatus.Completed]
             : [PurchasedSongStatus.Completed, PurchasedSongStatus.Failed, PurchasedSongStatus.Queued];
 
         var query = db.PurchasedSongs
