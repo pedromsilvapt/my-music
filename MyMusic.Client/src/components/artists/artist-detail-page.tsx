@@ -34,14 +34,14 @@ export default function ArtistDetailPage() {
     const songsSchema = useSongsSchema(false, {queueContext});
 
     if (!artist) {
-        return <Box p="md">Loading...</Box>;
+        return <Box p="md" data-testid="artist-detail" data-loading="true">Loading...</Box>;
     }
 
     const albums = artist.albums as unknown as ListAlbumItem[];
     const songs = artist.songs as unknown as ListSongItem[];
 
     return (
-        <Stack gap="md">
+        <Stack gap="md" data-testid="artist-detail" data-loading={artistQuery.isFetching ? "true" : "false"}>
             <Link to="/artists">
                 <Group gap="xs">
                     <IconArrowBack size={16}/>

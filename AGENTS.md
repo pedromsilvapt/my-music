@@ -71,6 +71,16 @@ dotnet run --project MyMusic.Common.Tests
     - Simple `GetByRole` / `GetByLabel` when the elements are uniquely identifiable by such
     - Otherwise, consider adding `GetByTestId(...)` / `data-testid="..."` over building complex & flaky locator queries in the tests
 
+### Data Loading Convention for Page Components
+
+When a page fetches data, add `data-testid="<page-name>"` and `data-loading` to the root element to enable reliable test waiting:
+
+- **On loading fallbacks**: `data-loading="true"` — e.g., `<Box data-testid="song-detail" data-loading="true">Loading...</Box>`
+- **On main content**: `data-loading={query.isFetching ? "true" : "false"}` — e.g., `<Box data-testid="song-detail" data-loading={songQuery.isFetching ? "true" : "false"}>`
+- **In page objects**: `WaitForLoadedAsync` should wait for the element, then assert `data-loading="false"`
+- **`<Collection>` already follows this convention** via its built-in `data-loading` attribute — no extra work needed for list pages
+- Use the existing component's root element, no need to create a `<Box>` just for this.
+
 ### Comment Style
 
 Integration tests should use comments with these characteristics: (example based on the test `Sync_ShouldUploadLocalChangesToServer` in [CliSyncTests.cs](./MyMusic.IntegrationTests/Tests/Cli/CliSyncTests.cs)):

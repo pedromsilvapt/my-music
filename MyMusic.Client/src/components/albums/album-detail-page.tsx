@@ -23,13 +23,13 @@ export default function AlbumDetailPage() {
     const songsSchema = useSongsSchema(false, {queueContext});
 
     if (!album) {
-        return <Box p="md">Loading...</Box>;
+        return <Box p="md" data-testid="album-detail" data-loading="true">Loading...</Box>;
     }
 
     const songs = album.songs as unknown as ListSongItem[];
 
     return (
-        <Stack gap="md">
+        <Stack gap="md" data-testid="album-detail" data-loading={albumQuery.isFetching ? "true" : "false"}>
             <Link to="/albums">
                 <Group gap="xs">
                     <IconArrowBack size={16}/>
