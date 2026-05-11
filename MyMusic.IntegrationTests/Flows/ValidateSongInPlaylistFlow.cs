@@ -44,10 +44,10 @@ public class ValidateSongInPlaylistFlow : IFlow
         // Wait for songs to load by checking for title cells with data-testid
         var titleCells = page.Locator("td[data-testid^='collection-cell-title-']");
         
-        // Wait for at least one cell to be visible (adjust timeout as needed)
+        // Wait for at least one cell to be visible
         try
         {
-            await titleCells.First.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+            await titleCells.First.WaitForAsync(new() { State = WaitForSelectorState.Visible });
         }
         catch
         {

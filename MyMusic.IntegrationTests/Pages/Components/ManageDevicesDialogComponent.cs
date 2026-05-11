@@ -14,12 +14,12 @@ public class ManageDevicesDialogComponent(ILocator locator) : BaseComponent(loca
     public async Task ApplyAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Apply" }).ClickAsync();
-        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = DefaultTimeout });
+        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
     }
 
     public async Task CancelAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
-        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = DefaultTimeout });
+        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
     }
 }

@@ -61,6 +61,6 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
     public async Task SaveAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();
-        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = DefaultTimeout });
+        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
     }
 }

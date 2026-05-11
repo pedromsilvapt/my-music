@@ -27,6 +27,7 @@ public class SongsController(
     IOptions<Config> config,
     IOptions<ServerConfig> serverConfig,
     ISongUpdateService songUpdateService,
+    ISongDeleteService songDeleteService,
     IMusicService musicService,
     IFileSystem fileSystem,
     ILogger<MusicImportJob> importJobLogger,
@@ -539,6 +540,15 @@ public class SongsController(
         }
 
         return new BatchUpdateSongsResponse { Songs = results };
+    }
+
+    [HttpDelete(Name = "DeleteSongs")]
+    public async Task<BatchDeleteSongsResponse> Delete(
+        [FromBody] BatchDeleteSongsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var deletedCount = await songDeleteService.DeleteAsync(request.SongIds.ToArray(), cancellationToken);
+        return new BatchDeleteSongsResponse { DeletedCount = deletedCount };
     }
 
     [HttpGet("autocomplete/albums", Name = "AutocompleteAlbums")]

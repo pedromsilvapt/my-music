@@ -29,7 +29,7 @@ export default function AuditsPage() {
     };
 
     return (
-        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
+        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="audits">
             <Group justify="space-between" mb="md">
                 <Title order={2}>Audits</Title>
                 <Group gap="sm">

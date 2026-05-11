@@ -13,6 +13,7 @@ import {
     IconPlayerSkipForward,
     IconPlayerStop,
     IconPlaylistAdd,
+    IconTrash,
     IconX
 } from "@tabler/icons-react";
 import {saveAs} from 'file-saver';
@@ -20,6 +21,7 @@ import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useCallback, useMemo} from "react";
 import {getDownloadSongUrl} from "../../client/songs";
+import {useDeleteSongs} from "../../client/songs";
 import {useGetDevices} from "../../client/devices";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
@@ -77,6 +79,25 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
     }, [setIsFavorite]);
 
     const toggleFavorites = useToggleFavorites(toggleFavoritesOnSuccess);
+
+    const deleteSongs = useDeleteSongs();
+    const handleDelete = useCallback((songs: ListSongItem[]) => {
+        modals.openConfirmModal({
+            title: songs.length === 1 ? 'Delete Song' : `Delete ${songs.length} Songs`,
+            children: (
+                <Text size="sm">
+                    Are you sure you want to delete {songs.length === 1
+                    ? `"${songs[0]!.title}"`
+                    : `${songs.length} songs`}? This action cannot be undone.
+                </Text>
+            ),
+            labels: {confirm: 'Delete', cancel: 'Cancel'},
+            confirmProps: {color: 'red'},
+            onConfirm: () => {
+                deleteSongs.mutate({data: {songIds: songs.map(s => s.id)}});
+            },
+        });
+    }, [deleteSongs]);
 
     const queueContext = useMemo(() => 
         options?.queueContext ?? {type: 'songs' as const}, 
@@ -247,6 +268,16 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                     },
                 },
                 {
+                    name: 'download',
+                    renderIcon: () => <IconDownload/>,
+                    renderLabel: () => "Download",
+                    onClick: (songs: ListSongItem[]) => {
+                        for (const song of songs) {
+                            saveAs(getDownloadSongUrl(song.id));
+                        }
+                    }
+                },
+                {
                     name: "edit",
                     renderIcon: () => <IconEdit/>,
                     renderLabel: () => `Edit ${elems.length === 1 ? 'Song' : `${elems.length} Songs`}`,
@@ -260,14 +291,10 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                     },
                 },
                 {
-                    name: 'download',
-                    renderIcon: () => <IconDownload/>,
-                    renderLabel: () => "Download",
-                    onClick: (songs: ListSongItem[]) => {
-                        for (const song of songs) {
-                            saveAs(getDownloadSongUrl(song.id));
-                        }
-                    }
+                    name: "delete",
+                    renderIcon: () => <IconTrash/>,
+                    renderLabel: () => `Delete ${elems.length === 1 ? 'Song' : `${elems.length} Songs`}`,
+                    onClick: handleDelete,
                 },
                 {group: "Queue"},
                 {
@@ -362,5 +389,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                               lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
 }

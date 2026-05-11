@@ -28,7 +28,7 @@ export default function DevicesPage() {
     const elements = devices?.data?.devices ?? [];
 
     return (
-        <div style={{height: 'var(--parent-height)'}}>
+        <div style={{height: 'var(--parent-height)'}} data-testid="devices">
             <Collection
                 key="devices"
                 stateKey="devices"

@@ -81,6 +81,11 @@ public static class HostBuilderExtensions
         });
         builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
         builder.Services.AddScoped<IUserDeleteService, UserDeleteService>();
+        builder.Services.AddScoped<ISongDeleteService, SongDeleteService>();
+        builder.Services.AddScoped<IAlbumDeleteService, AlbumDeleteService>();
+        builder.Services.AddScoped<IArtistDeleteService, ArtistDeleteService>();
+        builder.Services.AddScoped<IGenreDeleteService, GenreDeleteService>();
+        builder.Services.AddScoped<IArtworkDeleteService, ArtworkDeleteService>();
 
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();

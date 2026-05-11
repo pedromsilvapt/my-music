@@ -66,6 +66,9 @@ public abstract class IntegrationTestBase : PageTest
         _telemetry = new(_output);
         await base.InitializeAsync();
 
+        Page.SetDefaultTimeout(5000);
+        Page.SetDefaultNavigationTimeout(10000);
+
         InitializeTelemetry();
         CliRunner = new CliRunner(Configuration, _telemetry);
         await StartTraceRecordingAsync();

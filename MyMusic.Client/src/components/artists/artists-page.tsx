@@ -38,7 +38,7 @@ export default function ArtistsPage() {
     const elements = artists?.artists ?? [];
 
     return (
-        <div style={{height: 'var(--parent-height)'}}>
+        <div style={{height: 'var(--parent-height)'}} data-testid="artists">
             <Collection
                 key="artists"
                 stateKey="artists"

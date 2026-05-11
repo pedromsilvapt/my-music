@@ -35,6 +35,8 @@ import type {
   AutocompleteGenresResponse,
   AutocompleteSongsParams,
   AutocompleteSongsResponse,
+  BatchDeleteSongsRequest,
+  BatchDeleteSongsResponse,
   BatchMultiUpdateSongsRequest,
   BatchMultiUpdateSongsResponse,
   BatchUpdateSongsRequest,
@@ -328,6 +330,105 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       > => {
       const backupQueryClient = useQueryClient();
       return useMutation(getBatchUpdateSongsMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
+    }
+    export type deleteSongsResponse200TextPlain = {
+  data: BatchDeleteSongsResponse
+  status: 200
+}
+
+export type deleteSongsResponse200ApplicationJson = {
+  data: BatchDeleteSongsResponse
+  status: 200
+}
+
+export type deleteSongsResponse200TextJson = {
+  data: BatchDeleteSongsResponse
+  status: 200
+}
+
+export type deleteSongsResponseSuccess = (deleteSongsResponse200TextPlain | deleteSongsResponse200ApplicationJson | deleteSongsResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type deleteSongsResponse = (deleteSongsResponseSuccess)
+
+export const getDeleteSongsUrl = () => {
+
+
+
+
+  return `/api/songs`
+}
+
+export const deleteSongs = async (batchDeleteSongsRequest: BatchDeleteSongsRequest, options?: RequestInit): Promise<deleteSongsResponse> => {
+
+  const res = await fetch(getDeleteSongsUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      batchDeleteSongsRequest,)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: deleteSongsResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as deleteSongsResponse
+}
+
+
+
+
+export const getDeleteSongsMutationOptions = <TError = unknown,
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSongs>>, TError,{data: BatchDeleteSongsRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSongs>>, TError,{data: BatchDeleteSongsRequest}, TContext> => {
+
+const mutationKey = ['deleteSongs'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSongs>>, {data: BatchDeleteSongsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  deleteSongs(data,fetchOptions)
+        }
+
+  const onSuccess = (data: Awaited<ReturnType<typeof deleteSongs>>, variables: {data: BatchDeleteSongsRequest}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: getListSongsQueryKey() });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
+
+
+
+
+  return  { ...mutationOptions, mutationFn, onSuccess }}
+
+    export type DeleteSongsMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSongs>>>
+    export type DeleteSongsMutationBody = BatchDeleteSongsRequest
+    export type DeleteSongsMutationError = unknown
+
+    export const useDeleteSongs = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSongs>>, TError,{data: BatchDeleteSongsRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSongs>>,
+        TError,
+        {data: BatchDeleteSongsRequest},
+        TContext
+      > => {
+      const backupQueryClient = useQueryClient();
+      return useMutation(getDeleteSongsMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
     }
     export type getLocalSongResponse200TextPlain = {
   data: GetSongResponse
@@ -2330,6 +2431,8 @@ export const getBatchUpdateSongsResponseUpdateSongItemMock = (overrideResponse: 
 
 export const getBatchUpdateSongsResponseMock = (overrideResponse: Partial<Extract<BatchUpdateSongsResponse, object>> = {}): BatchUpdateSongsResponse => (faker.helpers.arrayElement([{songs: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), error: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), song: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getBatchUpdateSongsResponseUpdateSongItemMock()},]), undefined])})), ...overrideResponse}, {songs: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), error: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), song: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getBatchUpdateSongsResponseUpdateSongItemMock()},]), undefined])})), ...overrideResponse}, {songs: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), success: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), error: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), song: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getBatchUpdateSongsResponseUpdateSongItemMock()},]), undefined])})), ...overrideResponse}]))
 
+export const getDeleteSongsResponseMock = (overrideResponse: Partial<Extract<BatchDeleteSongsResponse, object>> = {}): BatchDeleteSongsResponse => (faker.helpers.arrayElement([{deletedCount: faker.number.int(), ...overrideResponse}, {deletedCount: faker.number.int(), ...overrideResponse}, {deletedCount: faker.number.int(), ...overrideResponse}]))
+
 export const getGetLocalSongResponseGetSongResponseCoverMock = (overrideResponse: Partial<GetSongResponseCover> = {}): GetSongResponseCover => ({...{id: faker.number.int(), width: faker.number.int(), height: faker.number.int(), mimeType: faker.string.alpha({length: {min: 10, max: 20}})}, ...overrideResponse});
 
 export const getGetLocalSongResponseGetSongResponseAlbumArtistMock = (overrideResponse: Partial<GetSongResponseAlbumArtist> = {}): GetSongResponseAlbumArtist => ({...{id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})}, ...overrideResponse});
@@ -2406,6 +2509,18 @@ export const getBatchUpdateSongsMockHandler = (overrideResponse?: BatchUpdateSon
     return HttpResponse.json(overrideResponse !== undefined
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getBatchUpdateSongsResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getDeleteSongsMockHandler = (overrideResponse?: BatchDeleteSongsResponse | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<BatchDeleteSongsResponse> | BatchDeleteSongsResponse), options?: RequestHandlerOptions) => {
+  return http.delete('*/songs', async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getDeleteSongsResponseMock(),
       { status: 200
       })
   }, options)
@@ -2613,6 +2728,7 @@ export const getBatchMultiUpdateSongsMockHandler = (overrideResponse?: BatchMult
 export const getSongsMock = () => [
   getListSongsMockHandler(),
   getBatchUpdateSongsMockHandler(),
+  getDeleteSongsMockHandler(),
   getGetLocalSongMockHandler(),
   getUpdateSongMockHandler(),
   getDownloadSongMockHandler(),

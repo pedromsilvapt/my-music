@@ -77,7 +77,7 @@ export default function HistoryPage() {
     const historyItems = playHistoryResponse?.data?.items ?? [];
 
     return (
-        <div style={{height: 'var(--parent-height)'}}>
+        <div style={{height: 'var(--parent-height)'}} data-testid="history">
             <Collection
                 key="history"
                 items={historyItems}

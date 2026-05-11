@@ -48,7 +48,7 @@ export default function PlaylistsPage() {
     const elements = playlists?.playlists ?? [];
 
     return (
-        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
+        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="playlists">
             <Group justify="space-between" mb="md">
                 <Title order={2}>Playlists</Title>
                 <Button leftSection={<IconPlus size={16}/>} onClick={() => setOpened(true)}>

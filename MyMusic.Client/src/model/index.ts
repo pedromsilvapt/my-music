@@ -30,6 +30,8 @@ export * from './autocompleteSongsParams';
 export * from './autocompleteSongsResponse';
 export * from './autoFetchedMetadataResponse';
 export * from './batchDeleteNonConformitiesRequest';
+export * from './batchDeleteSongsRequest';
+export * from './batchDeleteSongsResponse';
 export * from './batchMetadataFetchRequest';
 export * from './batchMetadataFetchResponse';
 export * from './batchMultiUpdateSongResult';

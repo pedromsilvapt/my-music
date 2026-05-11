@@ -97,8 +97,46 @@ The pattern follows a typical test structure: **Setup → Action → Assert → 
 
 When OpenTelemetry is enabled (`OpenTelemetry__Enabled=true`), integration tests emit traces and logs to Otelite. Use these commands to debug failed tests:
 
+#### Otelite Database Schema
+
+##### `traces` Table
+| Field           | Type     | Sample                 | Description                                                        |
+| --------------- | -------- | ---------------------- | ------------------------------------------------------------------ |
+| `id`              | INTEGER  | `1`                      | Auto-increment primary key                                         |
+| `timestamp`       | DATETIME | `2024-01-15 10:30:00`    | Record insert time                                                 |
+| `trace_id`        | TEXT     | `4bf92f3577b34da6`       | W3C trace identifier                                               |
+| `span_id`         | TEXT     | `00f067aa0ba902b7`       | Span identifier                                                    |
+| `parent_span_id`  | TEXT     | `5b8a5d6c4e3f2a1b`       | Parent span ID (nullable)                                          |
+| `service_name`    | TEXT     | `MyMusic.Server`         | Service that created the span                                      |
+| `activity_source` | TEXT     | `MyMusic.Server`         | ActivitySource name                                                |
+| `span_name`       | TEXT     | `POST /songs`            | Span name (HTTP method+route or operation)                         |
+| `kind`            | INTEGER  | `1`                      | Span kind (0=internal, 1=server, 2=client, 3=producer, 4=consumer) |
+| `start_time`      | INTEGER  | `1705315800000000000`    | Start time in nanoseconds                                          |
+| `end_time`        | INTEGER  | `1705315800100000000`    | End time in nanoseconds                                            |
+| `status_code`     | INTEGER  | `0`                      | Status (0=ok, 1=error, 2=error with description)                   |
+| `attributes`      | TEXT     | `{"http.method":"POST"}` | JSON-encoded span attributes                                       |
+| `raw_json`        | TEXT     | `{...}`                  | Original OTLP JSON payload                                         |
+
+##### `logs` Table
+| Field           | Type     | Sample              | Description                                |
+| --------------- | -------- | ------------------- | ------------------------------------------ |
+| `id`              | INTEGER  | `1`                   | Auto-increment primary key                 |
+| `timestamp`       | DATETIME | `2024-01-15 10:30:00` | Record insert time                         |
+| `trace_id`        | TEXT     | `4bf92f3577b34da6`    | Associated trace ID (nullable)             |
+| `span_id`         | TEXT     | `00f067aa0ba902b7`    | Associated span ID (nullable)              |
+| `service_name`    | TEXT     | `MyMusic.Server`      | Service that emitted the log               |
+| `severity_number` | INTEGER  | `17`                  | Numeric severity (9=info, 17=error, etc.)  |
+| `severity_text`   | TEXT     | `Error`               | Text severity (Info, Warning, Error, etc.) |
+| `body`            | TEXT     | `Connection failed`   | Log message body                           |
+| `log_timestamp`   | INTEGER  | `1705315800000000000` | Log event time in nanoseconds              |
+| `raw_json`        | TEXT     | `{...}`               | Original OTLP JSON payload                 |
+| `raw_body`        | TEXT     | `Connection failed`   | Raw log body before processing             |
+
 **Basic Queries:**
 ```bash
+# Full details for specific trace IDs (includes error messages and stack traces)
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, span_name, status_code, attributes FROM traces WHERE trace_id IN ('<trace_id_1>', '<trace_id_2>') ORDER BY start_time"
+
 # List recent traces
 docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT service_name, span_name, trace_id FROM traces ORDER BY id DESC LIMIT 10"
 

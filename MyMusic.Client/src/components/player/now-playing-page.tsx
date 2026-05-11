@@ -38,7 +38,7 @@ export default function NowPlayingPage() {
     const queueName = visibleQueue?.name ?? 'Now Playing';
 
     return (
-        <Stack gap="md" style={{height: 'var(--parent-height)'}}>
+        <Stack gap="md" style={{height: 'var(--parent-height)'}} data-testid="player">
             <Group justify="space-between" wrap="nowrap">
                 <Popover
                     position="bottom-start"

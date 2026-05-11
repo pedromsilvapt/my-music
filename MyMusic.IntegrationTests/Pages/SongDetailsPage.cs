@@ -1,19 +1,16 @@
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Pages.Components;
 
-using static Microsoft.Playwright.Assertions;
-
 namespace MyMusic.IntegrationTests.Pages;
 
-public class SongDetailsPage(IPage page) : BasePage(page)
+public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
 {
-    public ILocator Title => Page.Locator("text[size='xl'], h1, [data-size='xl']").First;
+    public ILocator Title => Root.Locator("text[size='xl'], h1, [data-size='xl']").First;
 
     public async Task WaitForLoadedAsync()
     {
-        var detailLocator = Page.Locator("[data-testid='song-detail']");
-        await detailLocator.WaitForAsync(new() { Timeout = 10000 });
-        await Assertions.Expect(detailLocator).ToHaveAttributeAsync("data-loading", "false", new() { Timeout = 10000 });
+        await Root.WaitForAsync(new() { Timeout = 10000 });
+        await Assertions.Expect(Root).ToHaveAttributeAsync("data-loading", "false", new() { Timeout = 10000 });
     }
 
     public async Task<string> GetTitleAsync()
@@ -23,7 +20,7 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task<string[]> GetArtistsAsync()
     {
-        var artistLinks = Page.Locator("a[href^='/artists/']");
+        var artistLinks = Root.Locator("a[href^='/artists/']");
         var count = await artistLinks.CountAsync();
         var artists = new List<string>();
         for (int i = 0; i < count; i++)
@@ -35,7 +32,7 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task<string?> GetAlbumAsync()
     {
-        var albumLink = Page.Locator("a[href^='/albums/']");
+        var albumLink = Root.Locator("a[href^='/albums/']");
         var count = await albumLink.CountAsync();
         if (count == 0)
             return null;
@@ -44,24 +41,24 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task<int?> GetYearAsync()
     {
-        var yearElement = Page.Locator("[data-testid=\"song-year\"]");
+        var yearElement = Root.Locator("[data-testid=\"song-year\"]");
         var count = await yearElement.CountAsync();
         if (count == 0)
             return null;
-        
+
         var text = await yearElement.InnerTextAsync();
         return int.TryParse(text, out var year) ? year : null;
     }
 
     public async Task<bool> GetExplicitAsync()
     {
-        var explicitLabel = Page.GetByText("Explicit");
+        var explicitLabel = Root.GetByText("Explicit");
         return await explicitLabel.CountAsync() > 0;
     }
 
     public async Task<string[]> GetGenresAsync()
     {
-        var genreItems = Page.Locator("[data-testid=\"song-genres\"] [data-testid=\"genre-item\"]");
+        var genreItems = Root.Locator("[data-testid=\"song-genres\"] [data-testid=\"genre-item\"]");
         var count = await genreItems.CountAsync();
         var genres = new List<string>();
         for (int i = 0; i < count; i++)
@@ -73,7 +70,7 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task<DeviceBadgeComponent?> GetDeviceBadgeAsync(string deviceName)
     {
-        var badgeLocator = Page.Locator("[data-testid='device-badge']").Filter(new()
+        var badgeLocator = Root.Locator("[data-testid='device-badge']").Filter(new()
         {
             HasText = deviceName
         });
@@ -82,12 +79,12 @@ public class SongDetailsPage(IPage page) : BasePage(page)
         if (count == 0)
         {
             // Fallback to a broader selector if data-testid is not available yet
-            badgeLocator = Page.Locator("div, span").Filter(new()
+            badgeLocator = Root.Locator("div, span").Filter(new()
             {
                 HasText = deviceName
             }).Filter(new()
             {
-                Has = Page.Locator("svg")
+                Has = Root.Locator("svg")
             });
             count = await badgeLocator.CountAsync();
             if (count == 0)
@@ -117,9 +114,9 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task<List<DeviceBadgeComponent>> GetAllDeviceBadgesAsync()
     {
-        var badges = Page.Locator("div").Filter(new()
+        var badges = Root.Locator("div").Filter(new()
         {
-            Has = Page.Locator("svg[data-icon^='Icon']")
+            Has = Root.Locator("svg[data-icon^='Icon']")
         });
 
         var count = await badges.CountAsync();
@@ -133,17 +130,28 @@ public class SongDetailsPage(IPage page) : BasePage(page)
 
     public async Task<EditSongModalComponent> OpenEditModalAsync()
     {
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Edit" }).ClickAsync();
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Edit" }).ClickAsync();
         var dialog = Page.GetByRole(AriaRole.Dialog);
-        await dialog.WaitForAsync(new() { Timeout = 5000 });
+        await dialog.WaitForAsync();
         return new EditSongModalComponent(dialog);
     }
 
     public async Task<ManagePlaylistsDialogComponent> OpenManagePlaylistsDialogAsync()
     {
-        await Page.GetByRole(AriaRole.Button, new() { Name = "Manage Playlists" }).ClickAsync();
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Manage Playlists" }).ClickAsync();
         var dialog = Page.GetByRole(AriaRole.Dialog);
-        await dialog.WaitForAsync(new() { Timeout = 5000 });
+        await dialog.WaitForAsync();
         return new ManagePlaylistsDialogComponent(dialog);
+    }
+
+    /// <summary>
+    /// Clicks the Delete button on the song detail page and returns the confirmation dialog component.
+    /// </summary>
+    public async Task<ConfirmDialogComponent> ClickDeleteButtonAsync()
+    {
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Delete" }).ClickAsync();
+        var dialog = Page.GetByRole(AriaRole.Dialog);
+        await dialog.WaitForAsync();
+        return new ConfirmDialogComponent(dialog);
     }
 }

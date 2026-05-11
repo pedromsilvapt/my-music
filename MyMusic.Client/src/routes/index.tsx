@@ -7,7 +7,7 @@ export const Route = createFileRoute('/')({
 
 function Index() {
     return <>
-        <Center>
+        <Center data-testid="home">
             <Text>TBD</Text>
         </Center>
     </>;

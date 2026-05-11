@@ -6,7 +6,7 @@ public class ManagePlaylistsDialogComponent(ILocator locator) : BaseComponent(lo
 {
     public async Task WaitForLoadedAsync()
     {
-        await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible });
     }
 
     public async Task SelectPlaylistAsync(string playlistName, string action = "add")
@@ -18,10 +18,10 @@ public class ManagePlaylistsDialogComponent(ILocator locator) : BaseComponent(lo
 
         var playlistRow = Root.Locator($"[data-testid='playlist-row'][data-playlist-name='{playlistName}']");
 
-        await playlistRow.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await playlistRow.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
         var segmentedControl = playlistRow.Locator("[role='listbox'], .mantine-SegmentedControl-root");
-        await segmentedControl.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5000 });
+        await segmentedControl.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 
         var actionButton = action.ToLower() switch
         {
@@ -73,6 +73,6 @@ public class ManagePlaylistsDialogComponent(ILocator locator) : BaseComponent(lo
         var cancelButton = Root.GetByRole(AriaRole.Button, new() { Name = "Cancel" });
         await cancelButton.ClickAsync();
 
-        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden, Timeout = 5000 });
+        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
     }
 }

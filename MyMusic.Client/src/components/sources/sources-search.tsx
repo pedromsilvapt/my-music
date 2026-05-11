@@ -95,7 +95,7 @@ export default function SourcesSearch() {
                 }
             }}
         />
-        <div style={{height: 'var(--parent-height)'}}>
+        <div style={{height: 'var(--parent-height)'}} data-testid="purchases">
             {sources.length === 0 ? (
                 <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
                     <SourcesSearchToolbar

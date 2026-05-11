@@ -24,7 +24,7 @@ public class ManageSongDevicesFlow : IFlow
         await manageDevicesButton.ClickAsync();
 
         var dialog = page.GetByRole(AriaRole.Dialog);
-        await dialog.WaitForAsync(new() { Timeout = 5000 });
+        await dialog.WaitForAsync();
 
         var manageDevicesDialog = new ManageDevicesDialogComponent(dialog);
         await manageDevicesDialog.SelectDeviceAsync(_deviceName, _action);

@@ -43,7 +43,7 @@ export default function AlbumsPage() {
     const elements = albums?.albums ?? [];
 
     return (
-        <div style={{height: 'var(--parent-height)'}}>
+        <div style={{height: 'var(--parent-height)'}} data-testid="albums">
             <Collection
                 key={ALBUMS_STATE_KEY}
                 stateKey={ALBUMS_STATE_KEY}

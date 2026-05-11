@@ -3,7 +3,7 @@ using MyMusic.IntegrationTests.Pages.Components;
 
 namespace MyMusic.IntegrationTests.Pages;
 
-public class SongsPage(IPage page) : BasePage(page)
+public class SongsPage(IPage page) : BasePage(page, "songs")
 {
-    public SongsCollectionComponent Collection => new(Page.GetByTestId("collection"));
+    public SongsCollectionComponent Collection => new(Root.GetByTestId("collection"));
 }

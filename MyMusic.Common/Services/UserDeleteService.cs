@@ -1,11 +1,12 @@
 using System.IO.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 
-namespace MyMusic.Server.Services;
+namespace MyMusic.Common.Services;
 
 public class UserDeleteService(
     MusicDbContext db,

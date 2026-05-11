@@ -13,12 +13,14 @@ import {
     IconPlayerPlayFilled,
     IconPlaylistAdd,
     IconTag,
+    IconTrash,
     IconUser
 } from "@tabler/icons-react";
-import {Link, useParams} from "@tanstack/react-router";
+import {useCallback} from "react";
+import {Link, useNavigate, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
 
-import {getDownloadSongUrl, useGetLocalSong} from "../../client/songs.ts";
+import {getDownloadSongUrl, useDeleteSongs, useGetLocalSong} from "../../client/songs.ts";
 import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
@@ -34,6 +36,7 @@ import DeviceBadge from "../devices/device-badge.tsx";
 
 export default function SongDetailPage() {
     const {songId} = useParams({from: '/songs/$songId'});
+    const navigate = useNavigate();
     const songQuery = useGetLocalSong(Number(songId));
     const songResponse = useQueryData(songQuery, "Failed to fetch song");
     const song = songResponse?.data.song ?? null;
@@ -41,6 +44,28 @@ export default function SongDetailPage() {
     const toggleFavorite = useToggleFavorite();
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
+    const deleteSongs = useDeleteSongs();
+
+    const handleDelete = useCallback(() => {
+        if (!song) return;
+        modals.openConfirmModal({
+            title: 'Delete Song',
+            children: (
+                <Text size="sm">
+                    Are you sure you want to delete &quot;{song.title}&quot;? This action cannot be undone.
+                </Text>
+            ),
+            labels: {confirm: 'Delete', cancel: 'Cancel'},
+            confirmProps: {color: 'red'},
+            onConfirm: () => {
+                deleteSongs.mutate({data: {songIds: [song.id]}}, {
+                    onSuccess: () => {
+                        navigate({to: '/songs'});
+                    },
+                });
+            },
+        });
+    }, [song, deleteSongs, navigate]);
 
     if (!song) {
         return <Box p="md" data-testid="song-detail" data-loading="true">Loading...</Box>;
@@ -166,6 +191,14 @@ export default function SongDetailPage() {
                             onClick={() => saveAs(getDownloadSongUrl(song.id))}
                         >
                             Download
+                        </Button>
+                        <Button
+                            leftSection={<IconTrash/>}
+                            variant="default"
+                            color="red"
+                            onClick={handleDelete}
+                        >
+                            Delete
                         </Button>
                     </Group>
                 </Stack>

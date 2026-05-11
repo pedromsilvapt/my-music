@@ -62,7 +62,7 @@ export default function SongsPage() {
 
     return (
         <SongImportDropzone onFilesDropped={handleFilesDropped}>
-            <div style={{height: 'var(--parent-height)', position: 'relative'}}>
+            <div style={{height: 'var(--parent-height)', position: 'relative'}} data-testid="songs">
                 <Collection
                     key={SONGS_STATE_KEY}
                     stateKey={SONGS_STATE_KEY}
