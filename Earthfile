@@ -109,7 +109,7 @@ docker-integration-tests:
     ENV PATH="$PNPM_HOME/bin:$PATH"
 
     ENV PLAYWRIGHT_BROWSERS_PATH=/home/vscode/.cache/ms-playwright
-    RUN pnpm install -g playwright && \
+    RUN pnpm install -g playwright@^1.59 && \
         pnpx playwright install chromium --with-deps && \
         pnpm uninstall -g playwright
 

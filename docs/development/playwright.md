@@ -53,6 +53,28 @@ The `test-results/` directory is gitignored. Recordings are only created when th
 
 ---
 
+## Version Synchronization
+
+The Playwright version used by the integration test Docker image must stay in sync with the .NET package version.
+
+### Files to Keep in Sync
+
+1. **Earthfile** (`Earthfile` line 112):
+   ```dockerfile
+   RUN pnpm install -g playwright@^1.59 && \
+   ```
+
+2. **Integration Tests Project** (`MyMusic.IntegrationTests/MyMusic.IntegrationTests.csproj` line 13):
+   ```xml
+   <PackageReference Include="Microsoft.Playwright.Xunit.v3" Version="1.59.0" />
+   ```
+
+### Rule
+
+When updating the Playwright .NET package in `MyMusic.IntegrationTests.csproj`, **always** update the `pnpm install` version in the `Earthfile` to match. Mismatched versions can cause browser binary incompatibilities and test failures in the Docker environment.
+
+---
+
 ## Getting the Root Element (`<html>` or `<body>`)
 
 ```csharp
