@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
+using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Targets;
 using MyMusic.Common.Utilities;
 
@@ -121,7 +122,8 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
             var tempTarget = new FileTarget(fileSystem) { FilePath = Path.GetTempFileName() + ".mp3" };
             try
             {
-                await tempTarget.Save(stream, metadata, cancellationToken);
+                var naming = new NamingMetadata { Extension = ".mp3" };
+                await tempTarget.Save(stream, metadata, naming, cancellationToken);
 
                 var now = DateTime.Now;
 

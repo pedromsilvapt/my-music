@@ -5,12 +5,13 @@ namespace MyMusic.Common.NamingStrategies;
 
 public class ArtistAlbumNamingStrategy : INamingStrategy
 {
-    public string Generate(SongMetadata metadata)
+    public string Generate(SongMetadata metadata, NamingMetadata? naming = null)
     {
         var artist = FilenameUtils.SanitizeFilename(metadata.Album?.Artist?.Name ??
                                                     metadata.Artists?.FirstOrDefault()?.Name ?? "(Unknown)");
         var album = FilenameUtils.SanitizeFilename(metadata.Album?.Name ?? "(No album)");
+        var extension = naming?.Extension ?? ".mp3";
 
-        return Path.Combine(artist, album, FilenameUtils.SanitizeFilename(metadata.SimpleLabel) + ".mp3");
+        return Path.Combine(artist, album, FilenameUtils.SanitizeFilename(metadata.SimpleLabel) + extension);
     }
 }

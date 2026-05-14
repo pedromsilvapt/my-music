@@ -8,7 +8,7 @@ public class TemplateNamingStrategy(string template) : INamingStrategy
 {
     private readonly Template _compiledTemplate = Template.Parse(template);
 
-    public string Generate(SongMetadata song)
+    public string Generate(SongMetadata song, NamingMetadata? naming = null)
     {
         var model = new
         {
@@ -25,6 +25,9 @@ public class TemplateNamingStrategy(string template) : INamingStrategy
             simple_label = song.SimpleLabel,
             full_label = song.FullLabel,
             artists_label = song.ArtistsLabel,
+            extension = naming?.Extension ?? "",
+            original_folder = naming?.OriginalFolder,
+            original_name = naming?.OriginalName,
         };
 
         var result = _compiledTemplate.Render(model);

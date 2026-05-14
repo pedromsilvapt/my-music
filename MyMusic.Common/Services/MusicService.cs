@@ -87,6 +87,8 @@ public class MusicService(
         var namingStrategy = new TemplateNamingStrategy(
             device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
+        var naming = new NamingMetadata { Extension = Path.GetExtension(song.RepositoryPath) };
+
         if (songDevice == null)
         {
             songDevice = new SongDevice
@@ -94,7 +96,7 @@ public class MusicService(
                 DeviceId = deviceId,
                 SongId = song.Id,
                 SyncAction = SongSyncAction.Download,
-                DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song)),
+                DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song), naming),
                 AddedAt = DateTime.Now,
             };
 
@@ -103,7 +105,7 @@ public class MusicService(
         else if (songDevice.SyncAction == SongSyncAction.Remove)
         {
             songDevice.SyncAction = null;
-            songDevice.DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song));
+            songDevice.DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song), naming);
 
             db.Update(songDevice);
         }
@@ -276,6 +278,8 @@ public class MusicService(
                     var targetFile = new FileTarget(fileSystem)
                         { Folder = fileSystem.Path.Join(config.Value.MusicRepositoryPath, user.Username) };
 
+                    var naming = NamingMetadata.FromPath(sourceFile.FilePath);
+
                     metadata = await sourceFile.ReadMetadata(cancellationToken);
 
                     // Get the length of the file
@@ -356,7 +360,7 @@ public class MusicService(
                         continue;
                     }
 
-                    targetFile.EnsureFilePath(metadata);
+                    targetFile.EnsureFilePath(metadata, naming);
 
                     song ??= await repo.GetSongByPath(targetFile.FilePath!, cancellationToken);
 
@@ -539,7 +543,7 @@ public class MusicService(
 
                     await using (var sourceStream = sourceFile.Read())
                     {
-                        await targetFile.Save(sourceStream, metadata, cancellationToken);
+                        await targetFile.Save(sourceStream, metadata, naming, cancellationToken);
                     }
 
                     job.AddFileMapping(sourceFile.FilePath!, targetFile.FilePath!);

@@ -184,6 +184,7 @@ function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onCha
                 </Group>
                 <Group gap="xs" wrap="nowrap">
                     <Badge
+                        data-testid="device-expand-badge"
                         size="sm"
                         variant="light"
                         color={matchingCount > 0 ? "green" : "gray"}

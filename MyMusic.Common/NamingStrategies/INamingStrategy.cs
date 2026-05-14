@@ -5,7 +5,7 @@ namespace MyMusic.Common.NamingStrategies;
 
 public interface INamingStrategy
 {
-    string Generate(SongMetadata song);
+    string Generate(SongMetadata song, NamingMetadata? naming = null);
 
     public static string SanitizeFilename(string filename) => FilenameUtils.SanitizeFilename(filename);
 }

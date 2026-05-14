@@ -104,8 +104,8 @@ public class DevicesController(
                 existingSongDevices.Count, device.Id);
         }
 
-        logger.LogInformation("Created device {DeviceName} with ID {DeviceId} for user {UserId}",
-            device.Name, device.Id, currentUser.Id);
+        Console.WriteLine($"[DEBUG] Created device {device.Name} with ID {device.Id}, Template={device.NamingTemplate ?? "(null)"}");
+        logger.LogInformation($"Created device {device.Name} with ID {device.Id} for user {currentUser.Id}, Template={device.NamingTemplate ?? "(null)"}");
 
         return new CreateDeviceResponse
         {
@@ -1295,6 +1295,9 @@ public class DevicesController(
             return [];
         }
 
+        Console.WriteLine($"[DEBUG] GetPendingActionsForDevice: DeviceId={device.Id}, Template={device.NamingTemplate ?? "(null)"}, Default={config.Value.DefaultNamingTemplate}");
+        logger.LogInformation($"GetPendingActionsForDevice: DeviceId={device.Id}, Template={device.NamingTemplate ?? "(null)"}, Default={config.Value.DefaultNamingTemplate}");
+
         var songDevices = await context.SongDevices
             .Include(sd => sd.Song)
                 .ThenInclude(s => s.Album)
@@ -1321,7 +1324,8 @@ public class DevicesController(
             if (sd.SyncAction == SongSyncAction.Download && sd.Song != null)
             {
                 var metadata = EntityConverter.ToSong(sd.Song);
-                var basePath = namingStrategy.Generate(metadata);
+                var naming = NamingMetadata.FromPath(sd.DevicePath);
+                var basePath = namingStrategy.Generate(metadata, naming);
                 var newPath = basePath == sd.DevicePath
                     ? basePath
                     : GetUniquePath(basePath, usedPaths);

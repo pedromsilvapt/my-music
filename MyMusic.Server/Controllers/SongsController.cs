@@ -379,7 +379,8 @@ public class SongsController(
                 if (update.Include && !hasExisting)
                 {
                     var metadata = EntityConverter.ToSong(song);
-                    var basePath = namingStrategy.Generate(metadata);
+                    var naming = new NamingMetadata { Extension = System.IO.Path.GetExtension(song.RepositoryPath) };
+                    var basePath = namingStrategy.Generate(metadata, naming);
                     var devicePath = GetUniquePath(basePath, allExistingPaths, newPathsInBatch);
 
                     newPathsInBatch[devicePath] = newPathsInBatch.GetValueOrDefault(devicePath, 0) + 1;

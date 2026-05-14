@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
+using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Targets;
 
 namespace MyMusic.Common.Services;
@@ -504,7 +505,8 @@ public class SongUpdateService(
 
         await fileTarget.SaveMetadata(metadata, cancellationToken);
 
-        await fileTarget.Relocate(cancellationToken);
+        var naming = NamingMetadata.FromPath(song.RepositoryPath);
+        await fileTarget.Relocate(naming, cancellationToken);
 
         song.RepositoryPath = fileTarget.FilePath!;
 

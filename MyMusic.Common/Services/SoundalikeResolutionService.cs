@@ -127,7 +127,9 @@ public class SoundalikeResolutionService(
 
                 var namingStrategy = new TemplateNamingStrategy(
                     device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
-                var basePath = namingStrategy.Generate(EntityConverter.ToSong(primarySong));
+                var secondaryPath = group.First().DevicePath;
+                var naming = NamingMetadata.FromPath(secondaryPath);
+                var basePath = namingStrategy.Generate(EntityConverter.ToSong(primarySong), naming);
 
                 var existingPaths = await db.SongDevices
                     .Where(sd => sd.DeviceId == deviceId)

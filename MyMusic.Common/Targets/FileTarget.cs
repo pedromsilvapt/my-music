@@ -16,13 +16,16 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
 
     protected SongMetadata? Metadata { get; set; }
 
+    protected NamingMetadata? Naming { get; set; }
+
     public FileTarget(IFileSystem fileSystem) : this(new ArtistAlbumNamingStrategy(), fileSystem) { }
 
-    public async Task Save(Stream data, SongMetadata? metadata = null, CancellationToken cancellationToken = default)
+    public async Task Save(Stream data, SongMetadata? metadata = null, NamingMetadata? naming = null, CancellationToken cancellationToken = default)
     {
-        EnsureFilePath(metadata);
+        EnsureFilePath(metadata, naming);
 
         Metadata = metadata;
+        Naming = naming;
 
         FileSystem.Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         
@@ -94,7 +97,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         await Task.CompletedTask;
     }
 
-    public async Task Relocate(CancellationToken cancellationToken = default)
+    public async Task Relocate(NamingMetadata? naming = null, CancellationToken cancellationToken = default)
     {
         if (FilePath is null)
         {
@@ -116,7 +119,8 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
             throw new Exception("Cannot relocate file if the metadata title is null.");
         }
 
-        var newFilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(Metadata));
+        var effectiveNaming = naming ?? Naming ?? NamingMetadata.FromPath(FilePath);
+        var newFilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(Metadata, effectiveNaming));
 
         // If the path is indeed different, move the file
         if (newFilePath != FilePath)
@@ -129,7 +133,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         }
     }
 
-    public void EnsureFilePath(SongMetadata? metadata)
+    public void EnsureFilePath(SongMetadata? metadata, NamingMetadata? naming = null)
     {
         if (FilePath is null)
         {
@@ -143,7 +147,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
                 throw new Exception("Cannot save new file without FilePath because no folder was provided.");
             }
 
-            FilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(metadata));
+            FilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(metadata, naming));
         }
     }
 }

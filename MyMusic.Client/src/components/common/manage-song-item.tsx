@@ -21,7 +21,7 @@ export default function ManageSongItem({song, isIncluded, path, syncAction}: Man
     const actionColor = getActionColor(syncAction, colorScheme === 'light');
 
     return (
-        <Card padding="xs" radius="sm" style={{borderLeft: `3px solid ${border}`}}>
+        <Card data-testid={`manage-song-item-${song.id}`} data-included={isIncluded} padding="xs" radius="sm" style={{borderLeft: `3px solid ${border}`}}>
             <Tooltip label={titleArtistsText} openDelay={500} withinPortal={false}>
                 <Text size="sm" truncate mb={path ? "xs" : undefined} style={{whiteSpace: 'nowrap'}}>
                     <Text component="span" fw={500}>{song.title}</Text>
@@ -32,11 +32,11 @@ export default function ManageSongItem({song, isIncluded, path, syncAction}: Man
                 <Card.Section withBorder p="xs">
                     <Group justify="space-between" wrap="nowrap" gap="xs">
                         <Tooltip label={path} openDelay={500} withinPortal={false}>
-                            <Text size="xs" truncate c="dimmed" style={{fontFamily: 'monospace'}}>{path}</Text>
+                            <Text data-testid="song-path" size="xs" truncate c="dimmed" style={{fontFamily: 'monospace'}}>{path}</Text>
                         </Tooltip>
                         {syncAction && actionColor && (
                             <Tooltip label={syncAction === 'Remove' ? 'To Delete' : `To ${syncAction}`} withinPortal={false}>
-                                <IconPointFilled size={14} color={actionColor} style={{flexShrink: 0}}/>
+                                <IconPointFilled data-testid="sync-action" data-action={syncAction} size={14} color={actionColor} style={{flexShrink: 0}}/>
                             </Tooltip>
                         )}
                     </Group>
