@@ -19,12 +19,12 @@ public abstract class IntegrationTestBase : PageTest
     private static readonly string TestResultsDir = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "test-results"));
 
-    private static readonly IConfiguration Configuration = new ConfigurationBuilder()
+    protected static readonly IConfiguration Configuration = new ConfigurationBuilder()
         .AddEnvironmentVariables()
         .Build();
 
     private string? _tracePath;
-    private IntegrationTestTelemetry _telemetry;
+    private IntegrationTestTelemetry? _telemetry;
     private readonly ITestOutputHelper _output;
 
     public static readonly string BaseUrl =
@@ -36,7 +36,7 @@ public abstract class IntegrationTestBase : PageTest
     protected string UserName { get; } = $"Test-{Guid.NewGuid()}";
     protected long UserId { get; private set; }
     protected ILogger Logger => _telemetry.TestsLogger;
-    protected CliRunner CliRunner { get; private set; } = null!;
+    protected IntegrationTestTelemetry Telemetry => _telemetry;
 
     public string Traceparent => Activity.Current?.Id ?? string.Empty;
 
@@ -70,7 +70,6 @@ public abstract class IntegrationTestBase : PageTest
         Page.SetDefaultNavigationTimeout(10000);
 
         InitializeTelemetry();
-        CliRunner = new CliRunner(Configuration, _telemetry);
         await StartTraceRecordingAsync();
         await InitializeRequestContextAsync();
         await CreateTestUser();

@@ -1,7 +1,7 @@
 import {orchestrateSync} from '../orchestrator';
 import type {SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt} from '../types';
 
-jest.mock('../../syncService', () => ({
+jest.mock('../errors', () => ({
     SyncCancelledError: class SyncCancelledError extends Error {
         constructor() {
             super('Sync was cancelled');
@@ -129,7 +129,7 @@ describe('orchestrateSync', () => {
     });
 
     test('cancellation returns partial result with cancelled=true', async () => {
-        const {SyncCancelledError} = require('../../syncService');
+        const {SyncCancelledError} = require('../errors');
         const deps = createMockDeps({
             scanner: jest.fn().mockImplementation(() => {
                 throw new SyncCancelledError();
@@ -187,7 +187,7 @@ describe('orchestrateSync', () => {
     });
 
     test('keepAwake.deactivate always called on cancellation', async () => {
-        const {SyncCancelledError} = require('../../syncService');
+        const {SyncCancelledError} = require('../errors');
         const deps = createMockDeps({
             scanner: jest.fn().mockImplementation(() => {
                 throw new SyncCancelledError();

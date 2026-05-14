@@ -1,7 +1,7 @@
 import {resolveConflictsPhase, completePhase} from '../phases';
 import type {SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt} from '../types';
 
-jest.mock('../../syncService', () => ({
+jest.mock('../errors', () => ({
     SyncCancelledError: class SyncCancelledError extends Error {
         constructor() {
             super('Sync was cancelled');

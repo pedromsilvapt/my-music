@@ -3,18 +3,18 @@ using MyMusic.IntegrationTests.Fixtures;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
 
-namespace MyMusic.IntegrationTests.Tests.Cli;
+namespace MyMusic.IntegrationTests.Tests.Sync;
 
-public partial class CliSyncTests
+public abstract partial class SyncTestsBase
 {
     [Fact]
     public async Task Sync_DryRun_ShouldReportCreationWithoutUploading()
     {
         // Create a local song that would be uploaded
-        await _cli.CreateSongAsync(SongsFixture.DefaultSongs[5]);
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[5]);
 
         // Run sync in dry-run mode
-        var result = await CliRunner.SyncAsync(_cli, dryRun: true);
+        var result = await App.SyncAsync(new SyncOptions { DryRun = true });
         result.ShouldBeSuccessful();
 
         // Dry run should report creation
@@ -25,7 +25,7 @@ public partial class CliSyncTests
         (await songs.Collection.GetRowCountAsync()).ShouldBe(0);
 
         // A subsequent real sync should upload the song successfully
-        var realResult = await CliRunner.SyncAsync(_cli);
+        var realResult = await App.SyncAsync(new SyncOptions());
         realResult.ShouldBeSuccessful();
         realResult.Created.ShouldBeGreaterThanOrEqualTo(1);
     }
@@ -34,11 +34,11 @@ public partial class CliSyncTests
     public async Task Sync_DryRun_ShouldReportDownloadWithoutDownloading()
     {
         // Seed a song on the server assigned to this device
-        var serverSongs = await _serverSongs.SeedAsync(RequestContext, UserId,
-            [SongsFixture.DefaultSongs[1] with { DeviceIds = [_cli.DeviceId] }]);
+        var serverSongs = await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] }]);
 
         // Run sync in dry-run mode
-        var result = await CliRunner.SyncAsync(_cli, dryRun: true);
+        var result = await App.SyncAsync(new SyncOptions { DryRun = true });
         result.ShouldBeSuccessful();
 
         // Dry run should report download
@@ -46,12 +46,12 @@ public partial class CliSyncTests
 
         // File should NOT exist locally (dry run doesn't download)
         var expectedPath = "Dylan/The Alibi/The Alibi - Dylan.mp3";
-        _cli.FileExists(expectedPath).ShouldBeFalse();
+        App.FileExists(expectedPath).ShouldBeFalse();
 
         // A subsequent real sync should download the file successfully
-        var realResult = await CliRunner.SyncAsync(_cli);
+        var realResult = await App.SyncAsync(new SyncOptions());
         realResult.ShouldBeSuccessful();
         realResult.Downloaded.ShouldBeGreaterThanOrEqualTo(1);
-        _cli.FileExists(expectedPath).ShouldBeTrue();
+        App.FileExists(expectedPath).ShouldBeTrue();
     }
 }

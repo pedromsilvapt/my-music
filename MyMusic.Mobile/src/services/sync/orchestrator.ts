@@ -1,5 +1,5 @@
 import type {SyncDeps, SyncContext, SyncResult, ProgressHandler} from './types';
-import {SyncCancelledError} from '../syncService';
+import {SyncCancelledError} from './errors';
 import {scanPhase, startSessionPhase, uploadPhase, serverActionsPhase, completePhase} from './phases';
 
 export async function orchestrateSync(

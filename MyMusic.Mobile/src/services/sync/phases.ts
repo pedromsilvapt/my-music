@@ -2,7 +2,7 @@
 // Mobile always syncs both ways. Consider adding this feature for fine-grained sync control.
 import type {SyncDeps, SyncContext, RecordItem, ConflictResolution, SyncFileInfo, ScanError, SyncConflict, ProgressHandler, PendingActionItem} from './types';
 import type {SyncConflictResolveItem, SyncPotentialConflictItem} from '../../api/types';
-import {SyncCancelledError} from '../syncService';
+import {SyncCancelledError} from './errors';
 import {safeToIsoString, chunkArray, formatFilePath} from './utils';
 import {uploadOneFile, downloadOneFile, removeOneFile} from './atomic-operations';
 

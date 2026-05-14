@@ -6,13 +6,6 @@ using MyMusic.OpenTelemetry.XUnit;
 
 namespace MyMusic.IntegrationTests.Fixtures;
 
-public enum SyncDirection
-{
-    Up,
-    Down,
-    Both,
-}
-
 public class CliRunner(IConfiguration configuration, IntegrationTestTelemetry telemetry)
 {
     private static string DefaultCliPath() => Path.Combine(

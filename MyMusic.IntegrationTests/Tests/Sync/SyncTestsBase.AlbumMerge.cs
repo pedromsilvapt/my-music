@@ -4,9 +4,9 @@ using MyMusic.IntegrationTests.Flows;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
 
-namespace MyMusic.IntegrationTests.Tests.Cli;
+namespace MyMusic.IntegrationTests.Tests.Sync;
 
-public partial class CliSyncTests
+public abstract partial class SyncTestsBase
 {
     [Fact]
     public async Task Sync_ShouldMergeSongsWhenChecksumsMatch()
@@ -16,11 +16,11 @@ public partial class CliSyncTests
         var lowerAlbumSong = baseSong with { Title = baseSong.Title.ToLower() };
 
         // Setup: Create two local files with different album casing
-        await _cli.CreateSongAsync(properAlbumSong);
-        var lowerAlbumPath = await _cli.CreateSongAsync(lowerAlbumSong);
+        await App.CreateSongAsync(properAlbumSong);
+        var lowerAlbumPath = await App.CreateSongAsync(lowerAlbumSong);
 
         // First sync: Should create two separate songs due to different album names
-        var result1 = await CliRunner.SyncAsync(_cli);
+        var result1 = await App.SyncAsync(new SyncOptions());
         result1.ShouldBeSuccessful();
         result1.Created.ShouldBe(2, $"Expected 2 songs to be created but got {result1.Created}");
 
@@ -29,18 +29,18 @@ public partial class CliSyncTests
         (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
 
         // Add first song to "Proper Casing" playlist (row 0)
-        var properPlaylist = await _playlists.SeedAsync(RequestContext, UserId, "Proper Casing");
+        var properPlaylist = await Playlists.SeedAsync(RequestContext, UserId, "Proper Casing");
         await new AddSongToPlaylistFlow(properAlbumSong.Title, properPlaylist.Name).ExecuteAsync(Page);
 
         // Add second song to "Lower Casing" playlist (row 1)
-        var lowerPlaylist = await _playlists.SeedAsync(RequestContext, UserId, "Lower Casing");
+        var lowerPlaylist = await Playlists.SeedAsync(RequestContext, UserId, "Lower Casing");
         await new AddSongToPlaylistFlow(lowerAlbumSong.Title, lowerPlaylist.Name).ExecuteAsync(Page);
 
         // Now, fix the title on the second file
-        await _cli.UpdateLocalFileMetadataAsync(lowerAlbumPath, new EditSongOptions(Title: properAlbumSong.Title));
+        await App.UpdateLocalFileMetadataAsync(lowerAlbumPath, new EditSongOptions(Title: properAlbumSong.Title));
 
         // Second sync: Should detect duplicates and merge
-        var result2 = await CliRunner.SyncAsync(_cli);
+        var result2 = await App.SyncAsync(new SyncOptions());
         result2.ShouldBeSuccessful();
 
         // Validate only one song exists on the server
@@ -52,7 +52,7 @@ public partial class CliSyncTests
             .ExecuteAsync(Page);
 
         // Validate song belongs to device
-        await new ShouldSongExistInDeviceFlow(properAlbumSong.Title, _cli.DeviceName, shouldExist: true)
+        await new ShouldSongExistInDeviceFlow(properAlbumSong.Title, App.DeviceName, shouldExist: true)
             .ExecuteAsync(Page);
 
         // Validate song belongs to both playlists

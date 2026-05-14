@@ -16,12 +16,8 @@ import {orchestrateSync} from './sync/orchestrator';
 import {type SyncProgress, useSyncStore} from '../stores/syncStore';
 import {getDeviceId, getRepositoryPath} from './configService';
 
-export class SyncCancelledError extends Error {
-    constructor() {
-        super('Sync was cancelled');
-        this.name = 'SyncCancelledError';
-    }
-}
+import {SyncCancelledError} from './sync/errors';
+export {SyncCancelledError};
 
 export interface SyncResult {
     created: number;
