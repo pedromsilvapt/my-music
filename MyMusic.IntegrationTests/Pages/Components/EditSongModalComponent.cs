@@ -27,11 +27,14 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
 
     public async Task SetExplicitAsync(bool isExplicit)
     {
-        var explicitSwitch = Root.GetByTestId("edit-song-explicit");
-        var isChecked = await explicitSwitch.IsCheckedAsync();
+        var explicitInput = Root.GetByTestId("edit-song-explicit");
+        var isChecked = await explicitInput.IsCheckedAsync();
         if (isChecked != isExplicit)
         {
-            await explicitSwitch.ClickAsync();
+            // Mantine renders the Switch <input> as visually hidden (opacity 0).
+            // Playwright refuses to click hidden elements, so we click the
+            // parent .mantine-Switch-track which is the actual visible toggle.
+            await explicitInput.Locator("xpath=..").ClickAsync();
         }
     }
 
