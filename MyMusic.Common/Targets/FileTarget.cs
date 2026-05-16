@@ -28,7 +28,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         Naming = naming;
 
         FileSystem.Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
-        
+
         await using (var fs = FileSystem.FileStream.New(FilePath!, FileMode.OpenOrCreate, FileAccess.Write))
         {
             await data.CopyToAsync(fs, cancellationToken);
@@ -60,12 +60,34 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         Metadata = metadata;
 
         var fileInfo = new FileSystemFileAbstraction(FileSystem.FileInfo.New(FilePath));
-        
         using var tfile = TagLib.File.Create(fileInfo);
 
+        // Write new metadata to the existing tags
         await TagConverter.FromSong(metadata, tfile.Tag, cancellationToken: cancellationToken);
 
+        // Rebuild tags fresh to eliminate old padding and ensure correct sizing
+        RebuildTags(tfile);
+
         tfile.Save();
+    }
+
+    private static void RebuildTags(TagLib.File file)
+    {
+        // Get the underlying tags (Id3v2, Ape, Id3v1, etc.)
+        var tags = (file.Tag as TagLib.CombinedTag)?.Tags ?? new[] { file.Tag };
+
+        // Save references to each tag BEFORE removing
+        var tagSnapshots = tags.Select(t => new { Type = t.TagTypes, Tag = t }).ToList();
+
+        // Remove all tags from the file
+        file.RemoveTags(TagLib.TagTypes.AllTags);
+
+        // Recreate each tag fresh and copy data
+        foreach (var snapshot in tagSnapshots)
+        {
+            var newTag = file.GetTag(snapshot.Type, true);
+            snapshot.Tag.CopyTo(newTag, true);
+        }
     }
 
     public Task<SongMetadata> ReadMetadata(CancellationToken cancellationToken = default)
@@ -76,7 +98,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         }
 
         var fileInfo = new FileSystemFileAbstraction(FileSystem.FileInfo.New(FilePath));
-        
+
         using var tfile = TagLib.File.Create(fileInfo);
 
         var metadata = TagConverter.ToSong(tfile.Tag, tfile.Properties);
@@ -163,7 +185,7 @@ public class FileSystemFileAbstraction(IFileInfo fileInfo) : TagLib.File.IFileAb
     public void CloseStream(Stream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
-        
+
         stream.Close();
     }
 }
