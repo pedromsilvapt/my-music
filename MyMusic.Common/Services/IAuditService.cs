@@ -22,4 +22,7 @@ public interface IAuditService
 
     Task DeleteNonConformitiesBatch(MusicDbContext db, List<long> ids, long ownerId,
         CancellationToken cancellationToken = default);
+
+    Task<int> ResetRule(MusicDbContext db, long ruleId, long ownerId,
+        CancellationToken cancellationToken = default);
 }

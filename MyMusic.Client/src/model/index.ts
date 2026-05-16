@@ -213,6 +213,7 @@ export * from './requeueManyPurchasesParams';
 export * from './requeueManyPurchasesResponse';
 export * from './requeuePurchaseItem';
 export * from './requeuePurchaseResponse';
+export * from './resetAuditRuleResponse';
 export * from './resolveSoundalikesRequest';
 export * from './resolveSoundalikesResponse';
 export * from './scanAuditRuleResponse';

@@ -81,6 +81,16 @@ public class AuditsController(
         return new ScanAuditRuleResponse { NonConformitiesCreated = count };
     }
 
+    [HttpPost("rules/{id:long}/reset", Name = "ResetAuditRule")]
+    public async Task<ResetAuditRuleResponse> ResetRule(
+        [FromRoute] long id,
+        MusicDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var count = await auditService.ResetRule(db, id, currentUser.Id, cancellationToken);
+        return new ResetAuditRuleResponse { DeletedCount = count };
+    }
+
     [HttpGet("rules/{id:long}/non-conformities", Name = "ListAuditNonConformities")]
     public async Task<ListAuditNonConformitiesResponse> ListNonConformities(
         [FromRoute] long id,

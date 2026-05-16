@@ -85,8 +85,7 @@ export const recordPlayHistory = async (createPlayHistoryRequest: CreatePlayHist
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createPlayHistoryRequest,)
+    body: JSON.stringify(createPlayHistoryRequest)
   }
 )
 

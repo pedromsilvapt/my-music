@@ -264,8 +264,7 @@ export const postDevices = async (createDeviceRequest: CreateDeviceRequest, opti
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createDeviceRequest,)
+    body: JSON.stringify(createDeviceRequest)
   }
 )
 
@@ -364,8 +363,7 @@ export const putDevicesDeviceId = async (deviceId: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateDeviceRequest,)
+    body: JSON.stringify(updateDeviceRequest)
   }
 )
 
@@ -588,7 +586,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevice>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevice>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDeviceQueryResult = NonNullable<Awaited<ReturnType<typeof getDevice>>>
@@ -730,7 +728,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>>
@@ -924,8 +922,7 @@ export const postDevicesDeviceIdSessionsPrune = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      pruneSessionsRequest,)
+    body: JSON.stringify(pruneSessionsRequest)
   }
 )
 
@@ -1069,7 +1066,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined && sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsSessionIdRecordsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>>
@@ -1214,7 +1211,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined && sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata>>>
@@ -1365,7 +1362,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined && sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsSessionIdRecordsFilterValuesQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterValues>>>
@@ -1470,8 +1467,7 @@ export const postDevicesDeviceIdSyncStart = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      nullSyncStartRequest,)
+    body: JSON.stringify(nullSyncStartRequest)
   }
 )
 
@@ -1566,8 +1562,7 @@ export const postDevicesDeviceIdSyncSessionIdRecords = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      syncRecordsRequest,)
+    body: JSON.stringify(syncRecordsRequest)
   }
 )
 
@@ -1662,8 +1657,7 @@ export const postDevicesDeviceIdSyncSessionIdComplete = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      nullSyncCompleteRequest,)
+    body: JSON.stringify(nullSyncCompleteRequest)
   }
 )
 
@@ -1792,7 +1786,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSyncPendingActionsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSyncPendingActions>>>
@@ -1923,7 +1917,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSyncSongsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>>
@@ -2018,8 +2012,7 @@ export const postDevicesDeviceIdSyncAcknowledge = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      acknowledgeActionRequest,)
+    body: JSON.stringify(acknowledgeActionRequest)
   }
 )
 
@@ -2112,8 +2105,7 @@ export const postDevicesDeviceIdSyncCheck = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      syncCheckRequest,)
+    body: JSON.stringify(syncCheckRequest)
   }
 )
 
@@ -2206,8 +2198,7 @@ export const postDevicesDeviceIdSyncResolveConflicts = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      syncResolveConflictsRequest,)
+    body: JSON.stringify(syncResolveConflictsRequest)
   }
 )
 
@@ -2316,8 +2307,7 @@ if(postDevicesDeviceIdSyncUploadBody.createdAt !== undefined) {
     ...options,
     method: 'POST'
     ,
-    body:
-      formData,
+    body: formData
   }
 )
 

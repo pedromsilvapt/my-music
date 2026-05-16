@@ -86,6 +86,10 @@ module.exports = {
                             invalidates: ['getSoundalikeDuplicates', 'listAuditRules'],
                         },
                         {
+                            onMutations: ['resetAuditRule'],
+                            invalidates: ['getAuditRule', 'listAuditRules', 'listAuditNonConformities'],
+                        },
+                        {
                             onMutations: ['deleteSongs'],
                             invalidates: ['listSongs'],
                         },

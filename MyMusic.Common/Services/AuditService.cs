@@ -117,4 +117,20 @@ public class AuditService(
         db.AuditNonConformities.RemoveRange(nonConformities);
         await db.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<int> ResetRule(
+        MusicDbContext db,
+        long ruleId,
+        long ownerId,
+        CancellationToken cancellationToken = default)
+    {
+        var nonConformities = await db.AuditNonConformities
+            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == ownerId)
+            .ToListAsync(cancellationToken);
+
+        db.AuditNonConformities.RemoveRange(nonConformities);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return nonConformities.Count;
+    }
 }

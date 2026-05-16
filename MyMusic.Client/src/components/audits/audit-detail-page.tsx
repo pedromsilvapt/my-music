@@ -1,10 +1,12 @@
 import {Badge, Button, Group, Text, Title} from "@mantine/core";
-import {IconRefresh} from '@tabler/icons-react';
+import {modals} from "@mantine/modals";
+import {IconRefresh, IconTrash} from '@tabler/icons-react';
 import {useParams} from "@tanstack/react-router";
 import {useCallback, useEffect, useState} from "react";
 import {
     useGetAuditRule,
     useListAuditNonConformities,
+    useResetAuditRule,
     useScanAuditRule
 } from "../../client/audits.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
@@ -47,8 +49,10 @@ export default function AuditDetailPage() {
     const refetchNonConformities = nonConformitiesQuery.refetch;
 
     const scanMutation = useScanAuditRule();
+    const resetMutation = useResetAuditRule();
 
     const [scanning, setScanning] = useState(false);
+    const [resetting, setResetting] = useState(false);
     const [customToolbar, setCustomToolbar] = useState<React.ReactNode>(null);
 
     const rule = ruleResponse?.data?.rule;
@@ -68,6 +72,29 @@ export default function AuditDetailPage() {
         }
     }, [id, scanMutation, refetchNonConformities]);
 
+    const handleReset = useCallback(() => {
+        modals.openConfirmModal({
+            title: 'Reset Audit Rule',
+            children: (
+                <Text size="sm">
+                    Are you sure you want to clear all non-conformities for &quot;{rule?.name ?? 'this audit rule'}&quot;? This action cannot be undone.
+                </Text>
+            ),
+            labels: {confirm: 'Reset', cancel: 'Cancel'},
+            confirmProps: {color: 'red'},
+            onConfirm: async () => {
+                setResetting(true);
+                try {
+                    await resetMutation.mutateAsync({id});
+                    await refetchNonConformities();
+                    await ruleQuery.refetch();
+                } finally {
+                    setResetting(false);
+                }
+            },
+        });
+    }, [id, rule?.name, resetMutation, refetchNonConformities, ruleQuery]);
+
     const handleFilterChange = useCallback((newSearch: string, newFilter: string) => {
         setCollectionFilter(AUDIT_STATE_KEY, { search: newSearch, expression: newFilter });
     }, [setCollectionFilter]);
@@ -86,6 +113,16 @@ export default function AuditDetailPage() {
                 </Group>
                 <Group>
                     {customToolbar}
+                    <Button
+                        leftSection={<IconTrash size={16}/>}
+                        onClick={handleReset}
+                        loading={resetting}
+                        disabled={!rule?.nonConformityCount}
+                        variant="light"
+                        color="red"
+                    >
+                        Reset
+                    </Button>
                     <Button
                         leftSection={<IconRefresh size={16}/>}
                         onClick={handleScan}

@@ -39,6 +39,7 @@ import type {
   ListAuditNonConformitiesResponse,
   ListAuditRulesResponse,
   ListExcludedPairsResponse,
+  ResetAuditRuleResponse,
   ResolveSoundalikesRequest,
   ResolveSoundalikesResponse,
   ScanAuditRuleResponse,
@@ -275,7 +276,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditRule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditRule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAuditRuleQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditRule>>>
@@ -424,6 +425,106 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       > => {
       return useMutation(getScanAuditRuleMutationOptions(options), queryClient);
     }
+    export type resetAuditRuleResponse200TextPlain = {
+  data: ResetAuditRuleResponse
+  status: 200
+}
+
+export type resetAuditRuleResponse200ApplicationJson = {
+  data: ResetAuditRuleResponse
+  status: 200
+}
+
+export type resetAuditRuleResponse200TextJson = {
+  data: ResetAuditRuleResponse
+  status: 200
+}
+
+export type resetAuditRuleResponseSuccess = (resetAuditRuleResponse200TextPlain | resetAuditRuleResponse200ApplicationJson | resetAuditRuleResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type resetAuditRuleResponse = (resetAuditRuleResponseSuccess)
+
+export const getResetAuditRuleUrl = (id: number,) => {
+
+
+
+
+  return `/api/audits/rules/${id}/reset`
+}
+
+export const resetAuditRule = async (id: number, options?: RequestInit): Promise<resetAuditRuleResponse> => {
+
+  const res = await fetch(getResetAuditRuleUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: resetAuditRuleResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as resetAuditRuleResponse
+}
+
+
+
+
+export const getResetAuditRuleMutationOptions = <TError = unknown,
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetAuditRule>>, TError,{id: number}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof resetAuditRule>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['resetAuditRule'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetAuditRule>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  resetAuditRule(id,fetchOptions)
+        }
+
+  const onSuccess = (data: Awaited<ReturnType<typeof resetAuditRule>>, variables: {id: number}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: ['audits', 'rules'] });
+    queryClient.invalidateQueries({ queryKey: getListAuditRulesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ['audits', 'rules'] });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
+
+
+
+
+  return  { ...mutationOptions, mutationFn, onSuccess }}
+
+    export type ResetAuditRuleMutationResult = NonNullable<Awaited<ReturnType<typeof resetAuditRule>>>
+
+    export type ResetAuditRuleMutationError = unknown
+
+    export const useResetAuditRule = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetAuditRule>>, TError,{id: number}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof resetAuditRule>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      const backupQueryClient = useQueryClient();
+      return useMutation(getResetAuditRuleMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
+    }
     export type listAuditNonConformitiesResponse200TextPlain = {
   data: ListAuditNonConformitiesResponse
   status: 200
@@ -509,7 +610,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditNonConformities>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditNonConformities>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type ListAuditNonConformitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditNonConformities>>>
@@ -599,8 +700,7 @@ export const setAuditWaiver = async (id: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      setWaiverRequest,)
+    body: JSON.stringify(setWaiverRequest)
   }
 )
 
@@ -764,8 +864,7 @@ export const batchSetAuditWaiver = async (batchSetWaiverRequest: BatchSetWaiverR
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      batchSetWaiverRequest,)
+    body: JSON.stringify(batchSetWaiverRequest)
   }
 )
 
@@ -847,8 +946,7 @@ export const batchDeleteAuditNonConformities = async (batchDeleteNonConformities
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      batchDeleteNonConformitiesRequest,)
+    body: JSON.stringify(batchDeleteNonConformitiesRequest)
   }
 )
 
@@ -1062,8 +1160,7 @@ export const updateSoundalikeSelection = async (nonConformityId: number,
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateSoundalikeSelectionRequest,)
+    body: JSON.stringify(updateSoundalikeSelectionRequest)
   }
 )
 
@@ -1151,8 +1248,7 @@ export const excludeDuplicatePair = async (excludeDuplicatePairRequest: ExcludeD
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      excludeDuplicatePairRequest,)
+    body: JSON.stringify(excludeDuplicatePairRequest)
   }
 )
 
@@ -1494,7 +1590,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAuditNonConformityFilterMetadataQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>>
@@ -1636,7 +1732,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAuditNonConformityFilterValuesQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>>
@@ -1735,8 +1831,7 @@ export const resolveSoundalikes = async (resolveSoundalikesRequest: ResolveSound
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      resolveSoundalikesRequest,)
+    body: JSON.stringify(resolveSoundalikesRequest)
   }
 )
 
@@ -1806,6 +1901,8 @@ export const getGetAuditRuleResponseMock = (overrideResponse: Partial<Extract<Ge
 
 export const getScanAuditRuleResponseMock = (overrideResponse: Partial<Extract<ScanAuditRuleResponse, object>> = {}): ScanAuditRuleResponse => (faker.helpers.arrayElement([{nonConformitiesCreated: faker.number.int(), ...overrideResponse}, {nonConformitiesCreated: faker.number.int(), ...overrideResponse}, {nonConformitiesCreated: faker.number.int(), ...overrideResponse}]))
 
+export const getResetAuditRuleResponseMock = (overrideResponse: Partial<Extract<ResetAuditRuleResponse, object>> = {}): ResetAuditRuleResponse => (faker.helpers.arrayElement([{deletedCount: faker.number.int(), ...overrideResponse}, {deletedCount: faker.number.int(), ...overrideResponse}, {deletedCount: faker.number.int(), ...overrideResponse}]))
+
 export const getListAuditNonConformitiesResponseListSongItemMock = (overrideResponse: Partial<ListSongItem> = {}): ListSongItem => ({...{id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), title: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined])}, ...overrideResponse});
 
 export const getListAuditNonConformitiesResponseMock = (overrideResponse: Partial<Extract<ListAuditNonConformitiesResponse, object>> = {}): ListAuditNonConformitiesResponse => (faker.helpers.arrayElement([{nonConformities: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), song: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getListAuditNonConformitiesResponseListSongItemMock()},]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), hasWaiver: faker.datatype.boolean(), waiverReason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})), ...overrideResponse}, {nonConformities: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), song: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getListAuditNonConformitiesResponseListSongItemMock()},]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), hasWaiver: faker.datatype.boolean(), waiverReason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})), ...overrideResponse}, {nonConformities: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), song: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getListAuditNonConformitiesResponseListSongItemMock()},]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), hasWaiver: faker.datatype.boolean(), waiverReason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})), ...overrideResponse}]))
@@ -1858,6 +1955,18 @@ export const getScanAuditRuleMockHandler = (overrideResponse?: ScanAuditRuleResp
     return HttpResponse.json(overrideResponse !== undefined
     ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
     : getScanAuditRuleResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
+export const getResetAuditRuleMockHandler = (overrideResponse?: ResetAuditRuleResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ResetAuditRuleResponse> | ResetAuditRuleResponse), options?: RequestHandlerOptions) => {
+  return http.post('*/audits/rules/:id/reset', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getResetAuditRuleResponseMock(),
       { status: 200
       })
   }, options)
@@ -2008,6 +2117,7 @@ export const getAuditsMock = () => [
   getListAuditRulesMockHandler(),
   getGetAuditRuleMockHandler(),
   getScanAuditRuleMockHandler(),
+  getResetAuditRuleMockHandler(),
   getListAuditNonConformitiesMockHandler(),
   getSetAuditWaiverMockHandler(),
   getDeleteAuditNonConformityMockHandler(),

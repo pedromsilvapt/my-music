@@ -227,8 +227,7 @@ export const createAlbum = async (createAlbumRequest: CreateAlbumRequest, option
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createAlbumRequest,)
+    body: JSON.stringify(createAlbumRequest)
   }
 )
 
@@ -357,7 +356,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAlbum>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAlbumQueryResult = NonNullable<Awaited<ReturnType<typeof getAlbum>>>
