@@ -53,7 +53,7 @@ export default function PlayerInfo(props: PlayerInfoProps) {
                                 <Text size="sm">{props.song.title}</Text>
                             </ExplicitLabel>
                             <Text size="xs" opacity={0.5}>
-                                {props.song.artists[0].name} • {props.song.album.name} • {props.song.year}
+                                {props.song.artists.map(a => a.name).join(', ')} • {props.song.album.name}{props.song.year ? ` • ${props.song.year}` : ''}
                             </Text>
                         </Box>
                     </Group>
