@@ -3,9 +3,13 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging.Abstractions;
+using MyMusic.Common.AudioIntegrity;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
+using MyMusic.Common.Tests.AudioIntegrity;
+using NSubstitute;
 using Shouldly;
 
 namespace MyMusic.Common.Tests.Services.AuditRules;
@@ -1082,6 +1086,153 @@ public class AuditRulesSpecs : IDisposable
             .Where(nc => nc.OwnerId == owner2.Id)
             .ToListAsync();
         owner2NonConformities.Count.ShouldBe(1);
+    }
+
+    #endregion
+
+    #region FileIntegrityAuditRule Tests
+
+    [Fact]
+    public async Task FileIntegrityAuditRule_Scan_CorruptedFile_ReturnsOne()
+    {
+        // Arrange - Xing claims 10 frames but 120 exist (delta = 110 > 100 -> Corrupted)
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        var song = CreateSong("Corrupted Song", album, repositoryPath: "/music/corrupted.mp3");
+        var data = SyntheticMp3Generator.CreateTruncatedFile(
+            claimedFrames: 10, actualFrames: 120, bitrateKbps: 128);
+
+        var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            ["/music/corrupted.mp3"] = new MockFileData(data),
+        });
+
+        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()),
+            [new Mp3IntegrityValidator(
+                Options.Create(new AudioIntegrityConfig()),
+                Substitute.For<IFFmpegRunner>(),
+                fileSystem,
+                NullLogger<Mp3IntegrityValidator>.Instance)],
+            NullLogger<AudioIntegrityService>.Instance);
+
+        var config = new AudioIntegrityConfig();
+        var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
+
+        // Act
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
+
+        // Assert
+        count.ShouldBe(1);
+        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 11);
+        nonConformity.ShouldNotBeNull();
+        nonConformity.SongId.ShouldBe(song.Id);
+        nonConformity.Data.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task FileIntegrityAuditRule_Scan_CleanFile_ReturnsZero()
+    {
+        // Arrange
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        var song = CreateSong("Clean Song", album, repositoryPath: "/music/clean.mp3");
+        var data = SyntheticMp3Generator.CreateCleanFile(10, bitrateKbps: 128);
+
+        var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            ["/music/clean.mp3"] = new MockFileData(data),
+        });
+
+        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()),
+            [new Mp3IntegrityValidator(
+                Options.Create(new AudioIntegrityConfig()),
+                Substitute.For<IFFmpegRunner>(),
+                fileSystem,
+                NullLogger<Mp3IntegrityValidator>.Instance)],
+            NullLogger<AudioIntegrityService>.Instance);
+
+        var config = new AudioIntegrityConfig();
+        var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
+
+        // Act
+        var count = await ScanAndSaveAsync(rule, _owner.Id);
+
+        // Assert
+        count.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task FileIntegrityAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
+    {
+        // Arrange - Xing claims 10 frames but 120 exist (delta = 110 > 100 -> Corrupted)
+        var artist = CreateArtist("Test Artist");
+        var album = CreateAlbum("Test Album", artist);
+        var song = CreateSong("Corrupted Song", album, repositoryPath: "/music/corrupted.mp3");
+        var data = SyntheticMp3Generator.CreateTruncatedFile(
+            claimedFrames: 10, actualFrames: 120, bitrateKbps: 128);
+
+        var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            ["/music/corrupted.mp3"] = new MockFileData(data),
+        });
+
+        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()),
+            [new Mp3IntegrityValidator(
+                Options.Create(new AudioIntegrityConfig()),
+                Substitute.For<IFFmpegRunner>(),
+                fileSystem,
+                NullLogger<Mp3IntegrityValidator>.Instance)],
+            NullLogger<AudioIntegrityService>.Instance);
+
+        var config = new AudioIntegrityConfig();
+        var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
+
+        // First scan
+        await ScanAndSaveAsync(rule, _owner.Id);
+        var firstCount = await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 11);
+        firstCount.ShouldBe(1);
+
+        // Second scan - should not create duplicate
+        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        secondScanCount.ShouldBe(0);
+        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 11)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task FileIntegrityAuditRule_Patch_ThrowsNotSupportedException()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem();
+        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()),
+            [new Mp3IntegrityValidator(
+                Options.Create(new AudioIntegrityConfig()),
+                Substitute.For<IFFmpegRunner>(),
+                fileSystem,
+                NullLogger<Mp3IntegrityValidator>.Instance)],
+            NullLogger<AudioIntegrityService>.Instance);
+
+        var config = new AudioIntegrityConfig();
+        var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
+
+        // Act & Assert
+        await Should.ThrowAsync<NotSupportedException>(() => rule.Patch(_db, 1));
+    }
+
+    [Fact]
+    public void FileIntegrityAuditRule_Properties_AreCorrect()
+    {
+        // Arrange
+        var fileSystem = new MockFileSystem();
+        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()),[], NullLogger<AudioIntegrityService>.Instance);
+        var config = new AudioIntegrityConfig();
+        var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
+
+        // Assert
+        rule.Id.ShouldBe(11L);
+        rule.Name.ShouldBe("File Integrity");
+        rule.Icon.ShouldBe("IconFileAlert");
+        rule.Description.ShouldNotBeNullOrEmpty();
+        rule.CustomPage.ShouldBeNull();
     }
 
     #endregion

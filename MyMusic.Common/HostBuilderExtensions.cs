@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MyMusic.Common.AudioIntegrity;
 using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
@@ -42,6 +43,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAuditRule, NonSquareCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, SoundalikeAuditRule>();
         builder.Services.AddScoped<IAuditRule, MissingFileAuditRule>();
+        builder.Services.AddScoped<IAuditRule, FileIntegrityAuditRule>();
 
         builder.Services.AddSingleton<IFpcalcService, FpcalcService>();
         builder.Services.AddScoped<AcousticFingerprintService>();
@@ -63,6 +65,11 @@ public static class HostBuilderExtensions
 
         builder.Services.Configure<Config>(builder.Configuration.GetSection("MyMusic"));
         builder.Services.Configure<AuditConfig>(builder.Configuration.GetSection("Audit"));
+        builder.Services.Configure<AudioIntegrityConfig>(builder.Configuration.GetSection("AudioIntegrity"));
+
+        builder.Services.AddSingleton<IAudioIntegrityService, AudioIntegrityService>();
+        builder.Services.AddSingleton<IAudioIntegrityValidator, Mp3IntegrityValidator>();
+        builder.Services.AddSingleton<IFFmpegRunner, FFmpegRunner>();
 
         return builder;
     }
