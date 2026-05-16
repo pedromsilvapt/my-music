@@ -987,13 +987,7 @@ public class DevicesController(
                     }
                     else
                     {
-                        toUpdate.Add(new SyncFileInfoItem
-                        {
-                            Path = clientFile.Path,
-                            ModifiedAt = clientFile.ModifiedAt,
-                            CreatedAt = clientFile.CreatedAt,
-                            Reason = "Local file exists but never synced, server has not changed since device was added",
-                        });
+                        toUpdate.Add(clientFile with { Reason = "Local file exists but never synced, server has not changed since device was added" });
                     }
                 }
                 else

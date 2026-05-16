@@ -87,6 +87,34 @@ docker-all:
     BUILD +docker
     BUILD ./MyMusic.Client+docker
 
+unit-tests:
+    FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+    WORKDIR /app/MyMusic
+
+    FOR proj IN "MyMusic.Common" "MyMusic.OpenTelemetry" "MyMusic.OpenTelemetry.XUnit" "MyMusic.Server" "MyMusic.CLI" "MyMusic.Common.Tests" "MyMusic.CLI.Tests"
+        RUN mkdir -p ./$proj/
+
+        COPY ./$proj/$proj.csproj ./$proj/
+    END
+
+    RUN dotnet restore MyMusic.Common.Tests/MyMusic.Common.Tests.csproj
+    RUN dotnet restore MyMusic.CLI.Tests/MyMusic.CLI.Tests.csproj
+
+    FOR proj IN "MyMusic.Common" "MyMusic.OpenTelemetry" "MyMusic.OpenTelemetry.XUnit" "MyMusic.Server" "MyMusic.CLI" "MyMusic.Common.Tests" "MyMusic.CLI.Tests"
+        COPY ./$proj/ ./$proj/
+    END
+
+    COPY MyMusic.sln .
+    RUN dotnet publish MyMusic.Common.Tests \
+        --configuration Release \
+        -o /app/publish/common-tests
+    RUN dotnet publish MyMusic.CLI.Tests \
+        --configuration Release \
+        -o /app/publish/cli-tests
+
+    SAVE ARTIFACT /app/publish publish
+
 docker-integration-tests:
     FROM mcr.microsoft.com/dotnet/sdk:10.0
     WORKDIR /app
@@ -124,5 +152,23 @@ docker-integration-tests:
 
     WORKDIR /app/bin
     ENTRYPOINT ["dotnet", "vstest", "--Settings:/app/bin/integration.runsettings", "MyMusic.IntegrationTests.dll"]
+
+    SAVE IMAGE --push --insecure $REGISTRY/$IMAGE:$TAG
+
+docker-unit-tests:
+    FROM mcr.microsoft.com/dotnet/sdk:10.0
+    WORKDIR /app
+
+    ARG REGISTRY='gitea.home'
+    ARG IMAGE='silvas/my-music-unit-tests'
+    ARG TAG='dev'
+
+    RUN apt-get update && apt-get install -y libgdiplus curl libchromaprint-tools && \
+        rm -rf /var/lib/apt/lists/*Earthfile
+
+    COPY +unit-tests/publish ./publish
+
+    WORKDIR /app/publish
+    ENTRYPOINT ["sh", "-c", "dotnet vstest common-tests/MyMusic.Common.Tests.dll cli-tests/MyMusic.CLI.Tests.dll"]
 
     SAVE IMAGE --push --insecure $REGISTRY/$IMAGE:$TAG

@@ -1,0 +1,31 @@
+name: Unit Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - uses: earthly/actions/setup-earthly@v1
+        with:
+          version: v0.8.16
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Set VERSION from commit SHA
+        run: echo "VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - name: Build UnitTests image
+        run: earthly --ci --output +docker-unit-tests --TAG="$VERSION"
+
+      - name: Run unit tests
+        run: docker run --rm gitea.home/silvas/my-music-unit-tests:$VERSION

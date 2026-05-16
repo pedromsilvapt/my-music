@@ -221,20 +221,22 @@ public class DevicesControllerSyncCheckSpecs
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_Has5SecondTolerance()
+    public async Task CheckSync_ServerNewer_WithinTickPrecision_NoSyncAction()
     {
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
 
-        var lastSynced = DateTime.UtcNow.AddHours(-1);
-        var serverModified = lastSynced.AddSeconds(3);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        // Ensure lastSynced ends with tick digit 0 so that adding 9 ticks stays in same bucket
+        // EF Core truncates last tick digit, so IsNewerThan compares ticks/10
+        var lastSynced = new DateTime((DateTime.UtcNow.AddHours(-1).Ticks / 10) * 10);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, lastSynced);
         var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
             lastSyncedModifiedAt: lastSynced, syncAction: null);
 
-        var clientModified = lastSynced.AddSeconds(-5);
+        // clientModified is only 9 ticks newer - within the same tick bucket (ticks/10 rounds down)
+        var clientModified = lastSynced.AddTicks(9);
         var request = new SyncCheckRequest
         {
             Files =

@@ -43,7 +43,7 @@ public class OrchestratorTests
         _config.GetExcludePatterns().Returns(Array.Empty<string>());
         _config.GetChunkSize().Returns(10);
 
-        _fileOps.FileExists("/music").Returns(true);
+        _fileOps.DirectoryExists("/music").Returns(true);
         _scanner.ScanAsync(
                 Arg.Any<string>(),
                 Arg.Any<string[]>(),

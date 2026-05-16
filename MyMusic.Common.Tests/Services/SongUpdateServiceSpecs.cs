@@ -272,9 +272,11 @@ public class SongUpdateServiceSpecs
         scenario.DbContext.Add(newArtist);
         scenario.DbContext.SaveChanges();
 
+        // Include both the new artist and the album artist (required by validation)
+        var albumArtist = song.Album.Artist;
         var update = new SongUpdateModel
         {
-            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(newArtist.Id, null)])
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(newArtist.Id, null), new ArtistRef(albumArtist.Id, null)])
         };
 
         // Act
@@ -288,8 +290,8 @@ public class SongUpdateServiceSpecs
             .Include(s => s.Artists)
             .ThenInclude(sa => sa.Artist)
             .First(s => s.Id == song.Id);
-        updatedSong.Artists.Count.ShouldBe(1);
-        updatedSong.Artists.First().Artist.Name.ShouldBe("New Artist");
+        updatedSong.Artists.Count.ShouldBe(2);
+        updatedSong.Artists.Select(a => a.Artist.Name).ShouldContain("New Artist");
     }
 
     #region Helpers
