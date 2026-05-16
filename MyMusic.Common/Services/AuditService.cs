@@ -7,6 +7,7 @@ namespace MyMusic.Common.Services;
 
 public class AuditService(
     IEnumerable<IAuditRule> rules,
+    ICurrentUser currentUser,
     ILogger<AuditService> logger) : IAuditService
 {
     private readonly Dictionary<long, IAuditRule> _rules = rules.ToDictionary(r => r.Id);
@@ -15,14 +16,14 @@ public class AuditService(
 
     public IAuditRule? GetRule(long ruleId) => _rules.GetValueOrDefault(ruleId);
 
-    public async Task<int> ScanRule(MusicDbContext db, long ruleId, long ownerId,
+    public async Task<int> ScanRule(MusicDbContext db, long ruleId,
         CancellationToken cancellationToken = default)
     {
         var rule = GetRule(ruleId) ?? throw new Exception($"Audit rule not found with id {ruleId}");
         
         var count = 0;
         
-        await foreach (var nc in rule.Scan(db, ownerId, cancellationToken))
+        await foreach (var nc in rule.Scan(db, currentUser.Id, cancellationToken))
         {
             if (rule.CustomPage == null && nc.SongId == null)
             {
@@ -43,12 +44,11 @@ public class AuditService(
     public async Task<IReadOnlyList<AuditNonConformity>> GetNonConformities(
         MusicDbContext db,
         long ruleId,
-        long ownerId,
         CancellationToken cancellationToken = default)
     {
         return await db.AuditNonConformities
             .IncludeSongMetadata("Song")
-            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == ownerId)
+            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == currentUser.Id)
             .OrderByDescending(nc => nc.CreatedAt)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
@@ -57,24 +57,22 @@ public class AuditService(
     public async Task<int> GetNonConformityCount(
         MusicDbContext db,
         long ruleId,
-        long ownerId,
         CancellationToken cancellationToken = default)
     {
         return await db.AuditNonConformities
-            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == ownerId && !nc.HasWaiver)
+            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == currentUser.Id && !nc.HasWaiver)
             .CountAsync(cancellationToken);
     }
 
     public async Task SetWaiver(
         MusicDbContext db,
         long nonConformityId,
-        long ownerId,
         bool hasWaiver,
         string? waiverReason,
         CancellationToken cancellationToken = default)
     {
         var nonConformity = await db.AuditNonConformities
-                                .FirstOrDefaultAsync(nc => nc.Id == nonConformityId && nc.OwnerId == ownerId,
+                                .FirstOrDefaultAsync(nc => nc.Id == nonConformityId && nc.OwnerId == currentUser.Id,
                                     cancellationToken)
                             ?? throw new Exception($"Audit non-conformity not found with id {nonConformityId}");
 
@@ -86,13 +84,12 @@ public class AuditService(
     public async Task SetWaiverBatch(
         MusicDbContext db,
         List<long> ids,
-        long ownerId,
         bool hasWaiver,
         string? waiverReason,
         CancellationToken cancellationToken = default)
     {
         var nonConformities = await db.AuditNonConformities
-            .Where(nc => ids.Contains(nc.Id) && nc.OwnerId == ownerId)
+            .Where(nc => ids.Contains(nc.Id) && nc.OwnerId == currentUser.Id)
             .ToListAsync(cancellationToken);
 
         foreach (var nc in nonConformities)
@@ -107,11 +104,10 @@ public class AuditService(
     public async Task DeleteNonConformitiesBatch(
         MusicDbContext db,
         List<long> ids,
-        long ownerId,
         CancellationToken cancellationToken = default)
     {
         var nonConformities = await db.AuditNonConformities
-            .Where(nc => ids.Contains(nc.Id) && nc.OwnerId == ownerId)
+            .Where(nc => ids.Contains(nc.Id) && nc.OwnerId == currentUser.Id)
             .ToListAsync(cancellationToken);
 
         db.AuditNonConformities.RemoveRange(nonConformities);
@@ -121,11 +117,10 @@ public class AuditService(
     public async Task<int> ResetRule(
         MusicDbContext db,
         long ruleId,
-        long ownerId,
         CancellationToken cancellationToken = default)
     {
         var nonConformities = await db.AuditNonConformities
-            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == ownerId)
+            .Where(nc => nc.AuditRuleId == ruleId && nc.OwnerId == currentUser.Id)
             .ToListAsync(cancellationToken);
 
         db.AuditNonConformities.RemoveRange(nonConformities);

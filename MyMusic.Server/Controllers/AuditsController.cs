@@ -31,7 +31,7 @@ public class AuditsController(
 
         foreach (var rule in rules)
         {
-            var count = await auditService.GetNonConformityCount(db, rule.Id, currentUser.Id, cancellationToken);
+            var count = await auditService.GetNonConformityCount(db, rule.Id, cancellationToken);
             ruleItems.Add(new ListAuditRuleItem
             {
                 Id = rule.Id,
@@ -55,7 +55,7 @@ public class AuditsController(
         var rule = auditService.GetRule(id)
                    ?? throw new Exception($"Audit rule not found with id {id}");
 
-        var count = await auditService.GetNonConformityCount(db, rule.Id, currentUser.Id, cancellationToken);
+        var count = await auditService.GetNonConformityCount(db, rule.Id, cancellationToken);
 
         return new GetAuditRuleResponse
         {
@@ -77,7 +77,7 @@ public class AuditsController(
         MusicDbContext db,
         CancellationToken cancellationToken)
     {
-        var count = await auditService.ScanRule(db, id, currentUser.Id, cancellationToken);
+        var count = await auditService.ScanRule(db, id, cancellationToken);
         return new ScanAuditRuleResponse { NonConformitiesCreated = count };
     }
 
@@ -87,7 +87,7 @@ public class AuditsController(
         MusicDbContext db,
         CancellationToken cancellationToken)
     {
-        var count = await auditService.ResetRule(db, id, currentUser.Id, cancellationToken);
+        var count = await auditService.ResetRule(db, id, cancellationToken);
         return new ResetAuditRuleResponse { DeletedCount = count };
     }
 
@@ -136,7 +136,7 @@ public class AuditsController(
         MusicDbContext db,
         CancellationToken cancellationToken)
     {
-        await auditService.SetWaiver(db, id, currentUser.Id, request.HasWaiver, request.WaiverReason,
+        await auditService.SetWaiver(db, id, request.HasWaiver, request.WaiverReason,
             cancellationToken);
     }
 
@@ -161,7 +161,7 @@ public class AuditsController(
         MusicDbContext db,
         CancellationToken cancellationToken)
     {
-        await auditService.SetWaiverBatch(db, request.Ids, currentUser.Id, request.HasWaiver, request.WaiverReason,
+        await auditService.SetWaiverBatch(db, request.Ids, request.HasWaiver, request.WaiverReason,
             cancellationToken);
     }
 
@@ -171,7 +171,7 @@ public class AuditsController(
         MusicDbContext db,
         CancellationToken cancellationToken)
     {
-        await auditService.DeleteNonConformitiesBatch(db, request.Ids, currentUser.Id, cancellationToken);
+        await auditService.DeleteNonConformitiesBatch(db, request.Ids, cancellationToken);
     }
 
     [HttpGet("soundalike", Name = "GetSoundalikeDuplicates")]
