@@ -32,7 +32,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-remove-scroll": "^2.7.2",
-    "wavesurfer.js": "^7.10.1",
+    "wavesurfer.js": "^7.12.7",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
