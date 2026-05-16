@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Playwright;
+using MyMusic.Common.Targets;
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
@@ -142,7 +143,10 @@ public class MobileCliApplication : ISyncApplication
             tfile.Tag.Comment = options.Explicit.Value ? "Explicit" : "";
         }
 
+        // Rebuild tags same way server does to ensure identical checksums
+        FileTarget.RebuildTags(tfile);
         tfile.Save();
+
         File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow);
 
         await Task.CompletedTask;
@@ -199,10 +203,15 @@ public class MobileCliApplication : ISyncApplication
 
         var traceparent = Activity.Current?.Id;
 
+        // Find tsx relative to the CLI path
+        var cliDir = Path.GetDirectoryName(cliPath) ?? "";
+        var tsxBin = Path.Combine(cliDir, "..", "node_modules", ".bin", "tsx");
+        var tsxBinResolved = Path.GetFullPath(tsxBin);
+
         var startInfo = new ProcessStartInfo
         {
-            FileName = "npx",
-            Arguments = $"tsx {cliPath} {argsString}",
+            FileName = "node",
+            Arguments = $"\"{tsxBinResolved}\" {cliPath} {argsString}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -290,6 +299,14 @@ public class MobileCliApplication : ISyncApplication
 
     private static string FindCliPath()
     {
+        // Check environment variable first (for containerized tests)
+        var envPath = Environment.GetEnvironmentVariable("MOBILE_CLI_PATH");
+        if (!string.IsNullOrEmpty(envPath) && File.Exists(envPath))
+        {
+            return envPath;
+        }
+        
+        // Fallback to solution root discovery (for local development)
         var dir = AppContext.BaseDirectory;
         while (dir != null)
         {
@@ -299,7 +316,7 @@ public class MobileCliApplication : ISyncApplication
             }
             dir = Directory.GetParent(dir)?.FullName;
         }
-        throw new Exception("Could not find solution root");
+        throw new Exception("Could not find Mobile CLI. Set MOBILE_CLI_PATH environment variable.");
     }
 
     private void ForwardOpenTelemetryConfig(ProcessStartInfo startInfo)

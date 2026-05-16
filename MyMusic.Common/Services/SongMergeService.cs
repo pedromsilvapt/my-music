@@ -13,6 +13,7 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
     {
         if (keepSongId == mergeFromSongId)
         {
+            logger.LogDebug("Merge skipped: keepSongId and mergeFromSongId are the same ({SongId})", keepSongId);
             return SongMergeResult.Succeeded();
         }
 
@@ -23,13 +24,18 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
 
         if (keepSong == null)
         {
+            logger.LogDebug("Merge aborted: keepSong {KeepSongId} not found", keepSongId);
             return SongMergeResult.Failed($"Song with id {keepSongId} not found");
         }
 
         if (mergeFromSong == null)
         {
+            logger.LogDebug("Merge aborted: mergeFromSong {MergeFromSongId} not found", mergeFromSongId);
             return SongMergeResult.Failed($"Song with id {mergeFromSongId} not found");
         }
+
+        logger.LogDebug("Merging: KeepSong[{KeepId}] '{KeepTitle}' (Album='{KeepAlbum}') <- MergeFromSong[{MergeId}] '{MergeTitle}' (Album='{MergeAlbum}')",
+            keepSongId, keepSong.Title, keepSong.Album?.Name ?? "(null)", mergeFromSongId, mergeFromSong.Title, mergeFromSong.Album?.Name ?? "(null)");
 
         var hasExistingTransaction = db.Database.CurrentTransaction != null;
         var transaction = hasExistingTransaction 
@@ -90,6 +96,10 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             .ToListAsync(cancellationToken);
 
         var keepDeviceIds = keepDevices.Select(sd => sd.DeviceId).ToHashSet();
+        var duplicateCount = mergeFromDevices.Count(d => keepDeviceIds.Contains(d.DeviceId));
+
+        logger.LogDebug("  >> MergeSongDevices: {FromCount} from source, {KeepCount} in target, {DuplicateCount} duplicates to remove, {TransferCount} to transfer",
+            mergeFromDevices.Count, keepDevices.Count, duplicateCount, mergeFromDevices.Count - duplicateCount);
 
         foreach (var device in mergeFromDevices)
         {
@@ -116,6 +126,10 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             .ToListAsync(cancellationToken);
 
         var keepPlaylistIds = keepPlaylistSongs.Select(ps => ps.PlaylistId).ToHashSet();
+        var duplicateCount = mergeFromPlaylistSongs.Count(ps => keepPlaylistIds.Contains(ps.PlaylistId));
+
+        logger.LogDebug("  >> MergePlaylistSongs: {FromCount} from source, {KeepCount} in target, {DuplicateCount} duplicates to remove, {TransferCount} to transfer",
+            mergeFromPlaylistSongs.Count, keepPlaylistSongs.Count, duplicateCount, mergeFromPlaylistSongs.Count - duplicateCount);
 
         foreach (var playlistSong in mergeFromPlaylistSongs)
         {
@@ -247,6 +261,10 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             .ToListAsync(cancellationToken);
 
         var keepArtistIds = keepArtists.Select(sa => sa.ArtistId).ToHashSet();
+        var duplicateCount = mergeFromArtists.Count(sa => keepArtistIds.Contains(sa.ArtistId));
+
+        logger.LogDebug("  >> MergeSongArtists: {FromCount} from source, {KeepCount} in target, {DuplicateCount} duplicates to remove, {TransferCount} to transfer",
+            mergeFromArtists.Count, keepArtists.Count, duplicateCount, mergeFromArtists.Count - duplicateCount);
 
         foreach (var artist in mergeFromArtists)
         {
@@ -273,6 +291,10 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             .ToListAsync(cancellationToken);
 
         var keepGenreIds = keepGenres.Select(sg => sg.GenreId).ToHashSet();
+        var duplicateCount = mergeFromGenres.Count(sg => keepGenreIds.Contains(sg.GenreId));
+
+        logger.LogDebug("  >> MergeSongGenres: {FromCount} from source, {KeepCount} in target, {DuplicateCount} duplicates to remove, {TransferCount} to transfer",
+            mergeFromGenres.Count, keepGenres.Count, duplicateCount, mergeFromGenres.Count - duplicateCount);
 
         foreach (var genre in mergeFromGenres)
         {

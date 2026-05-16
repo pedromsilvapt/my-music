@@ -5,6 +5,7 @@
     <InIsolation>true</InIsolation>
     <EnvironmentVariables>
       <CLI_PATH>/usr/local/bin/my-music</CLI_PATH>
+      <MOBILE_CLI_PATH>/app/mobile-cli/test-cli/sync-cli.ts</MOBILE_CLI_PATH>
       <BROWSER>chromium</BROWSER>
       <BASE_URL>http://caddy</BASE_URL>
       <!-- Enable video + trace recording for debugging (set to "true" to enable) -->

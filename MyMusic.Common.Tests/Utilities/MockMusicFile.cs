@@ -46,7 +46,7 @@ public static class MockMusicFile
         using var tfile = TagLib.File.Create(fileInfo);
 
         TagConverter.FromSong(metadata, tfile.Tag).GetAwaiter().GetResult();
-
+        FileTarget.RebuildTags(tfile);
         tfile.Save();
     }
 }

@@ -71,7 +71,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         tfile.Save();
     }
 
-    private static void RebuildTags(TagLib.File file)
+    public static void RebuildTags(TagLib.File file)
     {
         // Get the underlying tags (Id3v2, Ape, Id3v1, etc.)
         var tags = (file.Tag as TagLib.CombinedTag)?.Tags ?? new[] { file.Tag };

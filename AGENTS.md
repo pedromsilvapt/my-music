@@ -51,6 +51,24 @@ dotnet run --project MyMusic.Common.Tests
 - **MyMusic.IntegrationTests** - Playwright browser tests for end-user functionality; inherit from `IntegrationTestBase` for automatic user lifecycle
 - Run with: `dotnet test MyMusic.IntegrationTests` or filter by name: `dotnet test --filter "FullyQualifiedName~TestName"`
 - The default configured RunSettings file is `MyMusic.IntegrationTests/.runsettings`
+
+### Containerized Integration Tests (CI Debugging)
+
+Use containerized tests **only** for debugging CI-specific failures. For local development, use `dotnet test` instead.
+
+```bash
+# Build the test image
+earth +docker-integration-tests
+
+# Run tests with all dependencies (postgres, server, client, caddy)
+docker compose -f compose.integration.yaml up --exit-code-from integration-tests
+
+# Cleanup containers and volumes
+docker compose -f compose.integration.yaml down --volumes
+```
+
+The compose file spins up a complete test environment (PostgreSQL, Server API, Client SPA, Caddy reverse proxy).
+
 - All test classes should inherit from the base `IntegrationTestBase` and should be placed in `Tests/<Domain>/<Name>Tests.cs`
 - Fixtures should live in the folder `Fixtures/`. Do not set up data on the tests themselves!
 - When instantiating fixture classes, prefer class variables over recreating the same fixture object in multiple tests on the same file.
@@ -207,6 +225,26 @@ docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, start_tim
 
 # All DELETE operations
 docker exec my-music-otelite-1 sqlite3 /data/otel.db "SELECT trace_id, span_name, start_time FROM traces WHERE span_name LIKE 'DELETE%' ORDER BY start_time DESC LIMIT 10"
+```
+
+**Note on Root Traces:** Root traces are identified by `parent_span_id` being an empty string (`''`). Non-root traces have this field populated with their parent's span ID.
+
+**Find Failed Tests:**
+```bash
+docker exec my-music-otelite-1 sqlite3 /data/otel.db "
+SELECT
+  t.trace_id,
+  t.timestamp,
+  t.span_name,
+  json_extract((SELECT value FROM json_each(t.attributes) WHERE json_extract(value, '$.key') = 'test.result'), '$.value.stringValue') as result,
+  json_extract((SELECT value FROM json_each(t.attributes) WHERE json_extract(value, '$.key') = 'test.exception.message'), '$.value.stringValue') as error,
+  json_extract((SELECT value FROM json_each(t.attributes) WHERE json_extract(value, '$.key') = 'test.exception.stackTrace'), '$.value.stringValue') as stack_trace
+FROM traces t
+WHERE (t.parent_span_id IS NULL OR t.parent_span_id = '')
+  AND t.span_name LIKE 'MyMusic.IntegrationTests%'
+  AND json_extract((SELECT value FROM json_each(t.attributes) WHERE json_extract(value, '$.key') = 'test.result'), '$.value.stringValue') != 'passed'
+ORDER BY t.timestamp DESC
+"
 ```
 
 ## Database Migrations

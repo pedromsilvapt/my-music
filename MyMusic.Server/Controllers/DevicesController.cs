@@ -947,11 +947,12 @@ public class DevicesController(
         {
             var existingSongDevice = existingSongDevices.FirstOrDefault(sd => sd.DevicePath == clientFile.Path);
 
-            Console.WriteLine("Creating File: {0} (Created At: {1} - {2})", clientFile.Path, clientFile.CreatedAt,
-                clientFile.CreatedAt.Ticks);
+            logger.LogDebug("CheckSync: Path='{Path}', DeviceId={DeviceId}, SongDeviceFound={Found}, SongId={SongId}, LastSyncedModifiedAt={LastSynced}",
+                clientFile.Path, deviceId, existingSongDevice != null, existingSongDevice?.SongId, existingSongDevice?.LastSyncedModifiedAt);
 
             if (existingSongDevice == null)
             {
+                logger.LogDebug("CheckSync: Path='{Path}' -> TO CREATE (no existing SongDevice)", clientFile.Path);
                 toCreate.Add(clientFile with
                 {
                     Reason = $"No matching SongDevice found on server for path '{clientFile.Path}'"
@@ -959,11 +960,11 @@ public class DevicesController(
             }
             else if (existingSongDevice.Song == null)
             {
-                // Song was deleted, SongDevice is kept for tracking removal
-                // Skip this in sync check - the sync complete flow handles removals
+                logger.LogDebug("CheckSync: Path='{Path}' -> SKIP (Song was deleted, SongDevice kept for tracking removal)", clientFile.Path);
             }
             else if (request.Force)
             {
+                logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> TO UPDATE (Force flag)", clientFile.Path, existingSongDevice.SongId);
                 toUpdate.Add(clientFile with { Reason = "Force flag was set" });
             }
             else if (existingSongDevice.LastSyncedModifiedAt == null)
@@ -997,6 +998,7 @@ public class DevicesController(
                 }
                 else
                 {
+                    logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> TO UPDATE (no sync timestamp)", clientFile.Path, existingSongDevice.SongId);
                     toUpdate.Add(clientFile with { Reason = "Local file exists with no sync timestamp" });
                 }
             }
@@ -1004,6 +1006,8 @@ public class DevicesController(
             {
                 if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
                 {
+                    logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> POTENTIAL CONFLICT (local modified {LocalModifiedAt:O}, server modified {ServerModifiedAt:O}, last synced {LastSynced:O})",
+                        clientFile.Path, existingSongDevice.SongId, clientFile.ModifiedAt, existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt);
                     potentialConflicts.Add(new SyncPotentialConflictItem
                     {
                         Path = clientFile.Path,
@@ -1017,6 +1021,8 @@ public class DevicesController(
                 }
                 else
                 {
+                    logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> TO UPDATE (file modified at {LocalModifiedAt:O} newer than last synced {LastSynced:O})",
+                        clientFile.Path, existingSongDevice.SongId, clientFile.ModifiedAt, existingSongDevice.LastSyncedModifiedAt);
                     toUpdate.Add(clientFile with { Reason = $"File modified at {clientFile.ModifiedAt:O} is newer than last synced modified at {existingSongDevice.LastSyncedModifiedAt:O}" });
                 }
             }
@@ -1112,8 +1118,10 @@ public class DevicesController(
 
             if (localChecksum == songDevice.Song.Checksum)
             {
-                var newLastSynced = conflict.LocalModifiedAt > songDevice.Song.ModifiedAt
-                    ? conflict.LocalModifiedAt
+                var localModifiedAtUtc = conflict.LocalModifiedAt.ToUniversalTime();
+
+                var newLastSynced = localModifiedAtUtc > songDevice.Song.ModifiedAt
+                    ? localModifiedAtUtc
                     : songDevice.Song.ModifiedAt;
 
                 songDevice.LastSyncedModifiedAt = newLastSynced;
@@ -1196,6 +1204,9 @@ public class DevicesController(
 
             var songDeviceForImport = await context.SongDevices
                 .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == path, cancellationToken);
+
+            logger.LogDebug("UploadFile: Path='{Path}', DeviceId={DeviceId}, SongDeviceFound={Found}, SongId={SongId}, ModifiedAt={ModifiedAt:O}",
+                path, deviceId, songDeviceForImport != null, songDeviceForImport?.SongId, modifiedAtDateTime);
 
             var songImportMetadata = new SongImportMetadata(
                 tempFilePath,

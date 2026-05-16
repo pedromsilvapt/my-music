@@ -1,5 +1,6 @@
 using System.Reflection;
 using MyMusic.Common.Metadata;
+using MyMusic.Common.Targets;
 
 namespace MyMusic.IntegrationTests.Fixtures;
 
@@ -43,6 +44,7 @@ public static class TestFiles
             };
             
             TagConverter.FromSong(metadata, tfile.Tag).GetAwaiter().GetResult();
+            FileTarget.RebuildTags(tfile);
             tfile.Save();
             
             return File.ReadAllBytes(tempPath);

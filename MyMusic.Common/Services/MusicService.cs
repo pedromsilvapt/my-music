@@ -323,14 +323,29 @@ public class MusicService(
 
                     var checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, sourceFile.FilePath);
 
-                    logger.LogDebug("  >> Checksum calculated: {Checksum}", checksum);
+                    logger.LogDebug("  >> Checksum calculated: {Checksum} ({Algorithm}) for file {FilePath}",
+                        checksum, checksumAlgorithmName, importSongMetadata.SourceFilePath);
 
                     var song = await repo.GetSongByChecksum(checksum, checksumAlgorithmName, cancellationToken);
+
+                    if (song is not null)
+                    {
+                        logger.LogDebug("  >> Found existing song by checksum: SongId={SongId}, Title='{Title}', Album='{Album}', RepositoryPath='{RepositoryPath}'",
+                            song.Id, song.Title, song.Album?.Name, song.RepositoryPath);
+                    }
+                    else
+                    {
+                        logger.LogDebug("  >> No existing song found with matching checksum");
+                    }
 
                     if (song is not null &&
                         importSongMetadata.SongId.HasValue &&
                         importSongMetadata.SongId.Value != song.Id)
                     {
+                        var existingSong = await db.Songs.FindAsync([importSongMetadata.SongId.Value], cancellationToken);
+                        logger.LogDebug("  >> MERGE TRIGGERED: Existing song found by checksum (Id={ExistingSongId}, Title='{ExistingTitle}') differs from uploaded song (SongId={UploadedSongId}, Title='{UploadedTitle}'). Checksum={Checksum}",
+                            song.Id, song.Title, importSongMetadata.SongId.Value, existingSong?.Title ?? "(not found)", checksum);
+
                         var mergeResult = await songMergeService.MergeSongsAsync(
                             db,
                             song.Id,
@@ -339,9 +354,12 @@ public class MusicService(
 
                         if (!mergeResult.Success)
                         {
+                            logger.LogError("  >> MERGE FAILED: {ErrorMessage}", mergeResult.ErrorMessage);
                             job.AddException(new Exception($"Failed to merge songs: {mergeResult.ErrorMessage}"));
                             continue;
                         }
+
+                        logger.LogDebug("  >> MERGE SUCCEEDED: Merged song {MergeFromSongId} into {KeepSongId}", importSongMetadata.SongId.Value, song.Id);
 
                         await dbTrans.CommitAsync(cancellationToken);
 
@@ -354,6 +372,8 @@ public class MusicService(
                         (duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip ||
                          duplicatesStrategy == DuplicateSongsHandlingStrategy.SkipIdentical))
                     {
+                        logger.LogDebug("  >> SKIPPING: Duplicate checksum found. SongId={SongId}, RepositoryPath='{Path}', Strategy={Strategy}",
+                            song.Id, song.RepositoryPath, duplicatesStrategy);
                         job.AddSkipReason(new DuplicateChecksumSkipReason(importSongMetadata.SourceFilePath,
                             metadata.FullLabel, checksum, checksumAlgorithmName, song.Label, song.Id));
                         job.AddSongMapping(importSongMetadata, song);
@@ -364,8 +384,15 @@ public class MusicService(
 
                     song ??= await repo.GetSongByPath(targetFile.FilePath!, cancellationToken);
 
+                    if (song is not null)
+                    {
+                        logger.LogDebug("  >> Found existing song by repository path: SongId={SongId}, Path='{Path}'",
+                            song.Id, targetFile.FilePath);
+                    }
+
                     if (song is null && importSongMetadata.SongId.HasValue)
                     {
+                        logger.LogDebug("  >> Loading song by SongId={SongId} from import metadata", importSongMetadata.SongId.Value);
                         song = await db.Songs
                             .Include(s => s.Devices)
                             .FirstOrDefaultAsync(s => s.Id == importSongMetadata.SongId.Value, cancellationToken);
@@ -375,6 +402,8 @@ public class MusicService(
                         File.Exists(song.RepositoryPath) &&
                         duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip)
                     {
+                        logger.LogDebug("  >> SKIPPING: File exists at repository path with Skip strategy. SongId={SongId}, Path='{Path}'",
+                            song.Id, song.RepositoryPath);
                         job.AddSkipReason(new DuplicateFilePathSkipReason(importSongMetadata.SourceFilePath,
                             metadata.FullLabel, targetFile.FilePath!, song.Label, song.Id));
                         job.AddSongMapping(importSongMetadata, song);
@@ -383,6 +412,9 @@ public class MusicService(
 
                     if (song is not null)
                     {
+                        logger.LogDebug("  >> UPDATING existing song: SongId={SongId}, Title='{OldTitle}' -> '{NewTitle}', Album='{OldAlbum}' -> '{NewAlbum}'",
+                            song.Id, song.Title, metadata.Title, song.Album?.Name, metadata.Album?.Name);
+
                         song = await db.Songs
                             .Include(s => s.Artists)
                             .Include(s => s.Genres)
@@ -391,6 +423,11 @@ public class MusicService(
                             .ThenInclude(a => a!.Artist)
                             .Include(s => s.Devices)
                             .FirstAsync(s => s.Id == song.Id, cancellationToken);
+                    }
+                    else
+                    {
+                        logger.LogDebug("  >> CREATING new song: Title='{Title}', Album='{Album}', Artists=[{Artists}]",
+                            metadata.Title, metadata.Album?.Name, string.Join(", ", metadata.Artists?.Select(a => a.Name) ?? []));
                     }
 
                     ImageBuffer? cover = null;

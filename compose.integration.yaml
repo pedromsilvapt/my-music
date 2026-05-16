@@ -1,3 +1,5 @@
+name: my-music-integration-tests
+
 services:
   db:
     image: postgres:17
@@ -18,9 +20,15 @@ services:
     environment:
       MYMUSIC_HEADER_ID_ENABLED: "1"
       ConnectionStrings__Postgres: "Host=db;Port=5432;Username=postgres;Password=postgres;Database=my-music"
+      OpenTelemetry__Enabled: "true"
+      OpenTelemetry__Protocol: "http/protobuf"
+      OpenTelemetry__Endpoint: "http://otelite:4318"
+      Logging__LogLevel__MyMusic: "Debug"
     depends_on:
       db:
         condition: service_healthy
+    extra_hosts:
+      otelite: host-gateway
 
   client:
     image: gitea.home/silvas/my-music-ui:${VERSION:-dev}
@@ -41,14 +49,21 @@ services:
 
   integration-tests:
     image: gitea.home/silvas/my-music-integrations-tests:${VERSION:-dev}
+    environment:
+      OpenTelemetry__Enabled: "true"
+      OpenTelemetry__Protocol: "http/protobuf"
+      OpenTelemetry__Endpoint: "http://otelite:4318"
     depends_on:
       db:
         condition: service_healthy
       caddy:
         condition: service_healthy
+    extra_hosts:
+      otelite: host-gateway
 
 volumes:
   postgres-data: {}
+  otelite-data: {}
 
 configs:
   caddyfile:

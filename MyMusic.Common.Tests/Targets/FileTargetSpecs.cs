@@ -2,8 +2,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.IO.Hashing;
 using System.Runtime.InteropServices;
 using MyMusic.Common.Metadata;
+using MyMusic.Common.Services;
 using MyMusic.Common.Targets;
 using MyMusic.Common.Tests.Utilities;
 using Shouldly;
@@ -74,6 +76,63 @@ public class FileTargetSpecs
 
         // File with small artwork should be smaller than file with big artwork
         bigFileSize.ShouldBeGreaterThan(smallFileSize);
+    }
+
+    [Fact]
+    public async Task SaveMetadata_WithSameMetadataChangeOnTwoIdenticalFiles_ChecksumsShouldMatch()
+    {
+        // Arrange - Create two identical MP3 files
+        var fs = new MockFileSystem();
+        fs.Directory.CreateDirectory("/data/artist/album");
+
+        const string fileA = "/data/artist/album/song-a.mp3";
+        const string fileB = "/data/artist/album/song-b.mp3";
+
+        fs.File.WriteAllBytes(fileA, MockMusicFile.GetTestMusicFile());
+        fs.File.WriteAllBytes(fileB, MockMusicFile.GetTestMusicFile());
+
+        // Write initial metadata with different titles to simulate different starting states
+        // File A starts with title "the alibi" (lowercase)
+        var metadataA = new SongMetadata(null, "the alibi")
+        {
+            Album = new AlbumMetadata(null, "The Alibi", new CoverArtMetadata(), new ArtistMetadata(null, "Dylan")),
+            Artists = [new ArtistMetadata(null, "Dylan")],
+            Genres = ["Rock"],
+        };
+
+        // File B starts with title "The Alibi" (proper casing)
+        var metadataB = new SongMetadata(null, "The Alibi")
+        {
+            Album = new AlbumMetadata(null, "The Alibi", new CoverArtMetadata(), new ArtistMetadata(null, "Dylan")),
+            Artists = [new ArtistMetadata(null, "Dylan")],
+            Genres = ["Rock"],
+        };
+
+        // Write initial metadata to both files
+        var targetA = new FileTarget(fs) { FilePath = fileA };
+        var targetB = new FileTarget(fs) { FilePath = fileB };
+
+        await targetA.SaveMetadata(metadataA);
+        await targetB.SaveMetadata(metadataB);
+
+        // Get initial checksums - they should differ because titles are different
+        var initialChecksumA = ChecksumService.CalculateChecksum(new XxHash128(), fs.File.ReadAllBytes(fileA));
+        var initialChecksumB = ChecksumService.CalculateChecksum(new XxHash128(), fs.File.ReadAllBytes(fileB));
+        initialChecksumA.ShouldNotBe(initialChecksumB, "Initial checksums should differ because titles are different");
+
+        // Act - Now update file A to have the same metadata as file B
+        // This simulates the CLI test scenario: updating title from "the alibi" to "The Alibi"
+        var targetAUpdated = new FileTarget(fs) { FilePath = fileA };
+        await targetAUpdated.SaveMetadata(metadataB);
+
+        // Get final checksums
+        var finalChecksumA = ChecksumService.CalculateChecksum(new XxHash128(), fs.File.ReadAllBytes(fileA));
+        var finalChecksumB = ChecksumService.CalculateChecksum(new XxHash128(), fs.File.ReadAllBytes(fileB));
+
+        // Assert - Both files should have identical checksums after the update
+        finalChecksumA.ShouldBe(finalChecksumB,
+            "Checksums should match when both files have identical metadata. " +
+            $"File A: {initialChecksumA} -> {finalChecksumA}, File B: {initialChecksumB} -> {finalChecksumB}");
     }
 
     private static CoverArtMetadata CreateCoverArt(int width, int height)

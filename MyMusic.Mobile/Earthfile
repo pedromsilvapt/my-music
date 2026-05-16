@@ -90,3 +90,19 @@ package:
 
     COPY +build/app-*.apk /app/MyMusic-Mobile.apk
     SAVE ARTIFACT /app/MyMusic-Mobile.apk
+
+test-cli:
+    FROM node:${NODE_VERSION}-trixie
+
+    WORKDIR /app/mobile-cli
+
+    COPY package*.json ./
+    COPY tsconfig.json ./
+
+    RUN npm install
+    RUN npm install tsx
+
+    COPY test-cli ./test-cli
+    COPY src ./src
+
+    SAVE ARTIFACT /app/mobile-cli mobile-cli

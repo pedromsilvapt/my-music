@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Playwright;
+using MyMusic.Common.Targets;
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
@@ -290,7 +291,10 @@ public class CliTestFixture : IAsyncDisposable
             tfile.Tag.Comment = options.Explicit.Value ? "Explicit" : "";
         }
 
+        // Rebuild tags same way server does to ensure identical checksums
+        FileTarget.RebuildTags(tfile);
         tfile.Save();
+
         File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow);
 
         await Task.CompletedTask;

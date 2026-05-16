@@ -109,12 +109,14 @@ docker-integration-tests:
     ENV PATH="$PNPM_HOME/bin:$PATH"
 
     ENV PLAYWRIGHT_BROWSERS_PATH=/home/vscode/.cache/ms-playwright
-    RUN pnpm install -g playwright@^1.59 && \
-        pnpx playwright install chromium --with-deps && \
+    RUN pnpm install -g playwright@1.59 && \
+        pnpx playwright@1.59 install chromium --with-deps && \
         pnpm uninstall -g playwright
 
     COPY ./MyMusic.CLI+package/. /tmp/
     RUN dpkg -i /tmp/my-music-cli_0.0.0_amd64.deb && rm /tmp/my-music-cli_0.0.0_amd64.deb
+
+    COPY ./MyMusic.Mobile+test-cli/mobile-cli /app/mobile-cli
 
     COPY +integration-tests/publish ./bin
 
