@@ -71,6 +71,7 @@ export default function ArtistDetailPage() {
                     stateKey="artist-albums"
                     items={albums}
                     schema={albumsSchema}
+                    autoHeight
                 />
             </Box>
 
@@ -94,6 +95,7 @@ export default function ArtistDetailPage() {
                     stateKey="artist-songs"
                     items={songs}
                     schema={songsSchema}
+                    autoHeight
                 />
             </Box>
         </Stack>

@@ -49,12 +49,13 @@ export interface CollectionTableProps<M> {
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
     scrollRequestId?: number;
-    height: number;
+    height: number | undefined;
+    autoHeight?: boolean;
     onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, onSort, sort: propSort} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, onSort, sort: propSort, autoHeight} = props;
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -242,7 +243,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     });
 
     const tableContent = (
-        <Box style={{height: `${Math.max(height, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
+        <Box style={autoHeight ? undefined : {height: `${Math.max(height ?? 0, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
             <Table highlightOnHover ref={tableRef} style={{
                 borderCollapse: 'separate',
             }}>
@@ -313,7 +314,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={{height: height, overflowY: "auto"}}>
+                <Box ref={parentRef} style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
                     {tableContent}
                 </Box>
                 <DragOverlay>
@@ -347,7 +348,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         );
     }
 
-    return <Box ref={parentRef} style={{height: height, overflowY: "auto"}}>
+    return <Box ref={parentRef} style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
         {tableContent}
     </Box>;
 }

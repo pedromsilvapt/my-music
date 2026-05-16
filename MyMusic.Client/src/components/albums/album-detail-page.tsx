@@ -58,6 +58,7 @@ export default function AlbumDetailPage() {
                     stateKey="album-detail"
                     items={songs}
                     schema={songsSchema}
+                    autoHeight
                 />
             </Box>
         </Stack>

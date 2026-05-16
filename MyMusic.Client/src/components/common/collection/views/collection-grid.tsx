@@ -40,7 +40,8 @@ export interface CollectionGridProps<M> {
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
     scrollRequestId?: number;
-    height: number;
+    height: number | undefined;
+    autoHeight?: boolean;
     onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
@@ -76,7 +77,7 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 }
 
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, scrollToIndex, scrollRequestId, sortable, height, onReorderBatch, onReorder} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, scrollToIndex, scrollRequestId, sortable, height, onReorderBatch, onReorder, autoHeight} = props;
     const {lanes, parentRef, elemSize, gap} = props;
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -238,7 +239,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     });
 
     const gridContent = (
-        <Box style={{height: `${Math.max(height, virtualizer.getTotalSize())}px`}}>
+        <Box style={autoHeight ? undefined : {height: `${Math.max(height ?? 0, virtualizer.getTotalSize())}px`}}>
             {sortable ? (
                 <SortableContext
                     items={itemIds}
@@ -268,7 +269,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={{width: "100%", height: height, overflowY: "auto"}}>
+                <Box ref={parentRef} style={autoHeight ? {width: "100%"} : {width: "100%", height: height, overflowY: "auto"}}>
                     {gridContent}
                 </Box>
                 <DragOverlay>
@@ -298,7 +299,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     }
 
     return (
-        <Box ref={parentRef} style={{width: "100%", height: height, overflowY: "auto"}}>
+        <Box ref={parentRef} style={autoHeight ? {width: "100%"} : {width: "100%", height: height, overflowY: "auto"}}>
             {gridContent}
         </Box>
     );

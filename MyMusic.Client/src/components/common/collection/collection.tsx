@@ -42,6 +42,7 @@ interface CollectionProps<T extends { id: string | number }> {
     searchPlaceholder?: string;
     scrollToSongId?: number | string;
     scrollRequestId?: number;
+    autoHeight?: boolean;
 }
 
 const MIN_VIEW_HEIGHT = 200;
@@ -49,13 +50,14 @@ const MIN_VIEW_HEIGHT = 200;
 export default function Collection<T extends { id: string | number }>(props: CollectionProps<T>) {
     const filterMode = props.filterMode ?? 'client';
     const stateKey = props.stateKey;
+    const autoHeight = props.autoHeight ?? false;
 
     const {ref: containerRef, height: containerHeight} = useElementSize<HTMLDivElement>();
     const {ref: toolbarRef, height: toolbarHeight} = useElementSize<HTMLDivElement>();
     const collectionContainerRef = useRef<HTMLDivElement>(null);
     const floatingBarPortalTargetRef = useRef<HTMLDivElement>(null);
 
-    const viewHeight = Math.max(MIN_VIEW_HEIGHT, containerHeight - toolbarHeight);
+    const viewHeight = autoHeight ? undefined : Math.max(MIN_VIEW_HEIGHT, containerHeight - toolbarHeight);
 
     const {
         getCollectionState,
@@ -326,6 +328,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             scrollRequestId={props.scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
+            autoHeight={autoHeight}
         />;
     } else if (view === 'list') {
         viewNode = <CollectionList
@@ -342,6 +345,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             scrollRequestId={props.scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
+            autoHeight={autoHeight}
         />;
     } else if (view === 'grid') {
         viewNode = <CollectionGrid
@@ -358,6 +362,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             scrollRequestId={props.scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
+            autoHeight={autoHeight}
         />;
     } else {
         throw new Error(`Invalid collection view: ${view}`);
@@ -378,7 +383,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const toolbar = props.toolbar ?? (p => <CollectionToolbar {...p} />);
 
-    return <Flex ref={containerRef} direction="column" style={{height: `100%`}} data-testid="collection" data-loading={props.isFetching ? "true" : "false"}>
+    return <Flex ref={containerRef} direction="column" style={autoHeight ? undefined : {height: `100%`}} data-testid="collection" data-loading={props.isFetching ? "true" : "false"}>
         <Box ref={toolbarRef}>
             {toolbar({
                 search: searchFilter.value,
@@ -405,8 +410,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
             })}
         </Box>
 
-        <Box ref={collectionContainerRef} pos="relative" flex={1}
-             style={{minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
+        <Box ref={collectionContainerRef} pos="relative" {...(autoHeight ? {} : {flex: 1})}
+             style={autoHeight ? undefined : {minHeight: MIN_VIEW_HEIGHT, overflow: 'hidden'}}>
             <LoadingOverlay visible={props.isFetching ?? false} zIndex={ZINDEX_MODAL}
                             overlayProps={{radius: "sm", blur: 2}}/>
             <SelectionStoreProvider store={selectionStore}>

@@ -39,12 +39,13 @@ export interface CollectionListProps<M> {
     onScrollPositionChange?: (position: ScrollPosition) => void;
     scrollToIndex?: number;
     scrollRequestId?: number;
-    height: number;
+    height: number | undefined;
+    autoHeight?: boolean;
     onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, autoHeight} = props;
     const parentRef = useRef<HTMLDivElement>(null)
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -204,7 +205,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
     });
 
     const listContent = (
-        <Box style={{height: `${Math.max(height, virtualizer.getTotalSize())}px`}}>
+        <Box style={autoHeight ? undefined : {height: `${Math.max(height ?? 0, virtualizer.getTotalSize())}px`}}>
             {sortable ? (
                 <SortableContext
                     items={itemIds}
@@ -234,7 +235,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={{height: height, overflowY: "auto"}}>
+                <Box ref={parentRef} style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
                     {listContent}
                 </Box>
                 <DragOverlay>
@@ -261,7 +262,7 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
         );
     }
 
-    return <Box ref={parentRef} style={{height: height, overflowY: "auto"}}>
+    return <Box ref={parentRef} style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
         {listContent}
     </Box>;
 }
