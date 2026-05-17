@@ -3,7 +3,6 @@ import type { ArtworkRef } from "../../model/artworkRef";
 import type {
     SongMetadataDiff,
 } from "../../model/songMetadataDiff";
-import { convertArtworkUrlToBase64 } from "../../utils/artwork";
 import type { AutocompleteItem } from "./autocomplete-field";
 import type { TagsAutocompleteItem } from "./tags-autocomplete-field";
 
@@ -42,6 +41,7 @@ export interface FormState {
     rating: number | null;
     explicit: boolean;
     cover: ArtworkRef | null;
+    coverUrl?: string;
     coverDimensions: { width: number; height: number } | null;
     album: AutocompleteItem | null;
     albumArtist: AutocompleteItem | null;
@@ -107,10 +107,10 @@ export function formStateFromSong(song: GetSongResponseSong): FormState {
     };
 }
 
-export async function formStateFromMetadata(
+export function formStateFromMetadata(
     metadata: SongMetadataDiff,
     originalForm: FormState,
-): Promise<FormState> {
+): FormState {
     const form: FormState = { ...originalForm };
 
     if (metadata.title) {
@@ -128,10 +128,12 @@ export async function formStateFromMetadata(
     if (metadata.explicit) {
         form.explicit = metadata.explicit.new ?? false;
     }
+    // Always clear coverUrl first, then set if metadata has cover
+    form.coverUrl = undefined;
     if (metadata.cover) {
         if (metadata.cover.new) {
-            const base64 = await convertArtworkUrlToBase64(metadata.cover.new);
-            form.cover = { base64 };
+            form.coverUrl = metadata.cover.new;
+            form.cover = null;
         } else {
             form.cover = null;
         }

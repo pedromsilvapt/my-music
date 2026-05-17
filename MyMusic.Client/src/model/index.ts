@@ -124,6 +124,7 @@ export * from './getDevicesDeviceIdSessionsSessionIdRecordsParams';
 export * from './getDevicesFilterValuesParams';
 export * from './getDeviceSongsResponse';
 export * from './getDevicesParams';
+export * from './getMetadataFetchSongSongIdParams';
 export * from './getPendingActionsResponse';
 export * from './getPlaylistFilterValuesParams';
 export * from './getPlaylistItem';

@@ -12,10 +12,12 @@ import {
 import {useDebouncedValue, useColorScheme} from "@mantine/hooks";
 import {IconAlertCircle, IconLoader, IconMusic, IconSearch} from "@tabler/icons-react";
 import {useCallback, useEffect, useRef, useState} from "react";
-import {getSong, useSearchMetadataAllSources} from "../../client/sources.ts";
+import {useSearchMetadataAllSources} from "../../client/sources.ts";
+import {useManualFetchMetadata} from "../../hooks/useManualFetchMetadata";
+import type {SongMetadataDiff} from "../../model/songMetadataDiff";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {SearchMetadataResult, SongMetadataDiff, SourceSong} from "../../model";
+import type {SearchMetadataResult} from "../../model";
 import type {GetSongResponseSong} from "../../model/getSongResponseSong";
 import {ZINDEX_DRAWER} from "../../consts";
 import {ActionIcon, Button} from "@mantine/core";
@@ -25,76 +27,6 @@ interface MetadataSearchModalProps {
     onClose: () => void;
     song: GetSongResponseSong;
     onSelect: (metadata: SongMetadataDiff) => void;
-}
-
-function createMetadataDiff(song: GetSongResponseSong, sourceSong: SourceSong): SongMetadataDiff {
-    const diff: SongMetadataDiff = {};
-
-    if (sourceSong.title?.trim() && !stringEquals(song.title, sourceSong.title)) {
-        diff.title = { old: song.title, new: sourceSong.title };
-    }
-
-    if (sourceSong.year != null && sourceSong.year > 0 && song.year !== sourceSong.year) {
-        diff.year = { old: song.year ?? 0, new: sourceSong.year };
-    }
-
-    if (sourceSong.lyrics?.trim() && !stringEquals(song.lyrics ?? "", sourceSong.lyrics)) {
-        diff.lyrics = { old: song.lyrics ?? "", new: sourceSong.lyrics };
-    }
-
-    if (sourceSong.explicit != null && sourceSong.explicit !== song.isExplicit) {
-        diff.explicit = { old: song.isExplicit, new: sourceSong.explicit };
-    }
-
-    if (sourceSong.album?.name?.trim() && !stringEquals(song.album?.name, sourceSong.album.name)) {
-        diff.album = {
-            old: { name: song.album?.name ?? "" },
-            new: { name: sourceSong.album.name },
-        };
-    }
-
-    if (sourceSong.album?.artist?.name?.trim() && !stringEquals(song.album?.artist?.name, sourceSong.album.artist.name)) {
-        diff.albumArtist = {
-            old: song.album?.artist?.name ?? "",
-            new: sourceSong.album.artist.name,
-        };
-    }
-
-    const songArtistNames = song.artists.map(a => a.name);
-    const sourceArtistNames = sourceSong.artists.map(a => a.name);
-
-    if (sourceArtistNames.length > 0 && !arraysEqual(songArtistNames, sourceArtistNames)) {
-        diff.artists = {
-            old: songArtistNames.map(name => ({ name })),
-            new: sourceArtistNames.map(name => ({ name })),
-        };
-    }
-
-    const songGenreNames = song.genres.map(g => g.name);
-    const sourceGenreNames = sourceSong.genres;
-
-    if (sourceGenreNames.length > 0 && !arraysEqual(songGenreNames, sourceGenreNames)) {
-        diff.genres = {
-            old: songGenreNames,
-            new: sourceGenreNames,
-        };
-    }
-
-    if (sourceSong.cover) {
-        const oldCoverUrl = song.cover ? `/api/artwork/${song.cover}` : "";
-        diff.cover = { old: oldCoverUrl, new: sourceSong.cover.biggest ?? "" };
-    }
-
-    return diff;
-}
-
-function stringEquals(a: string | null | undefined, b: string | null | undefined): boolean {
-    return (a ?? "").toLowerCase() === (b ?? "").toLowerCase();
-}
-
-function arraysEqual(a: string[], b: string[]): boolean {
-    if (a.length !== b.length) return false;
-    return a.every((val, idx) => stringEquals(val, b[idx]));
 }
 
 export default function MetadataSearchModal({
@@ -122,18 +54,12 @@ export default function MetadataSearchModal({
     const results = searchResponse?.data?.results ?? [];
     const isLoading = searchQuery.isFetching;
 
+    const { manualFetch } = useManualFetchMetadata(onSelect);
+
     const handleSelect = useCallback(async (result: SearchMetadataResult) => {
-        try {
-            const response = await getSong(result.sourceId, result.song.id);
-            const fullDetails = response.data;
-            const diff = createMetadataDiff(song, fullDetails);
-            onSelect(diff);
-        } catch {
-            const diff = createMetadataDiff(song, result.song);
-            onSelect(diff);
-        }
+        await manualFetch(song.id, result);
         onClose();
-    }, [song, onSelect, onClose]);
+    }, [song.id, manualFetch, onClose]);
 
     return (
         <Modal

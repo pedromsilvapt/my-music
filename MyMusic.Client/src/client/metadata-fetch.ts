@@ -32,6 +32,7 @@ import type {
   BatchMetadataFetchResponse,
   ClearAllTasksResponse,
   FailedTaskDetailResponse,
+  GetMetadataFetchSongSongIdParams,
   MetadataQueueStatusResponse,
   RequeueFailedMetadataRequest,
   RequeueFailedMetadataResponse
@@ -183,17 +184,26 @@ export type getMetadataFetchSongSongIdResponseSuccess = (getMetadataFetchSongSon
 
 export type getMetadataFetchSongSongIdResponse = (getMetadataFetchSongSongIdResponseSuccess)
 
-export const getGetMetadataFetchSongSongIdUrl = (songId: number,) => {
+export const getGetMetadataFetchSongSongIdUrl = (songId: number,
+    params?: GetMetadataFetchSongSongIdParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/metadata-fetch/song/${songId}`
+  return stringifiedParams.length > 0 ? `/api/metadata-fetch/song/${songId}?${stringifiedParams}` : `/api/metadata-fetch/song/${songId}`
 }
 
-export const getMetadataFetchSongSongId = async (songId: number, options?: RequestInit): Promise<getMetadataFetchSongSongIdResponse> => {
+export const getMetadataFetchSongSongId = async (songId: number,
+    params?: GetMetadataFetchSongSongIdParams, options?: RequestInit): Promise<getMetadataFetchSongSongIdResponse> => {
 
-  const res = await fetch(getGetMetadataFetchSongSongIdUrl(songId),
+  const res = await fetch(getGetMetadataFetchSongSongIdUrl(songId,params),
   {
     ...options,
     method: 'GET'
@@ -213,23 +223,25 @@ export const getMetadataFetchSongSongId = async (songId: number, options?: Reque
 
 
 
-export const getGetMetadataFetchSongSongIdQueryKey = (songId: number,) => {
+export const getGetMetadataFetchSongSongIdQueryKey = (songId: number,
+    params?: GetMetadataFetchSongSongIdParams,) => {
     return [
-    'api','metadata-fetch','song',songId
+    'api','metadata-fetch','song',songId, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetMetadataFetchSongSongIdQueryOptions = <TData = Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError = unknown>(songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>>, fetch?: RequestInit}
+export const getGetMetadataFetchSongSongIdQueryOptions = <TData = Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError = unknown>(songId: number,
+    params?: GetMetadataFetchSongSongIdParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
 const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMetadataFetchSongSongIdQueryKey(songId);
+  const queryKey =  queryOptions?.queryKey ?? getGetMetadataFetchSongSongIdQueryKey(songId,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>> = ({ signal }) => getMetadataFetchSongSongId(songId, { signal, ...fetchOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>> = ({ signal }) => getMetadataFetchSongSongId(songId,params, { signal, ...fetchOptions });
 
 
 
@@ -243,7 +255,8 @@ export type GetMetadataFetchSongSongIdQueryError = unknown
 
 
 export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError = unknown>(
- songId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>> & Pick<
+ songId: number,
+    params: undefined |  GetMetadataFetchSongSongIdParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMetadataFetchSongSongId>>,
           TError,
@@ -253,7 +266,8 @@ export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof 
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError = unknown>(
- songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>> & Pick<
+ songId: number,
+    params?: GetMetadataFetchSongSongIdParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getMetadataFetchSongSongId>>,
           TError,
@@ -263,16 +277,18 @@ export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof 
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError = unknown>(
- songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>>, fetch?: RequestInit}
+ songId: number,
+    params?: GetMetadataFetchSongSongIdParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError = unknown>(
- songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>>, fetch?: RequestInit}
+ songId: number,
+    params?: GetMetadataFetchSongSongIdParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetMetadataFetchSongSongIdQueryOptions(songId,options)
+  const queryOptions = getGetMetadataFetchSongSongIdQueryOptions(songId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -281,10 +297,11 @@ export function useGetMetadataFetchSongSongId<TData = Awaited<ReturnType<typeof 
 
 
 export const invalidateGetMetadataFetchSongSongId = async (
- queryClient: QueryClient, songId: number, options?: InvalidateOptions
+ queryClient: QueryClient, songId: number,
+    params?: GetMetadataFetchSongSongIdParams, options?: InvalidateOptions
   ): Promise<QueryClient> => {
 
-  await queryClient.invalidateQueries({ queryKey: getGetMetadataFetchSongSongIdQueryKey(songId) }, options);
+  await queryClient.invalidateQueries({ queryKey: getGetMetadataFetchSongSongIdQueryKey(songId,params) }, options);
 
   return queryClient;
 }

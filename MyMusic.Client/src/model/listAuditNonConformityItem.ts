@@ -16,6 +16,8 @@ export interface ListAuditNonConformityItem {
      */
   songId?: number | null;
   song?: null | ListSongItem;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  auditRuleId: number;
   data?: null | JsonElement;
   hasWaiver: boolean;
   /** @nullable */

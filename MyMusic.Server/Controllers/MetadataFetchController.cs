@@ -13,7 +13,22 @@ using MyMusic.Server.Mapping;
 namespace MyMusic.Server.Controllers;
 
 /// <summary>
-/// Controller for metadata auto-fetch operations.
+/// Controller for metadata fetch operations.
+/// 
+/// This controller handles two distinct metadata-fetch flows:
+/// 
+/// 1. Prefetch (database lookup) — GET /metadata-fetch/song/{songId} without sourceId/sourceSongId:
+///    Reads previously auto-fetched metadata from the AutoFetchedMetadata database table.
+///    Used when the Song Edit Modal opens from an audit rule page: the prefetch hook loads
+///    cached metadata and returns preSelectedFields based on the audit rules that flagged the song.
+/// 
+/// 2. Manual fetch (direct source) — GET /metadata-fetch/song/{songId}?sourceId=X&sourceSongId=Y:
+///    Fetches metadata directly from the specified source at request time.
+///    Used when the user selects a specific search result in the Metadata Search Modal.
+///    Returns preSelectedFields as empty since there are no audit-rule-driven selections.
+/// 
+/// The "auto" button (live source search) is handled separately via POST /songs/{id}/fetch-metadata
+/// in the SongsController, which searches all configured sources and picks the best match.
 /// </summary>
 [ApiController]
 [Route("metadata-fetch")]
@@ -112,23 +127,36 @@ public class MetadataFetchController(
         });
     }
 
-    /// <summary>
-    /// Gets pending auto-fetched metadata for a specific song.
-    /// Constructs the metadata diff at runtime from stored raw source data.
-    /// </summary>
-    /// <param name="db">Database context</param>
-    /// <param name="currentUser">Current authenticated user</param>
-    /// <param name="fieldMapper">Audit rule field mapper</param>
-    /// <param name="songId">Song ID</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>Auto-fetched metadata if available</returns>
-    [HttpGet("song/{songId:long}")]
-    public async Task<ActionResult<AutoFetchedMetadataResponse>> GetAutoFetchedMetadata(
-        [FromServices] MusicDbContext db,
-        [FromServices] ICurrentUser currentUser,
-        [FromServices] IAuditRuleFieldMapper fieldMapper,
-        [FromRoute] long songId,
-        CancellationToken cancellationToken)
+/// <summary>
+/// Gets metadata for a specific song via one of two modes:
+/// 
+/// Prefetch mode (no sourceId/sourceSongId): reads the most recent pending auto-fetched metadata
+/// from the AutoFetchedMetadata database table. Includes preSelectedFields derived from the song's
+/// audit non-conformities. Used when the Song Edit Modal opens from an audit rule page.
+/// 
+/// Manual mode (sourceId + sourceSongId provided): fetches metadata directly from the specified
+/// source at request time. Does not include audit-rule-driven preSelectedFields.
+/// Used when the user selects a specific search result in the Metadata Search Modal.
+/// </summary>
+/// <param name="db">Database context</param>
+/// <param name="currentUser">Current authenticated user</param>
+/// <param name="fieldMapper">Audit rule field mapper</param>
+/// <param name="sourcesService">Sources service for getting source clients</param>
+/// <param name="songId">Song ID</param>
+/// <param name="sourceId">Optional source ID to fetch from directly</param>
+/// <param name="sourceSongId">Optional source song ID when fetching directly</param>
+/// <param name="cancellationToken">Cancellation token</param>
+/// <returns>Auto-fetched metadata if available</returns>
+[HttpGet("song/{songId:long}")]
+public async Task<ActionResult<AutoFetchedMetadataResponse>> GetAutoFetchedMetadata(
+    [FromServices] MusicDbContext db,
+    [FromServices] ICurrentUser currentUser,
+    [FromServices] IAuditRuleFieldMapper fieldMapper,
+    [FromServices] ISourcesService sourcesService,
+    [FromRoute] long songId,
+    [FromQuery] long? sourceId,
+    [FromQuery] string? sourceSongId,
+    CancellationToken cancellationToken)
     {
         // Load song with all related entities needed for diff construction
         var song = await db.Songs
@@ -147,7 +175,14 @@ public class MetadataFetchController(
             return NotFound("Song not found");
         }
 
-        // Get the most recent pending metadata
+        // If sourceId and sourceSongId are provided, fetch directly from that source
+        if (sourceId.HasValue && !string.IsNullOrEmpty(sourceSongId))
+        {
+            return await GetMetadataFromSourceAsync(
+                db, sourcesService, song, sourceId.Value, sourceSongId, cancellationToken);
+        }
+
+        // Otherwise, get the most recent pending auto-fetched metadata
         var metadata = await db.AutoFetchedMetadata
             .AsNoTracking()
             .Include(m => m.Source)
@@ -207,6 +242,70 @@ public class MetadataFetchController(
             FetchedAt = metadata.FetchedAt,
             SourceName = metadata.Source?.Name,
             PreSelectedFields = preSelectedFields
+        });
+    }
+
+    /// <summary>
+    /// Fetches metadata directly from a source for manual selection.
+    /// </summary>
+    private async Task<ActionResult<AutoFetchedMetadataResponse>> GetMetadataFromSourceAsync(
+        MusicDbContext db,
+        ISourcesService sourcesService,
+        Song song,
+        long sourceId,
+        string sourceSongId,
+        CancellationToken cancellationToken)
+    {
+        // Get the source entity
+        var source = await db.Sources.FindAsync(new object[] { sourceId }, cancellationToken);
+        if (source == null)
+        {
+            return NotFound($"Source {sourceId} not found");
+        }
+
+        // Get the source client
+        var sourceClient = await sourcesService.GetSourceClientAsync(sourceId, cancellationToken);
+
+        // Fetch the full song details from the source
+        SourceSong sourceSong;
+        try
+        {
+            sourceSong = await sourceClient.GetSongAsync(sourceSongId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to fetch song {SourceSongId} from source {SourceId}", sourceSongId, sourceId);
+            return StatusCode(502, $"Failed to fetch from source: {ex.Message}");
+        }
+
+        // Build the diff using the shared builder
+        SongMetadataDiff? diff = null;
+        try
+        {
+            var diffModel = await metadataDiffBuilder.CreateDiffAsync(song, sourceSong, cancellationToken);
+            diff = MetadataDiffMapper.ToSongMetadataDiff(diffModel);
+
+            if (diff?.Cover is not null)
+            {
+                diff.Cover = new SongMetadataField<string>
+                {
+                    Old = diff.Cover.Old,
+                    New = thumbnailProxyService.GetProxyUrl(diff.Cover.New),
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to construct metadata diff for song {SongId}", song.Id);
+        }
+
+        return Ok(new AutoFetchedMetadataResponse
+        {
+            HasMetadata = true,
+            Metadata = diff,
+            FetchedAt = DateTime.UtcNow,
+            SourceName = source.Name,
+            PreSelectedFields = [] // No pre-selected fields for manual selection
         });
     }
 

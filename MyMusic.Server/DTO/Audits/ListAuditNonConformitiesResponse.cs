@@ -14,6 +14,7 @@ public record ListAuditNonConformityItem
     public required long Id { get; set; }
     public long? SongId { get; set; }
     public ListSongItem? Song { get; set; }
+    public long AuditRuleId { get; set; }
     public JsonElement? Data { get; set; }
     public required bool HasWaiver { get; set; }
     public string? WaiverReason { get; set; }
@@ -25,6 +26,7 @@ public record ListAuditNonConformityItem
             Id = nc.Id,
             SongId = nc.SongId,
             Song = nc.Song != null ? ListSongItem.FromEntity(nc.Song) : null,
+            AuditRuleId = nc.AuditRuleId,
             Data = nc.Data,
             HasWaiver = nc.HasWaiver,
             WaiverReason = nc.WaiverReason,

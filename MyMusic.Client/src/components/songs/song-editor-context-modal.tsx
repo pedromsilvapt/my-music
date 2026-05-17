@@ -22,7 +22,6 @@ import {IconChevronLeft, IconChevronRight, IconRefresh, IconSearch} from "@table
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {
     useBatchMultiUpdateSongs,
-    useFetchSongMetadata,
     useUpdateSong,
     autocompleteAlbums,
     autocompleteArtists,
@@ -32,8 +31,10 @@ import {
     getLocalSong,
 } from "../../client/songs.ts";
 import {useApplyMetadata} from "../../hooks/useApplyMetadata";
-import {useAutoFetchMetadata, usePrefetchMetadata} from "../../hooks/useAutoFetchMetadata";
-import type {GetSongResponseSong, SongMetadataDiff, UpdateSongRequest} from "../../model";
+import {useAutoFetchMetadata} from "../../hooks/useAutoFetchMetadata";
+import {usePrefetchMetadata, useMetadataPrefetchAhead} from "../../hooks/usePrefetchMetadata";
+import type {SongMetadataDiff} from "../../model/songMetadataDiff";
+import type {GetSongResponseSong, UpdateSongRequest} from "../../model";
 import type {BatchMultiUpdateSongResult} from "../../model/batchMultiUpdateSongResult";
 import type {SongMultiUpdateItem} from "../../model/songMultiUpdateItem";
 import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
@@ -51,8 +52,36 @@ import {
     type FieldCheckboxes,
 } from "./song-edit-types";
 
+/**
+ * Song Edit Modal — Metadata Fetching Behavior
+ *
+ * This modal has three metadata-fetch mechanisms:
+ *
+ * 1. Prefetch on modal open (database lookup):
+ *    When the modal is opened from an audit rule page, auditRuleIds is provided.
+ *    The usePrefetchMetadata hook reads previously auto-fetched metadata from the
+ *    AutoFetchedMetadata database table (GET /metadata-fetch/song/{songId}, no source params).
+ *    The server returns preSelectedFields based on the audit rules that flagged the song,
+ *    which are used to auto-check the relevant diff checkboxes.
+ *    When opened from a non-audit context (songs page, song detail), auditRuleIds is absent
+ *    and the prefetch query stays disabled.
+ *
+ * 2. Auto button (live source search):
+ *    The refresh icon button triggers useAutoFetchMetadata, which calls
+ *    POST /songs/{id}/fetch-metadata. This searches all configured sources for the song,
+ *    picks the best match, and fetches full metadata directly from that source.
+ *    When in an audit context, the new metadata is merged with the existing audit-rule-based
+ *    pre-selections (the preSelectedFields checkboxes are preserved).
+ *
+ * 3. Manual search (user picks a source result):
+ *    The search icon button opens the MetadataSearchModal. The user searches across all sources,
+ *    picks a result, and the modal calls GET /metadata-fetch/song/{songId}?sourceId=X&sourceSongId=Y
+ *    to fetch directly from that chosen source. No audit-rule-based pre-selections are returned
+ *    by the server for manual selections (preSelectedFields is empty).
+ */
 interface SongEditorContextModalInnerProps {
     songIds: number[];
+    auditRuleIds?: number[];
     onSuccess?: () => void;
 }
 
@@ -63,12 +92,12 @@ interface SongEditState {
     checkboxes: FieldCheckboxes;
 }
 
-async function createSongEditState(
+function createSongEditState(
     song: GetSongResponseSong, 
     metadata?: SongMetadataDiff | null,
     preSelectedFields?: string[]
-): Promise<SongEditState> {
-    const form = metadata ? await formStateFromMetadata(metadata, formStateFromSong(song)) : formStateFromSong(song);
+): SongEditState {
+    const form = metadata ? formStateFromMetadata(metadata, formStateFromSong(song)) : formStateFromSong(song);
     let checkboxes = metadata ? checkboxesFromMetadata(metadata) : createInitialCheckboxes();
     
     // Apply rule-based pre-selections
@@ -98,24 +127,27 @@ export default function SongEditorContextModal({
     const savedSongIds = useRef<Set<number>>(new Set());
     const queryClient = useQueryClient();
     const applyMetadata = useApplyMetadata();
-    const {prefetch, getCached} = usePrefetchMetadata();
+    const {prefetch, getCached} = useMetadataPrefetchAhead();
+    
+    const isAuditContext = (innerProps.auditRuleIds?.length ?? 0) > 0;
     
     // Track which songs we've attempted to load metadata for (either loaded or confirmed no metadata)
     const [metadataAttemptedSongs, setMetadataAttemptedSongs] = useState<Set<number>>(new Set());
     
-    // Fetch auto-fetched metadata for the current song
+    // Prefetch metadata from the AutoFetchedMetadata DB table for the current song.
+    // Only enabled when the modal was opened from an audit context (auditRuleIds provided).
     const currentSongId = songs[currentIndex]?.id ?? null;
-    const metadataQuery = useAutoFetchMetadata(currentSongId);
+    const metadataQuery = usePrefetchMetadata(currentSongId, isAuditContext);
     
-    // Prefetch-ahead: when on song N, preload metadata for song N+1
+    // Prefetch-ahead: when on song N, preload metadata for song N+1 (only in audit context)
     useEffect(() => {
-        if (songs.length > 1 && currentIndex < songs.length - 1) {
+        if (isAuditContext && songs.length > 1 && currentIndex < songs.length - 1) {
             const nextSongId = songs[currentIndex + 1]?.id;
             if (nextSongId) {
                 prefetch(nextSongId);
             }
         }
-    }, [currentIndex, songs, prefetch]);
+    }, [isAuditContext, currentIndex, songs, prefetch]);
 
     const isMultiSong = songs.length > 1;
     const currentState = currentIndex < songs.length ? editStates.get(songs[currentIndex]?.id) : null;
@@ -182,12 +214,13 @@ export default function SongEditorContextModal({
                 return;
             }
             
-            // If metadata query is still loading, wait (loading indicator shown on buttons)
-            if (metadataQuery.isLoading) {
+            // In audit context, wait for the prefetch metadata query before initializing.
+            // The query fetches from the AutoFetchedMetadata DB table and returns preSelectedFields.
+            // In non-audit context, the query is disabled so we initialize immediately with no metadata.
+            if (isAuditContext && metadataQuery.isLoading) {
                 return;
             }
             
-            // Metadata loaded (or confirmed no metadata) - initialize current song
             const initializeCurrentSong = async () => {
                 const currentSong = songs.find(s => s.id === currentSongId);
                 
@@ -197,7 +230,7 @@ export default function SongEditorContextModal({
                         ? (responseData.metadata as SongMetadataDiff) 
                         : null;
                     const preSelectedFields = responseData?.preSelectedFields;
-                    const editState = await createSongEditState(currentSong, songMetadata, preSelectedFields);
+                    const editState = createSongEditState(currentSong, songMetadata, preSelectedFields);
                     
                     setEditStates(prev => {
                         const newMap = new Map(prev);
@@ -220,7 +253,7 @@ export default function SongEditorContextModal({
                 }
             }
         }
-    }, [loading, metadataQuery.isLoading, metadataQuery.data, songs, currentSongId, currentIndex, prefetch, metadataAttemptedSongs, editStates]);
+    }, [loading, isAuditContext, metadataQuery.isLoading, metadataQuery.data, songs, currentSongId, currentIndex, prefetch, metadataAttemptedSongs, editStates]);
 
     const handleClose = () => {
         setSongs([]);
@@ -341,30 +374,23 @@ export default function SongEditorContextModal({
         },
     });
 
-    const fetchMetadata = useFetchSongMetadata({
-        mutation: {
-            onSuccess: (response) => {
-                if (response.status >= 400) {
-                    const responseData = response.data as { detail?: string } | undefined;
-                    const errorDetail = responseData?.detail || "Unknown error";
-                    notifications.show({title: "Error", message: `Failed to fetch metadata: ${errorDetail}`, color: "red"});
-                    return;
-                }
-                if (currentState && response.data.metadata) {
-                    handleMetadataFetched(response.data.metadata);
-                }
-            },
-            onError: (error) => {
-                notifications.show({title: "Error", message: `Failed to fetch metadata: ${error}`, color: "red"});
-            },
-        },
-    });
-
-    const handleMetadataFetched = useCallback(async (metadata: SongMetadataDiff) => {
+    const handleMetadataFetched = useCallback((metadata: SongMetadataDiff, preservePreSelections: boolean = false) => {
         if (!currentState) return;
 
-        const newForm = await formStateFromMetadata(metadata, formStateFromSong(currentState.song));
-        const newCheckboxes = checkboxesFromMetadata(metadata);
+        const newForm = formStateFromMetadata(metadata, formStateFromSong(currentState.song));
+        let newCheckboxes = checkboxesFromMetadata(metadata);
+
+        // When auto-fetching in an audit context, preserve any currently checked checkboxes
+        // so that audit-rule-based pre-selections are not lost when metadata is refreshed.
+        if (preservePreSelections) {
+            const preservedSelections = Object.entries(currentState.checkboxes)
+                .filter(([_, checked]) => checked)
+                .map(([field, _]) => [field, true]);
+            newCheckboxes = {
+                ...newCheckboxes,
+                ...Object.fromEntries(preservedSelections),
+            } as FieldCheckboxes;
+        }
 
         setEditStates((prev) => {
             const newMap = new Map(prev);
@@ -378,13 +404,17 @@ export default function SongEditorContextModal({
         });
     }, [currentState]);
 
+    const {autoFetch, isPending: isAutoFetchPending} = useAutoFetchMetadata(
+        useCallback((metadata: SongMetadataDiff) => handleMetadataFetched(metadata, isAuditContext), [handleMetadataFetched, isAuditContext]),
+    );
+
     const handleAutoFetchMetadata = useCallback(() => {
         if (!currentState) return;
-        fetchMetadata.mutate({ id: currentState.song.id });
-    }, [currentState, fetchMetadata]);
+        autoFetch(currentState.song.id);
+    }, [currentState, autoFetch]);
 
     const handleMetadataSelect = useCallback((metadata: SongMetadataDiff) => {
-        handleMetadataFetched(metadata);
+        handleMetadataFetched(metadata, false);
     }, [handleMetadataFetched]);
 
     const searchAlbums = useCallback(async (query: string): Promise<AutocompleteItem[]> => {
@@ -628,7 +658,7 @@ export default function SongEditorContextModal({
         }
     };
 
-    const handleNext = async () => {
+    const handleNext = () => {
         if (currentIndex < songs.length - 1) {
             const nextIndex = currentIndex + 1;
             const nextSongId = songs[nextIndex]?.id;
@@ -640,7 +670,7 @@ export default function SongEditorContextModal({
                 const songMetadata = cachedData.hasMetadata 
                     ? (cachedData.metadata as SongMetadataDiff) 
                     : null;
-                const editState = await createSongEditState(nextSong, songMetadata, cachedData.preSelectedFields);
+                const editState = createSongEditState(nextSong, songMetadata, cachedData.preSelectedFields);
                 setEditStates(prev => {
                     const newMap = new Map(prev);
                     newMap.set(nextSongId, editState);
@@ -1159,12 +1189,13 @@ export default function SongEditorContextModal({
                             <CoverUploadField
                                 label={hasMetadata && currentState.metadata?.cover ? "Cover (new)" : "Cover"}
                                 value={currentState.form.cover}
-                                onChange={(val, dimensions) => handleFormChange({cover: val, coverDimensions: dimensions})}
+                                onChange={(val, dimensions) => handleFormChange({cover: val, coverDimensions: dimensions, coverUrl: undefined})}
                                 currentDimensions={currentState.form.coverDimensions}
                                 diffMode={hasMetadata && !!currentState.metadata?.cover}
                                 isChecked={currentState.checkboxes.cover}
                                 onCheckChange={(checked) => handleCheckboxChange("cover", checked)}
                                 oldCoverUrl={currentState.metadata?.cover?.old ?? undefined}
+                                coverUrl={currentState.form.coverUrl}
                                 disabled={hasMetadata && !!currentState.metadata?.cover && !currentState.checkboxes.cover}
                             />
                         </Box>
@@ -1180,7 +1211,7 @@ export default function SongEditorContextModal({
                         size="lg"
                         onClick={handleAutoFetchMetadata}
                         disabled={isLoading}
-                        loading={fetchMetadata.isPending}
+                        loading={isAutoFetchPending}
                         title="Auto-fetch metadata"
                     >
                         <IconRefresh/>

@@ -1,8 +1,9 @@
-import {ActionIcon, Box, Checkbox, Group, Stack, Text, TextInput} from "@mantine/core";
+import {ActionIcon, Box, Checkbox, Group, Skeleton, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {IconClipboard, IconDownload, IconMusic, IconUpload, IconWorld, IconX} from "@tabler/icons-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
+import {useBackgroundArtwork} from "../../hooks/useBackgroundArtwork";
 import {fetchArtworkAsDataUrl} from "../../utils/artwork.ts";
 import {autocompleteSongs} from "../../client/songs.ts";
 import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
@@ -23,6 +24,7 @@ interface CoverUploadFieldProps {
     isChecked?: boolean;
     onCheckChange?: (checked: boolean) => void;
     oldCoverUrl?: string;
+    coverUrl?: string;
 }
 
 export default function CoverUploadField({
@@ -35,6 +37,7 @@ export default function CoverUploadField({
                                              isChecked = true,
                                              onCheckChange,
                                              oldCoverUrl,
+                                             coverUrl,
                                            }: CoverUploadFieldProps) {
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
@@ -45,8 +48,28 @@ export default function CoverUploadField({
     const [selectedSong, setSelectedSong] = useState<AutocompleteItem | null>(null);
     const {openLightbox} = useArtworkLightbox();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const appliedCoverUrlRef = useRef<string | null>(null);
+
+    const backgroundArtwork = useBackgroundArtwork(coverUrl);
 
     const hasChanged = diffMode && value !== null && value?.base64 !== undefined;
+    
+    // Show loading if we have a coverUrl that hasn't been applied yet
+    const showBackgroundLoading = coverUrl && appliedCoverUrlRef.current !== coverUrl && backgroundArtwork.isLoading;
+    const showBackgroundError = coverUrl && appliedCoverUrlRef.current !== coverUrl && backgroundArtwork.error && !backgroundArtwork.isLoading;
+
+    useEffect(() => {
+        if (
+            coverUrl &&
+            backgroundArtwork.base64 && 
+            !backgroundArtwork.isLoading && 
+            !backgroundArtwork.error &&
+            appliedCoverUrlRef.current !== coverUrl
+        ) {
+            appliedCoverUrlRef.current = coverUrl;
+            onChange({ base64: backgroundArtwork.base64 }, backgroundArtwork.dimensions);
+        }
+    }, [backgroundArtwork, coverUrl, onChange]);
 
     const loadImageDimensions = useCallback((src: string): Promise<CoverDimensions | null> => {
         return new Promise((resolve) => {
@@ -276,17 +299,31 @@ export default function CoverUploadField({
                                     justifyContent: "center",
                                     overflow: "hidden",
                                     backgroundColor: newBgColor,
-                                    cursor: "pointer",
+                                    cursor: showBackgroundLoading ? "default" : "pointer",
+                                    position: "relative",
                                 }}
-                                onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
+                                onClick={() => !showBackgroundLoading && previewSrc && handleOpenLightbox(previewSrc)}
                             >
+                            {showBackgroundLoading ? (
+                                <Skeleton height={120} width={120} />
+                            ) : showBackgroundError ? (
+                                <Box style={{ textAlign: "center", padding: "8px" }}>
+                                    <IconMusic size={30} color="var(--mantine-color-red-6)" />
+                                    <Text size="xs" c="red" mt={4}>Failed to load</Text>
+                                </Box>
+                            ) : previewSrc ? (
                                 <img
-                                    src={previewSrc ?? ""}
+                                    src={previewSrc}
                                     alt="New Cover"
                                     style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
                                 />
+                            ) : (
+                                <IconMusic size={40} color="var(--mantine-color-gray-4)"/>
+                            )}
                             </Box>
-                            {newCoverDimensions ? (
+                            {showBackgroundLoading ? (
+                                <Text size="xs" c="dimmed">Loading...</Text>
+                            ) : newCoverDimensions ? (
                                 <Text size="xs" c="dimmed">
                                     {newCoverDimensions.width} x {newCoverDimensions.height}
                                 </Text>
@@ -407,11 +444,19 @@ export default function CoverUploadField({
                                 overflow: "hidden",
                                 backgroundColor: hasChanged ? "var(--mantine-color-green-0)" : undefined,
                                 borderColor: hasChanged ? "var(--mantine-color-green-6)" : undefined,
-                                cursor: previewSrc ? "pointer" : undefined,
+                                cursor: showBackgroundLoading ? "default" : (previewSrc ? "pointer" : undefined),
+                                position: "relative",
                             }}
-                            onClick={() => previewSrc && handleOpenLightbox(previewSrc)}
+                            onClick={() => !showBackgroundLoading && previewSrc && handleOpenLightbox(previewSrc)}
                         >
-                            {previewSrc ? (
+                            {showBackgroundLoading ? (
+                                <Skeleton height={150} width={150} />
+                            ) : showBackgroundError ? (
+                                <Box style={{ textAlign: "center", padding: "8px" }}>
+                                    <IconMusic size={40} color="var(--mantine-color-red-6)" />
+                                    <Text size="xs" c="red" mt={4}>Failed to load</Text>
+                                </Box>
+                            ) : previewSrc ? (
                                 <img
                                     src={previewSrc}
                                     alt="Cover"
@@ -421,7 +466,9 @@ export default function CoverUploadField({
                                 <IconMusic size={50} color="var(--mantine-color-gray-4)"/>
                             )}
                         </Box>
-                        {previewDimensions ? (
+                        {showBackgroundLoading ? (
+                            <Text size="xs" c="dimmed">Loading...</Text>
+                        ) : previewDimensions ? (
                             <Text size="xs" c="dimmed">
                                 {previewDimensions.width} x {previewDimensions.height}
                             </Text>

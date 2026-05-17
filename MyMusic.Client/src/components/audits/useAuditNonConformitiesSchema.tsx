@@ -99,6 +99,7 @@ export function useAuditNonConformitiesSchema(
             const allHaveWaiver = elems.every(nc => nc.hasWaiver);
             const someHaveWaiver = elems.some(nc => nc.hasWaiver);
             const uniqueSongIds = [...new Set(elems.map(nc => nc.songId))];
+            const uniqueRuleIds = [...new Set(elems.map(nc => nc.auditRuleId))];
 
             return [
                 {group: "Edit"},
@@ -112,7 +113,7 @@ export function useAuditNonConformitiesSchema(
                                 modal: 'song-editor',
                                 title: 'Edit Song',
                                 size: SONG_EDITOR_MODAL_SIZE,
-                                innerProps: { songIds: uniqueSongIds },
+                                innerProps: { songIds: uniqueSongIds, auditRuleIds: uniqueRuleIds },
                             });
                         }
                     },
