@@ -32,6 +32,7 @@ interface CollectionProps<T extends { id: string | number }> {
     stateKey?: string,
     toolbar?: (props: CollectionToolbarProps<T>) => React.ReactNode | null | undefined;
     isFetching?: boolean | null | undefined;
+    selectable?: boolean;
     sortable?: boolean;
     onReorder?: (fromIndex: number, toIndex: number) => void;
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
@@ -51,6 +52,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
     const filterMode = props.filterMode ?? 'client';
     const stateKey = props.stateKey;
     const autoHeight = props.autoHeight ?? false;
+    const selectable = props.selectable ?? true;
 
     const {ref: containerRef, height: containerHeight} = useElementSize<HTMLDivElement>();
     const {ref: toolbarRef, height: toolbarHeight} = useElementSize<HTMLDivElement>();
@@ -229,6 +231,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
     }, [props.items, searchFilter.debouncedValue, filterExpression.value, sort, filterMode, evaluateClientFilter, props.schema]);
 
     const handleItemClick = useCallback((clickedKey: React.Key, event: React.MouseEvent) => {
+        if (!selectable) return;
+
         const isCtrlPressed = event.ctrlKey || event.metaKey;
         const isShiftPressed = event.shiftKey;
         const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
@@ -282,9 +286,10 @@ export default function Collection<T extends { id: string | number }>(props: Col
     }, [filteredAndSortedItems, props.schema, selectionStore]);
 
     const handleSelectAll = useCallback(() => {
+        if (!selectable) return;
         const allKeys = filteredAndSortedItems.map(item => props.schema.key(item));
         selectionStore.getState().setSelection(allKeys);
-    }, [filteredAndSortedItems, props.schema, selectionStore]);
+    }, [selectable, filteredAndSortedItems, props.schema, selectionStore]);
 
     const handleClearSelection = useCallback(() => {
         selectionStore.getState().reset();
@@ -403,10 +408,10 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 columns: props.schema.columns,
                 filterMetadata: props.schema.filterMetadata,
                 fetchFilterValues: props.schema.fetchFilterValues,
-                selectionStore: selectionStore,
+                selectionStore: selectable ? selectionStore : undefined,
                 totalItems: filteredAndSortedItems.length,
-                onSelectAll: handleSelectAll,
-                onClearSelection: handleClearSelection,
+                onSelectAll: selectable ? handleSelectAll : undefined,
+                onClearSelection: selectable ? handleClearSelection : undefined,
             })}
         </Box>
 
@@ -425,7 +430,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 <CollectionActionMenu key={getCollectionActionKey(action, index)} action={action} selection={contextMenuSelectionRef.current} />);
         }} />
 
-        <SelectionFloatingBar
+        {selectable && <SelectionFloatingBar
             items={props.items}
             itemKey={props.schema.key}
             selectionStore={selectionStore}
@@ -433,6 +438,6 @@ export default function Collection<T extends { id: string | number }>(props: Col
             containerRef={collectionContainerRef}
             portalTarget={floatingBarPortalTargetRef}
             onClearSelection={handleClearSelection}
-        />
+        />}
     </Flex>;
 }
