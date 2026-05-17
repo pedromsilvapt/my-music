@@ -62,5 +62,11 @@ public class ValidateSongDetailsFlow : IFlow
             var genres = await songDetails.GetGenresAsync();
             genres.ShouldBe(_expected.Genres);
         }
+
+        if (_expected.RepositoryPath is not null)
+        {
+            var repositoryPath = await songDetails.GetRepositoryPathAsync();
+            repositoryPath.ShouldBe(_expected.RepositoryPath);
+        }
     }
 }

@@ -8,6 +8,8 @@ OpenAPI spec version: 1.0.0
 export interface GetSongResponseDevice {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   id: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songDeviceId: number;
   name: string;
   /** @nullable */
   icon?: string | null;

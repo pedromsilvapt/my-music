@@ -28,7 +28,7 @@ public record ListSongItem
         var artists = song.Artists.Select(a => ListSongsArtist.FromEntity(a.Artist)).ToList();
         var genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList();
         var album = ListSongsAlbum.FromEntity(song.Album);
-        var devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).ToList();
+        var devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).DistinctBy(d => d.Id).ToList();
 
         return new ListSongItem
         {

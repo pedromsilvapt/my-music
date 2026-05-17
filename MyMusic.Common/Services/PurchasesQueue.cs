@@ -129,7 +129,7 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
 
                 await musicService.ImportRepositorySongs(db, importJob, purchase.UserId, [
                         new SongImportMetadata(tempTarget.FilePath, now, now),
-                    ], duplicatesStrategy: DuplicateSongsHandlingStrategy.SkipIdentical,
+                    ], duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip,
                     cancellationToken: cancellationToken);
 
                 importJob.ThrowIfAnyExceptions();

@@ -187,7 +187,7 @@ public class SongsController(
                 currentUser.Id,
                 new[] { songImportMetadata },
                 null,
-                DuplicateSongsHandlingStrategy.SkipIdentical,
+                DuplicateSongsHandlingStrategy.Skip,
                 cancellationToken);
 
             var importedSong = job.SongMapping.Values.FirstOrDefault();

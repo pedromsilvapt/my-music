@@ -29,8 +29,8 @@ public class DesktopCliApplication : ISyncApplication
     public Task InitializeAsync(IAPIRequestContext api, long userId, string userName, string? serverUrl = null)
         => _fixture.InitializeAsync(api, userId, userName, serverUrl);
 
-    public Task<string> CreateSongAsync(SampleSong song, string? relativePath = null)
-        => _fixture.CreateSongAsync(song, relativePath);
+    public Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null)
+        => _fixture.CreateSongAsync(song, relativePath, contentVariant);
 
     public Task<List<string>> CreateSongsAsync(params (SampleSong Song, string Path)[] songs)
         => _fixture.CreateSongsAsync(songs);

@@ -116,7 +116,7 @@ public record GetArtistSongItem
             Genres = song.Genres.Select(GetArtistResponseGenre.FromEntity).ToList(),
             Year = song.Year,
             Duration = song.Duration.ToString(@"mm\:ss"),
-            Devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).ToList(),
+            Devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).DistinctBy(d => d.Id).ToList(),
             IsFavorite = false,
             IsExplicit = song.Explicit,
         };

@@ -12,7 +12,7 @@ public interface ISyncApplication : IAsyncDisposable
     Task InitializeAsync(IAPIRequestContext api, long userId, string userName, string? serverUrl = null);
 
     // Fixture helpers
-    Task<string> CreateSongAsync(SampleSong song, string? relativePath = null);
+    Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null);
     Task<List<string>> CreateSongsAsync(params (SampleSong Song, string Path)[] songs);
     bool FileExists(string relativePath);
     string GetSongPath(string relativePath);

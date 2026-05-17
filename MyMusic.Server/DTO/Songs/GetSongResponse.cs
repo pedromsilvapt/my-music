@@ -134,6 +134,7 @@ public record GetSongResponseGenre
 public record GetSongResponseDevice
 {
     public required long Id { get; set; }
+    public required long SongDeviceId { get; set; }
     public required string Name { get; set; }
     public string? Icon { get; set; }
     public string? Color { get; set; }
@@ -143,6 +144,7 @@ public record GetSongResponseDevice
         new()
         {
             Id = songDevice.Device.Id,
+            SongDeviceId = songDevice.Id,
             Name = songDevice.Device.Name,
             Icon = songDevice.Device.Icon,
             Color = songDevice.Device.Color,

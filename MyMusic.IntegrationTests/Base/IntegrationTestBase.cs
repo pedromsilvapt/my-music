@@ -34,6 +34,7 @@ public abstract class IntegrationTestBase : PageTest
 
     protected IAPIRequestContext RequestContext { get; private set; } = null!;
     protected string UserName { get; } = $"Test-{Guid.NewGuid()}";
+    protected string ServerRepositoryBase => $"/app/data/music/{UserName}";
     protected long UserId { get; private set; }
     protected ILogger Logger => _telemetry.TestsLogger;
     protected IntegrationTestTelemetry Telemetry => _telemetry;

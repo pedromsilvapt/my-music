@@ -66,7 +66,7 @@ public interface IMusicService
     /// <returns></returns>
     Task ImportRepositorySongs(MusicDbContext db, MusicImportJob job, long userId, string rootSourceFolder,
         IList<long>? deviceIds = null,
-        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.SkipIdentical,
+        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.Skip,
         SearchOption searchOption = SearchOption.AllDirectories, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -82,6 +82,6 @@ public interface IMusicService
     /// <returns></returns>
     Task ImportRepositorySongs(MusicDbContext db, MusicImportJob job, long userId,
         IEnumerable<SongImportMetadata> importSongsMetadataList, IList<long>? deviceIds = null,
-        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.SkipIdentical,
+        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.Skip,
         CancellationToken cancellationToken = default);
 }

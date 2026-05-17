@@ -23,7 +23,7 @@ public static class TestFiles
         return ms.ToArray();
     }
 
-    public static byte[] CreateTestMusicFile(string title, string album, string[] artists, string[] genres, int? year = null)
+    public static byte[] CreateTestMusicFile(string title, string album, string[] artists, string[] genres, int? year = null, int? contentVariant = null)
     {
         var baseBytes = GetBaseTestMusicFile();
         
@@ -41,6 +41,7 @@ public static class TestFiles
                 Artists = artists.Select(a => new ArtistMetadata(null, a)).ToList(),
                 Genres = genres.ToList(),
                 Year = year,
+                Lyrics = contentVariant.HasValue ? $"Variant {contentVariant.Value}" : null,
             };
             
             TagConverter.FromSong(metadata, tfile.Tag).GetAwaiter().GetResult();

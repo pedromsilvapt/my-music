@@ -116,16 +116,3 @@ public class DuplicateChecksumSkipReason(
     public override object[] MessageArgs =>
         [fullLabel, checksum, checksumAlgorithmName, existingLabel, existingId, SourceFilePath];
 }
-
-public class DuplicateFilePathSkipReason(
-    string sourceFilePath,
-    string fullLabel,
-    string targetFilePath,
-    string existingLabel,
-    long existingId) : ImportSkipReason(sourceFilePath)
-{
-    public override string Message =>
-        "Cannot import song, target file path when importing: {ImportedSong} with file path {FilePath} matches existing song {ExistingSong} {ExistingSongId}: {File}";
-
-    public override object[] MessageArgs => [fullLabel, targetFilePath, existingLabel, existingId, SourceFilePath];
-}

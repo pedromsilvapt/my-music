@@ -8,6 +8,7 @@ using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Targets;
+using MyMusic.Common.Utilities;
 
 namespace MyMusic.Common.Services;
 
@@ -172,7 +173,7 @@ public class MusicService(
     /// <returns></returns>
     public async Task ImportRepositorySongs(MusicDbContext db, MusicImportJob job, long userId, string rootSourceFolder,
         IList<long>? deviceIds = null,
-        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.SkipIdentical,
+        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.Skip,
         SearchOption searchOption = SearchOption.AllDirectories, CancellationToken cancellationToken = default)
     {
         var importedSongs = new List<SongImportMetadata>();
@@ -231,7 +232,7 @@ public class MusicService(
     /// <returns></returns>
     public async Task ImportRepositorySongs(MusicDbContext db, MusicImportJob job, long userId,
         IEnumerable<SongImportMetadata> importSongsMetadataList, IList<long>? deviceIds = null,
-        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.SkipIdentical,
+        DuplicateSongsHandlingStrategy duplicatesStrategy = DuplicateSongsHandlingStrategy.Skip,
         CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Acquiring lock to begin importing songs into repository Id {RepositoryId}", userId);
@@ -369,8 +370,7 @@ public class MusicService(
 
                     if (song is not null &&
                         File.Exists(song.RepositoryPath) &&
-                        (duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip ||
-                         duplicatesStrategy == DuplicateSongsHandlingStrategy.SkipIdentical))
+                        duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip)
                     {
                         logger.LogDebug("  >> SKIPPING: Duplicate checksum found. SongId={SongId}, RepositoryPath='{Path}', Strategy={Strategy}",
                             song.Id, song.RepositoryPath, duplicatesStrategy);
@@ -382,13 +382,8 @@ public class MusicService(
 
                     targetFile.EnsureFilePath(metadata, naming);
 
-                    song ??= await repo.GetSongByPath(targetFile.FilePath!, cancellationToken);
-
-                    if (song is not null)
-                    {
-                        logger.LogDebug("  >> Found existing song by repository path: SongId={SongId}, Path='{Path}'",
-                            song.Id, targetFile.FilePath);
-                    }
+                    targetFile.FilePath = await FilePathResolver.ResolveConflictAsync(
+                        targetFile.FilePath!, user.Id, db, cancellationToken);
 
                     if (song is null && importSongMetadata.SongId.HasValue)
                     {
@@ -396,18 +391,6 @@ public class MusicService(
                         song = await db.Songs
                             .Include(s => s.Devices)
                             .FirstOrDefaultAsync(s => s.Id == importSongMetadata.SongId.Value, cancellationToken);
-                    }
-
-                    if (song is not null &&
-                        File.Exists(song.RepositoryPath) &&
-                        duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip)
-                    {
-                        logger.LogDebug("  >> SKIPPING: File exists at repository path with Skip strategy. SongId={SongId}, Path='{Path}'",
-                            song.Id, song.RepositoryPath);
-                        job.AddSkipReason(new DuplicateFilePathSkipReason(importSongMetadata.SourceFilePath,
-                            metadata.FullLabel, targetFile.FilePath!, song.Label, song.Id));
-                        job.AddSongMapping(importSongMetadata, song);
-                        continue;
                     }
 
                     if (song is not null)
@@ -735,17 +718,14 @@ public class MusicService(
 public enum DuplicateSongsHandlingStrategy
 {
     /// <summary>
-    ///     Do not import the song if it already exists in the repository (same checksum or same file path)
+    ///     Do not import the song if a song with the same checksum already exists in the repository.
+    ///     If the file path collides with an existing song, a counter suffix is appended.
     /// </summary>
     Skip,
 
     /// <summary>
-    ///     Do not import the song if it already exists in the repository as an exact match (same checksum)
-    /// </summary>
-    SkipIdentical,
-
-    /// <summary>
-    ///     Replace the existing song, if it already exists in the repository (same checksum or same file path)
+    ///     Replace the existing song if a song with the same checksum already exists in the repository.
+    ///     If the file path collides with an existing song, a counter suffix is appended.
     /// </summary>
     Overwrite,
 }

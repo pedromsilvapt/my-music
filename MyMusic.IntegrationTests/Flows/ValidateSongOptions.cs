@@ -6,4 +6,5 @@ public record ValidateSongOptions(
     string? Album = null,
     int? Year = null,
     bool? Explicit = null,
-    string[]? Genres = null);
+    string[]? Genres = null,
+    string? RepositoryPath = null);

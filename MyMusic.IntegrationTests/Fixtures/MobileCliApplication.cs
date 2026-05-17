@@ -63,7 +63,7 @@ public class MobileCliApplication : ISyncApplication
         await WriteConfigAsync(serverUrl, userId, userName);
     }
 
-    public async Task<string> CreateSongAsync(SampleSong song, string? relativePath = null)
+    public async Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null)
     {
         relativePath ??= $"{SanitizeFileName(song.Title)}.mp3";
         var filePath = Path.Combine(_repoPath, relativePath);
@@ -79,7 +79,8 @@ public class MobileCliApplication : ISyncApplication
             song.Album,
             song.Artists,
             song.Genres,
-            song.Year);
+            song.Year,
+            contentVariant);
 
         await File.WriteAllBytesAsync(filePath, bytes);
         return relativePath;

@@ -7,6 +7,7 @@ import {
     IconDisc,
     IconDownload,
     IconEdit,
+    IconFile,
     IconHeart,
     IconHeartFilled,
     IconMusic,
@@ -123,17 +124,23 @@ export default function SongDetailPage() {
                             <Text size="sm" c="dimmed">No genres</Text>
                         )}
                     </Group>
-                    <Group gap="xs">
+                    {song.repositoryPath && (
+                        <Group gap="xs">
+                            <IconFile size={16}/>
+                            <Text size="sm" c="dimmed" data-testid="song-repository-path">{song.repositoryPath}</Text>
+                        </Group>
+                    )}
+                    <Group gap="xs" data-testid="song-devices">
                         {song.devices.length > 0 ? (
-                            song.devices.map(device => (
-                                <DeviceBadge
-                                    key={device.id}
-                                    name={device.name}
-                                    icon={device.icon}
-                                    color={device.color}
-                                    syncAction={device.syncAction}
-                                />
-                            ))
+                             song.devices.map(device => (
+                                 <DeviceBadge
+                                     key={device.songDeviceId}
+                                     name={device.name}
+                                     icon={device.icon}
+                                     color={device.color}
+                                     syncAction={device.syncAction}
+                                 />
+                             ))
                         ) : (
                             <Text size="sm" c="dimmed">No devices</Text>
                         )}

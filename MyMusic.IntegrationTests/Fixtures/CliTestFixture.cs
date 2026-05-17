@@ -130,7 +130,7 @@ public class CliTestFixture : IAsyncDisposable
         await File.WriteAllTextAsync(ConfigPath, updatedJson);
     }
 
-    public async Task<string> CreateSongAsync(SampleSong song, string? relativePath = null)
+    public async Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null)
     {
         relativePath ??= $"{SanitizeFileName(song.Title)}.mp3";
         var filePath = Path.Combine(RepositoryPath, relativePath);
@@ -146,7 +146,8 @@ public class CliTestFixture : IAsyncDisposable
             song.Album,
             song.Artists,
             song.Genres,
-            song.Year);
+            song.Year,
+            contentVariant);
 
         await File.WriteAllBytesAsync(filePath, bytes);
         return relativePath;

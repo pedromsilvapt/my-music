@@ -6,6 +6,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Targets;
+using MyMusic.Common.Utilities;
 
 namespace MyMusic.Common.Services;
 
@@ -43,7 +44,7 @@ public class SongUpdateService(
         song = await LoadSongAsync(db, songId, cancellationToken);
 
         var previousChecksum = song.Checksum;
-        await UpdateFileAndChecksumAsync(song, cancellationToken);
+        await UpdateFileAndChecksumAsync(db, song, cancellationToken);
 
         logger.LogInformation("Song {SongId} update: previousChecksum={PreviousChecksum}, newChecksum={NewChecksum}",
             songId, previousChecksum, song.Checksum);
@@ -87,7 +88,7 @@ public class SongUpdateService(
             await db.SaveChangesAsync(cancellationToken);
 
             var previousChecksum = song.Checksum;
-            await UpdateFileAndChecksumAsync(song, cancellationToken);
+            await UpdateFileAndChecksumAsync(db, song, cancellationToken);
 
             if (song.Checksum != previousChecksum)
             {
@@ -493,7 +494,7 @@ public class SongUpdateService(
         }
     }
 
-    private async Task UpdateFileAndChecksumAsync(Song song, CancellationToken cancellationToken)
+    private async Task UpdateFileAndChecksumAsync(MusicDbContext db, Song song, CancellationToken cancellationToken)
     {
         var metadata = EntityConverter.ToSong(song);
 
@@ -507,6 +508,16 @@ public class SongUpdateService(
 
         var naming = NamingMetadata.FromPath(song.RepositoryPath);
         await fileTarget.Relocate(naming, cancellationToken);
+
+        var resolvedPath = await FilePathResolver.ResolveConflictAsync(
+            fileTarget.FilePath!, song.OwnerId, song.Id, db, cancellationToken);
+
+        if (resolvedPath != fileTarget.FilePath)
+        {
+            fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(resolvedPath)!);
+            fileSystem.File.Move(fileTarget.FilePath!, resolvedPath);
+            fileTarget.FilePath = resolvedPath;
+        }
 
         song.RepositoryPath = fileTarget.FilePath!;
 

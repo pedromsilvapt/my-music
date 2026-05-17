@@ -68,6 +68,14 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         return genres.ToArray();
     }
 
+    public async Task<string?> GetRepositoryPathAsync()
+    {
+        var element = Root.Locator("[data-testid='song-repository-path']");
+        var count = await element.CountAsync();
+        if (count == 0) return null;
+        return await element.InnerTextAsync();
+    }
+
     public async Task<DeviceBadgeComponent?> GetDeviceBadgeAsync(string deviceName)
     {
         var badgeLocator = Root.Locator("[data-testid='device-badge']").Filter(new()
@@ -77,19 +85,7 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
 
         var count = await badgeLocator.CountAsync();
         if (count == 0)
-        {
-            // Fallback to a broader selector if data-testid is not available yet
-            badgeLocator = Root.Locator("div, span").Filter(new()
-            {
-                HasText = deviceName
-            }).Filter(new()
-            {
-                Has = Root.Locator("svg")
-            });
-            count = await badgeLocator.CountAsync();
-            if (count == 0)
-                return null;
-        }
+            return null;
 
         return new DeviceBadgeComponent(badgeLocator.First);
     }
@@ -114,10 +110,7 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
 
     public async Task<List<DeviceBadgeComponent>> GetAllDeviceBadgesAsync()
     {
-        var badges = Root.Locator("div").Filter(new()
-        {
-            Has = Root.Locator("svg[data-icon^='Icon']")
-        });
+        var badges = Root.Locator("[data-testid='device-badge']");
 
         var count = await badges.CountAsync();
         var result = new List<DeviceBadgeComponent>();

@@ -95,6 +95,88 @@ public class MusicServiceSpecs
         songs[0].Bitrate!.Value.ShouldBeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task ImportMusic_SamePathDifferentChecksum_ResolvesWithCounter()
+    {
+        // Two songs with identical metadata (same title/album/artist) but different file content
+        // should both be stored, with the second getting a "(2)" suffix on its path
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        MockMusicFile.CreateWithDifferentContent(scenario.FileSystem, "/music/Song_v2.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+
+        // Act
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        // Assert
+        job.SkipReasons.ShouldBeEmpty();
+        var songs = LoadSongs(scenario.DbContext);
+        songs.Count.ShouldBe(2);
+
+        var paths = songs.Select(s => s.RepositoryPath).ToList();
+        paths.ShouldContain("/data/admin/My Artist/My Album/Song - My Artist.mp3");
+        paths.ShouldContain("/data/admin/My Artist/My Album/Song - My Artist (2).mp3");
+    }
+
+    [Fact]
+    public async Task ImportMusic_SamePathDifferentChecksum_ThreeSongs_ResolvesWithIncrementingCounters()
+    {
+        // Three songs with identical metadata but different content should get base, (2), and (3) paths
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        MockMusicFile.CreateWithDifferentContent(scenario.FileSystem, "/music/Song_v2.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        MockMusicFile.CreateWithDifferentContent(scenario.FileSystem, "/music/Song_v3.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+
+        // Act
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        // Assert
+        job.SkipReasons.ShouldBeEmpty();
+        var songs = LoadSongs(scenario.DbContext);
+        songs.Count.ShouldBe(3);
+
+        var paths = songs.Select(s => s.RepositoryPath).ToList();
+        paths.ShouldContain("/data/admin/My Artist/My Album/Song - My Artist.mp3");
+        paths.ShouldContain("/data/admin/My Artist/My Album/Song - My Artist (2).mp3");
+        paths.ShouldContain("/data/admin/My Artist/My Album/Song - My Artist (3).mp3");
+    }
+
+    [Fact]
+    public async Task ImportMusic_SameChecksum_SamePath_DoesNotCreateDuplicateSongs()
+    {
+        // Importing the same file twice should not create a duplicate song.
+        // The second import either skips (if file exists on disk) or updates the existing song.
+        // Either way, only one song should exist in the DB.
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+
+        // Act - import once
+        var job1 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job1, scenario.AdminUser.Id, "/music",
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job1.Exceptions.ShouldBeEmpty();
+
+        var songsAfterFirst = LoadSongs(scenario.DbContext);
+        songsAfterFirst.Count.ShouldBe(1);
+
+        // Act - import the same directory again (same file, same checksum)
+        var job2 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job2, scenario.AdminUser.Id, "/music",
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job2.Exceptions.ShouldBeEmpty();
+
+        // Assert - still only one song (not duplicated, path collision resolved or updated)
+        var songsAfterSecond = LoadSongs(scenario.DbContext);
+        songsAfterSecond.Count.ShouldBe(1);
+    }
+
     private static List<Song> LoadSongs(MusicDbContext context)
     {
         return context.Songs
