@@ -503,9 +503,16 @@ public class MusicService(
                                 await db.AddAsync(songArtist, cancellationToken);
                             }
 
+                            var existingSongArtist = song?.Artists?.FirstOrDefault(sa => sa.ArtistId == songArtist.Id);
+
+                            if (existingSongArtist is null)
+                            {
+                                songArtist.SongsCount += 1;
+                            }
+
                             // Add the song artist that already belonged to the song (if any) or create a new one
                             songArtists.Add(
-                                song?.Artists?.FirstOrDefault(sa => sa.ArtistId == songArtist.Id)
+                                existingSongArtist
                                 ??
                                 new SongArtist { SongId = 0, Artist = songArtist }
                             );
@@ -529,8 +536,15 @@ public class MusicService(
                             await db.AddAsync(albumArtist, cancellationToken);
                         }
 
+                        var existingAlbumSongArtist = song?.Artists?.FirstOrDefault(sa => sa.ArtistId == albumArtist.Id);
+
+                        if (existingAlbumSongArtist is null)
+                        {
+                            albumArtist.SongsCount += 1;
+                        }
+
                         songArtists.Add(
-                            song?.Artists?.FirstOrDefault(sa => sa.ArtistId == albumArtist.Id)
+                            existingAlbumSongArtist
                             ??
                             new SongArtist { SongId = 0, Artist = albumArtist }
                         );

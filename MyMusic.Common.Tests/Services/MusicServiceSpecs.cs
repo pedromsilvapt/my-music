@@ -177,6 +177,54 @@ public class MusicServiceSpecs
         songsAfterSecond.Count.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task ImportMusic_EmptyDatabase_IncrementsArtistSongsCount()
+    {
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Title A.mp3", "Title A", "Album A", ["Artist A", "Artist B"],
+            ["Genre A", "Genre B"]);
+        MockMusicFile.Create(scenario.FileSystem, "/music/Title B.mp3", "Title B", "Album A", ["Artist A"],
+            ["Genre A", "Genre B"]);
+
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+        job.Exceptions.ShouldBeEmpty();
+
+        var artists = scenario.DbContext.Artists.AsNoTracking().ToList();
+        var artistA = artists.First(a => a.Name == "Artist A");
+        var artistB = artists.First(a => a.Name == "Artist B");
+
+        artistA.SongsCount.ShouldBe(2);
+        artistB.SongsCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task ImportMusic_ReImportSameSongs_DoesNotDoubleIncrementSongsCount()
+    {
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+
+        var job1 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job1, scenario.AdminUser.Id, "/music",
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job1.Exceptions.ShouldBeEmpty();
+
+        var artistAfterFirst = scenario.DbContext.Artists.First(a => a.Name == "My Artist");
+        var songsCountAfterFirst = artistAfterFirst.SongsCount;
+
+        var job2 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job2, scenario.AdminUser.Id, "/music",
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job2.Exceptions.ShouldBeEmpty();
+
+        var artistAfterSecond = scenario.DbContext.Artists.First(a => a.Name == "My Artist");
+        artistAfterSecond.SongsCount.ShouldBe(songsCountAfterFirst);
+    }
+
     private static List<Song> LoadSongs(MusicDbContext context)
     {
         return context.Songs
