@@ -41,7 +41,8 @@ export default function SourcesSearch() {
 
     const searchSongsQuery = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter, fuzzyMatch}, {
         query: {
-            placeholderData: (prev) => prev as searchSongsResponse | undefined
+            placeholderData: (prev) => prev as searchSongsResponse | undefined,
+            enabled: !!source && debouncedSearch.length > 0,
         }
     });
 
