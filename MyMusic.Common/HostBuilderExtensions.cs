@@ -51,6 +51,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAuditRuleFieldMapper, AuditRuleFieldMapper>();
 
         builder.Services.AddScoped<ISeedService, SeedService>();
+        builder.Services.AddScoped<ICountRecalculationService, CountRecalculationService>();
 
         // Add services to the container.
         builder.Services.AddDbContext<MusicDbContext>((sp, options) =>
