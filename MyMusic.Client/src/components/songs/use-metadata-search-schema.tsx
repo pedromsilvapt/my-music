@@ -24,7 +24,7 @@ export function useMetadataSearchSchema(
                 placeholderIcon={<IconMusic/>}
             />
         ),
-        renderListTitle: (item: MetadataSearchItem, lineClamp: number) => (
+        renderListTitle: (item: MetadataSearchItem, _lineClamp: number) => (
             <ExplicitLabel visible={item.song.explicit ?? false}>
                 {item.song.title}
             </ExplicitLabel>
