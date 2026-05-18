@@ -1,6 +1,6 @@
 {
   "name": "mymusic.mobile",
-  "version": "0.18.1",
+  "version": "0.18.2",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
