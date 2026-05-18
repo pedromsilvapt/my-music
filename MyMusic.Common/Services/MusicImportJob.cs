@@ -77,31 +77,6 @@ public abstract class ImportSkipReason(string sourceFilePath)
     public virtual object[] MessageArgs => [sourceFilePath];
 }
 
-public class MissingTitleSkipReason(string sourceFilePath) : ImportSkipReason(sourceFilePath)
-{
-    public override string Message => "Cannot import song, song metadata does not have a title: {File}.";
-}
-
-public class MissingAlbumSkipReason(string sourceFilePath) : ImportSkipReason(sourceFilePath)
-{
-    public override string Message => "Cannot import song, song metadata does not have an album: {File}.";
-}
-
-public class MissingAlbumNameSkipReason(string sourceFilePath) : ImportSkipReason(sourceFilePath)
-{
-    public override string Message => "Cannot import song, album metadata does not have a name: {File}.";
-}
-
-public class MissingAlbumArtistSkipReason(string sourceFilePath) : ImportSkipReason(sourceFilePath)
-{
-    public override string Message => "Cannot import song, album metadata does not have an artist: {File}.";
-}
-
-public class MissingAlbumArtistNameSkipReason(string sourceFilePath) : ImportSkipReason(sourceFilePath)
-{
-    public override string Message => "Cannot import song, album's artist metadata does not have a name: {File}.";
-}
-
 public class DuplicateChecksumSkipReason(
     string sourceFilePath,
     string fullLabel,

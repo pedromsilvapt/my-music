@@ -63,6 +63,11 @@ public class EditSongFlow : IFlow
             await editModal.SetArtistsAsync(_edit.Artists);
         }
 
+        if (_edit.AlbumArtist is not null)
+        {
+            await editModal.SetAlbumArtistAsync(_edit.AlbumArtist);
+        }
+
         await editModal.SaveAsync();
     }
 }

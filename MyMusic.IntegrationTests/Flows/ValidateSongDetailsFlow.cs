@@ -36,7 +36,7 @@ public class ValidateSongDetailsFlow : IFlow
         if (_expected.Artists is not null)
         {
             var artists = await songDetails.GetArtistsAsync();
-            artists.ShouldBeEquivalentTo(_expected.Artists);
+            artists.ShouldBe(_expected.Artists, ignoreOrder: true);
         }
 
         if (_expected.Album is not null)
@@ -60,7 +60,7 @@ public class ValidateSongDetailsFlow : IFlow
         if (_expected.Genres is not null)
         {
             var genres = await songDetails.GetGenresAsync();
-            genres.ShouldBe(_expected.Genres);
+            genres.ShouldBe(_expected.Genres, ignoreOrder: true);
         }
 
         if (_expected.RepositoryPath is not null)

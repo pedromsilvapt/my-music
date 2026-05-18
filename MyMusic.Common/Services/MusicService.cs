@@ -288,37 +288,23 @@ public class MusicService(
 
                     logger.LogDebug("  >> Metadata read: {Song}", metadata.FullLabel);
 
-                    #region Metadata Validations
+                    #region Placeholder Values for Missing Metadata
 
-                    if (string.IsNullOrEmpty(metadata.Title))
-                    {
-                        job.AddSkipReason(new MissingTitleSkipReason(importSongMetadata.SourceFilePath));
-                        continue;
-                    }
+                    // Use placeholder values for missing metadata fields when writing to the database.
+                    // Do NOT mutate the metadata object — it is used for file operations (path generation,
+                    // tag writing) and must reflect the actual file contents to preserve checksum integrity.
 
-                    if (metadata.Album is null)
-                    {
-                        job.AddSkipReason(new MissingAlbumSkipReason(importSongMetadata.SourceFilePath));
-                        continue;
-                    }
+                    var effectiveTitle = string.IsNullOrEmpty(metadata.Title)
+                        ? fileSystem.Path.GetFileNameWithoutExtension(importSongMetadata.SourceFilePath)
+                        : metadata.Title;
 
-                    if (string.IsNullOrEmpty(metadata.Album.Name))
-                    {
-                        job.AddSkipReason(new MissingAlbumNameSkipReason(importSongMetadata.SourceFilePath));
-                        continue;
-                    }
+                    var effectiveAlbumName = metadata.Album is null || string.IsNullOrEmpty(metadata.Album.Name)
+                        ? "(No Album)"
+                        : metadata.Album.Name;
 
-                    if (metadata.Album.Artist is null)
-                    {
-                        job.AddSkipReason(new MissingAlbumArtistSkipReason(importSongMetadata.SourceFilePath));
-                        continue;
-                    }
-
-                    if (string.IsNullOrEmpty(metadata.Album.Artist.Name))
-                    {
-                        job.AddSkipReason(new MissingAlbumArtistNameSkipReason(importSongMetadata.SourceFilePath));
-                        continue;
-                    }
+                    var effectiveAlbumArtistName = metadata.Album?.Artist is null || string.IsNullOrEmpty(metadata.Album!.Artist!.Name)
+                        ? "(No Artist)"
+                        : metadata.Album.Artist.Name;
 
                     #endregion
 
@@ -415,9 +401,9 @@ public class MusicService(
 
                     ImageBuffer? cover = null;
 
-                    if (metadata.Album.CoverArt?.Biggest is not null)
+                    if (metadata.Album?.CoverArt?.Biggest is not null)
                     {
-                        var biggestCoverArt = metadata.Album.CoverArt.Biggest!;
+                        var biggestCoverArt = metadata.Album!.CoverArt!.Biggest!;
 
                         if (biggestCoverArt.Length > 500)
                         {
@@ -439,8 +425,8 @@ public class MusicService(
                     #region Album
 
                     // We are updating an existing song, and the Album remains the same
-                    if (song?.Album?.Name == metadata.Album.Name &&
-                        song?.Album?.Artist?.Name == metadata.Album.Artist.Name)
+                    if (song?.Album?.Name == effectiveAlbumName &&
+                        song?.Album?.Artist?.Name == effectiveAlbumArtistName)
                     {
                         songAlbum = song.Album;
                     }
@@ -457,7 +443,7 @@ public class MusicService(
                     if (songAlbum is null)
                     {
                         // Try and find an existing album for this Artist with the given name
-                        songAlbum = await repo.GetArtistAlbum(metadata.Album.Artist.Name, metadata.Album.Name,
+                        songAlbum = await repo.GetArtistAlbum(effectiveAlbumArtistName, effectiveAlbumName,
                             cancellationToken);
 
                         if (songAlbum is not null)
@@ -471,14 +457,14 @@ public class MusicService(
                     // If no Album with this name belonging to this Artist exists on the database yet
                     if (songAlbum is null)
                     {
-                        var songAlbumArtist = (await repo.GetArtists(metadata.Album.Artist.Name, cancellationToken))
+                        var songAlbumArtist = (await repo.GetArtists(effectiveAlbumArtistName, cancellationToken))
                             .FirstOrDefault();
 
                         if (songAlbumArtist is null)
                         {
                             songAlbumArtist = new Artist
                             {
-                                Name = metadata.Album.Artist.Name, OwnerId = userId, AlbumsCount = 1, SongsCount = 0,
+                                Name = effectiveAlbumArtistName, OwnerId = userId, AlbumsCount = 1, SongsCount = 0,
                                 CreatedAt = DateTime.UtcNow,
                             };
 
@@ -492,7 +478,7 @@ public class MusicService(
 
                         songAlbum = new Album
                         {
-                            Name = metadata.Album.Name, Artist = songAlbumArtist, OwnerId = userId, SongsCount = 1,
+                            Name = effectiveAlbumName, Artist = songAlbumArtist, OwnerId = userId, SongsCount = 1,
                             CreatedAt = DateTime.UtcNow,
                         };
                         await db.AddAsync(songAlbum, cancellationToken);
@@ -529,6 +515,30 @@ public class MusicService(
                                 new SongArtist { SongId = 0, Artist = songArtist }
                             );
                         }
+                    }
+
+                    // Always ensure the album artist is in the song's artist list
+                    if (!songArtists.Any(sa => sa.Artist.Name == effectiveAlbumArtistName))
+                    {
+                        var albumArtist = (await repo.GetArtists(effectiveAlbumArtistName, cancellationToken))
+                            .FirstOrDefault();
+
+                        if (albumArtist is null)
+                        {
+                            albumArtist = new Artist
+                            {
+                                Name = effectiveAlbumArtistName, Owner = user, AlbumsCount = 0, SongsCount = 0,
+                                CreatedAt = DateTime.UtcNow,
+                            };
+
+                            await db.AddAsync(albumArtist, cancellationToken);
+                        }
+
+                        songArtists.Add(
+                            song?.Artists?.FirstOrDefault(sa => sa.ArtistId == albumArtist.Id)
+                            ??
+                            new SongArtist { SongId = 0, Artist = albumArtist }
+                        );
                     }
 
                     #endregion Artists
@@ -636,7 +646,7 @@ public class MusicService(
                         db.RemoveRange(genresDiff.Removed);
                     }
 
-                    song.Title = metadata.Title;
+                    song.Title = effectiveTitle;
                     song.Label = metadata.FullLabel;
                     song.Year = metadata.Year;
                     song.Lyrics = metadata.Lyrics;

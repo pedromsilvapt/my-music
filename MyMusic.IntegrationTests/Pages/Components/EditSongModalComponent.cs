@@ -46,6 +46,14 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         await albumInput.BlurAsync();
     }
 
+    public async Task SetAlbumArtistAsync(string albumArtist)
+    {
+        var albumArtistInput = Root.GetByTestId("edit-song-album-artist");
+        await albumArtistInput.ClearAsync();
+        await albumArtistInput.FillAsync(albumArtist);
+        await albumArtistInput.BlurAsync();
+    }
+
     public async Task SetArtistsAsync(string[] artists)
     {
         var artistsInput = Root.GetByTestId("edit-song-artists");

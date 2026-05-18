@@ -153,7 +153,7 @@ public static class TagConverter
 
         tag.Performers = metadata.Artists?.Select(artist => artist.Name)?.ToArray();
 
-        var albumArtist = metadata.Album?.Artist?.Name ?? metadata.Artists?[0]?.Name;
+        var albumArtist = metadata.Album?.Artist?.Name ?? metadata.Artists?.FirstOrDefault()?.Name;
         tag.AlbumArtists = albumArtist is not null ? [albumArtist] : [];
 
         tag.Genres = metadata.Genres?.ToArray();

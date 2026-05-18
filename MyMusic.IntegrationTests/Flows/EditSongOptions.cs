@@ -7,4 +7,5 @@ public record EditSongOptions(
     int? Rating = null,
     bool? Explicit = null,
     string? Album = null,
-    string[]? Artists = null);
+    string[]? Artists = null,
+    string? AlbumArtist = null);

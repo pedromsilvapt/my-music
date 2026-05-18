@@ -166,7 +166,7 @@ public class SongsFixture
 
         foreach (var song in sampleSongs)
         {
-            var mp3Content = TestFiles.CreateTestMusicFile(song.Title, song.Album, song.Artists, song.Genres, song.Year);
+            var mp3Content = TestFiles.CreateTestMusicFile(song);
             var safeFileName = string.Join("_", song.Title.Split(Path.GetInvalidFileNameChars()));
             var fileName = $"{safeFileName}.mp3";
             var modifiedAt = DateTime.UtcNow.ToString("o");
