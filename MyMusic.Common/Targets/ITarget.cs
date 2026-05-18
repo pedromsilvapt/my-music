@@ -5,7 +5,7 @@ namespace MyMusic.Common.Targets;
 
 public interface ITarget
 {
-    public Task Save(Stream data, SongMetadata? metadata = null, NamingMetadata? naming = null, CancellationToken cancellationToken = default);
+    public Task Save(Stream data, SongMetadata? metadata = null, NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null, CancellationToken cancellationToken = default);
 
     public Stream Read();
 
@@ -15,5 +15,5 @@ public interface ITarget
 
     public Task SetTimestamps(DateTime createdAt, DateTime modifiedAt, CancellationToken cancellationToken = default);
 
-    public Task Relocate(NamingMetadata? naming = null, CancellationToken cancellationToken = default);
+    public Task Relocate(NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null, CancellationToken cancellationToken = default);
 }

@@ -9,6 +9,8 @@ namespace MyMusic.Common.Utilities;
 /// </summary>
 public static class FilePathResolver
 {
+    private const int MaxConflictResolutionAttempts = 100;
+
     /// <summary>
     ///     Given a base file path, checks the database for existing songs owned by the same user
     ///     that have the same RepositoryPath. If a collision is found, appends a counter suffix
@@ -36,6 +38,12 @@ public static class FilePathResolver
 
         for (var counter = 2; ; counter++)
         {
+            if (counter > MaxConflictResolutionAttempts)
+            {
+                throw new InvalidOperationException(
+                    $"Could not resolve file path conflict for '{basePath}': exceeded maximum attempts ({MaxConflictResolutionAttempts}).");
+            }
+
             var candidateFilename = $"{filenameWithoutExt} ({counter}){extension}";
             var candidatePath = string.IsNullOrEmpty(directory)
                 ? candidateFilename
@@ -77,6 +85,12 @@ public static class FilePathResolver
 
         for (var counter = 2; ; counter++)
         {
+            if (counter > MaxConflictResolutionAttempts)
+            {
+                throw new InvalidOperationException(
+                    $"Could not resolve file path conflict for '{basePath}': exceeded maximum attempts ({MaxConflictResolutionAttempts}).");
+            }
+
             var candidateFilename = $"{filenameWithoutExt} ({counter}){extension}";
             var candidatePath = string.IsNullOrEmpty(directory)
                 ? candidateFilename

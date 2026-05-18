@@ -366,11 +366,6 @@ public class MusicService(
                         continue;
                     }
 
-                    targetFile.EnsureFilePath(metadata, naming);
-
-                    targetFile.FilePath = await FilePathResolver.ResolveConflictAsync(
-                        targetFile.FilePath!, user.Id, db, cancellationToken);
-
                     if (song is null && importSongMetadata.SongId.HasValue)
                     {
                         logger.LogDebug("  >> Loading song by SongId={SongId} from import metadata", importSongMetadata.SongId.Value);
@@ -573,7 +568,9 @@ public class MusicService(
 
                     await using (var sourceStream = sourceFile.Read())
                     {
-                        await targetFile.Save(sourceStream, metadata, naming, cancellationToken);
+                        await targetFile.Save(sourceStream, metadata, naming,
+                            async newPath => await FilePathResolver.ResolveConflictAsync(newPath, user.Id, db, cancellationToken),
+                            cancellationToken);
                     }
 
                     job.AddFileMapping(sourceFile.FilePath!, targetFile.FilePath!);

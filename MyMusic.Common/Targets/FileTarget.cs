@@ -20,9 +20,9 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
 
     public FileTarget(IFileSystem fileSystem) : this(new ArtistAlbumNamingStrategy(), fileSystem) { }
 
-    public async Task Save(Stream data, SongMetadata? metadata = null, NamingMetadata? naming = null, CancellationToken cancellationToken = default)
+    public async Task Save(Stream data, SongMetadata? metadata = null, NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null, CancellationToken cancellationToken = default)
     {
-        EnsureFilePath(metadata, naming);
+        await EnsureFilePath(metadata, naming, resolveConflict);
 
         Metadata = metadata;
         Naming = naming;
@@ -111,7 +111,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
     public async Task SetTimestamps(DateTime createdAt, DateTime modifiedAt,
         CancellationToken cancellationToken = default)
     {
-        EnsureFilePath(null);
+        await EnsureFilePath(null);
 
         FileSystem.File.SetCreationTimeUtc(FilePath!, createdAt.ToUniversalTime());
         FileSystem.File.SetLastWriteTimeUtc(FilePath!, modifiedAt.ToUniversalTime());
@@ -119,7 +119,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         await Task.CompletedTask;
     }
 
-    public async Task Relocate(NamingMetadata? naming = null, CancellationToken cancellationToken = default)
+    public async Task Relocate(NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null, CancellationToken cancellationToken = default)
     {
         if (FilePath is null)
         {
@@ -144,7 +144,14 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         var effectiveNaming = naming ?? Naming ?? NamingMetadata.FromPath(FilePath);
         var newFilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(Metadata, effectiveNaming));
 
-        // If the path is indeed different, move the file
+        // Ensure that the automatically generated path does not conflict with other files,
+        // and if it does, transform it into a unique path.
+        // The specifics of that logic are the responsibility of the caller.
+        if (newFilePath != FilePath && resolveConflict is not null)
+        {
+            newFilePath = await resolveConflict(newFilePath);
+        }
+
         if (newFilePath != FilePath)
         {
             FileSystem.Directory.CreateDirectory(FileSystem.Path.GetDirectoryName(newFilePath)!);
@@ -155,7 +162,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         }
     }
 
-    public void EnsureFilePath(SongMetadata? metadata, NamingMetadata? naming = null)
+    public async Task EnsureFilePath(SongMetadata? metadata, NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null)
     {
         if (FilePath is null)
         {
@@ -170,6 +177,11 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
             }
 
             FilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(metadata, naming));
+        }
+
+        if (resolveConflict is not null)
+        {
+            FilePath = await resolveConflict(FilePath!);
         }
     }
 }

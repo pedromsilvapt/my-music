@@ -507,17 +507,10 @@ public class SongUpdateService(
         await fileTarget.SaveMetadata(metadata, cancellationToken);
 
         var naming = NamingMetadata.FromPath(song.RepositoryPath);
-        await fileTarget.Relocate(naming, cancellationToken);
-
-        var resolvedPath = await FilePathResolver.ResolveConflictAsync(
-            fileTarget.FilePath!, song.OwnerId, song.Id, db, cancellationToken);
-
-        if (resolvedPath != fileTarget.FilePath)
-        {
-            fileSystem.Directory.CreateDirectory(fileSystem.Path.GetDirectoryName(resolvedPath)!);
-            fileSystem.File.Move(fileTarget.FilePath!, resolvedPath);
-            fileTarget.FilePath = resolvedPath;
-        }
+        await fileTarget.Relocate(naming, async newPath =>
+            await FilePathResolver.ResolveConflictAsync(
+                newPath, song.OwnerId, song.Id, db, cancellationToken),
+            cancellationToken);
 
         song.RepositoryPath = fileTarget.FilePath!;
 

@@ -123,7 +123,7 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
             try
             {
                 var naming = new NamingMetadata { Extension = ".mp3" };
-                await tempTarget.Save(stream, metadata, naming, cancellationToken);
+                await tempTarget.Save(stream, metadata, naming, cancellationToken: cancellationToken);
 
                 var now = DateTime.Now;
 

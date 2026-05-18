@@ -5,6 +5,7 @@ using System.IO.Abstractions.TestingHelpers;
 using System.IO.Hashing;
 using System.Runtime.InteropServices;
 using MyMusic.Common.Metadata;
+using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Common.Targets;
 using MyMusic.Common.Tests.Utilities;
@@ -133,6 +134,167 @@ public class FileTargetSpecs
         finalChecksumA.ShouldBe(finalChecksumB,
             "Checksums should match when both files have identical metadata. " +
             $"File A: {initialChecksumA} -> {finalChecksumA}, File B: {initialChecksumB} -> {finalChecksumB}");
+    }
+
+    [Fact]
+    public async Task Save_WithResolveConflict_ShouldUseResolvedPath()
+    {
+        var fs = new MockFileSystem();
+        const string resolvedPath = "/data/Artist/New Album/New Song - Artist (2).mp3";
+
+        fs.Directory.CreateDirectory("/data/artist/album");
+        fs.File.WriteAllBytes(FilePath, MockMusicFile.GetTestMusicFile());
+
+        var metadata = new SongMetadata(null, "New Song")
+        {
+            Album = new AlbumMetadata(null, "New Album", new CoverArtMetadata(), new ArtistMetadata(null, "Artist")),
+            Artists = [new ArtistMetadata(null, "Artist")],
+        };
+
+        var target = new FileTarget(fs)
+        {
+            Folder = "/data",
+        };
+
+        var naming = new NamingMetadata { Extension = ".mp3" };
+
+        await using (var sourceStream = fs.FileStream.New(FilePath, FileMode.Open, FileAccess.Read))
+        {
+            await target.Save(sourceStream, metadata, naming, newPath =>
+            {
+                newPath.ShouldContain("New Song - Artist");
+                return Task.FromResult(resolvedPath);
+            });
+        }
+
+        target.FilePath.ShouldBe(resolvedPath);
+        fs.File.Exists(resolvedPath).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Save_WithResolveConflict_ReturningSamePath_ShouldUseThatPath()
+    {
+        var fs = new MockFileSystem();
+        fs.Directory.CreateDirectory("/data/artist/album");
+        fs.File.WriteAllBytes(FilePath, MockMusicFile.GetTestMusicFile());
+
+        var metadata = new SongMetadata(null, "Test Song")
+        {
+            Album = new AlbumMetadata(null, "Test Album", new CoverArtMetadata(), new ArtistMetadata(null, "Test Artist")),
+            Artists = [new ArtistMetadata(null, "Test Artist")],
+        };
+
+        var target = new FileTarget(fs)
+        {
+            Folder = "/data",
+        };
+
+        var naming = new NamingMetadata { Extension = ".mp3" };
+        var expectedPath = "/data/Test Artist/Test Album/Test Song - Test Artist.mp3";
+
+        await using (var sourceStream = fs.FileStream.New(FilePath, FileMode.Open, FileAccess.Read))
+        {
+            await target.Save(sourceStream, metadata, naming, newPath => Task.FromResult(newPath));
+        }
+
+        target.FilePath.ShouldBe(expectedPath);
+        fs.File.Exists(expectedPath).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Save_WithoutResolveConflict_ShouldBehaveAsBefore()
+    {
+        var fs = new MockFileSystem();
+        fs.Directory.CreateDirectory("/data/artist/album");
+        fs.File.WriteAllBytes(FilePath, MockMusicFile.GetTestMusicFile());
+
+        var metadata = new SongMetadata(null, "Test Song")
+        {
+            Album = new AlbumMetadata(null, "Test Album", new CoverArtMetadata(), new ArtistMetadata(null, "Test Artist")),
+            Artists = [new ArtistMetadata(null, "Test Artist")],
+        };
+
+        var target = new FileTarget(fs)
+        {
+            Folder = "/data",
+        };
+
+        var naming = new NamingMetadata { Extension = ".mp3" };
+        var expectedPath = "/data/Test Artist/Test Album/Test Song - Test Artist.mp3";
+
+        await using (var sourceStream = fs.FileStream.New(FilePath, FileMode.Open, FileAccess.Read))
+        {
+            await target.Save(sourceStream, metadata, naming);
+        }
+
+        target.FilePath.ShouldBe(expectedPath);
+        fs.File.Exists(expectedPath).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Relocate_WithResolveConflict_ShouldUseResolvedPath()
+    {
+        var fs = new MockFileSystem();
+        const string originalPath = "/data/artist/album/old-song.mp3";
+        const string resolvedPath = "/data/artist/album/Artist/New Album/New Song - Artist (2).mp3";
+
+        fs.Directory.CreateDirectory("/data/artist/album");
+        fs.File.WriteAllBytes(originalPath, MockMusicFile.GetTestMusicFile());
+
+        var metadata = new SongMetadata(null, "New Song")
+        {
+            Album = new AlbumMetadata(null, "New Album", new CoverArtMetadata(), new ArtistMetadata(null, "Artist")),
+            Artists = [new ArtistMetadata(null, "Artist")],
+        };
+
+        var target = new FileTarget(fs)
+        {
+            FilePath = originalPath,
+            Folder = "/data",
+        };
+
+        await target.SaveMetadata(metadata);
+
+        var naming = NamingMetadata.FromPath(originalPath);
+        await target.Relocate(naming, newPath =>
+        {
+            newPath.ShouldContain("New Song - Artist");
+            return Task.FromResult(resolvedPath);
+        });
+
+        target.FilePath.ShouldBe(resolvedPath);
+        fs.File.Exists(resolvedPath).ShouldBeTrue();
+        fs.File.Exists(originalPath).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Relocate_WithResolveConflict_ReturningSamePath_ShouldNotMove()
+    {
+        var fs = new MockFileSystem();
+        const string originalPath = "/data/artist/album/old-song.mp3";
+
+        fs.Directory.CreateDirectory("/data/artist/album");
+        fs.File.WriteAllBytes(originalPath, MockMusicFile.GetTestMusicFile());
+
+        var metadata = new SongMetadata(null, "New Song")
+        {
+            Album = new AlbumMetadata(null, "New Album", new CoverArtMetadata(), new ArtistMetadata(null, "Artist")),
+            Artists = [new ArtistMetadata(null, "Artist")],
+        };
+
+        var target = new FileTarget(fs)
+        {
+            FilePath = originalPath,
+            Folder = "/data",
+        };
+
+        await target.SaveMetadata(metadata);
+
+        var naming = NamingMetadata.FromPath(originalPath);
+        await target.Relocate(naming, newPath => Task.FromResult(originalPath));
+
+        target.FilePath.ShouldBe(originalPath);
+        fs.File.Exists(originalPath).ShouldBeTrue();
     }
 
     private static CoverArtMetadata CreateCoverArt(int width, int height)
