@@ -14,8 +14,7 @@ public static class SongQueryableExtensions
             .Include(s => s.Genres)
             .ThenInclude(g => g.Genre)
             .Include(s => s.Devices)
-            .ThenInclude(sd => sd.Device)
-            .Include(s => s.Cover);
+            .ThenInclude(sd => sd.Device);
 
     public static IQueryable<TEntity> IncludeSongMetadata<TEntity>(
         this IQueryable<TEntity> query,
@@ -26,8 +25,7 @@ public static class SongQueryableExtensions
         var result = query
             .Include($"{songNavigationPath}.Artists.Artist")
             .Include($"{songNavigationPath}.Genres.Genre")
-            .Include($"{songNavigationPath}.Devices.Device")
-            .Include($"{songNavigationPath}.Cover");
+            .Include($"{songNavigationPath}.Devices.Device");
 
         if (includeAlbum)
         {
