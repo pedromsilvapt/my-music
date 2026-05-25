@@ -1,3 +1,4 @@
+using System.Text.Json;
 using MyMusic.Common.Entities;
 
 namespace MyMusic.Server.DTO.Sync;
@@ -20,25 +21,29 @@ public record SyncRecordSongInfo
 
 public record SyncRecordResponseItem
 {
+    public required long Id { get; init; }
     public required string FilePath { get; init; }
     public required SyncRecordAction Action { get; init; }
-    public required SyncRecordSource Source { get; init; }
     public long? SongId { get; init; }
+    public JsonElement? Data { get; init; }
+    public long? ResolvesConflictRecordId { get; init; }
     public SyncRecordSongInfo? SongInfo { get; init; }
-    public string? ErrorMessage { get; init; }
     public string? Reason { get; init; }
+    public bool Acknowledged { get; init; }
     public DateTime ProcessedAt { get; init; }
 
     public static SyncRecordResponseItem FromEntity(DeviceSyncSessionRecord record, bool includeSongInfo = false)
     {
         var item = new SyncRecordResponseItem
         {
+            Id = record.Id,
             FilePath = record.FilePath,
             Action = record.Action,
-            Source = record.Source,
             SongId = record.SongId,
-            ErrorMessage = record.ErrorMessage,
+            Data = record.Data,
+            ResolvesConflictRecordId = record.ResolvesConflictRecordId,
             Reason = record.Reason,
+            Acknowledged = record.Acknowledged,
             ProcessedAt = record.ProcessedAt,
         };
 

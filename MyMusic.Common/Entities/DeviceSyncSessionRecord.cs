@@ -1,9 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
 
-[Index(nameof(SessionId), nameof(FilePath), IsUnique = true)]
 public class DeviceSyncSessionRecord
 {
     public long Id { get; set; }
@@ -18,27 +18,31 @@ public class DeviceSyncSessionRecord
 
     public SyncRecordAction Action { get; set; }
 
-    public SyncRecordSource Source { get; set; }
-
-    [MaxLength(2048)] public string? ErrorMessage { get; set; }
+    public JsonElement? Data { get; set; }
 
     [MaxLength(2048)] public string? Reason { get; set; }
+
+    public long? ResolvesConflictRecordId { get; set; }
+
+    public DeviceSyncSessionRecord? ResolvesConflictRecord { get; set; }
+
+    public bool Acknowledged { get; set; } = false;
 
     public DateTime ProcessedAt { get; set; }
 }
 
 public enum SyncRecordAction
 {
-    Created,
-    Updated,
+    CreateRemote,
+    UpdateRemote,
+    CreateLocal,
+    UpdateLocal,
+    Delete,
+    Link,
+    Unlink,
+    Rename,
     Skipped,
-    Downloaded,
-    Removed,
+    Conflict,
+    UpdateTimestamp,
     Error,
-}
-
-public enum SyncRecordSource
-{
-    Device,
-    Server,
 }

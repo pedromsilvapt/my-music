@@ -20,4 +20,6 @@ export interface ListDeviceItem {
   songCount: number;
   songs: DeviceSongRef[];
   importOnPurchase?: boolean;
+  /** @nullable */
+  lastSyncAt?: string | null;
 }

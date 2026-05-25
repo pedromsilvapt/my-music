@@ -9,7 +9,7 @@ using Shouldly;
 
 namespace MyMusic.IntegrationTests.Fixtures;
 
-public class CliTestFixture : IAsyncDisposable
+public class DesktopCliFixture : IAsyncDisposable
 {
     private readonly string _deviceName;
     private readonly string? _namingTemplate;
@@ -22,7 +22,7 @@ public class CliTestFixture : IAsyncDisposable
     public string ConfigDirectory { get; }
     public string DeviceName => _deviceName;
 
-    public CliTestFixture(string? deviceName = null, string? namingTemplate = null)
+    public DesktopCliFixture(string? deviceName = null, string? namingTemplate = null)
     {
         _deviceName = deviceName ?? $"TestDevice-{Guid.NewGuid():N}";
         _namingTemplate = namingTemplate;

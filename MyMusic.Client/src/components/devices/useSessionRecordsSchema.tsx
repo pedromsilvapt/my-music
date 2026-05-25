@@ -8,9 +8,7 @@ import SessionRecordSong from "../common/fields/session-record-song.tsx";
 import Artwork from "../common/artwork.tsx";
 import {IconFileMusic} from "@tabler/icons-react";
 
-interface RecordWithId extends SyncRecordResponseItem {
-    id: string;
-}
+type RecordWithId = Omit<SyncRecordResponseItem, 'id'> & { id: string };
 
 function formatDateTime(date: string | Date): string {
     const d = new Date(date);
@@ -19,20 +17,47 @@ function formatDateTime(date: string | Date): string {
 
 function getActionColor(action: string): string {
     switch (action) {
-        case 'Created':
+        case 'CreateRemote':
             return 'green';
-        case 'Updated':
+        case 'UpdateRemote':
             return 'blue';
+        case 'CreateLocal':
+            return 'teal';
+        case 'UpdateLocal':
+            return 'cyan';
+        case 'Delete':
+            return 'red';
+        case 'Link':
+            return 'lime';
+        case 'Unlink':
+            return 'orange';
+        case 'Rename':
+            return 'violet';
         case 'Skipped':
             return 'gray';
-        case 'Downloaded':
-            return 'cyan';
-        case 'Removed':
-            return 'orange';
+        case 'Conflict':
+            return 'yellow';
+        case 'UpdateTimestamp':
+            return 'grape';
         case 'Error':
             return 'red';
         default:
             return 'gray';
+    }
+}
+
+function formatData(data: unknown): string {
+    if (data == null) return '-';
+    try {
+        const obj = typeof data === 'string' ? JSON.parse(data) : data;
+        if (typeof obj === 'object' && obj !== null) {
+            return Object.entries(obj)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ');
+        }
+        return String(obj);
+    } catch {
+        return String(data);
     }
 }
 
@@ -90,13 +115,22 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
                 name: 'action',
                 displayName: 'Action',
                 render: row => <Badge color={getActionColor(row.action)}>{row.action}</Badge>,
-                width: 100,
+                width: 110,
             },
             {
-                name: 'source',
-                displayName: 'Source',
-                render: row => <Text>{row.source}</Text>,
-                width: 80,
+                name: 'data',
+                displayName: 'Data',
+                render: row => {
+                    const formatted = formatData(row.data);
+                    return formatted !== '-' ? (
+                        <Tooltip label={formatted} openDelay={500}>
+                            <Text lineClamp={1} style={{maxWidth: '200px'}}>
+                                {formatted}
+                            </Text>
+                        </Tooltip>
+                    ) : <Text c="dimmed">-</Text>;
+                },
+                width: '1.5fr',
             },
             {
                 name: 'reason',
@@ -109,6 +143,17 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
                     </Tooltip>
                 ) : <Text c="dimmed">-</Text>,
                 width: '1.5fr',
+            },
+            {
+                name: 'resolvesConflictRecordId',
+                displayName: 'Resolves',
+                render: row => row.resolvesConflictRecordId != null ? (
+                    <Badge color="yellow" variant="light" size="sm">
+                        #{row.resolvesConflictRecordId}
+                    </Badge>
+                ) : <Text c="dimmed">-</Text>,
+                width: 80,
+                align: 'center' as const,
             },
             {
                 name: 'processedAt',
@@ -126,9 +171,11 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
         />,
         renderListTitle: (row) => <Text fw={500} lineClamp={1}>{row.filePath.split('/').pop()}</Text>,
         renderListSubTitle: (row, lineClamp) => (
-            <Text c="gray" size="sm" lineClamp={lineClamp}>
-                {row.action} • {row.source}
-            </Text>
+            <div>
+                <Text c="gray" size="sm" lineClamp={lineClamp}>
+                    {row.action}{row.resolvesConflictRecordId != null ? ` resolves #${row.resolvesConflictRecordId}` : ''}
+                </Text>
+            </div>
         ),
     }) as CollectionSchema<RecordWithId>, [filterMetadata, fetchFilterValues]);
 }

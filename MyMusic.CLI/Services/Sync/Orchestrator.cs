@@ -19,7 +19,7 @@ public class Orchestrator(
         if (deviceId is null)
         {
             logger.LogError("Failed to get or create device");
-            return new SyncResult { Failed = 1 };
+            return new SyncResult { Error = 1 };
         }
 
         logger.LogInformation("Using device ID: {DeviceId}", deviceId);
@@ -28,13 +28,13 @@ public class Orchestrator(
         if (string.IsNullOrEmpty(repositoryPath))
         {
             logger.LogError("Repository path is not configured");
-            return new SyncResult { Failed = 1 };
+            return new SyncResult { Error = 1 };
         }
 
         if (!fileOps.DirectoryExists(repositoryPath))
         {
             logger.LogError("Repository path does not exist: {Path}", repositoryPath);
-            return new SyncResult { Failed = 1 };
+            return new SyncResult { Error = 1 };
         }
 
         var ctx = new SyncContext
@@ -56,17 +56,19 @@ public class Orchestrator(
 
             await phases.ServerActionsPhaseAsync(ctx, progress, ct);
 
+            await phases.CommitPhaseAsync(ctx, progress, ct);
+
             await phases.CompleteAsync(ctx, scanResult.Files.Count, ct);
         }
         catch (OperationCanceledException)
         {
             logger.LogInformation("Sync cancelled by user");
-            return ctx.Result with { Failed = ctx.Result.Failed + 1, Cancelled = true, SessionId = ctx.SessionId };
+            return ctx.Result with { Error = ctx.Result.Error + 1, Cancelled = true, SessionId = ctx.SessionId };
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Sync failed with exception");
-            return ctx.Result with { Failed = ctx.Result.Failed + 1, SessionId = ctx.SessionId };
+            return ctx.Result with { Error = ctx.Result.Error + 1, SessionId = ctx.SessionId };
         }
         finally
         {

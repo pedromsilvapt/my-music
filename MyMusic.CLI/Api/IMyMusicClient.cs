@@ -54,11 +54,11 @@ public interface IMyMusicClient
         [Body] SyncStartRequest request,
         CancellationToken ct = default);
 
-    [Post("/api/devices/{deviceId}/sync/{sessionId}/records")]
-    Task<SyncRecordsResponse> RecordChunkAsync(
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/commit")]
+    Task<SyncCommitResponse> CommitSyncAsync(
         long deviceId,
         long sessionId,
-        [Body] SyncRecordsRequest request,
+        [Body] SyncCommitRequest request,
         CancellationToken ct = default);
 
     [Post("/api/devices/{deviceId}/sync/{sessionId}/complete")]
@@ -68,25 +68,28 @@ public interface IMyMusicClient
         [Body] SyncCompleteRequest request,
         CancellationToken ct = default);
 
-    [Post("/api/devices/{deviceId}/sync/check")]
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/check")]
     Task<SyncCheckResponse> CheckSyncAsync(
         long deviceId,
+        long sessionId,
         [Body] SyncCheckRequest request,
         CancellationToken ct = default);
 
     [Multipart]
-    [Post("/api/devices/{deviceId}/sync/upload")]
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/upload")]
     Task<SyncUploadResponse> UploadFileAsync(
         long deviceId,
+        long sessionId,
         [AliasAs("file")] StreamPart file,
         [AliasAs("path")] string path,
         [AliasAs("modifiedAt")] string modifiedAt,
         [AliasAs("createdAt")] string createdAt,
         CancellationToken ct = default);
 
-    [Get("/api/devices/{deviceId}/sync/pending-actions")]
-    Task<GetPendingActionsResponse> GetPendingActionsAsync(
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/pending-actions")]
+    Task<CreatePendingActionsResponse> CreatePendingActionsAsync(
         long deviceId,
+        long sessionId,
         CancellationToken ct = default);
 
     [Get("/api/devices/{deviceId}/sync/songs")]
@@ -94,16 +97,25 @@ public interface IMyMusicClient
         long deviceId,
         CancellationToken ct = default);
 
-    [Post("/api/devices/{deviceId}/sync/acknowledge")]
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/acknowledge")]
     Task<AcknowledgeActionResponse> AcknowledgeActionAsync(
         long deviceId,
+        long sessionId,
         [Body] AcknowledgeActionRequest request,
         CancellationToken ct = default);
 
-    [Post("/api/devices/{deviceId}/sync/resolve-conflicts")]
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/resolve-conflicts")]
     Task<SyncResolveConflictsResponse> ResolveConflictsAsync(
         long deviceId,
+        long sessionId,
         [Body] SyncResolveConflictsRequest request,
+        CancellationToken ct = default);
+
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/error")]
+    Task<ReportSyncErrorResponse> ReportSyncErrorAsync(
+        long deviceId,
+        long sessionId,
+        [Body] ReportSyncErrorRequest request,
         CancellationToken ct = default);
 
     [Get("/api/songs/{songId}/download")]

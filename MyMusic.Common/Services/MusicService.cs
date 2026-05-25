@@ -72,7 +72,7 @@ public class MusicService(
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public async Task AddSongsToDevice(MusicDbContext db, long deviceId, Song song,
+    public async Task<SongDevice> AddSongsToDevice(MusicDbContext db, long deviceId, Song song,
         CancellationToken cancellationToken = default)
     {
         var device = await db.Devices.FindAsync([deviceId], cancellationToken);
@@ -97,8 +97,9 @@ public class MusicService(
                 DeviceId = deviceId,
                 SongId = song.Id,
                 SyncAction = SongSyncAction.Download,
+                SyncActionReason = "Song added to device",
                 DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song), naming),
-                AddedAt = DateTime.Now,
+                AddedAt = DateTime.UtcNow,
             };
 
             await db.AddAsync(songDevice, cancellationToken);
@@ -106,10 +107,38 @@ public class MusicService(
         else if (songDevice.SyncAction == SongSyncAction.Remove)
         {
             songDevice.SyncAction = null;
+            songDevice.SyncActionReason = null;
             songDevice.DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song), naming);
 
             db.Update(songDevice);
         }
+
+        return songDevice;
+    }
+
+    public async Task<SongDevice> AddSongsToDevice(MusicDbContext db, long deviceId, long songId, string devicePath,
+        DateTime modifiedAt, CancellationToken cancellationToken = default)
+    {
+        var existing = await db.SongDevices
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == devicePath, cancellationToken);
+
+        if (existing != null)
+        {
+            logger.LogInformation("AddSongsToDevice: RETURNING EARLY for path={Path}, existing.LastSyncedModifiedAtTicks={LastSyncedTicks}", devicePath, existing.LastSyncedModifiedAt?.Ticks);
+            return existing;
+        }
+
+        logger.LogInformation("AddSongsToDevice: ADDING new SongDevice for path={Path}, songId={SongId}, modifiedAtTicks={ModifiedAtTicks}", devicePath, songId, modifiedAt.Ticks);
+        var songDevice = new SongDevice
+        {
+            DeviceId = deviceId,
+            SongId = songId,
+            DevicePath = devicePath,
+            AddedAt = DateTime.UtcNow,
+            LastSyncedModifiedAt = modifiedAt,
+        };
+        db.SongDevices.Add(songDevice);
+        return songDevice;
     }
 
     /// <summary>
@@ -130,6 +159,7 @@ public class MusicService(
         if (songDevice != null)
         {
             songDevice.SyncAction = SongSyncAction.Remove;
+            songDevice.SyncActionReason = "Song removed from device";
             db.Update(songDevice);
         }
     }
@@ -279,7 +309,7 @@ public class MusicService(
                     var targetFile = new FileTarget(fileSystem)
                         { Folder = fileSystem.Path.Join(config.Value.MusicRepositoryPath, user.Username) };
 
-                    var naming = NamingMetadata.FromPath(sourceFile.FilePath);
+                    var naming = NamingMetadata.FromPath(importSongMetadata.OriginalFilePath ?? sourceFile.FilePath);
 
                     metadata = await sourceFile.ReadMetadata(cancellationToken);
 
@@ -295,7 +325,7 @@ public class MusicService(
                     // tag writing) and must reflect the actual file contents to preserve checksum integrity.
 
                     var effectiveTitle = string.IsNullOrEmpty(metadata.Title)
-                        ? fileSystem.Path.GetFileNameWithoutExtension(importSongMetadata.SourceFilePath)
+                        ? fileSystem.Path.GetFileNameWithoutExtension(importSongMetadata.OriginalFilePath ?? importSongMetadata.SourceFilePath)
                         : metadata.Title;
 
                     var effectiveAlbumName = metadata.Album is null || string.IsNullOrEmpty(metadata.Album.Name)
@@ -673,7 +703,7 @@ public class MusicService(
                     song.Genres = songGenres;
                     song.Devices = song.Devices is { Count: > 0 } ? song.Devices : songDevices;
                     song.Artists = songArtists;
-                    song.ModifiedAt = importSongMetadata.CreatedAt.ToUniversalTime();
+                    song.ModifiedAt = importSongMetadata.ModifiedAt.ToUniversalTime();
 
                     if (cover is not null)
                     {

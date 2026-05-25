@@ -66,12 +66,18 @@ function parseArgs(argv: string[]): CliArgs {
 }
 
 function printResults(result: SyncResult): void {
-    console.log(`Created: ${result.created}`);
-    console.log(`Updated: ${result.updated}`);
-    console.log(`Downloaded: ${result.downloaded}`);
-    console.log(`Removed: ${result.removed}`);
-    console.log(`Failed: ${result.failed}`);
-    console.log(`Conflicts: ${result.conflicts}`);
+    console.log(`CreateRemote: ${result.createRemote}`);
+    console.log(`UpdateRemote: ${result.updateRemote}`);
+    console.log(`CreateLocal: ${result.createLocal}`);
+    console.log(`UpdateLocal: ${result.updateLocal}`);
+    console.log(`Delete: ${result.delete}`);
+    console.log(`Link: ${result.link}`);
+    console.log(`Unlink: ${result.unlink}`);
+    console.log(`Rename: ${result.rename}`);
+    console.log(`Skipped: ${result.skipped}`);
+    console.log(`Conflict: ${result.conflict}`);
+    console.log(`UpdateTimestamp: ${result.updateTimestamp}`);
+    console.log(`Error: ${result.error}`);
 }
 
 async function main(): Promise<number> {
@@ -140,7 +146,7 @@ async function main(): Promise<number> {
 
         printResults(result);
 
-        if (result.failed > 0) {
+        if (result.error > 0) {
             return 1;
         }
 

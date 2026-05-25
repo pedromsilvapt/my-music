@@ -10,13 +10,18 @@ export function createSyncContext(
     const decodedRepoPath = decodeToFsPath(repositoryPath);
 
     const result: SyncResult = {
-        created: 0,
-        updated: 0,
+        createRemote: 0,
+        updateRemote: 0,
+        createLocal: 0,
+        updateLocal: 0,
+        delete: 0,
+        link: 0,
+        unlink: 0,
+        rename: 0,
         skipped: 0,
-        downloaded: 0,
-        removed: 0,
-        failed: 0,
-        conflicts: 0,
+        conflict: 0,
+        updateTimestamp: 0,
+        error: 0,
     };
 
     return {
@@ -27,5 +32,6 @@ export function createSyncContext(
         result,
         uploadedPaths: new Set(),
         pendingDownloadPaths: new Set(),
+        conflictedSongIds: new Set(),
     };
 }

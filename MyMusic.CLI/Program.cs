@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using System.IO.Abstractions;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -178,6 +180,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddSingleton<ISyncConfig, CliSyncConfig>();
     services.AddSingleton<ISyncApiClient, CliSyncApiClient>();
 
+    services.AddScoped<SyncActionsDevice>();
     services.AddScoped<Phases>();
     services.AddScoped<Orchestrator>();
     services.AddScoped<ISyncService, SyncService>();
@@ -188,7 +191,10 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
 static RefitSettings GetRefitSettings(IServiceProvider sp) =>
     new()
     {
-        ContentSerializer = new SystemTextJsonContentSerializer(),
+        ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            Converters = { new JsonStringEnumConverter() },
+        }),
     };
 
 public class FileLoggerProvider : ILoggerProvider

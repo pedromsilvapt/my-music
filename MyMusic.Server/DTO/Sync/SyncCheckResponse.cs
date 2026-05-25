@@ -1,3 +1,5 @@
+using MyMusic.Common.Entities;
+
 namespace MyMusic.Server.DTO.Sync;
 
 public record SyncCheckResponse
@@ -5,7 +7,9 @@ public record SyncCheckResponse
     public required List<SyncFileInfoItem> ToCreate { get; init; }
     public required List<SyncFileInfoItem> ToUpdate { get; init; }
     public required List<SyncPotentialConflictItem> PotentialConflicts { get; init; }
-    public required List<PendingActionItem> PendingActions { get; init; }
+    public required List<SyncRecordResponseItem> Records { get; init; }
+    public required List<long> SkippedRecordIds { get; init; }
+    public required SyncActionCounts Counts { get; init; }
 }
 
 public record SyncPotentialConflictItem

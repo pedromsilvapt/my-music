@@ -9,10 +9,16 @@ export type SyncRecordAction = typeof SyncRecordAction[keyof typeof SyncRecordAc
 
 
 export const SyncRecordAction = {
-  Created: 'Created',
-  Updated: 'Updated',
+  CreateRemote: 'CreateRemote',
+  UpdateRemote: 'UpdateRemote',
+  CreateLocal: 'CreateLocal',
+  UpdateLocal: 'UpdateLocal',
+  Delete: 'Delete',
+  Link: 'Link',
+  Unlink: 'Unlink',
+  Rename: 'Rename',
   Skipped: 'Skipped',
-  Downloaded: 'Downloaded',
-  Removed: 'Removed',
+  Conflict: 'Conflict',
+  UpdateTimestamp: 'UpdateTimestamp',
   Error: 'Error',
 } as const;

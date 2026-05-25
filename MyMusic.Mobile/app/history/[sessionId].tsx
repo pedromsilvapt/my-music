@@ -11,7 +11,7 @@ import {useTheme} from '../../src/hooks/useTheme';
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 
-type FilterType = 'all' | 'created' | 'updated' | 'skipped' | 'downloaded' | 'removed' | 'error';
+type FilterType = 'all' | 'CreateRemote' | 'UpdateRemote' | 'CreateLocal' | 'UpdateLocal' | 'Delete' | 'Link' | 'Unlink' | 'Rename' | 'Skipped' | 'Conflict' | 'UpdateTimestamp' | 'Error';
 
 const PAGE_SIZE = 50;
 
@@ -237,15 +237,17 @@ export default function SessionDetailScreen() {
 
     const getActionColor = (action: string) => {
         switch (action.toLowerCase()) {
-            case 'created':
+            case 'createremote':
                 return colors.success;
-            case 'updated':
+            case 'updateremote':
                 return colors.info;
             case 'skipped':
                 return colors.textMuted;
-            case 'downloaded':
+            case 'createlocal':
+            case 'updatelocal':
                 return colors.syncDownload;
-            case 'removed':
+            case 'delete':
+            case 'unlink':
                 return colors.error;
             case 'error':
                 return colors.error;
@@ -256,15 +258,17 @@ export default function SessionDetailScreen() {
 
     const getActionColorKey = (action: string): keyof typeof colors => {
         switch (action.toLowerCase()) {
-            case 'created':
+            case 'createremote':
                 return 'success';
-            case 'updated':
+            case 'updateremote':
                 return 'info';
             case 'skipped':
                 return 'textMuted';
-            case 'downloaded':
+            case 'createlocal':
+            case 'updatelocal':
                 return 'syncDownload';
-            case 'removed':
+            case 'delete':
+            case 'unlink':
                 return 'error';
             case 'error':
                 return 'error';
@@ -273,21 +277,32 @@ export default function SessionDetailScreen() {
         }
     };
 
-    const getActionIcon = (action: string, source: string) => {
+    const getActionIcon = (action: string) => {
         if (action.toLowerCase() === 'error') return 'alert-circle';
         if (action.toLowerCase() === 'skipped') return 'skip-forward';
-        if (source === 'Server') return 'cloud-download';
+        if (action === 'CreateLocal' || action === 'UpdateLocal' || action === 'Delete' || action === 'Link' || action === 'Unlink' || action === 'Rename') return 'cloud-download';
         return 'cloud-upload';
+    };
+
+    const getActionSource = (action: string): string => {
+        if (action === 'CreateLocal' || action === 'UpdateLocal' || action === 'Delete' || action === 'Link' || action === 'Unlink' || action === 'Rename') return 'Server';
+        return 'Device';
     };
 
     const getSessionActionCount = useCallback((action: string): number => {
         if (!session) return 0;
         switch (action.toLowerCase()) {
-            case 'created': return session.createdCount;
-            case 'updated': return session.updatedCount;
+            case 'createremote': return session.createRemoteCount;
+            case 'updateremote': return session.updateRemoteCount;
             case 'skipped': return session.skippedCount;
-            case 'downloaded': return session.downloadedCount;
-            case 'removed': return session.removedCount;
+            case 'createlocal': return session.createLocalCount;
+            case 'updatelocal': return session.updateLocalCount;
+            case 'delete': return session.deleteCount;
+            case 'link': return session.linkCount;
+            case 'unlink': return session.unlinkCount;
+            case 'rename': return session.renameCount;
+            case 'conflict': return session.conflictCount;
+            case 'updatetimestamp': return session.updateTimestampCount;
             case 'error': return session.errorCount;
             default: return 0;
         }
@@ -299,12 +314,18 @@ export default function SessionDetailScreen() {
 
     const filters: { key: FilterType; label: string }[] = [
         {key: 'all', label: 'All'},
-        {key: 'created', label: 'Created'},
-        {key: 'updated', label: 'Updated'},
-        {key: 'skipped', label: 'Skipped'},
-        {key: 'downloaded', label: 'Down'},
-        {key: 'removed', label: 'Removed'},
-        {key: 'error', label: 'Errors'},
+        {key: 'CreateRemote', label: 'Created'},
+        {key: 'UpdateRemote', label: 'Updated'},
+        {key: 'Skipped', label: 'Skipped'},
+        {key: 'CreateLocal', label: 'Down'},
+        {key: 'UpdateLocal', label: 'UpdLocal'},
+        {key: 'Delete', label: 'Deleted'},
+        {key: 'Link', label: 'Linked'},
+        {key: 'Unlink', label: 'Unlinked'},
+        {key: 'Rename', label: 'Renamed'},
+        {key: 'Conflict', label: 'Conflict'},
+        {key: 'UpdateTimestamp', label: 'TS Upd'},
+        {key: 'Error', label: 'Errors'},
     ];
 
     // Build flat list data for FlashList
@@ -384,24 +405,24 @@ export default function SessionDetailScreen() {
                         <Text style={[styles.summaryTitle, {fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Summary</Text>
                         <View style={[styles.summaryGrid, {flexDirection: 'row', flexWrap: 'wrap'}]}>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.success}]}>{item.session.createdCount}</Text>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.success}]}>{item.session.createRemoteCount}</Text>
                                 <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
                             </View>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.info}]}>{item.session.updatedCount}</Text>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.info}]}>{item.session.updateRemoteCount}</Text>
                                 <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
+                            </View>
+                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{item.session.createLocalCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
                             </View>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
                                 <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textMuted}]}>{item.session.skippedCount}</Text>
                                 <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
                             </View>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{item.session.downloadedCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
-                            </View>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.removedCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Removed</Text>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.deleteCount}</Text>
+                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Deleted</Text>
                             </View>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
                                 <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.errorCount}</Text>
@@ -446,7 +467,7 @@ export default function SessionDetailScreen() {
                     <View style={{marginHorizontal: spacing.md, marginTop: spacing.md, marginBottom: spacing.sm}}>
                         <View style={[styles.actionBadge, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm, alignSelf: 'flex-start', backgroundColor: withAlpha(getActionColorKey(item.action), 0.12)}]}>
                             <Ionicons
-                                name={getActionIcon(item.action, item.firstRecord.source) as any}
+                                name={getActionIcon(item.action) as any}
                                 size={14}
                                 color={getActionColor(item.action)}
                             />
@@ -475,7 +496,7 @@ export default function SessionDetailScreen() {
                         <View style={[styles.recordItem]}>
                             <View style={[styles.recordPathRow, {flexDirection: 'row', alignItems: 'center', gap: spacing.xs}]}>
                                 <Ionicons
-                                    name={item.record.source === 'Server' ? 'arrow-down' : 'arrow-up'}
+                                    name={getActionSource(item.record.action) === 'Server' ? 'arrow-down' : 'arrow-up'}
                                     size={12}
                                     color={getActionColor(item.record.action)}
                                 />
@@ -483,9 +504,9 @@ export default function SessionDetailScreen() {
                                     {formatFilePath(item.record.filePath, item.repositoryPath)}
                                 </Text>
                             </View>
-                            {item.record.errorMessage && (
+                            {item.record.data && (item.record.data as Record<string, unknown>)?.errorMessage && (
                                 <Text style={[styles.recordError, {fontSize: fontSize.sm, color: colors.error, marginTop: spacing.xs}]} numberOfLines={2}>
-                                    {item.record.errorMessage}
+                                    {(item.record.data as Record<string, unknown>).errorMessage as string}
                                 </Text>
                             )}
                             {item.record.reason && (

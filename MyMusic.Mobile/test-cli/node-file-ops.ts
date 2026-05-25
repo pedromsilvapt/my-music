@@ -7,6 +7,14 @@ export class NodeFileOps implements IFileOps {
         return fs.existsSync(filePath);
     }
 
+    directoryExists(dirPath: string): boolean {
+        try {
+            return fs.statSync(dirPath).isDirectory();
+        } catch {
+            return false;
+        }
+    }
+
     async ensureDirectory(filePath: string): Promise<void> {
         const dir = path.dirname(filePath);
         if (!fs.existsSync(dir)) {
@@ -37,6 +45,14 @@ export class NodeFileOps implements IFileOps {
         } catch {
             return null;
         }
+    }
+
+    async moveFile(fromPath: string, toPath: string): Promise<void> {
+        const dir = path.dirname(toPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.renameSync(fromPath, toPath);
     }
 
     async deleteEmptyDirectories(filePath: string, basePath: string): Promise<void> {

@@ -16,6 +16,7 @@ public record GetDeviceItem
     public string? NamingTemplate { get; init; }
     public required int SongCount { get; init; }
     public bool ImportOnPurchase { get; init; }
+    public DateTime? LastSyncAt { get; init; }
 
     public static GetDeviceItem FromEntity(Entities.Device device, int songCount) =>
         new()
@@ -27,5 +28,6 @@ public record GetDeviceItem
             NamingTemplate = device.NamingTemplate,
             SongCount = songCount,
             ImportOnPurchase = device.ImportOnPurchase,
+            LastSyncAt = device.LastSyncAt,
         };
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
 using MyMusic.Server.DTO.Sync;
 using NSubstitute;
@@ -24,8 +25,9 @@ public class DevicesControllerResolveConflictsSpecs
             Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<ILogger<MusicImportJob>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>()
+            Substitute.For<System.IO.Abstractions.IFileSystem>(),
+            Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<ISyncCommitService>()
         );
     }
 
@@ -153,19 +155,18 @@ public class DevicesControllerResolveConflictsSpecs
         };
 
         // Act
-        var response = await controller.ResolveConflicts(device.Id, request, CancellationToken.None);
+        var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
         // Assert
-        response.ToUpload.ShouldBeEmpty();
-        response.Conflicts.ShouldBeEmpty();
-        response.Resolved.Count.ShouldBe(1);
-        response.Resolved[0].Path.ShouldBe("/music/song.mp3");
+        response.Value.ToUpload.ShouldBeEmpty();
+        response.Value.Conflicts.ShouldBeEmpty();
+        response.Value.Resolved.Count.ShouldBe(1);
+        response.Value.Resolved[0].Path.ShouldBe("/music/song.mp3");
     }
 
     [Fact]
-    public async Task ResolveConflicts_ChecksumsMatch_AdvancesLastSyncedModifiedAt()
+    public async Task ResolveConflicts_ChecksumsMatch_DoesNotMutateLastSyncedModifiedAt()
     {
-        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -189,14 +190,10 @@ public class DevicesControllerResolveConflictsSpecs
             ]
         };
 
-        // Act
-        await controller.ResolveConflicts(device.Id, request, CancellationToken.None);
+        await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
-        // Assert
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        var expected = localModifiedAt > song.ModifiedAt ? localModifiedAt : song.ModifiedAt;
-        updatedSd.LastSyncedModifiedAt.ShouldNotBeNull();
-        ((DateTime)updatedSd.LastSyncedModifiedAt).ShouldBe(expected, TimeSpan.FromSeconds(1));
+        updatedSd.LastSyncedModifiedAt.ShouldBeNull();
     }
 
     [Fact]
@@ -227,13 +224,170 @@ public class DevicesControllerResolveConflictsSpecs
         };
 
         // Act
-        var response = await controller.ResolveConflicts(device.Id, request, CancellationToken.None);
+        var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
         // Assert
-        response.ToUpload.ShouldBeEmpty();
-        response.Resolved.ShouldBeEmpty();
-        response.Conflicts.Count.ShouldBe(1);
-        response.Conflicts[0].Path.ShouldBe("/music/song.mp3");
-        response.Conflicts[0].Reason.ShouldContain("Checksum mismatch");
+        response.Value.ToUpload.ShouldBeEmpty();
+        response.Value.Resolved.ShouldBeEmpty();
+        response.Value.Conflicts.Count.ShouldBe(1);
+        response.Value.Conflicts[0].Path.ShouldBe("/music/song.mp3");
+        response.Value.Conflicts[0].Reason.ShouldContain("Checksum mismatch");
+    }
+
+    [Fact]
+    public async Task ResolveConflicts_InvalidBase64_CreatesErrorRecord()
+    {
+        var scenario = new Scenario();
+        var factory = new SyncActionsServerFactory();
+        var currentUser = Substitute.For<MyMusic.Common.Services.ICurrentUser>();
+        currentUser.Id.Returns(scenario.AdminUser.Id);
+        var controller = new DevicesController(
+            Substitute.For<ILogger<DevicesController>>(),
+            currentUser,
+            scenario.DbContext,
+            Substitute.For<IMusicService>(),
+            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
+            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
+            Substitute.For<System.IO.Abstractions.IFileSystem>(),
+            factory,
+            Substitute.For<ISyncCommitService>()
+        );
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = new DeviceSyncSession
+        {
+            DeviceId = device.Id,
+            Device = device,
+            StartedAt = DateTime.UtcNow,
+            Status = SyncSessionStatus.InProgress,
+            IsDryRun = false,
+            Records = []
+        };
+        scenario.DbContext.DeviceSyncSessions.Add(session);
+        scenario.DbContext.SaveChanges();
+
+        var content = new byte[] { 1, 2, 3 };
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
+        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    FileContentBase64 = "not-valid-base64!!!",
+                    LocalModifiedAt = DateTime.UtcNow,
+                }
+            ]
+        };
+
+        var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.Conflicts.Count.ShouldBe(1);
+        response.Value.Conflicts[0].Reason.ShouldBe("Invalid file content format");
+
+        var errorRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.Error)
+            .ToListAsync();
+        errorRecords.Count.ShouldBe(1);
+        errorRecords[0].FilePath.ShouldBe("/music/song.mp3");
+    }
+
+    [Fact]
+    public async Task ResolveConflicts_ChecksumsMatch_CreatesUpdateTimestampRecord()
+    {
+        var scenario = new Scenario();
+        var factory = new SyncActionsServerFactory();
+        var currentUser = Substitute.For<MyMusic.Common.Services.ICurrentUser>();
+        currentUser.Id.Returns(scenario.AdminUser.Id);
+        var controller = new DevicesController(
+            Substitute.For<ILogger<DevicesController>>(),
+            currentUser,
+            scenario.DbContext,
+            Substitute.For<IMusicService>(),
+            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
+            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
+            Substitute.For<System.IO.Abstractions.IFileSystem>(),
+            factory,
+            Substitute.For<ISyncCommitService>()
+        );
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = new DeviceSyncSession
+        {
+            DeviceId = device.Id,
+            Device = device,
+            StartedAt = DateTime.UtcNow,
+            Status = SyncSessionStatus.InProgress,
+            IsDryRun = false,
+            Records = []
+        };
+        scenario.DbContext.DeviceSyncSessions.Add(session);
+        scenario.DbContext.SaveChanges();
+
+        var content = new byte[] { 10, 20, 30 };
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
+        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+
+        var localModifiedAt = DateTime.UtcNow;
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    FileContentBase64 = Convert.ToBase64String(content),
+                    LocalModifiedAt = localModifiedAt,
+                }
+            ]
+        };
+
+        var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.Resolved.Count.ShouldBe(1);
+        response.Value.ConflictRecords.Count.ShouldBe(0);
+        response.Value.UpdateTimestampRecords.Count.ShouldBe(1);
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id)
+            .ToListAsync();
+        records.Count.ShouldBe(1);
+        records.ShouldContain(r => r.Action == SyncRecordAction.UpdateTimestamp);
+    }
+
+    [Fact]
+    public async Task ResolveConflicts_ChecksumsDiffer_DoesNotMutateLastSyncedModifiedAt()
+    {
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, serverContent);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    FileContentBase64 = Convert.ToBase64String(clientContent),
+                    LocalModifiedAt = DateTime.UtcNow,
+                }
+            ]
+        };
+
+        await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
+
+        var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
+        unchangedSd.LastSyncedModifiedAt.ShouldBe(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     }
 }

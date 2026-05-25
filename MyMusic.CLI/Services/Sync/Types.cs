@@ -1,5 +1,29 @@
 namespace MyMusic.CLI.Services.Sync.Types;
 
+public enum SyncSessionStatus
+{
+    InProgress,
+    Committed,
+    Completed,
+    Cancelled,
+}
+
+public enum SyncRecordAction
+{
+    CreateRemote,
+    UpdateRemote,
+    CreateLocal,
+    UpdateLocal,
+    Delete,
+    Link,
+    Unlink,
+    Rename,
+    Skipped,
+    Conflict,
+    UpdateTimestamp,
+    Error,
+}
+
 public enum SyncDirection
 {
     Both = 0,
@@ -24,17 +48,72 @@ public record SyncOptions
 
 public record SyncResult
 {
-    public int Created { get; init; }
-    public int Updated { get; init; }
+    public int CreateRemote { get; init; }
+    public int UpdateRemote { get; init; }
+    public int CreateLocal { get; init; }
+    public int UpdateLocal { get; init; }
+    public int Delete { get; init; }
+    public int Link { get; init; }
+    public int Unlink { get; init; }
+    public int Rename { get; init; }
     public int Skipped { get; init; }
-    public int Downloaded { get; init; }
-    public int Removed { get; init; }
-    public int Failed { get; init; }
-    public int Conflicts { get; init; }
+    public int Conflict { get; init; }
+    public int UpdateTimestamp { get; init; }
+    public int Error { get; init; }
     public bool Cancelled { get; init; }
     public long? SessionId { get; init; }
 
     public static SyncResult Empty => new();
+
+    public SyncResult AddDelta(SyncActionCounts delta) => new()
+    {
+        CreateRemote = CreateRemote + delta.CreateRemoteCount,
+        UpdateRemote = UpdateRemote + delta.UpdateRemoteCount,
+        CreateLocal = CreateLocal + delta.CreateLocalCount,
+        UpdateLocal = UpdateLocal + delta.UpdateLocalCount,
+        Delete = Delete + delta.DeleteCount,
+        Link = Link + delta.LinkCount,
+        Unlink = Unlink + delta.UnlinkCount,
+        Rename = Rename + delta.RenameCount,
+        Skipped = Skipped + delta.SkippedCount,
+        Conflict = Conflict + delta.ConflictCount,
+        UpdateTimestamp = UpdateTimestamp + delta.UpdateTimestampCount,
+        Error = Error + delta.ErrorCount,
+    };
+}
+
+public record SyncActionCounts
+{
+    public int CreateRemoteCount { get; init; }
+    public int UpdateRemoteCount { get; init; }
+    public int SkippedCount { get; init; }
+    public int CreateLocalCount { get; init; }
+    public int UpdateLocalCount { get; init; }
+    public int DeleteCount { get; init; }
+    public int LinkCount { get; init; }
+    public int UnlinkCount { get; init; }
+    public int RenameCount { get; init; }
+    public int ConflictCount { get; init; }
+    public int UpdateTimestampCount { get; init; }
+    public int ErrorCount { get; init; }
+
+    public static SyncActionCounts Empty => new();
+
+    public static SyncActionCounts FromApi(MyMusic.CLI.Api.Dtos.SyncActionCounts api) => new()
+    {
+        CreateRemoteCount = api.CreateRemoteCount,
+        UpdateRemoteCount = api.UpdateRemoteCount,
+        SkippedCount = api.SkippedCount,
+        CreateLocalCount = api.CreateLocalCount,
+        UpdateLocalCount = api.UpdateLocalCount,
+        DeleteCount = api.DeleteCount,
+        LinkCount = api.LinkCount,
+        UnlinkCount = api.UnlinkCount,
+        RenameCount = api.RenameCount,
+        ConflictCount = api.ConflictCount,
+        UpdateTimestampCount = api.UpdateTimestampCount,
+        ErrorCount = api.ErrorCount,
+    };
 }
 
 public record SyncProgress
@@ -81,22 +160,33 @@ public record SyncProgress
         };
 }
 
-public record RecordItem
+public record SyncRecordItem
 {
+    public required long Id { get; init; }
     public required string FilePath { get; init; }
-    public required string Action { get; init; }
-    public string Source { get; init; } = "";
-    public string? Reason { get; init; }
-    public string? ErrorMessage { get; init; }
+    public required SyncRecordAction Action { get; init; }
     public long? SongId { get; init; }
+    public System.Text.Json.JsonElement? Data { get; init; }
+    public long? ResolvesConflictRecordId { get; init; }
+    public SyncRecordSongInfo? SongInfo { get; init; }
+    public string? Reason { get; init; }
+    public bool Acknowledged { get; init; }
+    public DateTime ProcessedAt { get; init; }
+
+    public string Source => Action switch
+    {
+        SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.Delete => "Client",
+        SyncRecordAction.CreateRemote or SyncRecordAction.UpdateRemote or SyncRecordAction.Link or SyncRecordAction.Skipped or SyncRecordAction.Conflict or SyncRecordAction.UpdateTimestamp or SyncRecordAction.Error => "Server",
+        _ => throw new InvalidOperationException($"Unknown sync record action: {Action}")
+    };
 }
 
-public record PendingActionItem
+public record SyncRecordSongInfo
 {
-    public long? SongId { get; init; }
-    public required string Path { get; init; }
-    public required string Action { get; init; }
-    public string? PreviousPath { get; init; }
+    public required long Id { get; init; }
+    public required string Title { get; init; }
+    public required string ArtistNames { get; init; }
+    public string? CoverId { get; init; }
 }
 
 public record SyncFileInfo
@@ -117,6 +207,7 @@ public record StartSyncRequest
 {
     public bool DryRun { get; init; }
     public string? RepositoryPath { get; init; }
+    public List<ScanError>? ScanErrors { get; init; }
 }
 
 public record StartSyncResult
@@ -135,7 +226,9 @@ public record CheckSyncResult
     public required List<SyncFileInfo> ToCreate { get; init; }
     public required List<SyncFileInfo> ToUpdate { get; init; }
     public required List<PotentialConflictItem> PotentialConflicts { get; init; }
-    public required List<PendingActionItem> PendingActions { get; init; }
+    public required List<SyncRecordItem> Records { get; init; }
+    public required List<long> SkippedRecordIds { get; init; }
+    public required SyncActionCounts Counts { get; init; }
 }
 
 public record PotentialConflictItem
@@ -144,7 +237,7 @@ public record PotentialConflictItem
     public required DateTime LocalModifiedAt { get; init; }
     public required DateTime ServerModifiedAt { get; init; }
     public required DateTime? LastSyncedAt { get; init; }
-    public required long SongId { get; init; }
+    public required long? SongId { get; init; }
     public required string ServerChecksum { get; init; }
     public required string ServerChecksumAlgorithm { get; init; }
 }
@@ -162,12 +255,7 @@ public record UploadFileResult
 {
     public bool Success { get; init; }
     public long? SongId { get; init; }
-    public List<PendingActionItem> PendingActions { get; init; } = [];
-}
-
-public record RecordChunkRequest
-{
-    public required List<RecordItem> Records { get; init; }
+    public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 
 public record CompleteSyncRequest
@@ -177,24 +265,51 @@ public record CompleteSyncRequest
 
 public record CompleteSyncResult
 {
-    public int CreatedCount { get; init; }
-    public int UpdatedCount { get; init; }
+    public int CreateRemoteCount { get; init; }
+    public int UpdateRemoteCount { get; init; }
     public int SkippedCount { get; init; }
-    public int DownloadedCount { get; init; }
-    public int RemovedCount { get; init; }
+    public int CreateLocalCount { get; init; }
+    public int UpdateLocalCount { get; init; }
+    public int DeleteCount { get; init; }
+    public int LinkCount { get; init; }
+    public int UnlinkCount { get; init; }
+    public int RenameCount { get; init; }
+    public int ConflictCount { get; init; }
+    public int UpdateTimestampCount { get; init; }
     public int ErrorCount { get; init; }
 }
 
-public record GetPendingActionsResult
+public record CommitSyncRequest
 {
-    public required List<PendingActionItem> Actions { get; init; }
+    public required string Direction { get; init; }
+}
+
+public record CommitSyncResult
+{
+    public int CreateRemoteCount { get; init; }
+    public int UpdateRemoteCount { get; init; }
+    public int SkippedCount { get; init; }
+    public int CreateLocalCount { get; init; }
+    public int UpdateLocalCount { get; init; }
+    public int DeleteCount { get; init; }
+    public int LinkCount { get; init; }
+    public int UnlinkCount { get; init; }
+    public int RenameCount { get; init; }
+    public int ConflictCount { get; init; }
+    public int UpdateTimestampCount { get; init; }
+    public int ErrorCount { get; init; }
+    public DateTime CommittedAt { get; init; }
+}
+
+public record CreatePendingActionsResult
+{
+    public required List<SyncRecordItem> Records { get; init; }
 }
 
 public record AcknowledgeActionRequest
 {
-    public required string DevicePath { get; init; }
+    public required List<long> RecordIds { get; init; }
     public DateTime? ModifiedAt { get; init; }
-    public string? PreviousDevicePath { get; init; }
 }
 
 public record ResolveConflictsRequest
@@ -207,7 +322,21 @@ public record ConflictResolveItem
     public required string Path { get; init; }
     public required long SongId { get; init; }
     public required string FileContentBase64 { get; init; }
-    public required string LocalModifiedAt { get; init; }
+    public required DateTime LocalModifiedAt { get; init; }
+}
+
+public record AcknowledgeActionResult
+{
+    public required bool Success { get; init; }
+    public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
+}
+
+public record SyncActionRecordItem
+{
+    public required long Id { get; init; }
+    public required string Action { get; init; }
+    public System.Text.Json.JsonElement? Data { get; init; }
+    public long? ResolvesConflictRecordId { get; init; }
 }
 
 public record ResolveConflictsResult
@@ -215,6 +344,9 @@ public record ResolveConflictsResult
     public required List<SyncFileInfo> ToUpload { get; init; }
     public required List<ResolvedConflictItem> Resolved { get; init; }
     public required List<SyncConflictItem> Conflicts { get; init; }
+    public required List<SyncActionRecordItem> ConflictRecords { get; init; }
+    public required List<SyncActionRecordItem> UpdateTimestampRecords { get; init; }
+    public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 
 public record ResolvedConflictItem
@@ -238,6 +370,13 @@ public record ScanError
 {
     public required string Path { get; init; }
     public required string Error { get; init; }
+}
+
+public record ReportSyncErrorCliRequest
+{
+    public required string FilePath { get; init; }
+    public required string ErrorMessage { get; init; }
+    public long? SongId { get; init; }
 }
 
 public record ScanResult

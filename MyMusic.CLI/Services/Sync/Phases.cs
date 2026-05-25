@@ -1,14 +1,12 @@
 namespace MyMusic.CLI.Services.Sync;
 
-using System.IO.Abstractions;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync.Types;
 
 public class Phases(
     ISyncApiClient apiClient,
-    IFileOps fileOps,
-    IUserPrompt userPrompt,
-    IFileSystem fileSystem,
+    SyncActionsDevice syncActions,
     ISyncConfig config,
     IFileSystemScanner scanner,
     ILogger<Phases> logger)
@@ -43,7 +41,7 @@ public class Phases(
         if (scanErrors.Count > 0)
         {
             logger.LogWarning("Scan completed with {Count} errors", scanErrors.Count);
-            ctx.Result = ctx.Result with { Failed = ctx.Result.Failed + scanErrors.Count };
+            ctx.Result = ctx.Result.AddDelta(new SyncActionCounts { ErrorCount = scanErrors.Count });
         }
 
         return result;
@@ -57,28 +55,11 @@ public class Phases(
         var startResponse = await apiClient.StartSyncAsync(ctx.DeviceId, new StartSyncRequest
         {
             DryRun = ctx.Options.DryRun,
-            RepositoryPath = ctx.RepositoryPath
+            RepositoryPath = ctx.RepositoryPath,
+            ScanErrors = scanErrors
         }, ct);
         ctx.SessionId = startResponse.SessionId;
         logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun})", ctx.SessionId, ctx.Options.DryRun);
-
-        if (scanErrors.Count > 0)
-        {
-            var errorRecords = scanErrors.Select(e => new RecordItem
-            {
-                FilePath = e.Path,
-                Action = "Error",
-                Source = "Device",
-                ErrorMessage = e.Error
-            }).ToList();
-
-            await apiClient.RecordChunkAsync(ctx.DeviceId, ctx.SessionId, new RecordChunkRequest
-            {
-                Records = errorRecords
-            }, ct);
-
-            logger.LogInformation("Recorded {Count} scan errors to session", scanErrors.Count);
-        }
     }
 
     public async Task UploadPhaseAsync(
@@ -93,18 +74,6 @@ public class Phases(
             return;
         }
 
-        var pendingResponse = await apiClient.GetPendingActionsAsync(ctx.DeviceId, ct);
-        ctx.PendingActions = pendingResponse.Actions;
-        ctx.PendingDownloadPaths = pendingResponse.Actions
-            .Where(a => a.Action == "Download")
-            .Select(a => a.Path)
-            .ToHashSet();
-        ctx.PendingDownloadPreviousPaths = pendingResponse.Actions
-            .Where(a => a.Action == "Download" && a.PreviousPath != null)
-            .Select(a => a.PreviousPath!)
-            .ToHashSet();
-        logger.LogInformation("Found {Count} pending actions", ctx.PendingActions.Count);
-
         if (files.Count == 0)
         {
             return;
@@ -113,11 +82,6 @@ public class Phases(
         var chunkSize = config.GetChunkSize();
         var chunks = files.Chunk(chunkSize).ToList();
         logger.LogInformation("Processing {ChunkCount} chunks", chunks.Count);
-
-        var created = 0;
-        var updated = 0;
-        var skipped = 0;
-        var failed = 0;
 
         for (var i = 0; i < chunks.Count; i++)
         {
@@ -131,7 +95,6 @@ public class Phases(
             logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
 
             var syncFiles = chunk
-                .Where(f => !ctx.PendingDownloadPaths.Contains(f.RelativePath))
                 .Select(f => new SyncFileInfo
                 {
                     Path = f.RelativePath,
@@ -148,27 +111,30 @@ public class Phases(
             CheckSyncResult syncResponse;
             try
             {
-                syncResponse = await apiClient.CheckSyncAsync(ctx.DeviceId, syncRequest, ct);
+                syncResponse = await apiClient.CheckSyncAsync(ctx.DeviceId, ctx.SessionId, syncRequest, ct);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Failed to check sync for chunk {ChunkNumber}", chunkNumber);
-                failed += chunk.Length;
-                ctx.Result = ctx.Result with { Failed = failed };
+                ctx.Result = ctx.Result.AddDelta(new SyncActionCounts { ErrorCount = chunk.Length });
                 progress?.Report(SyncProgress.FromResult(
                     ctx.Result, "upload", files.Count, (i + 1) * chunkSize,
                     errorMessage: $"Chunk {chunkNumber} failed: {ex.Message}"));
                 continue;
             }
 
-            if (syncResponse.PendingActions.Count > 0)
+            ctx.Result = ctx.Result.AddDelta(syncResponse.Counts);
+
+            if (syncResponse.Records.Count > 0)
             {
-                MergePendingActions(ctx, syncResponse.PendingActions);
+                ctx.PendingServerRecords.AddRange(syncResponse.Records);
+                logger.LogInformation(
+                    "Chunk {ChunkNumber}: {RecordCount} server action records accumulated",
+                    chunkNumber, syncResponse.Records.Count);
             }
 
             var toCreatePaths = syncResponse.ToCreate.Select(f => f.Path).ToHashSet();
             var toUpdatePaths = syncResponse.ToUpdate.Select(f => f.Path).ToHashSet();
-            var recordItems = new List<RecordItem>();
 
             if (syncResponse.PotentialConflicts.Count > 0)
             {
@@ -184,21 +150,18 @@ public class Phases(
             {
                 if (ct.IsCancellationRequested) break;
 
-                var record = await UploadOneFileAsync(ctx, fileToCreate, "Created", ct);
-                if (record.Action == "Created")
+                var result = await syncActions.ActionCreateRemoteAsync(
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, fileToCreate, ct);
+
+                if (result.Counts != null)
                 {
-                    created++;
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
-                else if (record.Action == "Error")
-                {
-                    failed++;
-                }
-                recordItems.Add(record);
+
                 ctx.UploadedPaths.Add(fileToCreate.Path);
-                ctx.Result = ctx.Result with { Created = created, Updated = updated, Skipped = skipped, Failed = failed };
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, created + updated + skipped + failed,
-                    fileToCreate.Path, record.Action == "Error" ? record.ErrorMessage : null));
+                    ctx.Result, "upload", files.Count, 0,
+                    fileToCreate.Path, result.Action == "Error" ? result.ErrorMessage : null));
             }
 
             foreach (var fileToUpdate in syncResponse.ToUpdate)
@@ -210,49 +173,19 @@ public class Phases(
                     continue;
                 }
 
-                var record = await UploadOneFileAsync(ctx, fileToUpdate, "Updated", ct);
-                if (record.Action == "Updated")
+                var result = await syncActions.ActionUpdateRemoteAsync(
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, fileToUpdate, ct);
+
+                if (result.Counts != null)
                 {
-                    updated++;
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
-                else if (record.Action == "Error")
-                {
-                    failed++;
-                }
-                recordItems.Add(record);
+
                 ctx.UploadedPaths.Add(fileToUpdate.Path);
-                ctx.Result = ctx.Result with { Created = created, Updated = updated, Skipped = skipped, Failed = failed };
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, created + updated + skipped + failed,
-                    fileToUpdate.Path, record.Action == "Error" ? record.ErrorMessage : null));
+                    ctx.Result, "upload", files.Count, 0,
+                    fileToUpdate.Path, result.Action == "Error" ? result.ErrorMessage : null));
             }
-
-            var conflictPaths = syncResponse.PotentialConflicts.Select(c => c.Path).ToHashSet();
-
-            foreach (var file in chunk)
-            {
-                var inCreate = toCreatePaths.Contains(file.RelativePath);
-                var inUpdate = toUpdatePaths.Contains(file.RelativePath);
-                var isPendingDownload = ctx.PendingDownloadPaths.Contains(file.RelativePath);
-                var isConflict = conflictPaths.Contains(file.RelativePath);
-
-                if (!inCreate && !inUpdate && !isPendingDownload && !isConflict)
-                {
-                    skipped++;
-                    recordItems.Add(new RecordItem
-                    {
-                        FilePath = file.RelativePath,
-                        Action = "Skipped",
-                        Source = "Device",
-                        Reason = $"File unchanged (modified at {file.ModifiedAt:O})"
-                    });
-                }
-            }
-
-            await apiClient.RecordChunkAsync(ctx.DeviceId, ctx.SessionId, new RecordChunkRequest
-            {
-                Records = recordItems
-            }, ct);
         }
     }
 
@@ -267,76 +200,22 @@ public class Phases(
             return;
         }
 
-        if (ctx.Options.DryRun)
+        var result = await syncActions.ActionConflictAsync(
+            ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, potentialConflicts, ctx.Options.DryRun, ct);
+
+        ctx.Result = ctx.Result.AddDelta(result.Counts ?? SyncActionCounts.Empty);
+
+        foreach (var toUploadPath in result.ToUpdatePaths)
         {
-            logger.LogInformation("Dry-run: {Count} potential conflicts detected (not resolved)", potentialConflicts.Count);
-            ctx.Result = ctx.Result with { Conflicts = ctx.Result.Conflicts + potentialConflicts.Count };
-            foreach (var conflict in potentialConflicts)
-            {
-                ctx.ConflictedSongIds.Add(conflict.SongId);
-            }
-            return;
+            toUpdatePaths.Add(toUploadPath);
         }
 
-        logger.LogInformation("Found {Count} potential conflicts, reading file content", potentialConflicts.Count);
-
-        var resolveItems = new List<ConflictResolveItem>();
         foreach (var conflict in potentialConflicts)
         {
-            var fullPath = Path.Combine(ctx.RepositoryPath, conflict.Path);
-            if (!fileSystem.File.Exists(fullPath))
+            if (!result.ToUpdatePaths.Contains(conflict.Path) && conflict.SongId.HasValue)
             {
-                logger.LogWarning("Conflict file not found locally: {Path}", conflict.Path);
-                continue;
+                ctx.ConflictedSongIds.Add(conflict.SongId.Value);
             }
-
-            var fileBytes = fileSystem.File.ReadAllBytes(fullPath);
-            var fileContentBase64 = Convert.ToBase64String(fileBytes);
-            resolveItems.Add(new ConflictResolveItem
-            {
-                Path = conflict.Path,
-                SongId = conflict.SongId,
-                FileContentBase64 = fileContentBase64,
-                LocalModifiedAt = conflict.LocalModifiedAt.ToString("O")
-            });
-        }
-
-        if (resolveItems.Count == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            var resolveResponse = await apiClient.ResolveConflictsAsync(ctx.DeviceId, new ResolveConflictsRequest
-            {
-                Conflicts = resolveItems
-            }, ct);
-
-            foreach (var resolved in resolveResponse.Resolved)
-            {
-                logger.LogInformation("Resolved conflict for {Path}: {Reason}", resolved.Path, resolved.Reason);
-            }
-
-            foreach (var toUploadItem in resolveResponse.ToUpload)
-            {
-                toUpdatePaths.Add(toUploadItem.Path);
-            }
-
-            foreach (var conflictError in resolveResponse.Conflicts)
-            {
-                logger.LogError("Conflict for {Path}: {Reason}", conflictError.Path, conflictError.Reason);
-                ctx.Result = ctx.Result with { Conflicts = ctx.Result.Conflicts + 1 };
-                var potentialConflict = potentialConflicts.FirstOrDefault(c => c.Path == conflictError.Path);
-                if (potentialConflict != null)
-                {
-                    ctx.ConflictedSongIds.Add(potentialConflict.SongId);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to resolve conflicts");
         }
     }
 
@@ -351,100 +230,159 @@ public class Phases(
             return;
         }
 
-        List<PendingActionItem> actionsToProcess;
+        List<SyncRecordItem> recordsToProcess;
+
+        logger.LogInformation("Fetching pending actions for device {DeviceId}", ctx.DeviceId);
+        var pendingResponse = await apiClient.CreatePendingActionsAsync(ctx.DeviceId, ctx.SessionId, ct);
+
+        var existingIds = ctx.PendingServerRecords.Select(r => r.Id).ToHashSet();
+        var newRecords = pendingResponse.Records
+            .Where(r => !existingIds.Contains(r.Id))
+            .ToList();
+        ctx.PendingServerRecords.AddRange(newRecords);
+
+        recordsToProcess = ctx.PendingServerRecords;
 
         if (ctx.Options.Direction == SyncDirection.Down)
         {
-            logger.LogInformation("Direction is 'down' - fetching all device songs");
-            var allDeviceSongs = await apiClient.GetPendingActionsAsync(ctx.DeviceId, ct);
-            actionsToProcess = allDeviceSongs.Actions
-                .Where(s => s.Action == "Download" || s.Action == null)
+            recordsToProcess = recordsToProcess
+                .Where(r => r.Action == SyncRecordAction.CreateLocal || r.Action == SyncRecordAction.UpdateLocal)
                 .ToList();
-            logger.LogInformation("Found {Count} songs to download", actionsToProcess.Count);
+            logger.LogInformation("Found {Count} songs to download", recordsToProcess.Count);
         }
         else
         {
-            actionsToProcess = ctx.PendingActions;
-            logger.LogInformation("Processing {Count} pending actions", actionsToProcess.Count);
+            logger.LogInformation("Processing {Count} pending actions", recordsToProcess.Count);
         }
 
-        var serverTotal = actionsToProcess.Count;
-        var downloaded = ctx.Result.Downloaded;
-        var removed = ctx.Result.Removed;
-        var failed = ctx.Result.Failed;
-        var serverRecordItems = new List<RecordItem>();
+        var serverTotal = recordsToProcess.Count;
 
-        foreach (var action in actionsToProcess)
+        foreach (var record in recordsToProcess)
         {
             if (ct.IsCancellationRequested) break;
 
-            var fullPath = Path.Combine(ctx.RepositoryPath, action.Path);
+            var fullPath = Path.Combine(ctx.RepositoryPath, record.FilePath);
 
-            if (ctx.UploadedPaths.Contains(action.Path) && action.Action != "Download")
+            if (ctx.UploadedPaths.Contains(record.FilePath) && record.Action != SyncRecordAction.CreateLocal && record.Action != SyncRecordAction.UpdateLocal)
             {
-                if (!ctx.Options.DryRun)
+                await apiClient.AcknowledgeActionAsync(ctx.DeviceId, ctx.SessionId, new AcknowledgeActionRequest
                 {
-                    await apiClient.AcknowledgeActionAsync(ctx.DeviceId, new AcknowledgeActionRequest
-                    {
-                        DevicePath = action.Path
-                    }, ct);
-                }
+                    RecordIds = [record.Id]
+                }, ct);
                 continue;
             }
 
-            if (action.Action == "Download" && action.SongId.HasValue && ctx.ConflictedSongIds.Contains(action.SongId.Value))
+            if ((record.Action == SyncRecordAction.CreateLocal || record.Action == SyncRecordAction.UpdateLocal) && record.SongId.HasValue && ctx.ConflictedSongIds.Contains(record.SongId.Value))
             {
-                logger.LogInformation("Skipping download for song {SongId} - unresolved conflict", action.SongId);
+                logger.LogInformation("Skipping download for song {SongId} - unresolved conflict", record.SongId);
                 continue;
             }
 
-            if (action.Action == "Download")
+            if (record.Action == SyncRecordAction.CreateLocal)
             {
-                logger.LogInformation("Downloading song {SongId} to {Path} (PreviousPath: {PreviousPath})", 
-                    action.SongId, action.Path, action.PreviousPath ?? "(null)");
-                var record = await DownloadOneFileAsync(ctx, action.SongId, fullPath, action.Path, ct, action.PreviousPath);
-                if (record != null)
+                logger.LogInformation("Creating local song {SongId} at {Path}", record.SongId, record.FilePath);
+
+                var result = await syncActions.ActionCreateLocalAsync(
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
+                    ctx.Options.DryRun, ctx.Options.AutoConfirm,
+                    record.Id, record.Reason, ct);
+
+                if (result?.Counts != null)
                 {
-                    if (record.Action == "Downloaded")
-                    {
-                        downloaded++;
-                    }
-                    else if (record.Action == "Error")
-                    {
-                        failed++;
-                    }
-                    serverRecordItems.Add(record);
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
             }
-            else if (action.Action == "Remove")
+            else if (record.Action == SyncRecordAction.UpdateLocal)
             {
-                var record = await RemoveOneFileAsync(ctx, action.SongId, fullPath, action.Path, ct);
-                if (record != null)
+                logger.LogInformation("Updating local song {SongId} at {Path}", record.SongId, record.FilePath);
+
+                var result = await syncActions.ActionUpdateLocalAsync(
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
+                    ctx.Options.DryRun, ctx.Options.AutoConfirm,
+                    record.Id, record.Reason, ct);
+
+                if (result?.Counts != null)
                 {
-                    if (record.Action == "Removed")
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
+                }
+            }
+            else if (record.Action == SyncRecordAction.Unlink || record.Action == SyncRecordAction.Delete)
+            {
+                var result = await syncActions.ActionDeleteAsync(
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
+                    ctx.Options.DryRun, ctx.Options.AutoConfirm, record.Id, record.Reason, ct);
+
+                if (result?.Counts != null)
+                {
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
+                }
+            }
+            else if (record.Action == SyncRecordAction.Rename)
+            {
+                var renameData = DeserializeRenameData(record.Data);
+                if (renameData != null)
+                {
+                    var result = await syncActions.ActionRenameAsync(
+                        ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.FilePath, renameData.PreviousPath,
+                        ctx.Options.DryRun, record.Id, ct);
+
+                    if (result?.Counts != null)
                     {
-                        removed++;
+                        ctx.Result = ctx.Result.AddDelta(result.Counts);
                     }
-                    else if (record.Action == "Error")
-                    {
-                        failed++;
-                    }
-                    serverRecordItems.Add(record);
                 }
             }
 
-            ctx.Result = ctx.Result with { Downloaded = downloaded, Removed = removed, Failed = failed };
             progress?.Report(SyncProgress.FromResult(
-                ctx.Result, "server", serverTotal, actionsToProcess.IndexOf(action) + 1, action.Path));
+                ctx.Result, "server", serverTotal, recordsToProcess.IndexOf(record) + 1, record.FilePath));
         }
+    }
 
-        if (serverRecordItems.Count > 0)
+    public async Task CommitPhaseAsync(
+        SyncContext ctx,
+        IProgress<SyncProgress>? progress,
+        CancellationToken ct = default)
+    {
+        var directionString = ctx.Options.Direction switch
         {
-            await apiClient.RecordChunkAsync(ctx.DeviceId, ctx.SessionId, new RecordChunkRequest
-            {
-                Records = serverRecordItems
-            }, ct);
-        }
+            SyncDirection.Up => "up",
+            SyncDirection.Down => "down",
+            _ => "both"
+        };
+
+        logger.LogInformation("Committing sync session {SessionId} (direction: {Direction})", ctx.SessionId, directionString);
+
+        var commitResult = await apiClient.CommitSyncAsync(ctx.DeviceId, ctx.SessionId, new CommitSyncRequest
+        {
+            Direction = directionString
+        }, ct);
+
+        logger.LogInformation(
+            "Commit result: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {Delete} deleted, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
+            commitResult.CreateRemoteCount, commitResult.UpdateRemoteCount, commitResult.SkippedCount,
+            commitResult.CreateLocalCount, commitResult.UpdateLocalCount, commitResult.DeleteCount,
+            commitResult.LinkCount, commitResult.UnlinkCount, commitResult.RenameCount,
+            commitResult.ConflictCount, commitResult.UpdateTimestampCount,
+            commitResult.ErrorCount);
+
+        ctx.Result = ctx.Result with
+        {
+            CreateRemote = commitResult.CreateRemoteCount,
+            UpdateRemote = commitResult.UpdateRemoteCount,
+            Skipped = commitResult.SkippedCount,
+            CreateLocal = commitResult.CreateLocalCount,
+            UpdateLocal = commitResult.UpdateLocalCount,
+            Delete = commitResult.DeleteCount,
+            Link = commitResult.LinkCount,
+            Unlink = commitResult.UnlinkCount,
+            Rename = commitResult.RenameCount,
+            Conflict = commitResult.ConflictCount,
+            UpdateTimestamp = commitResult.UpdateTimestampCount,
+            Error = commitResult.ErrorCount
+        };
+
+        progress?.Report(SyncProgress.FromResult(
+            ctx.Result, "commit", 1, 1));
     }
 
     public async Task CompleteAsync(
@@ -465,269 +403,52 @@ public class Phases(
         }, ct);
 
         logger.LogInformation(
-            "Sync complete: {Created} created, {Updated} updated, {Skipped} skipped, {Downloaded} downloaded, {Removed} removed, {Error} error",
-            completeResponse.CreatedCount, completeResponse.UpdatedCount, completeResponse.SkippedCount,
-            completeResponse.DownloadedCount, completeResponse.RemovedCount,
+            "Sync complete: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {Delete} deleted, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
+            completeResponse.CreateRemoteCount, completeResponse.UpdateRemoteCount, completeResponse.SkippedCount,
+            completeResponse.CreateLocalCount, completeResponse.UpdateLocalCount, completeResponse.DeleteCount,
+            completeResponse.LinkCount, completeResponse.UnlinkCount, completeResponse.RenameCount,
+            completeResponse.ConflictCount, completeResponse.UpdateTimestampCount,
             completeResponse.ErrorCount);
+
+        ctx.Result = ctx.Result with
+        {
+            CreateRemote = completeResponse.CreateRemoteCount,
+            UpdateRemote = completeResponse.UpdateRemoteCount,
+            Skipped = completeResponse.SkippedCount,
+            CreateLocal = completeResponse.CreateLocalCount,
+            UpdateLocal = completeResponse.UpdateLocalCount,
+            Delete = completeResponse.DeleteCount,
+            Link = completeResponse.LinkCount,
+            Unlink = completeResponse.UnlinkCount,
+            Rename = completeResponse.RenameCount,
+            Conflict = completeResponse.ConflictCount,
+            UpdateTimestamp = completeResponse.UpdateTimestampCount,
+            Error = completeResponse.ErrorCount
+        };
     }
 
-    private async Task<RecordItem> UploadOneFileAsync(
-        SyncContext ctx,
-        SyncFileInfo fileInfo,
-        string action,
-        CancellationToken ct = default)
+    private static readonly JsonSerializerOptions RenameDataOptions = new()
     {
-        var fullPath = Path.Combine(ctx.RepositoryPath, fileInfo.Path);
-        if (!fileSystem.File.Exists(fullPath))
-        {
-            logger.LogWarning("File not found: {Path}", fullPath);
-            return new RecordItem
-            {
-                FilePath = fileInfo.Path,
-                Action = "Error",
-                Source = "Device",
-                Reason = "File not found"
-            };
-        }
+        PropertyNameCaseInsensitive = true,
+    };
 
-        if (ctx.Options.DryRun)
-        {
-            return new RecordItem
-            {
-                FilePath = fileInfo.Path,
-                Action = action,
-                Source = "Device",
-                Reason = fileInfo.Reason
-            };
-        }
-
+    private static RenameData? DeserializeRenameData(JsonElement? data)
+    {
+        if (!data.HasValue || data.Value.ValueKind == JsonValueKind.Null)
+            return null;
         try
         {
-            await using var stream = fileSystem.File.OpenRead(fullPath);
-            var fileName = Path.GetFileName(fullPath);
-            await apiClient.UploadFileAsync(ctx.DeviceId, new UploadFileRequest
-            {
-                FileStream = stream,
-                FileName = fileName,
-                Path = fileInfo.Path,
-                ModifiedAt = fileInfo.ModifiedAt.ToString("O"),
-                CreatedAt = fileInfo.CreatedAt.ToString("O")
-            }, ct);
-
-            return new RecordItem
-            {
-                FilePath = fileInfo.Path,
-                Action = action,
-                Source = "Device",
-                Reason = fileInfo.Reason
-            };
+            return JsonSerializer.Deserialize<RenameData>(data.Value, RenameDataOptions);
         }
-        catch (Exception ex)
+        catch
         {
-            logger.LogError(ex, "Failed to {Action} file: {Path}", action.ToLower(), fileInfo.Path);
-            return new RecordItem
-            {
-                FilePath = fileInfo.Path,
-                Action = "Error",
-                ErrorMessage = ex.Message,
-                Source = "Device",
-                Reason = fileInfo.Reason
-            };
-        }
-    }
-
-    private async Task<RecordItem?> DownloadOneFileAsync(
-        SyncContext ctx,
-        long? songId,
-        string fullPath,
-        string relativePath,
-        CancellationToken ct = default,
-        string? previousPath = null)
-    {
-        var fileExists = fileOps.FileExists(fullPath);
-
-        if (!ctx.Options.DryRun && fileExists && !ctx.Options.AutoConfirm)
-        {
-            var confirmed = await userPrompt.ConfirmDeletionAsync(relativePath, ct);
-            if (!confirmed)
-            {
-                return null;
-            }
-        }
-
-        if (ctx.Options.DryRun)
-        {
-            return new RecordItem
-            {
-                FilePath = relativePath,
-                Action = "Downloaded",
-                SongId = songId,
-                Source = "Server",
-                Reason = "Server-initiated download"
-            };
-        }
-
-        var tempPath = fullPath + ".tmp";
-        try
-        {
-            await fileOps.EnsureDirectoryAsync(fullPath, ct);
-
-            await using var stream = await apiClient.DownloadSongAsync(songId!.Value, ct);
-            await fileOps.WriteFileAsync(tempPath, stream, ct);
-
-            if (fileExists)
-            {
-                await fileOps.DeleteFileAsync(fullPath, ct);
-            }
-
-            fileSystem.File.Move(tempPath, fullPath);
-
-            if (previousPath != null)
-            {
-                var previousFullPath = Path.Combine(ctx.RepositoryPath, previousPath);
-                if (fileOps.FileExists(previousFullPath))
-                {
-                    await fileOps.DeleteFileAsync(previousFullPath, ct);
-                    fileOps.CleanupEmptyParentDirectories(previousFullPath, ctx.RepositoryPath);
-                }
-            }
-
-            var fileInfo = fileSystem.FileInfo.New(fullPath);
-            await apiClient.AcknowledgeActionAsync(ctx.DeviceId, new AcknowledgeActionRequest
-            {
-                DevicePath = relativePath,
-                ModifiedAt = fileInfo.LastWriteTimeUtc,
-                PreviousDevicePath = previousPath
-            }, ct);
-
-            return new RecordItem
-            {
-                FilePath = relativePath,
-                Action = "Downloaded",
-                SongId = songId,
-                Source = "Server",
-                Reason = previousPath != null ? "Server-initiated download (renamed)" : "Server-initiated download"
-            };
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to download file: {Path}", relativePath);
-            return new RecordItem
-            {
-                FilePath = relativePath,
-                Action = "Error",
-                SongId = songId,
-                ErrorMessage = ex.Message,
-                Source = "Server",
-                Reason = "Server-initiated download failed"
-            };
-        }
-        finally
-        {
-            if (fileSystem.File.Exists(tempPath))
-            {
-                fileSystem.File.Delete(tempPath);
-            }
-        }
-    }
-
-    private async Task<RecordItem?> RemoveOneFileAsync(
-        SyncContext ctx,
-        long? songId,
-        string fullPath,
-        string relativePath,
-        CancellationToken ct = default)
-    {
-        var fileExists = fileOps.FileExists(fullPath);
-
-        if (!fileExists)
-        {
-            if (!ctx.Options.DryRun)
-            {
-                await apiClient.AcknowledgeActionAsync(ctx.DeviceId, new AcknowledgeActionRequest
-                {
-                    DevicePath = relativePath
-                }, ct);
-            }
             return null;
         }
-
-        if (!ctx.Options.DryRun && !ctx.Options.AutoConfirm)
-        {
-            var confirmed = await userPrompt.ConfirmDeletionAsync(relativePath, ct);
-            if (!confirmed)
-            {
-                return null;
-            }
-        }
-
-        if (ctx.Options.DryRun)
-        {
-            return new RecordItem
-            {
-                FilePath = relativePath,
-                Action = "Removed",
-                SongId = songId,
-                Source = "Server",
-                Reason = "Server-initiated removal"
-            };
-        }
-
-        try
-        {
-            await fileOps.DeleteFileAsync(fullPath, ct);
-            await apiClient.AcknowledgeActionAsync(ctx.DeviceId, new AcknowledgeActionRequest
-            {
-                DevicePath = relativePath
-            }, ct);
-
-            return new RecordItem
-            {
-                FilePath = relativePath,
-                Action = "Removed",
-                SongId = songId,
-                Source = "Server",
-                Reason = "Server-initiated removal"
-            };
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to delete file: {Path}", relativePath);
-            return new RecordItem
-            {
-                FilePath = relativePath,
-                Action = "Error",
-                SongId = songId,
-                ErrorMessage = ex.Message,
-                Source = "Server",
-                Reason = "Server-initiated removal failed"
-            };
-        }
     }
+}
 
-    private void MergePendingActions(SyncContext ctx, List<PendingActionItem> newActions)
-    {
-        var existingPaths = ctx.PendingActions.Select(a => a.Path).ToHashSet();
-        foreach (var newAction in newActions)
-        {
-            if (existingPaths.Contains(newAction.Path))
-            {
-                var existingIdx = ctx.PendingActions.FindIndex(a => a.Path == newAction.Path);
-                ctx.PendingActions[existingIdx] = newAction;
-            }
-            else
-            {
-                ctx.PendingActions.Add(newAction);
-            }
-        }
-
-        ctx.PendingDownloadPaths = ctx.PendingActions
-            .Where(a => a.Action == "Download")
-            .Select(a => a.Path)
-            .ToHashSet();
-        ctx.PendingDownloadPreviousPaths = ctx.PendingActions
-            .Where(a => a.Action == "Download" && a.PreviousPath != null)
-            .Select(a => a.PreviousPath!)
-            .ToHashSet();
-    }
+internal record RenameData
+{
+    public required string PreviousPath { get; init; }
+    public required string NewPath { get; init; }
 }

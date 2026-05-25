@@ -125,7 +125,7 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
                 var naming = new NamingMetadata { Extension = ".mp3" };
                 await tempTarget.Save(stream, metadata, naming, cancellationToken: cancellationToken);
 
-                var now = DateTime.Now;
+                var now = DateTime.UtcNow;
 
                 await musicService.ImportRepositorySongs(db, importJob, purchase.UserId, [
                         new SongImportMetadata(tempTarget.FilePath, now, now),

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using MyMusic.Common;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Sync;
 using MyMusic.OpenTelemetry;
 using MyMusic.Server.Services;
 using Scalar.AspNetCore;
@@ -86,6 +87,8 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IArtistDeleteService, ArtistDeleteService>();
         builder.Services.AddScoped<IGenreDeleteService, GenreDeleteService>();
         builder.Services.AddScoped<IArtworkDeleteService, ArtworkDeleteService>();
+
+        builder.Services.AddScoped<ISyncActionsServerFactory, SyncActionsServerFactory>();
 
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
+using MyMusic.CLI.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using MyMusic.CLI;
@@ -48,7 +49,7 @@ public class HistoryPruneCommand(
 
             var sessionsToDelete = sessions.Where(s =>
             {
-                if (s.Status == "InProgress" && s.StartedAt > DateTime.UtcNow.AddSeconds(-10))
+                if (s.Status == SyncSessionStatus.InProgress && s.StartedAt > DateTime.UtcNow.AddSeconds(-10))
                 {
                     return false;
                 }

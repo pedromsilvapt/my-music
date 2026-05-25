@@ -51,6 +51,7 @@ dotnet run --project MyMusic.Common.Tests
 - **MyMusic.IntegrationTests** - Playwright browser tests for end-user functionality; inherit from `IntegrationTestBase` for automatic user lifecycle
 - Run with: `dotnet test MyMusic.IntegrationTests` or filter by name: `dotnet test --filter "FullyQualifiedName~TestName"`
 - The default configured RunSettings file is `MyMusic.IntegrationTests/.runsettings`
+- **IMPORTANT** You can run all unit tests, and you can run specific integration tests, but never run all tests (or all integration tests).
 
 ### Containerized Integration Tests (CI Debugging)
 
@@ -343,6 +344,7 @@ public record ListSongsResponse
 - Imports order: System → Microsoft → Third-party → MyMusic (or use implicit usings)
 - Throw exceptions with descriptive messages; return appropriate HTTP status codes in controllers
 - Use **PostgreSQL** with `Npgsql.EntityFrameworkCore.PostgreSQL`; `EFCore.NamingConventions` for snake_case
+- **Always call `.ToUniversalTime()` before saving DateTime values to the DB or to JsonElement data stored in the DB**; always assume UTC when deserializing/parsing DateTime values (Npgsql 10 rejects `DateTimeKind.Local` for `timestamptz` columns)
 - Use **Include().ThenInclude()** for related entities; **AsSplitQuery()** for complex queries
 - **SongDevice Records:** mark for removal (SyncAction = Remove), never delete
 - DTOs organized by resource in `MyMusic.Server/DTO/<Resource>/`; AgileMapper for simple, manual mapping for complex

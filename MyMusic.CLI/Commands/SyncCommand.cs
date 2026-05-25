@@ -59,23 +59,28 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
             summaryTable.AddColumn("");
             summaryTable.AddColumn("");
 
-            summaryTable.AddRow("↑ Created:", ColorizeCounter(syncResult.Created, "green"));
-            summaryTable.AddRow("↑ Updated:", ColorizeCounter(syncResult.Updated, "teal"));
+            summaryTable.AddRow("↑ CreateRemote:", ColorizeCounter(syncResult.CreateRemote, "green"));
+            summaryTable.AddRow("↑ UpdateRemote:", ColorizeCounter(syncResult.UpdateRemote, "teal"));
+            summaryTable.AddRow("↓ CreateLocal:", ColorizeCounter(syncResult.CreateLocal, "blue"));
+            summaryTable.AddRow("↓ UpdateLocal:", ColorizeCounter(syncResult.UpdateLocal, "blue"));
+            summaryTable.AddRow("× Delete:", ColorizeCounter(syncResult.Delete, "red"));
+            summaryTable.AddRow("↗ Link:", ColorizeCounter(syncResult.Link, "green"));
+            summaryTable.AddRow("↘ Unlink:", ColorizeCounter(syncResult.Unlink, "red"));
+            summaryTable.AddRow("» Rename:", ColorizeCounter(syncResult.Rename, "teal"));
             summaryTable.AddRow("- Skipped:", ColorizeCounter(syncResult.Skipped, "grey"));
-            summaryTable.AddRow("↓ Downloaded:", ColorizeCounter(syncResult.Downloaded, "blue"));
-            summaryTable.AddRow("× Removed:", ColorizeCounter(syncResult.Removed, "red"));
-            summaryTable.AddRow("! Failed:", ColorizeCounter(syncResult.Failed, "red"));
-            summaryTable.AddRow("⚠ Conflicts:", ColorizeCounter(syncResult.Conflicts, "yellow"));
+            summaryTable.AddRow("⚠ Conflict:", ColorizeCounter(syncResult.Conflict, "yellow"));
+            summaryTable.AddRow("⏱ UpdateTimestamp:", ColorizeCounter(syncResult.UpdateTimestamp, "grey"));
+            summaryTable.AddRow("! Error:", ColorizeCounter(syncResult.Error, "red"));
 
             AnsiConsole.Write(summaryTable);
 
-            if (syncResult.Conflicts > 0)
+            if (syncResult.Conflict > 0)
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine("[yellow]Run without --dry-run to resolve conflicts[/]");
             }
 
-            if (syncResult.Failed > 0)
+            if (syncResult.Error > 0)
             {
                 return 1;
             }
@@ -97,13 +102,14 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         var phaseLabel = p.Phase == "server" ? "Server actions" : "Uploading";
 
         var status = $"{phaseLabel}: {p.ProcessedFiles}/{p.TotalFiles} | " +
-                     $"{ColorizeCounter(p.Result.Created, "green", "↑")} " +
-                     $"{ColorizeCounter(p.Result.Updated, "teal", "↑")} " +
+                     $"{ColorizeCounter(p.Result.CreateRemote, "green", "↑")} " +
+                     $"{ColorizeCounter(p.Result.UpdateRemote, "teal", "↑")} " +
+                     $"{ColorizeCounter(p.Result.CreateLocal, "blue", "↓")} " +
+                     $"{ColorizeCounter(p.Result.UpdateLocal, "blue", "↓")} " +
+                     $"{ColorizeCounter(p.Result.Delete, "red", "×")} " +
                      $"{ColorizeCounter(p.Result.Skipped, "grey", "-")} " +
-                     $"{ColorizeCounter(p.Result.Downloaded, "blue", "↓")} " +
-                     $"{ColorizeCounter(p.Result.Removed, "red", "×")} " +
-                     $"{ColorizeCounter(p.Result.Failed, "red", "!")} " +
-                     $"{ColorizeCounter(p.Result.Conflicts, "yellow", "⚠")} | " +
+                     $"{ColorizeCounter(p.Result.Conflict, "yellow", "⚠")} " +
+                     $"{ColorizeCounter(p.Result.Error, "red", "!")} | " +
                      $"[magenta]{FormatElapsedTime(elapsed)}[/] | " +
                      $"[cyan]ETA: {eta}[/]";
 

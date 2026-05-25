@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
 using MyMusic.Server.DTO.Sync;
 using NSubstitute;
@@ -23,8 +24,9 @@ public class DevicesControllerCompleteSyncSpecs
             Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<ILogger<MusicImportJob>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>()
+            Substitute.For<System.IO.Abstractions.IFileSystem>(),
+            Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<ISyncCommitService>()
         );
     }
 
@@ -67,7 +69,7 @@ public class DevicesControllerCompleteSyncSpecs
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
         device.LastSyncAt.ShouldBe(null);
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
         var beforeComplete = DateTime.UtcNow;
 
         // Act
@@ -89,7 +91,7 @@ public class DevicesControllerCompleteSyncSpecs
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
         device.LastSyncAt.ShouldBe(null);
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, isDryRun: true);
+        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, isDryRun: true);
 
         // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
@@ -101,7 +103,7 @@ public class DevicesControllerCompleteSyncSpecs
     }
 
     [Fact]
-    public async Task CompleteSync_DownDirection_UpdatesDeviceLastSyncAt()
+    public async Task CompleteSync_RejectsInProgressSession()
     {
         // Arrange
         var scenario = new Scenario();
@@ -109,36 +111,64 @@ public class DevicesControllerCompleteSyncSpecs
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
 
         var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
-        var beforeComplete = DateTime.UtcNow;
 
-        // Act
-        var response = await controller.CompleteSync(device.Id, session.Id,
-            new SyncCompleteRequest { Direction = "down" }, CancellationToken.None);
-
-        // Assert
-        var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
-        updatedDevice.LastSyncAt.ShouldNotBeNull();
-        updatedDevice.LastSyncAt.Value.ShouldBeGreaterThanOrEqualTo(beforeComplete);
+        // Act & Assert
+        await Should.ThrowAsync<Exception>(async () =>
+            await controller.CompleteSync(device.Id, session.Id,
+                new SyncCompleteRequest { Direction = "both" }, CancellationToken.None));
     }
 
     [Fact]
-    public async Task CompleteSync_UpDirection_UpdatesDeviceLastSyncAt()
+    public async Task CompleteSync_SetsSessionStatusToCompleted()
     {
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
         var beforeComplete = DateTime.UtcNow;
 
         // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
-            new SyncCompleteRequest { Direction = "up" }, CancellationToken.None);
+            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
 
         // Assert
-        var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
-        updatedDevice.LastSyncAt.ShouldNotBeNull();
-        updatedDevice.LastSyncAt.Value.ShouldBeGreaterThanOrEqualTo(beforeComplete);
+        var updatedSession = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == session.Id);
+        updatedSession.Status.ShouldBe(SyncSessionStatus.Completed);
+        updatedSession.CompletedAt.ShouldNotBeNull();
+        updatedSession.CompletedAt.Value.ShouldBeGreaterThanOrEqualTo(beforeComplete);
+    }
+
+    [Fact]
+    public async Task CompleteSync_ReturnsPerActionTypeCounts()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+
+        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
+
+        scenario.DbContext.DeviceSyncSessionRecords.AddRange(
+            new DeviceSyncSessionRecord { SessionId = session.Id, Action = SyncRecordAction.CreateRemote, FilePath = "/a", ProcessedAt = DateTime.UtcNow },
+            new DeviceSyncSessionRecord { SessionId = session.Id, Action = SyncRecordAction.CreateRemote, FilePath = "/b", ProcessedAt = DateTime.UtcNow },
+            new DeviceSyncSessionRecord { SessionId = session.Id, Action = SyncRecordAction.Skipped, FilePath = "/c", ProcessedAt = DateTime.UtcNow },
+            new DeviceSyncSessionRecord { SessionId = session.Id, Action = SyncRecordAction.Link, FilePath = "/d", ProcessedAt = DateTime.UtcNow }
+        );
+        scenario.DbContext.SaveChanges();
+
+        // Act
+        var response = await controller.CompleteSync(device.Id, session.Id,
+            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+
+        // Assert
+        response.Value.CreateRemoteCount.ShouldBe(2);
+        response.Value.SkippedCount.ShouldBe(1);
+        response.Value.LinkCount.ShouldBe(1);
+        response.Value.UpdateRemoteCount.ShouldBe(0);
+        response.Value.DeleteCount.ShouldBe(0);
+        response.Value.UnlinkCount.ShouldBe(0);
+        response.Value.ErrorCount.ShouldBe(0);
     }
 }

@@ -1,9 +1,11 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
+using MyMusic.CLI.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using MyMusic.CLI;
@@ -84,19 +86,18 @@ public class HistoryShowCommand(
 
         AnsiConsole.WriteLine();
 
-        var createdCount = session?.CreatedCount ?? 0;
-        var updatedCount = session?.UpdatedCount ?? 0;
-        var skippedCount = session?.SkippedCount ?? 0;
-        var downloadedCount = session?.DownloadedCount ?? 0;
-        var removedCount = session?.RemovedCount ?? 0;
-        var errorCount = session?.ErrorCount ?? 0;
-
-        AnsiConsole.MarkupLine($"Summary: {ColorizeCounter(createdCount, "green")} created, " +
-                               $"{ColorizeCounter(updatedCount, "teal")} updated, " +
-                               $"{ColorizeCounter(skippedCount, "grey")} skipped, " +
-                               $"{ColorizeCounter(downloadedCount, "blue")} downloaded, " +
-                               $"{ColorizeCounter(removedCount, "red")} removed, " +
-                               $"{ColorizeCounter(errorCount, "red")} error");
+        AnsiConsole.MarkupLine($"Summary: {ColorizeCounter(session?.CreateRemoteCount ?? 0, "green")} created (remote), " +
+                               $"{ColorizeCounter(session?.UpdateRemoteCount ?? 0, "teal")} updated (remote), " +
+                               $"{ColorizeCounter(session?.SkippedCount ?? 0, "grey")} skipped, " +
+                               $"{ColorizeCounter(session?.CreateLocalCount ?? 0, "blue")} downloaded, " +
+                               $"{ColorizeCounter(session?.UpdateLocalCount ?? 0, "blue")} updated (local), " +
+                               $"{ColorizeCounter(session?.DeleteCount ?? 0, "red")} deleted, " +
+                               $"{ColorizeCounter(session?.LinkCount ?? 0, "green")} linked, " +
+                               $"{ColorizeCounter(session?.UnlinkCount ?? 0, "red")} unlinked, " +
+                               $"{ColorizeCounter(session?.RenameCount ?? 0, "teal")} renamed, " +
+                               $"{ColorizeCounter(session?.ConflictCount ?? 0, "yellow")} conflicts, " +
+                               $"{ColorizeCounter(session?.UpdateTimestampCount ?? 0, "grey")} timestamp updates, " +
+                               $"{ColorizeCounter(session?.ErrorCount ?? 0, "red")} error");
         AnsiConsole.WriteLine();
 
         var requestedActions = GetRequestedActions(settings);
@@ -106,34 +107,64 @@ public class HistoryShowCommand(
 
         var grouped = response.Records.GroupBy(r => r.Action).ToDictionary(g => g.Key, g => g.ToList());
 
-        if (requestedActions.Contains(RecordAction.Created))
+        if (requestedActions.Contains(SyncRecordAction.CreateRemote))
         {
-            PrintRecordGroup(RecordAction.Created, grouped, "green");
+            PrintRecordGroup(SyncRecordAction.CreateRemote, grouped, "green");
         }
 
-        if (requestedActions.Contains(RecordAction.Updated))
+        if (requestedActions.Contains(SyncRecordAction.UpdateRemote))
         {
-            PrintRecordGroup(RecordAction.Updated, grouped, "teal");
+            PrintRecordGroup(SyncRecordAction.UpdateRemote, grouped, "teal");
         }
 
-        if (requestedActions.Contains(RecordAction.Skipped))
+        if (requestedActions.Contains(SyncRecordAction.CreateLocal))
         {
-            PrintRecordGroup(RecordAction.Skipped, grouped, "grey");
+            PrintRecordGroup(SyncRecordAction.CreateLocal, grouped, "blue");
         }
 
-        if (requestedActions.Contains(RecordAction.Downloaded))
+        if (requestedActions.Contains(SyncRecordAction.UpdateLocal))
         {
-            PrintRecordGroup(RecordAction.Downloaded, grouped, "blue");
+            PrintRecordGroup(SyncRecordAction.UpdateLocal, grouped, "blue");
         }
 
-        if (requestedActions.Contains(RecordAction.Removed))
+        if (requestedActions.Contains(SyncRecordAction.Delete))
         {
-            PrintRecordGroup(RecordAction.Removed, grouped, "red");
+            PrintRecordGroup(SyncRecordAction.Delete, grouped, "red");
         }
 
-        if (requestedActions.Contains(RecordAction.Error))
+        if (requestedActions.Contains(SyncRecordAction.Link))
         {
-            PrintRecordGroup(RecordAction.Error, grouped, "red");
+            PrintRecordGroup(SyncRecordAction.Link, grouped, "green");
+        }
+
+        if (requestedActions.Contains(SyncRecordAction.Unlink))
+        {
+            PrintRecordGroup(SyncRecordAction.Unlink, grouped, "red");
+        }
+
+        if (requestedActions.Contains(SyncRecordAction.Rename))
+        {
+            PrintRecordGroup(SyncRecordAction.Rename, grouped, "teal");
+        }
+
+        if (requestedActions.Contains(SyncRecordAction.Skipped))
+        {
+            PrintRecordGroup(SyncRecordAction.Skipped, grouped, "grey");
+        }
+
+        if (requestedActions.Contains(SyncRecordAction.Conflict))
+        {
+            PrintRecordGroup(SyncRecordAction.Conflict, grouped, "yellow");
+        }
+
+        if (requestedActions.Contains(SyncRecordAction.UpdateTimestamp))
+        {
+            PrintRecordGroup(SyncRecordAction.UpdateTimestamp, grouped, "grey");
+        }
+
+        if (requestedActions.Contains(SyncRecordAction.Error))
+        {
+            PrintRecordGroup(SyncRecordAction.Error, grouped, "red");
         }
 
         return 0;
@@ -160,9 +191,9 @@ public class HistoryShowCommand(
         return null;
     }
 
-    private static string? GetActionsFilter(HashSet<RecordAction> requestedActions)
+    private static string? GetActionsFilter(HashSet<SyncRecordAction> requestedActions)
     {
-        if (requestedActions.Count == 6)
+        if (requestedActions.Count == 12)
         {
             return null;
         }
@@ -170,62 +201,56 @@ public class HistoryShowCommand(
         return string.Join(",", requestedActions.Select(a => a.ToString()));
     }
 
-    private static HashSet<RecordAction> GetRequestedActions(Settings settings)
+    private static readonly Dictionary<string, SyncRecordAction> CounterAbbreviations = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["cr"] = SyncRecordAction.CreateRemote,
+        ["ur"] = SyncRecordAction.UpdateRemote,
+        ["cl"] = SyncRecordAction.CreateLocal,
+        ["ul"] = SyncRecordAction.UpdateLocal,
+        ["del"] = SyncRecordAction.Delete,
+        ["link"] = SyncRecordAction.Link,
+        ["unlink"] = SyncRecordAction.Unlink,
+        ["ren"] = SyncRecordAction.Rename,
+        ["skip"] = SyncRecordAction.Skipped,
+        ["conf"] = SyncRecordAction.Conflict,
+        ["ts"] = SyncRecordAction.UpdateTimestamp,
+        ["err"] = SyncRecordAction.Error,
+    };
+
+    private static HashSet<SyncRecordAction> GetRequestedActions(Settings settings)
     {
         if (settings.ShowAll)
         {
-            return new HashSet<RecordAction>
+            return Enum.GetValues<SyncRecordAction>().ToHashSet();
+        }
+
+        var actions = new HashSet<SyncRecordAction>();
+
+        foreach (var counter in settings.Counters)
+        {
+            if (CounterAbbreviations.TryGetValue(counter, out var action))
             {
-                RecordAction.Created, RecordAction.Updated, RecordAction.Skipped, RecordAction.Downloaded,
-                RecordAction.Removed, RecordAction.Error,
-            };
-        }
-
-        var actions = new HashSet<RecordAction>();
-
-        if (settings.ShowCreated)
-        {
-            actions.Add(RecordAction.Created);
-        }
-
-        if (settings.ShowUpdated)
-        {
-            actions.Add(RecordAction.Updated);
-        }
-
-        if (settings.ShowSkipped)
-        {
-            actions.Add(RecordAction.Skipped);
-        }
-
-        if (settings.ShowDownloaded)
-        {
-            actions.Add(RecordAction.Downloaded);
-        }
-
-        if (settings.ShowRemoved)
-        {
-            actions.Add(RecordAction.Removed);
-        }
-
-        if (settings.ShowError)
-        {
-            actions.Add(RecordAction.Error);
+                actions.Add(action);
+            }
+            else if (Enum.TryParse<SyncRecordAction>(counter, ignoreCase: true, out var parsed))
+            {
+                actions.Add(parsed);
+            }
         }
 
         if (actions.Count == 0)
         {
-            actions.Add(RecordAction.Error);
+            actions.Add(SyncRecordAction.Error);
         }
 
         return actions;
     }
 
-    private static void PrintRecordGroup(RecordAction action, Dictionary<string, List<SyncRecordResponseItem>> grouped,
+    private static void PrintRecordGroup(SyncRecordAction action, Dictionary<SyncRecordAction, List<SyncRecordResponseItem>> grouped,
         string color)
     {
         var actionName = action.ToString();
-        var hasRecords = grouped.TryGetValue(actionName, out var records);
+        var hasRecords = grouped.TryGetValue(action, out var records);
         var count = hasRecords ? records!.Count : 0;
 
         AnsiConsole.MarkupLine($"[{color}]{actionName} ({count}):[/]");
@@ -241,13 +266,10 @@ public class HistoryShowCommand(
                 var sourceLabel = record.Source == "Server" ? "[blue]↓[/]" : "[green]↑[/]";
                 var parts = new List<string> { $"  {sourceLabel} [grey]{record.FilePath.EscapeMarkup()}[/]" };
 
-                if (!string.IsNullOrEmpty(record.ErrorMessage))
+                if (!string.IsNullOrEmpty(record.Reason))
                 {
-                    parts.Add($"[red]- {record.ErrorMessage.EscapeMarkup()}[/]");
-                }
-                else if (!string.IsNullOrEmpty(record.Reason))
-                {
-                    parts.Add($"[dim]- {record.Reason.EscapeMarkup()}[/]");
+                    var reasonStyle = record.Action == SyncRecordAction.Error ? "red" : "dim";
+                    parts.Add($"[{reasonStyle}]- {record.Reason.EscapeMarkup()}[/]");
                 }
 
                 AnsiConsole.MarkupLine(string.Join(" ", parts));
@@ -269,37 +291,13 @@ public class HistoryShowCommand(
 
     private static string FormatDateTime(DateTime dt) => dt.ToString("yyyy-MM-dd HH:mm:ss");
 
-    private enum RecordAction
-    {
-        Created,
-        Updated,
-        Skipped,
-        Downloaded,
-        Removed,
-        Error,
-    }
-
-    private enum RecordSource
-    {
-        Device,
-        Server,
-    }
-
     public class Settings : GlobalSettings
     {
         [CommandArgument(0, "[SESSION_ID]")] public long? SessionId { get; set; }
 
-        [CommandOption("-c|--created")] public bool ShowCreated { get; set; }
-
-        [CommandOption("-u|--updated")] public bool ShowUpdated { get; set; }
-
-        [CommandOption("-s|--skipped")] public bool ShowSkipped { get; set; }
-
-        [CommandOption("-d|--downloaded")] public bool ShowDownloaded { get; set; }
-
-        [CommandOption("-r|--removed")] public bool ShowRemoved { get; set; }
-
-        [CommandOption("-e|--error")] public bool ShowError { get; set; }
+        [CommandOption("-c|--counters")]
+        [Description("Counter filters: cr=CreateRemote, ur=UpdateRemote, cl=CreateLocal, ul=UpdateLocal, del=Delete, link=Link, unlink=Unlink, ren=Rename, skip=Skipped, conf=Conflict, ts=UpdateTimestamp, err=Error. Comma-separated or repeat -c. Also accepts full names.")]
+        public string[] Counters { get; set; } = [];
 
         [CommandOption("-a|--all")] public bool ShowAll { get; set; }
 

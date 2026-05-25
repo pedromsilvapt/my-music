@@ -1,6 +1,10 @@
+using System.IO.Abstractions.TestingHelpers;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
 using MyMusic.Server.DTO.Devices;
 using NSubstitute;
@@ -22,8 +26,9 @@ public class DevicesControllerSessionDeletionSpecs
             Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<ILogger<MusicImportJob>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>()
+            scenario.FileSystem,
+            Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<ISyncCommitService>()
         );
     }
 
@@ -42,7 +47,7 @@ public class DevicesControllerSessionDeletionSpecs
     }
 
     private DeviceSyncSession CreateSession(
-        MusicDbContext db, Device device, SyncSessionStatus status, DateTime startedAt)
+        MusicDbContext db, Device device, SyncSessionStatus status, DateTime startedAt, string? repositoryPath = null)
     {
         var session = new DeviceSyncSession
         {
@@ -51,6 +56,7 @@ public class DevicesControllerSessionDeletionSpecs
             StartedAt = startedAt,
             Status = status,
             IsDryRun = false,
+            RepositoryPath = repositoryPath,
             Records = []
         };
         db.DeviceSyncSessions.Add(session);
@@ -66,8 +72,7 @@ public class DevicesControllerSessionDeletionSpecs
             SessionId = session.Id,
             Session = session,
             FilePath = filePath,
-            Action = SyncRecordAction.Created,
-            Source = SyncRecordSource.Device,
+            Action = SyncRecordAction.CreateRemote,
             ProcessedAt = DateTime.UtcNow
         };
         db.DeviceSyncSessionRecords.Add(record);
@@ -92,13 +97,13 @@ public class DevicesControllerSessionDeletionSpecs
         var result = await controller.DeleteSession(device.Id, session.Id);
 
         // Assert
-        result.Success.ShouldBeTrue();
+        result.Value.Success.ShouldBeTrue();
         scenario.DbContext.DeviceSyncSessions.Any(s => s.Id == session.Id).ShouldBeFalse();
         scenario.DbContext.DeviceSyncSessionRecords.Any(r => r.SessionId == session.Id).ShouldBeFalse();
     }
 
     [Fact]
-    public async Task DeleteSession_SessionNotFound_ThrowsException()
+    public async Task DeleteSession_SessionNotFound_ReturnsNotFound()
     {
         // Arrange
         var scenario = new Scenario();
@@ -106,8 +111,8 @@ public class DevicesControllerSessionDeletionSpecs
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
 
         // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.DeleteSession(device.Id, 9999));
+        var result = await controller.DeleteSession(device.Id, 9999);
+        result.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
@@ -137,12 +142,12 @@ public class DevicesControllerSessionDeletionSpecs
         var result = await controller.DeleteSession(device.Id, session.Id);
 
         // Assert
-        result.Success.ShouldBeTrue();
+        result.Value.Success.ShouldBeTrue();
         scenario.DbContext.DeviceSyncSessions.Any(s => s.Id == session.Id).ShouldBeFalse();
     }
 
     [Fact]
-    public async Task DeleteSession_OtherDeviceSession_ThrowsException()
+    public async Task DeleteSession_OtherDeviceSession_ReturnsNotFound()
     {
         // Arrange
         var scenario = new Scenario();
@@ -153,8 +158,8 @@ public class DevicesControllerSessionDeletionSpecs
         var session = CreateSession(scenario.DbContext, otherDevice, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
 
         // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.DeleteSession(ownDevice.Id, session.Id));
+        var result = await controller.DeleteSession(ownDevice.Id, session.Id);
+        result.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
@@ -199,7 +204,7 @@ public class DevicesControllerSessionDeletionSpecs
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
 
         // Assert
-        result.DeletedCount.ShouldBe(2);
+        result.Value.DeletedCount.ShouldBe(2);
         scenario.DbContext.DeviceSyncSessions.Count().ShouldBe(0);
         scenario.DbContext.DeviceSyncSessionRecords.Count().ShouldBe(0);
     }
@@ -218,7 +223,7 @@ public class DevicesControllerSessionDeletionSpecs
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
 
         // Assert
-        result.DeletedCount.ShouldBe(1);
+        result.Value.DeletedCount.ShouldBe(1);
         scenario.DbContext.DeviceSyncSessions.Any(s => s.Id == completed.Id).ShouldBeFalse();
         scenario.DbContext.DeviceSyncSessions.Any(s => s.Id == inProgress.Id).ShouldBeTrue();
     }
@@ -242,7 +247,7 @@ public class DevicesControllerSessionDeletionSpecs
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = false });
 
         // Assert
-        result.DeletedCount.ShouldBe(1);
+        result.Value.DeletedCount.ShouldBe(1);
         scenario.DbContext.DeviceSyncSessions.Any(s => s.Id == oldSession.Id).ShouldBeFalse();
         foreach (var rs in recentSessions)
         {
@@ -274,15 +279,15 @@ public class DevicesControllerSessionDeletionSpecs
     }
 
     [Fact]
-    public async Task PruneSessions_DeviceNotFound_ThrowsException()
+    public async Task PruneSessions_DeviceNotFound_ReturnsNotFound()
     {
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
 
         // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.PruneSessions(9999, new PruneSessionsRequest { All = true }));
+        var result = await controller.PruneSessions(9999, new PruneSessionsRequest { All = true });
+        result.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
@@ -298,7 +303,7 @@ public class DevicesControllerSessionDeletionSpecs
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
 
         // Assert
-        result.DeletedCount.ShouldBe(1);
+        result.Value.DeletedCount.ShouldBe(1);
         scenario.DbContext.DeviceSyncSessions.Any(s => s.Id == oldInProgress.Id).ShouldBeFalse();
     }
 
@@ -326,19 +331,19 @@ public class DevicesControllerSessionDeletionSpecs
     }
 
     [Fact]
-    public async Task Delete_DeviceNotFound_ThrowsException()
+    public async Task Delete_DeviceNotFound_ReturnsNotFound()
     {
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
 
         // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.Delete(9999, CancellationToken.None));
+        var result = await controller.Delete(9999, CancellationToken.None);
+        result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task Delete_OtherUsersDevice_ThrowsException()
+    public async Task Delete_OtherUsersDevice_ReturnsNotFound()
     {
         // Arrange
         var scenario = new Scenario();
@@ -347,8 +352,8 @@ public class DevicesControllerSessionDeletionSpecs
         var controller = CreateController(scenario);
 
         // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.Delete(otherDevice.Id, CancellationToken.None));
+        var result = await controller.Delete(otherDevice.Id, CancellationToken.None);
+        result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
@@ -397,6 +402,67 @@ public class DevicesControllerSessionDeletionSpecs
         // Assert
         scenario.DbContext.DeviceSyncSessions.Count().ShouldBe(0);
         scenario.DbContext.DeviceSyncSessionRecords.Count().ShouldBe(0);
+    }
+
+    #endregion
+
+    #region Staging Directory Cleanup
+
+    [Fact]
+    public async Task DeleteSession_CleansUpStagingDirectory()
+    {
+        var scenario = new Scenario();
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var controller = CreateController(scenario);
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var repoPath = "/data";
+        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2), repositoryPath: repoPath);
+        var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
+
+        mockFs.AddDirectory(stagingDir);
+        mockFs.AddFile($"{stagingDir}/file.mp3", new MockFileData("data"));
+
+        await controller.DeleteSession(device.Id, session.Id);
+
+        mockFs.Directory.Exists(stagingDir).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task PruneSessions_CleansUpStagingDirectoriesForDeletedSessions()
+    {
+        var scenario = new Scenario();
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var controller = CreateController(scenario);
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var repoPath = "/data";
+        var oldSession = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5), repositoryPath: repoPath);
+        var stagingDir = $"{repoPath}/.temp/sync-{oldSession.Id}";
+
+        mockFs.AddDirectory(stagingDir);
+        mockFs.AddFile($"{stagingDir}/file.mp3", new MockFileData("data"));
+
+        await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
+
+        mockFs.Directory.Exists(stagingDir).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Delete_CleansUpStagingDirectoriesForDeviceSessions()
+    {
+        var scenario = new Scenario();
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var controller = CreateController(scenario);
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var repoPath = "/data";
+        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2), repositoryPath: repoPath);
+        var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
+
+        mockFs.AddDirectory(stagingDir);
+        mockFs.AddFile($"{stagingDir}/file.mp3", new MockFileData("data"));
+
+        await controller.Delete(device.Id, CancellationToken.None);
+
+        mockFs.Directory.Exists(stagingDir).ShouldBeFalse();
     }
 
     #endregion

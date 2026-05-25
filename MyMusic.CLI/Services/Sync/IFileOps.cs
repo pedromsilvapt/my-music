@@ -7,6 +7,7 @@ public interface IFileOps
     Task EnsureDirectoryAsync(string path, CancellationToken ct = default);
     Task WriteFileAsync(string path, Stream content, CancellationToken ct = default);
     Task DeleteFileAsync(string path, CancellationToken ct = default);
+    Task MoveFileAsync(string fromPath, string toPath, CancellationToken ct = default);
     Task<string> ReadFileBase64Async(string path, CancellationToken ct = default);
     Task<DateTime?> GetModificationTimeAsync(string path, CancellationToken ct = default);
     void CleanupEmptyParentDirectories(string filePath, string repositoryRoot);

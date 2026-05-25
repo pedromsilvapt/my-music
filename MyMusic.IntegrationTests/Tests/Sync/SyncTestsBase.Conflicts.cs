@@ -31,11 +31,13 @@ public abstract partial class SyncTestsBase
         result2.ShouldBeSuccessful();
 
         // Conflicts should be 0 (auto-resolved)
-        result2.Conflicts.ShouldBeLessThanOrEqualTo(1, $"Expected auto-resolution but got {result2.Conflicts} conflicts.");
+        result2.Conflict.ShouldBeLessThanOrEqualTo(1, $"Expected auto-resolution but got {result2.Conflict} conflicts.");
 
         // Verify the final state is consistent (both sides should have "Updated Sand")
+        // The file path should not have changed, because the conflict was auto-resolved:
+        // both files were changed, but had the exact same checksum after the change
         await FileValidator.AssertMetadataAsync(
-            App.GetSongPath("Dove Cameron/Sand/Updated Sand - Dove Cameron.mp3"),
+            App.GetSongPath("Dove Cameron/Sand/Sand - Dove Cameron.mp3"),
             title: "Updated Sand");
     }
 
@@ -62,6 +64,6 @@ public abstract partial class SyncTestsBase
         result2.ShouldBeSuccessful();
 
         // Should report at least 1 conflict
-        result2.Conflicts.ShouldBeGreaterThanOrEqualTo(1);
+        result2.Conflict.ShouldBeGreaterThanOrEqualTo(1);
     }
 }

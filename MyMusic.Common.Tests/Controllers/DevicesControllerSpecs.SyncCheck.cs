@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Metadata;
+using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
 using MyMusic.Server.DTO.Sync;
 using NSubstitute;
@@ -11,10 +14,17 @@ namespace MyMusic.Common.Tests.Controllers;
 
 public class DevicesControllerSyncCheckSpecs
 {
-    private DevicesController CreateController(Scenario scenario)
+    private DevicesController CreateController(Scenario scenario, ISyncActionsServerFactory? factory = null)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
+
+        var config = Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>();
+        config.Value.Returns(new Config
+        {
+            MusicRepositoryPath = "/music",
+            DefaultNamingTemplate = "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}"
+        });
 
         return new DevicesController(
             Substitute.For<ILogger<DevicesController>>(),
@@ -22,9 +32,10 @@ public class DevicesControllerSyncCheckSpecs
             scenario.DbContext,
             Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<ILogger<MusicImportJob>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>()
+            config,
+            Substitute.For<System.IO.Abstractions.IFileSystem>(),
+            factory ?? Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<ISyncCommitService>()
         );
     }
 
@@ -40,6 +51,22 @@ public class DevicesControllerSyncCheckSpecs
         db.Add(device);
         db.SaveChanges();
         return device;
+    }
+
+    private DeviceSyncSession CreateSession(MusicDbContext db, Device device)
+    {
+        var session = new DeviceSyncSession
+        {
+            DeviceId = device.Id,
+            Device = device,
+            StartedAt = DateTime.UtcNow,
+            Status = SyncSessionStatus.InProgress,
+            IsDryRun = false,
+            Records = [],
+        };
+        db.DeviceSyncSessions.Add(session);
+        db.SaveChanges();
+        return session;
     }
 
     private Song CreateSong(MusicDbContext db, long ownerId, DateTime modifiedAt, string checksum = "AA==", string checksumAlgorithm = "MD5")
@@ -73,6 +100,7 @@ public class DevicesControllerSyncCheckSpecs
             Title = $"Song-{Guid.NewGuid():N}",
             Label = "Label",
             AlbumId = album.Id,
+            Album = album,
             OwnerId = ownerId,
             Owner = db.Users.First(u => u.Id == ownerId),
             RepositoryPath = "/music/song.mp3",
@@ -83,7 +111,7 @@ public class DevicesControllerSyncCheckSpecs
             AddedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             ModifiedAt = modifiedAt,
-            Artists = [],
+            Artists = [new SongArtist { Artist = artist, ArtistId = artist.Id }],
             Genres = [],
             Devices = [],
             Sources = [],
@@ -112,13 +140,32 @@ public class DevicesControllerSyncCheckSpecs
         return sd;
     }
 
-    [Fact]
-    public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_SetsDownloadAction()
+    private static string ComputeExpectedPath(Song song, string devicePath, string template)
     {
-        // Arrange
+        var namingStrategy = new TemplateNamingStrategy(template);
+        var metadata = EntityConverter.ToSong(song);
+        var naming = NamingMetadata.FromPath(devicePath);
+        return namingStrategy.Generate(metadata, naming);
+    }
+
+    private static Song ReloadSongWithNavigations(MusicDbContext db, long songId)
+    {
+        return db.Songs
+            .Include(s => s.Album)
+                .ThenInclude(a => a.Artist)
+            .Include(s => s.Artists)
+                .ThenInclude(sa => sa.Artist)
+            .First(s => s.Id == songId);
+    }
+
+    [Fact]
+    public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_CreatesUpdateLocalRecord()
+    {
         var scenario = new Scenario();
-        var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
 
         var lastSynced = DateTime.UtcNow.AddHours(-2);
         var serverModified = DateTime.UtcNow.AddHours(-1);
@@ -136,25 +183,46 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
+        var reloadedSong = ReloadSongWithNavigations(scenario.DbContext, song.Id);
+        var expectedPath = ComputeExpectedPath(reloadedSong, "/music/song.mp3",
+            "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
+
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.Count.ShouldBe(2);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        response.Value.Records[0].SongId.ShouldBe(song.Id);
+        response.Value.Records[0].FilePath.ShouldBe(expectedPath);
+        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        response.Value.Records[1].SongId.ShouldBe(song.Id);
+        response.Value.Records[1].FilePath.ShouldBe(expectedPath);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        updatedSd.SyncAction.ShouldBe(SongSyncAction.Download);
+        updatedSd.SyncAction.ShouldBeNull();
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id)
+            .ToListAsync();
+        records.Count.ShouldBe(2);
+        records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        records[0].FilePath.ShouldBe(expectedPath);
+        records[0].SongId.ShouldBe(song.Id);
+        records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        records[1].FilePath.ShouldBe(expectedPath);
+        records[1].SongId.ShouldBe(song.Id);
     }
 
     [Fact]
     public async Task CheckSync_ServerAndClientUnchanged_SkipsFile()
     {
-        // Arrange
         var scenario = new Scenario();
-        var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
 
         var lastSynced = DateTime.UtcNow.AddHours(-1);
         var serverModified = lastSynced.AddMinutes(-10);
@@ -172,25 +240,70 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.ShouldBeEmpty();
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
+            .ToListAsync();
+        records.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_AlreadyDownloadAction_RemainsDownload()
+    public async Task CheckSync_ServerNewer_WithinTickPrecision_NoSessionRecord()
     {
-        // Arrange
         var scenario = new Scenario();
-        var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = new DateTime((DateTime.UtcNow.AddHours(-1).Ticks / 10) * 10);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, lastSynced);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = lastSynced.AddTicks(9);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.ShouldBeEmpty();
+
+        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
+        updatedSd.SyncAction.ShouldBeNull();
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
+            .ToListAsync();
+        records.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task CheckSync_ServerNewer_AlreadyDownloadAction_CreatesUpdateLocalRecord()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
 
         var lastSynced = DateTime.UtcNow.AddHours(-2);
         var serverModified = DateTime.UtcNow.AddHours(-1);
@@ -208,99 +321,34 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.Count.ShouldBe(2);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Download);
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
+            .ToListAsync();
+        records.Count.ShouldBe(2);
+        records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_WithinTickPrecision_NoSyncAction()
+    public async Task CheckSync_ServerNewerBeyondTolerance_CreatesUpdateLocalRecord()
     {
-        // Arrange
         var scenario = new Scenario();
-        var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-
-        // Ensure lastSynced ends with tick digit 0 so that adding 9 ticks stays in same bucket
-        // EF Core truncates last tick digit, so IsNewerThan compares ticks/10
-        var lastSynced = new DateTime((DateTime.UtcNow.AddHours(-1).Ticks / 10) * 10);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, lastSynced);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
-            lastSyncedModifiedAt: lastSynced, syncAction: null);
-
-        // clientModified is only 9 ticks newer - within the same tick bucket (ticks/10 rounds down)
-        var clientModified = lastSynced.AddTicks(9);
-        var request = new SyncCheckRequest
-        {
-            Files =
-            [
-                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
-            ],
-            Force = false,
-        };
-
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
-
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
-
-        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        updatedSd.SyncAction.ShouldBeNull();
-    }
-
-    [Fact]
-    public async Task CheckSync_ServerNewer_SyncActionUpload_NotOverridden()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-
-        var lastSynced = DateTime.UtcNow.AddHours(-2);
-        var serverModified = DateTime.UtcNow.AddHours(-1);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
-            lastSyncedModifiedAt: lastSynced, syncAction: SongSyncAction.Upload);
-
-        var clientModified = lastSynced;
-        var request = new SyncCheckRequest
-        {
-            Files =
-            [
-                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
-            ],
-            Force = false,
-        };
-
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
-
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
-
-        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        updatedSd.SyncAction.ShouldBe(SongSyncAction.Upload);
-    }
-
-    [Fact]
-    public async Task CheckSync_ServerNewerBeyondTolerance_SetsDownloadAction()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
 
         var lastSynced = DateTime.UtcNow.AddHours(-1);
         var serverModified = lastSynced.AddSeconds(10);
@@ -318,25 +366,86 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
+        var reloadedSong = ReloadSongWithNavigations(scenario.DbContext, song.Id);
+        var expectedPath = ComputeExpectedPath(reloadedSong, "/music/song.mp3",
+            "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
+
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.Count.ShouldBe(2);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        updatedSd.SyncAction.ShouldBe(SongSyncAction.Download);
+        updatedSd.SyncAction.ShouldBeNull();
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id)
+            .ToListAsync();
+        records.Count.ShouldBe(2);
+        records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        records[0].FilePath.ShouldBe(expectedPath);
+        records[0].SongId.ShouldBe(song.Id);
+        records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        records[1].FilePath.ShouldBe(expectedPath);
+        records[1].SongId.ShouldBe(song.Id);
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_SyncActionRemove_NotOverridden()
+    public async Task CheckSync_UnchangedFile_SyncActionRemove_CreatesUnlinkRecord()
     {
-        // Arrange
         var scenario = new Scenario();
-        var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-1);
+        var serverModified = lastSynced.AddMinutes(-10);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: SongSyncAction.Remove);
+
+        var clientModified = lastSynced.AddMinutes(-5);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        response.Value.Records[0].SongId.ShouldBe(song.Id);
+
+        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
+        updatedSd.SyncAction.ShouldBe(SongSyncAction.Remove);
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
+            .ToListAsync();
+        records.Count.ShouldBe(1);
+        records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+    }
+
+    [Fact]
+    public async Task CheckSync_ServerNewer_SyncActionRemove_CreatesUnlinkRecord()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
 
         var lastSynced = DateTime.UtcNow.AddHours(-2);
         var serverModified = DateTime.UtcNow.AddHours(-1);
@@ -354,15 +463,156 @@ public class DevicesControllerSyncCheckSpecs
             Force = false,
         };
 
-        // Act
-        var response = await controller.CheckSync(device.Id, request, CancellationToken.None);
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        // Assert
-        response.ToCreate.ShouldBeEmpty();
-        response.ToUpdate.ShouldBeEmpty();
-        response.PotentialConflicts.ShouldBeEmpty();
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Remove);
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
+            .ToListAsync();
+        records.Count.ShouldBe(1);
+        records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+    }
+
+    [Fact]
+    public async Task CheckSync_ServerNewer_NoActiveSession_NoSessionRecord_NoMutation()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var serverModified = DateTime.UtcNow.AddHours(-1);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = lastSynced;
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, 0, request, CancellationToken.None);
+
+        response.Value.ToCreate.ShouldBeEmpty();
+        response.Value.ToUpdate.ShouldBeEmpty();
+        response.Value.PotentialConflicts.ShouldBeEmpty();
+        response.Value.Records.ShouldBeEmpty();
+
+        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
+        updatedSd.SyncAction.ShouldBeNull();
+
+        var records = await scenario.DbContext.DeviceSyncSessionRecords.ToListAsync();
+        records.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task CheckSync_ClientNewerThanServer_NoSyncActionMutation()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var serverModified = DateTime.UtcNow.AddHours(-3);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = DateTime.UtcNow.AddHours(-1);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
+        updatedSd.SyncAction.ShouldBeNull();
+        updatedSd.LastSyncedModifiedAt.ShouldBe(lastSynced);
+    }
+
+    [Fact]
+    public async Task CheckSync_OnlyCreatesSessionRecords_NoSyncActionMutations()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var serverModified = DateTime.UtcNow.AddHours(-1);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+        var sdId = sd.Id;
+
+        var clientModified = lastSynced;
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sdId);
+        unchangedSd.SyncAction.ShouldBeNull();
+        unchangedSd.LastSyncedModifiedAt.ShouldBe(lastSynced);
+    }
+
+    [Fact]
+    public async Task CheckSync_ForceFlag_NoSyncActionMutation()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-1);
+        var serverModified = lastSynced.AddMinutes(-30);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: SongSyncAction.Download);
+
+        var clientModified = lastSynced;
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = true,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.ToUpdate.ShouldNotBeEmpty();
+        var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
+        unchangedSd.SyncAction.ShouldBe(SongSyncAction.Download);
     }
 }
