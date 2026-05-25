@@ -188,7 +188,7 @@ public abstract partial class SyncTestsBase
         // Run CLI sync to download the song to the device
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Downloaded.ShouldBe(1);
+        result.CreateLocal.ShouldBe(1);
 
         // Verify file exists locally with correct metadata
         // Expected path based on naming template: {artist[0]}/{album}/{simple_label}.mp3

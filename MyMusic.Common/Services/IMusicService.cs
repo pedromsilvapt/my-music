@@ -25,8 +25,15 @@ public interface IMusicService
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    Task AddSongsToDevice(MusicDbContext db, long deviceId, Song song,
+    Task<SongDevice> AddSongsToDevice(MusicDbContext db, long deviceId, Song song,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Links a song to a device at a specific device path.
+    /// The file already exists at the given path on the device, so no download action is set.
+    /// </summary>
+    Task<SongDevice> AddSongsToDevice(MusicDbContext db, long deviceId, long songId, string devicePath,
+        DateTime modifiedAt, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes a music from a device (if it is added already)

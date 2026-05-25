@@ -7,15 +7,27 @@ OpenAPI spec version: 1.0.0
 */
 export interface SyncCompleteResponse {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  createdCount: number;
+  createRemoteCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  updatedCount: number;
+  updateRemoteCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   skippedCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  downloadedCount: number;
+  createLocalCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  removedCount: number;
+  updateLocalCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  deleteCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  linkCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  unlinkCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  renameCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  conflictCount: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  updateTimestampCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   errorCount: number;
 }

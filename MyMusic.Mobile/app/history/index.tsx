@@ -250,11 +250,11 @@ export default function HistoryListScreen() {
 
                     <View style={[styles.sessionStats, {flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.cardBorder}]}>
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.success}]}>{session.createdCount}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.success}]}>{session.createRemoteCount}</Text>
                             <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
                         </View>
                         <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.info}]}>{session.updatedCount}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.info}]}>{session.updateRemoteCount}</Text>
                             <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
                         </View>
                         <View style={styles.statItem}>
@@ -263,7 +263,7 @@ export default function HistoryListScreen() {
                         </View>
                         <View style={styles.statItem}>
                             <Text
-                                style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{session.downloadedCount}</Text>
+                                style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{session.createLocalCount}</Text>
                             <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
                         </View>
                         {session.errorCount > 0 && (

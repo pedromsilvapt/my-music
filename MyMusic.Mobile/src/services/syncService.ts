@@ -20,13 +20,18 @@ import {SyncCancelledError} from './sync/errors';
 export {SyncCancelledError};
 
 export interface SyncResult {
-    created: number;
-    updated: number;
+    createRemote: number;
+    updateRemote: number;
+    createLocal: number;
+    updateLocal: number;
+    delete: number;
+    link: number;
+    unlink: number;
+    rename: number;
     skipped: number;
-    downloaded: number;
-    removed: number;
-    failed: number;
-    conflicts: number;
+    conflict: number;
+    updateTimestamp: number;
+    error: number;
     sessionId?: number;
     cancelled?: boolean;
 }

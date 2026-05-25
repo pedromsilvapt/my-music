@@ -21,6 +21,10 @@ export type SyncFileInfoItem = z.infer<typeof SyncFileInfoItemSchema>;
 export const SyncStartRequestSchema = z.object({
     dryRun: z.boolean().optional(),
     repositoryPath: z.string().optional(),
+    scanErrors: z.array(z.object({
+        path: z.string(),
+        error: z.string(),
+    })).optional(),
 });
 
 export type SyncStartRequest = z.infer<typeof SyncStartRequestSchema>;
@@ -45,7 +49,7 @@ export const SyncPotentialConflictItemSchema = z.object({
     localModifiedAt: z.coerce.date(),
     serverModifiedAt: z.coerce.date(),
     lastSyncedAt: z.coerce.date().nullable(),
-    songId: z.number(),
+    songId: z.number().nullable(),
     serverChecksum: z.string(),
     serverChecksumAlgorithm: z.string(),
 });
@@ -58,53 +62,155 @@ export const SyncActionSchema = z.enum(['Download', 'Upload', 'Remove']);
 export type SyncAction = z.infer<typeof SyncActionSchema>;
 
 /** Represents the result of what action was performed during a specific sync session. */
-export const SyncRecordActionSchema = z.enum(['Created', 'Updated', 'Skipped', 'Downloaded', 'Removed', 'Error', 'Conflict']);
+export const SyncRecordActionSchema = z.enum(['CreateRemote', 'UpdateRemote', 'CreateLocal', 'UpdateLocal', 'Delete', 'Link', 'Unlink', 'Rename', 'Skipped', 'Conflict', 'UpdateTimestamp', 'Error']);
 
 export type SyncRecordAction = z.infer<typeof SyncRecordActionSchema>;
 
-export const PendingActionItemSchema = z.object({
-    songId: z.number().nullable(),
-    path: z.string(),
-    action: SyncActionSchema,
-    previousPath: z.string().nullable().optional(),
+export const RenameDataSchema = z.object({
+    previousPath: z.string(),
+    newPath: z.string(),
 });
 
-export type PendingActionItem = z.infer<typeof PendingActionItemSchema>;
+export const SongModifiedAtDataSchema = z.object({
+    songId: z.number().nullable().optional(),
+    modifiedAt: z.string().nullable().optional(),
+    checksum: z.string().nullable().optional(),
+    algorithm: z.string().nullable().optional(),
+});
+
+export const CreateRemoteDataSchema = z.object({
+    songId: z.number().nullable().optional(),
+    checksum: z.string().nullable().optional(),
+    algorithm: z.string().nullable().optional(),
+    modifiedAt: z.string().nullable().optional(),
+    tempFilePath: z.string().nullable().optional(),
+    createdAt: z.string().nullable().optional(),
+    originalFilePath: z.string().nullable().optional(),
+});
+
+export const UpdateRemoteDataSchema = z.object({
+    songId: z.number().nullable().optional(),
+    checksum: z.string().nullable().optional(),
+    algorithm: z.string().nullable().optional(),
+    modifiedAt: z.string().nullable().optional(),
+    tempFilePath: z.string().nullable().optional(),
+    createdAt: z.string().nullable().optional(),
+    originalFilePath: z.string().nullable().optional(),
+});
+
+export const ConflictDataSchema = z.object({
+    localModifiedAt: z.string(),
+    serverModifiedAt: z.string(),
+});
+
+export const UpdateTimestampDataSchema = z.object({
+    newTimestamp: z.string(),
+    songId: z.number().nullable().optional(),
+});
+
+export const ErrorDataSchema = z.object({
+    errorMessage: z.string(),
+});
+
+const SyncRecordItemBaseSchema = z.object({
+    id: z.number(),
+    filePath: z.string(),
+    songId: z.number().nullable(),
+    resolvesConflictRecordId: z.number().nullable().optional(),
+    reason: z.string().nullable().optional(),
+    acknowledged: z.boolean(),
+    processedAt: z.string(),
+});
+
+export const SyncRecordItemSchema = z.discriminatedUnion('action', [
+    SyncRecordItemBaseSchema.extend({ action: z.literal('CreateRemote'), data: CreateRemoteDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateRemote'), data: UpdateRemoteDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('CreateLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Delete'), data: z.null().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Unlink'), data: SongModifiedAtDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Link'), data: SongModifiedAtDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Rename'), data: RenameDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Skipped'), data: z.null().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Conflict'), data: ConflictDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateTimestamp'), data: UpdateTimestampDataSchema.nullable().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('Error'), data: ErrorDataSchema.nullable().optional() }),
+]);
+
+export type SyncRecordItem = z.infer<typeof SyncRecordItemSchema>;
+
+export type RenameData = z.infer<typeof RenameDataSchema>;
+export type SongModifiedAtData = z.infer<typeof SongModifiedAtDataSchema>;
+export type CreateRemoteData = z.infer<typeof CreateRemoteDataSchema>;
+export type UpdateRemoteData = z.infer<typeof UpdateRemoteDataSchema>;
+export type ConflictData = z.infer<typeof ConflictDataSchema>;
+export type UpdateTimestampData = z.infer<typeof UpdateTimestampDataSchema>;
+export type ErrorData = z.infer<typeof ErrorDataSchema>;
+
+export const SyncActionCountsSchema = z.object({
+    createRemoteCount: z.number(),
+    updateRemoteCount: z.number(),
+    skippedCount: z.number(),
+    createLocalCount: z.number(),
+    updateLocalCount: z.number(),
+    deleteCount: z.number(),
+    linkCount: z.number(),
+    unlinkCount: z.number(),
+    renameCount: z.number(),
+    conflictCount: z.number(),
+    updateTimestampCount: z.number(),
+    errorCount: z.number(),
+});
+
+export type SyncActionCounts = z.infer<typeof SyncActionCountsSchema>;
 
 export const SyncCheckResponseSchema = z.object({
     toCreate: z.array(SyncFileInfoItemSchema),
     toUpdate: z.array(SyncFileInfoSchema),
     potentialConflicts: z.array(SyncPotentialConflictItemSchema),
-    pendingActions: z.array(PendingActionItemSchema),
+    records: z.array(SyncRecordItemSchema),
+    skippedRecordIds: z.array(z.number()),
+    counts: SyncActionCountsSchema,
 });
 
 export type SyncCheckResponse = z.infer<typeof SyncCheckResponseSchema>;
 
-export const SyncRecordsRequestSchema = z.object({
-    records: z.array(z.object({
-        filePath: z.string(),
-        action: SyncRecordActionSchema,
-        source: z.string().optional(),
-        songId: z.number().optional(),
-        errorMessage: z.string().optional(),
-        reason: z.string().optional(),
-    })),
+export const SyncCommitRequestSchema = z.object({
+    direction: z.string().optional(),
 });
 
-export type SyncRecordsRequest = z.infer<typeof SyncRecordsRequestSchema>;
+export type SyncCommitRequest = z.infer<typeof SyncCommitRequestSchema>;
 
-export const SyncRecordsResponseSchema = z.object({
-    success: z.boolean(),
+export const SyncCommitResponseSchema = z.object({
+    createRemoteCount: z.number(),
+    updateRemoteCount: z.number(),
+    skippedCount: z.number(),
+    createLocalCount: z.number(),
+    updateLocalCount: z.number(),
+    deleteCount: z.number(),
+    linkCount: z.number(),
+    unlinkCount: z.number(),
+    renameCount: z.number(),
+    conflictCount: z.number(),
+    updateTimestampCount: z.number(),
+    errorCount: z.number(),
+    committedAt: z.coerce.date(),
 });
 
-export type SyncRecordsResponse = z.infer<typeof SyncRecordsResponseSchema>;
+export type SyncCommitResponse = z.infer<typeof SyncCommitResponseSchema>;
 
 export const SyncCompleteResponseSchema = z.object({
-    createdCount: z.number(),
-    updatedCount: z.number(),
+    createRemoteCount: z.number(),
+    updateRemoteCount: z.number(),
     skippedCount: z.number(),
-    downloadedCount: z.number(),
-    removedCount: z.number(),
+    createLocalCount: z.number(),
+    updateLocalCount: z.number(),
+    deleteCount: z.number(),
+    linkCount: z.number(),
+    unlinkCount: z.number(),
+    renameCount: z.number(),
+    conflictCount: z.number(),
+    updateTimestampCount: z.number(),
     errorCount: z.number(),
 });
 
@@ -112,28 +218,41 @@ export type SyncCompleteResponse = z.infer<typeof SyncCompleteResponseSchema>;
 
 export const SyncUploadResponseSchema = z.object({
     success: z.boolean(),
-    songId: z.number(),
-    pendingActions: z.array(PendingActionItemSchema),
+    songId: z.number().nullable(),
+    recordId: z.number().nullable(),
+    action: SyncRecordActionSchema.nullable(),
+    data: z.union([CreateRemoteDataSchema, UpdateRemoteDataSchema, SongModifiedAtDataSchema, RenameDataSchema, ConflictDataSchema, UpdateTimestampDataSchema, ErrorDataSchema, z.null()]).nullable(),
+    counts: SyncActionCountsSchema,
 });
 
 export type SyncUploadResponse = z.infer<typeof SyncUploadResponseSchema>;
 
-export const GetPendingActionsResponseSchema = z.object({
-    actions: z.array(PendingActionItemSchema),
+export const CreatePendingActionsResponseSchema = z.object({
+    records: z.array(SyncRecordItemSchema),
 });
 
-export type GetPendingActionsResponse = z.infer<typeof GetPendingActionsResponseSchema>;
+export type CreatePendingActionsResponse = z.infer<typeof CreatePendingActionsResponseSchema>;
 
 export const AcknowledgeActionRequestSchema = z.object({
-    devicePath: z.string(),
+    recordIds: z.array(z.number()),
     modifiedAt: z.string().optional(),
-    previousDevicePath: z.string().nullable().optional(),
 });
 
 export type AcknowledgeActionRequest = z.infer<typeof AcknowledgeActionRequestSchema>;
 
+export const SyncActionRecordResponseItemSchema = z.object({
+    id: z.number(),
+    action: SyncRecordActionSchema,
+    data: z.union([CreateRemoteDataSchema, UpdateRemoteDataSchema, SongModifiedAtDataSchema, RenameDataSchema, ConflictDataSchema, UpdateTimestampDataSchema, ErrorDataSchema, z.null()]).nullable().optional(),
+    resolvesConflictRecordId: z.number().nullable().optional(),
+});
+
+export type SyncActionRecordResponseItem = z.infer<typeof SyncActionRecordResponseItemSchema>;
+
 export const AcknowledgeActionResponseSchema = z.object({
     success: z.boolean(),
+    records: z.array(SyncActionRecordResponseItemSchema).optional(),
+    counts: SyncActionCountsSchema,
 });
 
 export type AcknowledgeActionResponse = z.infer<typeof AcknowledgeActionResponseSchema>;
@@ -232,11 +351,17 @@ export const SyncSessionItemSchema = z.object({
     completedAt: z.string().nullable(),
     status: z.string(),
     isDryRun: z.boolean(),
-    createdCount: z.number(),
-    updatedCount: z.number(),
+    createRemoteCount: z.number(),
+    updateRemoteCount: z.number(),
     skippedCount: z.number(),
-    downloadedCount: z.number(),
-    removedCount: z.number(),
+    createLocalCount: z.number(),
+    updateLocalCount: z.number(),
+    deleteCount: z.number(),
+    linkCount: z.number(),
+    unlinkCount: z.number(),
+    renameCount: z.number(),
+    conflictCount: z.number(),
+    updateTimestampCount: z.number(),
     errorCount: z.number(),
     repositoryPath: z.string().nullable(),
 });
@@ -252,10 +377,10 @@ export type ListSyncSessionsResponse = z.infer<typeof ListSyncSessionsResponseSc
 export const SyncRecordResponseItemSchema = z.object({
     filePath: z.string(),
     action: SyncRecordActionSchema,
-    source: z.string(),
     songId: z.number().nullable(),
-    errorMessage: z.string().nullable(),
     reason: z.string().nullable(),
+    data: z.union([CreateRemoteDataSchema, UpdateRemoteDataSchema, SongModifiedAtDataSchema, RenameDataSchema, ConflictDataSchema, UpdateTimestampDataSchema, ErrorDataSchema, z.null()]).nullable().optional(),
+    resolvesConflictRecordId: z.number().nullable().optional(),
     processedAt: z.string(),
 });
 
@@ -316,7 +441,7 @@ export type DeleteSessionResponse = z.infer<typeof DeleteSessionResponseSchema>;
 
 export const SyncConflictResolveItemSchema = z.object({
     path: z.string(),
-    songId: z.number(),
+    songId: z.number().nullable(),
     fileContentBase64: z.string(),
     localModifiedAt: z.string(),
 });
@@ -340,6 +465,23 @@ export const SyncResolveConflictsResponseSchema = z.object({
     toUpload: z.array(SyncFileInfoItemSchema),
     resolved: z.array(SyncFileInfoItemSchema),
     conflicts: z.array(SyncConflictErrorItemSchema),
+    conflictRecords: z.array(SyncActionRecordResponseItemSchema),
+    updateTimestampRecords: z.array(SyncActionRecordResponseItemSchema),
+    counts: SyncActionCountsSchema,
 });
 
 export type SyncResolveConflictsResponse = z.infer<typeof SyncResolveConflictsResponseSchema>;
+
+export const ReportSyncErrorRequestSchema = z.object({
+    filePath: z.string(),
+    errorMessage: z.string(),
+    songId: z.number().nullable().optional(),
+});
+
+export type ReportSyncErrorRequest = z.infer<typeof ReportSyncErrorRequestSchema>;
+
+export const ReportSyncErrorResponseSchema = z.object({
+    counts: SyncActionCountsSchema,
+});
+
+export type ReportSyncErrorResponse = z.infer<typeof ReportSyncErrorResponseSchema>;

@@ -2,7 +2,6 @@ namespace MyMusic.CLI.Tests.Services.Sync;
 
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync;
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 using NSubstitute;
 using Shouldly;
@@ -19,6 +18,7 @@ public class OrchestratorTests
     private readonly ILogger<Phases> _phasesLogger;
     private readonly ILogger<Orchestrator> _orchestratorLogger;
     private readonly System.IO.Abstractions.IFileSystem _fileSystem;
+    private readonly SyncActionsDevice _syncActions;
 
     public OrchestratorTests()
     {
@@ -31,6 +31,8 @@ public class OrchestratorTests
         _phasesLogger = Substitute.For<ILogger<Phases>>();
         _orchestratorLogger = Substitute.For<ILogger<Orchestrator>>();
         _fileSystem = Substitute.For<System.IO.Abstractions.IFileSystem>();
+
+        _syncActions = new SyncActionsDevice(_fileOps, _apiClient, _userPrompt, _fileSystem, Substitute.For<ILogger<SyncActionsDevice>>());
 
         SetupDefaults();
     }
@@ -55,15 +57,17 @@ public class OrchestratorTests
 
         _apiClient.StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new StartSyncResult { SessionId = 1 }));
-        _apiClient.GetPendingActionsAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new GetPendingActionsResult { Actions = [] }));
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CreatePendingActionsResult { Records = [] }));
         _apiClient.CompleteSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CompleteSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CompleteSyncResult()));
+        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommitSyncResult()));
     }
 
     private Phases CreatePhases()
     {
-        return new Phases(_apiClient, _fileOps, _userPrompt, _fileSystem, _config, _scanner, _phasesLogger);
+        return new Phases(_apiClient, _syncActions, _config, _scanner, _phasesLogger);
     }
 
     private Orchestrator CreateOrchestrator(Phases phases)
@@ -91,7 +95,8 @@ public class OrchestratorTests
             Arg.Any<Action<string, string>?>(),
             Arg.Any<CancellationToken>());
         await _apiClient.Received(1).StartSyncAsync(1, Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
-        await _apiClient.Received(1).GetPendingActionsAsync(1, Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CreatePendingActionsAsync(1, Arg.Any<long>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>());
         await _apiClient.Received(1).CompleteSyncAsync(1, 1, Arg.Any<CompleteSyncRequest>(), Arg.Any<CancellationToken>());
         _keepAwake.Received(1).Deactivate();
     }
@@ -107,7 +112,7 @@ public class OrchestratorTests
         // Act
         await orchestrator.OrchestrateSyncAsync(options, null);
 
-        // Assert - Server actions should not process downloads
+        // Assert
         await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
     }
 
@@ -122,8 +127,8 @@ public class OrchestratorTests
         // Act
         await orchestrator.OrchestrateSyncAsync(options, null);
 
-        // Assert - Upload should not be called
-        await _apiClient.DidNotReceive().UploadFileAsync(Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
+        // Assert
+        await _apiClient.DidNotReceive().UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -139,13 +144,14 @@ public class OrchestratorTests
 
         // Assert
         await _apiClient.Received(1).StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>());
         await _apiClient.Received(1).CompleteSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CompleteSyncRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public void SyncResult_HasCancelledProperty()
     {
-        // Arrange & Act
+        // Arrange
         var result = new SyncResult { Cancelled = true };
 
         // Assert
@@ -155,17 +161,22 @@ public class OrchestratorTests
     [Fact]
     public void SyncProgress_HasExpectedStructure()
     {
-        // Arrange & Act
+        // Arrange
         var progress = SyncProgress.FromResult(
             new SyncResult
             {
-                Created = 2,
-                Updated = 1,
+                CreateRemote = 2,
+                UpdateRemote = 1,
                 Skipped = 1,
-                Downloaded = 1,
-                Removed = 0,
-                Failed = 0,
-                Conflicts = 0
+                CreateLocal = 1,
+                UpdateLocal = 0,
+                Delete = 0,
+                Link = 0,
+                Unlink = 0,
+                Rename = 0,
+                Conflict = 0,
+                UpdateTimestamp = 0,
+                Error = 0
             },
             "upload", 10, 5);
 
@@ -173,7 +184,7 @@ public class OrchestratorTests
         progress.TotalFiles.ShouldBe(10);
         progress.ProcessedFiles.ShouldBe(5);
         progress.Phase.ShouldBe("upload");
-        progress.Result.Created.ShouldBe(2);
-        progress.Result.Updated.ShouldBe(1);
+        progress.Result.CreateRemote.ShouldBe(2);
+        progress.Result.UpdateRemote.ShouldBe(1);
     }
 }

@@ -18,6 +18,9 @@ public class SongDevice
 
     public SongSyncAction? SyncAction { get; set; }
 
+    [MaxLength(2048)]
+    public string? SyncActionReason { get; set; }
+
     public DateTime AddedAt { get; set; }
 
     public DateTime? LastSyncedModifiedAt { get; set; }

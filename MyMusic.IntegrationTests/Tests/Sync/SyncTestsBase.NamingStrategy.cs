@@ -1,8 +1,6 @@
 using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures;
 using MyMusic.IntegrationTests.Flows;
-using MyMusic.IntegrationTests.Pages;
-using MyMusic.IntegrationTests.Pages.Components;
 using Shouldly;
 
 namespace MyMusic.IntegrationTests.Tests.Sync;
@@ -17,22 +15,22 @@ public abstract partial class SyncTestsBase
 
         // Create a song in an arbitrary folder — its path template variables should be derived from the file's location
         var songA = SongsFixture.DefaultSongs[1]; // The Alibi, year 2024
-        var pathA = $"OriginalFolder/{songA.Title} - {songA.Artists[0]}.mp3";
+        var pathA = $"OriginalFolder/{songA.Title} - {songA.Artists![0]}.mp3";
         await App.CreateSongAsync(songA, pathA);
         App.FileExists(pathA).ShouldBeTrue();
 
         // Initial sync uploads the song to the server
         var result1 = await App.SyncAsync(new SyncOptions());
         result1.ShouldBeSuccessful();
-        result1.Created.ShouldBe(1);
+        result1.CreateRemote.ShouldBe(1);
 
         // Editing the year should trigger a rename
-        await new EditSongFlow(songA.Title, new(Year: 2025)).ExecuteAsync(Page);
+        await new EditSongFlow(songA.Title!, new(Year: 2025)).ExecuteAsync(Page);
 
         // Second sync should download the renamed file to the new year-based path
         var result2 = await App.SyncAsync(new SyncOptions());
         result2.ShouldBeSuccessful();
-        result2.Downloaded.ShouldBe(1);
+        result2.UpdateLocal.ShouldBe(1);
 
         var expectedPath = $"2025/{songA.Title} - {songA.Artists[0]}.mp3";
         App.FileShouldExist(expectedPath);
@@ -63,7 +61,7 @@ public abstract partial class SyncTestsBase
         // Initial sync should upload all four songs, preserving their original folder paths
         var result1 = await App.SyncAsync(new SyncOptions());
         result1.ShouldBeSuccessful();
-        result1.Created.ShouldBe(4);
+        result1.CreateRemote.ShouldBe(4);
 
         App.FilesShouldExist(createdPaths);
 
@@ -78,7 +76,8 @@ public abstract partial class SyncTestsBase
         // Second sync downloads all three changes: year-changed A, title-changed B, and new song E
         var result2 = await App.SyncAsync(new SyncOptions());
         result2.ShouldBeSuccessful();
-        result2.Downloaded.ShouldBe(3, "Should download 3 songs: year-changed A, title-changed B, and new E");
+        result2.UpdateLocal.ShouldBe(2, "Should update 2 songs: year-changed A, title-changed B");
+        result2.CreateLocal.ShouldBe(1, "Should update 2 songs: new E");
 
         // Song A changed year but original_folder should be preserved — file stays in the same folder
         App.FileShouldExist(createdPaths[0], "Song A (year change) should stay in same folder");
@@ -117,7 +116,7 @@ public abstract partial class SyncTestsBase
         // Initial sync uploads the song to server, deriving original_folder from path
         var result1 = await App.SyncAsync(new SyncOptions());
         result1.ShouldBeSuccessful();
-        result1.Created.ShouldBe(1);
+        result1.CreateRemote.ShouldBe(1);
 
         App.FileShouldExist(createdPathA, "Path should exist after initial sync");
 
@@ -127,7 +126,7 @@ public abstract partial class SyncTestsBase
         // Second sync downloads the metadata change
         var result2 = await App.SyncAsync(new SyncOptions());
         result2.ShouldBeSuccessful();
-        result2.Downloaded.ShouldBe(1, "Should download the year-changed song");
+        result2.UpdateLocal.ShouldBe(1, "Should download the year-changed song");
 
         // File should stay in the original 2024 folder (original_folder preserved)
         App.FileShouldExist(createdPathA, "File should remain in original folder after year change");
@@ -155,7 +154,7 @@ public abstract partial class SyncTestsBase
         // Run CLI sync to download the song to the device
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Downloaded.ShouldBe(1);
+        result.CreateLocal.ShouldBe(1);
 
         // Assert file downloaded to year-based path (no original_folder, so fallback to year)
         var expectedPath = $"{songA.Year}/{songA.Title}.mp3";

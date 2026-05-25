@@ -15,4 +15,6 @@ export interface PendingActionItem {
   action: string;
   /** @nullable */
   previousPath?: string | null;
+  /** @nullable */
+  reason?: string | null;
 }

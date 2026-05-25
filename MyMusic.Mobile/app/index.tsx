@@ -110,11 +110,11 @@ export default function HomeScreen() {
                     />
                     <View style={styles.progressDetails}>
                         <View style={styles.progressStat}>
-                            <Text style={[styles.progressValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.success}]}>{progress.created}</Text>
+                            <Text style={[styles.progressValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.success}]}>{progress.createRemote}</Text>
                             <Text style={[styles.progressLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
                         </View>
                         <View style={styles.progressStat}>
-                            <Text style={[styles.progressValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.info}]}>{progress.updated}</Text>
+                            <Text style={[styles.progressValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.info}]}>{progress.updateRemote}</Text>
                             <Text style={[styles.progressLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
                         </View>
                         <View style={styles.progressStat}>
@@ -123,7 +123,7 @@ export default function HomeScreen() {
                         </View>
                         <View style={styles.progressStat}>
                             <Text
-                                style={[styles.progressValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{progress.downloaded}</Text>
+                                style={[styles.progressValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{progress.createLocal}</Text>
                             <Text style={[styles.progressLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
                         </View>
                     </View>

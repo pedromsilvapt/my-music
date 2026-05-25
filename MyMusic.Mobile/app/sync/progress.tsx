@@ -159,6 +159,8 @@ export default function SyncProgressScreen() {
                 return 'Resolving conflicts...';
             case 'server':
                 return 'Processing server actions...';
+            case 'committing':
+                return 'Committing changes...';
             case 'completing':
                 return 'Finalizing sync...';
             case 'completed':
@@ -275,30 +277,33 @@ export default function SyncProgressScreen() {
 
                 <View style={[styles.statsContainer, {flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.md, marginTop: spacing.xl}]}>
                     <View style={styles.stat}>
-                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.success}]}>↑ {progress.created}</Text>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.success}]}>↑ {progress.createRemote}</Text>
                     </View>
                     <View style={styles.stat}>
-                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.info}]}>↑ {progress.updated}</Text>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.info}]}>↑ {progress.updateRemote}</Text>
                     </View>
+                    <View style={styles.stat}>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>↓ {progress.createLocal}</Text>
+                    </View>
+                    <View style={styles.stat}>
+                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>↓ {progress.updateLocal}</Text>
+                    </View>
+                    {progress.delete > 0 && (
+                        <View style={styles.stat}>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>× {progress.delete}</Text>
+                        </View>
+                    )}
                     <View style={styles.stat}>
                         <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textMuted}]}>- {progress.skipped}</Text>
                     </View>
-                    <View style={styles.stat}>
-                        <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>↓ {progress.downloaded}</Text>
-                    </View>
-                    {progress.removed > 0 && (
+                    {progress.conflict > 0 && (
                         <View style={styles.stat}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>× {progress.removed}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.warning}]}>⚠ {progress.conflict}</Text>
                         </View>
                     )}
-                    {progress.failed > 0 && (
+                    {progress.error > 0 && (
                         <View style={styles.stat}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>! {progress.failed}</Text>
-                        </View>
-                    )}
-                    {progress.conflicts > 0 && (
-                        <View style={styles.stat}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.warning}]}>⚠ {progress.conflicts}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>! {progress.error}</Text>
                         </View>
                     )}
                 </View>

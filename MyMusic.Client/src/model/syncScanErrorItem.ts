@@ -5,6 +5,7 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface SyncRecordsResponse {
-  success: boolean;
+export interface SyncScanErrorItem {
+  filePath: string;
+  errorMessage: string;
 }

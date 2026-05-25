@@ -1,10 +1,24 @@
-// @TODO: CLI has SyncDirection (Both/Up/Down) for controlling upload/download phases.
-// Mobile always syncs both ways. Consider adding this feature for fine-grained sync control.
-import type {SyncDeps, SyncContext, RecordItem, ConflictResolution, SyncFileInfo, ScanError, SyncConflict, ProgressHandler, PendingActionItem} from './types';
-import type {SyncConflictResolveItem, SyncPotentialConflictItem} from '../../api/types';
-import {SyncCancelledError} from './errors';
-import {safeToIsoString, chunkArray, formatFilePath} from './utils';
-import {uploadOneFile, downloadOneFile, removeOneFile} from './atomic-operations';
+import type { SyncDeps, SyncContext, SyncFileInfo, ScanError, SyncConflict, ProgressHandler, SyncRecordItem, ActionResult } from './types';
+import { SyncActionCounts, addDeltaToResult } from './types';
+import type { SyncPotentialConflictItem, RenameData } from '../../api/types';
+import { SyncCancelledError } from './errors';
+import { safeToIsoString, chunkArray, formatFilePath } from './utils';
+import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionDelete, actionConflict, actionRename } from './sync-actions-device';
+
+const EMPTY_COUNTS: SyncActionCounts = {
+    createRemoteCount: 0,
+    updateRemoteCount: 0,
+    skippedCount: 0,
+    createLocalCount: 0,
+    updateLocalCount: 0,
+    deleteCount: 0,
+    linkCount: 0,
+    unlinkCount: 0,
+    renameCount: 0,
+    conflictCount: 0,
+    updateTimestampCount: 0,
+    errorCount: 0,
+};
 
 export interface ScanPhaseResult {
     files: SyncFileInfo[];
@@ -12,7 +26,7 @@ export interface ScanPhaseResult {
     estimatedTotal: number;
 }
 
-export async function scanPhase(
+export async function scanPhase (
     deps: SyncDeps,
     ctx: SyncContext,
     onProgress: ProgressHandler,
@@ -32,7 +46,7 @@ export async function scanPhase(
     const scanErrors: ScanError[] = [];
     let currentEstimate = estimatedTotal;
 
-    const {files, errors} = await deps.scanner(ctx.repositoryPath, {
+    const { files, errors } = await deps.scanner(ctx.repositoryPath, {
         extensions: deps.config.getMusicExtensions(),
         excludePatterns: deps.config.getExcludePatterns(),
         basePath: ctx.repositoryPath,
@@ -51,11 +65,11 @@ export async function scanPhase(
             });
         },
         onError: (path, error) => {
-            scanErrors.push({path, error});
+            scanErrors.push({ path, error });
         },
     });
 
-    ctx.result.failed += errors.length;
+    ctx.result.error += errors.length;
 
     if (deps.state.isCancelled) {
         throw new SyncCancelledError();
@@ -73,10 +87,10 @@ export async function scanPhase(
         currentFile: '',
     });
 
-    return {files, errors: scanErrors, estimatedTotal: currentEstimate};
+    return { files, errors: scanErrors, estimatedTotal: currentEstimate };
 }
 
-export async function startSessionPhase(
+export async function startSessionPhase (
     deps: SyncDeps,
     ctx: SyncContext,
     scanErrors: ScanError[],
@@ -85,25 +99,14 @@ export async function startSessionPhase(
     const startResponse = await deps.apiClient.startSync(ctx.deviceId, {
         dryRun: ctx.options.dryRun,
         repositoryPath: ctx.repositoryPath,
+        scanErrors: scanErrors.map(e => ({ path: e.path, error: e.error })),
     });
-    const sessionId = startResponse.sessionId;
-    ctx.sessionId = sessionId;
+    ctx.sessionId = startResponse.sessionId;
 
-    if (scanErrors.length > 0) {
-        await deps.apiClient.recordChunk(ctx.deviceId, sessionId, {
-            records: scanErrors.map(e => ({
-                filePath: e.path,
-                action: 'Error',
-                source: 'Device',
-                errorMessage: e.error,
-            })),
-        });
-    }
-
-    onProgress({phase: 'server'});
+    onProgress({ phase: 'server' });
 }
 
-export async function resolveConflictsPhase(
+export async function resolveConflictsPhase (
     deps: SyncDeps,
     ctx: SyncContext,
     potentialConflicts: SyncPotentialConflictItem[],
@@ -111,125 +114,35 @@ export async function resolveConflictsPhase(
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
 ): Promise<void> {
-    if (potentialConflicts.length === 0) {
-        return;
-    }
-
-    if (ctx.options.dryRun) {
-        console.log(
-            `Dry-run: ${potentialConflicts.length} potential conflicts detected (not resolved)`
-        );
-        ctx.result.conflicts += potentialConflicts.length;
-
-        onProgress({
-            phase: 'resolving',
-            currentFile: `${potentialConflicts.length} conflicts detected (dry-run)`,
-            conflicts: ctx.result.conflicts,
-        });
-        return;
-    }
-
-    onProgress({phase: 'resolving', currentFile: 'Checking conflicts...'});
-
-    const resolveItems: SyncConflictResolveItem[] = [];
-
-    for (const conflict of potentialConflicts) {
-        const file = chunk.find(f => f.relativePath === conflict.path);
-        if (!file) {
-            continue;
-        }
-
-        try {
-            const fileContentBase64 = await deps.fileOps.readFileBase64(file.fullPath);
-            resolveItems.push({
-                path: conflict.path,
-                songId: conflict.songId,
-                fileContentBase64,
-                localModifiedAt: safeToIsoString(conflict.localModifiedAt)!,
-            });
-        } catch (e) {
-            console.error('Failed to read file for conflict resolution:', conflict.path, e);
-        }
-    }
-
-    if (resolveItems.length === 0) {
-        return;
-    }
-
-    try {
-        const resolveResponse = await deps.apiClient.resolveConflicts(ctx.deviceId, {
-            conflicts: resolveItems,
-        });
-
-        for (const resolved of resolveResponse.resolved) {
-            console.log('Resolved conflict for', resolved.path, ':', resolved.reason);
-        }
-
-        for (const toUploadItem of resolveResponse.toUpload) {
-            toUpdatePaths.add(toUploadItem.path);
-        }
-
-        for (const conflict of resolveResponse.conflicts) {
-            ctx.result.conflicts++;
-
-            if (ctx.options.treatConflictsAsErrors) {
-                ctx.result.failed++;
-                console.error('Conflict (as error):', conflict.path, conflict.reason);
-            } else {
-                const resolution = await deps.userPrompt.promptConflictResolution(conflict.path);
-
-                if (resolution === 'upload') {
-                    toUpdatePaths.add(conflict.path);
-                } else if (resolution === 'download') {
-                    await handleDownloadConflict(deps, ctx, conflict, potentialConflicts);
-                    ctx.result.downloaded++;
-                } else {
-                    ctx.result.failed++;
-                }
-            }
-        }
-    } catch (e) {
-        console.error('Failed to resolve conflicts:', e);
-    }
-}
-
-async function handleDownloadConflict(
-    deps: SyncDeps,
-    ctx: SyncContext,
-    conflict: SyncConflict,
-    potentialConflicts: SyncPotentialConflictItem[]
-): Promise<void> {
-    const conflictInfo = potentialConflicts.find(c => c.path === conflict.path);
-    if (!conflictInfo || !ctx.sessionId) {
-        return;
-    }
-
-    const record = await downloadOneFile(
+    await actionConflict(
         deps.apiClient,
         deps.fileOps,
+        deps.userPrompt,
         ctx,
-        conflictInfo.songId,
-        conflictInfo.path,
-        ctx.decodedRepoPath,
-        null
+        potentialConflicts,
+        chunk,
+        toUpdatePaths,
+        (progress) => {
+            onProgress(progress);
+        }
     );
 
-    if (record) {
-        await deps.apiClient.recordChunk(ctx.deviceId, ctx.sessionId, {
-            records: [record],
-        });
+    for (const conflict of potentialConflicts) {
+        if (conflict.songId != null && !toUpdatePaths.has(conflict.path)) {
+            ctx.conflictedSongIds.add(conflict.songId);
+        }
     }
 }
 
-export async function uploadPhase(
+export async function uploadPhase (
     deps: SyncDeps,
     ctx: SyncContext,
     files: SyncFileInfo[],
     onProgress: ProgressHandler
 ): Promise<void> {
-    const pendingActionsResponse = await deps.apiClient.getPendingActions(ctx.deviceId);
-    ctx.pendingActions = pendingActionsResponse.actions;
-    ctx.pendingDownloadPaths = extractPendingDownloadPaths(ctx.pendingActions);
+    if (files.length === 0) {
+        return;
+    }
 
     const chunkSize = deps.config.getChunkSize();
     const chunks = chunkArray(files, chunkSize);
@@ -239,7 +152,6 @@ export async function uploadPhase(
             throw new SyncCancelledError();
         }
         const chunk = chunks[i];
-        const recordItems: RecordItem[] = [];
 
         const syncFiles = chunk.map(f => ({
             path: f.relativePath,
@@ -247,143 +159,224 @@ export async function uploadPhase(
             createdAt: safeToIsoString(f.createdAt)!,
         }));
 
-        const syncResponse = await deps.apiClient.checkSync(ctx.deviceId, {
-            files: syncFiles,
-            force: ctx.options.force,
-        });
+        let syncResponse;
+        try {
+            syncResponse = await deps.apiClient.checkSync(ctx.deviceId, ctx.sessionId!, {
+                files: syncFiles,
+                force: ctx.options.force,
+            });
+        } catch (e) {
+            ctx.result.error += chunk.length;
+            onProgress({
+                phase: 'upload',
+                errorMessage: `Chunk ${i + 1} failed: ${e instanceof Error ? e.message : String(e)}`,
+            });
+            continue;
+        }
 
-        if (syncResponse.pendingActions.length > 0) {
-            ctx.pendingActions = mergePendingActions(ctx.pendingActions, syncResponse.pendingActions);
+        ctx.result = addDeltaToResult(ctx.result, syncResponse.counts ?? EMPTY_COUNTS);
+
+        if (syncResponse.records.length > 0) {
+            ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], syncResponse.records);
             ctx.pendingDownloadPaths = extractPendingDownloadPaths(ctx.pendingActions);
         }
 
         const toCreatePaths = new Set(syncResponse.toCreate.map(f => f.path));
         const toUpdatePaths = new Set(syncResponse.toUpdate.map(f => f.path));
 
-        await resolveConflictsPhase(
-            deps,
-            ctx,
-            syncResponse.potentialConflicts,
-            chunk,
-            toUpdatePaths,
-            onProgress
-        );
-
-        const uploadRecords = await processChunkUploads(deps, ctx, chunk, syncResponse.toCreate, syncResponse.toUpdate, toUpdatePaths, onProgress);
-        recordItems.push(...uploadRecords);
-
-        const skippedRecords = processSkippedFiles(chunk, toCreatePaths, toUpdatePaths, ctx.pendingDownloadPaths);
-        recordItems.push(...skippedRecords);
-        ctx.result.skipped += skippedRecords.length;
-
-        await deps.apiClient.recordChunk(ctx.deviceId, ctx.sessionId!, {records: recordItems});
-    }
-
-    for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        for (const file of chunk) {
-            ctx.uploadedPaths.add(file.relativePath);
-        }
-    }
-}
-
-export async function serverActionsPhase(
-    deps: SyncDeps,
-    ctx: SyncContext,
-    onProgress: ProgressHandler
-): Promise<RecordItem[]> {
-    if (deps.state.isCancelled) {
-        throw new SyncCancelledError();
-    }
-
-    const pendingActions = ctx.pendingActions ?? [];
-    const downloadRecordItems: RecordItem[] = [];
-
-    for (const action of pendingActions) {
-        if (deps.state.isCancelled) {
-            throw new SyncCancelledError();
-        }
-
-        if (action.action === 'Download') {
-            const record = await downloadOneFile(
-                deps.apiClient,
-                deps.fileOps,
-                ctx,
-                action.songId!,
-                action.path,
-                ctx.decodedRepoPath,
-                action.previousPath
-            );
-            if (record) {
-                downloadRecordItems.push(record);
-            }
-        } else if (action.action === 'Remove') {
-            const record = await removeOneFile(
+        if (syncResponse.potentialConflicts.length > 0) {
+            await actionConflict(
                 deps.apiClient,
                 deps.fileOps,
                 deps.userPrompt,
                 ctx,
-                action.path,
-                ctx.decodedRepoPath
+                syncResponse.potentialConflicts,
+                chunk,
+                toUpdatePaths,
+                (progress) => {
+                    onProgress({
+                        phase: progress.phase ?? 'resolving',
+                        currentFile: progress.currentFile,
+                        conflict: progress.conflict,
+                    });
+                }
             );
-            if (record) {
-                downloadRecordItems.push({
-                    ...record,
-                    songId: action.songId ?? undefined,
-                });
+
+            for (const conflict of syncResponse.potentialConflicts) {
+                if (conflict.songId != null && !toUpdatePaths.has(conflict.path)) {
+                    ctx.conflictedSongIds.add(conflict.songId);
+                }
+            }
+        }
+
+        await processChunkUploads(deps, ctx, chunk, syncResponse.toCreate, syncResponse.toUpdate, toUpdatePaths, onProgress);
+    }
+}
+
+export async function serverActionsPhase (
+    deps: SyncDeps,
+    ctx: SyncContext,
+    onProgress: ProgressHandler
+): Promise<ActionResult[]> {
+    if (deps.state.isCancelled) {
+        throw new SyncCancelledError();
+    }
+
+    const pendingActionsResponse = await deps.apiClient.createPendingActions(ctx.deviceId, ctx.sessionId!);
+    ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], pendingActionsResponse.records);
+    ctx.pendingDownloadPaths = extractPendingDownloadPaths(ctx.pendingActions);
+
+    const pendingActions = ctx.pendingActions;
+    const serverResults: ActionResult[] = [];
+
+    for (const record of pendingActions) {
+        if (deps.state.isCancelled) {
+            throw new SyncCancelledError();
+        }
+
+        if (ctx.uploadedPaths.has(record.filePath) && record.action !== 'CreateLocal' && record.action !== 'UpdateLocal') {
+            await deps.apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, {
+                recordIds: [record.id],
+            });
+            continue;
+        }
+
+        if ((record.action === 'CreateLocal' || record.action === 'UpdateLocal')) {
+            if (record.songId != null && ctx.conflictedSongIds.has(record.songId)) {
+                continue;
+            }
+
+            const result = await actionCreateLocal(
+                deps.apiClient,
+                deps.fileOps,
+                deps.userPrompt,
+                ctx,
+                record.songId,
+                record.filePath,
+                ctx.decodedRepoPath,
+                record.id,
+                record.reason ?? undefined
+            );
+            if (result) {
+                serverResults.push(result);
+                if (result.counts) {
+                    ctx.result = addDeltaToResult(ctx.result, result.counts);
+                }
+            }
+        } else if (record.action === 'Unlink' || record.action === 'Delete') {
+            const result = await actionDelete(
+                deps.apiClient,
+                deps.fileOps,
+                deps.userPrompt,
+                ctx,
+                record.filePath,
+                ctx.decodedRepoPath,
+                record.songId ?? undefined,
+                record.id,
+                record.reason ?? undefined
+            );
+            if (result) {
+                serverResults.push(result);
+                if (result.counts) {
+                    ctx.result = addDeltaToResult(ctx.result, result.counts);
+                }
+            }
+        } else if (record.action === 'Rename') {
+            const renameData = record.data;
+            if (renameData?.previousPath) {
+                const result = await actionRename(
+                    deps.apiClient,
+                    deps.fileOps,
+                    ctx,
+                    record.filePath,
+                    renameData.previousPath,
+                    ctx.decodedRepoPath,
+                    record.id
+                );
+                if (result) {
+                    serverResults.push(result);
+                    if (result.counts) {
+                        ctx.result = addDeltaToResult(ctx.result, result.counts);
+                    }
+                }
             }
         }
 
         onProgress({
-            downloaded: ctx.result.downloaded,
-            removed: ctx.result.removed,
-            processedFiles: pendingActions.indexOf(action) + 1,
+            createLocal: ctx.result.createLocal,
+            delete: ctx.result.delete,
+            processedFiles: pendingActions.indexOf(record) + 1,
             totalFiles: pendingActions.length,
         });
     }
 
-    if (downloadRecordItems.length > 0 && ctx.sessionId) {
-        await deps.apiClient.recordChunk(ctx.deviceId, ctx.sessionId, {
-            records: downloadRecordItems,
-        });
-    }
-
-    return downloadRecordItems;
+    return serverResults;
 }
 
-export async function completePhase(
+export async function commitPhase (
+    deps: SyncDeps,
+    ctx: SyncContext,
+    onProgress: ProgressHandler
+): Promise<void> {
+    if (deps.state.isCancelled) {
+        throw new SyncCancelledError();
+    }
+
+    onProgress({ phase: 'committing' });
+
+    const commitResponse = await deps.apiClient.commitSync(ctx.deviceId, ctx.sessionId!);
+
+    ctx.result.createRemote = commitResponse.createRemoteCount;
+    ctx.result.updateRemote = commitResponse.updateRemoteCount;
+    ctx.result.skipped = commitResponse.skippedCount;
+    ctx.result.createLocal = commitResponse.createLocalCount;
+    ctx.result.updateLocal = commitResponse.updateLocalCount;
+    ctx.result.delete = commitResponse.deleteCount;
+    ctx.result.link = commitResponse.linkCount;
+    ctx.result.unlink = commitResponse.unlinkCount;
+    ctx.result.rename = commitResponse.renameCount;
+    ctx.result.conflict = commitResponse.conflictCount;
+    ctx.result.updateTimestamp = commitResponse.updateTimestampCount;
+    ctx.result.error = commitResponse.errorCount;
+}
+
+export async function completePhase (
     deps: SyncDeps,
     ctx: SyncContext,
     filesCount: number,
     onProgress: ProgressHandler
 ): Promise<void> {
-    onProgress({phase: 'completing'});
+    onProgress({ phase: 'completing' });
 
     const completeResponse = await deps.apiClient.completeSync(ctx.deviceId, ctx.sessionId!);
 
-    ctx.result.created = completeResponse.createdCount;
-    ctx.result.updated = completeResponse.updatedCount;
+    ctx.result.createRemote = completeResponse.createRemoteCount;
+    ctx.result.updateRemote = completeResponse.updateRemoteCount;
     ctx.result.skipped = completeResponse.skippedCount;
-    ctx.result.downloaded = completeResponse.downloadedCount;
-    ctx.result.removed = completeResponse.removedCount;
-    ctx.result.failed = completeResponse.errorCount;
+    ctx.result.createLocal = completeResponse.createLocalCount;
+    ctx.result.updateLocal = completeResponse.updateLocalCount;
+    ctx.result.delete = completeResponse.deleteCount;
+    ctx.result.link = completeResponse.linkCount;
+    ctx.result.unlink = completeResponse.unlinkCount;
+    ctx.result.rename = completeResponse.renameCount;
+    ctx.result.conflict = completeResponse.conflictCount;
+    ctx.result.updateTimestamp = completeResponse.updateTimestampCount;
+    ctx.result.error = completeResponse.errorCount;
     ctx.result.sessionId = ctx.sessionId;
 
     await deps.config.setLastSyncAt(new Date().toISOString());
     await deps.config.setLastScanTotal(filesCount);
 }
 
-async function processChunkUploads(
+async function processChunkUploads (
     deps: SyncDeps,
     ctx: SyncContext,
     chunk: SyncFileInfo[],
-    toCreate: Array<{path: string; modifiedAt: Date; createdAt: Date; reason?: string}>,
-    toUpdate: Array<{path: string; modifiedAt: Date; createdAt: Date; reason?: string}>,
+    toCreate: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string; }>,
+    toUpdate: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string; }>,
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
-): Promise<RecordItem[]> {
-    const recordItems: RecordItem[] = [];
-
+): Promise<void> {
     for (const fileToCreate of toCreate) {
         if (deps.state.isCancelled) {
             throw new SyncCancelledError();
@@ -391,18 +384,21 @@ async function processChunkUploads(
 
         const file = chunk.find(f => f.relativePath === fileToCreate.path);
         if (file) {
-            const record = await uploadOneFile(deps.apiClient, ctx, file, 'Created', fileToCreate.reason);
-            recordItems.push(record);
+            const result = await actionCreateRemote(deps.apiClient, deps.fileOps, ctx, file, fileToCreate.reason);
+            if (result.counts) {
+                ctx.result = addDeltaToResult(ctx.result, result.counts);
+            }
         }
+        ctx.uploadedPaths.add(fileToCreate.path);
 
         onProgress({
-            processedFiles: ctx.result.created + ctx.result.updated + ctx.result.skipped + ctx.result.failed + ctx.result.conflicts,
+            processedFiles: ctx.result.createRemote + ctx.result.updateRemote + ctx.result.skipped + ctx.result.error + ctx.result.conflict,
             currentFile: formatFilePath(fileToCreate.path, ctx.repositoryPath),
-            created: ctx.result.created,
-            updated: ctx.result.updated,
+            createRemote: ctx.result.createRemote,
+            updateRemote: ctx.result.updateRemote,
             skipped: ctx.result.skipped,
-            failed: ctx.result.failed,
-            conflicts: ctx.result.conflicts,
+            error: ctx.result.error,
+            conflict: ctx.result.conflict,
         });
     }
 
@@ -417,70 +413,45 @@ async function processChunkUploads(
 
         const file = chunk.find(f => f.relativePath === fileToUpdate.path);
         if (file) {
-            const record = await uploadOneFile(deps.apiClient, ctx, file, 'Updated', fileToUpdate.reason);
-            recordItems.push(record);
+            const result = await actionUpdateRemote(deps.apiClient, deps.fileOps, ctx, file, fileToUpdate.reason);
+            if (result.counts) {
+                ctx.result = addDeltaToResult(ctx.result, result.counts);
+            }
         }
+        ctx.uploadedPaths.add(fileToUpdate.path);
 
         onProgress({
-            processedFiles: ctx.result.created + ctx.result.updated + ctx.result.skipped + ctx.result.failed + ctx.result.conflicts,
+            processedFiles: ctx.result.createRemote + ctx.result.updateRemote + ctx.result.skipped + ctx.result.error + ctx.result.conflict,
             currentFile: formatFilePath(fileToUpdate.path, ctx.repositoryPath),
-            created: ctx.result.created,
-            updated: ctx.result.updated,
+            createRemote: ctx.result.createRemote,
+            updateRemote: ctx.result.updateRemote,
             skipped: ctx.result.skipped,
-            failed: ctx.result.failed,
-            conflicts: ctx.result.conflicts,
+            error: ctx.result.error,
+            conflict: ctx.result.conflict,
         });
     }
-
-    return recordItems;
 }
 
-function processSkippedFiles(
-    chunk: SyncFileInfo[],
-    toCreatePaths: Set<string>,
-    toUpdatePaths: Set<string>,
-    pendingDownloadPaths: Set<string>
-): RecordItem[] {
-    const skippedRecords: RecordItem[] = [];
-
-    for (const file of chunk) {
-        const inCreate = toCreatePaths.has(file.relativePath);
-        const inUpdate = toUpdatePaths.has(file.relativePath);
-        const isPendingDownload = pendingDownloadPaths.has(file.relativePath);
-
-        if (!inCreate && !inUpdate && !isPendingDownload) {
-            skippedRecords.push({
-                filePath: file.relativePath,
-                action: 'Skipped',
-                source: 'Device',
-                reason: 'Unchanged',
-            });
-        }
-    }
-
-    return skippedRecords;
-}
-
-function extractPendingDownloadPaths(actions: PendingActionItem[]): Set<string> {
+function extractPendingDownloadPaths (records: SyncRecordItem[]): Set<string> {
     const paths = new Set<string>();
-    for (const action of actions) {
-        if (action.action === 'Download') {
-            paths.add(action.path);
+    for (const record of records) {
+        if (record.action === 'CreateLocal' || record.action === 'UpdateLocal') {
+            paths.add(record.filePath);
         }
     }
     return paths;
 }
 
-function mergePendingActions(
-    existing: PendingActionItem[],
-    incoming: PendingActionItem[]
-): PendingActionItem[] {
-    const merged = new Map<string, PendingActionItem>();
-    for (const action of existing) {
-        merged.set(action.path, action);
+function mergePendingActions (
+    existing: SyncRecordItem[],
+    incoming: SyncRecordItem[]
+): SyncRecordItem[] {
+    const merged = new Map<number, SyncRecordItem>();
+    for (const record of existing) {
+        merged.set(record.id, record);
     }
-    for (const action of incoming) {
-        merged.set(action.path, action);
+    for (const record of incoming) {
+        merged.set(record.id, record);
     }
     return Array.from(merged.values());
 }

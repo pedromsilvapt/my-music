@@ -6,16 +6,9 @@
 // this option. Consider adding verbose mode for debugging sync operations.
 import type { SyncPhase, SyncProgress } from '../../stores/syncStore';
 import type { ScannerType } from '../../services/scannerRegistry';
-import type { SyncAction, SyncRecordAction } from '../../api/types';
+import type {SyncRecordAction, SyncRecordItem} from '../../api/types';
 
-export type { SyncAction, SyncRecordAction };
-
-export interface PendingActionItem {
-    songId: number | null;
-    path: string;
-    action: SyncAction;
-    previousPath?: string | null;
-}
+export type {SyncRecordAction, SyncRecordItem};
 
 export interface SyncContext {
     deviceId: number;
@@ -32,30 +25,80 @@ export interface SyncContext {
     result: SyncResult;
     uploadedPaths: Set<string>;
     pendingDownloadPaths: Set<string>;
-    pendingActions?: PendingActionItem[];
+    conflictedSongIds: Set<number>;
+    pendingActions?: SyncRecordItem[];
 }
 
+export interface SyncActionCounts {
+    createRemoteCount: number;
+    updateRemoteCount: number;
+    skippedCount: number;
+    createLocalCount: number;
+    updateLocalCount: number;
+    deleteCount: number;
+    linkCount: number;
+    unlinkCount: number;
+    renameCount: number;
+    conflictCount: number;
+    updateTimestampCount: number;
+    errorCount: number;
+}
+
+function addDeltaToResult(result: SyncResult, delta: SyncActionCounts): SyncResult {
+    return {
+        createRemote: result.createRemote + delta.createRemoteCount,
+        updateRemote: result.updateRemote + delta.updateRemoteCount,
+        createLocal: result.createLocal + delta.createLocalCount,
+        updateLocal: result.updateLocal + delta.updateLocalCount,
+        delete: result.delete + delta.deleteCount,
+        link: result.link + delta.linkCount,
+        unlink: result.unlink + delta.unlinkCount,
+        rename: result.rename + delta.renameCount,
+        skipped: result.skipped + delta.skippedCount,
+        conflict: result.conflict + delta.conflictCount,
+        updateTimestamp: result.updateTimestamp + delta.updateTimestampCount,
+        error: result.error + delta.errorCount,
+        sessionId: result.sessionId,
+        cancelled: result.cancelled,
+    };
+}
+
+export { addDeltaToResult };
+
 export interface SyncResult {
-    created: number;
-    updated: number;
+    createRemote: number;
+    updateRemote: number;
+    createLocal: number;
+    updateLocal: number;
+    delete: number;
+    link: number;
+    unlink: number;
+    rename: number;
     skipped: number;
-    downloaded: number;
-    removed: number;
-    failed: number;
-    conflicts: number;
+    conflict: number;
+    updateTimestamp: number;
+    error: number;
     sessionId?: number;
     cancelled?: boolean;
 }
 
 export type ConflictResolution = 'upload' | 'download' | 'skip';
 
-export interface RecordItem {
-    filePath: string;
+export interface ActionResult {
     action: SyncRecordAction;
+    filePath: string;
     source: string;
     reason?: string;
     errorMessage?: string;
     songId?: number;
+    recordId?: number;
+    counts?: SyncActionCounts;
+}
+
+export interface ResolveConflictsResult {
+    conflicts: number;
+    toUpdatePaths: Set<string>;
+    counts?: SyncActionCounts;
 }
 
 export interface SyncDeps {
@@ -100,11 +143,12 @@ export interface SyncConflict {
 export interface ISyncApiClient {
     startSync: (
         deviceId: number,
-        request: { dryRun?: boolean; repositoryPath?: string }
+        request: { dryRun?: boolean; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
     ) => Promise<{ sessionId: number }>;
 
     checkSync: (
         deviceId: number,
+        sessionId: number,
         request: {
             files: Array<{
                 path: string;
@@ -132,65 +176,82 @@ export interface ISyncApiClient {
             localModifiedAt: Date;
             serverModifiedAt: Date;
             lastSyncedAt: Date | null;
-            songId: number;
+            songId: number | null;
             serverChecksum: string;
             serverChecksumAlgorithm: string;
         }>;
-        pendingActions: PendingActionItem[];
+        records: SyncRecordItem[];
+        skippedRecordIds: number[];
+        counts: SyncActionCounts;
     }>;
 
     uploadFile: (
         deviceId: number,
+        sessionId: number,
         file: { uri: string; name: string },
         path: string,
         modifiedAt: string,
         createdAt: string
-    ) => Promise<{ success: boolean; songId: number; pendingActions: PendingActionItem[] }>;
+    ) => Promise<{ success: boolean; songId: number | null; recordId: number | null; action: string | null; data: SyncRecordItem['data']; counts: SyncActionCounts }>;
 
-    recordChunk: (
+    commitSync: (
         deviceId: number,
         sessionId: number,
-        request: {
-            records: Array<{
-                filePath: string;
-                action: SyncRecordAction;
-                source?: string;
-                songId?: number;
-                errorMessage?: string;
-                reason?: string;
-            }>;
-        }
-    ) => Promise<{ success: boolean }>;
+        request?: { direction?: string }
+    ) => Promise<{
+        createRemoteCount: number;
+        updateRemoteCount: number;
+        skippedCount: number;
+        createLocalCount: number;
+        updateLocalCount: number;
+        deleteCount: number;
+        linkCount: number;
+        unlinkCount: number;
+        renameCount: number;
+        conflictCount: number;
+        updateTimestampCount: number;
+        errorCount: number;
+        committedAt: Date;
+    }>;
 
     completeSync: (
         deviceId: number,
         sessionId: number
     ) => Promise<{
-        createdCount: number;
-        updatedCount: number;
+        createRemoteCount: number;
+        updateRemoteCount: number;
         skippedCount: number;
-        downloadedCount: number;
-        removedCount: number;
+        createLocalCount: number;
+        updateLocalCount: number;
+        deleteCount: number;
+        linkCount: number;
+        unlinkCount: number;
+        renameCount: number;
+        conflictCount: number;
+        updateTimestampCount: number;
         errorCount: number;
     }>;
 
-    getPendingActions: (
-        deviceId: number
+    createPendingActions: (
+        deviceId: number,
+        sessionId: number
     ) => Promise<{
-        actions: PendingActionItem[];
+        records: SyncRecordItem[];
     }>;
 
     acknowledgeAction: (
         deviceId: number,
-        request: { devicePath: string; modifiedAt?: string; previousDevicePath?: string | null }
-    ) => Promise<{ success: boolean }>;
+        sessionId: number,
+        request: { recordIds: number[]; modifiedAt?: string }
+    ) => Promise<{ success: boolean; counts: SyncActionCounts }>;
 
     resolveConflicts: (
         deviceId: number,
+        sessionId: number,
         request: {
             conflicts: Array<{
                 path: string;
-                songId: number;
+                songId: number | null;
                 fileContentBase64: string;
                 localModifiedAt: string;
             }>;
@@ -209,9 +270,12 @@ export interface ISyncApiClient {
             reason?: string;
         }>;
         conflicts: SyncConflict[];
+        counts: SyncActionCounts;
     }>;
 
     downloadSong: (songId: number) => Promise<Blob>;
+
+    reportSyncError: (deviceId: number, sessionId: number, request: { filePath: string; errorMessage: string; songId?: number | null }) => Promise<{ counts: SyncActionCounts }>;
 }
 
 export interface ISyncConfig {
@@ -255,9 +319,11 @@ export interface ScannerResult {
 
 export interface IFileOps {
     fileExists: (path: string) => boolean;
+    directoryExists: (path: string) => boolean;
     ensureDirectory: (path: string) => Promise<void>;
     writeFile: (path: string, data: Blob) => Promise<void>;
     deleteFile: (path: string) => Promise<void>;
+    moveFile: (fromPath: string, toPath: string) => Promise<void>;
     readFileBase64: (path: string) => Promise<string>;
     getModificationTime: (path: string) => Date | null;
     deleteEmptyDirectories: (filePath: string, basePath: string) => Promise<void>;

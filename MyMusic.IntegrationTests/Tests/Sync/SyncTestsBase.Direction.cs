@@ -27,10 +27,11 @@ public abstract partial class SyncTestsBase
         result.ShouldBeSuccessful();
 
         // Local song should be uploaded (Created >= 1)
-        result.Created.ShouldBeGreaterThanOrEqualTo(1);
+        result.CreateRemote.ShouldBe(1);
 
-        // Server song should NOT be downloaded (Downloaded should be 0)
-        result.Downloaded.ShouldBe(0);
+        // Server song should NOT be downloaded (CreateLocal should be 0)
+        result.CreateLocal.ShouldBe(0);
+        result.UpdateLocal.ShouldBe(0);
 
         // Verify the local song exists on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -56,11 +57,12 @@ public abstract partial class SyncTestsBase
         var result = await App.SyncAsync(new SyncOptions { Direction = SyncDirection.Down });
         result.ShouldBeSuccessful();
 
-        // Server song should be downloaded (Downloaded >= 1)
-        result.Downloaded.ShouldBeGreaterThanOrEqualTo(1);
+        // Server song should be downloaded (CreateLocal == 1)
+        result.CreateLocal.ShouldBe(1);
 
         // Local song should NOT be uploaded (Created should be 0)
-        result.Created.ShouldBe(0);
+        result.CreateRemote.ShouldBe(0);
+        result.UpdateRemote.ShouldBe(0);
 
         // Verify the downloaded file exists locally
         var expectedPath = "Dylan/The Alibi/The Alibi - Dylan.mp3";

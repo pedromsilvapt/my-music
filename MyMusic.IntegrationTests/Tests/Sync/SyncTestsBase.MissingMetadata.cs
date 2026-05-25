@@ -20,7 +20,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload the song
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Created.ShouldBe(1);
+        result.CreateRemote.ShouldBe(1);
 
         // Verify: DB uses filename (no extension) as title
         // The effectiveTitle is derived from the source filename without extension
@@ -49,7 +49,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Created.ShouldBe(1);
+        result.CreateRemote.ShouldBe(1);
 
         // Verify: DB uses "(No Album)" placeholder for album name
         // Album artist falls back to first performer, no (No Artist) placeholder needed
@@ -78,7 +78,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Created.ShouldBe(1);
+        result.CreateRemote.ShouldBe(1);
 
         // Verify: DB uses "(No Album)" placeholder for empty album name
         await new ValidateSongDetailsFlow(song.Title!, new ValidateSongOptions(
@@ -106,7 +106,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Created.ShouldBe(1);
+        result.CreateRemote.ShouldBe(1);
 
         // Verify: album artist falls back to first performer, no (No Artist) placeholder needed
         await new ValidateSongDetailsFlow(song.Title!, new ValidateSongOptions(
@@ -135,7 +135,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Created.ShouldBe(1);
+        result.CreateRemote.ShouldBe(1);
 
         // Verify: DB uses "(No Artist)" for album artist
         await new ValidateSongDetailsFlow(song.Title!, new ValidateSongOptions(
@@ -186,7 +186,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload - DB will use placeholders
         var result1 = await App.SyncAsync(new SyncOptions());
         result1.ShouldBeSuccessful();
-        result1.Created.ShouldBe(1);
+        result1.CreateRemote.ShouldBe(1);
 
         // Verify: server shows placeholder title derived from filename
         await new ValidateSongDetailsFlow("no_meta_edit", new ValidateSongOptions(
@@ -234,7 +234,7 @@ public abstract partial class SyncTestsBase
         // Run sync to upload both songs
         var result = await App.SyncAsync(new SyncOptions());
         result.ShouldBeSuccessful();
-        result.Created.ShouldBe(2);
+        result.CreateRemote.ShouldBe(2);
 
         // Verify: both songs should appear on server with distinct
         // placeholder titles derived from their filenames

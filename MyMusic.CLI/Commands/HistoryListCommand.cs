@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Configuration;
+using MyMusic.CLI.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using MyMusic.CLI;
@@ -49,17 +50,22 @@ public class HistoryListCommand(
             table.AddColumn("Updated");
             table.AddColumn("Skipped");
             table.AddColumn("Downloaded");
-            table.AddColumn("Removed");
+            table.AddColumn("Deleted");
+            table.AddColumn("Linked");
+            table.AddColumn("Unlinked");
+            table.AddColumn("Renamed");
+            table.AddColumn("Conflicts");
+            table.AddColumn("TS Updates");
             table.AddColumn("Error");
 
             foreach (var session in response.Sessions)
             {
                 var status = session.Status switch
                 {
-                    "InProgress" => "[yellow]In Progress[/]",
-                    "Completed" => "[green]Completed[/]",
-                    "Cancelled" => "[red]Cancelled[/]",
-                    _ => session.Status,
+                    SyncSessionStatus.InProgress => "[yellow]In Progress[/]",
+                    SyncSessionStatus.Completed => "[green]Completed[/]",
+                    SyncSessionStatus.Cancelled => "[red]Cancelled[/]",
+                    _ => session.Status.ToString(),
                 };
 
                 var dryRun = session.IsDryRun ? "[yellow]Yes[/]" : "[grey]No[/]";
@@ -70,11 +76,16 @@ public class HistoryListCommand(
                     session.CompletedAt.HasValue ? FormatDateTime(session.CompletedAt.Value) : "[grey]-[/]",
                     status,
                     dryRun,
-                    ColorizeCounter(session.CreatedCount, "green"),
-                    ColorizeCounter(session.UpdatedCount, "teal"),
+                    ColorizeCounter(session.CreateRemoteCount, "green"),
+                    ColorizeCounter(session.UpdateRemoteCount, "teal"),
                     ColorizeCounter(session.SkippedCount, "grey"),
-                    ColorizeCounter(session.DownloadedCount, "blue"),
-                    ColorizeCounter(session.RemovedCount, "red"),
+                    ColorizeCounter(session.CreateLocalCount, "blue"),
+                    ColorizeCounter(session.DeleteCount, "red"),
+                    ColorizeCounter(session.LinkCount, "green"),
+                    ColorizeCounter(session.UnlinkCount, "red"),
+                    ColorizeCounter(session.RenameCount, "teal"),
+                    ColorizeCounter(session.ConflictCount, "yellow"),
+                    ColorizeCounter(session.UpdateTimestampCount, "grey"),
                     ColorizeCounter(session.ErrorCount, "red")
                 );
             }

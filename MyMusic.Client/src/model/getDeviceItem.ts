@@ -18,4 +18,6 @@ export interface GetDeviceItem {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   songCount: number;
   importOnPurchase?: boolean;
+  /** @nullable */
+  lastSyncAt?: string | null;
 }

@@ -133,6 +133,7 @@ public class SongDeleteService(
             {
                 sd.SongId = null;
                 sd.SyncAction = SongSyncAction.Remove;
+                sd.SyncActionReason = "Song deleted from library";
             }
         }
 

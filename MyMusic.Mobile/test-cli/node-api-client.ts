@@ -1,8 +1,10 @@
 import type {
     ISyncApiClient,
-    PendingActionItem,
+    SyncRecordItem,
+    SyncActionCounts,
     SyncConflict,
 } from '../src/services/sync/types';
+import {SyncRecordItemSchema} from '../src/api/types';
 
 export class NodeApiClient implements ISyncApiClient {
     private _serverUrl: string;
@@ -21,6 +23,13 @@ export class NodeApiClient implements ISyncApiClient {
             'X-MyMusic-UserId': this._userId.toString(),
             'X-MyMusic-UserName': this._userName,
         };
+    }
+
+    private _parseRecords(records: unknown[]): SyncRecordItem[] {
+        return records.map(r => {
+            const parsed = SyncRecordItemSchema.safeParse(r);
+            return parsed.success ? parsed.data : r as SyncRecordItem;
+        });
     }
 
     private async _post<T>(endpoint: string, body: unknown): Promise<T> {
@@ -54,13 +63,14 @@ export class NodeApiClient implements ISyncApiClient {
 
     async startSync(
         deviceId: number,
-        request: { dryRun?: boolean; repositoryPath?: string }
+        request: { dryRun?: boolean; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
     ): Promise<{ sessionId: number }> {
         return this._post(`/devices/${deviceId}/sync/start`, request);
     }
 
     async checkSync(
         deviceId: number,
+        sessionId: number,
         request: {
             files: Array<{ path: string; modifiedAt: string; createdAt: string; reason?: string }>;
             force: boolean;
@@ -73,23 +83,28 @@ export class NodeApiClient implements ISyncApiClient {
             localModifiedAt: Date;
             serverModifiedAt: Date;
             lastSyncedAt: Date | null;
-            songId: number;
+            songId: number | null;
             serverChecksum: string;
             serverChecksumAlgorithm: string;
         }>;
-        pendingActions: PendingActionItem[];
+        records: SyncRecordItem[];
+        skippedRecordIds: number[];
+        counts: SyncActionCounts;
     }> {
-        const response = await this._post(`/devices/${deviceId}/sync/check`, request);
-        return this._parseDates(response, ['toCreate', 'toUpdate', 'potentialConflicts']);
+        const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/check`, request);
+        const parsed = this._parseDates(response, ['toCreate', 'toUpdate', 'potentialConflicts']);
+        parsed.records = this._parseRecords(parsed.records ?? []);
+        return parsed;
     }
 
     async uploadFile(
         deviceId: number,
+        sessionId: number,
         file: { uri: string; name: string },
         path: string,
         modifiedAt: string,
         createdAt: string
-    ): Promise<{ success: boolean; songId: number; pendingActions: PendingActionItem[] }> {
+    ): Promise<{ success: boolean; songId: number | null; recordId: number | null; action: string | null; data: any; counts: SyncActionCounts }> {
         const fs = require('fs');
         const buffer = fs.readFileSync(file.uri);
         const blob = new Blob([buffer]);
@@ -103,7 +118,7 @@ export class NodeApiClient implements ISyncApiClient {
         const headers = this._headers();
         delete headers['Content-Type'];
 
-        const response = await fetch(`${this._serverUrl}/devices/${deviceId}/sync/upload`, {
+        const response = await fetch(`${this._serverUrl}/devices/${deviceId}/sync/${sessionId}/upload`, {
             method: 'POST',
             headers,
             body: formData,
@@ -117,54 +132,72 @@ export class NodeApiClient implements ISyncApiClient {
         return response.json();
     }
 
-    async recordChunk(
+    async commitSync(
         deviceId: number,
         sessionId: number,
-        request: {
-            records: Array<{
-                filePath: string;
-                action: string;
-                source?: string;
-                songId?: number;
-                errorMessage?: string;
-                reason?: string;
-            }>;
+        request?: { direction?: string }
+    ): Promise<{
+        createRemoteCount: number;
+        updateRemoteCount: number;
+        skippedCount: number;
+        createLocalCount: number;
+        updateLocalCount: number;
+        deleteCount: number;
+        linkCount: number;
+        unlinkCount: number;
+        renameCount: number;
+        conflictCount: number;
+        updateTimestampCount: number;
+        errorCount: number;
+        committedAt: Date;
+    }> {
+        const response: any = await this._post(`/devices/${deviceId}/sync/${sessionId}/commit`, request ?? {});
+        if (response.committedAt && typeof response.committedAt === 'string') {
+            response.committedAt = new Date(response.committedAt);
         }
-    ): Promise<{ success: boolean }> {
-        return this._post(`/devices/${deviceId}/sync/${sessionId}/records`, request);
+        return response;
     }
 
     async completeSync(
         deviceId: number,
         sessionId: number
     ): Promise<{
-        createdCount: number;
-        updatedCount: number;
+        createRemoteCount: number;
+        updateRemoteCount: number;
         skippedCount: number;
-        downloadedCount: number;
-        removedCount: number;
+        createLocalCount: number;
+        updateLocalCount: number;
+        deleteCount: number;
+        linkCount: number;
+        unlinkCount: number;
+        renameCount: number;
+        conflictCount: number;
+        updateTimestampCount: number;
         errorCount: number;
     }> {
         return this._post(`/devices/${deviceId}/sync/${sessionId}/complete`, {});
     }
 
-    async getPendingActions(deviceId: number): Promise<{ actions: PendingActionItem[] }> {
-        return this._get(`/devices/${deviceId}/sync/pending-actions`);
+    async createPendingActions(deviceId: number, sessionId: number): Promise<{ records: SyncRecordItem[] }> {
+        const response = await this._post<{ records: unknown[] }>(`/devices/${deviceId}/sync/${sessionId}/pending-actions`, {});
+        return { records: this._parseRecords(response.records) };
     }
 
     async acknowledgeAction(
         deviceId: number,
-        request: { devicePath: string; modifiedAt?: string; previousDevicePath?: string | null }
-    ): Promise<{ success: boolean }> {
-        return this._post(`/devices/${deviceId}/sync/acknowledge`, request);
+        sessionId: number,
+        request: { recordIds: number[]; modifiedAt?: string }
+    ): Promise<{ success: boolean; counts: SyncActionCounts }> {
+        return this._post(`/devices/${deviceId}/sync/${sessionId}/acknowledge`, request);
     }
 
     async resolveConflicts(
         deviceId: number,
+        sessionId: number,
         request: {
             conflicts: Array<{
                 path: string;
-                songId: number;
+                songId: number | null;
                 fileContentBase64: string;
                 localModifiedAt: string;
             }>;
@@ -173,8 +206,9 @@ export class NodeApiClient implements ISyncApiClient {
         toUpload: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
         resolved: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
         conflicts: SyncConflict[];
+        counts: SyncActionCounts;
     }> {
-        const response = await this._post(`/devices/${deviceId}/sync/resolve-conflicts`, request);
+        const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, request);
         return this._parseDates(response, ['toUpload', 'resolved']);
     }
 
@@ -190,6 +224,14 @@ export class NodeApiClient implements ISyncApiClient {
         }
 
         return response.blob();
+    }
+
+    async reportSyncError(
+        deviceId: number,
+        sessionId: number,
+        request: { filePath: string; errorMessage: string; songId?: number | null }
+    ): Promise<{ counts: SyncActionCounts }> {
+        return this._post(`/devices/${deviceId}/sync/${sessionId}/error`, request);
     }
 
     private _parseDates(response: any, fields: string[]): any {

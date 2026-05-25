@@ -1,6 +1,6 @@
 ﻿namespace MyMusic.Common.Models;
 
-public record class SongImportMetadata(string SourceFilePath, DateTime CreatedAt, DateTime ModifiedAt, long? SongId = null)
+public record class SongImportMetadata(string SourceFilePath, DateTime CreatedAt, DateTime ModifiedAt, long? SongId = null, string? OriginalFilePath = null)
 {
     public string SourceFilePath { get; set; } = SourceFilePath;
 
@@ -9,4 +9,6 @@ public record class SongImportMetadata(string SourceFilePath, DateTime CreatedAt
     public DateTime ModifiedAt { get; set; } = ModifiedAt;
 
     public long? SongId { get; set; } = SongId;
+
+    public string? OriginalFilePath { get; set; } = OriginalFilePath;
 }

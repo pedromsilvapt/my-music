@@ -14,7 +14,7 @@ public interface IFileScanner
         CancellationToken ct = default);
 }
 
-public record FileMetadata(string RelativePath, string FullPath, DateTime ModifiedAt, DateTime CreatedAt);
+public record FileMetadata(string RelativePath, string FullPath, DateTime ModifiedAt, DateTime CreatedAt, long Size = 0);
 
 public record FileScanResult
 {
@@ -70,7 +70,7 @@ public class FileScanner(IFileSystem fileSystem) : IFileScanner
             {
                 var fileInfo = fileSystem.FileInfo.New(filePath);
                 files.Add(new FileMetadata(relativePath, filePath.Replace('\\', '/'), fileInfo.LastWriteTimeUtc,
-                    fileInfo.CreationTimeUtc));
+                    fileInfo.CreationTimeUtc, fileInfo.Length));
                 scannedCount++;
 
                 if (onProgress != null && scannedCount % 10 == 0)

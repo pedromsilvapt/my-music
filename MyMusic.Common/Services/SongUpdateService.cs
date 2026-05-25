@@ -35,6 +35,11 @@ public class SongUpdateService(
             throw new Exception($"Song not found with id {songId}");
         }
 
+        var oldTitle = song.Title;
+        var oldChecksum = song.Checksum;
+        var oldAlbumId = song.AlbumId;
+        var oldArtistNames = song.Artists?.Select(a => a.Artist?.Name).ToList();
+
         await ApplyUpdatesAsync(db, song, update, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -53,7 +58,8 @@ public class SongUpdateService(
         {
             logger.LogInformation("Marking devices for download for song {SongId} (checksumChanged={ChecksumChanged}",
                 songId, song.Checksum != previousChecksum);
-            await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
+            var reason = BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames);
+            await MarkSongDevicesForDownloadAsync(db, songId, reason, cancellationToken);
             logger.LogInformation("Marked devices for download for song {SongId}, saving changes", songId);
         }
         else
@@ -84,6 +90,11 @@ public class SongUpdateService(
 
         try
         {
+            var oldChecksum = song.Checksum;
+            var oldTitle = song.Title;
+            var oldAlbumId = song.AlbumId;
+            var oldArtistNames = song.Artists?.Select(a => a.Artist?.Name).ToList();
+
             await ApplyUpdatesAsync(db, song, update, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
 
@@ -92,7 +103,8 @@ public class SongUpdateService(
 
             if (song.Checksum != previousChecksum)
             {
-                await MarkSongDevicesForDownloadAsync(db, songId, cancellationToken);
+                var reason = BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames);
+                await MarkSongDevicesForDownloadAsync(db, songId, reason, cancellationToken);
             }
 
             await db.SaveChangesAsync(cancellationToken);
@@ -482,7 +494,7 @@ public class SongUpdateService(
     }
 
     private static async Task MarkSongDevicesForDownloadAsync(MusicDbContext db, long songId,
-        CancellationToken cancellationToken)
+        string reason, CancellationToken cancellationToken)
     {
         var songDevices = await db.SongDevices
             .Where(sd => sd.SongId == songId && sd.SyncAction != SongSyncAction.Remove)
@@ -491,6 +503,7 @@ public class SongUpdateService(
         foreach (var songDevice in songDevices)
         {
             songDevice.SyncAction = SongSyncAction.Download;
+            songDevice.SyncActionReason = reason;
         }
     }
 
@@ -557,5 +570,46 @@ public class SongUpdateService(
                 Name = sg.Genre.Name,
             }).ToList(),
         };
+    }
+
+    private const int MaxReasonLength = 2048;
+
+    private static string BuildSongUpdateReason(Song song, SongUpdateModel update, string previousChecksum,
+        string oldTitle, long? oldAlbumId, List<string?>? oldArtistNames)
+    {
+        var changes = new List<string>();
+
+        if (update.Title != null && oldTitle != song.Title)
+        {
+            changes.Add($"title '{oldTitle}' → '{song.Title}'");
+        }
+
+        if (song.Checksum != previousChecksum)
+        {
+            changes.Add($"checksum {previousChecksum} → {song.Checksum}");
+        }
+
+        if (update.Album != null && oldAlbumId != song.AlbumId)
+        {
+            changes.Add("album changed");
+        }
+
+        if (update.Artists != null)
+        {
+            var newArtistNames = song.Artists?.Select(a => a.Artist?.Name).ToList();
+            if (oldArtistNames == null || newArtistNames == null
+                || !oldArtistNames.SequenceEqual(newArtistNames))
+            {
+                changes.Add("artists changed");
+            }
+        }
+
+        var reason = changes.Count > 0
+            ? $"Song updated: {string.Join(", ", changes)}"
+            : "Song updated";
+
+        return reason.Length > MaxReasonLength
+            ? string.Concat(reason.AsSpan(0, MaxReasonLength - 3), "...")
+            : reason;
     }
 }

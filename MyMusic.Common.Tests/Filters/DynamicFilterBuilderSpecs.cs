@@ -1754,9 +1754,8 @@ public class DynamicFilterBuilderSpecs
     #region Batch 13: Enum Property Filtering
 
     private static DeviceSyncSessionRecord CreateSyncRecord(
-        SyncRecordAction action = SyncRecordAction.Created,
+        SyncRecordAction action = SyncRecordAction.CreateRemote,
         string filePath = "/test/file.mp3",
-        SyncRecordSource source = SyncRecordSource.Device,
         long? songId = null)
     {
         return new DeviceSyncSessionRecord
@@ -1765,7 +1764,6 @@ public class DynamicFilterBuilderSpecs
             SessionId = 1,
             FilePath = filePath,
             Action = action,
-            Source = source,
             SongId = songId,
             ProcessedAt = DateTime.UtcNow
         };
@@ -1787,7 +1785,7 @@ public class DynamicFilterBuilderSpecs
 
         // Act & Assert
         ExecuteFilterOnRecord(record, @"action = ""Error""").ShouldBeTrue();
-        ExecuteFilterOnRecord(record, @"action = ""Created""").ShouldBeFalse();
+        ExecuteFilterOnRecord(record, @"action = ""CreateRemote""").ShouldBeFalse();
     }
 
     [Fact]
@@ -1809,7 +1807,7 @@ public class DynamicFilterBuilderSpecs
 
         // Act & Assert
         ExecuteFilterOnRecord(record, @"action != ""Error""").ShouldBeFalse();
-        ExecuteFilterOnRecord(record, @"action != ""Created""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action != ""CreateRemote""").ShouldBeTrue();
     }
 
     [Fact]
@@ -1820,7 +1818,7 @@ public class DynamicFilterBuilderSpecs
 
         // Act & Assert
         ExecuteFilterOnRecord(record, @"action contains ""Error""").ShouldBeTrue();
-        ExecuteFilterOnRecord(record, @"action contains ""Created""").ShouldBeFalse();
+        ExecuteFilterOnRecord(record, @"action contains ""CreateRemote""").ShouldBeFalse();
     }
 
     [Fact]
@@ -1841,21 +1839,8 @@ public class DynamicFilterBuilderSpecs
         var record = CreateSyncRecord(action: SyncRecordAction.Error);
 
         // Act & Assert
-        ExecuteFilterOnRecord(record, @"action in [""Error"", ""Created""]").ShouldBeTrue();
-        ExecuteFilterOnRecord(record, @"action in [""Created"", ""Skipped""]").ShouldBeFalse();
-    }
-
-    [Fact]
-    public void Enum_Source_Eq()
-    {
-        // Arrange
-        var deviceRecord = CreateSyncRecord(source: SyncRecordSource.Device);
-        var serverRecord = CreateSyncRecord(source: SyncRecordSource.Server);
-
-        // Act & Assert
-        ExecuteFilterOnRecord(deviceRecord, @"source = ""Device""").ShouldBeTrue();
-        ExecuteFilterOnRecord(deviceRecord, @"source = ""Server""").ShouldBeFalse();
-        ExecuteFilterOnRecord(serverRecord, @"source = ""Server""").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action in [""Error"", ""CreateRemote""]").ShouldBeTrue();
+        ExecuteFilterOnRecord(record, @"action in [""CreateRemote"", ""Skipped""]").ShouldBeFalse();
     }
 
     [Fact]

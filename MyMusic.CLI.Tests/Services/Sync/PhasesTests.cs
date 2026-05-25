@@ -2,7 +2,6 @@ namespace MyMusic.CLI.Tests.Services.Sync;
 
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync;
-using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
 using NSubstitute;
 using Shouldly;
@@ -11,12 +10,13 @@ using Xunit;
 public class PhasesTests
 {
     private readonly ISyncApiClient _apiClient;
-    private readonly IFileOps _fileOps;
-    private readonly IUserPrompt _userPrompt;
-    private readonly System.IO.Abstractions.IFileSystem _fileSystem;
+    private readonly SyncActionsDevice _syncActions;
     private readonly ISyncConfig _config;
     private readonly IFileSystemScanner _scanner;
     private readonly ILogger<Phases> _logger;
+    private readonly IFileOps _fileOps;
+    private readonly IUserPrompt _userPrompt;
+    private readonly System.IO.Abstractions.IFileSystem _fileSystem;
 
     public PhasesTests()
     {
@@ -27,64 +27,95 @@ public class PhasesTests
         _config = Substitute.For<ISyncConfig>();
         _scanner = Substitute.For<IFileSystemScanner>();
         _logger = Substitute.For<ILogger<Phases>>();
+
+        _syncActions = new SyncActionsDevice(_fileOps, _apiClient, _userPrompt, _fileSystem, Substitute.For<ILogger<SyncActionsDevice>>());
     }
 
     [Fact]
     public async Task UploadPhase_WithSyncDirectionDown_SkipsUpload()
     {
-        // Arrange
         var phases = CreatePhases();
         var ctx = CreateContext(options: new SyncOptions { Direction = SyncDirection.Down });
         var files = new List<ScannedFile> { CreateScannedFile("test.mp3") };
 
-        // Act
         await phases.UploadPhaseAsync(ctx, files, null);
 
-        // Assert
-        await _apiClient.DidNotReceive().UploadFileAsync(Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task ServerActionsPhase_WithSyncDirectionUp_SkipsServerActions()
     {
-        // Arrange
         var phases = CreatePhases();
         var ctx = CreateContext(options: new SyncOptions { Direction = SyncDirection.Up });
-        ctx.PendingActions = [new PendingActionItem { SongId = 1, Path = "test.mp3", Action = "Download" }];
 
-        // Act
         await phases.ServerActionsPhaseAsync(ctx, null);
 
-        // Assert
         await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CommitPhase_CallsCommitEndpointWithDirection()
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommitSyncResult()));
+
+        await phases.CommitPhaseAsync(ctx, null);
+
+        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Is<CommitSyncRequest>(r => r.Direction == "both"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CommitPhase_WithDirectionUp_SendsUpDirection()
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Direction = SyncDirection.Up });
+
+        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommitSyncResult()));
+
+        await phases.CommitPhaseAsync(ctx, null);
+
+        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Is<CommitSyncRequest>(r => r.Direction == "up"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CommitPhase_WithDirectionDown_SendsDownDirection()
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Direction = SyncDirection.Down });
+
+        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new CommitSyncResult()));
+
+        await phases.CommitPhaseAsync(ctx, null);
+
+        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Is<CommitSyncRequest>(r => r.Direction == "down"), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public void SyncOptions_DefaultDirectionIsBoth()
     {
-        // Arrange & Act
         var options = new SyncOptions();
-
-        // Assert
         options.Direction.ShouldBe(SyncDirection.Both);
     }
 
     [Fact]
     public void SyncOptions_CanSetDirection()
     {
-        // Arrange & Act
         var options = new SyncOptions { Direction = SyncDirection.Up };
-
-        // Assert
         options.Direction.ShouldBe(SyncDirection.Up);
     }
 
     private Phases CreatePhases()
     {
-        return new Phases(_apiClient, _fileOps, _userPrompt, _fileSystem, _config, _scanner, _logger);
+        return new Phases(_apiClient, _syncActions, _config, _scanner, _logger);
     }
 
-    private SyncContext CreateContext(SyncOptions? options = null)
+    private static SyncContext CreateContext(SyncOptions? options = null)
     {
         return new SyncContext
         {

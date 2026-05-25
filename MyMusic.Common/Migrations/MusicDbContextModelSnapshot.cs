@@ -457,14 +457,17 @@ namespace MyMusic.Common.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<bool>("Acknowledged")
+                        .HasColumnType("boolean")
+                        .HasColumnName("acknowledged");
+
                     b.Property<int>("Action")
                         .HasColumnType("integer")
                         .HasColumnName("action");
 
-                    b.Property<string>("ErrorMessage")
-                        .HasMaxLength(2048)
-                        .HasColumnType("character varying(2048)")
-                        .HasColumnName("error_message");
+                    b.Property<string>("Data")
+                        .HasColumnType("text")
+                        .HasColumnName("data");
 
                     b.Property<string>("FilePath")
                         .IsRequired()
@@ -481,6 +484,10 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("reason");
 
+                    b.Property<long?>("ResolvesConflictRecordId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("resolves_conflict_record_id");
+
                     b.Property<long>("SessionId")
                         .HasColumnType("bigint")
                         .HasColumnName("session_id");
@@ -489,19 +496,17 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("song_id");
 
-                    b.Property<int>("Source")
-                        .HasColumnType("integer")
-                        .HasColumnName("source");
-
                     b.HasKey("Id")
                         .HasName("pk_device_sync_session_records");
 
+                    b.HasIndex("ResolvesConflictRecordId")
+                        .HasDatabaseName("ix_device_sync_session_records_resolves_conflict_record_id");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_device_sync_session_records_session_id");
+
                     b.HasIndex("SongId")
                         .HasDatabaseName("ix_device_sync_session_records_song_id");
-
-                    b.HasIndex("SessionId", "FilePath")
-                        .IsUnique()
-                        .HasDatabaseName("ix_device_sync_session_records_session_id_file_path");
 
                     b.ToTable("device_sync_session_records", (string)null);
                 });
@@ -1079,6 +1084,11 @@ namespace MyMusic.Common.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("sync_action");
 
+                    b.Property<string>("SyncActionReason")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("sync_action_reason");
+
                     b.HasKey("Id")
                         .HasName("pk_song_devices");
 
@@ -1483,6 +1493,12 @@ namespace MyMusic.Common.Migrations
 
             modelBuilder.Entity("MyMusic.Common.Entities.DeviceSyncSessionRecord", b =>
                 {
+                    b.HasOne("MyMusic.Common.Entities.DeviceSyncSessionRecord", "ResolvesConflictRecord")
+                        .WithMany()
+                        .HasForeignKey("ResolvesConflictRecordId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_device_sync_session_records_device_sync_session_records_res");
+
                     b.HasOne("MyMusic.Common.Entities.DeviceSyncSession", "Session")
                         .WithMany("Records")
                         .HasForeignKey("SessionId")
@@ -1494,6 +1510,8 @@ namespace MyMusic.Common.Migrations
                         .WithMany()
                         .HasForeignKey("SongId")
                         .HasConstraintName("fk_device_sync_session_records_songs_song_id");
+
+                    b.Navigation("ResolvesConflictRecord");
 
                     b.Navigation("Session");
 

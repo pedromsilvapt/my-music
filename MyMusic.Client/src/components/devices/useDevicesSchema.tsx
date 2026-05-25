@@ -104,6 +104,14 @@ export function useDevicesSchema() {
                 render: row => <Code>{row.namingTemplate ?? 'Default'}</Code>,
                 width: '2fr',
             },
+            {
+                name: 'lastSyncAt',
+                displayName: 'Last Sync',
+                render: row => <Text c="dimmed">{row.lastSyncAt ? new Date(row.lastSyncAt).toLocaleString() : 'Never'}</Text>,
+                width: 180,
+                sortable: true,
+                getValue: row => row.lastSyncAt ?? null,
+            },
         ],
 
         actions: () => {

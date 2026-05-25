@@ -1,6 +1,6 @@
 import type {SyncDeps, SyncContext, SyncResult, ProgressHandler} from './types';
 import {SyncCancelledError} from './errors';
-import {scanPhase, startSessionPhase, uploadPhase, serverActionsPhase, completePhase} from './phases';
+import {scanPhase, startSessionPhase, uploadPhase, serverActionsPhase, commitPhase, completePhase} from './phases';
 
 export async function orchestrateSync(
     deps: SyncDeps,
@@ -19,6 +19,8 @@ export async function orchestrateSync(
 
         await serverActionsPhase(deps, ctx, onProgress);
 
+        await commitPhase(deps, ctx, onProgress);
+
         await completePhase(deps, ctx, scanResult.files.length, onProgress);
 
     } catch (error) {
@@ -28,7 +30,7 @@ export async function orchestrateSync(
             return ctx.result;
         }
         console.error('Sync error:', error);
-        ctx.result.failed++;
+        ctx.result.error++;
         throw error;
     } finally {
         deps.keepAwake.deactivate();

@@ -5,18 +5,12 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface SyncRecordRequestItem {
+export interface ReportSyncErrorRequest {
   filePath: string;
-  action: string;
+  errorMessage: string;
   /**
      * @nullable
      * @pattern ^-?(?:0|[1-9]\d*)$
      */
   songId?: number | null;
-  /** @nullable */
-  errorMessage?: string | null;
-  /** @nullable */
-  source?: string | null;
-  /** @nullable */
-  reason?: string | null;
 }

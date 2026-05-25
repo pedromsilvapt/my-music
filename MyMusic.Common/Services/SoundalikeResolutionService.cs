@@ -143,6 +143,7 @@ public class SoundalikeResolutionService(
                     DeviceId = deviceId,
                     DevicePath = devicePath,
                     SyncAction = SongSyncAction.Download,
+                    SyncActionReason = "Soundalike resolution: replacing duplicate",
                     AddedAt = DateTime.UtcNow,
                 });
 
@@ -153,6 +154,7 @@ public class SoundalikeResolutionService(
             {
                 sd.SongId = null;
                 sd.SyncAction = SongSyncAction.Remove;
+                sd.SyncActionReason = "Soundalike resolution: replacing duplicate";
                 db.Update(sd);
             }
 

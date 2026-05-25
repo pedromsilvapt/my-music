@@ -23,6 +23,7 @@ public class DeviceSyncSession
 public enum SyncSessionStatus
 {
     InProgress,
+    Committed,
     Completed,
     Cancelled,
 }

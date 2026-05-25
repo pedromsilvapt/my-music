@@ -2,17 +2,18 @@ import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
 import {apiMultipartRequest, apiRequest} from './client';
 import {ApiError} from './types';
-import type {AcknowledgeActionRequest, PruneSessionsRequest, SyncCheckRequest, SyncRecordsRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
+import type {AcknowledgeActionRequest, PruneSessionsRequest, ReportSyncErrorRequest, SyncCheckRequest, SyncCommitRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
 import {
     AcknowledgeActionResponseSchema,
+    CreatePendingActionsResponseSchema,
     DeleteSessionResponseSchema,
-    GetPendingActionsResponseSchema,
     ListSyncRecordsResponseSchema,
     ListSyncSessionsResponseSchema,
     PruneSessionsResponseSchema,
+    ReportSyncErrorResponseSchema,
     SyncCheckResponseSchema,
+    SyncCommitResponseSchema,
     SyncCompleteResponseSchema,
-    SyncRecordsResponseSchema,
     SyncResolveConflictsResponseSchema,
     SyncStartResponseSchema,
     SyncUploadResponseSchema,
@@ -46,19 +47,11 @@ export async function startSync(deviceId: number, request: SyncStartRequest) {
     });
 }
 
-export async function checkSync(deviceId: number, request: SyncCheckRequest) {
-    return apiRequest(`/devices/${deviceId}/sync/check`, {
+export async function checkSync(deviceId: number, sessionId: number, request: SyncCheckRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/check`, {
         method: 'POST',
         body: request,
         schema: SyncCheckResponseSchema,
-    });
-}
-
-export async function recordChunk(deviceId: number, sessionId: number, request: SyncRecordsRequest) {
-    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/records`, {
-        method: 'POST',
-        body: request,
-        schema: SyncRecordsResponseSchema,
     });
 }
 
@@ -69,8 +62,17 @@ export async function completeSync(deviceId: number, sessionId: number) {
     });
 }
 
+export async function commitSync(deviceId: number, sessionId: number, request?: SyncCommitRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/commit`, {
+        method: 'POST',
+        body: request ?? {},
+        schema: SyncCommitResponseSchema,
+    });
+}
+
 export async function uploadFile(
     deviceId: number,
+    sessionId: number,
     file: { uri: string; name: string },
     path: string,
     modifiedAt: string,
@@ -82,17 +84,18 @@ export async function uploadFile(
     formData.append('modifiedAt', modifiedAt);
     formData.append('createdAt', createdAt);
 
-    return apiMultipartRequest(`/devices/${deviceId}/sync/upload`, formData, SyncUploadResponseSchema);
+    return apiMultipartRequest(`/devices/${deviceId}/sync/${sessionId}/upload`, formData, SyncUploadResponseSchema);
 }
 
-export async function getPendingActions(deviceId: number) {
-    return apiRequest(`/devices/${deviceId}/sync/pending-actions`, {
-        schema: GetPendingActionsResponseSchema,
+export async function createPendingActions(deviceId: number, sessionId: number) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/pending-actions`, {
+        method: 'POST',
+        schema: CreatePendingActionsResponseSchema,
     });
 }
 
-export async function acknowledgeAction(deviceId: number, request: AcknowledgeActionRequest) {
-    return apiRequest(`/devices/${deviceId}/sync/acknowledge`, {
+export async function acknowledgeAction(deviceId: number, sessionId: number, request: AcknowledgeActionRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/acknowledge`, {
         method: 'POST',
         body: request,
         schema: AcknowledgeActionResponseSchema,
@@ -161,10 +164,18 @@ export async function pruneSessions(deviceId: number, request: PruneSessionsRequ
     });
 }
 
-export async function resolveConflicts(deviceId: number, request: SyncResolveConflictsRequest) {
-    return apiRequest(`/devices/${deviceId}/sync/resolve-conflicts`, {
+export async function resolveConflicts(deviceId: number, sessionId: number, request: SyncResolveConflictsRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, {
         method: 'POST',
         body: request,
         schema: SyncResolveConflictsResponseSchema,
+    });
+}
+
+export async function reportSyncError(deviceId: number, sessionId: number, request: ReportSyncErrorRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/error`, {
+        method: 'POST',
+        body: request,
+        schema: ReportSyncErrorResponseSchema,
     });
 }

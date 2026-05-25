@@ -1,5 +1,6 @@
 namespace MyMusic.CLI.Services.Sync;
 
+using System.Globalization;
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,8 +10,11 @@ using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services.Sync.Types;
 using Refit;
 using SyncOptions = MyMusic.CLI.Services.Sync.Types.SyncOptions;
-using PendingActionItem = MyMusic.CLI.Services.Sync.Types.PendingActionItem;
+using SyncRecordItem = MyMusic.CLI.Services.Sync.Types.SyncRecordItem;
+using SyncRecordSongInfo = MyMusic.CLI.Services.Sync.Types.SyncRecordSongInfo;
 using AcknowledgeActionRequest = MyMusic.CLI.Services.Sync.Types.AcknowledgeActionRequest;
+using AcknowledgeActionResult = MyMusic.CLI.Services.Sync.Types.AcknowledgeActionResult;
+using SyncActionCounts = MyMusic.CLI.Services.Sync.Types.SyncActionCounts;
 
 public class CliFileOps(IFileSystem fileSystem) : IFileOps
 {
@@ -39,6 +43,17 @@ public class CliFileOps(IFileSystem fileSystem) : IFileOps
         {
             fileSystem.File.Delete(path);
         }
+        return Task.CompletedTask;
+    }
+
+    public Task MoveFileAsync(string fromPath, string toPath, CancellationToken ct = default)
+    {
+        var dir = Path.GetDirectoryName(toPath);
+        if (!string.IsNullOrEmpty(dir) && !fileSystem.Directory.Exists(dir))
+        {
+            fileSystem.Directory.CreateDirectory(dir);
+        }
+        fileSystem.File.Move(fromPath, toPath);
         return Task.CompletedTask;
     }
 
@@ -186,12 +201,17 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         var response = await client.StartSyncAsync(deviceId, new SyncStartRequest
         {
             DryRun = request.DryRun,
-            RepositoryPath = request.RepositoryPath
+            RepositoryPath = request.RepositoryPath,
+            ScanErrors = request.ScanErrors?.Select(e => new SyncScanErrorItem
+            {
+                FilePath = e.Path,
+                ErrorMessage = e.Error
+            }).ToList()
         }, ct);
         return new StartSyncResult { SessionId = response.SessionId };
     }
 
-    public async Task<CheckSyncResult> CheckSyncAsync(long deviceId, CheckSyncRequest request, CancellationToken ct = default)
+    public async Task<CheckSyncResult> CheckSyncAsync(long deviceId, long sessionId, CheckSyncRequest request, CancellationToken ct = default)
     {
         var syncFiles = request.Files.Select(f => new SyncFileInfoItem
         {
@@ -201,7 +221,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             Reason = f.Reason
         }).ToList();
 
-        var response = await client.CheckSyncAsync(deviceId, new SyncCheckRequest
+        var response = await client.CheckSyncAsync(deviceId, sessionId, new SyncCheckRequest
         {
             Files = syncFiles,
             Force = request.Force
@@ -233,47 +253,40 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
                 ServerChecksum = c.ServerChecksum,
                 ServerChecksumAlgorithm = c.ServerChecksumAlgorithm
             }).ToList(),
-            PendingActions = response.PendingActions.Select(a => new PendingActionItem
+            Records = response.Records.Select(a => new SyncRecordItem
             {
-                SongId = a.SongId,
-                Path = a.Path,
+                Id = a.Id,
+                FilePath = a.FilePath,
                 Action = a.Action,
-                PreviousPath = a.PreviousPath
-            }).ToList()
+                SongId = a.SongId,
+                Data = a.Data,
+                ResolvesConflictRecordId = a.ResolvesConflictRecordId,
+                SongInfo = a.SongInfo is not null ? new SyncRecordSongInfo
+                {
+                    Id = a.SongInfo.Id,
+                    Title = a.SongInfo.Title,
+                    ArtistNames = a.SongInfo.ArtistNames,
+                    CoverId = a.SongInfo.CoverId,
+                } : null,
+                Reason = a.Reason,
+                Acknowledged = a.Acknowledged,
+                ProcessedAt = a.ProcessedAt,
+            }).ToList(),
+            SkippedRecordIds = response.SkippedRecordIds,
+            Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }
 
-    public async Task<UploadFileResult> UploadFileAsync(long deviceId, UploadFileRequest request, CancellationToken ct = default)
+    public async Task<UploadFileResult> UploadFileAsync(long deviceId, long sessionId, UploadFileRequest request, CancellationToken ct = default)
     {
         var streamPart = new StreamPart(request.FileStream, request.FileName);
-        var response = await client.UploadFileAsync(deviceId, streamPart, request.Path, request.ModifiedAt, request.CreatedAt, ct);
+        var response = await client.UploadFileAsync(deviceId, sessionId, streamPart, request.Path, request.ModifiedAt, request.CreatedAt, ct);
         return new UploadFileResult
         {
             Success = true,
             SongId = response.SongId,
-            PendingActions = response.PendingActions.Select(a => new PendingActionItem
-            {
-                SongId = a.SongId,
-                Path = a.Path,
-                Action = a.Action,
-                PreviousPath = a.PreviousPath
-            }).ToList()
+            Counts = SyncActionCounts.FromApi(response.Counts)
         };
-    }
-
-    public async Task RecordChunkAsync(long deviceId, long sessionId, RecordChunkRequest request, CancellationToken ct = default)
-    {
-        var records = request.Records.Select(r => new SyncRecordRequestItem
-        {
-            FilePath = r.FilePath,
-            Action = r.Action,
-            SongId = r.SongId,
-            ErrorMessage = r.ErrorMessage,
-            Source = r.Source,
-            Reason = r.Reason
-        }).ToList();
-
-        await client.RecordChunkAsync(deviceId, sessionId, new SyncRecordsRequest { Records = records }, ct);
     }
 
     public async Task<CompleteSyncResult> CompleteSyncAsync(long deviceId, long sessionId, CompleteSyncRequest request, CancellationToken ct = default)
@@ -281,51 +294,95 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         var response = await client.CompleteSyncAsync(deviceId, sessionId, new SyncCompleteRequest { Direction = request.Direction }, ct);
         return new CompleteSyncResult
         {
-            CreatedCount = response.CreatedCount,
-            UpdatedCount = response.UpdatedCount,
+            CreateRemoteCount = response.CreateRemoteCount,
+            UpdateRemoteCount = response.UpdateRemoteCount,
             SkippedCount = response.SkippedCount,
-            DownloadedCount = response.DownloadedCount,
-            RemovedCount = response.RemovedCount,
+            CreateLocalCount = response.CreateLocalCount,
+            UpdateLocalCount = response.UpdateLocalCount,
+            DeleteCount = response.DeleteCount,
+            LinkCount = response.LinkCount,
+            UnlinkCount = response.UnlinkCount,
+            RenameCount = response.RenameCount,
+            ConflictCount = response.ConflictCount,
+            UpdateTimestampCount = response.UpdateTimestampCount,
             ErrorCount = response.ErrorCount
         };
     }
 
-    public async Task<GetPendingActionsResult> GetPendingActionsAsync(long deviceId, CancellationToken ct = default)
+    public async Task<CommitSyncResult> CommitSyncAsync(long deviceId, long sessionId, CommitSyncRequest request, CancellationToken ct = default)
     {
-        var response = await client.GetPendingActionsAsync(deviceId, ct);
-        return new GetPendingActionsResult
+        var response = await client.CommitSyncAsync(deviceId, sessionId, new SyncCommitRequest { Direction = request.Direction }, ct);
+        return new CommitSyncResult
         {
-            Actions = response.Actions.Select(a => new PendingActionItem
+            CreateRemoteCount = response.CreateRemoteCount,
+            UpdateRemoteCount = response.UpdateRemoteCount,
+            SkippedCount = response.SkippedCount,
+            CreateLocalCount = response.CreateLocalCount,
+            UpdateLocalCount = response.UpdateLocalCount,
+            DeleteCount = response.DeleteCount,
+            LinkCount = response.LinkCount,
+            UnlinkCount = response.UnlinkCount,
+            RenameCount = response.RenameCount,
+            ConflictCount = response.ConflictCount,
+            UpdateTimestampCount = response.UpdateTimestampCount,
+            ErrorCount = response.ErrorCount,
+            CommittedAt = response.CommittedAt
+        };
+    }
+
+    public async Task<CreatePendingActionsResult> CreatePendingActionsAsync(long deviceId, long sessionId, CancellationToken ct = default)
+    {
+        var response = await client.CreatePendingActionsAsync(deviceId, sessionId, ct);
+        return new CreatePendingActionsResult
+        {
+            Records = response.Records.Select(a => new SyncRecordItem
             {
-                SongId = a.SongId,
-                Path = a.Path,
+                Id = a.Id,
+                FilePath = a.FilePath,
                 Action = a.Action,
-                PreviousPath = a.PreviousPath
+                SongId = a.SongId,
+                Data = a.Data,
+                ResolvesConflictRecordId = a.ResolvesConflictRecordId,
+                SongInfo = a.SongInfo is not null ? new SyncRecordSongInfo
+                {
+                    Id = a.SongInfo.Id,
+                    Title = a.SongInfo.Title,
+                    ArtistNames = a.SongInfo.ArtistNames,
+                    CoverId = a.SongInfo.CoverId,
+                } : null,
+                Reason = a.Reason,
+                Acknowledged = a.Acknowledged,
+                ProcessedAt = a.ProcessedAt,
             }).ToList()
         };
     }
 
-    public async Task AcknowledgeActionAsync(long deviceId, AcknowledgeActionRequest request, CancellationToken ct = default)
+    public async Task<AcknowledgeActionResult> AcknowledgeActionAsync(long deviceId, long sessionId, AcknowledgeActionRequest request, CancellationToken ct = default)
     {
-        await client.AcknowledgeActionAsync(deviceId, new Api.Dtos.AcknowledgeActionRequest
+        var response = await client.AcknowledgeActionAsync(deviceId, sessionId, new Api.Dtos.AcknowledgeActionRequest
         {
-            DevicePath = request.DevicePath,
-            ModifiedAt = request.ModifiedAt,
-            PreviousDevicePath = request.PreviousDevicePath
+            RecordIds = request.RecordIds,
+            ModifiedAt = request.ModifiedAt
         }, ct);
+
+        return new AcknowledgeActionResult
+        {
+            Success = response.Success,
+            Counts = SyncActionCounts.FromApi(response.Counts)
+        };
     }
 
-    public async Task<ResolveConflictsResult> ResolveConflictsAsync(long deviceId, ResolveConflictsRequest request, CancellationToken ct = default)
+    public async Task<ResolveConflictsResult> ResolveConflictsAsync(long deviceId, long sessionId, ResolveConflictsRequest request, CancellationToken ct = default)
     {
         var conflicts = request.Conflicts.Select(c => new SyncConflictResolveItem
         {
             Path = c.Path,
             SongId = c.SongId,
             FileContentBase64 = c.FileContentBase64,
-            LocalModifiedAt = DateTime.Parse(c.LocalModifiedAt)
+            LocalModifiedAt = c.LocalModifiedAt.ToUniversalTime()
         }).ToList();
 
-        var response = await client.ResolveConflictsAsync(deviceId, new SyncResolveConflictsRequest { Conflicts = conflicts }, ct);
+        var response = await client.ResolveConflictsAsync(deviceId, sessionId, new SyncResolveConflictsRequest { Conflicts = conflicts }, ct);
 
         return new ResolveConflictsResult
         {
@@ -347,13 +404,40 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             {
                 Path = c.Path,
                 Reason = c.Reason
-            }).ToList()
+            }).ToList(),
+            ConflictRecords = response.ConflictRecords.Select(r => new SyncActionRecordItem
+            {
+                Id = r.Id,
+                Action = r.Action,
+                Data = r.Data,
+                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
+            }).ToList(),
+            UpdateTimestampRecords = response.UpdateTimestampRecords.Select(r => new SyncActionRecordItem
+            {
+                Id = r.Id,
+                Action = r.Action,
+                Data = r.Data,
+                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
+            }).ToList(),
+            Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }
 
     public async Task<Stream> DownloadSongAsync(long songId, CancellationToken ct = default)
     {
         return await client.DownloadSongAsync(songId, ct);
+    }
+
+    public async Task<SyncActionCounts> ReportSyncErrorAsync(long deviceId, long sessionId, ReportSyncErrorCliRequest request, CancellationToken ct = default)
+    {
+        var response = await client.ReportSyncErrorAsync(deviceId, sessionId, new ReportSyncErrorRequest
+        {
+            FilePath = request.FilePath,
+            ErrorMessage = request.ErrorMessage,
+            SongId = request.SongId
+        }, ct);
+
+        return SyncActionCounts.FromApi(response.Counts);
     }
 }
 
@@ -389,7 +473,7 @@ public class CliFileSystemScanner(IFileScanner fileScanner) : IFileSystemScanner
                 FullPath = f.FullPath,
                 ModifiedAt = f.ModifiedAt,
                 CreatedAt = f.CreatedAt,
-                Size = 0
+                Size = f.Size
             }).ToList(),
             Errors = result.Errors.Select(e => new ScanError
             {

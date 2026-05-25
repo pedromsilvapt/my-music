@@ -10,8 +10,6 @@ public record SyncContext
     public SyncOptions Options { get; init; } = new();
     public SyncResult Result { get; set; } = new();
     public HashSet<string> UploadedPaths { get; } = [];
-    public HashSet<string> PendingDownloadPaths { get; set; } = [];
-    public HashSet<string> PendingDownloadPreviousPaths { get; set; } = [];
     public HashSet<long> ConflictedSongIds { get; } = [];
-    public List<PendingActionItem> PendingActions { get; set; } = [];
+    public List<SyncRecordItem> PendingServerRecords { get; } = [];
 }

@@ -4,10 +4,11 @@ import { Alert } from 'react-native';
 import {
     acknowledgeAction,
     checkSync,
+    commitSync,
     completeSync,
     downloadSong,
-    getPendingActions,
-    recordChunk,
+    createPendingActions,
+    reportSyncError,
     resolveConflicts,
     startSync,
     uploadFile,
@@ -33,19 +34,42 @@ import type {
     ISyncConfig,
     ISyncState,
     IUserPrompt,
+    SyncRecordItem,
 } from './types';
 
 export function createDefaultApiClient(): ISyncApiClient {
     return {
         startSync,
-        checkSync,
-        uploadFile,
-        recordChunk,
+        checkSync: async (deviceId, sessionId, request) => {
+            const result = await checkSync(deviceId, sessionId, request);
+            return {
+                ...result,
+                records: result.records as SyncRecordItem[],
+            };
+        },
+        uploadFile: async (deviceId, sessionId, file, path, modifiedAt, createdAt) => {
+            const result = await uploadFile(deviceId, sessionId, file, path, modifiedAt, createdAt);
+            return {
+                success: result.success,
+                songId: result.songId,
+                recordId: result.recordId,
+                action: result.action,
+                data: result.data as SyncRecordItem['data'],
+                counts: result.counts,
+            };
+        },
+        commitSync,
         completeSync,
-        getPendingActions,
+        createPendingActions: async (deviceId, sessionId) => {
+            const result = await createPendingActions(deviceId, sessionId);
+            return {
+                records: result.records as SyncRecordItem[],
+            };
+        },
         acknowledgeAction,
         resolveConflicts,
         downloadSong,
+        reportSyncError,
     };
 }
 
@@ -86,6 +110,10 @@ export function createDefaultFileOps(): IFileOps {
         fileExists: (path: string) => {
             return new File(toFileUri(path)).exists;
         },
+        directoryExists: (path: string) => {
+            const dir = new File(toFileUri(path));
+            return dir.exists && dir.isDirectory;
+        },
         ensureDirectory: async (path: string) => {
             const file = new File(toFileUri(path));
             const dir = file.parentDirectory;
@@ -100,6 +128,11 @@ export function createDefaultFileOps(): IFileOps {
         },
         deleteFile: async (path: string) => {
             await new File(toFileUri(path)).delete();
+        },
+        moveFile: async (fromPath: string, toPath: string) => {
+            const fromFile = new File(toFileUri(fromPath));
+            const toFile = new File(toFileUri(toPath));
+            fromFile.move(toFile);
         },
         readFileBase64: async (path: string) => {
             return new File(toFileUri(path)).base64();

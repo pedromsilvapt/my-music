@@ -5,26 +5,38 @@ namespace MyMusic.IntegrationTests.Fixtures;
 public record SyncResult
 {
     public bool Success { get; init; }
-    public int Created { get; init; }
-    public int Updated { get; init; }
-    public int Downloaded { get; init; }
-    public int Removed { get; init; }
-    public int Failed { get; init; }
-    public int Conflicts { get; init; }
+    public int CreateRemote { get; init; }
+    public int UpdateRemote { get; init; }
+    public int CreateLocal { get; init; }
+    public int UpdateLocal { get; init; }
+    public int Delete { get; init; }
+    public int Link { get; init; }
+    public int Unlink { get; init; }
+    public int Rename { get; init; }
+    public int Skipped { get; init; }
+    public int Conflict { get; init; }
+    public int UpdateTimestamp { get; init; }
+    public int Error { get; init; }
 
-    public int TotalChanges => Created + Updated + Downloaded + Removed;
+    public int TotalChanges => CreateRemote + UpdateRemote + CreateLocal + UpdateLocal + Delete + Link + Unlink + Rename;
 
     public static SyncResult ParseCliOutput(int exitCode, string standardOutput)
     {
         return new SyncResult
         {
             Success = exitCode == 0,
-            Created = GetCounterValue(standardOutput, "Created"),
-            Updated = GetCounterValue(standardOutput, "Updated"),
-            Downloaded = GetCounterValue(standardOutput, "Downloaded"),
-            Removed = GetCounterValue(standardOutput, "Removed"),
-            Failed = GetCounterValue(standardOutput, "Failed"),
-            Conflicts = GetCounterValue(standardOutput, "Conflicts"),
+            CreateRemote = GetCounterValue(standardOutput, "CreateRemote"),
+            UpdateRemote = GetCounterValue(standardOutput, "UpdateRemote"),
+            CreateLocal = GetCounterValue(standardOutput, "CreateLocal"),
+            UpdateLocal = GetCounterValue(standardOutput, "UpdateLocal"),
+            Delete = GetCounterValue(standardOutput, "Delete"),
+            Link = GetCounterValue(standardOutput, "Link"),
+            Unlink = GetCounterValue(standardOutput, "Unlink"),
+            Rename = GetCounterValue(standardOutput, "Rename"),
+            Skipped = GetCounterValue(standardOutput, "Skipped"),
+            Conflict = GetCounterValue(standardOutput, "Conflict"),
+            UpdateTimestamp = GetCounterValue(standardOutput, "UpdateTimestamp"),
+            Error = GetCounterValue(standardOutput, "Error"),
         };
     }
 

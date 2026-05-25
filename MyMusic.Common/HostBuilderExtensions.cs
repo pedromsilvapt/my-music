@@ -8,6 +8,7 @@ using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
 using MyMusic.Common.Services.PlaylistSongs;
+using MyMusic.Common.Services.Sync;
 
 namespace MyMusic.Common;
 
@@ -32,6 +33,8 @@ public static class HostBuilderExtensions
         builder.Services.AddTransient<MetadataFetchQueue.MetadataFetchExecutor>();
         builder.Services.AddTransient<MusicImportJob>();
 
+        builder.Services.AddScoped<ISyncCommitService, SyncCommitService>();
+        builder.Services.AddHostedService<StagingDirectoryCleanupService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<IAuditRule, MissingCoverAuditRule>();
         builder.Services.AddScoped<IAuditRule, MissingYearAuditRule>();

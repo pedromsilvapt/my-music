@@ -147,6 +147,21 @@ public class MusicDbContext : DbContext
             entity.HasIndex(e => e.OwnerId);
         });
 
+        // DeviceSyncSessionRecord entity configuration
+        modelBuilder.Entity<DeviceSyncSessionRecord>(entity =>
+        {
+            var jsonDataConverter = new ValueConverter<JsonElement?, string>(
+                v => v.HasValue ? v.Value.GetRawText() : "null",
+                v => v == "null" ? null : JsonDocument.Parse(v).RootElement);
+
+            entity.Property(e => e.Data).HasConversion(jsonDataConverter);
+
+            entity.HasOne(e => e.ResolvesConflictRecord)
+                .WithMany()
+                .HasForeignKey(e => e.ResolvesConflictRecordId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // ExcludedDuplicatePair entity configuration
         modelBuilder.Entity<ExcludedDuplicatePair>(entity =>
         {

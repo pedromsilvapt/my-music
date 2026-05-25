@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import type {ScannerType} from '../services/scannerRegistry';
 
-export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'resolving' | 'server' | 'completing' | 'completed' | 'error';
+export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'resolving' | 'server' | 'committing' | 'completing' | 'completed' | 'error';
 
 export interface SyncProgress {
     phase: SyncPhase;
@@ -10,13 +10,18 @@ export interface SyncProgress {
     processedFiles: number;
     scannedFiles: number;
     currentFile: string;
-    created: number;
-    updated: number;
+    createRemote: number;
+    updateRemote: number;
+    createLocal: number;
+    updateLocal: number;
+    delete: number;
+    link: number;
+    unlink: number;
+    rename: number;
     skipped: number;
-    downloaded: number;
-    removed: number;
-    failed: number;
-    conflicts: number;
+    conflict: number;
+    updateTimestamp: number;
+    error: number;
     errorMessage?: string;
     startedAt?: string;
     completedAt?: string;
@@ -53,13 +58,18 @@ const initialProgress: SyncProgress = {
     processedFiles: 0,
     scannedFiles: 0,
     currentFile: '',
-    created: 0,
-    updated: 0,
+    createRemote: 0,
+    updateRemote: 0,
+    createLocal: 0,
+    updateLocal: 0,
+    delete: 0,
+    link: 0,
+    unlink: 0,
+    rename: 0,
     skipped: 0,
-    downloaded: 0,
-    removed: 0,
-    failed: 0,
-    conflicts: 0,
+    conflict: 0,
+    updateTimestamp: 0,
+    error: 0,
     isCancelled: false,
 };
 

@@ -11,9 +11,7 @@ import type {SyncRecordResponseItem} from "../../model";
 const SEARCH_DEBOUNCE_MS = 300;
 
 // Add id field to records for Collection component
-interface RecordWithId extends SyncRecordResponseItem {
-    id: string;
-}
+type RecordWithId = Omit<SyncRecordResponseItem, 'id'> & { id: string };
 
 export default function SessionRecordsPage() {
     const {deviceId, sessionId} = useParams({from: '/devices/$deviceId/sessions/$sessionId'});

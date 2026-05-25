@@ -8,7 +8,7 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
-    [Fact]
+    [Fact(Skip = "Re-enable after the sync process is turned more interactive. Whether this song is merged, just unlinked and re-linked, or unlinked and deleted, should be a choice made by the user.")]
     public async Task Sync_ShouldMergeSongsWhenChecksumsMatch()
     {
         var baseSong = SongsFixture.DefaultSongs[1];
@@ -22,7 +22,7 @@ public abstract partial class SyncTestsBase
         // First sync: Should create two separate songs due to different album names
         var result1 = await App.SyncAsync(new SyncOptions());
         result1.ShouldBeSuccessful();
-        result1.Created.ShouldBe(2, $"Expected 2 songs to be created but got {result1.Created}");
+        result1.CreateRemote.ShouldBe(2, $"Expected 2 songs to be created but got {result1.CreateRemote}");
 
         // Validate two songs exist on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();

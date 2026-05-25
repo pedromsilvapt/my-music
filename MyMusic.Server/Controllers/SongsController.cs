@@ -174,8 +174,8 @@ public class SongsController(
                 await file.CopyToAsync(stream, cancellationToken);
             }
 
-            var modifiedAtDateTime = DateTime.Parse(modifiedAt, null, DateTimeStyles.RoundtripKind);
-            var createdAtDateTime = DateTime.Parse(createdAt, null, DateTimeStyles.RoundtripKind);
+            var modifiedAtDateTime = DateTime.Parse(modifiedAt, null, DateTimeStyles.RoundtripKind).ToUniversalTime();
+            var createdAtDateTime = DateTime.Parse(createdAt, null, DateTimeStyles.RoundtripKind).ToUniversalTime();
 
             var songImportMetadata = new SongImportMetadata(tempFilePath, createdAtDateTime, modifiedAtDateTime);
 
@@ -392,6 +392,7 @@ public class SongsController(
                         DeviceId = update.DeviceId,
                         DevicePath = devicePath,
                         SyncAction = SongSyncAction.Download,
+                        SyncActionReason = "Song included on device",
                         AddedAt = DateTime.UtcNow,
                     };
                     context.SongDevices.Add(newSongDevice);
@@ -405,11 +406,13 @@ public class SongsController(
                     else
                     {
                         existing.SyncAction = SongSyncAction.Remove;
+                        existing.SyncActionReason = "Song excluded from device";
                     }
                 }
                 else if (update.Include && hasExisting && existing!.SyncAction == SongSyncAction.Remove)
                 {
                     existing.SyncAction = null;
+                    existing.SyncActionReason = null;
                 }
             }
         }

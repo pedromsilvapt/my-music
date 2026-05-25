@@ -20,7 +20,7 @@ public abstract partial class SyncTestsBase
         result.ShouldBeSuccessful();
 
         // All 3 songs should be created
-        result.Created.ShouldBe(3);
+        result.CreateRemote.ShouldBe(3);
 
         // Verify all 3 songs exist on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -44,15 +44,15 @@ public abstract partial class SyncTestsBase
         result.ShouldBeSuccessful();
 
         // Should have both downloads and creations
-        result.Downloaded.ShouldBeGreaterThanOrEqualTo(1);
-        result.Created.ShouldBeGreaterThanOrEqualTo(1);
+        result.CreateLocal.ShouldBe(1);
+        result.CreateRemote.ShouldBe(1);
 
         // Verify the downloaded file exists
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeTrue();
 
         // Verify the uploaded song exists on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
-        (await songs.Collection.GetRowCountAsync()).ShouldBeGreaterThanOrEqualTo(2);
+        (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
     }
 
     [Fact]
@@ -71,7 +71,7 @@ public abstract partial class SyncTestsBase
         result.ShouldBeSuccessful();
 
         // All 3 songs should be downloaded
-        result.Downloaded.ShouldBe(3);
+        result.CreateLocal.ShouldBe(3);
 
         // Verify all files exist locally
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeTrue();
@@ -107,6 +107,7 @@ public abstract partial class SyncTestsBase
         // Run sync again - should remove all local files
         var result2 = await App.SyncAsync(new SyncOptions());
         result2.ShouldBeSuccessful();
+        result2.Unlink.ShouldBe(3);
 
         // Verify all local files were removed
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeFalse();

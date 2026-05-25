@@ -27,6 +27,7 @@ function makePlaylistSong (id: number, order: number, stopAfterPlayback = false)
         devices: [],
         isFavorite: false,
         isExplicit: false,
+        hasLyrics: false,
         createdAt: '2025-01-01T00:00:00Z',
     };
 }
@@ -44,6 +45,7 @@ function makeListSong (id: number): ListSongItem {
         devices: [],
         isFavorite: false,
         isExplicit: false,
+        hasLyrics: false,
         createdAt: '2025-01-01T00:00:00Z',
     };
 }

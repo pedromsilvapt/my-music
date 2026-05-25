@@ -14,11 +14,17 @@ public record SyncSessionItem
     public DateTime? CompletedAt { get; init; }
     public required SyncSessionStatus Status { get; init; }
     public required bool IsDryRun { get; init; }
-    public required int CreatedCount { get; init; }
-    public required int UpdatedCount { get; init; }
+    public required int CreateRemoteCount { get; init; }
+    public required int UpdateRemoteCount { get; init; }
     public required int SkippedCount { get; init; }
-    public required int DownloadedCount { get; init; }
-    public required int RemovedCount { get; init; }
+    public required int CreateLocalCount { get; init; }
+    public required int UpdateLocalCount { get; init; }
+    public required int DeleteCount { get; init; }
+    public required int LinkCount { get; init; }
+    public required int UnlinkCount { get; init; }
+    public required int RenameCount { get; init; }
+    public required int ConflictCount { get; init; }
+    public required int UpdateTimestampCount { get; init; }
     public required int ErrorCount { get; init; }
     public string? RepositoryPath { get; init; }
 
@@ -31,11 +37,17 @@ public record SyncSessionItem
             CompletedAt = session.CompletedAt,
             Status = session.Status,
             IsDryRun = session.IsDryRun,
-            CreatedCount = session.Records.Count(r => r.Action == SyncRecordAction.Created),
-            UpdatedCount = session.Records.Count(r => r.Action == SyncRecordAction.Updated),
+            CreateRemoteCount = session.Records.Count(r => r.Action == SyncRecordAction.CreateRemote),
+            UpdateRemoteCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateRemote),
             SkippedCount = session.Records.Count(r => r.Action == SyncRecordAction.Skipped),
-            DownloadedCount = session.Records.Count(r => r.Action == SyncRecordAction.Downloaded),
-            RemovedCount = session.Records.Count(r => r.Action == SyncRecordAction.Removed),
+            CreateLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.CreateLocal),
+            UpdateLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateLocal),
+            DeleteCount = session.Records.Count(r => r.Action == SyncRecordAction.Delete),
+            LinkCount = session.Records.Count(r => r.Action == SyncRecordAction.Link),
+            UnlinkCount = session.Records.Count(r => r.Action == SyncRecordAction.Unlink),
+            RenameCount = session.Records.Count(r => r.Action == SyncRecordAction.Rename),
+            ConflictCount = session.Records.Count(r => r.Action == SyncRecordAction.Conflict),
+            UpdateTimestampCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateTimestamp),
             ErrorCount = session.Records.Count(r => r.Action == SyncRecordAction.Error),
             RepositoryPath = session.RepositoryPath,
         };

@@ -10,6 +10,7 @@ export type SyncSessionStatus = typeof SyncSessionStatus[keyof typeof SyncSessio
 
 export const SyncSessionStatus = {
   InProgress: 'InProgress',
+  Committed: 'Committed',
   Completed: 'Completed',
   Cancelled: 'Cancelled',
 } as const;
