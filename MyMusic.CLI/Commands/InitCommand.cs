@@ -46,11 +46,16 @@ public class InitCommand : Command<InitCommand.Settings>
         return 0;
     }
 
-    private static string GetConfigPath() =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "my-music",
-            "appsettings.json");
+    internal static string GetConfigPath()
+    {
+        var envPath = Environment.GetEnvironmentVariable("MYMUSIC_CONFIG_PATH");
+        return !string.IsNullOrEmpty(envPath)
+            ? envPath
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "my-music",
+                "appsettings.json");
+    }
 
     private static void EnsureConfigDirectory(string configPath)
     {
