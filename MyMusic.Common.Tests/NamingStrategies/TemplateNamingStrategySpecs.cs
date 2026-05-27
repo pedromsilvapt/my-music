@@ -95,6 +95,54 @@ public class TemplateNamingStrategySpecs
     }
 
     [Fact]
+    public void Generate_WithDateNow_ShouldRenderCurrentYear()
+    {
+        var song = CreateTestSong();
+        var naming = new NamingMetadata { Extension = ".mp3" };
+        var strategy = new TemplateNamingStrategy("{{ date.now.year }}/{{ title }}{{ extension }}");
+
+        var result = strategy.Generate(song, naming);
+
+        result.ShouldBe($"{DateTime.UtcNow.Year}/Test Song.mp3");
+    }
+
+    [Fact]
+    public void Generate_WithOriginalFolderYearCurrentYearFallback_OriginalFolderSet_ShouldUseOriginalFolder()
+    {
+        var song = CreateTestSong();
+        var naming = new NamingMetadata { Extension = ".mp3", OriginalFolder = "Rock" };
+        var strategy = new TemplateNamingStrategy("{{ original_folder ?? year ?? date.now.year }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
+
+        var result = strategy.Generate(song, naming);
+
+        result.ShouldBe("Rock/Test Song - Artist One, Artist Two.mp3");
+    }
+
+    [Fact]
+    public void Generate_WithOriginalFolderYearCurrentYearFallback_YearSet_ShouldUseYear()
+    {
+        var song = CreateTestSong();
+        var naming = new NamingMetadata { Extension = ".mp3" };
+        var strategy = new TemplateNamingStrategy("{{ original_folder ?? year ?? date.now.year }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
+
+        var result = strategy.Generate(song, naming);
+
+        result.ShouldBe("2024/Test Song - Artist One, Artist Two.mp3");
+    }
+
+    [Fact]
+    public void Generate_WithOriginalFolderYearCurrentYearFallback_BothNull_ShouldUseCurrentYear()
+    {
+        var song = CreateTestSong(new { Year = (int?)null });
+        var naming = new NamingMetadata { Extension = ".mp3" };
+        var strategy = new TemplateNamingStrategy("{{ original_folder ?? year ?? date.now.year }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
+
+        var result = strategy.Generate(song, naming);
+
+        result.ShouldBe($"{DateTime.UtcNow.Year}/Test Song - Artist One, Artist Two.mp3");
+    }
+
+    [Fact]
     public void Generate_WithNullYear_ShouldRenderEmptyString()
     {
         var song = CreateTestSong(new { Year = (int?)null });
