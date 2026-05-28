@@ -1120,6 +1120,7 @@ export default function SongEditorContextModal({
                             <Box style={{flex: 1}}>
                                 <Input.Wrapper label="Rating (old)">
                                     <Rating
+                                        fractions={2}
                                         value={currentState.metadata.rating.old ?? 0}
                                         readOnly
                                         styles={{
@@ -1139,6 +1140,7 @@ export default function SongEditorContextModal({
                                 data-testid="edit-song-rating"
                             >
                                 <Rating
+                                    fractions={2}
                                     value={currentState.form.rating ?? 0}
                                     onChange={(val) => handleFormChange({rating: val})}
                                     readOnly={hasMetadata && !!currentState.metadata?.rating && !currentState.checkboxes.rating}
