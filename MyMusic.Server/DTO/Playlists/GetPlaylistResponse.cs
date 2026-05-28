@@ -52,6 +52,7 @@ public record GetPlaylistSongItem : ListSongItem
             Devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).DistinctBy(d => d.Id).ToList(),
             IsFavorite = false,
             IsExplicit = song.Explicit,
+            HasLyrics = song.HasLyrics,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,
             Order = displayOrder,

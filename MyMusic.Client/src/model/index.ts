@@ -201,6 +201,7 @@ export * from './postDevicesDeviceIdSyncUploadBody';
 export * from './pruneSessionsRequest';
 export * from './pruneSessionsResponse';
 export * from './purchasedSongStatus';
+export * from './recalculateCountsResponse';
 export * from './removeFromQueueRequest';
 export * from './renameQueueRequest';
 export * from './renameQueueResponse';

@@ -111,6 +111,7 @@ public class AuditsControllerFilterSpecs
         // Assert
         explicitField.Type.ShouldBe("boolean");
         explicitField.EntityPath.ShouldBe("Song.Explicit");
+        explicitField.ClientPath.ShouldBe("isExplicit");
         explicitField.SupportedOperators.ShouldContain("isTrue");
         explicitField.SupportedOperators.ShouldContain("isFalse");
     }

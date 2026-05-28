@@ -33,7 +33,7 @@ let isProviderRegistered = false;
 
 const isAfterOperator = (text: string): boolean => {
     const trimmed = text.trimEnd();
-    return /[=<>!~]|\b(?:contains|startsWith|endsWith|in|between|isNull|isNotNull|isTrue|isFalse)\s*$/i.test(trimmed);
+    return /[=<>!~]|\b(?:contains|startsWith|endsWith|in|notIn|between|isNull|isNotNull|isTrue|isFalse)\s*$/i.test(trimmed);
 };
 
 const isAfterField = (text: string): boolean => {
@@ -43,12 +43,12 @@ const isAfterField = (text: string): boolean => {
 };
 
 const extractFieldName = (text: string): string | null => {
-    const match = text.match(/([a-zA-Z._[\]]+)\s*(?:=|!=|>|>=|<|<=|~|contains|startsWith|endsWith|in|between)/);
+    const match = text.match(/([a-zA-Z._[\]]+)\s*(?:=|!=|>|>=|<|<=|~|contains|startsWith|endsWith|in|notIn|between)/);
     return match ? match[1] : null;
 };
 
 const extractStringContext = (textBeforeCursor: string): { field: string; partialValue: string } | null => {
-    const match = textBeforeCursor.match(/([a-zA-Z._[\]]+)\s*(?:=|!=|>|>=|<|<=|~|contains|startsWith|endsWith)\s*"([^"]*)$/);
+    const match = textBeforeCursor.match(/([a-zA-Z._[\]]+)\s*(?:=|!=|>|>=|<|<=|~|contains|startsWith|endsWith|in|notIn)\s*"([^"]*)$/);
     if (match) {
         return {field: match[1], partialValue: match[2]};
     }
@@ -79,6 +79,7 @@ const getOperatorCompletions = (range: unknown): CompletionItem[] => {
         {label: "startsWith", insertText: "startsWith", doc: "Starts with"},
         {label: "endsWith", insertText: "endsWith", doc: "Ends with"},
         {label: "in", insertText: "in [$1]", doc: "In list"},
+        {label: "notIn", insertText: "notIn [$1]", doc: "Not in list"},
         {label: "between", insertText: "between $1 and $2", doc: "Between two values"},
         {label: "isNull", insertText: "isNull", doc: "Is null"},
         {label: "isNotNull", insertText: "isNotNull", doc: "Is not null"},
@@ -210,8 +211,8 @@ function ensureProviderRegistered(monaco: Monaco) {
     monaco.languages.register({id: "filter-dsl"});
 
     monaco.languages.setMonarchTokensProvider("filter-dsl", {
-        keywords: ["and", "or", "in", "between", "isNull", "isNotNull", "isTrue", "isFalse", "any", "all"],
-        operators: ["=", "!=", ">", ">=", "<", "<=", "~", "contains", "startsWith", "endsWith"],
+        keywords: ["and", "or", "in", "notIn", "between", "isNull", "isNotNull", "isTrue", "isFalse", "any", "all"],
+        operators: ["=", "!=", ">", ">=", "<", "<=", "~", "contains", "startsWith", "endsWith", "notIn"],
         symbols: /[=><!~]+/,
         tokenizer: {
             root: [

@@ -102,6 +102,7 @@ public record GetArtistSongItem
     public required List<ListSongsDevice> Devices { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
+    public required bool HasLyrics { get; set; }
 
     public static GetArtistSongItem FromEntity(Entities.SongArtist songArtist)
     {
@@ -119,6 +120,7 @@ public record GetArtistSongItem
             Devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).DistinctBy(d => d.Id).ToList(),
             IsFavorite = false,
             IsExplicit = song.Explicit,
+            HasLyrics = song.HasLyrics,
         };
     }
 }

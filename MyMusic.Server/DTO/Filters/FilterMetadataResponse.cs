@@ -10,6 +10,7 @@ public record FilterFieldMetadata
 {
     public required string Name { get; init; }
     public string? EntityPath { get; init; }
+    public string? ClientPath { get; init; }
     public required string Type { get; init; }
     public required string Description { get; init; }
     public required List<string> SupportedOperators { get; init; }

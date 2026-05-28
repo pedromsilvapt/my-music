@@ -30,6 +30,7 @@ export interface ListSongItem {
   devices: ListSongsDevice[];
   isFavorite: boolean;
   isExplicit: boolean;
+  hasLyrics: boolean;
   createdAt: string;
   /** @nullable */
   addedAt?: string | null;

@@ -523,6 +523,7 @@ public class AuditsController(
         {
             Name = "explicit",
             EntityPath = "Song.Explicit",
+            ClientPath = "isExplicit",
             Type = "boolean",
             Description = "Has explicit content",
             SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],

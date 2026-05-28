@@ -721,6 +721,7 @@ public class SongsController(
         new()
         {
             Name = "explicit",
+            ClientPath = "isExplicit",
             Type = "boolean",
             Description = "Has explicit content",
             SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
@@ -836,6 +837,7 @@ public class SongsController(
         new()
         {
             Name = "hasLyrics",
+            ClientPath = "hasLyrics",
             Type = "boolean",
             Description = "Has lyrics",
             IsComputed = true,

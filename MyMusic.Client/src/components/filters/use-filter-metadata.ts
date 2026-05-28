@@ -4,6 +4,7 @@ import type {FilterEntity} from "../../types/filter-entity.ts";
 export interface FilterFieldMetadata {
     name: string;
     entityPath?: string;
+    clientPath?: string;
     type: string;
     description: string;
     supportedOperators: string[];

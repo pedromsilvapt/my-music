@@ -9,6 +9,8 @@ export interface FilterFieldMetadata {
   name: string;
   /** @nullable */
   entityPath?: string | null;
+  /** @nullable */
+  clientPath?: string | null;
   type: string;
   description: string;
   supportedOperators: string[];

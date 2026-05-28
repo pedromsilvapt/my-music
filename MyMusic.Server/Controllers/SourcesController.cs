@@ -207,7 +207,7 @@ public class SourcesController(
         },
         new()
         {
-            Name = "explicit", Type = "boolean", Description = "Has explicit content",
+            Name = "explicit", ClientPath = "isExplicit", Type = "boolean", Description = "Has explicit content",
             SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
         },
         new()
@@ -238,7 +238,7 @@ public class SourcesController(
         },
         new()
         {
-            Name = "hasLyrics", Type = "boolean", Description = "Has lyrics", IsComputed = true,
+            Name = "hasLyrics", ClientPath = "hasLyrics", Type = "boolean", Description = "Has lyrics", IsComputed = true,
             SupportedOperators = ["eq", "neq", "isTrue", "isFalse"],
         },
         new()

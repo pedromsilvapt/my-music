@@ -30,4 +30,5 @@ export interface GetArtistSongItem {
   devices: ListSongsDevice[];
   isFavorite: boolean;
   isExplicit: boolean;
+  hasLyrics: boolean;
 }

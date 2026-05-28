@@ -20,6 +20,7 @@ public record ListSongItem
     public required IEnumerable<ListSongsDevice> Devices { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
+    public required bool HasLyrics { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime? AddedAt { get; set; }
 
@@ -43,6 +44,7 @@ public record ListSongItem
             Devices = devices,
             IsFavorite = song.IsFavorite,
             IsExplicit = song.Explicit,
+            HasLyrics = song.HasLyrics,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt
         };
