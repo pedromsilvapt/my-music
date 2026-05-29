@@ -366,6 +366,7 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
     } = props;
 
     const isSelected = selectionStore(state => state.selectedKeys.has(itemId));
+    const isContextMenuHovered = selectionStore(state => state.contextMenuHoverKey) === itemId;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const prevScrollRequestIdRef = useRef<number | undefined>(undefined);
@@ -448,6 +449,11 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
         onToggle(itemKey, event);
 
         const isNowSelected = !isSelected;
+
+        if (isNowSelected && event.type === 'contextmenu') {
+            selectionStore.getState().setContextMenuHoverKey(itemKey);
+        }
+
         const contextActions = isNowSelected ? itemActions : (schema.actions?.(items.filter(i => selectionStore.getState().selectedKeys.has(schema.key(i)))) ?? []);
         const contextSelection = isNowSelected ? [item] : items.filter(i => selectionStore.getState().selectedKeys.has(schema.key(i)));
 
@@ -474,7 +480,7 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
                 {...(sortable && !isDragOverlay ? listeners : {})}
                 className={cls(
                     styles.item,
-                    isSelected && styles.selected,
+                    (isSelected || isContextMenuHovered) && styles.selected,
                     isDragOverlay && styles.selected,
                     isHighlighted && styles.highlighted,
                 )}

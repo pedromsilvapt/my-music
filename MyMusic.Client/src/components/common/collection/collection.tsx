@@ -8,6 +8,7 @@ import type {ScrollPosition} from "../../../contexts/collection-context.tsx";
 import {useCollectionActions} from "../../../contexts/collection-context.tsx";
 import useFilter from "../../../hooks/useFilter.ts";
 import {useContextMenuTrigger} from "../../../hooks/use-context-menu-trigger";
+import {useContextMenuStore} from "../../../stores/context-menu-store.tsx";
 import {sortBy} from "../../../utils/sort-by.tsx";
 import {ContextMenuPortal} from "../context-menu-portal.tsx";
 import type {CollectionFilterMode, CollectionSchema, CollectionSchemaAction, CollectionSort} from "./collection-schema.tsx";
@@ -122,6 +123,13 @@ export default function Collection<T extends { id: string | number }>(props: Col
     }
 
     const selectionStore = useMemo(() => createSelectionStore(), []);
+
+    const isContextMenuOpen = useContextMenuStore(state => state.isOpen);
+    useEffect(() => {
+        if (!isContextMenuOpen) {
+            selectionStore.getState().setContextMenuHoverKey(null);
+        }
+    }, [isContextMenuOpen, selectionStore]);
 
     // Persist state to store
     useEffect(() => {
@@ -240,10 +248,6 @@ export default function Collection<T extends { id: string | number }>(props: Col
         const lastSelectedKey = selectionStore.getState().lastSelectedKey;
 
         if (event.button === 2) {
-            if (!currentSelectionKeys.has(clickedKey)) {
-                selectionStore.getState().setSelection([clickedKey]);
-                selectionStore.getState().setLastSelectedKey(clickedKey);
-            }
             return;
         }
 

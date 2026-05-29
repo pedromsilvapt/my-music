@@ -6,6 +6,7 @@ interface SelectionState {
     hasSelection: boolean;
     lastSelectedKey: React.Key | null;
     lastSelectedElement: HTMLElement | null;
+    contextMenuHoverKey: React.Key | null;
 }
 
 interface SelectionActions {
@@ -14,6 +15,7 @@ interface SelectionActions {
     reset: () => void;
     setLastSelectedKey: (key: React.Key | null) => void;
     setLastSelectedElement: (element: HTMLElement | null) => void;
+    setContextMenuHoverKey: (key: React.Key | null) => void;
 }
 
 export type SelectionStore = UseBoundStore<StoreApi<SelectionState & SelectionActions>>;
@@ -38,6 +40,7 @@ export const createSelectionStore = (): SelectionStore => {
         hasSelection: false,
         lastSelectedKey: null,
         lastSelectedElement: null,
+        contextMenuHoverKey: null,
         setSelection: (keys) => {
             set({
                 selectedKeys: new Set(keys),
@@ -62,7 +65,8 @@ export const createSelectionStore = (): SelectionStore => {
         reset: () => {
             set({
                 selectedKeys: new Set(),
-                hasSelection: false
+                hasSelection: false,
+                contextMenuHoverKey: null,
             });
         },
         setLastSelectedKey: (key) => {
@@ -70,6 +74,9 @@ export const createSelectionStore = (): SelectionStore => {
         },
         setLastSelectedElement: (element) => {
             set({lastSelectedElement: element});
+        },
+        setContextMenuHoverKey: (key) => {
+            set({contextMenuHoverKey: key});
         },
     }));
 };
