@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
@@ -427,7 +428,7 @@ public class DevicesControllerSyncCheckSpecs
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_NoActiveSession_NoSessionRecord_NoMutation()
+    public async Task CheckSync_ServerNewer_NoActiveSession_ReturnsNotFound()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -437,7 +438,7 @@ public class DevicesControllerSyncCheckSpecs
         var lastSynced = DateTime.UtcNow.AddHours(-2);
         var serverModified = DateTime.UtcNow.AddHours(-1);
         var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
             lastSyncedModifiedAt: lastSynced, syncAction: null);
 
         var clientModified = lastSynced;
@@ -452,16 +453,8 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, 0, request, CancellationToken.None);
 
-        response.Value.Records.ShouldNotBeEmpty();
-
-        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
-        updateLocalRecords.Count.ShouldBe(1);
-
-        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        updatedSd.SyncAction.ShouldBeNull();
-
-        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords.ToListAsync();
-        dbRecords.ShouldBeEmpty();
+        response.Result.ShouldNotBeNull();
+        response.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.IO.Hashing;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
@@ -128,16 +129,15 @@ public class DevicesControllerResolveConflictsSpecs
     }
 
     [Fact]
-    public async Task ResolveConflicts_ChecksumsMatch_ReturnsEmptyRecordsWithoutSession()
+    public async Task ResolveConflicts_ChecksumsMatch_NoActiveSession_ReturnsNotFound()
     {
-        // Arrange - without a session, no records are created (syncActions is null)
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
 
         var content = new byte[] { 1, 2, 3, 4, 5 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
 
         var localModifiedAt = DateTime.UtcNow;
         var request = new SyncResolveConflictsRequest
@@ -155,16 +155,14 @@ public class DevicesControllerResolveConflictsSpecs
             PotentialUpdates = []
         };
 
-        // Act
         var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
-        // Assert - without a session, no records are created
-        response.Value.Records.ShouldBeEmpty();
-        response.Value.Counts.UpdateTimestampCount.ShouldBe(0);
+        response.Result.ShouldNotBeNull();
+        response.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task ResolveConflicts_ChecksumsMatch_DoesNotMutateLastSyncedModifiedAt()
+    public async Task ResolveConflicts_ChecksumsMatch_NoActiveSession2_ReturnsNotFound()
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
@@ -172,7 +170,7 @@ public class DevicesControllerResolveConflictsSpecs
 
         var content = new byte[] { 10, 20, 30 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
 
         var localModifiedAt = DateTime.UtcNow.AddMinutes(5);
         var request = new SyncResolveConflictsRequest
@@ -190,16 +188,15 @@ public class DevicesControllerResolveConflictsSpecs
             PotentialUpdates = []
         };
 
-        await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
+        var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
-        var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
-        updatedSd.LastSyncedModifiedAt.ShouldBeNull();
+        response.Result.ShouldNotBeNull();
+        response.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
-    public async Task ResolveConflicts_ChecksumsDiffer_ReturnsEmptyRecordsWithoutSession()
+    public async Task ResolveConflicts_ChecksumsDiffer_NoActiveSession_ReturnsNotFound()
     {
-        // Arrange - without a session, no records are created (syncActions is null)
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -207,7 +204,7 @@ public class DevicesControllerResolveConflictsSpecs
         var serverContent = new byte[] { 1, 2, 3, 4, 5 };
         var clientContent = new byte[] { 9, 8, 7, 6, 5 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, serverContent);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
 
         var request = new SyncResolveConflictsRequest
         {
@@ -224,11 +221,10 @@ public class DevicesControllerResolveConflictsSpecs
             PotentialUpdates = []
         };
 
-        // Act
         var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
-        // Assert - without a session, records are not created
-        response.Value.Records.ShouldBeEmpty();
+        response.Result.ShouldNotBeNull();
+        response.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
