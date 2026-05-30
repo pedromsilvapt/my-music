@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
-using MyMusic.Common.Metadata;
-using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
@@ -140,26 +138,8 @@ public class DevicesControllerSyncCheckSpecs
         return sd;
     }
 
-    private static string ComputeExpectedPath(Song song, string devicePath, string template)
-    {
-        var namingStrategy = new TemplateNamingStrategy(template);
-        var metadata = EntityConverter.ToSong(song);
-        var naming = NamingMetadata.FromPath(devicePath);
-        return namingStrategy.Generate(metadata, naming);
-    }
-
-    private static Song ReloadSongWithNavigations(MusicDbContext db, long songId)
-    {
-        return db.Songs
-            .Include(s => s.Album)
-                .ThenInclude(a => a.Artist)
-            .Include(s => s.Artists)
-                .ThenInclude(sa => sa.Artist)
-            .First(s => s.Id == songId);
-    }
-
     [Fact]
-    public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_CreatesUpdateLocalRecord()
+    public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_ReturnsPotentialUpdate()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -185,34 +165,17 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        var reloadedSong = ReloadSongWithNavigations(scenario.DbContext, song.Id);
-        var expectedPath = ComputeExpectedPath(reloadedSong, "/music/song.mp3",
-            "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
-
         response.Value.ToCreate.ShouldBeEmpty();
         response.Value.ToUpdate.ShouldBeEmpty();
         response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.Count.ShouldBe(2);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
-        response.Value.Records[0].SongId.ShouldBe(song.Id);
-        response.Value.Records[0].FilePath.ShouldBe(expectedPath);
-        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
-        response.Value.Records[1].SongId.ShouldBe(song.Id);
-        response.Value.Records[1].FilePath.ShouldBe(expectedPath);
+        response.Value.PotentialUpdates.Count.ShouldBe(1);
+        response.Value.PotentialUpdates[0].SongId.ShouldBe(song.Id);
+        response.Value.PotentialUpdates[0].Path.ShouldBe("/music/song.mp3");
+        response.Value.PotentialUpdates[0].ServerModifiedAt.ShouldBe(serverModified);
+        response.Value.Records.ShouldBeEmpty();
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
-
-        var records = await scenario.DbContext.DeviceSyncSessionRecords
-            .Where(r => r.SessionId == session.Id)
-            .ToListAsync();
-        records.Count.ShouldBe(2);
-        records[0].Action.ShouldBe(SyncRecordAction.Rename);
-        records[0].FilePath.ShouldBe(expectedPath);
-        records[0].SongId.ShouldBe(song.Id);
-        records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
-        records[1].FilePath.ShouldBe(expectedPath);
-        records[1].SongId.ShouldBe(song.Id);
     }
 
     [Fact]
@@ -297,7 +260,7 @@ public class DevicesControllerSyncCheckSpecs
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_AlreadyDownloadAction_CreatesUpdateLocalRecord()
+    public async Task CheckSync_ServerNewer_AlreadyDownloadAction_ReturnsPotentialUpdate()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -326,23 +289,16 @@ public class DevicesControllerSyncCheckSpecs
         response.Value.ToCreate.ShouldBeEmpty();
         response.Value.ToUpdate.ShouldBeEmpty();
         response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.Count.ShouldBe(2);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
-        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        response.Value.PotentialUpdates.Count.ShouldBe(1);
+        response.Value.PotentialUpdates[0].SongId.ShouldBe(song.Id);
+        response.Value.Records.ShouldBeEmpty();
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Download);
-
-        var records = await scenario.DbContext.DeviceSyncSessionRecords
-            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
-            .ToListAsync();
-        records.Count.ShouldBe(2);
-        records[0].Action.ShouldBe(SyncRecordAction.Rename);
-        records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewerBeyondTolerance_CreatesUpdateLocalRecord()
+    public async Task CheckSync_ServerNewerBeyondTolerance_ReturnsPotentialUpdate()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -368,30 +324,17 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        var reloadedSong = ReloadSongWithNavigations(scenario.DbContext, song.Id);
-        var expectedPath = ComputeExpectedPath(reloadedSong, "/music/song.mp3",
-            "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}");
-
         response.Value.ToCreate.ShouldBeEmpty();
         response.Value.ToUpdate.ShouldBeEmpty();
         response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.Count.ShouldBe(2);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
-        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        response.Value.PotentialUpdates.Count.ShouldBe(1);
+        response.Value.PotentialUpdates[0].SongId.ShouldBe(song.Id);
+        response.Value.PotentialUpdates[0].Path.ShouldBe("/music/song.mp3");
+        response.Value.PotentialUpdates[0].ServerModifiedAt.ShouldBe(serverModified);
+        response.Value.Records.ShouldBeEmpty();
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
-
-        var records = await scenario.DbContext.DeviceSyncSessionRecords
-            .Where(r => r.SessionId == session.Id)
-            .ToListAsync();
-        records.Count.ShouldBe(2);
-        records[0].Action.ShouldBe(SyncRecordAction.Rename);
-        records[0].FilePath.ShouldBe(expectedPath);
-        records[0].SongId.ShouldBe(song.Id);
-        records[1].Action.ShouldBe(SyncRecordAction.UpdateLocal);
-        records[1].FilePath.ShouldBe(expectedPath);
-        records[1].SongId.ShouldBe(song.Id);
     }
 
     [Fact]

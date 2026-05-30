@@ -20,6 +20,8 @@ public record SyncActionRecordResponseItem
     public required string Action { get; init; }
     public System.Text.Json.JsonElement? Data { get; init; }
     public long? ResolvesConflictRecordId { get; init; }
+    public string? FilePath { get; init; }
+    public long? SongId { get; init; }
 
     public static SyncActionRecordResponseItem FromEntity(DeviceSyncSessionRecord record) => new()
     {
@@ -27,5 +29,7 @@ public record SyncActionRecordResponseItem
         Action = record.Action.ToString(),
         Data = record.Data,
         ResolvesConflictRecordId = record.ResolvesConflictRecordId,
+        FilePath = record.FilePath,
+        SongId = record.SongId,
     };
 }

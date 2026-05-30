@@ -351,10 +351,12 @@ public class SyncActionsDeviceTests
                 Resolved = [new ResolvedConflictItem { Path = "conflict.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow, Reason = "Resolved" }],
                 Conflicts = [],
                 ConflictRecords = [],
-                UpdateTimestampRecords = []
+                UpdateTimestampRecords = [],
+                UpdateLocalRecords = [],
+                RenameRecords = []
             }));
 
-        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, dryRun: false);
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, [], dryRun: false);
 
         result.Conflicts.ShouldBe(0);
         result.ToUpdatePaths.ShouldContain("conflict.mp3");
@@ -391,10 +393,12 @@ public class SyncActionsDeviceTests
                 Resolved = [new ResolvedConflictItem { Path = "conflict.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow, Reason = "Resolved" }],
                 Conflicts = [],
                 ConflictRecords = [],
-                UpdateTimestampRecords = []
+                UpdateTimestampRecords = [],
+                UpdateLocalRecords = [],
+                RenameRecords = []
             }));
 
-        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, dryRun: true);
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, [], dryRun: true);
 
         result.Conflicts.ShouldBe(1);
         result.ToUpdatePaths.ShouldBeEmpty();

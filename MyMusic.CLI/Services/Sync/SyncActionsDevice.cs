@@ -332,16 +332,15 @@ public class SyncActionsDevice(
         long sessionId,
         string repositoryPath,
         List<PotentialConflictItem> conflicts,
+        List<PotentialUpdateItem> potentialUpdates,
         bool dryRun,
         CancellationToken ct = default)
     {
         if (dryRun)
         {
-            logger.LogInformation("Dry-run: skipping conflict resolution for {Count} conflicts", conflicts.Count);
-            return new ResolveConflictsActionResult(Conflicts: conflicts.Count, ToUpdatePaths: []);
+            logger.LogInformation("Dry-run: skipping conflict resolution for {ConflictCount} conflicts and {UpdateCount} potential updates", conflicts.Count, potentialUpdates.Count);
+            return new ResolveConflictsActionResult(Conflicts: conflicts.Count, ToUpdatePaths: [], UpdateLocalRecords: [], RenameRecords: []);
         }
-
-        logger.LogInformation("Found {Count} potential conflicts, reading file content", conflicts.Count);
 
         var resolveItems = new List<ConflictResolveItem>();
         foreach (var conflict in conflicts)
@@ -369,16 +368,38 @@ public class SyncActionsDevice(
             });
         }
 
-        if (resolveItems.Count == 0)
+        var potentialUpdateItems = new List<PotentialUpdateResolveItem>();
+        foreach (var update in potentialUpdates)
         {
-            return new ResolveConflictsActionResult(Conflicts: 0, ToUpdatePaths: []);
+            var fullPath = Path.Combine(repositoryPath, update.Path);
+            if (!fileSystem.File.Exists(fullPath))
+            {
+                logger.LogWarning("Potential update file not found locally: {Path}", update.Path);
+                continue;
+            }
+
+            var fileContentBase64 = await fileOps.ReadFileBase64Async(fullPath, ct);
+            potentialUpdateItems.Add(new PotentialUpdateResolveItem
+            {
+                Path = update.Path,
+                SongId = update.SongId,
+                FileContentBase64 = fileContentBase64,
+                LocalModifiedAt = update.LocalModifiedAt.ToUniversalTime(),
+                LastSyncedAt = update.LastSyncedAt.ToUniversalTime()
+            });
+        }
+
+        if (resolveItems.Count == 0 && potentialUpdateItems.Count == 0)
+        {
+            return new ResolveConflictsActionResult(Conflicts: 0, ToUpdatePaths: [], UpdateLocalRecords: [], RenameRecords: []);
         }
 
         try
         {
             var resolveResponse = await apiClient.ResolveConflictsAsync(deviceId, sessionId, new ResolveConflictsRequest
             {
-                Conflicts = resolveItems
+                Conflicts = resolveItems,
+                PotentialUpdates = potentialUpdateItems
             }, ct);
 
             var toUpdatePaths = resolveResponse.ToUpload.Select(f => f.Path).ToHashSet();
@@ -388,16 +409,31 @@ public class SyncActionsDevice(
                 logger.LogInformation("Resolved conflict for {Path}: {Reason}", resolved.Path, resolved.Reason);
             }
 
+            foreach (var record in resolveResponse.UpdateLocalRecords)
+            {
+                logger.LogInformation("Created UpdateLocal action for record {RecordId}", record.Id);
+            }
+
+            foreach (var record in resolveResponse.RenameRecords)
+            {
+                logger.LogInformation("Created Rename action for record {RecordId}", record.Id);
+            }
+
             var errorCount = resolveResponse.Conflicts.Count;
 
-            return new ResolveConflictsActionResult(Conflicts: errorCount, ToUpdatePaths: toUpdatePaths, Counts: resolveResponse.Counts);
+            return new ResolveConflictsActionResult(
+                Conflicts: errorCount,
+                ToUpdatePaths: toUpdatePaths,
+                UpdateLocalRecords: resolveResponse.UpdateLocalRecords,
+                RenameRecords: resolveResponse.RenameRecords,
+                Counts: resolveResponse.Counts);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to resolve conflicts");
-            return new ResolveConflictsActionResult(Conflicts: conflicts.Count, ToUpdatePaths: []);
+            return new ResolveConflictsActionResult(Conflicts: conflicts.Count, ToUpdatePaths: [], UpdateLocalRecords: [], RenameRecords: []);
         }
     }
 }
 
-public record ResolveConflictsActionResult(int Conflicts, HashSet<string> ToUpdatePaths, SyncActionCounts? Counts = null);
+public record ResolveConflictsActionResult(int Conflicts, HashSet<string> ToUpdatePaths, List<SyncActionRecordItem> UpdateLocalRecords, List<SyncActionRecordItem> RenameRecords, SyncActionCounts? Counts = null);

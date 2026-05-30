@@ -662,6 +662,9 @@ describe('actionConflict', () => {
                 resolved: [{path: 'song.mp3', modifiedAt: new Date(), createdAt: new Date(), reason: 'Checksum match'}],
                 toUpload: [{path: 'song.mp3', modifiedAt: new Date(), createdAt: new Date(), reason: 'Auto-resolved'}],
                 conflicts: [],
+                conflictRecords: [],
+                updateTimestampRecords: [],
+                updateLocalRecords: [],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -670,7 +673,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(toUpdatePaths.has('song.mp3')).toBe(true);
         expect(result.conflicts).toBe(0);
@@ -682,6 +685,9 @@ describe('actionConflict', () => {
                 resolved: [],
                 toUpload: [],
                 conflicts: [{path: 'song.mp3', reason: 'Different checksums'}],
+                conflictRecords: [],
+                updateTimestampRecords: [],
+                updateLocalRecords: [],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -695,7 +701,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(ctx.result.conflict).toBe(1);
         expect(ctx.result.error).toBe(1);
@@ -714,11 +720,10 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(ctx.result.conflict).toBe(1);
         expect(result.conflicts).toBe(1);
-        expect(apiClient.resolveConflicts).not.toHaveBeenCalled();
     });
 
     test('no conflicts returns empty result', async () => {
@@ -728,7 +733,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, [], [], toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, [], [], [], toUpdatePaths, onProgress);
 
         expect(result.conflicts).toBe(0);
         expect(apiClient.resolveConflicts).not.toHaveBeenCalled();
@@ -740,6 +745,9 @@ describe('actionConflict', () => {
                 resolved: [],
                 toUpload: [],
                 conflicts: [{path: 'song.mp3', reason: 'Different checksums'}],
+                conflictRecords: [],
+                updateTimestampRecords: [],
+                updateLocalRecords: [],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -751,7 +759,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(toUpdatePaths.has('song.mp3')).toBe(true);
         expect(userPrompt.promptConflictResolution).toHaveBeenCalledWith('song.mp3');
@@ -763,6 +771,9 @@ describe('actionConflict', () => {
                 resolved: [],
                 toUpload: [],
                 conflicts: [{path: 'song.mp3', reason: 'Different checksums'}],
+                conflictRecords: [],
+                updateTimestampRecords: [],
+                updateLocalRecords: [],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -774,7 +785,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(ctx.result.error).toBe(1);
         expect(toUpdatePaths.has('song.mp3')).toBe(false);

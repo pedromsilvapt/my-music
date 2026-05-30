@@ -148,14 +148,14 @@ describe('resolveConflictsPhase', () => {
 
     test('delegates to actionConflict', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set() });
+        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] });
 
         const deps = createMockDeps();
         const ctx = createContext();
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        await resolveConflictsPhase(deps, ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        await resolveConflictsPhase(deps, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(mockedActionConflict).toHaveBeenCalledWith(
             deps.apiClient,
@@ -163,6 +163,7 @@ describe('resolveConflictsPhase', () => {
             deps.userPrompt,
             ctx,
             potentialConflicts,
+            [],
             chunk,
             toUpdatePaths,
             expect.any(Function)
@@ -171,14 +172,14 @@ describe('resolveConflictsPhase', () => {
 
     test('adds songId to conflictedSongIds when conflict path is NOT in toUpdatePaths', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set() });
+        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] });
 
         const deps = createMockDeps();
         const ctx = createContext();
         const toUpdatePaths = new Set<string>(['other-song.mp3']);
         const onProgress = jest.fn();
 
-        await resolveConflictsPhase(deps, ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        await resolveConflictsPhase(deps, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(ctx.conflictedSongIds.has(42)).toBe(true);
     });
@@ -186,13 +187,13 @@ describe('resolveConflictsPhase', () => {
     test('does NOT add songId to conflictedSongIds when conflict path IS in toUpdatePaths', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
         const toUpdatePaths = new Set<string>(['song.mp3']);
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths });
+        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths, updateLocalRecords: [] });
 
         const deps = createMockDeps();
         const ctx = createContext();
         const onProgress = jest.fn();
 
-        await resolveConflictsPhase(deps, ctx, potentialConflicts, chunk, toUpdatePaths, onProgress);
+        await resolveConflictsPhase(deps, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(ctx.conflictedSongIds.has(42)).toBe(false);
     });
@@ -315,6 +316,7 @@ describe('uploadPhase - uploadedPaths', () => {
                     toCreate: [{ path: 'new-song.mp3', modifiedAt: new Date(), createdAt: new Date() }],
                     toUpdate: [{ path: 'updated-song.mp3', modifiedAt: new Date(), createdAt: new Date() }],
                     potentialConflicts: [],
+                    potentialUpdates: [],
                     records: [],
                 }),
             },
@@ -345,6 +347,7 @@ describe('uploadPhase - uploadedPaths', () => {
                     toCreate: [],
                     toUpdate: [],
                     potentialConflicts: [],
+                    potentialUpdates: [],
                     records: [],
                 }),
             },
@@ -383,6 +386,7 @@ describe('uploadPhase - accumulated pending actions from checkSync', () => {
                     toCreate: [],
                     toUpdate: [],
                     potentialConflicts: [],
+                    potentialUpdates: [],
                     records: checkSyncRecords,
                 }),
             },
@@ -414,7 +418,7 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
             filePath: '',
             source: 'Device',
         });
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set() });
+        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] });
     });
 
     test('adds songId to conflictedSongIds when conflict path is NOT in toUpdatePaths', async () => {
@@ -433,6 +437,7 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
                         serverChecksum: 'abc',
                         serverChecksumAlgorithm: 'md5',
                     }],
+                    potentialUpdates: [],
                     records: [],
                 }),
             },
@@ -464,6 +469,7 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
                         serverChecksum: 'abc',
                         serverChecksumAlgorithm: 'md5',
                     }],
+                    potentialUpdates: [],
                     records: [],
                 }),
             },

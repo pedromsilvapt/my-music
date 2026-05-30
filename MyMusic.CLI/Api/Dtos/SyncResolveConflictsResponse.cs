@@ -14,6 +14,8 @@ public record SyncActionRecordResponseItem
     public required string Action { get; init; }
     public JsonElement? Data { get; init; }
     public long? ResolvesConflictRecordId { get; init; }
+    public string? FilePath { get; init; }
+    public long? SongId { get; init; }
 }
 
 public record SyncResolveConflictsResponse
@@ -23,5 +25,7 @@ public record SyncResolveConflictsResponse
     public required List<SyncConflictErrorItem> Conflicts { get; init; }
     public required List<SyncActionRecordResponseItem> ConflictRecords { get; init; }
     public required List<SyncActionRecordResponseItem> UpdateTimestampRecords { get; init; }
+    public required List<SyncActionRecordResponseItem> UpdateLocalRecords { get; init; }
+    public required List<SyncActionRecordResponseItem> RenameRecords { get; init; }
     public required SyncActionCounts Counts { get; init; }
 }

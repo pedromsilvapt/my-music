@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
@@ -828,18 +829,14 @@ public class DevicesController(
         var usedPaths = new HashSet<string>(allExistingPaths);
 
         var existingSongDevices = await context.SongDevices
-            .Include(sd => sd.Song)
-                .ThenInclude(s => s.Album)
-                    .ThenInclude(a => a.Artist)
-            .Include(sd => sd.Song)
-                .ThenInclude(s => s.Artists)
-                    .ThenInclude(sa => sa.Artist)
+            .IncludeSongMetadata("Song")
             .Where(sd => sd.DeviceId == deviceId)
             .ToListAsync(cancellationToken);
 
         var toCreate = new List<SyncFileInfoItem>();
         var toUpdate = new List<SyncFileInfoItem>();
         var potentialConflicts = new List<SyncPotentialConflictItem>();
+        var potentialUpdates = new List<SyncPotentialUpdateItem>();
         var createdSessionRecords = new List<DeviceSyncSessionRecord>();
         var skippedFiles = new List<SyncFileInfoItem>();
 
@@ -938,30 +935,48 @@ public class DevicesController(
             // Check if the server song was changed after the last sync (device file unchanged).
             else if (IsNewerThan(existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
             {
-                logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> PENDING ACTION (server modified {ServerModifiedAt:O}, last synced {LastSynced:O})",
+                logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> POTENTIAL UPDATE (server modified {ServerModifiedAt:O}, last synced {LastSynced:O})",
                     clientFile.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, existingSongDevice.LastSyncedModifiedAt);
-                var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
-                usedPaths.Add(pendingAction.Path);
-                if (activeSession != null)
+
+                if (existingSongDevice.SyncAction == SongSyncAction.Remove)
                 {
-                    var syncActions = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, activeSession.IsDryRun);
-                    var reason = $"Server modified at {existingSongDevice.Song.ModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}";
-                    if (existingSongDevice.SyncAction == SongSyncAction.Remove)
+                    var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
+                    usedPaths.Add(pendingAction.Path);
+                    if (activeSession != null)
                     {
-                        var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, reason, cancellationToken);
+                        var syncActions = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, activeSession.IsDryRun);
+                        var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                         createdSessionRecords.Add(record);
                     }
-                    else
+                }
+                else if (existingSongDevice.LastSyncedModifiedAt != null)
+                {
+                    potentialUpdates.Add(new SyncPotentialUpdateItem
                     {
+                        Path = clientFile.Path,
+                        LocalModifiedAt = clientFile.ModifiedAt,
+                        ServerModifiedAt = existingSongDevice.Song.ModifiedAt,
+                        LastSyncedAt = existingSongDevice.LastSyncedModifiedAt!.Value,
+                        SongId = existingSongDevice.SongId!.Value,
+                        ServerChecksum = existingSongDevice.Song.Checksum,
+                        ServerChecksumAlgorithm = existingSongDevice.Song.ChecksumAlgorithm,
+                    });
+                }
+                else
+                {
+                    var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
+                    usedPaths.Add(pendingAction.Path);
+                    if (activeSession != null)
+                    {
+                        var syncActions = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, activeSession.IsDryRun);
                         if (pendingAction.PreviousPath != null)
                         {
                             var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, existingSongDevice.SongId, "Path updated by naming template", cancellationToken);
                             createdSessionRecords.Add(renameRecord);
                         }
 
-                        var record = existingSongDevice.LastSyncedModifiedAt != null
-                            ? await syncActions.ActionUpdateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, reason, cancellationToken)
-                            : await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, reason, cancellationToken);
+                        var reason = $"Server modified at {existingSongDevice.Song.ModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}";
+                        var record = await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, reason, cancellationToken);
                         createdSessionRecords.Add(record);
                     }
                 }
@@ -989,14 +1004,15 @@ public class DevicesController(
         }
 
         logger.LogInformation(
-            "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update, {PotentialConflicts} potential conflicts, {NewRecords} new session records, {Skipped} skipped",
-            deviceId, toCreate.Count, toUpdate.Count, potentialConflicts.Count, createdSessionRecords.Count, skippedRecordIds.Count);
+            "Sync check for device {DeviceId}: {ToCreate} to create, {ToUpdate} to update, {PotentialConflicts} potential conflicts, {PotentialUpdates} potential updates, {NewRecords} new session records, {Skipped} skipped",
+            deviceId, toCreate.Count, toUpdate.Count, potentialConflicts.Count, potentialUpdates.Count, createdSessionRecords.Count, skippedRecordIds.Count);
 
         return new SyncCheckResponse
         {
             ToCreate = toCreate,
             ToUpdate = toUpdate,
             PotentialConflicts = potentialConflicts,
+            PotentialUpdates = potentialUpdates,
             Records = createdSessionRecords.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
             SkippedRecordIds = skippedRecordIds,
             Counts = SyncActionCounts.FromRecords(checkSyncRecords),
@@ -1022,6 +1038,8 @@ public class DevicesController(
         var conflicts = new List<SyncConflictErrorItem>();
         var conflictRecords = new List<SyncActionRecordResponseItem>();
         var updateTimestampRecords = new List<SyncActionRecordResponseItem>();
+        var updateLocalRecords = new List<SyncActionRecordResponseItem>();
+        var renameRecords = new List<SyncActionRecordResponseItem>();
         var resolveSyncRecords = new List<DeviceSyncSessionRecord>();
 
         var syncActions = activeSession != null
@@ -1064,18 +1082,7 @@ public class DevicesController(
                 continue;
             }
 
-            string localChecksum;
-            if (songDevice.Song.ChecksumAlgorithm == "MD5")
-            {
-                using var md5 = System.Security.Cryptography.MD5.Create();
-                localChecksum = Convert.ToBase64String(md5.ComputeHash(fileBytes));
-            }
-            else
-            {
-                var xxHash = new XxHash128();
-                xxHash.Append(fileBytes);
-                localChecksum = Convert.ToBase64String(xxHash.GetCurrentHash());
-            }
+            string localChecksum = ComputeChecksum(fileBytes, songDevice.Song.ChecksumAlgorithm);
 
             if (localChecksum == songDevice.Song.Checksum)
             {
@@ -1125,11 +1132,122 @@ public class DevicesController(
             }
         }
 
+        // Process potential updates: server was modified after last sync, client file was unchanged.
+        // Compare checksums to determine if a local update is actually needed.
+        if (request.PotentialUpdates.Count > 0)
+        {
+            var namingStrategy = new TemplateNamingStrategy(
+                device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
+
+            var usedPaths = new HashSet<string>(await context.SongDevices
+                .Where(sd => sd.DeviceId == deviceId)
+                .Select(sd => sd.DevicePath)
+                .ToHashSetAsync(cancellationToken));
+
+            foreach (var update in request.PotentialUpdates)
+            {
+                var songDevice = await context.SongDevices
+                    .IncludeSongMetadata("Song")
+                    .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == update.SongId, cancellationToken);
+
+                if (songDevice == null)
+                {
+                    logger.LogWarning("SongDevice not found for device {DeviceId} and song {SongId} during potential update resolution", deviceId, update.SongId);
+                    continue;
+                }
+
+                if (songDevice.Song == null)
+                {
+                    logger.LogWarning("Song not found for SongDevice device {DeviceId} and song {SongId} during potential update resolution", deviceId, update.SongId);
+                    continue;
+                }
+
+                byte[] fileBytes;
+                try
+                {
+                    fileBytes = Convert.FromBase64String(update.FileContentBase64);
+                }
+                catch (FormatException ex)
+                {
+                    logger.LogError(ex, "Invalid base64 content for potential update {Path}", update.Path);
+
+                    if (syncActions != null)
+                    {
+                        var errorRecord = await syncActions.ActionError(update.Path, "Invalid file content format", update.SongId, "Invalid file content format", cancellationToken);
+                        resolveSyncRecords.Add(errorRecord);
+                        updateLocalRecords.Add(SyncActionRecordResponseItem.FromEntity(errorRecord));
+                    }
+
+                    conflicts.Add(new SyncConflictErrorItem
+                    {
+                        Path = update.Path,
+                        Reason = "Invalid file content format",
+                    });
+                    continue;
+                }
+
+                var localChecksum = ComputeChecksum(fileBytes, songDevice.Song.ChecksumAlgorithm);
+
+                if (localChecksum == songDevice.Song.Checksum)
+                {
+                    // Checksums match: no need to update the local file, just update the sync timestamp
+                    var newLastSynced = update.LocalModifiedAt.ToUniversalTime() > songDevice.Song.ModifiedAt
+                        ? update.LocalModifiedAt.ToUniversalTime()
+                        : songDevice.Song.ModifiedAt;
+
+                    if (syncActions != null)
+                    {
+                        var tsRecord = await syncActions.ActionUpdateTimestamp(update.Path, newLastSynced, update.SongId, "Timestamp update: server was modified but checksums match, no local update needed", cancellationToken);
+                        resolveSyncRecords.Add(tsRecord);
+                        updateTimestampRecords.Add(SyncActionRecordResponseItem.FromEntity(tsRecord));
+                    }
+
+                    resolved.Add(new SyncFileInfoItem
+                    {
+                        Path = update.Path,
+                        ModifiedAt = update.LocalModifiedAt,
+                        CreatedAt = songDevice.AddedAt,
+                        Reason = "Checksums match - server was modified but local file is current",
+                    });
+
+                    logger.LogInformation(
+                        "Resolved potential update for {Path} (SongId={SongId}) - checksums match, updated LastSyncedModifiedAt to {LastSyncedAt}",
+                        update.Path, update.SongId, newLastSynced);
+                }
+                else
+                {
+                    // Checksums differ: the local file needs to be updated from the server
+                    var pendingAction = ComputePendingActionPath(songDevice, namingStrategy, usedPaths);
+                    usedPaths.Add(pendingAction.Path);
+
+                    if (syncActions != null)
+                    {
+                        if (pendingAction.PreviousPath != null)
+                        {
+                            var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, update.SongId, "Path updated by naming template", cancellationToken);
+                            resolveSyncRecords.Add(renameRecord);
+                            renameRecords.Add(SyncActionRecordResponseItem.FromEntity(renameRecord));
+                        }
+
+                        var updateFilePath = pendingAction.PreviousPath ?? pendingAction.Path;
+                        var reason = $"Server modified at {songDevice.Song.ModifiedAt:O} is newer than last synced at {update.LastSyncedAt:O}, checksums differ";
+                        var updateRecord = await syncActions.ActionUpdateLocal(updateFilePath, update.SongId, songDevice.Song.ModifiedAt, reason, cancellationToken);
+                        resolveSyncRecords.Add(updateRecord);
+                        updateLocalRecords.Add(SyncActionRecordResponseItem.FromEntity(updateRecord));
+                    }
+
+                    logger.LogInformation(
+                        "Potential update for {Path} (SongId={SongId}) - checksums differ, creating UpdateLocal action",
+                        update.Path, update.SongId);
+                }
+            }
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
-            "Resolved conflicts for device {DeviceId}: {Resolved} resolved, {ToUpload} to upload, {Conflicts} conflicts",
-            deviceId, resolved.Count, toUpload.Count, conflicts.Count);
+            "Resolved conflicts for device {DeviceId}: {Resolved} resolved, {ToUpload} to upload, {Conflicts} conflicts, {UpdateLocal} update local actions, {Rename} rename actions",
+            deviceId, resolved.Count, toUpload.Count, conflicts.Count, updateLocalRecords.Count, renameRecords.Count);
 
         return new SyncResolveConflictsResponse
         {
@@ -1138,6 +1256,8 @@ public class DevicesController(
             Conflicts = conflicts,
             ConflictRecords = conflictRecords,
             UpdateTimestampRecords = updateTimestampRecords,
+            UpdateLocalRecords = updateLocalRecords,
+            RenameRecords = renameRecords,
             Counts = SyncActionCounts.FromRecords(resolveSyncRecords),
         };
     }
@@ -1359,12 +1479,7 @@ public class DevicesController(
             .ToHashSetAsync(cancellationToken);
 
         var songDevices = await context.SongDevices
-            .Include(sd => sd.Song)
-                .ThenInclude(s => s.Album)
-                    .ThenInclude(a => a.Artist)
-            .Include(sd => sd.Song)
-                .ThenInclude(s => s.Artists)
-                    .ThenInclude(sa => sa.Artist)
+            .IncludeSongMetadata("Song")
             .Where(sd => sd.DeviceId == deviceId
                 && sd.SyncAction != null
                 && sd.SyncAction != SongSyncAction.Upload
@@ -1422,10 +1537,11 @@ public class DevicesController(
                 JsonElement? data = modifiedAt.HasValue
                     ? SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = sd.SongId, ModifiedAt = modifiedAt })
                     : null;
+                var updateFilePath = (previousPath != null && action == SyncRecordAction.UpdateLocal) ? previousPath : path;
                 var record = new DeviceSyncSessionRecord
                 {
                     SessionId = sessionId,
-                    FilePath = path,
+                    FilePath = updateFilePath,
                     Action = action,
                     Data = data,
                     SongId = sd.SongId,
@@ -1677,6 +1793,19 @@ public class DevicesController(
         // The dates that are saved in the database by EF Core seem to lose the precision for the last digit
         // it is always 0 (zero) when reading it back, so we make the comparison without it in both values
         return current.Ticks / 10 > reference.Ticks / 10;
+    }
+
+    private static string ComputeChecksum(byte[] fileBytes, string checksumAlgorithm)
+    {
+        if (checksumAlgorithm == "MD5")
+        {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            return Convert.ToBase64String(md5.ComputeHash(fileBytes));
+        }
+
+        var xxHash = new XxHash128();
+        xxHash.Append(fileBytes);
+        return Convert.ToBase64String(xxHash.GetCurrentHash());
     }
 
     private static Dictionary<string, string> GetSessionRecordFieldMappings()

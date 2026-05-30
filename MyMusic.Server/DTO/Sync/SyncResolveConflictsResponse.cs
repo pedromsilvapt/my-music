@@ -15,5 +15,7 @@ public record SyncResolveConflictsResponse
     public required List<SyncConflictErrorItem> Conflicts { get; init; }
     public required List<SyncActionRecordResponseItem> ConflictRecords { get; init; }
     public required List<SyncActionRecordResponseItem> UpdateTimestampRecords { get; init; }
+    public required List<SyncActionRecordResponseItem> UpdateLocalRecords { get; init; }
+    public required List<SyncActionRecordResponseItem> RenameRecords { get; init; }
     public required SyncActionCounts Counts { get; init; }
 }

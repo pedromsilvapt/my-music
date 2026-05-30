@@ -1,5 +1,5 @@
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
-import type {SyncPotentialConflictItem, SyncConflictResolveItem} from '../../api/types';
+import type {SyncPotentialConflictItem, SyncPotentialUpdateItem, SyncConflictResolveItem, SyncPotentialUpdateResolveItem} from '../../api/types';
 import {addDeltaToResult} from './types';
 import {safeToIsoString} from './utils';
 
@@ -363,12 +363,13 @@ export async function actionConflict(
     userPrompt: IUserPrompt,
     ctx: SyncContext,
     potentialConflicts: SyncPotentialConflictItem[],
+    potentialUpdates: SyncPotentialUpdateItem[],
     chunk: Array<{ relativePath: string; fullPath: string }>,
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
 ): Promise<ResolveConflictsResult> {
-    if (potentialConflicts.length === 0) {
-        return { conflicts: 0, toUpdatePaths: new Set() };
+    if (potentialConflicts.length === 0 && potentialUpdates.length === 0) {
+        return { conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] };
     }
 
     if (ctx.options.dryRun) {
@@ -378,7 +379,7 @@ export async function actionConflict(
             currentFile: `${potentialConflicts.length} conflicts detected (dry-run)`,
             conflict: ctx.result.conflict,
         });
-        return { conflicts: potentialConflicts.length, toUpdatePaths: new Set() };
+        return { conflicts: potentialConflicts.length, toUpdatePaths: new Set(), updateLocalRecords: [] };
     }
 
     onProgress({ phase: 'resolving', currentFile: 'Checking conflicts...' });
@@ -404,13 +405,36 @@ export async function actionConflict(
         }
     }
 
-    if (resolveItems.length === 0) {
-        return { conflicts: 0, toUpdatePaths: new Set() };
+    const potentialUpdateItems: SyncPotentialUpdateResolveItem[] = [];
+
+    for (const update of potentialUpdates) {
+        const file = chunk.find(f => f.relativePath === update.path);
+        if (!file) {
+            continue;
+        }
+
+        try {
+            const fileContentBase64 = await fileOps.readFileBase64(file.fullPath);
+            potentialUpdateItems.push({
+                path: update.path,
+                songId: update.songId,
+                fileContentBase64,
+                localModifiedAt: safeToIsoString(update.localModifiedAt)!,
+                lastSyncedAt: safeToIsoString(update.lastSyncedAt)!,
+            });
+        } catch (e) {
+            console.error('Failed to read file for potential update resolution:', update.path, e);
+        }
+    }
+
+    if (resolveItems.length === 0 && potentialUpdateItems.length === 0) {
+        return { conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] };
     }
 
     try {
         const resolveResponse = await apiClient.resolveConflicts(ctx.deviceId, ctx.sessionId!, {
             conflicts: resolveItems,
+            potentialUpdates: potentialUpdateItems,
         });
 
         ctx.result = addDeltaToResult(ctx.result, resolveResponse.counts ?? EMPTY_COUNTS);
@@ -439,9 +463,9 @@ export async function actionConflict(
             }
         }
 
-        return { conflicts: resolveResponse.conflicts.length, toUpdatePaths };
+        return { conflicts: resolveResponse.conflicts.length, toUpdatePaths, updateLocalRecords: resolveResponse.updateLocalRecords };
     } catch (e) {
         console.error('Failed to resolve conflicts:', e);
-        return { conflicts: potentialConflicts.length, toUpdatePaths: new Set() };
+        return { conflicts: potentialConflicts.length, toUpdatePaths: new Set(), updateLocalRecords: [] };
     }
 }

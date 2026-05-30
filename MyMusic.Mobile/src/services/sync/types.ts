@@ -98,6 +98,7 @@ export interface ActionResult {
 export interface ResolveConflictsResult {
     conflicts: number;
     toUpdatePaths: Set<string>;
+    updateLocalRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
     counts?: SyncActionCounts;
 }
 
@@ -180,6 +181,15 @@ export interface ISyncApiClient {
             serverChecksum: string;
             serverChecksumAlgorithm: string;
         }>;
+        potentialUpdates: Array<{
+            path: string;
+            localModifiedAt: Date;
+            serverModifiedAt: Date;
+            lastSyncedAt: Date;
+            songId: number;
+            serverChecksum: string;
+            serverChecksumAlgorithm: string;
+        }>;
         records: SyncRecordItem[];
         skippedRecordIds: number[];
         counts: SyncActionCounts;
@@ -255,6 +265,13 @@ export interface ISyncApiClient {
                 fileContentBase64: string;
                 localModifiedAt: string;
             }>;
+            potentialUpdates: Array<{
+                path: string;
+                songId: number;
+                fileContentBase64: string;
+                localModifiedAt: string;
+                lastSyncedAt: string;
+            }>;
         }
     ) => Promise<{
         toUpload: Array<{
@@ -270,6 +287,9 @@ export interface ISyncApiClient {
             reason?: string;
         }>;
         conflicts: SyncConflict[];
+        conflictRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+        updateTimestampRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+        updateLocalRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
         counts: SyncActionCounts;
     }>;
 

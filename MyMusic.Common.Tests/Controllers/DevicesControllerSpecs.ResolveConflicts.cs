@@ -151,7 +151,8 @@ public class DevicesControllerResolveConflictsSpecs
                     FileContentBase64 = Convert.ToBase64String(content),
                     LocalModifiedAt = localModifiedAt,
                 }
-            ]
+            ],
+            PotentialUpdates = []
         };
 
         // Act
@@ -187,7 +188,8 @@ public class DevicesControllerResolveConflictsSpecs
                     FileContentBase64 = Convert.ToBase64String(content),
                     LocalModifiedAt = localModifiedAt,
                 }
-            ]
+            ],
+            PotentialUpdates = []
         };
 
         await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
@@ -220,7 +222,8 @@ public class DevicesControllerResolveConflictsSpecs
                     FileContentBase64 = Convert.ToBase64String(clientContent),
                     LocalModifiedAt = DateTime.UtcNow,
                 }
-            ]
+            ],
+            PotentialUpdates = []
         };
 
         // Act
@@ -280,7 +283,8 @@ public class DevicesControllerResolveConflictsSpecs
                     FileContentBase64 = "not-valid-base64!!!",
                     LocalModifiedAt = DateTime.UtcNow,
                 }
-            ]
+            ],
+            PotentialUpdates = []
         };
 
         var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
@@ -342,7 +346,8 @@ public class DevicesControllerResolveConflictsSpecs
                     FileContentBase64 = Convert.ToBase64String(content),
                     LocalModifiedAt = localModifiedAt,
                 }
-            ]
+            ],
+            PotentialUpdates = []
         };
 
         var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
@@ -382,7 +387,8 @@ public class DevicesControllerResolveConflictsSpecs
                     FileContentBase64 = Convert.ToBase64String(clientContent),
                     LocalModifiedAt = DateTime.UtcNow,
                 }
-            ]
+            ],
+            PotentialUpdates = []
         };
 
         await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);

@@ -1,6 +1,6 @@
 import type { SyncDeps, SyncContext, SyncFileInfo, ScanError, SyncConflict, ProgressHandler, SyncRecordItem, ActionResult } from './types';
 import { SyncActionCounts, addDeltaToResult } from './types';
-import type { SyncPotentialConflictItem, RenameData } from '../../api/types';
+import type { SyncPotentialConflictItem, SyncPotentialUpdateItem, RenameData } from '../../api/types';
 import { SyncCancelledError } from './errors';
 import { safeToIsoString, chunkArray, formatFilePath } from './utils';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionDelete, actionConflict, actionRename } from './sync-actions-device';
@@ -110,6 +110,7 @@ export async function resolveConflictsPhase (
     deps: SyncDeps,
     ctx: SyncContext,
     potentialConflicts: SyncPotentialConflictItem[],
+    potentialUpdates: SyncPotentialUpdateItem[],
     chunk: SyncFileInfo[],
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
@@ -120,6 +121,7 @@ export async function resolveConflictsPhase (
         deps.userPrompt,
         ctx,
         potentialConflicts,
+        potentialUpdates,
         chunk,
         toUpdatePaths,
         (progress) => {
@@ -184,13 +186,14 @@ export async function uploadPhase (
         const toCreatePaths = new Set(syncResponse.toCreate.map(f => f.path));
         const toUpdatePaths = new Set(syncResponse.toUpdate.map(f => f.path));
 
-        if (syncResponse.potentialConflicts.length > 0) {
+        if (syncResponse.potentialConflicts.length > 0 || syncResponse.potentialUpdates.length > 0) {
             await actionConflict(
                 deps.apiClient,
                 deps.fileOps,
                 deps.userPrompt,
                 ctx,
                 syncResponse.potentialConflicts,
+                syncResponse.potentialUpdates,
                 chunk,
                 toUpdatePaths,
                 (progress) => {

@@ -87,12 +87,21 @@ export class NodeApiClient implements ISyncApiClient {
             serverChecksum: string;
             serverChecksumAlgorithm: string;
         }>;
+        potentialUpdates: Array<{
+            path: string;
+            localModifiedAt: Date;
+            serverModifiedAt: Date;
+            lastSyncedAt: Date;
+            songId: number;
+            serverChecksum: string;
+            serverChecksumAlgorithm: string;
+        }>;
         records: SyncRecordItem[];
         skippedRecordIds: number[];
         counts: SyncActionCounts;
     }> {
         const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/check`, request);
-        const parsed = this._parseDates(response, ['toCreate', 'toUpdate', 'potentialConflicts']);
+        const parsed = this._parseDates(response, ['toCreate', 'toUpdate', 'potentialConflicts', 'potentialUpdates']);
         parsed.records = this._parseRecords(parsed.records ?? []);
         return parsed;
     }
@@ -201,11 +210,21 @@ export class NodeApiClient implements ISyncApiClient {
                 fileContentBase64: string;
                 localModifiedAt: string;
             }>;
+            potentialUpdates: Array<{
+                path: string;
+                songId: number;
+                fileContentBase64: string;
+                localModifiedAt: string;
+                lastSyncedAt: string;
+            }>;
         }
     ): Promise<{
         toUpload: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
         resolved: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
         conflicts: SyncConflict[];
+        conflictRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+        updateTimestampRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+        updateLocalRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
         counts: SyncActionCounts;
     }> {
         const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, request);

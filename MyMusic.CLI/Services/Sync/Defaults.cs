@@ -253,6 +253,16 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
                 ServerChecksum = c.ServerChecksum,
                 ServerChecksumAlgorithm = c.ServerChecksumAlgorithm
             }).ToList(),
+            PotentialUpdates = response.PotentialUpdates.Select(u => new PotentialUpdateItem
+            {
+                Path = u.Path,
+                LocalModifiedAt = u.LocalModifiedAt,
+                ServerModifiedAt = u.ServerModifiedAt,
+                LastSyncedAt = u.LastSyncedAt,
+                SongId = u.SongId,
+                ServerChecksum = u.ServerChecksum,
+                ServerChecksumAlgorithm = u.ServerChecksumAlgorithm
+            }).ToList(),
             Records = response.Records.Select(a => new SyncRecordItem
             {
                 Id = a.Id,
@@ -382,7 +392,16 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             LocalModifiedAt = c.LocalModifiedAt.ToUniversalTime()
         }).ToList();
 
-        var response = await client.ResolveConflictsAsync(deviceId, sessionId, new SyncResolveConflictsRequest { Conflicts = conflicts }, ct);
+        var potentialUpdates = request.PotentialUpdates.Select(u => new SyncPotentialUpdateResolveItem
+        {
+            Path = u.Path,
+            SongId = u.SongId,
+            FileContentBase64 = u.FileContentBase64,
+            LocalModifiedAt = u.LocalModifiedAt.ToUniversalTime(),
+            LastSyncedAt = u.LastSyncedAt.ToUniversalTime()
+        }).ToList();
+
+        var response = await client.ResolveConflictsAsync(deviceId, sessionId, new SyncResolveConflictsRequest { Conflicts = conflicts, PotentialUpdates = potentialUpdates }, ct);
 
         return new ResolveConflictsResult
         {
@@ -411,6 +430,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
                 Action = r.Action,
                 Data = r.Data,
                 ResolvesConflictRecordId = r.ResolvesConflictRecordId,
+                FilePath = r.FilePath,
+                SongId = r.SongId,
             }).ToList(),
             UpdateTimestampRecords = response.UpdateTimestampRecords.Select(r => new SyncActionRecordItem
             {
@@ -418,6 +439,26 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
                 Action = r.Action,
                 Data = r.Data,
                 ResolvesConflictRecordId = r.ResolvesConflictRecordId,
+                FilePath = r.FilePath,
+                SongId = r.SongId,
+            }).ToList(),
+            UpdateLocalRecords = response.UpdateLocalRecords.Select(r => new SyncActionRecordItem
+            {
+                Id = r.Id,
+                Action = r.Action,
+                Data = r.Data,
+                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
+                FilePath = r.FilePath,
+                SongId = r.SongId,
+            }).ToList(),
+            RenameRecords = response.RenameRecords.Select(r => new SyncActionRecordItem
+            {
+                Id = r.Id,
+                Action = r.Action,
+                Data = r.Data,
+                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
+                FilePath = r.FilePath,
+                SongId = r.SongId,
             }).ToList(),
             Counts = SyncActionCounts.FromApi(response.Counts)
         };

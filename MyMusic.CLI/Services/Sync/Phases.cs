@@ -136,15 +136,15 @@ public class Phases(
             var toCreatePaths = syncResponse.ToCreate.Select(f => f.Path).ToHashSet();
             var toUpdatePaths = syncResponse.ToUpdate.Select(f => f.Path).ToHashSet();
 
-            if (syncResponse.PotentialConflicts.Count > 0)
+            if (syncResponse.PotentialConflicts.Count > 0 || syncResponse.PotentialUpdates.Count > 0)
             {
-                await ResolveConflictsAsync(ctx, syncResponse.PotentialConflicts, toUpdatePaths, ct);
+                await ResolveConflictsAsync(ctx, syncResponse.PotentialConflicts, syncResponse.PotentialUpdates, toUpdatePaths, ct);
             }
 
             logger.LogInformation(
-                "Chunk {ChunkNumber}: {ToCreate} to create, {ToUpdate} to update, {Conflicts} conflicts",
+                "Chunk {ChunkNumber}: {ToCreate} to create, {ToUpdate} to update, {Conflicts} conflicts, {PotentialUpdates} potential updates",
                 chunkNumber, syncResponse.ToCreate.Count, syncResponse.ToUpdate.Count,
-                syncResponse.PotentialConflicts.Count);
+                syncResponse.PotentialConflicts.Count, syncResponse.PotentialUpdates.Count);
 
             foreach (var fileToCreate in syncResponse.ToCreate)
             {
@@ -192,29 +192,38 @@ public class Phases(
     public async Task ResolveConflictsAsync(
         SyncContext ctx,
         List<PotentialConflictItem> potentialConflicts,
+        List<PotentialUpdateItem> potentialUpdates,
         HashSet<string> toUpdatePaths,
         CancellationToken ct = default)
     {
-        if (potentialConflicts.Count == 0)
+        if (potentialConflicts.Count > 0 || potentialUpdates.Count > 0)
         {
-            return;
-        }
+            var result = await syncActions.ActionConflictAsync(
+                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, potentialConflicts, potentialUpdates, ctx.Options.DryRun, ct);
 
-        var result = await syncActions.ActionConflictAsync(
-            ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, potentialConflicts, ctx.Options.DryRun, ct);
+            ctx.Result = ctx.Result.AddDelta(result.Counts ?? SyncActionCounts.Empty);
 
-        ctx.Result = ctx.Result.AddDelta(result.Counts ?? SyncActionCounts.Empty);
-
-        foreach (var toUploadPath in result.ToUpdatePaths)
-        {
-            toUpdatePaths.Add(toUploadPath);
-        }
-
-        foreach (var conflict in potentialConflicts)
-        {
-            if (!result.ToUpdatePaths.Contains(conflict.Path) && conflict.SongId.HasValue)
+            foreach (var toUploadPath in result.ToUpdatePaths)
             {
-                ctx.ConflictedSongIds.Add(conflict.SongId.Value);
+                toUpdatePaths.Add(toUploadPath);
+            }
+
+            foreach (var conflict in potentialConflicts)
+            {
+                if (!result.ToUpdatePaths.Contains(conflict.Path) && conflict.SongId.HasValue)
+                {
+                    ctx.ConflictedSongIds.Add(conflict.SongId.Value);
+                }
+            }
+
+            foreach (var record in result.UpdateLocalRecords)
+            {
+                ctx.PendingServerRecords.Add(MapActionRecordToSyncRecord(record));
+            }
+
+            foreach (var record in result.RenameRecords)
+            {
+                ctx.PendingServerRecords.Add(MapActionRecordToSyncRecord(record));
             }
         }
     }
@@ -424,6 +433,22 @@ public class Phases(
             Conflict = completeResponse.ConflictCount,
             UpdateTimestamp = completeResponse.UpdateTimestampCount,
             Error = completeResponse.ErrorCount
+        };
+    }
+
+    private static SyncRecordItem MapActionRecordToSyncRecord(SyncActionRecordItem record)
+    {
+        var action = Enum.Parse<SyncRecordAction>(record.Action);
+        return new SyncRecordItem
+        {
+            Id = record.Id,
+            FilePath = record.FilePath ?? "",
+            Action = action,
+            SongId = record.SongId,
+            Data = record.Data,
+            ResolvesConflictRecordId = record.ResolvesConflictRecordId,
+            Acknowledged = false,
+            ProcessedAt = DateTime.MinValue,
         };
     }
 

@@ -56,6 +56,18 @@ export const SyncPotentialConflictItemSchema = z.object({
 
 export type SyncPotentialConflictItem = z.infer<typeof SyncPotentialConflictItemSchema>;
 
+export const SyncPotentialUpdateItemSchema = z.object({
+    path: z.string(),
+    localModifiedAt: z.coerce.date(),
+    serverModifiedAt: z.coerce.date(),
+    lastSyncedAt: z.coerce.date(),
+    songId: z.number(),
+    serverChecksum: z.string(),
+    serverChecksumAlgorithm: z.string(),
+});
+
+export type SyncPotentialUpdateItem = z.infer<typeof SyncPotentialUpdateItemSchema>;
+
 /** Represents pending actions that come from the server (e.g., files to download or remove). */
 export const SyncActionSchema = z.enum(['Download', 'Upload', 'Remove']);
 
@@ -168,6 +180,7 @@ export const SyncCheckResponseSchema = z.object({
     toCreate: z.array(SyncFileInfoItemSchema),
     toUpdate: z.array(SyncFileInfoSchema),
     potentialConflicts: z.array(SyncPotentialConflictItemSchema),
+    potentialUpdates: z.array(SyncPotentialUpdateItemSchema),
     records: z.array(SyncRecordItemSchema),
     skippedRecordIds: z.array(z.number()),
     counts: SyncActionCountsSchema,
@@ -448,8 +461,19 @@ export const SyncConflictResolveItemSchema = z.object({
 
 export type SyncConflictResolveItem = z.infer<typeof SyncConflictResolveItemSchema>;
 
+export const SyncPotentialUpdateResolveItemSchema = z.object({
+    path: z.string(),
+    songId: z.number(),
+    fileContentBase64: z.string(),
+    localModifiedAt: z.string(),
+    lastSyncedAt: z.string(),
+});
+
+export type SyncPotentialUpdateResolveItem = z.infer<typeof SyncPotentialUpdateResolveItemSchema>;
+
 export const SyncResolveConflictsRequestSchema = z.object({
     conflicts: z.array(SyncConflictResolveItemSchema),
+    potentialUpdates: z.array(SyncPotentialUpdateResolveItemSchema),
 });
 
 export type SyncResolveConflictsRequest = z.infer<typeof SyncResolveConflictsRequestSchema>;
@@ -467,6 +491,7 @@ export const SyncResolveConflictsResponseSchema = z.object({
     conflicts: z.array(SyncConflictErrorItemSchema),
     conflictRecords: z.array(SyncActionRecordResponseItemSchema),
     updateTimestampRecords: z.array(SyncActionRecordResponseItemSchema),
+    updateLocalRecords: z.array(SyncActionRecordResponseItemSchema),
     counts: SyncActionCountsSchema,
 });
 
