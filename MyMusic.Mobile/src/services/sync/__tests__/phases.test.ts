@@ -148,7 +148,7 @@ describe('resolveConflictsPhase', () => {
 
     test('delegates to actionConflict', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] });
+        mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
 
         const deps = createMockDeps();
         const ctx = createContext();
@@ -172,7 +172,7 @@ describe('resolveConflictsPhase', () => {
 
     test('adds songId to conflictedSongIds when conflict path is NOT in toUpdatePaths', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] });
+        mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
 
         const deps = createMockDeps();
         const ctx = createContext();
@@ -187,7 +187,7 @@ describe('resolveConflictsPhase', () => {
     test('does NOT add songId to conflictedSongIds when conflict path IS in toUpdatePaths', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
         const toUpdatePaths = new Set<string>(['song.mp3']);
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths, updateLocalRecords: [] });
+        mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
 
         const deps = createMockDeps();
         const ctx = createContext();
@@ -418,7 +418,7 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
             filePath: '',
             source: 'Device',
         });
-        mockedActionConflict.mockResolvedValue({ conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] });
+        mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
     });
 
     test('adds songId to conflictedSongIds when conflict path is NOT in toUpdatePaths', async () => {

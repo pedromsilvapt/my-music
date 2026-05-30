@@ -324,17 +324,17 @@ public class SyncActionsDeviceTests
     public async Task ActionConflictAsync_ResolvesConflicts()
     {
         var device = CreateDevice();
-        var conflicts = new List<PotentialConflictItem>
+        var conflicts = new List<SyncRecordItem>
         {
             new()
             {
-                Path = "conflict.mp3",
-                LocalModifiedAt = DateTime.UtcNow,
-                ServerModifiedAt = DateTime.UtcNow,
-                LastSyncedAt = null,
+                Id = 1,
+                FilePath = "conflict.mp3",
+                Action = SyncRecordAction.Conflict,
                 SongId = 1,
-                ServerChecksum = "abc",
-                ServerChecksumAlgorithm = "SHA256"
+                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow }),
+                Acknowledged = false,
+                ProcessedAt = DateTime.UtcNow
             }
         };
 
@@ -347,36 +347,41 @@ public class SyncActionsDeviceTests
         _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new ResolveConflictsResult
             {
-                ToUpload = [new SyncFileInfo { Path = "conflict.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }],
-                Resolved = [new ResolvedConflictItem { Path = "conflict.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow, Reason = "Resolved" }],
-                Conflicts = [],
-                ConflictRecords = [],
-                UpdateTimestampRecords = [],
-                UpdateLocalRecords = [],
-                RenameRecords = []
+                Records =
+                [
+                    new SyncRecordItem
+                    {
+                        Id = 1,
+                        FilePath = "conflict.mp3",
+                        Action = SyncRecordAction.UpdateTimestamp,
+                        SongId = 1,
+                        Acknowledged = false,
+                        ProcessedAt = DateTime.UtcNow
+                    }
+                ],
             }));
 
         var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, [], dryRun: false);
 
-        result.Conflicts.ShouldBe(0);
-        result.ToUpdatePaths.ShouldContain("conflict.mp3");
+        result.Records.Count.ShouldBe(1);
+        result.Records[0].Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
     }
 
     [Fact]
     public async Task ActionConflictAsync_DryRun_SkipsFileReadingAndServerCall()
     {
         var device = CreateDevice();
-        var conflicts = new List<PotentialConflictItem>
+        var conflicts = new List<SyncRecordItem>
         {
             new()
             {
-                Path = "conflict.mp3",
-                LocalModifiedAt = DateTime.UtcNow,
-                ServerModifiedAt = DateTime.UtcNow,
-                LastSyncedAt = null,
+                Id = 1,
+                FilePath = "conflict.mp3",
+                Action = SyncRecordAction.Conflict,
                 SongId = 1,
-                ServerChecksum = "abc",
-                ServerChecksumAlgorithm = "SHA256"
+                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow }),
+                Acknowledged = false,
+                ProcessedAt = DateTime.UtcNow
             }
         };
 
@@ -386,22 +391,9 @@ public class SyncActionsDeviceTests
 
         _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("base64content");
 
-        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new ResolveConflictsResult
-            {
-                ToUpload = [new SyncFileInfo { Path = "conflict.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }],
-                Resolved = [new ResolvedConflictItem { Path = "conflict.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow, Reason = "Resolved" }],
-                Conflicts = [],
-                ConflictRecords = [],
-                UpdateTimestampRecords = [],
-                UpdateLocalRecords = [],
-                RenameRecords = []
-            }));
-
         var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, [], dryRun: true);
 
-        result.Conflicts.ShouldBe(1);
-        result.ToUpdatePaths.ShouldBeEmpty();
+        result.Records.ShouldBeEmpty();
         await _fileOps.DidNotReceive().ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _apiClient.DidNotReceive().ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>());
     }

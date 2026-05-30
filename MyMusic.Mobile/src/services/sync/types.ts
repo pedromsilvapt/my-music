@@ -96,9 +96,7 @@ export interface ActionResult {
 }
 
 export interface ResolveConflictsResult {
-    conflicts: number;
-    toUpdatePaths: Set<string>;
-    updateLocalRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+    records: SyncRecordItem[];
     counts?: SyncActionCounts;
 }
 
@@ -136,10 +134,6 @@ export interface ScanError {
     error: string;
 }
 
-export interface SyncConflict {
-    path: string;
-    reason: string;
-}
 
 export interface ISyncApiClient {
     startSync: (
@@ -160,38 +154,7 @@ export interface ISyncApiClient {
             force: boolean;
         }
     ) => Promise<{
-        toCreate: Array<{
-            path: string;
-            modifiedAt: Date;
-            createdAt: Date;
-            reason?: string;
-        }>;
-        toUpdate: Array<{
-            path: string;
-            modifiedAt: Date;
-            createdAt: Date;
-            reason?: string;
-        }>;
-        potentialConflicts: Array<{
-            path: string;
-            localModifiedAt: Date;
-            serverModifiedAt: Date;
-            lastSyncedAt: Date | null;
-            songId: number | null;
-            serverChecksum: string;
-            serverChecksumAlgorithm: string;
-        }>;
-        potentialUpdates: Array<{
-            path: string;
-            localModifiedAt: Date;
-            serverModifiedAt: Date;
-            lastSyncedAt: Date;
-            songId: number;
-            serverChecksum: string;
-            serverChecksumAlgorithm: string;
-        }>;
         records: SyncRecordItem[];
-        skippedRecordIds: number[];
         counts: SyncActionCounts;
     }>;
 
@@ -274,22 +237,7 @@ export interface ISyncApiClient {
             }>;
         }
     ) => Promise<{
-        toUpload: Array<{
-            path: string;
-            modifiedAt: Date;
-            createdAt: Date;
-            reason?: string;
-        }>;
-        resolved: Array<{
-            path: string;
-            modifiedAt: Date;
-            createdAt: Date;
-            reason?: string;
-        }>;
-        conflicts: SyncConflict[];
-        conflictRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
-        updateTimestampRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
-        updateLocalRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+        records: SyncRecordItem[];
         counts: SyncActionCounts;
     }>;
 

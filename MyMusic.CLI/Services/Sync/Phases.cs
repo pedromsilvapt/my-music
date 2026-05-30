@@ -133,97 +133,127 @@ public class Phases(
                     chunkNumber, syncResponse.Records.Count);
             }
 
-            var toCreatePaths = syncResponse.ToCreate.Select(f => f.Path).ToHashSet();
-            var toUpdatePaths = syncResponse.ToUpdate.Select(f => f.Path).ToHashSet();
+            var conflictRecords = syncResponse.Records.Where(r => r.Action == SyncRecordAction.Conflict).ToList();
+            var updateLocalRecords = syncResponse.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
 
-            if (syncResponse.PotentialConflicts.Count > 0 || syncResponse.PotentialUpdates.Count > 0)
+            if (conflictRecords.Count > 0 || updateLocalRecords.Count > 0)
             {
-                await ResolveConflictsAsync(ctx, syncResponse.PotentialConflicts, syncResponse.PotentialUpdates, toUpdatePaths, ct);
+                await ResolveConflictsAsync(ctx, conflictRecords, updateLocalRecords, ct);
+
+                var superseded = conflictRecords
+                    .Concat(updateLocalRecords)
+                    .ToHashSet(ReferenceEqualityComparer.Instance);
+                ctx.PendingServerRecords.RemoveAll(superseded.Contains);
+            }
+
+            var toCreateRecords = syncResponse.Records.Where(r => r.Action == SyncRecordAction.CreateRemote).ToList();
+            var toUpdatePaths = new HashSet<string>();
+            foreach (var updateRecord in syncResponse.Records.Where(r => r.Action == SyncRecordAction.UpdateRemote))
+            {
+                toUpdatePaths.Add(updateRecord.FilePath);
             }
 
             logger.LogInformation(
                 "Chunk {ChunkNumber}: {ToCreate} to create, {ToUpdate} to update, {Conflicts} conflicts, {PotentialUpdates} potential updates",
-                chunkNumber, syncResponse.ToCreate.Count, syncResponse.ToUpdate.Count,
-                syncResponse.PotentialConflicts.Count, syncResponse.PotentialUpdates.Count);
+                chunkNumber, toCreateRecords.Count, toUpdatePaths.Count,
+                conflictRecords.Count, updateLocalRecords.Count);
 
-            foreach (var fileToCreate in syncResponse.ToCreate)
+            foreach (var createRecord in toCreateRecords)
             {
                 if (ct.IsCancellationRequested) break;
 
+                var createData = createRecord.Data.HasValue ? DeserializeCheckCreateUpdateData(createRecord.Data) : null;
+                var fileInfo = new SyncFileInfo
+                {
+                    Path = createRecord.FilePath,
+                    ModifiedAt = createData?.ModifiedAt ?? DateTime.MinValue,
+                    CreatedAt = createData?.CreatedAt ?? DateTime.MinValue,
+                    Reason = createRecord.Reason
+                };
+
                 var result = await syncActions.ActionCreateRemoteAsync(
-                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, fileToCreate, ct);
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, fileInfo, ct);
 
                 if (result.Counts != null)
                 {
                     ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
 
-                ctx.UploadedPaths.Add(fileToCreate.Path);
+                ctx.UploadedPaths.Add(createRecord.FilePath);
                 progress?.Report(SyncProgress.FromResult(
                     ctx.Result, "upload", files.Count, 0,
-                    fileToCreate.Path, result.Action == "Error" ? result.ErrorMessage : null));
+                    createRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
 
-            foreach (var fileToUpdate in syncResponse.ToUpdate)
+            foreach (var updateRecord in syncResponse.Records.Where(r => r.Action == SyncRecordAction.UpdateRemote))
             {
                 if (ct.IsCancellationRequested) break;
 
-                if (!toUpdatePaths.Contains(fileToUpdate.Path))
+                if (!toUpdatePaths.Contains(updateRecord.FilePath))
                 {
                     continue;
                 }
 
+                var updateData = updateRecord.Data.HasValue ? DeserializeCheckCreateUpdateData(updateRecord.Data) : null;
+                var fileInfo = new SyncFileInfo
+                {
+                    Path = updateRecord.FilePath,
+                    ModifiedAt = updateData?.ModifiedAt ?? DateTime.MinValue,
+                    CreatedAt = updateData?.CreatedAt ?? DateTime.MinValue,
+                    Reason = updateRecord.Reason
+                };
+
                 var result = await syncActions.ActionUpdateRemoteAsync(
-                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, fileToUpdate, ct);
+                    ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, fileInfo, ct);
 
                 if (result.Counts != null)
                 {
                     ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
 
-                ctx.UploadedPaths.Add(fileToUpdate.Path);
+                ctx.UploadedPaths.Add(updateRecord.FilePath);
                 progress?.Report(SyncProgress.FromResult(
                     ctx.Result, "upload", files.Count, 0,
-                    fileToUpdate.Path, result.Action == "Error" ? result.ErrorMessage : null));
+                    updateRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
         }
     }
 
     public async Task ResolveConflictsAsync(
         SyncContext ctx,
-        List<PotentialConflictItem> potentialConflicts,
-        List<PotentialUpdateItem> potentialUpdates,
-        HashSet<string> toUpdatePaths,
+        List<SyncRecordItem> conflictRecords,
+        List<SyncRecordItem> updateLocalRecords,
         CancellationToken ct = default)
     {
-        if (potentialConflicts.Count > 0 || potentialUpdates.Count > 0)
+        if (conflictRecords.Count > 0 || updateLocalRecords.Count > 0)
         {
             var result = await syncActions.ActionConflictAsync(
-                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, potentialConflicts, potentialUpdates, ctx.Options.DryRun, ct);
+                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, ctx.Options.DryRun, ct);
 
-            ctx.Result = ctx.Result.AddDelta(result.Counts ?? SyncActionCounts.Empty);
+            ctx.Result = ctx.Result.AddDelta(result.Counts);
 
-            foreach (var toUploadPath in result.ToUpdatePaths)
+            var toUpdatePaths = result.Records
+                .Where(r => r.Action == SyncRecordAction.CreateRemote || r.Action == SyncRecordAction.UpdateRemote)
+                .Select(r => r.FilePath)
+                .ToHashSet();
+
+            foreach (var toUploadPath in toUpdatePaths)
             {
-                toUpdatePaths.Add(toUploadPath);
+                ctx.ConflictedSongIds.Clear();
             }
 
-            foreach (var conflict in potentialConflicts)
+            foreach (var record in conflictRecords.Where(r => !toUpdatePaths.Contains(r.FilePath) && r.SongId.HasValue))
             {
-                if (!result.ToUpdatePaths.Contains(conflict.Path) && conflict.SongId.HasValue)
+                ctx.ConflictedSongIds.Add(record.SongId!.Value);
+            }
+
+            foreach (var record in result.Records)
+            {
+                if (record.Action == SyncRecordAction.UpdateLocal ||
+                    record.Action == SyncRecordAction.Rename)
                 {
-                    ctx.ConflictedSongIds.Add(conflict.SongId.Value);
+                    ctx.PendingServerRecords.Add(record);
                 }
-            }
-
-            foreach (var record in result.UpdateLocalRecords)
-            {
-                ctx.PendingServerRecords.Add(MapActionRecordToSyncRecord(record));
-            }
-
-            foreach (var record in result.RenameRecords)
-            {
-                ctx.PendingServerRecords.Add(MapActionRecordToSyncRecord(record));
             }
         }
     }
@@ -436,20 +466,25 @@ public class Phases(
         };
     }
 
-    private static SyncRecordItem MapActionRecordToSyncRecord(SyncActionRecordItem record)
+    private static SyncCheckCreateUpdateData? DeserializeCheckCreateUpdateData(System.Text.Json.JsonElement? data)
     {
-        var action = Enum.Parse<SyncRecordAction>(record.Action);
-        return new SyncRecordItem
+        if (!data.HasValue || data.Value.ValueKind == System.Text.Json.JsonValueKind.Null)
+            return null;
+        try
         {
-            Id = record.Id,
-            FilePath = record.FilePath ?? "",
-            Action = action,
-            SongId = record.SongId,
-            Data = record.Data,
-            ResolvesConflictRecordId = record.ResolvesConflictRecordId,
-            Acknowledged = false,
-            ProcessedAt = DateTime.MinValue,
-        };
+            return System.Text.Json.JsonSerializer.Deserialize<SyncCheckCreateUpdateData>(data.Value, RenameDataOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    internal record SyncCheckCreateUpdateData
+    {
+        public required DateTime ModifiedAt { get; init; }
+        public required DateTime CreatedAt { get; init; }
+        public string? Reason { get; init; }
     }
 
     private static readonly JsonSerializerOptions RenameDataOptions = new()

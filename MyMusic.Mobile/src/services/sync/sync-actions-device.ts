@@ -1,5 +1,5 @@
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
-import type {SyncPotentialConflictItem, SyncPotentialUpdateItem, SyncConflictResolveItem, SyncPotentialUpdateResolveItem} from '../../api/types';
+import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData} from '../../api/types';
 import {addDeltaToResult} from './types';
 import {safeToIsoString} from './utils';
 
@@ -362,73 +362,79 @@ export async function actionConflict(
     fileOps: IFileOps,
     userPrompt: IUserPrompt,
     ctx: SyncContext,
-    potentialConflicts: SyncPotentialConflictItem[],
-    potentialUpdates: SyncPotentialUpdateItem[],
-    chunk: Array<{ relativePath: string; fullPath: string }>,
+    conflictRecords: SyncRecordItem[],
+    updateLocalRecords: SyncRecordItem[],
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
 ): Promise<ResolveConflictsResult> {
-    if (potentialConflicts.length === 0 && potentialUpdates.length === 0) {
-        return { conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] };
+    if (conflictRecords.length === 0 && updateLocalRecords.length === 0) {
+        return { records: [], counts: undefined };
     }
 
     if (ctx.options.dryRun) {
-        ctx.result.conflict += potentialConflicts.length;
+        ctx.result.conflict += conflictRecords.length;
         onProgress({
             phase: 'resolving',
-            currentFile: `${potentialConflicts.length} conflicts detected (dry-run)`,
+            currentFile: `${conflictRecords.length} conflicts detected (dry-run)`,
             conflict: ctx.result.conflict,
         });
-        return { conflicts: potentialConflicts.length, toUpdatePaths: new Set(), updateLocalRecords: [] };
+        return { records: [], counts: undefined };
     }
 
     onProgress({ phase: 'resolving', currentFile: 'Checking conflicts...' });
 
     const resolveItems: SyncConflictResolveItem[] = [];
 
-    for (const conflict of potentialConflicts) {
-        const file = chunk.find(f => f.relativePath === conflict.path);
-        if (!file) {
-            continue;
-        }
+    for (const conflict of conflictRecords) {
+        const relativePath = conflict.filePath;
 
         try {
-            const fileContentBase64 = await fileOps.readFileBase64(file.fullPath);
+            const fullPath = ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${relativePath}` : relativePath;
+            if (!fileOps.fileExists(fullPath)) {
+                console.error('Conflict file not found locally:', relativePath);
+                continue;
+            }
+
+            const fileContentBase64 = await fileOps.readFileBase64(fullPath);
             resolveItems.push({
-                path: conflict.path,
+                path: relativePath,
                 songId: conflict.songId,
                 fileContentBase64,
-                localModifiedAt: safeToIsoString(conflict.localModifiedAt)!,
+                localModifiedAt: safeToIsoString((conflict.data as any)?.localModifiedAt ? new Date((conflict.data as any).localModifiedAt) : new Date())!,
             });
         } catch (e) {
-            console.error('Failed to read file for conflict resolution:', conflict.path, e);
+            console.error('Failed to read file for conflict resolution:', relativePath, e);
         }
     }
 
     const potentialUpdateItems: SyncPotentialUpdateResolveItem[] = [];
 
-    for (const update of potentialUpdates) {
-        const file = chunk.find(f => f.relativePath === update.path);
-        if (!file) {
-            continue;
-        }
+    for (const update of updateLocalRecords) {
+        const relativePath = update.filePath;
 
         try {
-            const fileContentBase64 = await fileOps.readFileBase64(file.fullPath);
+            const fullPath = ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${relativePath}` : relativePath;
+            if (!fileOps.fileExists(fullPath)) {
+                console.error('Potential update file not found locally:', relativePath);
+                continue;
+            }
+
+            const fileContentBase64 = await fileOps.readFileBase64(fullPath);
+            const updateData = update.data as any;
             potentialUpdateItems.push({
-                path: update.path,
-                songId: update.songId,
+                path: relativePath,
+                songId: update.songId!,
                 fileContentBase64,
-                localModifiedAt: safeToIsoString(update.localModifiedAt)!,
-                lastSyncedAt: safeToIsoString(update.lastSyncedAt)!,
+                localModifiedAt: safeToIsoString(updateData?.localModifiedAt ? new Date(updateData.localModifiedAt) : new Date())!,
+                lastSyncedAt: safeToIsoString(updateData?.lastSyncedAt ? new Date(updateData.lastSyncedAt) : new Date())!,
             });
         } catch (e) {
-            console.error('Failed to read file for potential update resolution:', update.path, e);
+            console.error('Failed to read file for potential update resolution:', relativePath, e);
         }
     }
 
     if (resolveItems.length === 0 && potentialUpdateItems.length === 0) {
-        return { conflicts: 0, toUpdatePaths: new Set(), updateLocalRecords: [] };
+        return { records: [], counts: undefined };
     }
 
     try {
@@ -439,33 +445,40 @@ export async function actionConflict(
 
         ctx.result = addDeltaToResult(ctx.result, resolveResponse.counts ?? EMPTY_COUNTS);
 
-        for (const resolved of resolveResponse.resolved) {
-            console.log('Resolved conflict for', resolved.path, ':', resolved.reason);
-        }
-
-        for (const toUploadItem of resolveResponse.toUpload) {
-            toUpdatePaths.add(toUploadItem.path);
-        }
-
-        for (const conflict of resolveResponse.conflicts) {
-            if (ctx.options.treatConflictsAsErrors) {
-                console.error('Conflict (as error):', conflict.path, conflict.reason);
-                ctx.result.error++;
-                ctx.result.conflict++;
-            } else {
-                const resolution = await userPrompt.promptConflictResolution(conflict.path);
-
-                if (resolution === 'upload') {
-                    toUpdatePaths.add(conflict.path);
-                } else {
-                    ctx.result.error++;
-                }
+        for (const record of resolveResponse.records) {
+            switch (record.action) {
+                case 'UpdateTimestamp':
+                    console.log('Resolved conflict for', record.filePath, ':', record.reason);
+                    break;
+                case 'Conflict':
+                    if (ctx.options.treatConflictsAsErrors) {
+                        console.error('Conflict (as error):', record.filePath, record.reason);
+                        ctx.result.error++;
+                        ctx.result.conflict++;
+                    } else {
+                        const resolution = await userPrompt.promptConflictResolution(record.filePath);
+                        if (resolution === 'upload') {
+                            toUpdatePaths.add(record.filePath);
+                        } else {
+                            ctx.result.error++;
+                        }
+                    }
+                    break;
+                case 'CreateRemote':
+                case 'UpdateRemote':
+                    toUpdatePaths.add(record.filePath);
+                    break;
+                case 'UpdateLocal':
+                case 'Rename':
+                case 'Error':
+                    console.log(`${record.action} action for ${record.filePath}: ${record.reason}`);
+                    break;
             }
         }
 
-        return { conflicts: resolveResponse.conflicts.length, toUpdatePaths, updateLocalRecords: resolveResponse.updateLocalRecords };
+        return { records: resolveResponse.records, counts: resolveResponse.counts };
     } catch (e) {
         console.error('Failed to resolve conflicts:', e);
-        return { conflicts: potentialConflicts.length, toUpdatePaths: new Set(), updateLocalRecords: [] };
+        return { records: [], counts: undefined };
     }
 }

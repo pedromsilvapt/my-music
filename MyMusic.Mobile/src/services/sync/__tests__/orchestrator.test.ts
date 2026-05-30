@@ -47,12 +47,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         createPendingActions: jest.fn().mockResolvedValue({records: []}),
         acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
         resolveConflicts: jest.fn().mockResolvedValue({
-            resolved: [],
-            toUpload: [],
-            conflicts: [],
-            conflictRecords: [],
-            updateTimestampRecords: [],
-            updateLocalRecords: [],
+            records: [],
             counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
         }),
         downloadSong: jest.fn().mockResolvedValue(new Blob(['data'])),

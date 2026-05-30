@@ -139,7 +139,7 @@ public class DevicesControllerSyncCheckSpecs
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_ReturnsPotentialUpdate()
+    public async Task CheckSync_ServerNewerThanLastSynced_ClientUnchanged_ReturnsUpdateLocalRecord()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -165,17 +165,20 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.PotentialUpdates.Count.ShouldBe(1);
-        response.Value.PotentialUpdates[0].SongId.ShouldBe(song.Id);
-        response.Value.PotentialUpdates[0].Path.ShouldBe("/music/song.mp3");
-        response.Value.PotentialUpdates[0].ServerModifiedAt.ShouldBe(serverModified);
-        response.Value.Records.ShouldBeEmpty();
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.Count.ShouldBe(1);
+        updateLocalRecords[0].SongId.ShouldBe(song.Id);
+        updateLocalRecords[0].FilePath.ShouldBe("/music/song.mp3");
+
+        response.Value.Counts.UpdateLocalCount.ShouldBe(0, "UpdateLocal is tentative and should not be counted in CheckSync response");
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
+
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.UpdateLocal)
+            .ToListAsync();
+        dbRecords.ShouldBeEmpty("UpdateLocal records should not be persisted to DB during CheckSync (tentative)");
     }
 
     [Fact]
@@ -205,18 +208,18 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.ShouldBeEmpty();
+        var nonSkippedRecords = response.Value.Records.Where(r => r.Action != SyncRecordAction.Skipped).ToList();
+        var skippedRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Skipped).ToList();
+        nonSkippedRecords.ShouldBeEmpty();
+        skippedRecords.Count.ShouldBe(1);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
 
-        var records = await scenario.DbContext.DeviceSyncSessionRecords
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
             .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
             .ToListAsync();
-        records.ShouldBeEmpty();
+        dbRecords.ShouldBeEmpty();
     }
 
     [Fact]
@@ -245,22 +248,20 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.ShouldBeEmpty();
+        var nonSkippedRecords = response.Value.Records.Where(r => r.Action != SyncRecordAction.Skipped).ToList();
+        nonSkippedRecords.ShouldBeEmpty();
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
 
-        var records = await scenario.DbContext.DeviceSyncSessionRecords
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
             .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
             .ToListAsync();
-        records.ShouldBeEmpty();
+        dbRecords.ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_AlreadyDownloadAction_ReturnsPotentialUpdate()
+    public async Task CheckSync_ServerNewer_AlreadyDownloadAction_ReturnsUpdateLocalRecord()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -286,19 +287,23 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.PotentialUpdates.Count.ShouldBe(1);
-        response.Value.PotentialUpdates[0].SongId.ShouldBe(song.Id);
-        response.Value.Records.ShouldBeEmpty();
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.Count.ShouldBe(1);
+        updateLocalRecords[0].SongId.ShouldBe(song.Id);
+
+        response.Value.Counts.UpdateLocalCount.ShouldBe(0, "UpdateLocal is tentative and should not be counted in CheckSync response");
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Download);
+
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.UpdateLocal)
+            .ToListAsync();
+        dbRecords.ShouldBeEmpty("UpdateLocal records should not be persisted to DB during CheckSync (tentative)");
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewerBeyondTolerance_ReturnsPotentialUpdate()
+    public async Task CheckSync_ServerNewerBeyondTolerance_ReturnsUpdateLocalRecord()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -324,17 +329,20 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.PotentialUpdates.Count.ShouldBe(1);
-        response.Value.PotentialUpdates[0].SongId.ShouldBe(song.Id);
-        response.Value.PotentialUpdates[0].Path.ShouldBe("/music/song.mp3");
-        response.Value.PotentialUpdates[0].ServerModifiedAt.ShouldBe(serverModified);
-        response.Value.Records.ShouldBeEmpty();
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.Count.ShouldBe(1);
+        updateLocalRecords[0].SongId.ShouldBe(song.Id);
+        updateLocalRecords[0].FilePath.ShouldBe("/music/song.mp3");
+
+        response.Value.Counts.UpdateLocalCount.ShouldBe(0, "UpdateLocal is tentative and should not be counted in CheckSync response");
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
+
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.UpdateLocal)
+            .ToListAsync();
+        dbRecords.ShouldBeEmpty("UpdateLocal records should not be persisted to DB during CheckSync (tentative)");
     }
 
     [Fact]
@@ -364,12 +372,9 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.Count.ShouldBe(1);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
-        response.Value.Records[0].SongId.ShouldBe(song.Id);
+        var unlinkRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
+        unlinkRecords.Count.ShouldBe(1);
+        unlinkRecords[0].SongId.ShouldBe(song.Id);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Remove);
@@ -408,11 +413,8 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.Count.ShouldBe(1);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        var unlinkRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
+        unlinkRecords.Count.ShouldBe(1);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Remove);
@@ -450,16 +452,16 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, 0, request, CancellationToken.None);
 
-        response.Value.ToCreate.ShouldBeEmpty();
-        response.Value.ToUpdate.ShouldBeEmpty();
-        response.Value.PotentialConflicts.ShouldBeEmpty();
-        response.Value.Records.ShouldBeEmpty();
+        response.Value.Records.ShouldNotBeEmpty();
+
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.Count.ShouldBe(1);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBeNull();
 
-        var records = await scenario.DbContext.DeviceSyncSessionRecords.ToListAsync();
-        records.ShouldBeEmpty();
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords.ToListAsync();
+        dbRecords.ShouldBeEmpty();
     }
 
     [Fact]
@@ -525,10 +527,15 @@ public class DevicesControllerSyncCheckSpecs
         var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sdId);
         unchangedSd.SyncAction.ShouldBeNull();
         unchangedSd.LastSyncedModifiedAt.ShouldBe(lastSynced);
+
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.UpdateLocal)
+            .ToListAsync();
+        dbRecords.ShouldBeEmpty("UpdateLocal records should not be persisted to DB during CheckSync (tentative)");
     }
 
     [Fact]
-    public async Task CheckSync_ForceFlag_NoSyncActionMutation()
+    public async Task CheckSync_ForceFlag_ReturnsUpdateRemoteRecord()
     {
         var scenario = new Scenario();
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -554,8 +561,49 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.ToUpdate.ShouldNotBeEmpty();
+        var updateRemoteRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateRemote).ToList();
+        updateRemoteRecords.ShouldNotBeEmpty();
+
         var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         unchangedSd.SyncAction.ShouldBe(SongSyncAction.Download);
+    }
+
+    [Fact]
+    public async Task CheckSync_BothServerAndClientNewer_ReturnsConflictRecord_NotPersistedToDb()
+    {
+        var scenario = new Scenario();
+        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var session = CreateSession(scenario.DbContext, device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-3);
+        var serverModified = DateTime.UtcNow.AddHours(-1);
+        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, serverModified);
+        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = DateTime.UtcNow.AddHours(-2);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var conflictRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Conflict).ToList();
+        conflictRecords.Count.ShouldBe(1);
+        conflictRecords[0].SongId.ShouldBe(song.Id);
+
+        response.Value.Counts.ConflictCount.ShouldBe(0, "Conflict is tentative and should not be counted in CheckSync response");
+
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.Conflict)
+            .ToListAsync();
+        dbRecords.ShouldBeEmpty("Conflict records should not be persisted to DB during CheckSync (tentative)");
     }
 }

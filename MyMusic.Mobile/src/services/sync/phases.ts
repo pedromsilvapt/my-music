@@ -1,6 +1,6 @@
-import type { SyncDeps, SyncContext, SyncFileInfo, ScanError, SyncConflict, ProgressHandler, SyncRecordItem, ActionResult } from './types';
+import type { SyncDeps, SyncContext, SyncFileInfo, ScanError, ProgressHandler, SyncRecordItem, ActionResult } from './types';
 import { SyncActionCounts, addDeltaToResult } from './types';
-import type { SyncPotentialConflictItem, SyncPotentialUpdateItem, RenameData } from '../../api/types';
+import type { RenameData } from '../../api/types';
 import { SyncCancelledError } from './errors';
 import { safeToIsoString, chunkArray, formatFilePath } from './utils';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionDelete, actionConflict, actionRename } from './sync-actions-device';
@@ -109,9 +109,8 @@ export async function startSessionPhase (
 export async function resolveConflictsPhase (
     deps: SyncDeps,
     ctx: SyncContext,
-    potentialConflicts: SyncPotentialConflictItem[],
-    potentialUpdates: SyncPotentialUpdateItem[],
-    chunk: SyncFileInfo[],
+    conflictRecords: SyncRecordItem[],
+    updateLocalRecords: SyncRecordItem[],
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
 ): Promise<void> {
@@ -120,17 +119,16 @@ export async function resolveConflictsPhase (
         deps.fileOps,
         deps.userPrompt,
         ctx,
-        potentialConflicts,
-        potentialUpdates,
-        chunk,
+        conflictRecords,
+        updateLocalRecords,
         toUpdatePaths,
         (progress) => {
             onProgress(progress);
         }
     );
 
-    for (const conflict of potentialConflicts) {
-        if (conflict.songId != null && !toUpdatePaths.has(conflict.path)) {
+    for (const conflict of conflictRecords) {
+        if (conflict.songId != null && !toUpdatePaths.has(conflict.filePath)) {
             ctx.conflictedSongIds.add(conflict.songId);
         }
     }
@@ -183,18 +181,20 @@ export async function uploadPhase (
             ctx.pendingDownloadPaths = extractPendingDownloadPaths(ctx.pendingActions);
         }
 
-        const toCreatePaths = new Set(syncResponse.toCreate.map(f => f.path));
-        const toUpdatePaths = new Set(syncResponse.toUpdate.map(f => f.path));
+        const conflictRecords = syncResponse.records.filter(r => r.action === 'Conflict');
+        const updateLocalRecords = syncResponse.records.filter(r => r.action === 'UpdateLocal');
+        const toCreateRecords = syncResponse.records.filter(r => r.action === 'CreateRemote');
+        const toUpdateRecords = syncResponse.records.filter(r => r.action === 'UpdateRemote');
+        const toUpdatePaths = new Set(toUpdateRecords.map(r => r.filePath));
 
-        if (syncResponse.potentialConflicts.length > 0 || syncResponse.potentialUpdates.length > 0) {
-            await actionConflict(
+        if (conflictRecords.length > 0 || updateLocalRecords.length > 0) {
+            const resolveResult = await actionConflict(
                 deps.apiClient,
                 deps.fileOps,
                 deps.userPrompt,
                 ctx,
-                syncResponse.potentialConflicts,
-                syncResponse.potentialUpdates,
-                chunk,
+                conflictRecords,
+                updateLocalRecords,
                 toUpdatePaths,
                 (progress) => {
                     onProgress({
@@ -205,14 +205,25 @@ export async function uploadPhase (
                 }
             );
 
-            for (const conflict of syncResponse.potentialConflicts) {
-                if (conflict.songId != null && !toUpdatePaths.has(conflict.path)) {
+            for (const record of resolveResult.records) {
+                if (record.action === 'UpdateLocal' || record.action === 'Rename') {
+                    ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], [record]);
+                }
+            }
+
+            ctx.pendingDownloadPaths = extractPendingDownloadPaths(ctx.pendingActions ?? []);
+
+            const superseded = new Set<SyncRecordItem>([...conflictRecords, ...updateLocalRecords]);
+            ctx.pendingActions = (ctx.pendingActions ?? []).filter(r => !superseded.has(r));
+
+            for (const conflict of conflictRecords) {
+                if (conflict.songId != null && !toUpdatePaths.has(conflict.filePath)) {
                     ctx.conflictedSongIds.add(conflict.songId);
                 }
             }
         }
 
-        await processChunkUploads(deps, ctx, chunk, syncResponse.toCreate, syncResponse.toUpdate, toUpdatePaths, onProgress);
+        await processChunkUploads(deps, ctx, chunk, toCreateRecords, toUpdateRecords, toUpdatePaths, onProgress);
     }
 }
 
@@ -375,28 +386,32 @@ async function processChunkUploads (
     deps: SyncDeps,
     ctx: SyncContext,
     chunk: SyncFileInfo[],
-    toCreate: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string; }>,
-    toUpdate: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string; }>,
+    toCreateRecords: SyncRecordItem[],
+    toUpdateRecords: SyncRecordItem[],
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
 ): Promise<void> {
-    for (const fileToCreate of toCreate) {
+    for (const createRecord of toCreateRecords) {
         if (deps.state.isCancelled) {
             throw new SyncCancelledError();
         }
 
-        const file = chunk.find(f => f.relativePath === fileToCreate.path);
+        const file = chunk.find(f => f.relativePath === createRecord.filePath);
         if (file) {
-            const result = await actionCreateRemote(deps.apiClient, deps.fileOps, ctx, file, fileToCreate.reason);
+            const createData = createRecord.data as any;
+            const result = await actionCreateRemote(
+                deps.apiClient, deps.fileOps, ctx, file,
+                createData?.reason ?? createRecord.reason ?? undefined
+            );
             if (result.counts) {
                 ctx.result = addDeltaToResult(ctx.result, result.counts);
             }
         }
-        ctx.uploadedPaths.add(fileToCreate.path);
+        ctx.uploadedPaths.add(createRecord.filePath);
 
         onProgress({
             processedFiles: ctx.result.createRemote + ctx.result.updateRemote + ctx.result.skipped + ctx.result.error + ctx.result.conflict,
-            currentFile: formatFilePath(fileToCreate.path, ctx.repositoryPath),
+            currentFile: formatFilePath(createRecord.filePath, ctx.repositoryPath),
             createRemote: ctx.result.createRemote,
             updateRemote: ctx.result.updateRemote,
             skipped: ctx.result.skipped,
@@ -405,27 +420,31 @@ async function processChunkUploads (
         });
     }
 
-    for (const fileToUpdate of toUpdate) {
+    for (const updateRecord of toUpdateRecords) {
         if (deps.state.isCancelled) {
             throw new SyncCancelledError();
         }
 
-        if (!toUpdatePaths.has(fileToUpdate.path)) {
+        if (!toUpdatePaths.has(updateRecord.filePath)) {
             continue;
         }
 
-        const file = chunk.find(f => f.relativePath === fileToUpdate.path);
+        const file = chunk.find(f => f.relativePath === updateRecord.filePath);
         if (file) {
-            const result = await actionUpdateRemote(deps.apiClient, deps.fileOps, ctx, file, fileToUpdate.reason);
+            const updateData = updateRecord.data as any;
+            const result = await actionUpdateRemote(
+                deps.apiClient, deps.fileOps, ctx, file,
+                updateData?.reason ?? updateRecord.reason ?? undefined
+            );
             if (result.counts) {
                 ctx.result = addDeltaToResult(ctx.result, result.counts);
             }
         }
-        ctx.uploadedPaths.add(fileToUpdate.path);
+        ctx.uploadedPaths.add(updateRecord.filePath);
 
         onProgress({
             processedFiles: ctx.result.createRemote + ctx.result.updateRemote + ctx.result.skipped + ctx.result.error + ctx.result.conflict,
-            currentFile: formatFilePath(fileToUpdate.path, ctx.repositoryPath),
+            currentFile: formatFilePath(updateRecord.filePath, ctx.repositoryPath),
             createRemote: ctx.result.createRemote,
             updateRemote: ctx.result.updateRemote,
             skipped: ctx.result.skipped,

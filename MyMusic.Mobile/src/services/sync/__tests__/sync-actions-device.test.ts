@@ -659,12 +659,9 @@ describe('actionConflict', () => {
     test('auto-resolved conflicts add to toUpdate set', async () => {
         const apiClient = createMockApiClient({
             resolveConflicts: jest.fn().mockResolvedValue({
-                resolved: [{path: 'song.mp3', modifiedAt: new Date(), createdAt: new Date(), reason: 'Checksum match'}],
-                toUpload: [{path: 'song.mp3', modifiedAt: new Date(), createdAt: new Date(), reason: 'Auto-resolved'}],
-                conflicts: [],
-                conflictRecords: [],
-                updateTimestampRecords: [],
-                updateLocalRecords: [],
+                records: [
+                    { id: 1, filePath: 'song.mp3', action: 'UpdateRemote', songId: 42, data: null, resolvesConflictRecordId: null, reason: 'Auto-resolved', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' },
+                ],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -676,18 +673,16 @@ describe('actionConflict', () => {
         const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(toUpdatePaths.has('song.mp3')).toBe(true);
-        expect(result.conflicts).toBe(0);
+        expect(result.records).toHaveLength(1);
+        expect(result.records[0].action).toBe('UpdateRemote');
     });
 
     test('treatConflictsAsErrors increments failed without prompt', async () => {
         const apiClient = createMockApiClient({
             resolveConflicts: jest.fn().mockResolvedValue({
-                resolved: [],
-                toUpload: [],
-                conflicts: [{path: 'song.mp3', reason: 'Different checksums'}],
-                conflictRecords: [],
-                updateTimestampRecords: [],
-                updateLocalRecords: [],
+                records: [
+                    { id: 1, filePath: 'song.mp3', action: 'Conflict', songId: 42, data: { localModifiedAt: '2024-06-01', serverModifiedAt: '2024-06-02' }, resolvesConflictRecordId: null, reason: 'Checksum mismatch', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' },
+                ],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -705,7 +700,8 @@ describe('actionConflict', () => {
 
         expect(ctx.result.conflict).toBe(1);
         expect(ctx.result.error).toBe(1);
-        expect(result.conflicts).toBe(1);
+        expect(result.records).toHaveLength(1);
+        expect(result.records[0].action).toBe('Conflict');
     });
 
     test('dry-run counts conflicts without resolving', async () => {
@@ -723,7 +719,7 @@ describe('actionConflict', () => {
         const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
         expect(ctx.result.conflict).toBe(1);
-        expect(result.conflicts).toBe(1);
+        expect(result.records).toHaveLength(0);
     });
 
     test('no conflicts returns empty result', async () => {
@@ -735,19 +731,16 @@ describe('actionConflict', () => {
 
         const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, [], [], [], toUpdatePaths, onProgress);
 
-        expect(result.conflicts).toBe(0);
+        expect(result.records).toHaveLength(0);
         expect(apiClient.resolveConflicts).not.toHaveBeenCalled();
     });
 
     test('user prompt for upload adds to toUpdate', async () => {
         const apiClient = createMockApiClient({
             resolveConflicts: jest.fn().mockResolvedValue({
-                resolved: [],
-                toUpload: [],
-                conflicts: [{path: 'song.mp3', reason: 'Different checksums'}],
-                conflictRecords: [],
-                updateTimestampRecords: [],
-                updateLocalRecords: [],
+                records: [
+                    { id: 1, filePath: 'song.mp3', action: 'Conflict', songId: 42, data: { localModifiedAt: '2024-06-01', serverModifiedAt: '2024-06-02' }, resolvesConflictRecordId: null, reason: 'Different checksums', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' },
+                ],
                 counts: {...ZERO_COUNTS},
             }),
         });
@@ -768,12 +761,9 @@ describe('actionConflict', () => {
     test('user prompt for skip increments failed', async () => {
         const apiClient = createMockApiClient({
             resolveConflicts: jest.fn().mockResolvedValue({
-                resolved: [],
-                toUpload: [],
-                conflicts: [{path: 'song.mp3', reason: 'Different checksums'}],
-                conflictRecords: [],
-                updateTimestampRecords: [],
-                updateLocalRecords: [],
+                records: [
+                    { id: 1, filePath: 'song.mp3', action: 'Conflict', songId: 42, data: { localModifiedAt: '2024-06-01', serverModifiedAt: '2024-06-02' }, resolvesConflictRecordId: null, reason: 'Different checksums', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' },
+                ],
                 counts: {...ZERO_COUNTS},
             }),
         });

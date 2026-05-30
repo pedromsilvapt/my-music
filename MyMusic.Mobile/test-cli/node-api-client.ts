@@ -76,34 +76,15 @@ export class NodeApiClient implements ISyncApiClient {
             force: boolean;
         }
     ): Promise<{
-        toCreate: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
-        toUpdate: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
-        potentialConflicts: Array<{
-            path: string;
-            localModifiedAt: Date;
-            serverModifiedAt: Date;
-            lastSyncedAt: Date | null;
-            songId: number | null;
-            serverChecksum: string;
-            serverChecksumAlgorithm: string;
-        }>;
-        potentialUpdates: Array<{
-            path: string;
-            localModifiedAt: Date;
-            serverModifiedAt: Date;
-            lastSyncedAt: Date;
-            songId: number;
-            serverChecksum: string;
-            serverChecksumAlgorithm: string;
-        }>;
         records: SyncRecordItem[];
-        skippedRecordIds: number[];
         counts: SyncActionCounts;
     }> {
         const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/check`, request);
-        const parsed = this._parseDates(response, ['toCreate', 'toUpdate', 'potentialConflicts', 'potentialUpdates']);
-        parsed.records = this._parseRecords(parsed.records ?? []);
-        return parsed;
+        const records = this._parseRecords(response.records ?? []);
+        return {
+            records,
+            counts: response.counts ?? { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 },
+        };
     }
 
     async uploadFile(
@@ -219,16 +200,11 @@ export class NodeApiClient implements ISyncApiClient {
             }>;
         }
     ): Promise<{
-        toUpload: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
-        resolved: Array<{ path: string; modifiedAt: Date; createdAt: Date; reason?: string }>;
-        conflicts: SyncConflict[];
-        conflictRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
-        updateTimestampRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
-        updateLocalRecords: Array<{ id: number; action: string; data?: any; resolvesConflictRecordId?: number | null }>;
+        records: Array<{ id: number; filePath: string; action: string; songId: number | null; data?: any; resolvesConflictRecordId?: number | null; reason?: string; acknowledged: boolean; processedAt: string }>;
         counts: SyncActionCounts;
     }> {
         const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, request);
-        return this._parseDates(response, ['toUpload', 'resolved']);
+        return this._parseDates(response, ['records']);
     }
 
     async downloadSong(songId: number): Promise<Blob> {

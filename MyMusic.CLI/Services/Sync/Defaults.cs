@@ -229,40 +229,6 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
 
         return new CheckSyncResult
         {
-            ToCreate = response.ToCreate.Select(f => new SyncFileInfo
-            {
-                Path = f.Path,
-                ModifiedAt = f.ModifiedAt,
-                CreatedAt = f.CreatedAt,
-                Reason = f.Reason
-            }).ToList(),
-            ToUpdate = response.ToUpdate.Select(f => new SyncFileInfo
-            {
-                Path = f.Path,
-                ModifiedAt = f.ModifiedAt,
-                CreatedAt = f.CreatedAt,
-                Reason = f.Reason
-            }).ToList(),
-            PotentialConflicts = response.PotentialConflicts.Select(c => new PotentialConflictItem
-            {
-                Path = c.Path,
-                LocalModifiedAt = c.LocalModifiedAt,
-                ServerModifiedAt = c.ServerModifiedAt,
-                LastSyncedAt = c.LastSyncedAt,
-                SongId = c.SongId,
-                ServerChecksum = c.ServerChecksum,
-                ServerChecksumAlgorithm = c.ServerChecksumAlgorithm
-            }).ToList(),
-            PotentialUpdates = response.PotentialUpdates.Select(u => new PotentialUpdateItem
-            {
-                Path = u.Path,
-                LocalModifiedAt = u.LocalModifiedAt,
-                ServerModifiedAt = u.ServerModifiedAt,
-                LastSyncedAt = u.LastSyncedAt,
-                SongId = u.SongId,
-                ServerChecksum = u.ServerChecksum,
-                ServerChecksumAlgorithm = u.ServerChecksumAlgorithm
-            }).ToList(),
             Records = response.Records.Select(a => new SyncRecordItem
             {
                 Id = a.Id,
@@ -282,7 +248,6 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
                 Acknowledged = a.Acknowledged,
                 ProcessedAt = a.ProcessedAt,
             }).ToList(),
-            SkippedRecordIds = response.SkippedRecordIds,
             Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }
@@ -405,60 +370,17 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
 
         return new ResolveConflictsResult
         {
-            ToUpload = response.ToUpload.Select(f => new SyncFileInfo
-            {
-                Path = f.Path,
-                ModifiedAt = f.ModifiedAt,
-                CreatedAt = f.CreatedAt,
-                Reason = f.Reason
-            }).ToList(),
-            Resolved = response.Resolved.Select(r => new ResolvedConflictItem
-            {
-                Path = r.Path,
-                ModifiedAt = r.ModifiedAt,
-                CreatedAt = r.CreatedAt,
-                Reason = r.Reason
-            }).ToList(),
-            Conflicts = response.Conflicts.Select(c => new SyncConflictItem
-            {
-                Path = c.Path,
-                Reason = c.Reason
-            }).ToList(),
-            ConflictRecords = response.ConflictRecords.Select(r => new SyncActionRecordItem
+            Records = response.Records.Select(r => new SyncRecordItem
             {
                 Id = r.Id,
+                FilePath = r.FilePath,
                 Action = r.Action,
+                SongId = r.SongId,
                 Data = r.Data,
                 ResolvesConflictRecordId = r.ResolvesConflictRecordId,
-                FilePath = r.FilePath,
-                SongId = r.SongId,
-            }).ToList(),
-            UpdateTimestampRecords = response.UpdateTimestampRecords.Select(r => new SyncActionRecordItem
-            {
-                Id = r.Id,
-                Action = r.Action,
-                Data = r.Data,
-                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
-                FilePath = r.FilePath,
-                SongId = r.SongId,
-            }).ToList(),
-            UpdateLocalRecords = response.UpdateLocalRecords.Select(r => new SyncActionRecordItem
-            {
-                Id = r.Id,
-                Action = r.Action,
-                Data = r.Data,
-                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
-                FilePath = r.FilePath,
-                SongId = r.SongId,
-            }).ToList(),
-            RenameRecords = response.RenameRecords.Select(r => new SyncActionRecordItem
-            {
-                Id = r.Id,
-                Action = r.Action,
-                Data = r.Data,
-                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
-                FilePath = r.FilePath,
-                SongId = r.SongId,
+                Reason = r.Reason,
+                Acknowledged = r.Acknowledged,
+                ProcessedAt = r.ProcessedAt,
             }).ToList(),
             Counts = SyncActionCounts.FromApi(response.Counts)
         };

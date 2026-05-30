@@ -232,7 +232,7 @@ public class DevicesControllerCreatePendingActionsSpecs
     }
 
     [Fact]
-    public async Task CreatePendingActions_PathChanged_CreatesRenameAndCreateLocalRecords()
+    public async Task CreatePendingActions_PathChanged_CreatesOnlyCreateLocalRecord()
     {
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
@@ -246,15 +246,9 @@ public class DevicesControllerCreatePendingActionsSpecs
         var response = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
 
         response.Value.ShouldNotBeNull();
-        response.Value.Records.Count.ShouldBe(2);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.CreateLocal);
         response.Value.Records[0].FilePath.ShouldBe(expectedNewPath);
-        response.Value.Records[0].Data.ShouldNotBeNull();
-        var renameData = SyncActionDataSerializer.Deserialize<RenameData>(response.Value.Records[0].Data);
-        renameData.ShouldNotBeNull();
-        renameData.PreviousPath.ShouldBe("OldPath.mp3");
-        renameData.NewPath.ShouldBe(expectedNewPath);
-        response.Value.Records[1].Action.ShouldBe(SyncRecordAction.CreateLocal);
     }
 
     [Fact]

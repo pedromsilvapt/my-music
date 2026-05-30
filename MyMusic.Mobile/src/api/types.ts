@@ -88,6 +88,11 @@ export const SongModifiedAtDataSchema = z.object({
     modifiedAt: z.string().nullable().optional(),
     checksum: z.string().nullable().optional(),
     algorithm: z.string().nullable().optional(),
+    localModifiedAt: z.string().nullable().optional(),
+    serverModifiedAt: z.string().nullable().optional(),
+    lastSyncedAt: z.string().nullable().optional(),
+    serverChecksum: z.string().nullable().optional(),
+    serverChecksumAlgorithm: z.string().nullable().optional(),
 });
 
 export const CreateRemoteDataSchema = z.object({
@@ -113,11 +118,19 @@ export const UpdateRemoteDataSchema = z.object({
 export const ConflictDataSchema = z.object({
     localModifiedAt: z.string(),
     serverModifiedAt: z.string(),
+    lastSyncedAt: z.string().nullable().optional(),
+    serverChecksum: z.string().nullable().optional(),
+    serverChecksumAlgorithm: z.string().nullable().optional(),
+    localChecksum: z.string().nullable().optional(),
+    algorithm: z.string().nullable().optional(),
 });
 
 export const UpdateTimestampDataSchema = z.object({
     newTimestamp: z.string(),
     songId: z.number().nullable().optional(),
+    modifiedAt: z.string().nullable().optional(),
+    createdAt: z.string().nullable().optional(),
+    originalFilePath: z.string().nullable().optional(),
 });
 
 export const ErrorDataSchema = z.object({
@@ -177,12 +190,7 @@ export const SyncActionCountsSchema = z.object({
 export type SyncActionCounts = z.infer<typeof SyncActionCountsSchema>;
 
 export const SyncCheckResponseSchema = z.object({
-    toCreate: z.array(SyncFileInfoItemSchema),
-    toUpdate: z.array(SyncFileInfoSchema),
-    potentialConflicts: z.array(SyncPotentialConflictItemSchema),
-    potentialUpdates: z.array(SyncPotentialUpdateItemSchema),
     records: z.array(SyncRecordItemSchema),
-    skippedRecordIds: z.array(z.number()),
     counts: SyncActionCountsSchema,
 });
 
@@ -478,20 +486,8 @@ export const SyncResolveConflictsRequestSchema = z.object({
 
 export type SyncResolveConflictsRequest = z.infer<typeof SyncResolveConflictsRequestSchema>;
 
-export const SyncConflictErrorItemSchema = z.object({
-    path: z.string(),
-    reason: z.string(),
-});
-
-export type SyncConflictErrorItem = z.infer<typeof SyncConflictErrorItemSchema>;
-
 export const SyncResolveConflictsResponseSchema = z.object({
-    toUpload: z.array(SyncFileInfoItemSchema),
-    resolved: z.array(SyncFileInfoItemSchema),
-    conflicts: z.array(SyncConflictErrorItemSchema),
-    conflictRecords: z.array(SyncActionRecordResponseItemSchema),
-    updateTimestampRecords: z.array(SyncActionRecordResponseItemSchema),
-    updateLocalRecords: z.array(SyncActionRecordResponseItemSchema),
+    records: z.array(SyncRecordItemSchema),
     counts: SyncActionCountsSchema,
 });
 

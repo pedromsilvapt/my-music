@@ -131,12 +131,16 @@ public class SyncActionsServer(
 
     public async Task<DeviceSyncSessionRecord> ActionConflict(
         string filePath, DateTime localModifiedAt, DateTime serverModifiedAt, long? songId = null,
-        string? reason = null, CancellationToken cancellationToken = default)
+        string? reason = null, string? localChecksum = null, string? serverChecksum = null,
+        string? algorithm = null, CancellationToken cancellationToken = default)
     {
         var data = new ConflictData
         {
             LocalModifiedAt = localModifiedAt,
             ServerModifiedAt = serverModifiedAt,
+            LocalChecksum = localChecksum,
+            ServerChecksum = serverChecksum,
+            Algorithm = algorithm,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
         var record = CreateRecord(filePath, SyncRecordAction.Conflict, dataElement, songId, reason: reason);
@@ -145,12 +149,16 @@ public class SyncActionsServer(
 
     public async Task<DeviceSyncSessionRecord> ActionUpdateTimestamp(
         string filePath, DateTime newTimestamp, long? songId = null,
-        string? reason = null, CancellationToken cancellationToken = default)
+        string? reason = null, DateTime? modifiedAt = null, DateTime? createdAt = null,
+        string? originalFilePath = null, CancellationToken cancellationToken = default)
     {
         var data = new UpdateTimestampData
         {
             NewTimestamp = newTimestamp,
             SongId = songId,
+            ModifiedAt = modifiedAt,
+            CreatedAt = createdAt,
+            OriginalFilePath = originalFilePath,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
         var record = CreateRecord(filePath, SyncRecordAction.UpdateTimestamp, dataElement, songId, reason: reason);

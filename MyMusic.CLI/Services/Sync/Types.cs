@@ -197,11 +197,6 @@ public record SyncFileInfo
     public string? Reason { get; init; }
 }
 
-public record SyncConflictItem
-{
-    public required string Path { get; init; }
-    public string Reason { get; init; } = "";
-}
 
 public record StartSyncRequest
 {
@@ -223,35 +218,8 @@ public record CheckSyncRequest
 
 public record CheckSyncResult
 {
-    public required List<SyncFileInfo> ToCreate { get; init; }
-    public required List<SyncFileInfo> ToUpdate { get; init; }
-    public required List<PotentialConflictItem> PotentialConflicts { get; init; }
-    public required List<PotentialUpdateItem> PotentialUpdates { get; init; }
     public required List<SyncRecordItem> Records { get; init; }
-    public required List<long> SkippedRecordIds { get; init; }
     public required SyncActionCounts Counts { get; init; }
-}
-
-public record PotentialConflictItem
-{
-    public required string Path { get; init; }
-    public required DateTime LocalModifiedAt { get; init; }
-    public required DateTime ServerModifiedAt { get; init; }
-    public required DateTime? LastSyncedAt { get; init; }
-    public required long? SongId { get; init; }
-    public required string ServerChecksum { get; init; }
-    public required string ServerChecksumAlgorithm { get; init; }
-}
-
-public record PotentialUpdateItem
-{
-    public required string Path { get; init; }
-    public required DateTime LocalModifiedAt { get; init; }
-    public required DateTime ServerModifiedAt { get; init; }
-    public required DateTime LastSyncedAt { get; init; }
-    public required long SongId { get; init; }
-    public required string ServerChecksum { get; init; }
-    public required string ServerChecksumAlgorithm { get; init; }
 }
 
 public record UploadFileRequest
@@ -353,25 +321,9 @@ public record AcknowledgeActionResult
     public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 
-public record SyncActionRecordItem
-{
-    public required long Id { get; init; }
-    public required string Action { get; init; }
-    public System.Text.Json.JsonElement? Data { get; init; }
-    public long? ResolvesConflictRecordId { get; init; }
-    public string? FilePath { get; init; }
-    public long? SongId { get; init; }
-}
-
 public record ResolveConflictsResult
 {
-    public required List<SyncFileInfo> ToUpload { get; init; }
-    public required List<ResolvedConflictItem> Resolved { get; init; }
-    public required List<SyncConflictItem> Conflicts { get; init; }
-    public required List<SyncActionRecordItem> ConflictRecords { get; init; }
-    public required List<SyncActionRecordItem> UpdateTimestampRecords { get; init; }
-    public required List<SyncActionRecordItem> UpdateLocalRecords { get; init; }
-    public required List<SyncActionRecordItem> RenameRecords { get; init; }
+    public required List<SyncRecordItem> Records { get; init; }
     public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 

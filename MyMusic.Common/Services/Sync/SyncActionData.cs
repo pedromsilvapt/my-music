@@ -90,6 +90,15 @@ public record ConflictData
     [JsonPropertyName("serverModifiedAt")]
     [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
     public required DateTime ServerModifiedAt { get; init; }
+
+    [JsonPropertyName("localChecksum")]
+    public string? LocalChecksum { get; init; }
+
+    [JsonPropertyName("serverChecksum")]
+    public string? ServerChecksum { get; init; }
+
+    [JsonPropertyName("algorithm")]
+    public string? Algorithm { get; init; }
 }
 
 public record UpdateTimestampData
@@ -100,12 +109,79 @@ public record UpdateTimestampData
 
     [JsonPropertyName("songId")]
     public long? SongId { get; init; }
+
+    [JsonPropertyName("modifiedAt")]
+    [JsonConverter(typeof(SyncActionDateTimeJsonConverter))]
+    public DateTime? ModifiedAt { get; init; }
+
+    [JsonPropertyName("createdAt")]
+    [JsonConverter(typeof(SyncActionDateTimeJsonConverter))]
+    public DateTime? CreatedAt { get; init; }
+
+    [JsonPropertyName("originalFilePath")]
+    public string? OriginalFilePath { get; init; }
 }
 
 public record ErrorData
 {
     [JsonPropertyName("errorMessage")]
     public required string ErrorMessage { get; init; }
+}
+
+public record SyncCheckCreateUpdateData
+{
+    [JsonPropertyName("modifiedAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime ModifiedAt { get; init; }
+
+    [JsonPropertyName("createdAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime CreatedAt { get; init; }
+
+    [JsonPropertyName("reason")]
+    public string? Reason { get; init; }
+}
+
+public record SyncCheckConflictData
+{
+    [JsonPropertyName("localModifiedAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime LocalModifiedAt { get; init; }
+
+    [JsonPropertyName("serverModifiedAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime ServerModifiedAt { get; init; }
+
+    [JsonPropertyName("lastSyncedAt")]
+    [JsonConverter(typeof(SyncActionDateTimeJsonConverter))]
+    public DateTime? LastSyncedAt { get; init; }
+
+    [JsonPropertyName("serverChecksum")]
+    public required string ServerChecksum { get; init; }
+
+    [JsonPropertyName("serverChecksumAlgorithm")]
+    public required string ServerChecksumAlgorithm { get; init; }
+}
+
+public record SyncCheckUpdateLocalData
+{
+    [JsonPropertyName("localModifiedAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime LocalModifiedAt { get; init; }
+
+    [JsonPropertyName("serverModifiedAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime ServerModifiedAt { get; init; }
+
+    [JsonPropertyName("lastSyncedAt")]
+    [JsonConverter(typeof(SyncActionNonNullableDateTimeJsonConverter))]
+    public required DateTime LastSyncedAt { get; init; }
+
+    [JsonPropertyName("serverChecksum")]
+    public required string ServerChecksum { get; init; }
+
+    [JsonPropertyName("serverChecksumAlgorithm")]
+    public required string ServerChecksumAlgorithm { get; init; }
 }
 
 public class SyncActionDateTimeJsonConverter : JsonConverter<DateTime?>

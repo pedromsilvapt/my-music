@@ -1,6 +1,7 @@
 namespace MyMusic.CLI.Services.Sync;
 
 using System.IO.Abstractions;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync.Types;
 
@@ -331,67 +332,75 @@ public class SyncActionsDevice(
         long deviceId,
         long sessionId,
         string repositoryPath,
-        List<PotentialConflictItem> conflicts,
-        List<PotentialUpdateItem> potentialUpdates,
+        List<SyncRecordItem> conflictRecords,
+        List<SyncRecordItem> updateLocalRecords,
         bool dryRun,
         CancellationToken ct = default)
     {
         if (dryRun)
         {
-            logger.LogInformation("Dry-run: skipping conflict resolution for {ConflictCount} conflicts and {UpdateCount} potential updates", conflicts.Count, potentialUpdates.Count);
-            return new ResolveConflictsActionResult(Conflicts: conflicts.Count, ToUpdatePaths: [], UpdateLocalRecords: [], RenameRecords: []);
+            logger.LogInformation("Dry-run: skipping conflict resolution for {ConflictCount} conflicts and {UpdateCount} potential updates", conflictRecords.Count, updateLocalRecords.Count);
+            return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
         }
 
         var resolveItems = new List<ConflictResolveItem>();
-        foreach (var conflict in conflicts)
+        foreach (var conflict in conflictRecords)
         {
             if (!conflict.SongId.HasValue)
             {
-                logger.LogWarning("Skipping conflict with no SongId: {Path}", conflict.Path);
+                logger.LogWarning("Skipping conflict with no SongId: {Path}", conflict.FilePath);
                 continue;
             }
 
-            var fullPath = Path.Combine(repositoryPath, conflict.Path);
+            var fullPath = Path.Combine(repositoryPath, conflict.FilePath);
             if (!fileSystem.File.Exists(fullPath))
             {
-                logger.LogWarning("Conflict file not found locally: {Path}", conflict.Path);
+                logger.LogWarning("Conflict file not found locally: {Path}", conflict.FilePath);
                 continue;
             }
 
             var fileContentBase64 = await fileOps.ReadFileBase64Async(fullPath, ct);
+            var conflictData = SyncDataDeserialization.DeserializeConflictCheckData(conflict.Data);
             resolveItems.Add(new ConflictResolveItem
             {
-                Path = conflict.Path,
+                Path = conflict.FilePath,
                 SongId = conflict.SongId.Value,
                 FileContentBase64 = fileContentBase64,
-                LocalModifiedAt = conflict.LocalModifiedAt.ToUniversalTime()
+                LocalModifiedAt = conflictData?.LocalModifiedAt ?? DateTime.UtcNow
             });
         }
 
         var potentialUpdateItems = new List<PotentialUpdateResolveItem>();
-        foreach (var update in potentialUpdates)
+        foreach (var update in updateLocalRecords)
         {
-            var fullPath = Path.Combine(repositoryPath, update.Path);
+            if (!update.SongId.HasValue)
+            {
+                logger.LogWarning("Skipping potential update with no SongId: {Path}", update.FilePath);
+                continue;
+            }
+
+            var fullPath = Path.Combine(repositoryPath, update.FilePath);
             if (!fileSystem.File.Exists(fullPath))
             {
-                logger.LogWarning("Potential update file not found locally: {Path}", update.Path);
+                logger.LogWarning("Potential update file not found locally: {Path}", update.FilePath);
                 continue;
             }
 
             var fileContentBase64 = await fileOps.ReadFileBase64Async(fullPath, ct);
+            var updateData = SyncDataDeserialization.DeserializeUpdateLocalCheckData(update.Data);
             potentialUpdateItems.Add(new PotentialUpdateResolveItem
             {
-                Path = update.Path,
-                SongId = update.SongId,
+                Path = update.FilePath,
+                SongId = update.SongId.Value,
                 FileContentBase64 = fileContentBase64,
-                LocalModifiedAt = update.LocalModifiedAt.ToUniversalTime(),
-                LastSyncedAt = update.LastSyncedAt.ToUniversalTime()
+                LocalModifiedAt = updateData?.LocalModifiedAt ?? DateTime.UtcNow,
+                LastSyncedAt = updateData?.LastSyncedAt ?? DateTime.UtcNow
             });
         }
 
         if (resolveItems.Count == 0 && potentialUpdateItems.Count == 0)
         {
-            return new ResolveConflictsActionResult(Conflicts: 0, ToUpdatePaths: [], UpdateLocalRecords: [], RenameRecords: []);
+            return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
         }
 
         try
@@ -402,38 +411,52 @@ public class SyncActionsDevice(
                 PotentialUpdates = potentialUpdateItems
             }, ct);
 
-            var toUpdatePaths = resolveResponse.ToUpload.Select(f => f.Path).ToHashSet();
-
-            foreach (var resolved in resolveResponse.Resolved)
+            foreach (var record in resolveResponse.Records)
             {
-                logger.LogInformation("Resolved conflict for {Path}: {Reason}", resolved.Path, resolved.Reason);
+                var logMessage = record.Action switch
+                {
+                    SyncRecordAction.Conflict => $"Conflict for {record.FilePath}: {record.Reason}",
+                    SyncRecordAction.UpdateTimestamp => $"Resolved conflict for {record.FilePath}: {record.Reason}",
+                    SyncRecordAction.UpdateLocal => $"Created UpdateLocal action for record {record.Id}",
+                    SyncRecordAction.Rename => $"Created Rename action for record {record.Id}",
+                    SyncRecordAction.Error => $"Error for {record.FilePath}: {record.Reason}",
+                    _ => $"Created {record.Action} action for record {record.Id}"
+                };
+                logger.LogInformation("{LogMessage}", logMessage);
             }
-
-            foreach (var record in resolveResponse.UpdateLocalRecords)
-            {
-                logger.LogInformation("Created UpdateLocal action for record {RecordId}", record.Id);
-            }
-
-            foreach (var record in resolveResponse.RenameRecords)
-            {
-                logger.LogInformation("Created Rename action for record {RecordId}", record.Id);
-            }
-
-            var errorCount = resolveResponse.Conflicts.Count;
 
             return new ResolveConflictsActionResult(
-                Conflicts: errorCount,
-                ToUpdatePaths: toUpdatePaths,
-                UpdateLocalRecords: resolveResponse.UpdateLocalRecords,
-                RenameRecords: resolveResponse.RenameRecords,
+                Records: resolveResponse.Records,
                 Counts: resolveResponse.Counts);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to resolve conflicts");
-            return new ResolveConflictsActionResult(Conflicts: conflicts.Count, ToUpdatePaths: [], UpdateLocalRecords: [], RenameRecords: []);
+            return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
         }
     }
 }
 
-public record ResolveConflictsActionResult(int Conflicts, HashSet<string> ToUpdatePaths, List<SyncActionRecordItem> UpdateLocalRecords, List<SyncActionRecordItem> RenameRecords, SyncActionCounts? Counts = null);
+public record ResolveConflictsActionResult(List<SyncRecordItem> Records, SyncActionCounts Counts);
+
+file record ConflictCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt);
+file record UpdateLocalCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, DateTime LastSyncedAt);
+
+file static class SyncDataDeserialization
+{
+    private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
+
+    internal static ConflictCheckData? DeserializeConflictCheckData(System.Text.Json.JsonElement? data)
+    {
+        if (!data.HasValue || data.Value.ValueKind == System.Text.Json.JsonValueKind.Null) return null;
+        try { return JsonSerializer.Deserialize<ConflictCheckData>(data.Value, Options); }
+        catch { return null; }
+    }
+
+    internal static UpdateLocalCheckData? DeserializeUpdateLocalCheckData(System.Text.Json.JsonElement? data)
+    {
+        if (!data.HasValue || data.Value.ValueKind == System.Text.Json.JsonValueKind.Null) return null;
+        try { return JsonSerializer.Deserialize<UpdateLocalCheckData>(data.Value, Options); }
+        catch { return null; }
+    }
+}

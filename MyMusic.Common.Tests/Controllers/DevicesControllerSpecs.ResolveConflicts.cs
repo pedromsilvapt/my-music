@@ -128,9 +128,9 @@ public class DevicesControllerResolveConflictsSpecs
     }
 
     [Fact]
-    public async Task ResolveConflicts_ChecksumsMatch_ReturnsInResolvedNotToUpload()
+    public async Task ResolveConflicts_ChecksumsMatch_ReturnsEmptyRecordsWithoutSession()
     {
-        // Arrange
+        // Arrange - without a session, no records are created (syncActions is null)
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -158,11 +158,9 @@ public class DevicesControllerResolveConflictsSpecs
         // Act
         var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
-        // Assert
-        response.Value.ToUpload.ShouldBeEmpty();
-        response.Value.Conflicts.ShouldBeEmpty();
-        response.Value.Resolved.Count.ShouldBe(1);
-        response.Value.Resolved[0].Path.ShouldBe("/music/song.mp3");
+        // Assert - without a session, no records are created
+        response.Value.Records.ShouldBeEmpty();
+        response.Value.Counts.UpdateTimestampCount.ShouldBe(0);
     }
 
     [Fact]
@@ -199,9 +197,9 @@ public class DevicesControllerResolveConflictsSpecs
     }
 
     [Fact]
-    public async Task ResolveConflicts_ChecksumsDiffer_ReturnsInConflicts()
+    public async Task ResolveConflicts_ChecksumsDiffer_ReturnsEmptyRecordsWithoutSession()
     {
-        // Arrange
+        // Arrange - without a session, no records are created (syncActions is null)
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
@@ -229,12 +227,8 @@ public class DevicesControllerResolveConflictsSpecs
         // Act
         var response = await controller.ResolveConflicts(device.Id, 0, request, CancellationToken.None);
 
-        // Assert
-        response.Value.ToUpload.ShouldBeEmpty();
-        response.Value.Resolved.ShouldBeEmpty();
-        response.Value.Conflicts.Count.ShouldBe(1);
-        response.Value.Conflicts[0].Path.ShouldBe("/music/song.mp3");
-        response.Value.Conflicts[0].Reason.ShouldContain("Checksum mismatch");
+        // Assert - without a session, records are not created
+        response.Value.Records.ShouldBeEmpty();
     }
 
     [Fact]
@@ -289,8 +283,9 @@ public class DevicesControllerResolveConflictsSpecs
 
         var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.Conflicts.Count.ShouldBe(1);
-        response.Value.Conflicts[0].Reason.ShouldBe("Invalid file content format");
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Error);
+        response.Value.Records[0].Reason.ShouldBe("Invalid file content format");
 
         var errorRecords = await scenario.DbContext.DeviceSyncSessionRecords
             .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.Error)
@@ -352,9 +347,8 @@ public class DevicesControllerResolveConflictsSpecs
 
         var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
 
-        response.Value.Resolved.Count.ShouldBe(1);
-        response.Value.ConflictRecords.Count.ShouldBe(0);
-        response.Value.UpdateTimestampRecords.Count.ShouldBe(1);
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
 
         var records = await scenario.DbContext.DeviceSyncSessionRecords
             .Where(r => r.SessionId == session.Id)
