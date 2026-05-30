@@ -319,7 +319,7 @@ public class SoundalikeMergeServiceSpecs
             Size = 5000000,
             RepositoryPath = $"/music/{title}.mp3",
             Checksum = "test-checksum",
-            ChecksumAlgorithm = "MD5",
+            ChecksumAlgorithm = "XxHash128",
             AddedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             ModifiedAt = DateTime.UtcNow,

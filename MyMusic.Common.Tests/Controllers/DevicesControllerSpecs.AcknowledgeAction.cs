@@ -22,12 +22,12 @@ public class DevicesControllerAcknowledgeActionSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
-            syncCommitService ?? Substitute.For<ISyncCommitService>()
+            syncCommitService ?? Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
     }
 

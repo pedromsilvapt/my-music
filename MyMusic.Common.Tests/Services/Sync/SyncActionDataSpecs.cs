@@ -128,7 +128,7 @@ public class SyncActionDataSpecs
             SongId = 10,
             ModifiedAt = modifiedAt,
             Checksum = "xyz789",
-            Algorithm = "MD5",
+            Algorithm = "XxHash128",
         };
 
         var element = SyncActionDataSerializer.Serialize(data);
@@ -138,7 +138,7 @@ public class SyncActionDataSpecs
         result.SongId.ShouldBe(10);
         result.ModifiedAt.ShouldBe(modifiedAt);
         result.Checksum.ShouldBe("xyz789");
-        result.Algorithm.ShouldBe("MD5");
+        result.Algorithm.ShouldBe("XxHash128");
     }
 
     [Fact]

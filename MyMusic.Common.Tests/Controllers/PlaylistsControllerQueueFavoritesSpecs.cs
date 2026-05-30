@@ -61,7 +61,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
             Size = 5000000,
             RepositoryPath = $"/music/{title}.mp3",
             Checksum = $"checksum-{title}",
-            ChecksumAlgorithm = "MD5",
+            ChecksumAlgorithm = "XxHash128",
             AddedAt = DateTime.UtcNow,
             CreatedAt = DateTime.UtcNow,
             ModifiedAt = DateTime.UtcNow,

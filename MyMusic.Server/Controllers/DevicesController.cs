@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.IO.Abstractions;
-using System.IO.Hashing;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Mvc;
@@ -27,12 +26,12 @@ public class DevicesController(
     ILogger<DevicesController> logger,
     ICurrentUser currentUser,
     MusicDbContext context,
-    IMusicService musicService,
     IConfiguration configuration,
     IOptions<Config> config,
     IFileSystem fileSystem,
     ISyncActionsServerFactory syncActionsServerFactory,
-    ISyncCommitService syncCommitService) : ControllerBase
+    ISyncCommitService syncCommitService,
+    ISyncUploadService syncUploadService) : ControllerBase
 {
     [HttpGet]
     public async Task<ListDevicesResponse> List(
@@ -1121,7 +1120,7 @@ public class DevicesController(
                 continue;
             }
 
-            string localChecksum = ComputeChecksum(fileBytes, songDevice.Song.ChecksumAlgorithm);
+            string localChecksum = ChecksumService.ComputeChecksumFromBytes(fileBytes, songDevice.Song.ChecksumAlgorithm);
 
             if (localChecksum == songDevice.Song.Checksum)
             {
@@ -1197,7 +1196,7 @@ public class DevicesController(
                     continue;
                 }
 
-                var localChecksum = ComputeChecksum(fileBytes, songDevice.Song.ChecksumAlgorithm);
+                var localChecksum = ChecksumService.ComputeChecksumFromBytes(fileBytes, songDevice.Song.ChecksumAlgorithm);
 
                 if (localChecksum == songDevice.Song.Checksum)
                 {
@@ -1277,179 +1276,24 @@ public class DevicesController(
         var songDeviceForImport = await context.SongDevices
             .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == path, cancellationToken);
 
-        return await UploadFileStaged(device, deviceId, file, path, repositoryPath, activeSession,
-            songDeviceForImport, modifiedAtDateTime, createdAtDateTime, cancellationToken);
-    }
-
-    private async Task<SyncUploadResponse> UploadFileStaged(
-        Device device, long deviceId, IFormFile file, string path, string repositoryPath,
-        DeviceSyncSession activeSession, SongDevice? songDeviceForImport,
-        DateTime modifiedAtDateTime, DateTime createdAtDateTime, CancellationToken cancellationToken)
-    {
-        var isUpdate = songDeviceForImport != null;
-        var isDryRun = activeSession.IsDryRun;
-
-        var tempPath = fileSystem.Path.Combine(repositoryPath, ".temp", $"sync-{activeSession.Id}");
-        string? stagingFilePath = null;
-
-        if (!isDryRun)
-        {
-            fileSystem.Directory.CreateDirectory(tempPath);
-            var stagingFileName = $"{Guid.NewGuid()}-{fileSystem.Path.GetFileName(path)}";
-            stagingFilePath = fileSystem.Path.Combine(tempPath, stagingFileName);
-            await using (var stream = fileSystem.FileStream.New(stagingFilePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream, cancellationToken);
-            }
-        }
-        else
-        {
-            var systemTempPath = fileSystem.Path.Combine(fileSystem.Path.GetTempPath(), $"mymusic_staging_dryrun_{Guid.NewGuid()}");
-            fileSystem.Directory.CreateDirectory(systemTempPath);
-            try
-            {
-                var tempFilePath = fileSystem.Path.Combine(systemTempPath, fileSystem.Path.GetFileName(path));
-                await using (var stream = fileSystem.FileStream.New(tempFilePath, FileMode.Create))
-                {
-                    await file.CopyToAsync(stream, cancellationToken);
-                }
-
-                var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
-                var checksumAlgorithmName = checksumAlgorithm.GetType().Name;
-                var checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, tempFilePath);
-
-                long? songId = isUpdate ? songDeviceForImport!.SongId!.Value : null;
-
-                var (duplicateSongId, hasDuplicate) = await FindDuplicateForUploadAsync(deviceId, activeSession.Id, checksum, checksumAlgorithmName, cancellationToken);
-
-                var syncActions = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, isDryRun);
-                DeviceSyncSessionRecord record;
-                if (isUpdate)
-                {
-                    record = await syncActions.ActionUpdateRemote(path, songId, checksum, checksumAlgorithmName,
-                        modifiedAtDateTime, tempFilePath: null, createdAtDateTime, originalFilePath: null, reason: "File re-uploaded (updated)", cancellationToken);
-                }
-                else if (hasDuplicate && duplicateSongId.HasValue)
-                {
-                    record = await syncActions.ActionLink(path, duplicateSongId.Value, modifiedAtDateTime, checksum, checksumAlgorithmName, "Linked to existing song (duplicate checksum)", cancellationToken);
-                }
-                else if (hasDuplicate)
-                {
-                    record = await syncActions.ActionLink(path, checksum, checksumAlgorithmName, modifiedAtDateTime, "Linked to existing song (duplicate checksum)", cancellationToken);
-                }
-                else
-                {
-                    record = await syncActions.ActionCreateRemote(path, songId, checksum, checksumAlgorithmName,
-                        modifiedAtDateTime, tempFilePath: null, createdAtDateTime, originalFilePath: null, reason: "New file uploaded", cancellationToken);
-                }
-
-                await context.SaveChangesAsync(cancellationToken);
-
-                return new SyncUploadResponse
-                {
-                    Success = true,
-                    SongId = duplicateSongId ?? songId,
-                    RecordId = record.Id,
-                    Action = record.Action.ToString(),
-                    Data = record.Data,
-                    Counts = SyncActionCounts.FromAction(record.Action),
-                };
-            }
-            finally
-            {
-                if (fileSystem.Directory.Exists(systemTempPath))
-                {
-                    fileSystem.Directory.Delete(systemTempPath, true);
-                }
-            }
-        }
-
-        var checksumAlg = ChecksumService.CreateChecksumAlgorithm();
-        var checksumAlgName = checksumAlg.GetType().Name;
-        var fileChecksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlg, stagingFilePath!);
-
-        long? songIdForRecord = isUpdate ? songDeviceForImport!.SongId!.Value : null;
-
-        var (stagedDuplicateSongId, stagedHasDuplicate) = await FindDuplicateForUploadAsync(deviceId, activeSession.Id, fileChecksum, checksumAlgName, cancellationToken);
-
-        var originalFilePath = fileSystem.Path.Combine(tempPath, fileSystem.Path.GetFileName(path));
-
-        if (isUpdate)
-        {
-            // When updating, don't downgrade to Link even if a duplicate song exists.
-            // The force-sync mechanism explicitly requests re-upload of unchanged files,
-            // and the update should be recorded as UpdateRemote, not Link.
-            var syncActionsServerForUpdate = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, isDryRun);
-            var updateRecord = await syncActionsServerForUpdate.ActionUpdateRemote(path, songIdForRecord, fileChecksum, checksumAlgName,
-                modifiedAtDateTime, stagingFilePath, createdAtDateTime, originalFilePath, "File re-uploaded (updated)", cancellationToken);
-
-            await context.SaveChangesAsync(cancellationToken);
-
-            logger.LogInformation("Uploaded file {Path} to device {DeviceId} (forced update), song ID: {SongId}",
-                path, deviceId, songIdForRecord);
-
-            return new SyncUploadResponse
-            {
-                Success = true,
-                SongId = songIdForRecord,
-                RecordId = updateRecord.Id,
-                Action = updateRecord.Action.ToString(),
-                Data = updateRecord.Data,
-                Counts = SyncActionCounts.FromAction(updateRecord.Action),
-            };
-        }
-
-        if (stagedHasDuplicate)
-        {
-            fileSystem.File.Delete(stagingFilePath!);
-
-            var syncActionsServer = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, isDryRun);
-            DeviceSyncSessionRecord linkRecord;
-
-            if (stagedDuplicateSongId.HasValue)
-            {
-                linkRecord = await syncActionsServer.ActionLink(path, stagedDuplicateSongId.Value, modifiedAtDateTime, fileChecksum, checksumAlgName, "Linked to existing song (duplicate checksum)", cancellationToken);
-                logger.LogInformation("Uploaded file {Path} to device {DeviceId} linked to existing song {SongId}",
-                    path, deviceId, stagedDuplicateSongId.Value);
-            }
-            else
-            {
-                linkRecord = await syncActionsServer.ActionLink(path, fileChecksum, checksumAlgName, modifiedAtDateTime, "Linked to existing song (duplicate checksum)", cancellationToken);
-                logger.LogInformation("Uploaded file {Path} to device {DeviceId} linked via checksum to pending song",
-                    path, deviceId);
-            }
-
-            await context.SaveChangesAsync(cancellationToken);
-
-            return new SyncUploadResponse
-            {
-                Success = true,
-                SongId = stagedDuplicateSongId,
-                RecordId = linkRecord.Id,
-                Action = linkRecord.Action.ToString(),
-                Data = linkRecord.Data,
-                Counts = SyncActionCounts.FromAction(linkRecord.Action),
-            };
-        }
-
-        var syncActionsServerForCreate = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, isDryRun);
-        DeviceSyncSessionRecord stagedRecord;
-        stagedRecord = await syncActionsServerForCreate.ActionCreateRemote(path, songIdForRecord, fileChecksum, checksumAlgName,
-            modifiedAtDateTime, stagingFilePath, createdAtDateTime, originalFilePath, "New file uploaded", cancellationToken);
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Uploaded file {Path} to device {DeviceId} (staged), song ID: {SongId}",
-            path, deviceId, songIdForRecord);
+        var result = await syncUploadService.UploadAsync(
+            deviceId, activeSession.Id, activeSession.IsDryRun, path, file.OpenReadStream(),
+            fileSystem.Path.GetFileName(path),
+            modifiedAtDateTime, createdAtDateTime,
+            isUpdate: songDeviceForImport != null,
+            songDeviceForImport: songDeviceForImport,
+            repositoryPath: repositoryPath,
+            ownerId: currentUser.Id,
+            cancellationToken: cancellationToken);
 
         return new SyncUploadResponse
         {
             Success = true,
-            SongId = songIdForRecord,
-            RecordId = stagedRecord.Id,
-            Action = stagedRecord.Action.ToString(),
-            Data = stagedRecord.Data,
-            Counts = SyncActionCounts.FromAction(stagedRecord.Action),
+            SongId = result.EffectiveSongId,
+            RecordId = result.Record.Id,
+            Action = result.Record.Action.ToString(),
+            Data = result.Record.Data,
+            Counts = SyncActionCounts.FromAction(result.Record.Action),
         };
     }
 
@@ -1706,90 +1550,11 @@ public class DevicesController(
         return new FilterValuesResponse { Values = values };
     }
 
-    private async Task<(long? SongId, bool HasDuplicateChecksum)> FindDuplicateForUploadAsync(
-        long deviceId, long sessionId, string checksum, string checksumAlgorithm,
-        CancellationToken cancellationToken)
-    {
-        var sessionRecords = await context.DeviceSyncSessionRecords
-            .Where(r => r.SessionId == sessionId
-                        && (r.Action == SyncRecordAction.CreateRemote || r.Action == SyncRecordAction.Link))
-            .ToListAsync(cancellationToken);
-
-        foreach (var r in sessionRecords)
-        {
-            if (r.Data == null) continue;
-            var recordData = r.Action == SyncRecordAction.CreateRemote
-                ? (SyncActionDataSerializer.Deserialize<CreateRemoteData>(r.Data) as object ??
-                   (SyncActionDataSerializer.Deserialize<SongModifiedAtData>(r.Data) as object))
-                : SyncActionDataSerializer.Deserialize<SongModifiedAtData>(r.Data);
-
-            var recordChecksum = recordData switch
-            {
-                CreateRemoteData crd => crd.Checksum,
-                SongModifiedAtData smd => smd.Checksum,
-                _ => null
-            };
-            if (recordChecksum != checksum) continue;
-
-            var recordSongId = recordData switch
-            {
-                CreateRemoteData crd => crd.SongId,
-                SongModifiedAtData smd => smd.SongId,
-                _ => null
-            };
-
-            if (recordSongId.HasValue && recordSongId.Value > 0)
-                return (recordSongId.Value, true);
-        }
-
-        var hasDuplicateInSession = sessionRecords.Any(r =>
-        {
-            if (r.Data == null) return false;
-            var data = r.Action == SyncRecordAction.CreateRemote
-                ? (SyncActionDataSerializer.Deserialize<CreateRemoteData>(r.Data) as object ??
-                   (SyncActionDataSerializer.Deserialize<SongModifiedAtData>(r.Data) as object))
-                : SyncActionDataSerializer.Deserialize<SongModifiedAtData>(r.Data);
-            var dataChecksum = data switch
-            {
-                CreateRemoteData crd => crd.Checksum,
-                SongModifiedAtData smd => smd.Checksum,
-                _ => null
-            };
-            return dataChecksum == checksum;
-        });
-
-        if (hasDuplicateInSession)
-            return (null, true);
-
-        var existingSongs = await musicService.FindUserSongsByChecksum(
-            context, currentUser.Id, [checksum], checksumAlgorithm, cancellationToken);
-
-        if (existingSongs.TryGetValue(checksum, out var existingSong))
-        {
-            return (existingSong.Id, true);
-        }
-
-        return (null, false);
-    }
-
     private static bool IsNewerThan(DateTime current, DateTime reference)
     {
         // The dates that are saved in the database by EF Core seem to lose the precision for the last digit
         // it is always 0 (zero) when reading it back, so we make the comparison without it in both values
         return current.Ticks / 10 > reference.Ticks / 10;
-    }
-
-    private static string ComputeChecksum(byte[] fileBytes, string checksumAlgorithm)
-    {
-        if (checksumAlgorithm == "MD5")
-        {
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            return Convert.ToBase64String(md5.ComputeHash(fileBytes));
-        }
-
-        var xxHash = new XxHash128();
-        xxHash.Append(fileBytes);
-        return Convert.ToBase64String(xxHash.GetCurrentHash());
     }
 
     private static Dictionary<string, string> GetSessionRecordFieldMappings()

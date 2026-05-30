@@ -129,7 +129,7 @@ public class DynamicFilterBuilderSpecs
             OwnerId = owner.Id,
             RepositoryPath = $"/music/{title}.mp3",
             Checksum = $"checksum-{id}",
-            ChecksumAlgorithm = "MD5",
+            ChecksumAlgorithm = "XxHash128",
             Duration = TimeSpan.FromMinutes(3 + id % 5),
             CreatedAt = new DateTime(2020, 1, 1).AddDays(id * 10),
             ModifiedAt = new DateTime(2020, 1, 1).AddDays(id * 10),

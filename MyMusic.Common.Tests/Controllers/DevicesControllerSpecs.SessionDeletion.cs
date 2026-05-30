@@ -23,12 +23,12 @@ public class DevicesControllerSessionDeletionSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             scenario.FileSystem,
             Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>()
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
     }
 

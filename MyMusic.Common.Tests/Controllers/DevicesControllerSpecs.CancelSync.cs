@@ -24,12 +24,12 @@ public class DevicesControllerCancelSyncSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             scenario.FileSystem,
             Substitute.For<ISyncActionsServerFactory>(),
-            _syncCommitService
+            _syncCommitService,
+            Substitute.For<ISyncUploadService>()
         );
     }
 

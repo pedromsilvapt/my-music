@@ -7,6 +7,12 @@ public static class ChecksumService
 {
     public static NonCryptographicHashAlgorithm CreateChecksumAlgorithm() => new XxHash128();
 
+    public static NonCryptographicHashAlgorithm CreateChecksumAlgorithmByName(string name) => name switch
+    {
+        "XxHash128" => new XxHash128(),
+        _ => throw new ArgumentException($"Unknown checksum algorithm: {name}", nameof(name)),
+    };
+
     public static string CalculateChecksum(IFileSystem fs, NonCryptographicHashAlgorithm algorithm, string filePath)
     {
         using var file = fs.File.OpenRead(filePath);
@@ -28,5 +34,10 @@ public static class ChecksumService
         var hash = algorithm.GetHashAndReset();
 
         return Convert.ToBase64String(hash);
+    }
+
+    public static string ComputeChecksumFromBytes(byte[] fileBytes, string checksumAlgorithmName)
+    {
+        return CalculateChecksum(CreateChecksumAlgorithmByName(checksumAlgorithmName), fileBytes);
     }
 }

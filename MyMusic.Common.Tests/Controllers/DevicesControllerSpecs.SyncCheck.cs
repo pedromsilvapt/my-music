@@ -29,12 +29,12 @@ public class DevicesControllerSyncCheckSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             config,
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>()
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
     }
 
@@ -68,7 +68,7 @@ public class DevicesControllerSyncCheckSpecs
         return session;
     }
 
-    private Song CreateSong(MusicDbContext db, long ownerId, DateTime modifiedAt, string checksum = "AA==", string checksumAlgorithm = "MD5")
+    private Song CreateSong(MusicDbContext db, long ownerId, DateTime modifiedAt, string checksum = "AA==", string checksumAlgorithm = "XxHash128")
     {
         var artist = new Artist
         {

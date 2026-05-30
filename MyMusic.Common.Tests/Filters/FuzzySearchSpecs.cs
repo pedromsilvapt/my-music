@@ -435,7 +435,7 @@ public class FuzzySearchSpecs
             OwnerId = owner.Id,
             RepositoryPath = $"/music/{title}.mp3",
             Checksum = $"checksum-{id}",
-            ChecksumAlgorithm = "MD5",
+            ChecksumAlgorithm = "XxHash128",
             Duration = TimeSpan.FromMinutes(3),
             CreatedAt = DateTime.UtcNow,
             ModifiedAt = DateTime.UtcNow,

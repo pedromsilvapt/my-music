@@ -34,12 +34,12 @@ public class DevicesControllerCreatePendingActionsSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             config,
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>()
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
     }
 

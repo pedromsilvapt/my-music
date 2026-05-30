@@ -34,6 +34,7 @@ public static class HostBuilderExtensions
         builder.Services.AddTransient<MusicImportJob>();
 
         builder.Services.AddScoped<ISyncCommitService, SyncCommitService>();
+        builder.Services.AddScoped<ISyncUploadService, SyncUploadService>();
         builder.Services.AddHostedService<StagingDirectoryCleanupService>();
         builder.Services.AddScoped<IAuditService, AuditService>();
         builder.Services.AddScoped<IAuditRule, MissingCoverAuditRule>();

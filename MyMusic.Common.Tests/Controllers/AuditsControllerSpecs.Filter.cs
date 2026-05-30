@@ -263,14 +263,14 @@ public class AuditsControllerFilterSpecs
         db.Songs.Add(new Song
         {
             Title = "Rock Anthem", Label = "Label Rock", Album = album, AlbumId = album.Id, Owner = user, OwnerId = user.Id,
-            RepositoryPath = "/music/rock.mp3", Checksum = "chk1", ChecksumAlgorithm = "MD5",
+            RepositoryPath = "/music/rock.mp3", Checksum = "chk1", ChecksumAlgorithm = "XxHash128",
             Duration = TimeSpan.FromMinutes(3), CreatedAt = DateTime.UtcNow, ModifiedAt = DateTime.UtcNow, AddedAt = DateTime.UtcNow,
             Artists = [], Genres = [], Devices = [], Sources = [], CoverId = null,
         });
         db.Songs.Add(new Song
         {
             Title = "Pop Ballad", Label = "Label Pop", Album = album, AlbumId = album.Id, Owner = user, OwnerId = user.Id,
-            RepositoryPath = "/music/pop.mp3", Checksum = "chk2", ChecksumAlgorithm = "MD5",
+            RepositoryPath = "/music/pop.mp3", Checksum = "chk2", ChecksumAlgorithm = "XxHash128",
             Duration = TimeSpan.FromMinutes(3), CreatedAt = DateTime.UtcNow, ModifiedAt = DateTime.UtcNow, AddedAt = DateTime.UtcNow,
             Artists = [], Genres = [], Devices = [], Sources = [], CoverId = null,
         });
@@ -296,14 +296,14 @@ public class AuditsControllerFilterSpecs
         db.Songs.Add(new Song
         {
             Title = "Rock Anthem", Label = "Label Rock", Album = album, AlbumId = album.Id, Owner = user, OwnerId = user.Id,
-            RepositoryPath = "/music/rock.mp3", Checksum = "chk1", ChecksumAlgorithm = "MD5",
+            RepositoryPath = "/music/rock.mp3", Checksum = "chk1", ChecksumAlgorithm = "XxHash128",
             Duration = TimeSpan.FromMinutes(3), CreatedAt = DateTime.UtcNow, ModifiedAt = DateTime.UtcNow, AddedAt = DateTime.UtcNow,
             Artists = [], Genres = [], Devices = [], Sources = [], CoverId = null,
         });
         db.Songs.Add(new Song
         {
             Title = "Pop Ballad", Label = "Label Pop", Album = album, AlbumId = album.Id, Owner = user, OwnerId = user.Id,
-            RepositoryPath = "/music/pop.mp3", Checksum = "chk2", ChecksumAlgorithm = "MD5",
+            RepositoryPath = "/music/pop.mp3", Checksum = "chk2", ChecksumAlgorithm = "XxHash128",
             Duration = TimeSpan.FromMinutes(3), CreatedAt = DateTime.UtcNow, ModifiedAt = DateTime.UtcNow, AddedAt = DateTime.UtcNow,
             Artists = [], Genres = [], Devices = [], Sources = [], CoverId = null,
         });

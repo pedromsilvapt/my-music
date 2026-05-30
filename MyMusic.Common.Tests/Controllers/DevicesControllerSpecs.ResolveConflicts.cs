@@ -23,12 +23,12 @@ public class DevicesControllerResolveConflictsSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>()
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
     }
 
@@ -46,7 +46,7 @@ public class DevicesControllerResolveConflictsSpecs
         return device;
     }
 
-    private Song CreateSongWithChecksum(MusicDbContext db, long ownerId, byte[] content, string checksumAlgorithm = "MD5")
+    private Song CreateSongWithChecksum(MusicDbContext db, long ownerId, byte[] content, string checksumAlgorithm = "XxHash128")
     {
         string checksum;
         if (checksumAlgorithm == "XxHash128")
@@ -57,8 +57,7 @@ public class DevicesControllerResolveConflictsSpecs
         }
         else
         {
-            using var md5 = System.Security.Cryptography.MD5.Create();
-            checksum = Convert.ToBase64String(md5.ComputeHash(content));
+            throw new ArgumentException($"Unknown checksum algorithm: {checksumAlgorithm}", nameof(checksumAlgorithm));
         }
 
         var artist = new Artist
@@ -238,12 +237,12 @@ public class DevicesControllerResolveConflictsSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             factory,
-            Substitute.For<ISyncCommitService>()
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
         var session = new DeviceSyncSession
@@ -301,12 +300,12 @@ public class DevicesControllerResolveConflictsSpecs
             Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<IMusicService>(),
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
             Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             factory,
-            Substitute.For<ISyncCommitService>()
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
         );
         var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
         var session = new DeviceSyncSession
