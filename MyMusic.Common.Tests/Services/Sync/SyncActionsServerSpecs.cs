@@ -826,4 +826,157 @@ public class SyncActionsServerSpecs
     }
 
     #endregion
+
+    #region Reason Field
+
+    [Fact]
+    public async Task ActionCreateRemote_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionCreateRemote("/music/song.mp3", song.Id, "abc123", "XxHash128", modifiedAt, reason: "New file uploaded");
+
+        record.Reason.ShouldBe("New file uploaded");
+    }
+
+    [Fact]
+    public async Task ActionCreateRemote_WithoutReason_ReasonIsNull()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionCreateRemote("/music/song.mp3", song.Id, "abc123", "XxHash128", modifiedAt);
+
+        record.Reason.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ActionUpdateRemote_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionUpdateRemote("/music/song.mp3", song.Id, "def456", "XxHash128", modifiedAt, reason: "File re-uploaded (updated)");
+
+        record.Reason.ShouldBe("File re-uploaded (updated)");
+    }
+
+    [Fact]
+    public async Task ActionCreateLocal_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionCreateLocal("/music/song.mp3", song.Id, modifiedAt, reason: "Server modification — new to device");
+
+        record.Reason.ShouldBe("Server modification — new to device");
+    }
+
+    [Fact]
+    public async Task ActionUpdateLocal_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionUpdateLocal("/music/song.mp3", song.Id, modifiedAt, reason: "Server modification — updated since last sync");
+
+        record.Reason.ShouldBe("Server modification — updated since last sync");
+    }
+
+    [Fact]
+    public async Task ActionLink_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionLink("/music/song.mp3", song.Id, modifiedAt, reason: "Linked to existing song (duplicate checksum)");
+
+        record.Reason.ShouldBe("Linked to existing song (duplicate checksum)");
+    }
+
+    [Fact]
+    public async Task ActionUnlink_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+
+        var record = await server.ActionUnlink("/music/song.mp3", song.Id, reason: "Song marked for removal");
+
+        record.Reason.ShouldBe("Song marked for removal");
+    }
+
+    [Fact]
+    public async Task ActionRename_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, server) = Setup();
+
+        var record = await server.ActionRename("/music/new.mp3", "/music/old.mp3", "/music/new.mp3", reason: "Path updated by naming template");
+
+        record.Reason.ShouldBe("Path updated by naming template");
+    }
+
+    [Fact]
+    public async Task ActionSkipped_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, server) = Setup();
+
+        var record = await server.ActionSkipped("/music/song.mp3", reason: "No changes detected");
+
+        record.Reason.ShouldBe("No changes detected");
+    }
+
+    [Fact]
+    public async Task ActionConflict_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, server) = Setup();
+        var localModified = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var serverModified = new DateTime(2025, 1, 2, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionConflict("/music/song.mp3", localModified, serverModified, reason: "Conflict: local and server both modified, checksums differ");
+
+        record.Reason.ShouldBe("Conflict: local and server both modified, checksums differ");
+    }
+
+    [Fact]
+    public async Task ActionUpdateTimestamp_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var newTimestamp = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var record = await server.ActionUpdateTimestamp("/music/song.mp3", newTimestamp, song.Id, reason: "Timestamp update: checksums match, no file change needed");
+
+        record.Reason.ShouldBe("Timestamp update: checksums match, no file change needed");
+    }
+
+    [Fact]
+    public async Task ActionError_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, server) = Setup();
+
+        var record = await server.ActionError("/music/song.mp3", "File not found", reason: "Scan error: File not found");
+
+        record.Reason.ShouldBe("Scan error: File not found");
+    }
+
+    [Fact]
+    public async Task ActionError_WithoutReason_ReasonIsNull()
+    {
+        var (_, _, _, _, server) = Setup();
+
+        var record = await server.ActionError("/music/song.mp3", "File not found");
+
+        record.Reason.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ActionDelete_WithReason_SetsReasonOnRecord()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+
+        var record = await server.ActionDelete("/music/song.mp3", song.Id, reason: "Song deleted from library");
+
+        record.Reason.ShouldBe("Song deleted from library");
+    }
+
+    #endregion
 }

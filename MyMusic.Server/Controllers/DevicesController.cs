@@ -544,7 +544,7 @@ public class DevicesController(
             var syncActions = syncActionsServerFactory.Create(context, session.Id, deviceId, session.IsDryRun);
             foreach (var error in request.ScanErrors)
             {
-                await syncActions.ActionError(error.FilePath, error.ErrorMessage, cancellationToken: cancellationToken);
+                await syncActions.ActionError(error.FilePath, error.ErrorMessage, reason: $"Scan error: {error.ErrorMessage}", cancellationToken: cancellationToken);
             }
         }
 
@@ -765,7 +765,7 @@ public class DevicesController(
         }
 
         var syncActions = syncActionsServerFactory.Create(context, sessionId, deviceId, session.IsDryRun);
-        var record = await syncActions.ActionError(request.FilePath, request.ErrorMessage, request.SongId, cancellationToken);
+        var record = await syncActions.ActionError(request.FilePath, request.ErrorMessage, request.SongId, reason: request.ErrorMessage, cancellationToken);
 
         return new ReportSyncErrorResponse
         {
@@ -871,7 +871,7 @@ public class DevicesController(
                     var syncActions = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, activeSession.IsDryRun);
                     var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
                     usedPaths.Add(pendingAction.Path);
-                    var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, cancellationToken);
+                    var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                     createdSessionRecords.Add(record);
                 }
             }
@@ -948,20 +948,20 @@ public class DevicesController(
                     var reason = $"Server modified at {existingSongDevice.Song.ModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}";
                     if (existingSongDevice.SyncAction == SongSyncAction.Remove)
                     {
-                        var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, cancellationToken);
+                        var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, reason, cancellationToken);
                         createdSessionRecords.Add(record);
                     }
                     else
                     {
                         if (pendingAction.PreviousPath != null)
                         {
-                            var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, existingSongDevice.SongId, cancellationToken);
+                            var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, existingSongDevice.SongId, "Path updated by naming template", cancellationToken);
                             createdSessionRecords.Add(renameRecord);
                         }
 
                         var record = existingSongDevice.LastSyncedModifiedAt != null
-                            ? await syncActions.ActionUpdateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, cancellationToken)
-                            : await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, cancellationToken);
+                            ? await syncActions.ActionUpdateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, reason, cancellationToken)
+                            : await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, existingSongDevice.Song.ModifiedAt, reason, cancellationToken);
                         createdSessionRecords.Add(record);
                     }
                 }
@@ -982,7 +982,7 @@ public class DevicesController(
             foreach (var clientFile in skippedFiles)
             {
                 var existingSd = existingSongDevices.FirstOrDefault(sd => sd.DevicePath == clientFile.Path);
-                var record = await syncActions.ActionSkipped(clientFile.Path, existingSd?.SongId, cancellationToken: cancellationToken);
+                var record = await syncActions.ActionSkipped(clientFile.Path, existingSd?.SongId, reason: clientFile.Reason ?? "No changes detected", cancellationToken: cancellationToken);
                 skippedRecordIds.Add(record.Id);
                 checkSyncRecords.Add(record);
             }
@@ -1051,7 +1051,7 @@ public class DevicesController(
 
                 if (syncActions != null)
                 {
-                    var errorRecord = await syncActions.ActionError(conflict.Path, "Invalid file content format", conflict.SongId, cancellationToken);
+                    var errorRecord = await syncActions.ActionError(conflict.Path, "Invalid file content format", conflict.SongId, "Invalid file content format", cancellationToken);
                     resolveSyncRecords.Add(errorRecord);
                     conflictRecords.Add(SyncActionRecordResponseItem.FromEntity(errorRecord));
                 }
@@ -1087,7 +1087,7 @@ public class DevicesController(
 
                 if (syncActions != null)
                 {
-                    var tsRecord = await syncActions.ActionUpdateTimestamp(conflict.Path, newLastSynced, conflict.SongId, cancellationToken);
+                    var tsRecord = await syncActions.ActionUpdateTimestamp(conflict.Path, newLastSynced, conflict.SongId, "Timestamp update: checksums match, no file change needed", cancellationToken);
                     resolveSyncRecords.Add(tsRecord);
                     updateTimestampRecords.Add(SyncActionRecordResponseItem.FromEntity(tsRecord));
                 }
@@ -1108,7 +1108,7 @@ public class DevicesController(
             {
                 if (syncActions != null)
                 {
-                    var conflictRecord = await syncActions.ActionConflict(conflict.Path, conflict.LocalModifiedAt, songDevice.Song.ModifiedAt, conflict.SongId, cancellationToken);
+                    var conflictRecord = await syncActions.ActionConflict(conflict.Path, conflict.LocalModifiedAt, songDevice.Song.ModifiedAt, conflict.SongId, "Conflict: local and server both modified, checksums differ", cancellationToken);
                     resolveSyncRecords.Add(conflictRecord);
                     conflictRecords.Add(SyncActionRecordResponseItem.FromEntity(conflictRecord));
                 }
@@ -1223,20 +1223,20 @@ public class DevicesController(
                 if (isUpdate)
                 {
                     record = await syncActions.ActionUpdateRemote(path, songId, checksum, checksumAlgorithmName,
-                        modifiedAtDateTime, tempFilePath: null, createdAtDateTime, originalFilePath: null, cancellationToken);
+                        modifiedAtDateTime, tempFilePath: null, createdAtDateTime, originalFilePath: null, reason: "File re-uploaded (updated)", cancellationToken);
                 }
                 else if (hasDuplicate && duplicateSongId.HasValue)
                 {
-                    record = await syncActions.ActionLink(path, duplicateSongId.Value, modifiedAtDateTime, checksum, checksumAlgorithmName, cancellationToken);
+                    record = await syncActions.ActionLink(path, duplicateSongId.Value, modifiedAtDateTime, checksum, checksumAlgorithmName, "Linked to existing song (duplicate checksum)", cancellationToken);
                 }
                 else if (hasDuplicate)
                 {
-                    record = await syncActions.ActionLink(path, checksum, checksumAlgorithmName, modifiedAtDateTime, cancellationToken);
+                    record = await syncActions.ActionLink(path, checksum, checksumAlgorithmName, modifiedAtDateTime, "Linked to existing song (duplicate checksum)", cancellationToken);
                 }
                 else
                 {
                     record = await syncActions.ActionCreateRemote(path, songId, checksum, checksumAlgorithmName,
-                        modifiedAtDateTime, tempFilePath: null, createdAtDateTime, originalFilePath: null, cancellationToken);
+                        modifiedAtDateTime, tempFilePath: null, createdAtDateTime, originalFilePath: null, reason: "New file uploaded", cancellationToken);
                 }
 
                 await context.SaveChangesAsync(cancellationToken);
@@ -1277,7 +1277,7 @@ public class DevicesController(
             // and the update should be recorded as UpdateRemote, not Link.
             var syncActionsServerForUpdate = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, isDryRun);
             var updateRecord = await syncActionsServerForUpdate.ActionUpdateRemote(path, songIdForRecord, fileChecksum, checksumAlgName,
-                modifiedAtDateTime, stagingFilePath, createdAtDateTime, originalFilePath, cancellationToken);
+                modifiedAtDateTime, stagingFilePath, createdAtDateTime, originalFilePath, "File re-uploaded (updated)", cancellationToken);
 
             await context.SaveChangesAsync(cancellationToken);
 
@@ -1304,13 +1304,13 @@ public class DevicesController(
 
             if (stagedDuplicateSongId.HasValue)
             {
-                linkRecord = await syncActionsServer.ActionLink(path, stagedDuplicateSongId.Value, modifiedAtDateTime, fileChecksum, checksumAlgName, cancellationToken);
+                linkRecord = await syncActionsServer.ActionLink(path, stagedDuplicateSongId.Value, modifiedAtDateTime, fileChecksum, checksumAlgName, "Linked to existing song (duplicate checksum)", cancellationToken);
                 logger.LogInformation("Uploaded file {Path} to device {DeviceId} linked to existing song {SongId}",
                     path, deviceId, stagedDuplicateSongId.Value);
             }
             else
             {
-                linkRecord = await syncActionsServer.ActionLink(path, fileChecksum, checksumAlgName, modifiedAtDateTime, cancellationToken);
+                linkRecord = await syncActionsServer.ActionLink(path, fileChecksum, checksumAlgName, modifiedAtDateTime, "Linked to existing song (duplicate checksum)", cancellationToken);
                 logger.LogInformation("Uploaded file {Path} to device {DeviceId} linked via checksum to pending song",
                     path, deviceId);
             }
@@ -1331,7 +1331,7 @@ public class DevicesController(
         var syncActionsServerForCreate = syncActionsServerFactory.Create(context, activeSession.Id, deviceId, isDryRun);
         DeviceSyncSessionRecord stagedRecord;
         stagedRecord = await syncActionsServerForCreate.ActionCreateRemote(path, songIdForRecord, fileChecksum, checksumAlgName,
-            modifiedAtDateTime, stagingFilePath, createdAtDateTime, originalFilePath, cancellationToken);
+            modifiedAtDateTime, stagingFilePath, createdAtDateTime, originalFilePath, "New file uploaded", cancellationToken);
 
         await context.SaveChangesAsync(cancellationToken);
 

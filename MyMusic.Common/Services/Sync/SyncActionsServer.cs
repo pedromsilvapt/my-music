@@ -10,7 +10,7 @@ public class SyncActionsServer(
     public async Task<DeviceSyncSessionRecord> ActionCreateRemote(
         string filePath, long? songId, string checksum, string algorithm, DateTime modifiedAt,
         string? tempFilePath = null, DateTime? createdAt = null, string? originalFilePath = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = new CreateRemoteData
         {
@@ -23,14 +23,14 @@ public class SyncActionsServer(
             OriginalFilePath = originalFilePath,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
-        var record = CreateRecord(filePath, SyncRecordAction.CreateRemote, dataElement, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.CreateRemote, dataElement, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionUpdateRemote(
         string filePath, long? songId, string checksum, string algorithm, DateTime modifiedAt,
         string? tempFilePath = null, DateTime? createdAt = null, string? originalFilePath = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = new UpdateRemoteData
         {
@@ -43,50 +43,50 @@ public class SyncActionsServer(
             OriginalFilePath = originalFilePath,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
-        var record = CreateRecord(filePath, SyncRecordAction.UpdateRemote, dataElement, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.UpdateRemote, dataElement, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionCreateLocal(
         string filePath, long? songId = null, DateTime? modifiedAt = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId, ModifiedAt = modifiedAt });
-        var record = CreateRecord(filePath, SyncRecordAction.CreateLocal, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.CreateLocal, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionUpdateLocal(
         string filePath, long? songId = null, DateTime? modifiedAt = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId, ModifiedAt = modifiedAt });
-        var record = CreateRecord(filePath, SyncRecordAction.UpdateLocal, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.UpdateLocal, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionDelete(
-        string filePath, long? songId = null,
+        string filePath, long? songId = null, string? reason = null,
         CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId });
-        var record = CreateRecord(filePath, SyncRecordAction.Delete, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Delete, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionLink(
         string filePath, long songId, DateTime? modifiedAt = null,
-        string? checksum = null, string? algorithm = null,
+        string? checksum = null, string? algorithm = null, string? reason = null,
         CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId, ModifiedAt = modifiedAt, Checksum = checksum, Algorithm = algorithm });
-        var record = CreateRecord(filePath, SyncRecordAction.Link, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Link, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionLink(
         string filePath, string checksum, string algorithm, DateTime modifiedAt,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = new SongModifiedAtData
         {
@@ -95,43 +95,43 @@ public class SyncActionsServer(
             ModifiedAt = modifiedAt,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
-        var record = CreateRecord(filePath, SyncRecordAction.Link, dataElement);
+        var record = CreateRecord(filePath, SyncRecordAction.Link, dataElement, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionUnlink(
-        string filePath, long? songId = null,
+        string filePath, long? songId = null, string? reason = null,
         CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId });
-        var record = CreateRecord(filePath, SyncRecordAction.Unlink, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Unlink, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionRename(
         string filePath, string previousPath, string newPath, long? songId = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = new RenameData { PreviousPath = previousPath, NewPath = newPath };
         var dataElement = SyncActionDataSerializer.Serialize(data);
-        var record = CreateRecord(filePath, SyncRecordAction.Rename, dataElement, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Rename, dataElement, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionSkipped(
         string filePath, long? songId = null, DateTime? modifiedAt = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         JsonElement? data = modifiedAt.HasValue
             ? SyncActionDataSerializer.Serialize(new SongModifiedAtData { ModifiedAt = modifiedAt })
             : null;
-        var record = CreateRecord(filePath, SyncRecordAction.Skipped, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Skipped, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionConflict(
         string filePath, DateTime localModifiedAt, DateTime serverModifiedAt, long? songId = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = new ConflictData
         {
@@ -139,13 +139,13 @@ public class SyncActionsServer(
             ServerModifiedAt = serverModifiedAt,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
-        var record = CreateRecord(filePath, SyncRecordAction.Conflict, dataElement, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Conflict, dataElement, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionUpdateTimestamp(
         string filePath, DateTime newTimestamp, long? songId = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = new UpdateTimestampData
         {
@@ -153,22 +153,22 @@ public class SyncActionsServer(
             SongId = songId,
         };
         var dataElement = SyncActionDataSerializer.Serialize(data);
-        var record = CreateRecord(filePath, SyncRecordAction.UpdateTimestamp, dataElement, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.UpdateTimestamp, dataElement, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionError(
         string filePath, string errorMessage, long? songId = null,
-        CancellationToken cancellationToken = default)
+        string? reason = null, CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new ErrorData { ErrorMessage = errorMessage });
-        var record = CreateRecord(filePath, SyncRecordAction.Error, data, songId);
+        var record = CreateRecord(filePath, SyncRecordAction.Error, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     private DeviceSyncSessionRecord CreateRecord(
         string filePath, SyncRecordAction action, JsonElement? data = null, long? songId = null,
-        bool acknowledged = false)
+        bool acknowledged = false, string? reason = null)
     {
         return new DeviceSyncSessionRecord
         {
@@ -177,6 +177,7 @@ public class SyncActionsServer(
             Action = action,
             Data = data,
             SongId = songId,
+            Reason = reason,
             Acknowledged = acknowledged,
             ProcessedAt = DateTime.UtcNow,
         };

@@ -468,6 +468,7 @@ public class SyncCommitService(
                 Action = SyncRecordAction.Unlink,
                 Data = unlinkData,
                 SongId = sd.SongId,
+                Reason = "Orphaned: path not present in sync session",
                 ProcessedAt = DateTime.UtcNow,
             };
             db.DeviceSyncSessionRecords.Add(unlinkRecord);
@@ -494,6 +495,7 @@ public class SyncCommitService(
             Action = SyncRecordAction.Error,
             Data = errorData,
             SongId = record.SongId,
+            Reason = errorMessage,
             ProcessedAt = DateTime.UtcNow,
         };
         db.DeviceSyncSessionRecords.Add(errorRecord);

@@ -692,6 +692,8 @@ public class SyncCommitServiceSpecs
 
         result.ActionCounts.ShouldContainKey(SyncRecordAction.Error);
         result.ActionCounts[SyncRecordAction.Error].ShouldBeGreaterThanOrEqualTo(1);
+        var errorRecord = ctx.Db.DeviceSyncSessionRecords.First(r => r.Action == SyncRecordAction.Error);
+        errorRecord.Reason.ShouldStartWith("Staged file not found");
         var otherSd = ctx.Db.SongDevices.FirstOrDefault(sd => sd.DevicePath == "/music/other.mp3");
         otherSd.ShouldNotBeNull();
         otherSd.LastSyncedModifiedAt.ShouldBe(otherModifiedAt);
@@ -710,6 +712,8 @@ public class SyncCommitServiceSpecs
 
         result.ActionCounts.ShouldContainKey(SyncRecordAction.Error);
         FindSongDevice(ctx.Db, sd.Id).ShouldNotBeNull();
+        var errorRecord = ctx.Db.DeviceSyncSessionRecords.First(r => r.Action == SyncRecordAction.Error);
+        errorRecord.Reason.ShouldStartWith("Staged file not found");
     }
 
     #endregion
@@ -731,6 +735,7 @@ public class SyncCommitServiceSpecs
         var unlinkRecords = ctx.Db.DeviceSyncSessionRecords.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
         unlinkRecords.Count.ShouldBe(1);
         unlinkRecords[0].FilePath.ShouldBe("/music/orphan.mp3");
+        unlinkRecords[0].Reason.ShouldBe("Orphaned: path not present in sync session");
     }
 
     [Fact]
