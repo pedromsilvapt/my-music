@@ -43,117 +43,15 @@ public class SongDeleteServiceSpecs
         return (service, scenario, currentUser, fileSystem);
     }
 
-    private Artist CreateArtist(MusicDbContext db, long ownerId, string name)
-    {
-        var artist = new Artist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(artist);
-        db.SaveChanges();
-        return artist;
-    }
-
-    private Album CreateAlbum(MusicDbContext db, long ownerId, string name, Artist artist)
-    {
-        var album = new Album
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(album);
-        db.SaveChanges();
-        return album;
-    }
-
-    private Song CreateSong(MusicDbContext db, long ownerId, string title, Album album, string repositoryPath = "/data/song.mp3")
-    {
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromMinutes(3),
-            Size = 3000000,
-            RepositoryPath = repositoryPath,
-            Checksum = "abc123",
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = [],
-        };
-        db.Add(song);
-        db.SaveChanges();
-        return song;
-    }
-
-    private Genre CreateGenre(MusicDbContext db, long ownerId, string name)
-    {
-        var genre = new Genre
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-        };
-        db.Add(genre);
-        db.SaveChanges();
-        return genre;
-    }
-
-    private Device CreateDevice(MusicDbContext db, long ownerId, string name)
-    {
-        var device = new Device
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            NamingTemplate = "/music/{Artist}/{Album}/{Title}",
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private Playlist CreatePlaylist(MusicDbContext db, long ownerId, string name)
-    {
-        var playlist = new Playlist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            PlaylistSongs = [],
-        };
-        db.Add(playlist);
-        db.SaveChanges();
-        return playlist;
-    }
-
     [Fact]
     public async Task DeleteAsync_DeletesSongFromDatabase()
     {
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
 
         // Act
         var result = await service.DeleteAsync([song.Id]);
@@ -169,10 +67,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1", album, "/data/song1.mp3");
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2", album, "/data/song2.mp3");
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song1 = scenario.CreateSong("Song 1", album: album, repositoryPath: "/data/song1.mp3");
+        var song2 = scenario.CreateSong("Song 2", album: album, repositoryPath: "/data/song2.mp3");
 
         // Act
         var result = await service.DeleteAsync([song1.Id, song2.Id]);
@@ -200,9 +98,9 @@ public class SongDeleteServiceSpecs
         var (service, scenario, currentUser, _) = CreateService();
         var otherUser = scenario.CreateUser("Other", "other");
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, otherUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, otherUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, otherUser.Id, "Song", album);
+        var artist = scenario.CreateArtist("Artist", otherUser.Id);
+        var album = scenario.CreateAlbum("Album", artist, otherUser.Id);
+        var song = scenario.CreateSong("Song", ownerId: otherUser.Id, album: album);
 
         // Act & Assert
         await Should.ThrowAsync<InvalidOperationException>(() => service.DeleteAsync([song.Id]));
@@ -214,11 +112,9 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
-        scenario.DbContext.Add(new SongArtist { SongId = song.Id, ArtistId = artist.Id });
-        scenario.DbContext.SaveChanges();
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
 
         // Act
         await service.DeleteAsync([song.Id]);
@@ -233,10 +129,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var genre = CreateGenre(scenario.DbContext, scenario.AdminUser.Id, "Rock");
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var genre = scenario.CreateGenre("Rock");
+        var song = scenario.CreateSong("Song", album: album);
         scenario.DbContext.Add(new SongGenre { SongId = song.Id, GenreId = genre.Id });
         scenario.DbContext.SaveChanges();
 
@@ -253,10 +149,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
         var songDevice = new SongDevice
         {
             SongId = song.Id,
@@ -283,10 +179,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
         var songDevice = new SongDevice
         {
             SongId = song.Id,
@@ -311,10 +207,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "My Playlist");
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var playlist = scenario.CreatePlaylist("My Playlist");
         scenario.DbContext.Add(new PlaylistSong { SongId = song.Id, PlaylistId = playlist.Id, Order = 1, AddedAt = DateTime.UtcNow });
         scenario.DbContext.SaveChanges();
 
@@ -331,9 +227,9 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
 
         // Act
         await service.DeleteAsync([song.Id]);
@@ -348,10 +244,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1", album, "/data/song1.mp3");
-        CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2", album, "/data/song2.mp3");
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song1 = scenario.CreateSong("Song 1", album: album, repositoryPath: "/data/song1.mp3");
+        scenario.CreateSong("Song 2", album: album, repositoryPath: "/data/song2.mp3");
 
         // Act
         await service.DeleteAsync([song1.Id]);
@@ -366,11 +262,9 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
-        scenario.DbContext.Add(new SongArtist { SongId = song.Id, ArtistId = artist.Id });
-        scenario.DbContext.SaveChanges();
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
 
         // Act
         await service.DeleteAsync([song.Id]);
@@ -385,11 +279,11 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album1 = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album 1", artist);
-        var album2 = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album 2", artist);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1", album1, "/data/song1.mp3");
-        CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2", album2, "/data/song2.mp3");
+        var artist = scenario.CreateArtist("Artist");
+        var album1 = scenario.CreateAlbum("Album 1", artist);
+        var album2 = scenario.CreateAlbum("Album 2", artist);
+        var song1 = scenario.CreateSong("Song 1", album: album1, repositoryPath: "/data/song1.mp3");
+        scenario.CreateSong("Song 2", album: album2, repositoryPath: "/data/song2.mp3");
 
         // Act
         await service.DeleteAsync([song1.Id]);
@@ -405,13 +299,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1", album, "/data/song1.mp3");
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2", album, "/data/song2.mp3");
-        scenario.DbContext.Add(new SongArtist { SongId = song1.Id, ArtistId = artist.Id });
-        scenario.DbContext.Add(new SongArtist { SongId = song2.Id, ArtistId = artist.Id });
-        scenario.DbContext.SaveChanges();
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song1 = scenario.CreateSong("Song 1", album: album, repositoryPath: "/data/song1.mp3");
+        var song2 = scenario.CreateSong("Song 2", album: album, repositoryPath: "/data/song2.mp3");
 
         // Act
         await service.DeleteAsync([song1.Id]);
@@ -426,10 +317,10 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var genre = CreateGenre(scenario.DbContext, scenario.AdminUser.Id, "Rock");
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var genre = scenario.CreateGenre("Rock");
+        var song = scenario.CreateSong("Song", album: album);
         scenario.DbContext.Add(new SongGenre { SongId = song.Id, GenreId = genre.Id });
         scenario.DbContext.SaveChanges();
 
@@ -446,11 +337,11 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var genre = CreateGenre(scenario.DbContext, scenario.AdminUser.Id, "Rock");
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1", album, "/data/song1.mp3");
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2", album, "/data/song2.mp3");
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var genre = scenario.CreateGenre("Rock");
+        var song1 = scenario.CreateSong("Song 1", album: album, repositoryPath: "/data/song1.mp3");
+        var song2 = scenario.CreateSong("Song 2", album: album, repositoryPath: "/data/song2.mp3");
         scenario.DbContext.Add(new SongGenre { SongId = song1.Id, GenreId = genre.Id });
         scenario.DbContext.Add(new SongGenre { SongId = song2.Id, GenreId = genre.Id });
         scenario.DbContext.SaveChanges();
@@ -468,12 +359,12 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
         var artwork = new Artwork { Data = [1, 2, 3], MimeType = "image/jpeg", Width = 100, Height = 100 };
         scenario.DbContext.Add(artwork);
         scenario.DbContext.SaveChanges();
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
+        var song = scenario.CreateSong("Song", album: album);
         song.CoverId = artwork.Id;
         scenario.DbContext.SaveChanges();
 
@@ -490,14 +381,14 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
         var artwork = new Artwork { Data = [1, 2, 3], MimeType = "image/jpeg", Width = 100, Height = 100 };
         scenario.DbContext.Add(artwork);
         scenario.DbContext.SaveChanges();
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1", album, "/data/song1.mp3");
+        var song1 = scenario.CreateSong("Song 1", album: album, repositoryPath: "/data/song1.mp3");
         song1.CoverId = artwork.Id;
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2", album, "/data/song2.mp3");
+        var song2 = scenario.CreateSong("Song 2", album: album, repositoryPath: "/data/song2.mp3");
         song2.CoverId = artwork.Id;
         scenario.DbContext.SaveChanges();
 
@@ -514,9 +405,9 @@ public class SongDeleteServiceSpecs
         // Arrange
         var (service, scenario, currentUser, _) = CreateService();
         currentUser.Id.Returns(scenario.AdminUser.Id);
-        var artist = CreateArtist(scenario.DbContext, scenario.AdminUser.Id, "Artist");
-        var album = CreateAlbum(scenario.DbContext, scenario.AdminUser.Id, "Album", artist);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song", album);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
         scenario.DbContext.Add(new PlayHistory { SongId = song.Id, OwnerId = scenario.AdminUser.Id, ClientId = "test", PlayedAt = DateTime.UtcNow });
         scenario.DbContext.SaveChanges();
 

@@ -33,44 +33,13 @@ public class DevicesControllerCancelSyncSpecs
         );
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, SyncSessionStatus status, string? repositoryPath = null)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = status,
-            IsDryRun = false,
-            RepositoryPath = repositoryPath,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
     [Fact]
     public async Task CancelSync_InProgressSession_SetsStatusToCancelled()
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repositoryPath: "/data");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: "/data");
 
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
@@ -86,9 +55,9 @@ public class DevicesControllerCancelSyncSpecs
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repositoryPath: repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
 
         mockFs.AddDirectory(stagingDir);
@@ -105,8 +74,8 @@ public class DevicesControllerCancelSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repositoryPath: "/data");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: "/data");
 
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
@@ -119,8 +88,8 @@ public class DevicesControllerCancelSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repositoryPath: null);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: null);
 
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
@@ -132,8 +101,8 @@ public class DevicesControllerCancelSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
 
         await Should.ThrowAsync<Exception>(() =>
             controller.CancelSync(device.Id, session.Id, CancellationToken.None));
@@ -144,8 +113,8 @@ public class DevicesControllerCancelSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed);
 
         await Should.ThrowAsync<Exception>(() =>
             controller.CancelSync(device.Id, session.Id, CancellationToken.None));
@@ -156,8 +125,8 @@ public class DevicesControllerCancelSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Cancelled);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled);
 
         await Should.ThrowAsync<Exception>(() =>
             controller.CancelSync(device.Id, session.Id, CancellationToken.None));
@@ -168,7 +137,7 @@ public class DevicesControllerCancelSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var result = await controller.CancelSync(device.Id, 9999, CancellationToken.None);
 
@@ -190,7 +159,7 @@ public class DevicesControllerCancelSyncSpecs
         };
         scenario.DbContext.Add(otherDevice);
         scenario.DbContext.SaveChanges();
-        var session = CreateSession(scenario.DbContext, otherDevice, SyncSessionStatus.InProgress);
+        var session = scenario.CreateSession(otherDevice, status: SyncSessionStatus.InProgress);
 
         var result = await controller.CancelSync(otherDevice.Id, session.Id, CancellationToken.None);
 

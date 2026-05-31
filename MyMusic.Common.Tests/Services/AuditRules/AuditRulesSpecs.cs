@@ -1,7 +1,5 @@
 using System.IO.Abstractions.TestingHelpers;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging.Abstractions;
 using MyMusic.Common.AudioIntegrity;
@@ -14,128 +12,20 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Services.AuditRules;
 
-public class AuditRulesSpecs : IDisposable
+public class AuditRulesSpecs
 {
-    private readonly MusicDbContext _db;
-    private readonly SqliteConnection _keepAliveConnection;
-    private readonly User _owner;
-
-    public AuditRulesSpecs()
-    {
-        _keepAliveConnection = new SqliteConnection("DataSource=:memory:");
-        _keepAliveConnection.Open();
-
-        var options = new DbContextOptionsBuilder<MusicDbContext>()
-            .UseSqlite(_keepAliveConnection)
-            .UseProjectables()
-            .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
-            .Options;
-
-        _db = new MusicDbContext(options);
-        _db.Database.EnsureCreated();
-        _db.SaveChanges();
-
-        _owner = CreateUser("Test User", "testuser");
-    }
-
-    public void Dispose()
-    {
-        _db.Dispose();
-        _keepAliveConnection.Dispose();
-    }
+    private readonly Scenario _scenario = new();
 
     private async Task<int> ScanAndSaveAsync(IAuditRule rule, long ownerId)
     {
         var count = 0;
-        await foreach (var nc in rule.Scan(_db, ownerId))
+        await foreach (var nc in rule.Scan(_scenario.DbContext, ownerId))
         {
-            _db.AuditNonConformities.Add(nc);
-            await _db.SaveChangesAsync();
+            _scenario.DbContext.AuditNonConformities.Add(nc);
+            await _scenario.DbContext.SaveChangesAsync();
             count++;
         }
         return count;
-    }
-
-    private User CreateUser(string name, string username)
-    {
-        var user = new User
-        {
-            Name = name,
-            Username = username,
-        };
-        _db.Add(user);
-        _db.SaveChanges();
-        return user;
-    }
-
-    private Artist CreateArtist(string name)
-    {
-        var artist = new Artist
-        {
-            Name = name,
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-            Owner = _owner,
-        };
-        _db.Add(artist);
-        _db.SaveChanges();
-        return artist;
-    }
-
-    private Album CreateAlbum(string name, Artist artist)
-    {
-        var album = new Album
-        {
-            Name = name,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-            Owner = _owner,
-        };
-        _db.Add(album);
-        _db.SaveChanges();
-        return album;
-    }
-
-    private Song CreateSong(string title, Album album, Artwork? cover = null, int? year = null, string? lyrics = null, List<SongGenre>? genres = null, string? repositoryPath = null)
-    {
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            Album = album,
-            Cover = cover,
-            Year = year,
-            Lyrics = lyrics,
-            Genres = genres ?? [],
-            Artists = [],
-            Devices = [],
-            Sources = [],
-            RepositoryPath = repositoryPath ?? $"/test/{title}.mp3",
-            Checksum = Guid.NewGuid().ToString(),
-            ChecksumAlgorithm = "SHA256",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Owner = _owner,
-            Duration = TimeSpan.FromMinutes(3),
-        };
-        _db.Add(song);
-        _db.SaveChanges();
-        return song;
-    }
-
-    private Genre CreateGenre(string name)
-    {
-        var genre = new Genre
-        {
-            Name = name,
-            Owner = _owner,
-        };
-        _db.Add(genre);
-        _db.SaveChanges();
-        return genre;
     }
 
     private Artwork CreateArtwork(int width, int height, string mimeType = "image/jpeg")
@@ -147,8 +37,8 @@ public class AuditRulesSpecs : IDisposable
             Height = height,
             MimeType = mimeType,
         };
-        _db.Add(artwork);
-        _db.SaveChanges();
+        _scenario.DbContext.Add(artwork);
+        _scenario.DbContext.SaveChanges();
         return artwork;
     }
 
@@ -167,17 +57,17 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingCoverAuditRule_Scan_SongWithoutCover_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Song Without Cover", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Song Without Cover", album: album);
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync();
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync();
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
         nonConformity.AuditRuleId.ShouldBe(1);
@@ -187,53 +77,53 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingCoverAuditRule_Scan_SongWithCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 500);
-        CreateSong("Song With Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Cover", album: album, coverId: cover.Id);
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync()).ShouldBe(0);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync()).ShouldBe(0);
     }
 
     [Fact]
     public async Task MissingCoverAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Song Without Cover", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Song Without Cover", album: album);
         var rule = new MissingCoverAuditRule();
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
-        var firstCount = await _db.AuditNonConformities.CountAsync();
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
+        var firstCount = await _scenario.DbContext.AuditNonConformities.CountAsync();
         firstCount.ShouldBe(1);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync()).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync()).ShouldBe(1);
     }
 
     [Fact]
     public async Task MissingCoverAuditRule_Scan_MultipleSongsWithoutCovers_ReturnsCorrectCount()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song 1", album, cover: null);
-        CreateSong("Song 2", album, cover: null);
-        CreateSong("Song 3", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song 1", album: album);
+        _scenario.CreateSong("Song 2", album: album);
+        _scenario.CreateSong("Song 3", album: album);
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(3);
@@ -247,17 +137,17 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingYearAuditRule_Scan_SongWithoutYear_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Song Without Year", album, year: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Song Without Year", album: album);
         var rule = new MissingYearAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 2);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 2);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -266,13 +156,13 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingYearAuditRule_Scan_SongWithYear_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song With Year", album, year: 2023);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song With Year", album: album, year: 2023);
         var rule = new MissingYearAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -282,18 +172,18 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingYearAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Year", album, year: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Year", album: album);
         var rule = new MissingYearAuditRule();
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 2)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 2)).ShouldBe(1);
     }
 
     #endregion
@@ -304,17 +194,17 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingGenresAuditRule_Scan_SongWithoutGenres_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Song Without Genres", album, genres: []);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Song Without Genres", album: album);
         var rule = new MissingGenresAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 3);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 3);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -323,14 +213,14 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingGenresAuditRule_Scan_SongWithGenres_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var genre = CreateGenre("Rock");
-        var song = CreateSong("Song With Genres", album, genres: [new SongGenre { Genre = genre }]);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var genre = _scenario.CreateGenre("Rock");
+        var song = _scenario.CreateSong("Song With Genres", album: album, genres: [genre]);
         var rule = new MissingGenresAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -340,18 +230,18 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingGenresAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Genres", album, genres: []);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Genres", album: album);
         var rule = new MissingGenresAuditRule();
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 3)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 3)).ShouldBe(1);
     }
 
     #endregion
@@ -362,17 +252,17 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingLyricsAuditRule_Scan_SongWithoutLyrics_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Song Without Lyrics", album, lyrics: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Song Without Lyrics", album: album);
         var rule = new MissingLyricsAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 4);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 4);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -381,13 +271,13 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingLyricsAuditRule_Scan_SongWithEmptyLyrics_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Song With Empty Lyrics", album, lyrics: "");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Song With Empty Lyrics", album: album, lyrics: "");
         var rule = new MissingLyricsAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
@@ -397,13 +287,13 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingLyricsAuditRule_Scan_SongWithLyrics_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song With Lyrics", album, lyrics: "These are some lyrics");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song With Lyrics", album: album, lyrics: "These are some lyrics");
         var rule = new MissingLyricsAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -413,18 +303,18 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingLyricsAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Lyrics", album, lyrics: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Lyrics", album: album);
         var rule = new MissingLyricsAuditRule();
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 4)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 4)).ShouldBe(1);
     }
 
     #endregion
@@ -435,19 +325,19 @@ public class AuditRulesSpecs : IDisposable
     public async Task MediumCoverAuditRule_Scan_CoverInMediumRange_ReturnsOne()
     {
         // Arrange - cover between small (500) and medium (1080) threshold
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(800, 800); // Between 500 and 1080
-        var song = CreateSong("Song With Medium Cover", album, cover: cover);
+        var song = _scenario.CreateSong("Song With Medium Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 5);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 5);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -456,15 +346,15 @@ public class AuditRulesSpecs : IDisposable
     public async Task MediumCoverAuditRule_Scan_CoverAboveMediumThreshold_ReturnsZero()
     {
         // Arrange - cover above medium threshold
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(1200, 1200); // Above 1080
-        CreateSong("Song With Large Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Large Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -474,15 +364,15 @@ public class AuditRulesSpecs : IDisposable
     public async Task MediumCoverAuditRule_Scan_CoverBelowSmallThreshold_ReturnsZero()
     {
         // Arrange - cover below small threshold (should be caught by SmallCover rule)
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(400, 400); // Below 500
-        CreateSong("Song With Small Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Small Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -492,14 +382,14 @@ public class AuditRulesSpecs : IDisposable
     public async Task MediumCoverAuditRule_Scan_NoCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Cover", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Cover", album: album);
         var config = CreateAuditConfig();
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -509,20 +399,20 @@ public class AuditRulesSpecs : IDisposable
     public async Task MediumCoverAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(800, 800);
-        CreateSong("Song With Medium Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Medium Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new MediumCoverAuditRule(Options.Create(config));
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 5)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 5)).ShouldBe(1);
     }
 
     #endregion
@@ -533,19 +423,19 @@ public class AuditRulesSpecs : IDisposable
     public async Task SmallCoverAuditRule_Scan_CoverBelowSmallThreshold_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(400, 400); // Below 500
-        var song = CreateSong("Song With Small Cover", album, cover: cover);
+        var song = _scenario.CreateSong("Song With Small Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 6);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 6);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -554,15 +444,15 @@ public class AuditRulesSpecs : IDisposable
     public async Task SmallCoverAuditRule_Scan_CoverExactlyAtThreshold_ReturnsZero()
     {
         // Arrange - cover exactly at small threshold (500)
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 500); // Exactly at threshold
-        CreateSong("Song With Cover At Threshold", album, cover: cover);
+        _scenario.CreateSong("Song With Cover At Threshold", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -572,15 +462,15 @@ public class AuditRulesSpecs : IDisposable
     public async Task SmallCoverAuditRule_Scan_CoverAboveThreshold_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(600, 600); // Above 500
-        CreateSong("Song With Large Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Large Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -590,14 +480,14 @@ public class AuditRulesSpecs : IDisposable
     public async Task SmallCoverAuditRule_Scan_NoCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Cover", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Cover", album: album);
         var config = CreateAuditConfig();
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -607,24 +497,24 @@ public class AuditRulesSpecs : IDisposable
     public async Task SmallCoverAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(400, 400);
-        CreateSong("Song With Small Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Small Cover", album: album, coverId: cover.Id);
         var config = CreateAuditConfig();
         var rule = new SmallCoverAuditRule(Options.Create(config));
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 6)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 6)).ShouldBe(1);
     }
 
     [Fact]
-    public async Task SmallCoverAuditRule_Description_ContainsThresholdValue()
+    public void SmallCoverAuditRule_Description_ContainsThresholdValue()
     {
         // Arrange
         var config = CreateAuditConfig(smallThreshold: 600);
@@ -642,18 +532,18 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonJpegCoverAuditRule_Scan_NonJpegCover_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 500, mimeType: "image/png");
-        var song = CreateSong("Song With PNG Cover", album, cover: cover);
+        var song = _scenario.CreateSong("Song With PNG Cover", album: album, coverId: cover.Id);
         var rule = new NonJpegCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 7);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 7);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -662,14 +552,14 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonJpegCoverAuditRule_Scan_JpegCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 500, mimeType: "image/jpeg");
-        CreateSong("Song With JPEG Cover", album, cover: cover);
+        _scenario.CreateSong("Song With JPEG Cover", album: album, coverId: cover.Id);
         var rule = new NonJpegCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -679,13 +569,13 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonJpegCoverAuditRule_Scan_NoCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Cover", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Cover", album: album);
         var rule = new NonJpegCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -695,19 +585,19 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonJpegCoverAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 500, mimeType: "image/png");
-        CreateSong("Song With PNG Cover", album, cover: cover);
+        _scenario.CreateSong("Song With PNG Cover", album: album, coverId: cover.Id);
         var rule = new NonJpegCoverAuditRule();
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 7)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 7)).ShouldBe(1);
     }
 
     #endregion
@@ -718,18 +608,18 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonSquareCoverAuditRule_Scan_NonSquareCover_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 600); // Not square
-        var song = CreateSong("Song With Non-Square Cover", album, cover: cover);
+        var song = _scenario.CreateSong("Song With Non-Square Cover", album: album, coverId: cover.Id);
         var rule = new NonSquareCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 8);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 8);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -738,14 +628,14 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonSquareCoverAuditRule_Scan_SquareCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 500); // Square
-        CreateSong("Song With Square Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Square Cover", album: album, coverId: cover.Id);
         var rule = new NonSquareCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -755,13 +645,13 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonSquareCoverAuditRule_Scan_NoCover_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Song Without Cover", album, cover: null);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Song Without Cover", album: album);
         var rule = new NonSquareCoverAuditRule();
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -771,19 +661,19 @@ public class AuditRulesSpecs : IDisposable
     public async Task NonSquareCoverAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var cover = CreateArtwork(500, 600);
-        CreateSong("Song With Non-Square Cover", album, cover: cover);
+        _scenario.CreateSong("Song With Non-Square Cover", album: album, coverId: cover.Id);
         var rule = new NonSquareCoverAuditRule();
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 8)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 8)).ShouldBe(1);
     }
 
     #endregion
@@ -794,18 +684,18 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingFileAuditRule_Scan_SongWithMissingFile_ReturnsOne()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Missing File Song", album, repositoryPath: "/music/missing.mp3");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Missing File Song", album: album, repositoryPath: "/music/missing.mp3");
         var fileSystem = new MockFileSystem();
         var rule = new MissingFileAuditRule(fileSystem);
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 10);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 10);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
     }
@@ -814,10 +704,10 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingFileAuditRule_Scan_SongWithExistingFile_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var existingPath = "/music/existing.mp3";
-        CreateSong("Existing File Song", album, repositoryPath: existingPath);
+        _scenario.CreateSong("Existing File Song", album: album, repositoryPath: existingPath);
         var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
         {
             [existingPath] = new MockFileData("audio data"),
@@ -825,7 +715,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingFileAuditRule(fileSystem);
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -835,33 +725,33 @@ public class AuditRulesSpecs : IDisposable
     public async Task MissingFileAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        CreateSong("Missing File Song", album, repositoryPath: "/music/missing.mp3");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        _scenario.CreateSong("Missing File Song", album: album, repositoryPath: "/music/missing.mp3");
         var fileSystem = new MockFileSystem();
         var rule = new MissingFileAuditRule(fileSystem);
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
-        var firstCount = await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 10);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
+        var firstCount = await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 10);
         firstCount.ShouldBe(1);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 10)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 10)).ShouldBe(1);
     }
 
     [Fact]
     public async Task MissingFileAuditRule_Scan_MultipleMissingFiles_ReturnsCorrectCount()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
         var existingPath = "/music/exists.mp3";
-        CreateSong("Missing 1", album, repositoryPath: "/music/missing1.mp3");
-        CreateSong("Missing 2", album, repositoryPath: "/music/missing2.mp3");
-        CreateSong("Existing", album, repositoryPath: existingPath);
+        _scenario.CreateSong("Missing 1", album: album, repositoryPath: "/music/missing1.mp3");
+        _scenario.CreateSong("Missing 2", album: album, repositoryPath: "/music/missing2.mp3");
+        _scenario.CreateSong("Existing", album: album, repositoryPath: existingPath);
         var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
         {
             [existingPath] = new MockFileData("audio data"),
@@ -869,7 +759,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingFileAuditRule(fileSystem);
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(2);
@@ -883,7 +773,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new MissingFileAuditRule(fileSystem);
 
         // Act & Assert
-        await Should.ThrowAsync<NotSupportedException>(() => rule.Patch(_db, 1));
+        await Should.ThrowAsync<NotSupportedException>(() => rule.Patch(_scenario.DbContext, 1));
     }
 
     [Fact]
@@ -973,9 +863,9 @@ public class AuditRulesSpecs : IDisposable
     public async Task MultipleRules_SameSong_DifferentIssues_CreatesMultipleNonConformities()
     {
         // Arrange - song with multiple issues
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Problematic Song", album, cover: null, year: null, lyrics: null, genres: []);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Problematic Song", album: album);
 
         var missingCoverRule = new MissingCoverAuditRule();
         var missingYearRule = new MissingYearAuditRule();
@@ -983,10 +873,10 @@ public class AuditRulesSpecs : IDisposable
         var missingLyricsRule = new MissingLyricsAuditRule();
 
         // Act
-        var coverCount = await ScanAndSaveAsync(missingCoverRule, _owner.Id);
-        var yearCount = await ScanAndSaveAsync(missingYearRule, _owner.Id);
-        var genresCount = await ScanAndSaveAsync(missingGenresRule, _owner.Id);
-        var lyricsCount = await ScanAndSaveAsync(missingLyricsRule, _owner.Id);
+        var coverCount = await ScanAndSaveAsync(missingCoverRule, _scenario.AdminUser.Id);
+        var yearCount = await ScanAndSaveAsync(missingYearRule, _scenario.AdminUser.Id);
+        var genresCount = await ScanAndSaveAsync(missingGenresRule, _scenario.AdminUser.Id);
+        var lyricsCount = await ScanAndSaveAsync(missingLyricsRule, _scenario.AdminUser.Id);
 
         // Assert
         coverCount.ShouldBe(1);
@@ -994,7 +884,7 @@ public class AuditRulesSpecs : IDisposable
         genresCount.ShouldBe(1);
         lyricsCount.ShouldBe(1);
 
-        var allNonConformities = await _db.AuditNonConformities.ToListAsync();
+        var allNonConformities = await _scenario.DbContext.AuditNonConformities.ToListAsync();
         allNonConformities.Count.ShouldBe(4);
         allNonConformities.All(nc => nc.SongId == song.Id).ShouldBeTrue();
     }
@@ -1003,24 +893,24 @@ public class AuditRulesSpecs : IDisposable
     public async Task DifferentOwners_OnlyScansOwnSongs()
     {
         // Arrange - Clean up any data from previous tests to avoid test pollution
-        _db.AuditNonConformities.RemoveRange(_db.AuditNonConformities);
-        await _db.SaveChangesAsync();
-        _db.Songs.RemoveRange(_db.Songs);
-        await _db.SaveChangesAsync();
-        _db.Albums.RemoveRange(_db.Albums);
-        await _db.SaveChangesAsync();
-        _db.Artists.RemoveRange(_db.Artists);
-        await _db.SaveChangesAsync();
+        _scenario.DbContext.AuditNonConformities.RemoveRange(_scenario.DbContext.AuditNonConformities);
+        await _scenario.DbContext.SaveChangesAsync();
+        _scenario.DbContext.Songs.RemoveRange(_scenario.DbContext.Songs);
+        await _scenario.DbContext.SaveChangesAsync();
+        _scenario.DbContext.Albums.RemoveRange(_scenario.DbContext.Albums);
+        await _scenario.DbContext.SaveChangesAsync();
+        _scenario.DbContext.Artists.RemoveRange(_scenario.DbContext.Artists);
+        await _scenario.DbContext.SaveChangesAsync();
 
         // Verify cleanup worked
-        var songCountBefore = await _db.Songs.CountAsync();
+        var songCountBefore = await _scenario.DbContext.Songs.CountAsync();
         songCountBefore.ShouldBe(0);
 
-        var owner2 = CreateUser("Second User", "seconduser");
+        var owner2 = _scenario.CreateUser("Second User", "seconduser");
 
-        var artist1 = CreateArtist("Artist 1");
-        var album1 = CreateAlbum("Album 1", artist1);
-        CreateSong("Owner 1 Song Without Cover", album1, cover: null);
+        var artist1 = _scenario.CreateArtist("Artist 1");
+        var album1 = _scenario.CreateAlbum("Album 1", artist1);
+        _scenario.CreateSong("Owner 1 Song Without Cover", album: album1);
 
         var artist2 = new Artist
         {
@@ -1030,8 +920,8 @@ public class AuditRulesSpecs : IDisposable
             CreatedAt = DateTime.UtcNow,
             Owner = owner2,
         };
-        _db.Add(artist2);
-        _db.SaveChanges();
+        _scenario.DbContext.Add(artist2);
+        _scenario.DbContext.SaveChanges();
 
         var album2 = new Album
         {
@@ -1041,10 +931,10 @@ public class AuditRulesSpecs : IDisposable
             CreatedAt = DateTime.UtcNow,
             Owner = owner2,
         };
-        _db.Add(album2);
-        _db.SaveChanges();
+        _scenario.DbContext.Add(album2);
+        _scenario.DbContext.SaveChanges();
 
-        // Create song for owner2 manually since CreateSong helper uses _owner
+        // Create song for owner2 manually since CreateSong helper uses _scenario.AdminUser
         var song2 = new Song
         {
             Title = "Owner 2 Song Without Cover",
@@ -1064,25 +954,25 @@ public class AuditRulesSpecs : IDisposable
             Owner = owner2,
             Duration = TimeSpan.FromMinutes(3),
         };
-        _db.Add(song2);
-        _db.SaveChanges();
+        _scenario.DbContext.Add(song2);
+        _scenario.DbContext.SaveChanges();
 
         var rule = new MissingCoverAuditRule();
 
         // Act
-        var owner1Count = await ScanAndSaveAsync(rule, _owner.Id);
+        var owner1Count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         var owner2Count = await ScanAndSaveAsync(rule, owner2.Id);
 
         // Assert
         owner1Count.ShouldBe(1);
         owner2Count.ShouldBe(1);
 
-        var owner1NonConformities = await _db.AuditNonConformities
-            .Where(nc => nc.OwnerId == _owner.Id)
+        var owner1NonConformities = await _scenario.DbContext.AuditNonConformities
+            .Where(nc => nc.OwnerId == _scenario.AdminUser.Id)
             .ToListAsync();
         owner1NonConformities.Count.ShouldBe(1);
 
-        var owner2NonConformities = await _db.AuditNonConformities
+        var owner2NonConformities = await _scenario.DbContext.AuditNonConformities
             .Where(nc => nc.OwnerId == owner2.Id)
             .ToListAsync();
         owner2NonConformities.Count.ShouldBe(1);
@@ -1096,9 +986,9 @@ public class AuditRulesSpecs : IDisposable
     public async Task FileIntegrityAuditRule_Scan_CorruptedFile_ReturnsOne()
     {
         // Arrange - Xing claims 10 frames but 120 exist (delta = 110 > 100 -> Corrupted)
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Corrupted Song", album, repositoryPath: "/music/corrupted.mp3");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Corrupted Song", album: album, repositoryPath: "/music/corrupted.mp3");
         var data = SyntheticMp3Generator.CreateTruncatedFile(
             claimedFrames: 10, actualFrames: 120, bitrateKbps: 128);
 
@@ -1119,11 +1009,11 @@ public class AuditRulesSpecs : IDisposable
         var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(1);
-        var nonConformity = await _db.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 11);
+        var nonConformity = await _scenario.DbContext.AuditNonConformities.FirstOrDefaultAsync(nc => nc.AuditRuleId == 11);
         nonConformity.ShouldNotBeNull();
         nonConformity.SongId.ShouldBe(song.Id);
         nonConformity.Data.ShouldNotBeNull();
@@ -1133,9 +1023,9 @@ public class AuditRulesSpecs : IDisposable
     public async Task FileIntegrityAuditRule_Scan_CleanFile_ReturnsZero()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Clean Song", album, repositoryPath: "/music/clean.mp3");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Clean Song", album: album, repositoryPath: "/music/clean.mp3");
         var data = SyntheticMp3Generator.CreateCleanFile(10, bitrateKbps: 128);
 
         var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
@@ -1155,7 +1045,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
 
         // Act
-        var count = await ScanAndSaveAsync(rule, _owner.Id);
+        var count = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
 
         // Assert
         count.ShouldBe(0);
@@ -1165,9 +1055,9 @@ public class AuditRulesSpecs : IDisposable
     public async Task FileIntegrityAuditRule_Scan_DoesNotDuplicateExistingNonConformities()
     {
         // Arrange - Xing claims 10 frames but 120 exist (delta = 110 > 100 -> Corrupted)
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Corrupted Song", album, repositoryPath: "/music/corrupted.mp3");
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Corrupted Song", album: album, repositoryPath: "/music/corrupted.mp3");
         var data = SyntheticMp3Generator.CreateTruncatedFile(
             claimedFrames: 10, actualFrames: 120, bitrateKbps: 128);
 
@@ -1188,14 +1078,14 @@ public class AuditRulesSpecs : IDisposable
         var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
 
         // First scan
-        await ScanAndSaveAsync(rule, _owner.Id);
-        var firstCount = await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 11);
+        await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
+        var firstCount = await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 11);
         firstCount.ShouldBe(1);
 
         // Second scan - should not create duplicate
-        var secondScanCount = await ScanAndSaveAsync(rule, _owner.Id);
+        var secondScanCount = await ScanAndSaveAsync(rule, _scenario.AdminUser.Id);
         secondScanCount.ShouldBe(0);
-        (await _db.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 11)).ShouldBe(1);
+        (await _scenario.DbContext.AuditNonConformities.CountAsync(nc => nc.AuditRuleId == 11)).ShouldBe(1);
     }
 
     [Fact]
@@ -1215,7 +1105,7 @@ public class AuditRulesSpecs : IDisposable
         var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
 
         // Act & Assert
-        await Should.ThrowAsync<NotSupportedException>(() => rule.Patch(_db, 1));
+        await Should.ThrowAsync<NotSupportedException>(() => rule.Patch(_scenario.DbContext, 1));
     }
 
     [Fact]

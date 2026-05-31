@@ -38,8 +38,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
@@ -59,9 +59,9 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device1 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var device2 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Tablet");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device1 = scenario.CreateDevice("Phone");
+        var device2 = scenario.CreateDevice("Tablet");
         AddSongToDevice(scenario.DbContext, song, device1, "/music/My Song.mp3");
         AddSongToDevice(scenario.DbContext, song, device2, "/music/My Song.mp3");
 
@@ -85,7 +85,7 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
 
@@ -103,8 +103,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3",
             syncAction: SongSyncAction.Remove);
 
@@ -125,8 +125,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3",
             syncAction: SongSyncAction.Download);
 
@@ -147,8 +147,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3",
             syncAction: null, lastSyncedModifiedAt: DateTime.UtcNow.AddDays(-1));
 
@@ -169,8 +169,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
 
         var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
@@ -191,8 +191,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3",
             syncAction: null, lastSyncedModifiedAt: DateTime.UtcNow.AddDays(-1));
 
@@ -227,9 +227,9 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device1 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var device2 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Tablet");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device1 = scenario.CreateDevice("Phone");
+        var device2 = scenario.CreateDevice("Tablet");
         AddSongToDevice(scenario.DbContext, song, device1, "/music/My Song.mp3",
             syncAction: null, lastSyncedModifiedAt: DateTime.UtcNow.AddDays(-1));
         AddSongToDevice(scenario.DbContext, song, device2, "/music/My Song.mp3",
@@ -256,8 +256,8 @@ public class SongUpdateServiceSpecs
         var scenario = new Scenario();
         var service = CreateService(scenario.FileSystem);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "My Song", checksum, algo);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
         AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
 
         var newArtist = new Artist
@@ -295,84 +295,6 @@ public class SongUpdateServiceSpecs
     }
 
     #region Helpers
-
-    private Song CreateSong(MusicDbContext db, long ownerId, string title, string checksum, string checksumAlgorithm)
-    {
-        var artist = new Artist
-        {
-            Name = $"{title} Artist",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(artist);
-        db.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"{title} Album",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(album);
-        db.SaveChanges();
-
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromSeconds(180),
-            Size = 5000000,
-            RepositoryPath = $"/data/{title}.mp3",
-            Checksum = checksum,
-            ChecksumAlgorithm = checksumAlgorithm,
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = []
-        };
-        db.Add(song);
-        db.SaveChanges();
-
-        var songArtist = new SongArtist
-        {
-            SongId = song.Id,
-            ArtistId = artist.Id,
-            Artist = artist,
-            Song = song
-        };
-        db.Add(songArtist);
-        db.SaveChanges();
-
-        return song;
-    }
-
-    private Device CreateDevice(MusicDbContext db, long ownerId, string name)
-    {
-        var device = new Device
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
 
     private void AddSongToDevice(MusicDbContext db, Song song, Device device, string path,
         SongSyncAction? syncAction = null, DateTime? lastSyncedModifiedAt = null)

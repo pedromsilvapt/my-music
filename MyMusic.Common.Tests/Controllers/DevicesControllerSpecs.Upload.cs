@@ -41,128 +41,17 @@ public class DevicesControllerUploadSpecs
         );
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, bool isDryRun = false, string? repositoryPath = null)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = SyncSessionStatus.InProgress,
-            IsDryRun = isDryRun,
-            RepositoryPath = repositoryPath,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
-    private Song CreateSong(MusicDbContext db, long ownerId)
-    {
-        var artist = new Artist
-        {
-            Name = $"Artist-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(artist);
-        db.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"Album-{Guid.NewGuid():N}",
-            ArtistId = artist.Id,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 1,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(album);
-        db.SaveChanges();
-
-        var song = new Song
-        {
-            Title = $"Song-{Guid.NewGuid():N}",
-            Label = "Label",
-            AlbumId = album.Id,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            RepositoryPath = "/music/song.mp3",
-            Checksum = "abc123",
-            ChecksumAlgorithm = "XxHash128",
-            Size = 1000,
-            Duration = TimeSpan.FromSeconds(180),
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = [],
-        };
-        db.Songs.Add(song);
-        db.SaveChanges();
-        return song;
-    }
-
-    private SongDevice CreateSongDevice(MusicDbContext db, Device device, Song song, string devicePath)
-    {
-        var sd = new SongDevice
-        {
-            DeviceId = device.Id,
-            Device = device,
-            SongId = song.Id,
-            Song = song,
-            DevicePath = devicePath,
-            AddedAt = DateTime.UtcNow,
-        };
-        db.Add(sd);
-        db.SaveChanges();
-        return sd;
-    }
-
-    private static IFormFile CreateMockFormFile(byte[] content, string fileName = "song.mp3")
-    {
-        var formFile = Substitute.For<IFormFile>();
-        formFile.FileName.Returns(fileName);
-        formFile.CopyToAsync(Arg.Any<Stream>(), Arg.Any<CancellationToken>())
-            .Returns(async call =>
-            {
-                var stream = call.ArgAt<Stream>(0);
-                await stream.WriteAsync(content);
-            });
-        formFile.OpenReadStream().Returns(new MemoryStream(content));
-        return formFile;
-    }
 
     [Fact]
     public async Task UploadFile_NewFile_SetsIsUpdateFalseAndMapsCreateRemoteResponse()
     {
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, repositoryPath: "/data");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
 
         var controller = CreateController(scenario, factory);
-        var formFile = CreateMockFormFile(new byte[] { 1, 2, 3, 4, 5 });
+        var formFile = Scenario.CreateMockFormFile(new byte[] { 1, 2, 3, 4, 5 });
         var modifiedAt = DateTime.UtcNow.ToString("O");
         var createdAt = DateTime.UtcNow.ToString("O");
 
@@ -179,13 +68,13 @@ public class DevicesControllerUploadSpecs
     {
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, repositoryPath: "/data");
-        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var controller = CreateController(scenario, factory);
-        var formFile = CreateMockFormFile(new byte[] { 1, 2, 3, 4, 5 });
+        var formFile = Scenario.CreateMockFormFile(new byte[] { 1, 2, 3, 4, 5 });
         var modifiedAt = DateTime.UtcNow.ToString("O");
         var createdAt = DateTime.UtcNow.ToString("O");
 

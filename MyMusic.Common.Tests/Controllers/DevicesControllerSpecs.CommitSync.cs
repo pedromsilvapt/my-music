@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -34,59 +33,13 @@ public class DevicesControllerCommitSyncSpecs
         );
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, SyncSessionStatus status, bool isDryRun = false, string? repositoryPath = null)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = status,
-            IsDryRun = isDryRun,
-            RepositoryPath = repositoryPath,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
-    private DeviceSyncSessionRecord AddRecord(MusicDbContext db, long sessionId, string filePath, SyncRecordAction action)
-    {
-        var record = new DeviceSyncSessionRecord
-        {
-            SessionId = sessionId,
-            FilePath = filePath,
-            Action = action,
-            Data = JsonSerializer.SerializeToElement(new { }),
-            ProcessedAt = DateTime.UtcNow,
-        };
-        db.DeviceSyncSessionRecords.Add(record);
-        db.SaveChanges();
-        return record;
-    }
-
     [Fact]
     public async Task CommitSync_InProgressSession_SetsStatusToCommitted()
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
         _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
@@ -103,12 +56,12 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var existingCommittedAt = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
         session.CompletedAt = existingCommittedAt;
         scenario.DbContext.SaveChanges();
-        AddRecord(scenario.DbContext, session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
 
         var response = await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
 
@@ -122,8 +75,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed);
 
         await Should.ThrowAsync<Exception>(() =>
             controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None));
@@ -134,8 +87,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Cancelled);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled);
 
         await Should.ThrowAsync<Exception>(() =>
             controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None));
@@ -146,7 +99,7 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var result = await controller.CommitSync(device.Id, 9999, new SyncCommitRequest(), CancellationToken.None);
 
@@ -168,7 +121,7 @@ public class DevicesControllerCommitSyncSpecs
         };
         scenario.DbContext.Add(otherDevice);
         scenario.DbContext.SaveChanges();
-        var session = CreateSession(scenario.DbContext, otherDevice, SyncSessionStatus.InProgress);
+        var session = scenario.CreateSession(otherDevice, status: SyncSessionStatus.InProgress);
 
         var result = await controller.CommitSync(otherDevice.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
 
@@ -180,8 +133,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
         _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
@@ -196,8 +149,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
         _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "up", Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
@@ -212,8 +165,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
         var committedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
         _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
@@ -244,9 +197,9 @@ public class DevicesControllerCommitSyncSpecs
         var scenario = new Scenario();
         var mockFs = (System.IO.Abstractions.TestingHelpers.MockFileSystem)scenario.FileSystem;
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repositoryPath: repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
 
         mockFs.AddDirectory(stagingDir);
@@ -265,8 +218,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repositoryPath: null);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: null);
 
         _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
@@ -281,8 +234,8 @@ public class DevicesControllerCommitSyncSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, isDryRun: true);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, isDryRun: true);
 
         _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, true, "both", Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });

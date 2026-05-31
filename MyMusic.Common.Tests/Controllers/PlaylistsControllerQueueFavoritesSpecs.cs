@@ -22,87 +22,6 @@ public class PlaylistsControllerQueueFavoritesSpecs
         return new PlaylistsController(currentUser, playlistSongSkipService);
     }
 
-    private Song CreateSong(MusicDbContext db, long ownerId, string title)
-    {
-        var artist = new Artist
-        {
-            Name = $"{title} Artist",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(artist);
-        db.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"{title} Album",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(album);
-        db.SaveChanges();
-
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromSeconds(180),
-            Size = 5000000,
-            RepositoryPath = $"/music/{title}.mp3",
-            Checksum = $"checksum-{title}",
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = []
-        };
-        db.Add(song);
-        db.SaveChanges();
-
-        var songArtist = new SongArtist
-        {
-            SongId = song.Id,
-            ArtistId = artist.Id,
-            Artist = artist,
-            Song = song
-        };
-        db.Add(songArtist);
-        db.SaveChanges();
-
-        return song;
-    }
-
-    private Playlist CreatePlaylist(MusicDbContext db, long ownerId, string name, PlaylistType type = PlaylistType.Playlist)
-    {
-        var playlist = new Playlist
-        {
-            Name = name,
-            Type = type,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            PlaylistSongs = []
-        };
-        db.Add(playlist);
-        db.SaveChanges();
-        return playlist;
-    }
-
     #region GetQueue
 
     [Fact]
@@ -110,7 +29,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var queue = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Queue", PlaylistType.Queue);
+        var queue = scenario.CreatePlaylist("Test Queue", type: PlaylistType.Queue);
         
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
@@ -161,7 +80,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var favorites = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Favorites", PlaylistType.Favorites);
+        var favorites = scenario.CreatePlaylist("Favorites", type: PlaylistType.Favorites);
 
         var result = await controller.GetFavorites(scenario.DbContext, CancellationToken.None);
 
@@ -191,7 +110,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
+        var song = scenario.CreateSong( "Test Song");
         
         scenario.AdminUser.CurrentQueueId = null;
         scenario.DbContext.SaveChanges();
@@ -222,7 +141,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
+        var song = scenario.CreateSong( "Test Song");
         
         scenario.AdminUser.CurrentQueueId = null;
         scenario.DbContext.SaveChanges();
@@ -252,7 +171,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
+        var song = scenario.CreateSong( "Test Song");
 
         var request = new AddSongsToPlaylistRequest
         {

@@ -51,109 +51,6 @@ public class DevicesControllerCreatePendingActionsSpecs
         return namingStrategy.Generate(metadata, naming);
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, SyncSessionStatus status)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = status,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
-    private Song CreateSong(MusicDbContext db)
-    {
-        var ownerId = db.Users.First().Id;
-
-        var artist = new Artist
-        {
-            Name = $"Artist-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(artist);
-        db.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"Album-{Guid.NewGuid():N}",
-            ArtistId = artist.Id,
-            Artist = artist,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 1,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(album);
-        db.SaveChanges();
-
-        var song = new Song
-        {
-            Title = $"Song-{Guid.NewGuid():N}",
-            Label = "Label",
-            AlbumId = album.Id,
-            Album = album,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            RepositoryPath = "/music/song.mp3",
-            Checksum = "abc123",
-            ChecksumAlgorithm = "SHA256",
-            Size = 1000,
-            Duration = TimeSpan.FromSeconds(180),
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists =
-            [
-                new SongArtist { ArtistId = artist.Id, Artist = artist }
-            ],
-            Genres = [],
-            Devices = [],
-            Sources = [],
-        };
-        db.Songs.Add(song);
-        db.SaveChanges();
-        return song;
-    }
-
-    private SongDevice CreateSongDevice(MusicDbContext db, Device device, Song? song, string path, SongSyncAction? syncAction = null)
-    {
-        var songDevice = new SongDevice
-        {
-            DeviceId = device.Id,
-            Device = device,
-            DevicePath = path,
-            SongId = song?.Id,
-            Song = song,
-            SyncAction = syncAction,
-            AddedAt = DateTime.UtcNow,
-        };
-        db.SongDevices.Add(songDevice);
-        db.SaveChanges();
-        return songDevice;
-    }
 
     [Fact]
     public async Task CreatePendingActions_DownloadSyncAction_CreatesCreateLocalRecord()
@@ -161,11 +58,11 @@ public class DevicesControllerCreatePendingActionsSpecs
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
         var controller = CreateController(scenario, factory);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var song = CreateSong(scenario.DbContext);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
         var expectedPath = ComputeExpectedPath(song);
-        CreateSongDevice(scenario.DbContext, device, song, expectedPath, SongSyncAction.Download);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Download);
 
         var response = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
 
@@ -190,11 +87,11 @@ public class DevicesControllerCreatePendingActionsSpecs
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
         var controller = CreateController(scenario, factory);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var song = CreateSong(scenario.DbContext);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
         var expectedPath = ComputeExpectedPath(song);
-        CreateSongDevice(scenario.DbContext, device, song, expectedPath, SongSyncAction.Remove);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Remove);
 
         var response = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
 
@@ -216,11 +113,11 @@ public class DevicesControllerCreatePendingActionsSpecs
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
         var controller = CreateController(scenario, factory);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var song = CreateSong(scenario.DbContext);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
         var expectedPath = ComputeExpectedPath(song);
-        var songDevice = CreateSongDevice(scenario.DbContext, device, song, expectedPath, SongSyncAction.Download);
+        var songDevice = scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Download);
         songDevice.LastSyncedModifiedAt = DateTime.UtcNow;
         scenario.DbContext.SaveChanges();
 
@@ -237,10 +134,10 @@ public class DevicesControllerCreatePendingActionsSpecs
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
         var controller = CreateController(scenario, factory);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var song = CreateSong(scenario.DbContext);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
-        CreateSongDevice(scenario.DbContext, device, song, "OldPath.mp3", SongSyncAction.Download);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        scenario.CreateSongDevice(device, song, "OldPath.mp3", syncAction: SongSyncAction.Download);
         var expectedNewPath = ComputeExpectedPath(song);
 
         var response = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
@@ -257,11 +154,11 @@ public class DevicesControllerCreatePendingActionsSpecs
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
         var controller = CreateController(scenario, factory);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var song = CreateSong(scenario.DbContext);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
         var expectedPath = ComputeExpectedPath(song);
-        CreateSongDevice(scenario.DbContext, device, song, expectedPath, SongSyncAction.Download);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Download);
 
         await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
         await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
@@ -278,11 +175,11 @@ public class DevicesControllerCreatePendingActionsSpecs
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
         var controller = CreateController(scenario, factory);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        var song = CreateSong(scenario.DbContext);
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
         var expectedPath = ComputeExpectedPath(song);
-        CreateSongDevice(scenario.DbContext, device, song, expectedPath, SongSyncAction.Upload);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Upload);
 
         var response = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
 

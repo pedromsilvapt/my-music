@@ -26,6 +26,7 @@ public class SyncCommitServiceSpecs
     }
 
     private record SyncTestContext(
+        Scenario Scenario,
         MusicDbContext Db,
         Device Device,
         DeviceSyncSession Session,
@@ -39,150 +40,34 @@ public class SyncCommitServiceSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id, "Phone");
-        var session = CreateSession(db, device, dryRun);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
+        var session = scenario.CreateSession(device, isDryRun: dryRun);
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
-        return new SyncTestContext(db, device, session, user, null, service, mockFs);
+        return new SyncTestContext(scenario, db, device, session, user, null, service, mockFs);
     }
 
     private SyncTestContext SetupWithSong(bool dryRun = false)
     {
-        var ctx = Setup(dryRun);
-        var artist = CreateArtist(ctx.Db, ctx.User.Id, "Artist");
-        var album = CreateAlbum(ctx.Db, ctx.User.Id, "Album", artist);
-        var song = CreateSong(ctx.Db, ctx.User.Id, "Song", album);
-        return ctx with { Song = song };
+        var scenario = new Scenario();
+        var db = scenario.DbContext;
+        var user = scenario.AdminUser;
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
+        var session = scenario.CreateSession(device, isDryRun: dryRun);
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        return new SyncTestContext(scenario, db, device, session, user, song, service, mockFs);
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId, string name)
-    {
-        var device = new Device
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            NamingTemplate = "/music/{Artist}/{Album}/{Title}",
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
 
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, bool dryRun = false)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = SyncSessionStatus.InProgress,
-            IsDryRun = dryRun,
-            Records = [],
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
 
-    private Artist CreateArtist(MusicDbContext db, long ownerId, string name)
-    {
-        var artist = new Artist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(artist);
-        db.SaveChanges();
-        return artist;
-    }
-
-    private Album CreateAlbum(MusicDbContext db, long ownerId, string name, Artist artist)
-    {
-        var album = new Album
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(album);
-        db.SaveChanges();
-        return album;
-    }
-
-    private Song CreateSong(MusicDbContext db, long ownerId, string title, Album album)
-    {
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromMinutes(3),
-            Size = 3000000,
-            RepositoryPath = $"/data/{title}.mp3",
-            Checksum = "abc123",
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = [],
-        };
-        db.Add(song);
-        db.SaveChanges();
-        return song;
-    }
-
-    private SongDevice CreateSongDevice(MusicDbContext db, long deviceId, long? songId, string devicePath, SongSyncAction? syncAction = null, DateTime? lastSyncedModifiedAt = null)
-    {
-        var songDevice = new SongDevice
-        {
-            SongId = songId,
-            DeviceId = deviceId,
-            DevicePath = devicePath,
-            AddedAt = DateTime.UtcNow,
-            SyncAction = syncAction,
-            LastSyncedModifiedAt = lastSyncedModifiedAt,
-        };
-        db.SongDevices.Add(songDevice);
-        db.SaveChanges();
-        return songDevice;
-    }
-
-    private DeviceSyncSessionRecord AddRecord(MusicDbContext db, long sessionId, string filePath, SyncRecordAction action, JsonElement? data = null, long? songId = null, bool acknowledged = true)
-    {
-        var record = new DeviceSyncSessionRecord
-        {
-            SessionId = sessionId,
-            FilePath = filePath,
-            Action = action,
-            Data = data,
-            SongId = songId,
-            Acknowledged = acknowledged,
-            ProcessedAt = DateTime.UtcNow,
-        };
-        db.DeviceSyncSessionRecords.Add(record);
-        db.SaveChanges();
-        return record;
-    }
-
-    private DeviceSyncSessionRecord AddSkippedRecord(MusicDbContext db, long sessionId, string filePath, long songId, DateTime modifiedAt)
+    private DeviceSyncSessionRecord AddSkippedRecord(Scenario scenario, long sessionId, string filePath, long songId, DateTime modifiedAt)
     {
         var data = JsonSerializer.SerializeToElement(new { modifiedAt = modifiedAt.ToString("O") });
-        return AddRecord(db, sessionId, filePath, SyncRecordAction.Skipped, data, songId);
+        return scenario.AddRecord(sessionId, filePath, SyncRecordAction.Skipped, data: data, songId: songId, acknowledged: true);
     }
 
     private SongDevice GetSongDevice(MusicDbContext db, long songDeviceId) =>
@@ -258,7 +143,7 @@ public class SyncCommitServiceSpecs
         var tempFilePath = "/data/.temp/sync-1/test.mp3";
         ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
         var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -274,7 +159,7 @@ public class SyncCommitServiceSpecs
         var originalFilePath = "/data/.temp/sync-1/track_a.mp3";
         ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
         var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128", originalFilePath: originalFilePath);
-        AddRecord(ctx.Db, ctx.Session.Id, "track_a.mp3", SyncRecordAction.CreateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "track_a.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -293,7 +178,7 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong();
         var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -307,7 +192,7 @@ public class SyncCommitServiceSpecs
         var ctx = SetupWithSong(dryRun: true);
         var tempFilePath = "/data/.temp/sync-1/test.mp3";
         var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, cancellationToken: default);
 
@@ -325,9 +210,9 @@ public class SyncCommitServiceSpecs
         var ctx = SetupWithSong();
         var tempFilePath = "/data/.temp/sync-1/test.mp3";
         ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var data = CreateSyncData(ctx.Song.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -338,9 +223,9 @@ public class SyncCommitServiceSpecs
     public async Task UpdateRemote_WithoutTempFile_UpdatesTimestampOnly()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var data = CreateSyncData(ctx.Song.Id, DefaultModifiedAt, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -355,9 +240,9 @@ public class SyncCommitServiceSpecs
 
         await AssertDryRunSkipsMutation(c =>
         {
-            CreateSongDevice(c.Db, c.Device.Id, c.Song!.Id, "/music/song.mp3");
+            ctx.Scenario.CreateSongDevice(c.Device, c.Song, "/music/song.mp3");
             var data = CreateSyncData(c.Song!.Id, DefaultModifiedAt, checksum: "abc", algorithm: "XxHash128");
-            AddRecord(c.Db, c.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data, c.Song.Id);
+            c.Scenario.AddRecord(c.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: c.Song.Id, acknowledged: true);
             return Task.CompletedTask;
         }, ctx, sd => sd.LastSyncedModifiedAt.ShouldBeNull());
     }
@@ -373,8 +258,8 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong();
         var data = CreateLocalUpdateData(ctx.Song!.Id, DefaultModifiedAt);
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song.Id, "/music/song.mp3", syncAction: SongSyncAction.Download);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", action, data, ctx.Song.Id);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", syncAction: SongSyncAction.Download);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", action, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -393,8 +278,8 @@ public class SyncCommitServiceSpecs
 
         await AssertDryRunSkipsMutation(c =>
         {
-            CreateSongDevice(c.Db, c.Device.Id, c.Song!.Id, "/music/song.mp3");
-            AddRecord(c.Db, c.Session.Id, "/music/song.mp3", action, songId: c.Song!.Id);
+            ctx.Scenario.CreateSongDevice(c.Device, c.Song, "/music/song.mp3");
+            c.Scenario.AddRecord(c.Session.Id, "/music/song.mp3", action, songId: c.Song!.Id, acknowledged: true);
             return Task.CompletedTask;
         }, ctx, sd => sd.SyncAction.ShouldBeNull());
     }
@@ -409,9 +294,9 @@ public class SyncCommitServiceSpecs
     public async Task DeleteAndUnlink_RemovesSongDevice(SyncRecordAction action)
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var data = CreateSongIdData(ctx.Song.Id);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", action, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", action, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -427,9 +312,9 @@ public class SyncCommitServiceSpecs
 
         await AssertDryRunSkipsMutation(c =>
         {
-            CreateSongDevice(c.Db, c.Device.Id, c.Song!.Id, "/music/song.mp3");
+            ctx.Scenario.CreateSongDevice(c.Device, c.Song, "/music/song.mp3");
             var data = CreateSongIdData(c.Song!.Id);
-            AddRecord(c.Db, c.Session.Id, "/music/song.mp3", action, data, c.Song!.Id);
+            c.Scenario.AddRecord(c.Session.Id, "/music/song.mp3", action, data: data, songId: c.Song!.Id, acknowledged: true);
             return Task.CompletedTask;
         }, ctx, _ => SongDeviceExists(ctx.Db, ctx.Db.SongDevices.OrderByDescending(s => s.Id).First().Id).ShouldBeTrue());
     }
@@ -443,7 +328,7 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong();
         var data = CreateSongIdData(ctx.Song!.Id);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -455,7 +340,7 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong(dryRun: true);
         var data = CreateSongIdData(ctx.Song!.Id);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, cancellationToken: default);
 
@@ -470,9 +355,9 @@ public class SyncCommitServiceSpecs
     public async Task Rename_UpdatesDevicePathAndClearsSyncAction()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/old.mp3", SongSyncAction.Upload);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Upload);
         var data = CreateRenameData("/music/old.mp3", "/music/new.mp3");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/old.mp3", SyncRecordAction.Rename, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/old.mp3", SyncRecordAction.Rename, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -486,9 +371,9 @@ public class SyncCommitServiceSpecs
     public async Task Rename_WithNewPathInFilePath_UsesPreviousPathForLookup()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/old.mp3", SongSyncAction.Upload);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Upload);
         var data = CreateRenameData("/music/old.mp3", "/music/new.mp3");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -505,9 +390,9 @@ public class SyncCommitServiceSpecs
 
         await AssertDryRunSkipsMutation(c =>
         {
-            CreateSongDevice(c.Db, c.Device.Id, c.Song!.Id, "/music/old.mp3", SongSyncAction.Upload);
+            ctx.Scenario.CreateSongDevice(c.Device, c.Song, "/music/old.mp3", syncAction: SongSyncAction.Upload);
             var data = CreateRenameData("/music/old.mp3", "/music/new.mp3");
-            AddRecord(c.Db, c.Session.Id, "/music/old.mp3", SyncRecordAction.Rename, data, c.Song!.Id);
+            c.Scenario.AddRecord(c.Session.Id, "/music/old.mp3", SyncRecordAction.Rename, data: data, songId: c.Song!.Id, acknowledged: true);
             return Task.CompletedTask;
         }, ctx, sd =>
         {
@@ -524,8 +409,8 @@ public class SyncCommitServiceSpecs
     public async Task Skipped_UpdatesLastSyncedModifiedAt()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -539,8 +424,8 @@ public class SyncCommitServiceSpecs
 
         await AssertDryRunSkipsMutation(c =>
         {
-            CreateSongDevice(c.Db, c.Device.Id, c.Song!.Id, "/music/song.mp3");
-            AddSkippedRecord(c.Db, c.Session.Id, "/music/song.mp3", c.Song!.Id, DefaultModifiedAt);
+            ctx.Scenario.CreateSongDevice(c.Device, c.Song, "/music/song.mp3");
+            AddSkippedRecord(c.Scenario, c.Session.Id, "/music/song.mp3", c.Song!.Id, DefaultModifiedAt);
             return Task.CompletedTask;
         }, ctx, sd => sd.LastSyncedModifiedAt.ShouldBeNull());
     }
@@ -554,11 +439,11 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong();
         var lastSyncedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3", SongSyncAction.Download, lastSyncedAt);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", lastSyncedModifiedAt: lastSyncedAt, syncAction: SongSyncAction.Download);
         var localModified = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         var serverModified = new DateTime(2025, 1, 2, 12, 0, 0, DateTimeKind.Utc);
         var data = CreateConflictData(localModified, serverModified);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Conflict, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Conflict, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
 
@@ -578,7 +463,7 @@ public class SyncCommitServiceSpecs
     {
         var ctx = Setup();
         var data = CreateErrorData("Something failed");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Error, data);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Error, data: data, acknowledged: true);
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -590,9 +475,9 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong();
         var lastSyncedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3", SongSyncAction.Upload, lastSyncedAt);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", lastSyncedModifiedAt: lastSyncedAt, syncAction: SongSyncAction.Upload);
         var data = CreateErrorData("Something failed");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Error, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Error, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
 
@@ -609,10 +494,10 @@ public class SyncCommitServiceSpecs
     public async Task UpdateTimestamp_UpdatesLastSyncedModifiedAt()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var newTimestamp = new DateTime(2025, 7, 1, 12, 0, 0, DateTimeKind.Utc);
         var data = CreateUpdateTimestampData(ctx.Song.Id, newTimestamp);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateTimestamp, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateTimestamp, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
 
@@ -626,10 +511,10 @@ public class SyncCommitServiceSpecs
 
         await AssertDryRunSkipsMutation(c =>
         {
-            CreateSongDevice(c.Db, c.Device.Id, c.Song!.Id, "/music/song.mp3");
+            ctx.Scenario.CreateSongDevice(c.Device, c.Song, "/music/song.mp3");
             var newTimestamp = new DateTime(2025, 7, 1, 12, 0, 0, DateTimeKind.Utc);
             var data = CreateUpdateTimestampData(c.Song!.Id, newTimestamp);
-            AddRecord(c.Db, c.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateTimestamp, data, c.Song!.Id);
+            c.Scenario.AddRecord(c.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateTimestamp, data: data, songId: c.Song!.Id, acknowledged: true);
             return Task.CompletedTask;
         }, ctx, sd => sd.LastSyncedModifiedAt.ShouldBeNull());
     }
@@ -642,11 +527,11 @@ public class SyncCommitServiceSpecs
     public async Task Records_AreProcessedByIdAscending()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var newerModifiedAt = new DateTime(2025, 7, 1, 12, 0, 0, DateTimeKind.Utc);
 
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, newerModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, newerModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -664,7 +549,7 @@ public class SyncCommitServiceSpecs
         ctx.Session.Status = SyncSessionStatus.Committed;
         ctx.Session.CompletedAt = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
         ctx.Db.SaveChanges();
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song!.Id, DefaultModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song!.Id, DefaultModifiedAt);
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -681,12 +566,12 @@ public class SyncCommitServiceSpecs
         var ctx = SetupWithSong();
         var tempFilePath = "/data/.temp/sync-1/missing.mp3";
         var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         var otherModifiedAt = new DateTime(2025, 7, 1, 12, 0, 0, DateTimeKind.Utc);
-        var otherSong = CreateSong(ctx.Db, ctx.User.Id, "OtherSong", ctx.Song.Album);
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/other.mp3", otherSong.Id, otherModifiedAt);
-        CreateSongDevice(ctx.Db, ctx.Device.Id, otherSong.Id, "/music/other.mp3");
+        var otherSong = ctx.Scenario.CreateSong("OtherSong", album: ctx.Song.Album);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/other.mp3", otherSong.Id, otherModifiedAt);
+        ctx.Scenario.CreateSongDevice(ctx.Device, otherSong, "/music/other.mp3");
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -704,9 +589,9 @@ public class SyncCommitServiceSpecs
     {
         var ctx = SetupWithSong();
         var tempFilePath = "/data/.temp/sync-1/missing.mp3";
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var data = CreateSyncData(ctx.Song.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data, ctx.Song.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -724,10 +609,10 @@ public class SyncCommitServiceSpecs
     public async Task OrphanDetection_BothDirection_DetectsOrphansWithNullSyncAction()
     {
         var ctx = SetupWithSong();
-        CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
-        var orphan = CreateSongDevice(ctx.Db, ctx.Device.Id, null, "/music/orphan.mp3");
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        var orphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan.mp3");
         var orphanId = orphan.Id;
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
 
@@ -742,10 +627,10 @@ public class SyncCommitServiceSpecs
     public async Task OrphanDetection_BothDirection_IgnoresOrphansWithNonNullSyncAction()
     {
         var ctx = SetupWithSong();
-        CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
-        var notOrphan = CreateSongDevice(ctx.Db, ctx.Device.Id, null, "/music/not-orphan.mp3", SongSyncAction.Download);
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        var notOrphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/not-orphan.mp3", syncAction: SongSyncAction.Download);
         var notOrphanId = notOrphan.Id;
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
 
@@ -756,12 +641,12 @@ public class SyncCommitServiceSpecs
     public async Task OrphanDetection_UpDirection_DetectsAllOrphans()
     {
         var ctx = SetupWithSong();
-        CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
-        var orphan1 = CreateSongDevice(ctx.Db, ctx.Device.Id, null, "/music/orphan1.mp3");
-        var orphan2 = CreateSongDevice(ctx.Db, ctx.Device.Id, null, "/music/orphan2.mp3", SongSyncAction.Download);
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        var orphan1 = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan1.mp3");
+        var orphan2 = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan2.mp3", syncAction: SongSyncAction.Download);
         var orphan1Id = orphan1.Id;
         var orphan2Id = orphan2.Id;
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "up", cancellationToken: default);
 
@@ -773,8 +658,8 @@ public class SyncCommitServiceSpecs
     public async Task OrphanDetection_UpDirection_ClearsSyncActionsOnValidPaths()
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3", SongSyncAction.Upload);
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", syncAction: SongSyncAction.Upload);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "up", cancellationToken: default);
 
@@ -787,10 +672,10 @@ public class SyncCommitServiceSpecs
     public async Task OrphanDetection_DownDirection_SkipsDetection()
     {
         var ctx = SetupWithSong();
-        var potentialOrphan = CreateSongDevice(ctx.Db, ctx.Device.Id, null, "/music/orphan.mp3");
+        var potentialOrphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan.mp3");
         var orphanId = potentialOrphan.Id;
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
-        CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
 
@@ -803,10 +688,10 @@ public class SyncCommitServiceSpecs
     public async Task OrphanDetection_DryRun_CreatesUnlinkRecordsWithoutRemovingSongDevices()
     {
         var ctx = SetupWithSong(dryRun: true);
-        var orphan = CreateSongDevice(ctx.Db, ctx.Device.Id, null, "/music/orphan.mp3");
+        var orphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan.mp3");
         var orphanId = orphan.Id;
-        CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id, DefaultModifiedAt);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, direction: "both", cancellationToken: default);
 
@@ -825,8 +710,8 @@ public class SyncCommitServiceSpecs
     public async Task DeleteAndUnlink_WhenNoSongId_FallsBackToDevicePathLookup(SyncRecordAction action)
     {
         var ctx = SetupWithSong();
-        var sd = CreateSongDevice(ctx.Db, ctx.Device.Id, ctx.Song!.Id, "/music/song.mp3");
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song.mp3", action);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", action, acknowledged: true);
 
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
 
@@ -841,9 +726,9 @@ public class SyncCommitServiceSpecs
     public async Task CommitAsync_ReturnsCorrectActionCounts()
     {
         var ctx = SetupWithSong();
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song1.mp3", ctx.Song!.Id, DefaultModifiedAt);
-        AddSkippedRecord(ctx.Db, ctx.Session.Id, "/music/song2.mp3", ctx.Song.Id, DefaultModifiedAt);
-        AddRecord(ctx.Db, ctx.Session.Id, "/music/song3.mp3", SyncRecordAction.CreateLocal, songId: ctx.Song.Id);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song1.mp3", ctx.Song!.Id, DefaultModifiedAt);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song2.mp3", ctx.Song.Id, DefaultModifiedAt);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song3.mp3", SyncRecordAction.CreateLocal, songId: ctx.Song.Id, acknowledged: true);
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 

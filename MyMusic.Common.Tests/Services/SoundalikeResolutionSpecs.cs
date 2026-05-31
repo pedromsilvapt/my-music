@@ -24,10 +24,10 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, secondary, order: 1);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist = scenario.CreatePlaylist("Playlist");
+        scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
         var resolution = new GroupResolutionInput
         {
@@ -55,11 +55,11 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, primary, order: 0);
-        AddSongToPlaylist(scenario.DbContext, playlist, secondary, order: 1);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist = scenario.CreatePlaylist("Playlist");
+        scenario.AddSongToPlaylist(playlist, primary, order: 0);
+        scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
         var resolution = new GroupResolutionInput
         {
@@ -85,12 +85,12 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist1 = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist1");
-        var playlist2 = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist2");
-        AddSongToPlaylist(scenario.DbContext, playlist1, secondary, order: 1);
-        AddSongToPlaylist(scenario.DbContext, playlist2, secondary, order: 2);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist1 = scenario.CreatePlaylist("Playlist1");
+        var playlist2 = scenario.CreatePlaylist("Playlist2");
+        scenario.AddSongToPlaylist(playlist1, secondary, order: 1);
+        scenario.AddSongToPlaylist(playlist2, secondary, order: 2);
 
         var resolution = new GroupResolutionInput
         {
@@ -117,13 +117,13 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist1 = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist1");
-        var playlist2 = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist2");
-        AddSongToPlaylist(scenario.DbContext, playlist1, primary, order: 0);
-        AddSongToPlaylist(scenario.DbContext, playlist1, secondary, order: 1);
-        AddSongToPlaylist(scenario.DbContext, playlist2, secondary, order: 0);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist1 = scenario.CreatePlaylist("Playlist1");
+        var playlist2 = scenario.CreatePlaylist("Playlist2");
+        scenario.AddSongToPlaylist(playlist1, primary, order: 0);
+        scenario.AddSongToPlaylist(playlist1, secondary, order: 1);
+        scenario.AddSongToPlaylist(playlist2, secondary, order: 0);
 
         var resolution = new GroupResolutionInput
         {
@@ -150,11 +150,11 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist", currentSongId: secondary.Id);
-        AddSongToPlaylist(scenario.DbContext, playlist, primary, order: 0);
-        AddSongToPlaylist(scenario.DbContext, playlist, secondary, order: 1);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist = scenario.CreatePlaylist("Playlist", currentSongId: secondary.Id);
+        scenario.AddSongToPlaylist(playlist, primary, order: 0);
+        scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
         var resolution = new GroupResolutionInput
         {
@@ -177,12 +177,12 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var sec1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary1");
-        var sec2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary2");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, sec1, order: 1);
-        AddSongToPlaylist(scenario.DbContext, playlist, sec2, order: 3);
+        var primary = scenario.CreateSong( "Primary");
+        var sec1 = scenario.CreateSong( "Secondary1");
+        var sec2 = scenario.CreateSong( "Secondary2");
+        var playlist = scenario.CreatePlaylist("Playlist");
+        scenario.AddSongToPlaylist(playlist, sec1, order: 1);
+        scenario.AddSongToPlaylist(playlist, sec2, order: 3);
 
         var resolution = new GroupResolutionInput
         {
@@ -214,10 +214,10 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        AddSongToDevice(scenario.DbContext, secondary, device, "/music/Secondary.mp3");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var device = scenario.CreateDevice("Phone");
+        scenario.CreateSongDevice(device, secondary, "/music/Secondary.mp3");
 
         var resolution = new GroupResolutionInput
         {
@@ -249,11 +249,11 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        AddSongToDevice(scenario.DbContext, primary, device, "/music/Primary.mp3");
-        AddSongToDevice(scenario.DbContext, secondary, device, "/music/Secondary.mp3");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var device = scenario.CreateDevice("Phone");
+        scenario.CreateSongDevice(device, primary, "/music/Primary.mp3");
+        scenario.CreateSongDevice(device, secondary, "/music/Secondary.mp3");
 
         var resolution = new GroupResolutionInput
         {
@@ -284,12 +284,12 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var device1 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var device2 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Tablet");
-        AddSongToDevice(scenario.DbContext, secondary, device1, "/music/Secondary.mp3");
-        AddSongToDevice(scenario.DbContext, secondary, device2, "/music/Secondary.mp3");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var device1 = scenario.CreateDevice("Phone");
+        var device2 = scenario.CreateDevice("Tablet");
+        scenario.CreateSongDevice(device1, secondary, "/music/Secondary.mp3");
+        scenario.CreateSongDevice(device2, secondary, "/music/Secondary.mp3");
 
         var resolution = new GroupResolutionInput
         {
@@ -315,12 +315,12 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist");
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        AddSongToPlaylist(scenario.DbContext, playlist, secondary, order: 1);
-        AddSongToDevice(scenario.DbContext, secondary, device, "/music/Secondary.mp3");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist = scenario.CreatePlaylist("Playlist");
+        var device = scenario.CreateDevice("Phone");
+        scenario.AddSongToPlaylist(playlist, secondary, order: 1);
+        scenario.CreateSongDevice(device, secondary, "/music/Secondary.mp3");
 
         var resolution = new GroupResolutionInput
         {
@@ -351,10 +351,10 @@ public class SoundalikeResolutionSpecs
         var scenario = new Scenario();
         var mergeService = Substitute.For<ISoundalikeMergeService>();
         var service = CreateService(mergeService);
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, secondary, order: 1);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist = scenario.CreatePlaylist("Playlist");
+        scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
         var resolution = new GroupResolutionInput
         {
@@ -385,10 +385,10 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, secondary, order: 1);
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var playlist = scenario.CreatePlaylist("Playlist");
+        scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
         var resolution = new GroupResolutionInput
         {
@@ -416,8 +416,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
 
         var resolution = new GroupResolutionInput
         {
@@ -440,8 +440,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
         var nc = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
 
         var resolution = new GroupResolutionInput
@@ -464,10 +464,10 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var p1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary1");
-        var s1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Sec1");
-        var p2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary2");
-        var s2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Sec2");
+        var p1 = scenario.CreateSong( "Primary1");
+        var s1 = scenario.CreateSong( "Sec1");
+        var p2 = scenario.CreateSong( "Primary2");
+        var s2 = scenario.CreateSong( "Sec2");
         var nc1 = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
         var nc2 = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
 
@@ -496,12 +496,12 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Primary");
-        var secondary = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Secondary");
-        var device1 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var device2 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Tablet");
-        AddSongToDevice(scenario.DbContext, primary, device1, "/music/Primary.mp3");
-        AddSongToDevice(scenario.DbContext, secondary, device2, "/music/Secondary.mp3");
+        var primary = scenario.CreateSong( "Primary");
+        var secondary = scenario.CreateSong( "Secondary");
+        var device1 = scenario.CreateDevice("Phone");
+        var device2 = scenario.CreateDevice("Tablet");
+        scenario.CreateSongDevice(device1, primary, "/music/Primary.mp3");
+        scenario.CreateSongDevice(device2, secondary, "/music/Secondary.mp3");
 
         var resolution = new GroupResolutionInput
         {
@@ -527,126 +527,6 @@ public class SoundalikeResolutionSpecs
 
     #region Helper Methods
 
-    private Song CreateSong(MusicDbContext db, long ownerId, string title)
-    {
-        var artist = new Artist
-        {
-            Name = $"{title} Artist",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(artist);
-        db.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"{title} Album",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(album);
-        db.SaveChanges();
-
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromSeconds(180),
-            Size = 5000000,
-            RepositoryPath = $"/music/{title}.mp3",
-            Checksum = $"checksum-{title}",
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = []
-        };
-        db.Add(song);
-        db.SaveChanges();
-
-        var songArtist = new SongArtist
-        {
-            SongId = song.Id,
-            ArtistId = artist.Id,
-            Artist = artist,
-            Song = song
-        };
-        db.Add(songArtist);
-        db.SaveChanges();
-
-        return song;
-    }
-
-    private Playlist CreatePlaylist(MusicDbContext db, long ownerId, string name, long? currentSongId = null)
-    {
-        var playlist = new Playlist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            CurrentSongId = currentSongId,
-            PlaylistSongs = []
-        };
-        db.Add(playlist);
-        db.SaveChanges();
-        return playlist;
-    }
-
-    private void AddSongToPlaylist(MusicDbContext db, Playlist playlist, Song song, double order)
-    {
-        var ps = new PlaylistSong
-        {
-            PlaylistId = playlist.Id,
-            SongId = song.Id,
-            Order = order,
-            AddedAt = DateTime.UtcNow
-        };
-        db.Add(ps);
-        db.SaveChanges();
-    }
-
-    private Device CreateDevice(MusicDbContext db, long ownerId, string name)
-    {
-        var device = new Device
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private void AddSongToDevice(MusicDbContext db, Song song, Device device, string path)
-    {
-        var sd = new SongDevice
-        {
-            SongId = song.Id,
-            DeviceId = device.Id,
-            DevicePath = path,
-            AddedAt = DateTime.UtcNow
-        };
-        db.Add(sd);
-        db.SaveChanges();
-    }
 
     private AuditNonConformity CreateNonConformity(MusicDbContext db, long ownerId)
     {

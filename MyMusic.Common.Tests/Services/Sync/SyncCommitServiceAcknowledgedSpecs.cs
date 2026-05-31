@@ -27,11 +27,11 @@ public class SyncCommitServiceAcknowledgedSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id);
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
-        AddRecord(db, session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal, acknowledged: false);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(async () =>
             await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default));
@@ -45,11 +45,11 @@ public class SyncCommitServiceAcknowledgedSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id);
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
-        AddRecord(db, session.Id, "/music/song.mp3", SyncRecordAction.Unlink, acknowledged: false);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Unlink);
 
         var ex = await Should.ThrowAsync<InvalidOperationException>(async () =>
             await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default));
@@ -63,11 +63,11 @@ public class SyncCommitServiceAcknowledgedSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id);
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
-        AddRecord(db, session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal, acknowledged: true);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal, acknowledged: true);
 
         var result = await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default);
 
@@ -80,12 +80,12 @@ public class SyncCommitServiceAcknowledgedSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id);
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
-        AddRecord(db, session.Id, "/music/song.mp3", SyncRecordAction.Skipped, acknowledged: false);
-        AddRecord(db, session.Id, "/music/song2.mp3", SyncRecordAction.Conflict, acknowledged: false);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
+        scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.Conflict);
 
         var result = await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default);
 
@@ -98,11 +98,11 @@ public class SyncCommitServiceAcknowledgedSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id);
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
-        AddRecord(db, session.Id, "/music/song.mp3", SyncRecordAction.Skipped, acknowledged: false);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
 
         await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default);
 
@@ -116,58 +116,16 @@ public class SyncCommitServiceAcknowledgedSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id);
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
-        AddRecord(db, session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal, acknowledged: false);
-        AddRecord(db, session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal, acknowledged: false);
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal);
+        scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal);
 
         var result = await service.CommitAsync(db, session.Id, device.Id, true, cancellationToken: default);
 
         result.ShouldNotBeNull();
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = "Phone",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = SyncSessionStatus.InProgress,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
-    private DeviceSyncSessionRecord AddRecord(MusicDbContext db, long sessionId, string filePath, SyncRecordAction action, bool acknowledged = false)
-    {
-        var record = new DeviceSyncSessionRecord
-        {
-            SessionId = sessionId,
-            FilePath = filePath,
-            Action = action,
-            Acknowledged = acknowledged,
-            ProcessedAt = DateTime.UtcNow,
-        };
-        db.DeviceSyncSessionRecords.Add(record);
-        db.SaveChanges();
-        return record;
-    }
 }

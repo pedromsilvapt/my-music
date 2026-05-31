@@ -12,8 +12,8 @@ public class SyncActionsServerSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var device = CreateDevice(db, user.Id, "Phone");
-        var session = CreateSession(db, device);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
+        var session = scenario.CreateSession(device);
         var server = new SyncActionsServer(db, session.Id);
         return (db, device, session, user, server);
     }
@@ -23,104 +23,13 @@ public class SyncActionsServerSpecs
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
-        var artist = CreateArtist(db, user.Id, "Artist");
-        var album = CreateAlbum(db, user.Id, "Album", artist);
-        var song = CreateSong(db, user.Id, "Song", album);
-        var device = CreateDevice(db, user.Id, "Phone");
-        var session = CreateSession(db, device);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
+        var session = scenario.CreateSession(device);
         var server = new SyncActionsServer(db, session.Id);
         return (db, device, session, user, song, server);
-    }
-
-    private Device CreateDevice(MusicDbContext db, long ownerId, string name)
-    {
-        var device = new Device
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            NamingTemplate = "/music/{Artist}/{Album}/{Title}",
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = SyncSessionStatus.InProgress,
-            IsDryRun = false,
-            Records = [],
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
-    private Artist CreateArtist(MusicDbContext db, long ownerId, string name)
-    {
-        var artist = new Artist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(artist);
-        db.SaveChanges();
-        return artist;
-    }
-
-    private Album CreateAlbum(MusicDbContext db, long ownerId, string name, Artist artist)
-    {
-        var album = new Album
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.Add(album);
-        db.SaveChanges();
-        return album;
-    }
-
-    private Song CreateSong(MusicDbContext db, long ownerId, string title, Album album)
-    {
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromMinutes(3),
-            Size = 3000000,
-            RepositoryPath = $"/data/{title}.mp3",
-            Checksum = "abc123",
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = [],
-        };
-        db.Add(song);
-        db.SaveChanges();
-        return song;
     }
 
     #region ActionCreateRemote

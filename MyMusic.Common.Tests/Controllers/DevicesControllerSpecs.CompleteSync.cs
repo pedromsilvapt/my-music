@@ -30,46 +30,16 @@ public class DevicesControllerCompleteSyncSpecs
         );
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, SyncSessionStatus status, bool isDryRun = false)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = status,
-            IsDryRun = isDryRun,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
     [Fact]
     public async Task CompleteSync_UpdatesDeviceLastSyncAt()
     {
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         device.LastSyncAt.ShouldBe(null);
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
         var beforeComplete = DateTime.UtcNow;
 
         // Act
@@ -88,10 +58,10 @@ public class DevicesControllerCompleteSyncSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         device.LastSyncAt.ShouldBe(null);
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, isDryRun: true);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed, isDryRun: true);
 
         // Act
         var response = await controller.CompleteSync(device.Id, session.Id,
@@ -108,9 +78,9 @@ public class DevicesControllerCompleteSyncSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
         // Act & Assert
         await Should.ThrowAsync<Exception>(async () =>
@@ -124,9 +94,9 @@ public class DevicesControllerCompleteSyncSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
         var beforeComplete = DateTime.UtcNow;
 
         // Act
@@ -146,9 +116,9 @@ public class DevicesControllerCompleteSyncSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
 
         scenario.DbContext.DeviceSyncSessionRecords.AddRange(
             new DeviceSyncSessionRecord { SessionId = session.Id, Action = SyncRecordAction.CreateRemote, FilePath = "/a", ProcessedAt = DateTime.UtcNow },

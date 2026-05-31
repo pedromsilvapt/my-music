@@ -21,101 +21,6 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         return new PlaylistsController(currentUser, playlistSongSkipService);
     }
 
-    private Song CreateSong(MusicDbContext db, long ownerId, string title)
-    {
-        var artist = new Artist
-        {
-            Name = $"{title} Artist",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(artist);
-        db.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"{title} Album",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow
-        };
-        db.Add(album);
-        db.SaveChanges();
-
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromSeconds(180),
-            Size = 5000000,
-            RepositoryPath = $"/music/{title}.mp3",
-            Checksum = $"checksum-{title}",
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = []
-        };
-        db.Add(song);
-        db.SaveChanges();
-
-        var songArtist = new SongArtist
-        {
-            SongId = song.Id,
-            ArtistId = artist.Id,
-            Artist = artist,
-            Song = song
-        };
-        db.Add(songArtist);
-        db.SaveChanges();
-
-        return song;
-    }
-
-    private Playlist CreatePlaylist(MusicDbContext db, long ownerId, string name)
-    {
-        var playlist = new Playlist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            PlaylistSongs = []
-        };
-        db.Add(playlist);
-        db.SaveChanges();
-        return playlist;
-    }
-
-    private PlaylistSong AddSongToPlaylist(MusicDbContext db, Playlist playlist, Song song, double order, bool stopAfterPlayback = false)
-    {
-        var ps = new PlaylistSong
-        {
-            PlaylistId = playlist.Id,
-            SongId = song.Id,
-            Order = order,
-            StopAfterPlayback = stopAfterPlayback,
-            AddedAt = DateTime.UtcNow
-        };
-        db.Add(ps);
-        db.SaveChanges();
-        return ps;
-    }
-
     #region SetStopAfterPlayback
 
     [Fact]
@@ -124,9 +29,9 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, song, 1);
+        var song = scenario.CreateSong( "Test Song");
+        var playlist = scenario.CreatePlaylist("Test Playlist");
+        scenario.AddSongToPlaylist(playlist, song, 1);
 
         // Act
         var result = await controller.SetStopAfterPlayback(
@@ -146,9 +51,9 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, song, 1, stopAfterPlayback: true);
+        var song = scenario.CreateSong( "Test Song");
+        var playlist = scenario.CreatePlaylist("Test Playlist");
+        scenario.AddSongToPlaylist(playlist, song, 1, stopAfterPlayback: true);
 
         // Act
         var result = await controller.SetStopAfterPlayback(
@@ -168,8 +73,8 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Playlist");
+        var song = scenario.CreateSong( "Test Song");
+        var playlist = scenario.CreatePlaylist("Test Playlist");
 
         // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
@@ -185,9 +90,9 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
-        var otherPlaylist = CreatePlaylist(scenario.DbContext, otherUser.Id, "Other Playlist");
-        AddSongToPlaylist(scenario.DbContext, otherPlaylist, song, 1);
+        var song = scenario.CreateSong( "Test Song");
+        var otherPlaylist = scenario.CreatePlaylist("Other Playlist", ownerId: otherUser.Id);
+        scenario.AddSongToPlaylist(otherPlaylist, song, 1);
 
         var controller = CreateController(scenario);
 
@@ -209,13 +114,13 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1");
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2");
-        var song3 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 3");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, song1, 1);
-        AddSongToPlaylist(scenario.DbContext, playlist, song2, 2);
-        AddSongToPlaylist(scenario.DbContext, playlist, song3, 3);
+        var song1 = scenario.CreateSong( "Song 1");
+        var song2 = scenario.CreateSong( "Song 2");
+        var song3 = scenario.CreateSong( "Song 3");
+        var playlist = scenario.CreatePlaylist("Test Playlist");
+        scenario.AddSongToPlaylist(playlist, song1, 1);
+        scenario.AddSongToPlaylist(playlist, song2, 2);
+        scenario.AddSongToPlaylist(playlist, song3, 3);
 
         // Act
         var result = await controller.BatchSetStopAfterPlayback(
@@ -239,11 +144,11 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1");
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, song1, 1, stopAfterPlayback: true);
-        AddSongToPlaylist(scenario.DbContext, playlist, song2, 2, stopAfterPlayback: true);
+        var song1 = scenario.CreateSong( "Song 1");
+        var song2 = scenario.CreateSong( "Song 2");
+        var playlist = scenario.CreatePlaylist("Test Playlist");
+        scenario.AddSongToPlaylist(playlist, song1, 1, stopAfterPlayback: true);
+        scenario.AddSongToPlaylist(playlist, song2, 2, stopAfterPlayback: true);
 
         // Act
         var result = await controller.BatchSetStopAfterPlayback(
@@ -266,9 +171,9 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
-        var song = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Test Song");
-        var otherPlaylist = CreatePlaylist(scenario.DbContext, otherUser.Id, "Other Playlist");
-        AddSongToPlaylist(scenario.DbContext, otherPlaylist, song, 1);
+        var song = scenario.CreateSong( "Test Song");
+        var otherPlaylist = scenario.CreatePlaylist("Other Playlist", ownerId: otherUser.Id);
+        scenario.AddSongToPlaylist(otherPlaylist, song, 1);
 
         var controller = CreateController(scenario);
 
@@ -309,11 +214,11 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song1 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 1");
-        var song2 = CreateSong(scenario.DbContext, scenario.AdminUser.Id, "Song 2");
-        var playlist = CreatePlaylist(scenario.DbContext, scenario.AdminUser.Id, "Test Playlist");
-        AddSongToPlaylist(scenario.DbContext, playlist, song1, 1);
-        AddSongToPlaylist(scenario.DbContext, playlist, song2, 2);
+        var song1 = scenario.CreateSong( "Song 1");
+        var song2 = scenario.CreateSong( "Song 2");
+        var playlist = scenario.CreatePlaylist("Test Playlist");
+        scenario.AddSongToPlaylist(playlist, song1, 1);
+        scenario.AddSongToPlaylist(playlist, song2, 2);
 
         // Act - batch set only song1
         var result = await controller.BatchSetStopAfterPlayback(

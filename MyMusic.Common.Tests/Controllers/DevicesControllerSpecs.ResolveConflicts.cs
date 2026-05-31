@@ -32,20 +32,6 @@ public class DevicesControllerResolveConflictsSpecs
         );
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
     private Song CreateSongWithChecksum(MusicDbContext db, long ownerId, byte[] content, string checksumAlgorithm = "XxHash128")
     {
         string checksum;
@@ -109,34 +95,17 @@ public class DevicesControllerResolveConflictsSpecs
         return song;
     }
 
-    private SongDevice CreateSongDevice(MusicDbContext db, Device device, Song song, string devicePath,
-        DateTime? lastSyncedModifiedAt = null)
-    {
-        var sd = new SongDevice
-        {
-            DeviceId = device.Id,
-            Device = device,
-            SongId = song.Id,
-            Song = song,
-            DevicePath = devicePath,
-            AddedAt = DateTime.UtcNow,
-            LastSyncedModifiedAt = lastSyncedModifiedAt,
-        };
-        db.Add(sd);
-        db.SaveChanges();
-        return sd;
-    }
 
     [Fact]
     public async Task ResolveConflicts_ChecksumsMatch_NoActiveSession_ReturnsNotFound()
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var content = new byte[] { 1, 2, 3, 4, 5 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
-        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var localModifiedAt = DateTime.UtcNow;
         var request = new SyncResolveConflictsRequest
@@ -165,11 +134,11 @@ public class DevicesControllerResolveConflictsSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var content = new byte[] { 10, 20, 30 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
-        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var localModifiedAt = DateTime.UtcNow.AddMinutes(5);
         var request = new SyncResolveConflictsRequest
@@ -198,12 +167,12 @@ public class DevicesControllerResolveConflictsSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var serverContent = new byte[] { 1, 2, 3, 4, 5 };
         var clientContent = new byte[] { 9, 8, 7, 6, 5 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, serverContent);
-        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var request = new SyncResolveConflictsRequest
         {
@@ -244,7 +213,7 @@ public class DevicesControllerResolveConflictsSpecs
             Substitute.For<ISyncCommitService>(),
             Substitute.For<ISyncUploadService>()
         );
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
         {
             DeviceId = device.Id,
@@ -259,7 +228,7 @@ public class DevicesControllerResolveConflictsSpecs
 
         var content = new byte[] { 1, 2, 3 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
-        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var request = new SyncResolveConflictsRequest
         {
@@ -307,7 +276,7 @@ public class DevicesControllerResolveConflictsSpecs
             Substitute.For<ISyncCommitService>(),
             Substitute.For<ISyncUploadService>()
         );
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
         {
             DeviceId = device.Id,
@@ -322,7 +291,7 @@ public class DevicesControllerResolveConflictsSpecs
 
         var content = new byte[] { 10, 20, 30 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
-        CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var localModifiedAt = DateTime.UtcNow;
         var request = new SyncResolveConflictsRequest
@@ -357,12 +326,12 @@ public class DevicesControllerResolveConflictsSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var serverContent = new byte[] { 1, 2, 3, 4, 5 };
         var clientContent = new byte[] { 9, 8, 7, 6, 5 };
         var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, serverContent);
-        var sd = CreateSongDevice(scenario.DbContext, device, song, "/music/song.mp3",
+        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3",
             lastSyncedModifiedAt: new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
         var request = new SyncResolveConflictsRequest

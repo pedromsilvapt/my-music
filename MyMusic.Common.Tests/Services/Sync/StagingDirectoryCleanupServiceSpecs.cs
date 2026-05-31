@@ -16,10 +16,10 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed, repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
         mockFs.AddDirectory(stagingDir);
         mockFs.AddFile($"{stagingDir}/file.mp3", new MockFileData("data"));
@@ -36,10 +36,10 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Cancelled, repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled, repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
         mockFs.AddDirectory(stagingDir);
         mockFs.AddFile($"{stagingDir}/file.mp3", new MockFileData("data"));
@@ -56,10 +56,10 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
 
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
         mockFs.AddDirectory(stagingDir);
         mockFs.AddFile($"{stagingDir}/file.mp3", new MockFileData("data"));
@@ -76,10 +76,10 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
 
-        CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, repoPath);
+        scenario.CreateSession(device, status: SyncSessionStatus.Committed, repositoryPath: repoPath);
         mockFs.AddDirectory($"{repoPath}/.temp/other-dir");
         mockFs.AddFile($"{repoPath}/.temp/other-dir/file.txt", new MockFileData("data"));
 
@@ -95,7 +95,7 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
         var repoPath = "/data";
 
         mockFs.AddDirectory($"{repoPath}/.temp/sync-99999");
@@ -113,8 +113,8 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, "/nonexistent");
+        var device = scenario.CreateDevice();
+        scenario.CreateSession(device, status: SyncSessionStatus.Committed, repositoryPath: "/nonexistent");
 
         var service = CreateService(mockFs);
 
@@ -126,8 +126,8 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
-        CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, repositoryPath: null);
+        var device = scenario.CreateDevice();
+        scenario.CreateSession(device, status: SyncSessionStatus.Committed, repositoryPath: null);
 
         var service = CreateService(mockFs);
 
@@ -139,12 +139,12 @@ public class StagingDirectoryCleanupServiceSpecs
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id);
+        var device = scenario.CreateDevice();
 
         var repo1 = "/data1";
         var repo2 = "/data2";
-        var session1 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Cancelled, repo1);
-        var session2 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Committed, repo2);
+        var session1 = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled, repositoryPath: repo1);
+        var session2 = scenario.CreateSession(device, status: SyncSessionStatus.Committed, repositoryPath: repo2);
 
         var stagingDir1 = $"{repo1}/.temp/sync-{session1.Id}";
         var stagingDir2 = $"{repo2}/.temp/sync-{session2.Id}";
@@ -199,37 +199,6 @@ public class StagingDirectoryCleanupServiceSpecs
         var result = StagingDirectoryCleanupService.DeleteStagingDirectory(mockFs, "/data", 42, logger);
 
         result.ShouldBeFalse();
-    }
-
-    private Device CreateDevice(MusicDbContext db, long ownerId)
-    {
-        var device = new Device
-        {
-            Name = $"Device-{Guid.NewGuid():N}",
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(MusicDbContext db, Device device, SyncSessionStatus status, string? repositoryPath)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = DateTime.UtcNow,
-            Status = status,
-            IsDryRun = false,
-            RepositoryPath = repositoryPath,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
     }
 
     private StagingDirectoryCleanupService CreateService(MockFileSystem mockFs)

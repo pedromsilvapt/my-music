@@ -32,54 +32,6 @@ public class DevicesControllerSessionDeletionSpecs
         );
     }
 
-    private Device CreateDevice(MusicDbContext db, long ownerId, string name)
-    {
-        var device = new Device
-        {
-            Name = name,
-            OwnerId = ownerId,
-            Owner = db.Users.First(u => u.Id == ownerId),
-            Songs = []
-        };
-        db.Add(device);
-        db.SaveChanges();
-        return device;
-    }
-
-    private DeviceSyncSession CreateSession(
-        MusicDbContext db, Device device, SyncSessionStatus status, DateTime startedAt, string? repositoryPath = null)
-    {
-        var session = new DeviceSyncSession
-        {
-            DeviceId = device.Id,
-            Device = device,
-            StartedAt = startedAt,
-            Status = status,
-            IsDryRun = false,
-            RepositoryPath = repositoryPath,
-            Records = []
-        };
-        db.DeviceSyncSessions.Add(session);
-        db.SaveChanges();
-        return session;
-    }
-
-    private DeviceSyncSessionRecord CreateRecord(
-        MusicDbContext db, DeviceSyncSession session, string filePath)
-    {
-        var record = new DeviceSyncSessionRecord
-        {
-            SessionId = session.Id,
-            Session = session,
-            FilePath = filePath,
-            Action = SyncRecordAction.CreateRemote,
-            ProcessedAt = DateTime.UtcNow
-        };
-        db.DeviceSyncSessionRecords.Add(record);
-        db.SaveChanges();
-        return record;
-    }
-
     #region DeleteSession
 
     [Fact]
@@ -88,10 +40,10 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
-        var record1 = CreateRecord(scenario.DbContext, session, "/music/song1.mp3");
-        var record2 = CreateRecord(scenario.DbContext, session, "/music/song2.mp3");
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2));
+        var record1 = scenario.AddRecord(session.Id, "/music/song1.mp3", SyncRecordAction.CreateRemote);
+        var record2 = scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         var result = await controller.DeleteSession(device.Id, session.Id);
@@ -108,7 +60,7 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var device = scenario.CreateDevice("Phone");
 
         // Act & Assert
         var result = await controller.DeleteSession(device.Id, 9999);
@@ -121,8 +73,8 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, DateTime.UtcNow);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, startedAt: DateTime.UtcNow);
 
         // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
@@ -135,8 +87,8 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, DateTime.UtcNow.AddSeconds(-30));
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, startedAt: DateTime.UtcNow.AddSeconds(-30));
 
         // Act
         var result = await controller.DeleteSession(device.Id, session.Id);
@@ -152,10 +104,10 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var ownDevice = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "MyPhone");
+        var ownDevice = scenario.CreateDevice("MyPhone");
         var otherUser = scenario.CreateUser("Other", "other");
-        var otherDevice = CreateDevice(scenario.DbContext, otherUser.Id, "OtherPhone");
-        var session = CreateSession(scenario.DbContext, otherDevice, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
+        var otherDevice = scenario.CreateDevice("OtherPhone", ownerId: otherUser.Id);
+        var session = scenario.CreateSession(otherDevice, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2));
 
         // Act & Assert
         var result = await controller.DeleteSession(ownDevice.Id, session.Id);
@@ -168,11 +120,11 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var session1 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-3));
-        var session2 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
-        CreateRecord(scenario.DbContext, session1, "/music/old.mp3");
-        CreateRecord(scenario.DbContext, session2, "/music/keep.mp3");
+        var device = scenario.CreateDevice("Phone");
+        var session1 = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-3));
+        var session2 = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2));
+        scenario.AddRecord(session1.Id, "/music/old.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(session2.Id, "/music/keep.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         await controller.DeleteSession(device.Id, session1.Id);
@@ -194,11 +146,11 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var s1 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-10));
-        var s2 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5));
-        CreateRecord(scenario.DbContext, s1, "/a.mp3");
-        CreateRecord(scenario.DbContext, s2, "/b.mp3");
+        var device = scenario.CreateDevice("Phone");
+        var s1 = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-10));
+        var s2 = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-5));
+        scenario.AddRecord(s1.Id, "/a.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(s2.Id, "/b.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
@@ -215,9 +167,9 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var completed = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5));
-        var inProgress = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, DateTime.UtcNow);
+        var device = scenario.CreateDevice("Phone");
+        var completed = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-5));
+        var inProgress = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, startedAt: DateTime.UtcNow);
 
         // Act
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
@@ -234,13 +186,13 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var device = scenario.CreateDevice("Phone");
 
-        var oldSession = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5));
-        CreateRecord(scenario.DbContext, oldSession, "/old.mp3");
+        var oldSession = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-5));
+        scenario.AddRecord(oldSession.Id, "/old.mp3", SyncRecordAction.CreateRemote);
 
         var recentSessions = Enumerable.Range(0, 10)
-            .Select(i => CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddMinutes(-i)))
+            .Select(i => scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddMinutes(-i)))
             .ToList();
 
         // Act
@@ -261,14 +213,14 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var device = scenario.CreateDevice("Phone");
 
-        var oldSession = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5));
-        CreateRecord(scenario.DbContext, oldSession, "/old.mp3");
-        CreateRecord(scenario.DbContext, oldSession, "/old2.mp3");
+        var oldSession = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-5));
+        scenario.AddRecord(oldSession.Id, "/old.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(oldSession.Id, "/old2.mp3", SyncRecordAction.CreateRemote);
 
-        var recentSession = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddMinutes(-5));
-        CreateRecord(scenario.DbContext, recentSession, "/recent.mp3");
+        var recentSession = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddMinutes(-5));
+        scenario.AddRecord(recentSession.Id, "/recent.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = false });
@@ -296,8 +248,8 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var oldInProgress = CreateSession(scenario.DbContext, device, SyncSessionStatus.InProgress, DateTime.UtcNow.AddSeconds(-30));
+        var device = scenario.CreateDevice("Phone");
+        var oldInProgress = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, startedAt: DateTime.UtcNow.AddSeconds(-30));
 
         // Act
         var result = await controller.PruneSessions(device.Id, new PruneSessionsRequest { All = true });
@@ -317,9 +269,9 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
-        CreateRecord(scenario.DbContext, session, "/music/song.mp3");
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2));
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         await controller.Delete(device.Id, CancellationToken.None);
@@ -348,7 +300,7 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
-        var otherDevice = CreateDevice(scenario.DbContext, otherUser.Id, "OtherPhone");
+        var otherDevice = scenario.CreateDevice("OtherPhone", ownerId: otherUser.Id);
         var controller = CreateController(scenario);
 
         // Act & Assert
@@ -362,12 +314,12 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device1 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone1");
-        var device2 = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone2");
-        var session1 = CreateSession(scenario.DbContext, device1, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
-        var session2 = CreateSession(scenario.DbContext, device2, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2));
-        CreateRecord(scenario.DbContext, session1, "/a.mp3");
-        CreateRecord(scenario.DbContext, session2, "/b.mp3");
+        var device1 = scenario.CreateDevice("Phone1");
+        var device2 = scenario.CreateDevice("Phone2");
+        var session1 = scenario.CreateSession(device1, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2));
+        var session2 = scenario.CreateSession(device2, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2));
+        scenario.AddRecord(session1.Id, "/a.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(session2.Id, "/b.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         await controller.Delete(device1.Id, CancellationToken.None);
@@ -387,14 +339,14 @@ public class DevicesControllerSessionDeletionSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
-        var s1 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-10));
-        var s2 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5));
-        var s3 = CreateSession(scenario.DbContext, device, SyncSessionStatus.Cancelled, DateTime.UtcNow.AddDays(-1));
-        CreateRecord(scenario.DbContext, s1, "/a.mp3");
-        CreateRecord(scenario.DbContext, s2, "/b.mp3");
-        CreateRecord(scenario.DbContext, s2, "/c.mp3");
-        CreateRecord(scenario.DbContext, s3, "/d.mp3");
+        var device = scenario.CreateDevice("Phone");
+        var s1 = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-10));
+        var s2 = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-5));
+        var s3 = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled, startedAt: DateTime.UtcNow.AddDays(-1));
+        scenario.AddRecord(s1.Id, "/a.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(s2.Id, "/b.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(s2.Id, "/c.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(s3.Id, "/d.mp3", SyncRecordAction.CreateRemote);
 
         // Act
         await controller.Delete(device.Id, CancellationToken.None);
@@ -414,9 +366,9 @@ public class DevicesControllerSessionDeletionSpecs
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var device = scenario.CreateDevice("Phone");
         var repoPath = "/data";
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2), repositoryPath: repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2), repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
 
         mockFs.AddDirectory(stagingDir);
@@ -433,9 +385,9 @@ public class DevicesControllerSessionDeletionSpecs
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var device = scenario.CreateDevice("Phone");
         var repoPath = "/data";
-        var oldSession = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-5), repositoryPath: repoPath);
+        var oldSession = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-5), repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{oldSession.Id}";
 
         mockFs.AddDirectory(stagingDir);
@@ -452,9 +404,9 @@ public class DevicesControllerSessionDeletionSpecs
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var controller = CreateController(scenario);
-        var device = CreateDevice(scenario.DbContext, scenario.AdminUser.Id, "Phone");
+        var device = scenario.CreateDevice("Phone");
         var repoPath = "/data";
-        var session = CreateSession(scenario.DbContext, device, SyncSessionStatus.Completed, DateTime.UtcNow.AddDays(-2), repositoryPath: repoPath);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-2), repositoryPath: repoPath);
         var stagingDir = $"{repoPath}/.temp/sync-{session.Id}";
 
         mockFs.AddDirectory(stagingDir);

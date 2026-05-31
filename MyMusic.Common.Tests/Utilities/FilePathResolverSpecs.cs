@@ -1,6 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using MyMusic.Common.Entities;
-using MyMusic.Common.Tests;
 using MyMusic.Common.Utilities;
 using Shouldly;
 
@@ -107,7 +105,6 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, basePath);
         var song2 = CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, "/data/admin/Artist/Album/SongTitle (2).mp3");
 
-        // Excluding song2 means its path "(2)" is considered free, so the resolver returns "(2)"
         var result = await FilePathResolver.ResolveConflictAsync(
             basePath, scenario.AdminUser.Id, song2.Id, scenario.DbContext);
 
@@ -130,56 +127,6 @@ public class FilePathResolverSpecs
 
     private Song CreateSongWithRepositoryPath(Scenario scenario, long ownerId, string repositoryPath)
     {
-        var user = scenario.DbContext.Users.First(u => u.Id == ownerId);
-        var artist = new Artist
-        {
-            Name = $"Artist for {repositoryPath}",
-            OwnerId = ownerId,
-            Owner = user,
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        scenario.DbContext.Add(artist);
-        scenario.DbContext.SaveChanges();
-
-        var album = new Album
-        {
-            Name = $"Album for {repositoryPath}",
-            OwnerId = ownerId,
-            Owner = user,
-            ArtistId = artist.Id,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
-        scenario.DbContext.Add(album);
-        scenario.DbContext.SaveChanges();
-
-        var song = new Song
-        {
-            Title = $"Song for {repositoryPath}",
-            Label = $"Song for {repositoryPath}",
-            OwnerId = ownerId,
-            Owner = user,
-            AlbumId = album.Id,
-            Album = album,
-            Duration = TimeSpan.FromSeconds(180),
-            Size = 5000000,
-            RepositoryPath = repositoryPath,
-            Checksum = "test-checksum-" + Guid.NewGuid(),
-            ChecksumAlgorithm = "XxHash128",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Artists = [],
-            Genres = [],
-            Devices = [],
-            Sources = [],
-        };
-        scenario.DbContext.Add(song);
-        scenario.DbContext.SaveChanges();
-
-        return song;
+        return scenario.CreateSong("Song", ownerId: ownerId, repositoryPath: repositoryPath, checksum: "test-checksum-" + Guid.NewGuid());
     }
 }

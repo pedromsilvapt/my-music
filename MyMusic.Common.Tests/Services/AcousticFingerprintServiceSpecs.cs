@@ -1,6 +1,4 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
@@ -9,107 +7,18 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Services;
 
-public class AcousticFingerprintServiceSpecs : IDisposable
+public class AcousticFingerprintServiceSpecs
 {
-    private readonly MusicDbContext _db;
-    private readonly SqliteConnection _keepAliveConnection;
-    private readonly User _owner;
+    private readonly Scenario _scenario = new();
     private readonly IFpcalcService _fpcalc;
     private readonly AcousticFingerprintService _service;
 
     public AcousticFingerprintServiceSpecs()
     {
-        _keepAliveConnection = new SqliteConnection("DataSource=:memory:");
-        _keepAliveConnection.Open();
-
-        var options = new DbContextOptionsBuilder<MusicDbContext>()
-            .UseSqlite(_keepAliveConnection)
-            .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
-            .Options;
-
-        _db = new MusicDbContext(options);
-        _db.Database.EnsureCreated();
-        _db.SaveChanges();
-
-        _owner = CreateUser("Test User", "testuser");
-
         _fpcalc = Substitute.For<IFpcalcService>();
 
         var serviceLogger = Substitute.For<ILogger<AcousticFingerprintService>>();
-        _service = new AcousticFingerprintService(_db, _fpcalc, serviceLogger);
-    }
-
-    public void Dispose()
-    {
-        _db.Dispose();
-        _keepAliveConnection.Dispose();
-    }
-
-    private User CreateUser(string name, string username)
-    {
-        var user = new User
-        {
-            Name = name,
-            Username = username,
-        };
-        _db.Add(user);
-        _db.SaveChanges();
-        return user;
-    }
-
-    private Artist CreateArtist(string name)
-    {
-        var artist = new Artist
-        {
-            Name = name,
-            SongsCount = 0,
-            AlbumsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-            Owner = _owner,
-        };
-        _db.Add(artist);
-        _db.SaveChanges();
-        return artist;
-    }
-
-    private Album CreateAlbum(string name, Artist artist)
-    {
-        var album = new Album
-        {
-            Name = name,
-            Artist = artist,
-            SongsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-            Owner = _owner,
-        };
-        _db.Add(album);
-        _db.SaveChanges();
-        return album;
-    }
-
-    private Song CreateSong(string title, Album album)
-    {
-        var song = new Song
-        {
-            Title = title,
-            Label = title,
-            Album = album,
-            Genres = [],
-            Artists = [],
-            Devices = [],
-            Sources = [],
-            RepositoryPath = $"/test/{title}.mp3",
-            Checksum = Guid.NewGuid().ToString(),
-            ChecksumAlgorithm = "SHA256",
-            AddedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow,
-            ModifiedAt = DateTime.UtcNow,
-            Owner = _owner,
-            Duration = TimeSpan.FromMinutes(3),
-        };
-        _db.Add(song);
-        _db.SaveChanges();
-        return song;
+        _service = new AcousticFingerprintService(_scenario.DbContext, _fpcalc, serviceLogger);
     }
 
     [Fact]
@@ -212,9 +121,9 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     {
         // Arrange
         _fpcalc.IsAvailable().Returns(false);
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var song = CreateSong("Test Song", album);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var song = _scenario.CreateSong("Test Song", album: album);
 
         // Act
         var result = await _service.GetOrCreateFingerprintAsync(song);
@@ -282,13 +191,13 @@ public class AcousticFingerprintServiceSpecs : IDisposable
                 return null;
             });
 
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var songA = CreateSong("Song A", album);
-        var songB = CreateSong("Song B", album);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var songA = _scenario.CreateSong("Song A", album: album);
+        var songB = _scenario.CreateSong("Song B", album: album);
 
         // Act
-        var groups = await _service.FindDuplicatesAsync(_owner.Id, 0.25, 0.95);
+        var groups = await _service.FindDuplicatesAsync(_scenario.AdminUser.Id, 0.25, 0.95);
 
         // Assert
         groups.Count.ShouldBe(1);
@@ -301,19 +210,19 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     public async Task ExcludePairAsync_ExcludesPairCorrectly()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var songA = CreateSong("Song A", album);
-        var songB = CreateSong("Song B", album);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var songA = _scenario.CreateSong("Song A", album: album);
+        var songB = _scenario.CreateSong("Song B", album: album);
 
         // Act
-        await _service.ExcludePairAsync(songA.Id, songB.Id, _owner.Id, "Test reason");
+        await _service.ExcludePairAsync(songA.Id, songB.Id, _scenario.AdminUser.Id, "Test reason");
 
         // Assert
-        var isExcluded = await _service.IsExcludedPairAsync(songA.Id, songB.Id, _owner.Id);
+        var isExcluded = await _service.IsExcludedPairAsync(songA.Id, songB.Id, _scenario.AdminUser.Id);
         isExcluded.ShouldBeTrue();
 
-        var pairs = await _service.GetExcludedPairsAsync(_owner.Id);
+        var pairs = await _service.GetExcludedPairsAsync(_scenario.AdminUser.Id);
         pairs.Count.ShouldBe(1);
         pairs[0].SongAId.ShouldBe(Math.Min(songA.Id, songB.Id));
         pairs[0].SongBId.ShouldBe(Math.Max(songA.Id, songB.Id));
@@ -324,17 +233,17 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     public async Task ExcludePairAsync_NormalizesOrder()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var songA = CreateSong("Song A", album);
-        var songB = CreateSong("Song B", album);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var songA = _scenario.CreateSong("Song A", album: album);
+        var songB = _scenario.CreateSong("Song B", album: album);
 
         // Act
         // Exclude with reversed IDs
-        await _service.ExcludePairAsync(songB.Id, songA.Id, _owner.Id);
+        await _service.ExcludePairAsync(songB.Id, songA.Id, _scenario.AdminUser.Id);
 
         // Assert
-        var pairs = await _service.GetExcludedPairsAsync(_owner.Id);
+        var pairs = await _service.GetExcludedPairsAsync(_scenario.AdminUser.Id);
         pairs.Count.ShouldBe(1);
         // Should always store with lower ID first
         pairs[0].SongAId.ShouldBe(Math.Min(songA.Id, songB.Id));
@@ -345,18 +254,18 @@ public class AcousticFingerprintServiceSpecs : IDisposable
     public async Task ExcludePairAsync_DoesNotDuplicate()
     {
         // Arrange
-        var artist = CreateArtist("Test Artist");
-        var album = CreateAlbum("Test Album", artist);
-        var songA = CreateSong("Song A", album);
-        var songB = CreateSong("Song B", album);
+        var artist = _scenario.CreateArtist("Test Artist");
+        var album = _scenario.CreateAlbum("Test Album", artist);
+        var songA = _scenario.CreateSong("Song A", album: album);
+        var songB = _scenario.CreateSong("Song B", album: album);
 
         // Act
-        await _service.ExcludePairAsync(songA.Id, songB.Id, _owner.Id);
-        await _service.ExcludePairAsync(songA.Id, songB.Id, _owner.Id);
-        await _service.ExcludePairAsync(songB.Id, songA.Id, _owner.Id);
+        await _service.ExcludePairAsync(songA.Id, songB.Id, _scenario.AdminUser.Id);
+        await _service.ExcludePairAsync(songA.Id, songB.Id, _scenario.AdminUser.Id);
+        await _service.ExcludePairAsync(songB.Id, songA.Id, _scenario.AdminUser.Id);
 
         // Assert
-        var pairs = await _service.GetExcludedPairsAsync(_owner.Id);
+        var pairs = await _service.GetExcludedPairsAsync(_scenario.AdminUser.Id);
         pairs.Count.ShouldBe(1);
     }
 }
