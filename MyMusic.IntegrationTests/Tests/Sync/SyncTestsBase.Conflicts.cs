@@ -16,7 +16,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download the song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Modify the song title on the server
         await new EditSongFlow("Sand", new(Title: "Updated Sand")).ExecuteAsync(Page);
@@ -28,10 +28,8 @@ public abstract partial class SyncTestsBase
 
         // Run sync - conflict should be auto-resolved since content is identical
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-
-        // Conflicts should be 0 (auto-resolved)
-        result2.Conflict.ShouldBeLessThanOrEqualTo(1, $"Expected auto-resolution but got {result2.Conflict} conflicts.");
+        // Auto-resolved conflict: expected 0 or minimal conflicts
+        result2.ShouldBe(updateTimestamp: 1);
 
         // Verify the final state is consistent (both sides should have "Updated Sand")
         // The file path should not have changed, because the conflict was auto-resolved:
@@ -50,7 +48,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download the song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Modify the song title on the server to one title
         await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
@@ -61,9 +59,6 @@ public abstract partial class SyncTestsBase
 
         // Run sync - should detect conflict since content differs
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-
-        // Should report at least 1 conflict
-        result2.Conflict.ShouldBeGreaterThanOrEqualTo(1);
+        result2.ShouldBe(conflict: 1);
     }
 }

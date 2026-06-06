@@ -21,9 +21,8 @@ public abstract partial class SyncTestsBase
 
         // Sync should deduplicate by checksum: 1 song created, 1 linked
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
-        result.CreateRemote.ShouldBe(1, "First file creates the song on the server");
-        result.Link.ShouldBe(1, "Second file is linked to the existing song (same checksum)");
+        // First file creates the song on the server
+        result.ShouldBe(createRemote: 1, link: 1);
 
         // Verify only one song exists on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -47,16 +46,15 @@ public abstract partial class SyncTestsBase
         // First sync with one file: 1 song, 1 device path
         await App.CreateSongAsync(song, "folder1/CollisionIncremental.mp3");
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
-        result1.CreateRemote.ShouldBe(1);
+        result1.ShouldBe(createRemote: 1);
 
         // Copy the same file to a second folder (same bytes = same checksum)
         await App.CreateSongAsync(song, "folder2/CollisionIncremental.mp3");
 
         // Second sync: song already exists on server with same checksum, so link instead of create
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.Link.ShouldBe(1, "Second file should be linked to existing song (same checksum)");
+        // Second file should be linked to existing song (same checksum)
+        result2.ShouldBe(link: 1, skipped: 1);
 
         // Verify only one song on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -84,9 +82,8 @@ public abstract partial class SyncTestsBase
 
         // Sync should deduplicate by checksum: 1 CreateRemote, 2 Link
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
-        result.CreateRemote.ShouldBe(1, "First file creates the song on the server");
-        result.Link.ShouldBe(2, "Second and third files are linked to the existing song (same checksum)");
+        // First file creates the song on the server
+        result.ShouldBe(createRemote: 1, link: 2);
 
         // Verify only one song exists on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -97,10 +94,9 @@ public abstract partial class SyncTestsBase
         var deviceBadges = await songDetails.GetAllDeviceBadgesAsync();
         deviceBadges.Count.ShouldBe(3, "Song should have 3 device badges (one per folder/name)");
 
-        // Idempotency: second sync should have no changes
+        // Idempotency: second sync should skip all 3 unchanged files
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.TotalChanges.ShouldBe(0);
+        result2.ShouldBe(skipped: 3);
     }
 
     [Fact]
@@ -113,8 +109,7 @@ public abstract partial class SyncTestsBase
 
         // Sync: 1 song created, no collision yet
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
-        result1.CreateRemote.ShouldBe(1);
+        result1.ShouldBe(createRemote: 1);
 
         // Verify repository path is the base path (no collision counter)
         await new ValidateSongDetailsFlow("CollisionMulti", new ValidateSongOptions(
@@ -126,8 +121,8 @@ public abstract partial class SyncTestsBase
 
         // Sync: 2nd song created with collision resolution
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.CreateRemote.ShouldBe(1, "Second song should be created");
+        // Second song should be created; first file is skipped as unchanged
+        result2.ShouldBe(createRemote: 1, skipped: 1);
 
         // Verify 2 songs on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -143,8 +138,8 @@ public abstract partial class SyncTestsBase
 
         // Sync: 3rd song created with collision counter (3)
         var result3 = await App.SyncAsync(new SyncOptions());
-        result3.ShouldBeSuccessful();
-        result3.CreateRemote.ShouldBe(1, "Third song should be created");
+        // Third song should be created; first two files are skipped as unchanged
+        result3.ShouldBe(createRemote: 1, skipped: 2);
 
         // Verify 3 songs on the server
         songs = await new HomePage(Page).Navbar.GoToSongsAsync();

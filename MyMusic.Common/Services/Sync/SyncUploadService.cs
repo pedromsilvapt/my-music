@@ -178,7 +178,7 @@ public class SyncUploadService(
             SyncUploadActionType.UpdateRemote =>
                 await syncActions.ActionUpdateRemote(
                     path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!,
-                    modifiedAt, tempFilePath, createdAt, tempFilePath,
+                    modifiedAt, tempFilePath, createdAt, path,
                     decision.Reason, cancellationToken),
 
             SyncUploadActionType.LinkWithSongId =>
@@ -195,7 +195,7 @@ public class SyncUploadService(
             SyncUploadActionType.CreateRemote =>
                 await syncActions.ActionCreateRemote(
                     path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!,
-                    modifiedAt, tempFilePath, createdAt, tempFilePath,
+                    modifiedAt, tempFilePath, createdAt, path,
                     decision.Reason, cancellationToken),
 
             _ => throw new InvalidOperationException($"Unknown upload action type: {decision.ActionType}")

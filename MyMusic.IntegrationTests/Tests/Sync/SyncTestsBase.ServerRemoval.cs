@@ -16,7 +16,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download the song to the device
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Verify file exists locally
         var expectedPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
@@ -27,7 +27,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should delete the local file
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(unlink: 1);
 
         // Verify local file was removed
         App.FileExists(expectedPath).ShouldBeFalse();
@@ -46,7 +46,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download the song to the device
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Verify file exists locally
         var expectedPath = "Taylor Swift/The Life of a Showgirl/The Fate of Ophelia - Taylor Swift.mp3";
@@ -57,7 +57,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should remove the local file
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(unlink: 1);
 
         // Verify local file was removed
         App.FileExists(expectedPath).ShouldBeFalse();

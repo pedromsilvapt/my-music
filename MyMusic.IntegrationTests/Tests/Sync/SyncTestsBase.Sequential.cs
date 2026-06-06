@@ -16,9 +16,7 @@ public abstract partial class SyncTestsBase
 
         // First sync - download the song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
-        result1.CreateLocal.ShouldBe(1);
-        result1.TotalChanges.ShouldBe(1);
+        result1.ShouldBe(createLocal: 1);
 
         // Verify original file exists
         var originalPath = "Dove Cameron/Sand/Sand - Dove Cameron.mp3";
@@ -29,10 +27,7 @@ public abstract partial class SyncTestsBase
 
         // Second sync - should update and rename file
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.UpdateLocal.ShouldBe(1);
-        result2.Rename.ShouldBe(1);
-        result2.TotalChanges.ShouldBe(2);
+        result2.ShouldBe(updateLocal: 1, rename: 1);
 
         // Verify file was renamed to "Title A"
         var pathA = "Dove Cameron/Sand/Title A - Dove Cameron.mp3";
@@ -45,10 +40,7 @@ public abstract partial class SyncTestsBase
 
         // Third sync - should update and rename file again
         var result3 = await App.SyncAsync(new SyncOptions());
-        result3.ShouldBeSuccessful();
-        result3.UpdateLocal.ShouldBe(1);
-        result3.Rename.ShouldBe(1);
-        result3.TotalChanges.ShouldBe(2);
+        result3.ShouldBe(updateLocal: 1, rename: 1);
 
         // Verify final state reflects title "B"
         var pathB = "Dove Cameron/Sand/Title B - Dove Cameron.mp3";
@@ -65,8 +57,7 @@ public abstract partial class SyncTestsBase
 
         // First sync - upload the new song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
-        result1.CreateRemote.ShouldBe(1);
+        result1.ShouldBe(createRemote: 1);
 
         // Modify the file locally
         var localPath = "The Alibi.mp3";
@@ -74,16 +65,14 @@ public abstract partial class SyncTestsBase
 
         // Second sync - upload the local change
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.UpdateRemote.ShouldBeGreaterThanOrEqualTo(1);
+        result2.ShouldBe(updateRemote: 1);
 
         // Modify the song on the server
         await new EditSongFlow("Updated Alibi", new(Title: "Server Updated Alibi")).ExecuteAsync(Page);
 
         // Third sync - download the server change
         var result3 = await App.SyncAsync(new SyncOptions());
-        result3.ShouldBeSuccessful();
-        result3.UpdateLocal.ShouldBe(1);
+        result3.ShouldBe(updateLocal: 1, rename: 1);
 
         // Verify final state reflects the server-side change
         var finalPath = "Dylan/The Alibi/Server Updated Alibi - Dylan.mp3";

@@ -19,10 +19,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync in dry-run mode
         var result = await App.SyncAsync(new SyncOptions { DryRun = true });
-        result.ShouldBeSuccessful();
-
-        // Dry run should report creation
-        result.CreateRemote.ShouldBe(1);
+        result.ShouldBe(createRemote: 1);
 
         // Dry run should not change device last sync date
         var lastSyncAfter = await new GetDeviceLastSyncAtFlow(App.DeviceName).ExecuteAsync(Page);
@@ -34,8 +31,7 @@ public abstract partial class SyncTestsBase
 
         // A subsequent real sync should upload the song successfully
         var realResult = await App.SyncAsync(new SyncOptions());
-        realResult.ShouldBeSuccessful();
-        realResult.CreateRemote.ShouldBe(1);
+        realResult.ShouldBe(createRemote: 1);
 
         // Go home first, to force a refresh when we check the songs again
         await new HomePage(Page).Navbar.GoToHomeAsync();
@@ -77,10 +73,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync in dry-run mode
         var result = await App.SyncAsync(new SyncOptions { DryRun = true });
-        result.ShouldBeSuccessful();
-
-        // Dry run should report download
-        result.CreateLocal.ShouldBe(1);
+        result.ShouldBe(createLocal: 1);
 
         // File should NOT exist locally (dry run doesn't download)
         var expectedPath = "Dylan/The Alibi/The Alibi - Dylan.mp3";
@@ -88,8 +81,7 @@ public abstract partial class SyncTestsBase
 
         // A subsequent real sync should download the file successfully
         var realResult = await App.SyncAsync(new SyncOptions());
-        realResult.ShouldBeSuccessful();
-        realResult.CreateLocal.ShouldBe(1);
+        realResult.ShouldBe(createLocal: 1);
         App.FileExists(expectedPath).ShouldBeTrue();
     }
 }

@@ -74,6 +74,11 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
 
             AnsiConsole.Write(summaryTable);
 
+            if (syncResult.SessionId.HasValue)
+            {
+                AnsiConsole.WriteLine($"SessionId: {syncResult.SessionId.Value}");
+            }
+
             if (syncResult.Conflict > 0)
             {
                 AnsiConsole.WriteLine();

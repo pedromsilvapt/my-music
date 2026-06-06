@@ -16,7 +16,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download the song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Verify file exists with original album directory
         var originalPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
@@ -27,7 +27,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should rename the file to new album directory
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(updateLocal: 1, rename: 1);
 
         // Old path should be removed
         App.FileExists(originalPath).ShouldBeFalse();
@@ -46,7 +46,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download the song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Verify file exists with original artist in path
         var originalPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
@@ -57,7 +57,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should rename file with new artist in path
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(updateLocal: 1, rename: 1);
 
         // Old path should be removed
         App.FileExists(originalPath).ShouldBeFalse();

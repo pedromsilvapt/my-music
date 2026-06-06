@@ -254,7 +254,12 @@ public class MobileCliApplication : ISyncApplication
         span?.SetTag("exit_code", process.ExitCode);
         span?.Stop();
 
-        return SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
+        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
+
+        var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
+            _api, DeviceId, result.SessionId);
+
+        return result with { ApiRecordCounts = apiRecordCounts };
     }
 
     public bool SupportsSyncDirection() => false;

@@ -15,6 +15,7 @@ public class DesktopCliApplication : ISyncApplication
     private readonly DesktopCliFixture _fixture;
     private readonly IConfiguration _configuration;
     private readonly IntegrationTestTelemetry _telemetry;
+    private IAPIRequestContext _api = null!;
 
     private static string DefaultCliPath() => Path.Combine(
         FindSolutionRoot(),
@@ -47,7 +48,10 @@ public class DesktopCliApplication : ISyncApplication
     }
 
     public Task InitializeAsync(IAPIRequestContext api, long userId, string userName, string? serverUrl = null)
-        => _fixture.InitializeAsync(api, userId, userName, serverUrl);
+    {
+        _api = api;
+        return _fixture.InitializeAsync(api, userId, userName, serverUrl);
+    }
 
     public Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null)
         => _fixture.CreateSongAsync(song, relativePath, contentVariant);
@@ -156,7 +160,12 @@ public class DesktopCliApplication : ISyncApplication
         span?.SetTag("exit_code", process.ExitCode);
         span?.Stop();
 
-        return SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
+        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
+
+        var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
+            _api, _fixture.DeviceId, result.SessionId);
+
+        return result with { ApiRecordCounts = apiRecordCounts };
     }
 
     public bool SupportsSyncDirection() => true;

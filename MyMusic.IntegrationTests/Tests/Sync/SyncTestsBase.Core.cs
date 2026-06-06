@@ -18,7 +18,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to upload the song to the server
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
+        result.ShouldBe(createRemote: 1);
 
         // Verify the song appears on the server UI
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -29,7 +29,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync again to download the server changes
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(updateLocal: 1, rename: 1);
 
         // Validate the local file has the updated title
         await FileValidator.AssertMetadataAsync(App.GetSongPath("Dylan/The Alibi/Updated Title - Dylan.mp3"), title: "Updated Title");
@@ -47,7 +47,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to merge device and server songs
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
+        result.ShouldBe(createRemote: 1, createLocal: 1);
 
         // Verify the device song still exists locally
         App.FileExists("Sand.mp3").ShouldBeTrue();
@@ -70,7 +70,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to upload the song to the server
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createRemote: 1);
 
         // Verify the file still exists locally after upload
         App.FileExists("Girl across the street.mp3").ShouldBeTrue();
@@ -81,10 +81,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync again (idempotency check)
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-
-        // Verify no changes were made on the second sync
-        result2.TotalChanges.ShouldBe(0);
+        result2.ShouldBe(skipped: 1);
     }
 
     [Fact]
@@ -96,7 +93,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to download the song to the device
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Verify the file was downloaded with correct metadata
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -106,10 +103,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync again (idempotency check)
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-
-        // Verify no changes were made on the second sync
-        result2.TotalChanges.ShouldBe(0);
+        result2.ShouldBe(skipped: 1);
     }
 
     [Fact]
@@ -121,7 +115,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to download the song to the device
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Verify the file exists locally
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -133,7 +127,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to process the removal
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(unlink: 1);
 
         // Verify the song still exists on the server (device association removed)
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -151,7 +145,7 @@ public abstract partial class SyncTestsBase
 
         // Run the CLI sync command, should download the file to the local CLI folder
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         // Validate the file was correctly downloaded
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -167,7 +161,7 @@ public abstract partial class SyncTestsBase
 
         // Run the CLI sync command again, should upload the song
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(updateRemote: 1);
 
         // Validate that the title of the song on the details page is updated now
         await new ValidateSongDetailsFlow(updatedTitle, new ValidateSongOptions(Title: updatedTitle))
@@ -187,8 +181,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync to download the song to the device
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
-        result.CreateLocal.ShouldBe(1);
+        result.ShouldBe(createLocal: 1);
 
         // Verify file exists locally with correct metadata
         // Expected path based on naming template: {artist[0]}/{album}/{simple_label}.mp3
@@ -209,7 +202,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync - verify file downloaded with original title
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         var songData = songsData[0];
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3
@@ -223,7 +216,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync again
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(updateLocal: 1, rename: 1);
 
         // Verify: old file removed, new file exists with new title in filename
         var newDevicePath = "Freya Ridings/Wicker Woman/Updated Title - Freya Ridings.mp3";
@@ -243,7 +236,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync - verify file downloaded without "(Explicit)" in name
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 1);
 
         var songData = songsData[0];
         // Expected path: {artist[0]}/{album}/{title} - {artists}.mp3 (no Explicit suffix initially)
@@ -256,7 +249,7 @@ public abstract partial class SyncTestsBase
 
         // Run CLI sync again
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
+        result2.ShouldBe(updateLocal: 1, rename: 1);
 
         // Verify: old file removed, new file exists with "(Explicit)" in filename
         App.FileExists(originalDevicePath).ShouldBeFalse("Old file should be removed");

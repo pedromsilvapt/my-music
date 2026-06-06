@@ -78,6 +78,10 @@ function printResults(result: SyncResult): void {
     console.log(`Conflict: ${result.conflict}`);
     console.log(`UpdateTimestamp: ${result.updateTimestamp}`);
     console.log(`Error: ${result.error}`);
+
+    if (result.sessionId !== undefined && result.sessionId !== null) {
+        console.log(`SessionId: ${result.sessionId}`);
+    }
 }
 
 async function main(): Promise<number> {

@@ -21,8 +21,8 @@ public abstract partial class SyncTestsBase
 
         // First sync: Should create two separate songs due to different album names
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
-        result1.CreateRemote.ShouldBe(2, $"Expected 2 songs to be created but got {result1.CreateRemote}");
+        // Expected 2 songs to be created
+        result1.ShouldBe(createRemote: 2);
 
         // Validate two songs exist on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();

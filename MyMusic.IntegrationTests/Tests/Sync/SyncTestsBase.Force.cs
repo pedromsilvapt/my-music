@@ -14,17 +14,14 @@ public abstract partial class SyncTestsBase
 
         // First sync should upload the song
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
-        result1.CreateRemote.ShouldBe(1);
+        result1.ShouldBe(createRemote: 1);
 
         // Second sync without force should be idempotent (no changes)
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.TotalChanges.ShouldBe(0);
+        result2.ShouldBe(skipped: 1);
 
         // Sync with force should re-upload the unchanged file
         var result3 = await App.SyncAsync(new SyncOptions { Force = true });
-        result3.ShouldBeSuccessful();
-        result3.UpdateRemote.ShouldBe(1);
+        result3.ShouldBe(updateRemote: 1);
     }
 }

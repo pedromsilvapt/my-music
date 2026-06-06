@@ -5,6 +5,7 @@ namespace MyMusic.IntegrationTests.Fixtures;
 public record SyncResult
 {
     public bool Success { get; init; }
+    public long? SessionId { get; init; }
     public int CreateRemote { get; init; }
     public int UpdateRemote { get; init; }
     public int CreateLocal { get; init; }
@@ -17,6 +18,7 @@ public record SyncResult
     public int Conflict { get; init; }
     public int UpdateTimestamp { get; init; }
     public int Error { get; init; }
+    public Dictionary<string, int>? ApiRecordCounts { get; init; }
 
     public int TotalChanges => CreateRemote + UpdateRemote + CreateLocal + UpdateLocal + Delete + Link + Unlink + Rename;
 
@@ -25,6 +27,7 @@ public record SyncResult
         return new SyncResult
         {
             Success = exitCode == 0,
+            SessionId = GetNullableLongValue(standardOutput, "SessionId"),
             CreateRemote = GetCounterValue(standardOutput, "CreateRemote"),
             UpdateRemote = GetCounterValue(standardOutput, "UpdateRemote"),
             CreateLocal = GetCounterValue(standardOutput, "CreateLocal"),
@@ -46,5 +49,13 @@ public record SyncResult
         var matches = Regex.Matches(strippedOutput, $@"{counterName}:\s*(\d+)");
         if (matches.Count == 0) return -1;
         return int.Parse(matches[^1].Groups[1].Value);
+    }
+
+    private static long? GetNullableLongValue(string output, string name)
+    {
+        var strippedOutput = Regex.Replace(output, @"\x1b\[[0-9;]*m", "");
+        var matches = Regex.Matches(strippedOutput, $@"{name}:\s*(\d+)");
+        if (matches.Count == 0) return null;
+        return long.Parse(matches[^1].Groups[1].Value);
     }
 }

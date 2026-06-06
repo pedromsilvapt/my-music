@@ -17,10 +17,7 @@ public abstract partial class SyncTestsBase
 
         // Run a single sync
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
-
-        // All 3 songs should be created
-        result.CreateRemote.ShouldBe(3);
+        result.ShouldBe(createRemote: 3);
 
         // Verify all 3 songs exist on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
@@ -41,11 +38,7 @@ public abstract partial class SyncTestsBase
 
         // Run a single sync
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
-
-        // Should have both downloads and creations
-        result.CreateLocal.ShouldBe(1);
-        result.CreateRemote.ShouldBe(1);
+        result.ShouldBe(createLocal: 1, createRemote: 1);
 
         // Verify the downloaded file exists
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeTrue();
@@ -68,10 +61,7 @@ public abstract partial class SyncTestsBase
 
         // Run a single sync
         var result = await App.SyncAsync(new SyncOptions());
-        result.ShouldBeSuccessful();
-
-        // All 3 songs should be downloaded
-        result.CreateLocal.ShouldBe(3);
+        result.ShouldBe(createLocal: 3);
 
         // Verify all files exist locally
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeTrue();
@@ -92,7 +82,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync to download all songs
         var result1 = await App.SyncAsync(new SyncOptions());
-        result1.ShouldBeSuccessful();
+        result1.ShouldBe(createLocal: 3);
 
         // Verify all files exist locally
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeTrue();
@@ -106,8 +96,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should remove all local files
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBeSuccessful();
-        result2.Unlink.ShouldBe(3);
+        result2.ShouldBe(unlink: 3);
 
         // Verify all local files were removed
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeFalse();

@@ -22,20 +22,13 @@ public abstract partial class SyncTestsBase
         var serverSongs = await ServerSongs.SeedAsync(RequestContext, UserId,
             [SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] }]);
 
-        // Run sync with direction=up (upload only, no download)
+        // Run sync with direction=up (upload only, no download, unlink the old song)
         var result = await App.SyncAsync(new SyncOptions { Direction = SyncDirection.Up });
-        result.ShouldBeSuccessful();
-
-        // Local song should be uploaded (Created >= 1)
-        result.CreateRemote.ShouldBe(1);
-
-        // Server song should NOT be downloaded (CreateLocal should be 0)
-        result.CreateLocal.ShouldBe(0);
-        result.UpdateLocal.ShouldBe(0);
+        result.ShouldBe(createRemote: 1, createLocal: 0, updateLocal: 0, unlink: 1);
 
         // Verify the local song exists on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
-        (await songs.Collection.GetRowCountAsync()).ShouldBeGreaterThanOrEqualTo(2);
+        (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
     }
 
     [Fact]
@@ -55,14 +48,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync with direction=down (download only, no upload)
         var result = await App.SyncAsync(new SyncOptions { Direction = SyncDirection.Down });
-        result.ShouldBeSuccessful();
-
-        // Server song should be downloaded (CreateLocal == 1)
-        result.CreateLocal.ShouldBe(1);
-
-        // Local song should NOT be uploaded (Created should be 0)
-        result.CreateRemote.ShouldBe(0);
-        result.UpdateRemote.ShouldBe(0);
+        result.ShouldBe(createLocal: 1, createRemote: 0, updateRemote: 0);
 
         // Verify the downloaded file exists locally
         var expectedPath = "Dylan/The Alibi/The Alibi - Dylan.mp3";
