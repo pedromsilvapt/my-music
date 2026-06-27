@@ -232,19 +232,15 @@ public class Phases(
 
             ctx.Result = ctx.Result.AddDelta(result.Counts);
 
-            var toUpdatePaths = result.Records
-                .Where(r => r.Action == SyncRecordAction.CreateRemote || r.Action == SyncRecordAction.UpdateRemote)
-                .Select(r => r.FilePath)
+            var unresolvedSongIds = result.Records
+                .Where(r => (r.Action == SyncRecordAction.Conflict || r.Action == SyncRecordAction.Error) && r.SongId.HasValue)
+                .Select(r => r.SongId!.Value)
                 .ToHashSet();
 
-            foreach (var toUploadPath in toUpdatePaths)
+            ctx.ConflictedSongIds.Clear();
+            foreach (var songId in unresolvedSongIds)
             {
-                ctx.ConflictedSongIds.Clear();
-            }
-
-            foreach (var record in conflictRecords.Where(r => !toUpdatePaths.Contains(r.FilePath) && r.SongId.HasValue))
-            {
-                ctx.ConflictedSongIds.Add(record.SongId!.Value);
+                ctx.ConflictedSongIds.Add(songId);
             }
 
             foreach (var record in result.Records)
