@@ -700,6 +700,59 @@ public class SyncCommitServiceSpecs
         unlinkRecords.Count.ShouldBe(1);
     }
 
+    [Fact]
+    public async Task OrphanDetection_BothDirection_RenameRecord_ProtectsPreviousPathFromOrphaning()
+    {
+        var ctx = SetupWithSong();
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3");
+        var renameData = CreateRenameData("/music/old.mp3", "/music/new.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: renameData, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
+
+        // The SongDevice at PreviousPath should be preserved (not orphaned) and its path updated to NewPath
+        var updated = GetSongDevice(ctx.Db, sd.Id);
+        updated.DevicePath.ShouldBe("/music/new.mp3");
+        var unlinkRecords = ctx.Db.DeviceSyncSessionRecords.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
+        unlinkRecords.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task OrphanDetection_BothDirection_StandaloneRename_DoesNotOrphan()
+    {
+        // Simulates a future "manual rename" scenario: a Rename record with no paired
+        // UpdateLocal/CreateLocal record. The SongDevice at PreviousPath must still be protected
+        // from orphan detection (and its path moved to NewPath by ProcessRenameAsync).
+        var ctx = SetupWithSong();
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3");
+        var renameData = CreateRenameData("/music/old.mp3", "/music/new.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: renameData, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
+
+        SongDeviceExists(ctx.Db, sd.Id).ShouldBeTrue();
+        GetSongDevice(ctx.Db, sd.Id).DevicePath.ShouldBe("/music/new.mp3");
+        ctx.Db.DeviceSyncSessionRecords.ShouldNotContain(r => r.Action == SyncRecordAction.Unlink);
+    }
+
+    [Fact]
+    public async Task OrphanDetection_UpDirection_RenameRecord_ClearsSyncActionOnPreviousPath()
+    {
+        var ctx = SetupWithSong();
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Download);
+        var renameData = CreateRenameData("/music/old.mp3", "/music/new.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: renameData, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "up", cancellationToken: default);
+
+        // ProcessRenameAsync updates DevicePath and clears SyncAction; the songsToClear block
+        // (which uses the same validFilePaths set) is redundant but must not conflict.
+        var updated = GetSongDevice(ctx.Db, sd.Id);
+        updated.DevicePath.ShouldBe("/music/new.mp3");
+        updated.SyncAction.ShouldBeNull();
+        updated.SyncActionReason.ShouldBeNull();
+    }
+
     #endregion
 
     #region Delete / Unlink FindSongDeviceByIds Fallback

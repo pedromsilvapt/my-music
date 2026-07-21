@@ -409,11 +409,11 @@ public class SyncCommitService(
         List<DeviceSyncSessionRecord> records, bool isDryRun, string direction,
         CancellationToken cancellationToken)
     {
+        // Exclude Unlink: created by orphan detection itself, PendingActions (server-side), or CheckSync (Remove);
+        // its FilePath does not correspond to a client-reported path.
         var validFilePaths = records
-            .Where(r => r.Action is SyncRecordAction.CreateRemote or SyncRecordAction.UpdateRemote
-                or SyncRecordAction.Skipped or SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal
-                or SyncRecordAction.Link or SyncRecordAction.Error)
-            .Select(r => r.FilePath)
+            .Where(r => r.Action != SyncRecordAction.Unlink)
+            .Select(GetClientPath)
             .ToHashSet();
 
         List<SongDevice> orphanedSongDevices;
@@ -517,6 +517,23 @@ public class SyncCommitService(
 
         return await db.SongDevices
             .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == record.FilePath, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the path of the SongDevice this record operates on. For Rename records, this is
+    /// <see cref="RenameData.PreviousPath"/> (where the SongDevice currently lives); for all
+    /// other actions, it is <see cref="DeviceSyncSessionRecord.FilePath"/>.
+    /// </summary>
+    private static string GetClientPath(DeviceSyncSessionRecord record)
+    {
+        if (record.Action == SyncRecordAction.Rename)
+        {
+            var data = SyncActionDataSerializer.Deserialize<RenameData>(record.Data)
+                ?? throw new InvalidOperationException($"Rename record {record.Id} is missing Data.PreviousPath");
+            return data.PreviousPath;
+        }
+
+        return record.FilePath;
     }
 
     private async Task<long> ImportSongFromFile(
