@@ -419,5 +419,75 @@ public class SyncActionsDeviceTests
         await _apiClient.Received(1).ResolveConflictsAsync(1, 1, Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ActionConflictAsync_LargePayload_ChunksRequestsAndAggregatesResults()
+    {
+        var device = CreateDevice();
+        // Generate enough conflicts that combined base64 payload exceeds the chunk threshold.
+        // The default chunk threshold is ~20 MB of base64; each conflict carries a 7 MB base64 string,
+        // so 4 conflicts => 28 MB => must split into at least 2 chunks.
+        var bigBase64 = new string('A', 7_000_000);
+        const int conflictCount = 4;
+
+        var conflicts = new List<SyncRecordItem>();
+        for (var i = 0; i < conflictCount; i++)
+        {
+            conflicts.Add(new SyncRecordItem
+            {
+                Id = i + 1,
+                FilePath = $"conflict{i}.mp3",
+                Action = SyncRecordAction.Conflict,
+                SongId = i + 1,
+                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow }),
+                Acknowledged = false,
+                ProcessedAt = DateTime.UtcNow
+            });
+        }
+
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(true);
+        _fileSystem.File.Returns(mockFile);
+
+        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(bigBase64);
+
+        var chunkCalls = new List<ResolveConflictsRequest>();
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                var req = (ResolveConflictsRequest)callInfo[2];
+                chunkCalls.Add(req);
+                return Task.FromResult(new ResolveConflictsResult
+                {
+                    Records = req.Conflicts.Select(c => new SyncRecordItem
+                    {
+                        Id = c.SongId,
+                        FilePath = c.Path,
+                        Action = SyncRecordAction.UpdateTimestamp,
+                        SongId = c.SongId,
+                        Acknowledged = false,
+                        ProcessedAt = DateTime.UtcNow
+                    }).ToList(),
+                    Counts = new SyncActionCounts { UpdateTimestampCount = req.Conflicts.Count + req.PotentialUpdates.Count }
+                });
+            });
+
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, []);
+
+        // Should have made more than one request (chunking kicked in)
+        chunkCalls.Count.ShouldBeGreaterThan(1);
+        // Each chunk's total base64 payload must respect the threshold
+        foreach (var chunk in chunkCalls)
+        {
+            var chunkBytes = chunk.Conflicts.Sum(c => c.FileContentBase64.Length)
+                                + chunk.PotentialUpdates.Sum(p => p.FileContentBase64.Length);
+            chunkBytes.ShouldBeLessThanOrEqualTo(20_000_000);
+        }
+        // All conflicts were processed across chunks
+        chunkCalls.Sum(c => c.Conflicts.Count).ShouldBe(conflictCount);
+        // All records aggregated into the final result
+        result.Records.Count.ShouldBe(conflictCount);
+        result.Counts.UpdateTimestampCount.ShouldBe(conflictCount);
+    }
+
     private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);
 }

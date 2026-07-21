@@ -1074,6 +1074,7 @@ public class DevicesController(
     }
 
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/resolve-conflicts")]
+    [RequestSizeLimit(100_000_000)]
     public async Task<ActionResult<SyncResolveConflictsResponse>> ResolveConflicts(
         long deviceId,
         long sessionId,
@@ -1251,6 +1252,7 @@ public class DevicesController(
     }
 
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/upload")]
+    [RequestSizeLimit(100_000_000)]
     public async Task<ActionResult<SyncUploadResponse>> UploadFile(
         long deviceId,
         long sessionId,

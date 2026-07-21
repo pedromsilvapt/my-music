@@ -328,6 +328,13 @@ public class SyncActionsDevice(
         }
     }
 
+    /// <summary>
+    /// Maximum base64 payload size (in characters, roughly bytes) sent per resolve-conflicts
+    /// request. The server has a 100 MB request body limit; chunking keeps each request well
+    /// under that ceiling while leaving headroom for the JSON envelope and metadata.
+    /// </summary>
+    private const long MaxBytesPerResolveChunk = 20_000_000;
+
     public async Task<ResolveConflictsActionResult> ActionConflictAsync(
         long deviceId,
         long sessionId,
@@ -396,37 +403,111 @@ public class SyncActionsDevice(
             return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
         }
 
+        var chunks = BuildResolveChunks(resolveItems, potentialUpdateItems);
+        logger.LogInformation(
+            "Resolving {ConflictCount} conflicts and {PotentialUpdateCount} potential updates in {ChunkCount} chunk(s)",
+            resolveItems.Count, potentialUpdateItems.Count, chunks.Count);
+
+        var allRecords = new List<SyncRecordItem>();
+        var aggregatedCounts = SyncActionCounts.Empty;
+
         try
         {
-            var resolveResponse = await apiClient.ResolveConflictsAsync(deviceId, sessionId, new ResolveConflictsRequest
+            foreach (var chunk in chunks)
             {
-                Conflicts = resolveItems,
-                PotentialUpdates = potentialUpdateItems
-            }, ct);
-
-            foreach (var record in resolveResponse.Records)
-            {
-                var logMessage = record.Action switch
+                var resolveResponse = await apiClient.ResolveConflictsAsync(deviceId, sessionId, new ResolveConflictsRequest
                 {
-                    SyncRecordAction.Conflict => $"Conflict for {record.FilePath}: {record.Reason}",
-                    SyncRecordAction.UpdateTimestamp => $"Resolved conflict for {record.FilePath}: {record.Reason}",
-                    SyncRecordAction.UpdateLocal => $"Created UpdateLocal action for record {record.Id}",
-                    SyncRecordAction.Rename => $"Created Rename action for record {record.Id}",
-                    SyncRecordAction.Error => $"Error for {record.FilePath}: {record.Reason}",
-                    _ => $"Created {record.Action} action for record {record.Id}"
-                };
-                logger.LogInformation("{LogMessage}", logMessage);
+                    Conflicts = chunk.Conflicts,
+                    PotentialUpdates = chunk.PotentialUpdates
+                }, ct);
+
+                foreach (var record in resolveResponse.Records)
+                {
+                    var logMessage = record.Action switch
+                    {
+                        SyncRecordAction.Conflict => $"Conflict for {record.FilePath}: {record.Reason}",
+                        SyncRecordAction.UpdateTimestamp => $"Resolved conflict for {record.FilePath}: {record.Reason}",
+                        SyncRecordAction.UpdateLocal => $"Created UpdateLocal action for record {record.Id}",
+                        SyncRecordAction.Rename => $"Created Rename action for record {record.Id}",
+                        SyncRecordAction.Error => $"Error for {record.FilePath}: {record.Reason}",
+                        _ => $"Created {record.Action} action for record {record.Id}"
+                    };
+                    logger.LogInformation("{LogMessage}", logMessage);
+                }
+
+                allRecords.AddRange(resolveResponse.Records);
+                aggregatedCounts = aggregatedCounts.Add(resolveResponse.Counts);
             }
 
             return new ResolveConflictsActionResult(
-                Records: resolveResponse.Records,
-                Counts: resolveResponse.Counts);
+                Records: allRecords,
+                Counts: aggregatedCounts);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to resolve conflicts");
-            return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
+            return new ResolveConflictsActionResult(Records: allRecords, Counts: aggregatedCounts);
         }
+    }
+
+    /// <summary>
+    /// Splits the combined conflict + potential-update items into request chunks whose total
+    /// base64 payload does not exceed <see cref="MaxBytesPerResolveChunk"/>. Items are
+    /// interleaved so neither list is starved when one is much larger than the other.
+    /// </summary>
+    private static List<ResolveChunk> BuildResolveChunks(
+        List<ConflictResolveItem> conflicts,
+        List<PotentialUpdateResolveItem> potentialUpdates)
+    {
+        var chunks = new List<ResolveChunk>();
+        var current = new ResolveChunk();
+        var currentSize = 0L;
+
+        // Interleave by index so a long conflict list doesn't defer all potential updates
+        var maxIndex = Math.Max(conflicts.Count, potentialUpdates.Count);
+        for (var i = 0; i < maxIndex; i++)
+        {
+            if (i < conflicts.Count)
+            {
+                var item = conflicts[i];
+                var itemSize = item.FileContentBase64.Length;
+                if (currentSize > 0 && currentSize + itemSize > MaxBytesPerResolveChunk)
+                {
+                    chunks.Add(current);
+                    current = new ResolveChunk();
+                    currentSize = 0;
+                }
+                current.Conflicts.Add(item);
+                currentSize += itemSize;
+            }
+
+            if (i < potentialUpdates.Count)
+            {
+                var item = potentialUpdates[i];
+                var itemSize = item.FileContentBase64.Length;
+                if (currentSize > 0 && currentSize + itemSize > MaxBytesPerResolveChunk)
+                {
+                    chunks.Add(current);
+                    current = new ResolveChunk();
+                    currentSize = 0;
+                }
+                current.PotentialUpdates.Add(item);
+                currentSize += itemSize;
+            }
+        }
+
+        if (current.Conflicts.Count > 0 || current.PotentialUpdates.Count > 0)
+        {
+            chunks.Add(current);
+        }
+
+        return chunks;
+    }
+
+    private sealed class ResolveChunk
+    {
+        public List<ConflictResolveItem> Conflicts { get; } = [];
+        public List<PotentialUpdateResolveItem> PotentialUpdates { get; } = [];
     }
 }
 

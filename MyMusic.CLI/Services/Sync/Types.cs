@@ -99,6 +99,22 @@ public record SyncActionCounts
 
     public static SyncActionCounts Empty => new();
 
+    public SyncActionCounts Add(SyncActionCounts other) => new()
+    {
+        CreateRemoteCount = CreateRemoteCount + other.CreateRemoteCount,
+        UpdateRemoteCount = UpdateRemoteCount + other.UpdateRemoteCount,
+        SkippedCount = SkippedCount + other.SkippedCount,
+        CreateLocalCount = CreateLocalCount + other.CreateLocalCount,
+        UpdateLocalCount = UpdateLocalCount + other.UpdateLocalCount,
+        DeleteCount = DeleteCount + other.DeleteCount,
+        LinkCount = LinkCount + other.LinkCount,
+        UnlinkCount = UnlinkCount + other.UnlinkCount,
+        RenameCount = RenameCount + other.RenameCount,
+        ConflictCount = ConflictCount + other.ConflictCount,
+        UpdateTimestampCount = UpdateTimestampCount + other.UpdateTimestampCount,
+        ErrorCount = ErrorCount + other.ErrorCount,
+    };
+
     public static SyncActionCounts FromApi(MyMusic.CLI.Api.Dtos.SyncActionCounts api) => new()
     {
         CreateRemoteCount = api.CreateRemoteCount,
