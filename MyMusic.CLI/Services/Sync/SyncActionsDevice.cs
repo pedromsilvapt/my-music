@@ -334,15 +334,8 @@ public class SyncActionsDevice(
         string repositoryPath,
         List<SyncRecordItem> conflictRecords,
         List<SyncRecordItem> updateLocalRecords,
-        bool dryRun,
         CancellationToken ct = default)
     {
-        if (dryRun)
-        {
-            logger.LogInformation("Dry-run: skipping conflict resolution for {ConflictCount} conflicts and {UpdateCount} potential updates", conflictRecords.Count, updateLocalRecords.Count);
-            return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
-        }
-
         var resolveItems = new List<ConflictResolveItem>();
         foreach (var conflict in conflictRecords)
         {

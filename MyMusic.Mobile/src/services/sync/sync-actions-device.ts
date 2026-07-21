@@ -371,16 +371,6 @@ export async function actionConflict(
         return { records: [], counts: undefined };
     }
 
-    if (ctx.options.dryRun) {
-        ctx.result.conflict += conflictRecords.length;
-        onProgress({
-            phase: 'resolving',
-            currentFile: `${conflictRecords.length} conflicts detected (dry-run)`,
-            conflict: ctx.result.conflict,
-        });
-        return { records: [], counts: undefined };
-    }
-
     onProgress({ phase: 'resolving', currentFile: 'Checking conflicts...' });
 
     const resolveItems: SyncConflictResolveItem[] = [];

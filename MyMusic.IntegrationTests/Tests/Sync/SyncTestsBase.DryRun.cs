@@ -84,4 +84,118 @@ public abstract partial class SyncTestsBase
         realResult.ShouldBe(createLocal: 1);
         App.FileExists(expectedPath).ShouldBeTrue();
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_UpdatedDetectConflict(bool dryRun)
+    {
+        // Seed two songs on the server assigned to this device
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+        [
+            SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] },  // The Alibi - Dylan
+            SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] },  // Wicker Woman - Freya Ridings
+        ]);
+
+        // Initial sync o ensure both sides have same data
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 2);
+
+        // Change file locally
+        await App.UpdateLocalFileMetadataAsync(
+            "Dylan/The Alibi/The Alibi - Dylan.mp3",
+            new EditSongOptions(Title: "The Alibi (Edited)"));
+
+        // Different edit on the server, means different checksum
+        await new EditSongFlow("The Alibi", new(Title: "The Alibi (Unedited)")).ExecuteAsync(Page);
+
+        // The counters should be the same with or without dry run
+        var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        dryResult.ShouldBe(conflict: 1, skipped: 1);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_UpdatedAutoResolveConflict(bool dryRun)
+    {
+        // Seed two songs on the server assigned to this device
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+        [
+            SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] },  // The Alibi - Dylan
+            SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] },  // Wicker Woman - Freya Ridings
+        ]);
+
+        // Initial sync o ensure both sides have same data
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 2);
+
+        // Create new file locally
+        await App.UpdateLocalFileMetadataAsync(
+            "Dylan/The Alibi/The Alibi - Dylan.mp3",
+            new EditSongOptions(Title: "The Alibi (Edited)"));
+
+        // Same edit on the server, means same checksum, should auto-resolve
+        await new EditSongFlow("The Alibi", new(Title: "The Alibi (Edited)")).ExecuteAsync(Page);
+
+        // The counters should be the same with or without dry run
+        var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        dryResult.ShouldBe(updateTimestamp: 1, skipped: 1);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_CreatedDetectConflict(bool dryRun)
+    {
+        // Seed two songs on the server assigned to this device
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+        [
+            SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] },  // The Alibi - Dylan
+            SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] },  // Wicker Woman - Freya Ridings
+        ]);
+
+        // Initial sync o ensure both sides have same data
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 2);
+
+        // Create a new file locally on the App
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[5]);
+
+        // Create the same file on the server, but with a different Year (different checksum)
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[5] with { Year = 2024, DeviceIds = [App.DeviceId] }]);
+
+        // The counters should be the same with or without dry run
+        var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        dryResult.ShouldBe(createRemote: 1, createLocal: 1, skipped: 2);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_CreatedAutoResolveConflict(bool dryRun)
+    {
+        // Seed two songs on the server assigned to this device
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+        [
+            SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] },  // The Alibi - Dylan
+            SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] },  // Wicker Woman - Freya Ridings
+        ]);
+
+        // Initial sync o ensure both sides have same data
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 2);
+
+        // Create a new file locally on the App
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[5]);
+
+        // Create the same file on the server, with the same metadata (same checksum, conflict resolved)
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[5] with { DeviceIds = [App.DeviceId] }]);
+
+        // The counters should be the same with or without dry run
+        var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        dryResult.ShouldBe(link: 1, skipped: 2);
+    }
 }

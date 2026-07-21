@@ -228,7 +228,7 @@ public class Phases(
         if (conflictRecords.Count > 0 || updateLocalRecords.Count > 0)
         {
             var result = await syncActions.ActionConflictAsync(
-                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, ctx.Options.DryRun, ct);
+                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, ct);
 
             ctx.Result = ctx.Result.AddDelta(result.Counts);
 

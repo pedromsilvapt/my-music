@@ -361,14 +361,14 @@ public class SyncActionsDeviceTests
                 ],
             }));
 
-        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, [], dryRun: false);
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, []);
 
         result.Records.Count.ShouldBe(1);
         result.Records[0].Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
     }
 
     [Fact]
-    public async Task ActionConflictAsync_DryRun_SkipsFileReadingAndServerCall()
+    public async Task ActionConflictAsync_DryRun_CallsServerAndPropagatesRecords()
     {
         var device = CreateDevice();
         var conflicts = new List<SyncRecordItem>
@@ -391,11 +391,32 @@ public class SyncActionsDeviceTests
 
         _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("base64content");
 
-        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, [], dryRun: true);
+        var serverCounts = new SyncActionCounts { UpdateTimestampCount = 1 };
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ResolveConflictsResult
+            {
+                Records =
+                [
+                    new SyncRecordItem
+                    {
+                        Id = 1,
+                        FilePath = "conflict.mp3",
+                        Action = SyncRecordAction.UpdateTimestamp,
+                        SongId = 1,
+                        Acknowledged = false,
+                        ProcessedAt = DateTime.UtcNow
+                    }
+                ],
+                Counts = serverCounts,
+            }));
 
-        result.Records.ShouldBeEmpty();
-        await _fileOps.DidNotReceive().ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _apiClient.DidNotReceive().ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>());
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, []);
+
+        result.Records.Count.ShouldBe(1);
+        result.Records[0].Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
+        result.Counts.ShouldBe(serverCounts);
+        await _fileOps.Received(1).ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).ResolveConflictsAsync(1, 1, Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>());
     }
 
     private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);

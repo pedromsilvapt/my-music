@@ -704,8 +704,14 @@ describe('actionConflict', () => {
         expect(result.records[0].action).toBe('Conflict');
     });
 
-    test('dry-run counts conflicts without resolving', async () => {
-        const apiClient = createMockApiClient();
+    test('dry-run resolves conflicts via server (parity with non-dry-run)', async () => {
+        const resolveConflicts = jest.fn().mockResolvedValue({
+            records: [
+                { id: 1, filePath: 'song.mp3', action: 'UpdateTimestamp', songId: 42, data: null, resolvesConflictRecordId: null, reason: 'Checksums match', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' },
+            ],
+            counts: {...ZERO_COUNTS, updateTimestampCount: 1},
+        });
+        const apiClient = createMockApiClient({ resolveConflicts });
         const fileOps = createMockFileOps();
         const ctx = createContext({
             options: {
@@ -718,8 +724,13 @@ describe('actionConflict', () => {
 
         const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
 
-        expect(ctx.result.conflict).toBe(1);
-        expect(result.records).toHaveLength(0);
+        expect(resolveConflicts).toHaveBeenCalledWith(1, 1, expect.objectContaining({
+            conflicts: expect.arrayContaining([expect.objectContaining({ songId: 42 })]),
+        }));
+        expect(result.records).toHaveLength(1);
+        expect(result.records[0].action).toBe('UpdateTimestamp');
+        expect(result.counts).toEqual({...ZERO_COUNTS, updateTimestampCount: 1});
+        expect(ctx.result.conflict).toBe(0);
     });
 
     test('no conflicts returns empty result', async () => {
