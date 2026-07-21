@@ -83,6 +83,8 @@ public class Phases(
         var chunks = files.Chunk(chunkSize).ToList();
         logger.LogInformation("Processing {ChunkCount} chunks", chunks.Count);
 
+        var processedCount = 0;
+
         for (var i = 0; i < chunks.Count; i++)
         {
             if (ct.IsCancellationRequested)
@@ -92,6 +94,7 @@ public class Phases(
 
             var chunk = chunks[i];
             var chunkNumber = i + 1;
+            var uploadedCount = 0;
             logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
 
             var syncFiles = chunk
@@ -117,8 +120,9 @@ public class Phases(
             {
                 logger.LogError(ex, "Failed to check sync for chunk {ChunkNumber}", chunkNumber);
                 ctx.Result = ctx.Result.AddDelta(new SyncActionCounts { ErrorCount = chunk.Length });
+                processedCount += chunk.Length;
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, (i + 1) * chunkSize,
+                    ctx.Result, "upload", files.Count, processedCount,
                     errorMessage: $"Chunk {chunkNumber} failed: {ex.Message}"));
                 continue;
             }
@@ -180,8 +184,9 @@ public class Phases(
                 }
 
                 ctx.UploadedPaths.Add(createRecord.FilePath);
+                uploadedCount++;
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, 0,
+                    ctx.Result, "upload", files.Count, processedCount + uploadedCount,
                     createRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
 
@@ -212,10 +217,15 @@ public class Phases(
                 }
 
                 ctx.UploadedPaths.Add(updateRecord.FilePath);
+                uploadedCount++;
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, 0,
+                    ctx.Result, "upload", files.Count, processedCount + uploadedCount,
                     updateRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
+
+            processedCount += chunk.Length;
+            progress?.Report(SyncProgress.FromResult(
+                ctx.Result, "upload", files.Count, processedCount));
         }
     }
 
