@@ -822,23 +822,24 @@ public class DevicesController(
         var namingStrategy = new TemplateNamingStrategy(
             device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
-        var allExistingPaths = await context.SongDevices
-            .Where(sd => sd.DeviceId == deviceId)
-            .Select(sd => sd.DevicePath)
-            .ToHashSetAsync(cancellationToken);
+        // The naming strategy and the full set of device paths are only
+        // needed by the CreateLocal fallback branch below, so load them once only when needed
+        HashSet<string>? usedPaths = null;
 
-        var usedPaths = new HashSet<string>(allExistingPaths);
+        var clientPaths = request.Files.Select(f => f.Path).ToList();
 
-        var existingSongDevices = await context.SongDevices
+        // Load only the SongDevices for paths the client reported in this chunk,
+        // indexed by DevicePath for O(1) lookup inside the per-file loop.
+        var existingSongDevicesByPath = await context.SongDevices
             .IncludeSongMetadata("Song")
-            .Where(sd => sd.DeviceId == deviceId)
-            .ToListAsync(cancellationToken);
+            .Where(sd => sd.DeviceId == deviceId && clientPaths.Contains(sd.DevicePath))
+            .ToDictionaryAsync(sd => sd.DevicePath, cancellationToken);
 
         var allRecords = new List<DeviceSyncSessionRecord>();
 
         foreach (var clientFile in request.Files)
         {
-            var existingSongDevice = existingSongDevices.FirstOrDefault(sd => sd.DevicePath == clientFile.Path);
+            var existingSongDevice = existingSongDevicesByPath.GetValueOrDefault(clientFile.Path);
 
             logger.LogDebug("CheckSync: Path='{Path}', DeviceId={DeviceId}, SongDeviceFound={Found}, SongId={SongId}, LastSyncedModifiedAt={LastSynced}",
                 clientFile.Path, deviceId, existingSongDevice != null, existingSongDevice?.SongId, existingSongDevice?.LastSyncedModifiedAt);
@@ -1035,6 +1036,13 @@ public class DevicesController(
                 }
                 else
                 {
+                    // Lazy-load the naming strategy and the full set of device paths,
+                    // which are only needed for naming-collision detection on CreateLocal.
+                    usedPaths ??= await context.SongDevices
+                        .Where(sd => sd.DeviceId == deviceId)
+                        .Select(sd => sd.DevicePath)
+                        .ToHashSetAsync(cancellationToken);
+
                     var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
                     usedPaths.Add(pendingAction.Path);
 
