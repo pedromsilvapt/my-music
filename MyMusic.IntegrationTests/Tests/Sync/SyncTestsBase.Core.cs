@@ -258,4 +258,30 @@ public abstract partial class SyncTestsBase
         App.FileExists(explicitPath).ShouldBeTrue("New file should exist with (Explicit) in filename");
     }
 
+    [Fact]
+    public async Task Sync_ShouldDeleteOriginalFileWhenMetadataChanged()
+    {
+        // Create the file locally
+        var originalPath = await App.CreateSongAsync(SongsFixture.DefaultSongs[1]);
+
+        // Perform an initial sync, to have the file on the server as well
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1);
+
+        // Sanity check, the local file remains on disk after the initial sync
+        App.FileShouldExist(originalPath);
+
+        // Edit the song title, means on next sync, it would be renamed
+        await new EditSongFlow("Alibi", new(Title: "Alibi (Acoustic)")).ExecuteAsync(Page);
+
+        // Now mark the song for removal from the device
+        await new ManageSongDevicesFlow("Alibi (Acoustic)", App.DeviceName, "Remove").ExecuteAsync(Page);
+
+        // Even though the song was marked for remove after the edit, it should still remove the original DevicePath
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(unlink: 1);
+
+        // Verify the local file was actually deleted
+        App.FileShouldNotExist(originalPath, "Unlink must target the existing DevicePath, not the new templated path");
+    }
 }

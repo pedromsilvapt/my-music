@@ -125,7 +125,7 @@ public class SongDeleteService(
 
         foreach (var sd in songDevices)
         {
-            if (sd.SyncAction == SongSyncAction.Download)
+            if (sd is { SyncAction: SongSyncAction.Download, LastSyncedModifiedAt: null })
             {
                 db.SongDevices.Remove(sd);
             }

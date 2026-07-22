@@ -374,12 +374,12 @@ public class SongsController(
 
             foreach (var song in songs)
             {
-                var hasExisting = existingDict.TryGetValue(song.Id, out var existing);
+                var existing = existingDict.GetValueOrDefault(song.Id);
 
-                if (update.Include && !hasExisting)
+                if (update.Include && existing is null)
                 {
                     var metadata = EntityConverter.ToSong(song);
-                    var naming = new NamingMetadata { Extension = System.IO.Path.GetExtension(song.RepositoryPath) };
+                    var naming = new NamingMetadata { Extension = Path.GetExtension(song.RepositoryPath) };
                     var basePath = namingStrategy.Generate(metadata, naming);
                     var devicePath = GetUniquePath(basePath, allExistingPaths, newPathsInBatch);
 
@@ -397,9 +397,9 @@ public class SongsController(
                     };
                     context.SongDevices.Add(newSongDevice);
                 }
-                else if (!update.Include && hasExisting)
+                else if (!update.Include && existing is not null)
                 {
-                    if (existing!.SyncAction == SongSyncAction.Download)
+                    if (existing is { SyncAction: SongSyncAction.Download, LastSyncedModifiedAt: null })
                     {
                         context.SongDevices.Remove(existing);
                     }
@@ -409,7 +409,7 @@ public class SongsController(
                         existing.SyncActionReason = "Song excluded from device";
                     }
                 }
-                else if (update.Include && hasExisting && existing!.SyncAction == SongSyncAction.Remove)
+                else if (update.Include && existing is { SyncAction: SongSyncAction.Remove })
                 {
                     existing.SyncAction = null;
                     existing.SyncActionReason = null;

@@ -872,9 +872,7 @@ public class DevicesController(
             else if (existingSongDevice.SyncAction == SongSyncAction.Remove)
             {
                 logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> UNLINK (marked for removal)", clientFile.Path, existingSongDevice.SongId);
-                var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
-                usedPaths.Add(pendingAction.Path);
-                var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
+                var record = await syncActions.ActionUnlink(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                 allRecords.Add(record);
             }
             else if (request.Force)
@@ -1012,9 +1010,7 @@ public class DevicesController(
 
                 if (existingSongDevice.SyncAction == SongSyncAction.Remove)
                 {
-                    var pendingAction = ComputePendingActionPath(existingSongDevice, namingStrategy, usedPaths);
-                    usedPaths.Add(pendingAction.Path);
-                    var record = await syncActions.ActionUnlink(pendingAction.Path, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
+                    var record = await syncActions.ActionUnlink(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                     allRecords.Add(record);
                 }
                 else if (existingSongDevice.LastSyncedModifiedAt != null)
@@ -1329,16 +1325,16 @@ public class DevicesController(
 
         foreach (var sd in songDevices)
         {
-            var (path, previousPath) = ComputePendingActionPath(sd, namingStrategy, usedPaths);
-            usedPaths.Add(path);
-
             if (sd.SyncAction == SongSyncAction.Remove)
             {
-                var record = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.Unlink, path, sd.SongId, sd.SyncActionReason);
+                var record = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.Unlink, sd.DevicePath, sd.SongId, sd.SyncActionReason);
                 createdRecords.Add(record);
             }
             else if (sd.SyncAction == SongSyncAction.Download)
             {
+                var (path, previousPath) = ComputePendingActionPath(sd, namingStrategy, usedPaths);
+                usedPaths.Add(path);
+
                 var isUpdate = sd.LastSyncedModifiedAt != null;
                 var action = isUpdate ? SyncRecordAction.UpdateLocal : SyncRecordAction.CreateLocal;
 

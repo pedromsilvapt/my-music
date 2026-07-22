@@ -202,6 +202,37 @@ public class SongDeleteServiceSpecs
     }
 
     [Fact]
+    public async Task DeleteAsync_DownloadSyncActionWithLastSynced_SwitchesToRemove()
+    {
+        // Arrange
+        var (service, scenario, currentUser, _) = CreateService();
+        currentUser.Id.Returns(scenario.AdminUser.Id);
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
+        var songDevice = new SongDevice
+        {
+            SongId = song.Id,
+            DeviceId = device.Id,
+            DevicePath = "/music/song.mp3",
+            SyncAction = SongSyncAction.Download,
+            LastSyncedModifiedAt = DateTime.UtcNow.AddHours(-1),
+            AddedAt = DateTime.UtcNow,
+        };
+        scenario.DbContext.Add(songDevice);
+        await scenario.DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        await service.DeleteAsync([song.Id], TestContext.Current.CancellationToken);
+
+        // Assert
+        var sd = scenario.DbContext.SongDevices.First(sd => sd.Id == songDevice.Id);
+        sd.SongId.ShouldBeNull();
+        sd.SyncAction.ShouldBe(SongSyncAction.Remove);
+    }
+
+    [Fact]
     public async Task DeleteAsync_DeletesPlaylistSongs()
     {
         // Arrange
