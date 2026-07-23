@@ -5,15 +5,9 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import type { SyncActionCounts } from './syncActionCounts';
-import type { SyncFileInfoItem } from './syncFileInfoItem';
-import type { SyncPotentialConflictItem } from './syncPotentialConflictItem';
 import type { SyncRecordResponseItem } from './syncRecordResponseItem';
 
 export interface SyncCheckResponse {
-  toCreate: SyncFileInfoItem[];
-  toUpdate: SyncFileInfoItem[];
-  potentialConflicts: SyncPotentialConflictItem[];
   records: SyncRecordResponseItem[];
-  skippedRecordIds: number[];
   counts: SyncActionCounts;
 }

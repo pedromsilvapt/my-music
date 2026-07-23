@@ -20,7 +20,7 @@ public record ListDeviceItem
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }
     public required int SongCount { get; init; }
-    public required List<DeviceSongRef> Songs { get; init; }
+    public List<DeviceSongRef>? Songs { get; init; }
     public bool ImportOnPurchase { get; init; }
     public DateTime? LastSyncAt { get; init; }
 }

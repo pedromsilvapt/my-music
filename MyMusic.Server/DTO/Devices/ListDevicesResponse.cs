@@ -22,11 +22,11 @@ public record ListDeviceItem
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }
     public required int SongCount { get; init; }
-    public required List<DeviceSongRef> Songs { get; init; }
+    public List<DeviceSongRef>? Songs { get; init; }
     public bool ImportOnPurchase { get; init; }
     public DateTime? LastSyncAt { get; init; }
 
-    public static ListDeviceItem FromEntity(Entities.Device device, int songCount, List<DeviceSongRef> songs) =>
+    public static ListDeviceItem FromEntity(Entities.Device device, int songCount, List<DeviceSongRef>? songs) =>
         new()
         {
             Id = device.Id, Name = device.Name, Icon = device.Icon, Color = device.Color,

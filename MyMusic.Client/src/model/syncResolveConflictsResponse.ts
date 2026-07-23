@@ -5,15 +5,9 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import type { SyncActionCounts } from './syncActionCounts';
-import type { SyncActionRecordResponseItem } from './syncActionRecordResponseItem';
-import type { SyncConflictErrorItem } from './syncConflictErrorItem';
-import type { SyncFileInfoItem } from './syncFileInfoItem';
+import type { SyncRecordResponseItem } from './syncRecordResponseItem';
 
 export interface SyncResolveConflictsResponse {
-  toUpload: SyncFileInfoItem[];
-  resolved: SyncFileInfoItem[];
-  conflicts: SyncConflictErrorItem[];
-  conflictRecords: SyncActionRecordResponseItem[];
-  updateTimestampRecords: SyncActionRecordResponseItem[];
+  records: SyncRecordResponseItem[];
   counts: SyncActionCounts;
 }

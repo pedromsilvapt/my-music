@@ -26,7 +26,7 @@ export default function ManageDevicesDialog({
                                                songIds,
                                                onSuccess
                                            }: ManageDevicesDialogProps) {
-    const devicesQuery = useGetDevices(undefined, {query: {enabled: opened}});
+    const devicesQuery = useGetDevices({ includeSongs: true }, {query: {enabled: opened}});
     const devicesResponse = useQueryData(devicesQuery, "Failed to fetch devices") ?? {data: {devices: []}};
     const devices = devicesResponse.data.devices ?? [];
 
@@ -166,9 +166,10 @@ interface DeviceRowProps {
 }
 
 function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onChange}: DeviceRowProps) {
-    const deviceSongIdSet = new Set(device.songs.map(s => s.id));
-    const deviceSongPathMap = new Map(device.songs.map(s => [s.id, s.path]));
-    const deviceSongSyncActionMap = new Map(device.songs.map(s => [s.id, s.syncAction]));
+    // We can assume `device.songs` is never null only because in the query above, `includeSongs` is hardcoded to true
+    const deviceSongIdSet = new Set(device.songs!.map(s => s.id));
+    const deviceSongPathMap = new Map(device.songs!.map(s => [s.id, s.path]));
+    const deviceSongSyncActionMap = new Map(device.songs!.map(s => [s.id, s.syncAction]));
     const matchingCount = managedSongs.filter(s => deviceSongIdSet.has(s.id)).length;
 
     return (

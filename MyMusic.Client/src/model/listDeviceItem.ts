@@ -18,7 +18,8 @@ export interface ListDeviceItem {
   namingTemplate?: string | null;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   songCount: number;
-  songs: DeviceSongRef[];
+  /** @nullable */
+  songs?: DeviceSongRef[] | null;
   importOnPurchase?: boolean;
   /** @nullable */
   lastSyncAt?: string | null;

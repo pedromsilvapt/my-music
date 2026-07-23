@@ -37,7 +37,8 @@ public class DevicesController(
     public async Task<ListDevicesResponse> List(
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] bool includeSongs = false)
     {
         var query = context.Devices
             .Where(d => d.OwnerId == currentUser.Id);
@@ -54,11 +55,17 @@ public class DevicesController(
         }
 
         var devices = await query.ToListAsync(cancellationToken);
+        var deviceIds = devices.Select(d => d.Id).ToList();
 
         var songDeviceGroups = await context.SongDevices
-            .Where(sd => devices.Select(d => d.Id).Contains(sd.DeviceId))
+            .Where(sd => sd.SongId != null && deviceIds.Contains(sd.DeviceId))
             .GroupBy(sd => sd.DeviceId)
-            .Select(g => new { DeviceId = g.Key, Count = g.Count(), SongRefs = g.Select(sd => new { sd.SongId, sd.DevicePath, sd.SyncAction }).ToList() })
+            .Select(g => new
+            {
+                DeviceId = g.Key,
+                Count = g.Count(),
+                SongRefs = includeSongs ? g.ToList() : null
+            })
             .ToDictionaryAsync(x => x.DeviceId, x => x, cancellationToken);
 
         return new ListDevicesResponse
@@ -66,7 +73,9 @@ public class DevicesController(
             Devices = devices.Select(d =>
             {
                 var group = songDeviceGroups.GetValueOrDefault(d.Id);
-                var songs = group?.SongRefs.Select(sr => new DeviceSongRef { Id = sr.SongId!.Value, Path = sr.DevicePath, SyncAction = sr.SyncAction?.ToString() }).ToList() ?? [];
+                var songs = includeSongs
+                    ? (group?.SongRefs?.Select(sd => new DeviceSongRef { Id = sd.SongId!.Value, Path = sd.DevicePath, SyncAction = sd.SyncAction?.ToString() }).ToList() ?? [])
+                    : null;
                 return ListDeviceItem.FromEntity(d, group?.Count ?? 0, songs);
             }).ToList(),
         };

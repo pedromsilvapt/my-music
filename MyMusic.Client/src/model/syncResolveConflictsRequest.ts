@@ -5,7 +5,9 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import type { SyncConflictResolveItem } from './syncConflictResolveItem';
+import type { SyncPotentialUpdateResolveItem } from './syncPotentialUpdateResolveItem';
 
 export interface SyncResolveConflictsRequest {
   conflicts: SyncConflictResolveItem[];
+  potentialUpdates: SyncPotentialUpdateResolveItem[];
 }
