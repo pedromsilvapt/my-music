@@ -160,6 +160,11 @@ public class MusicDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ResolvesConflictRecordId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Song)
+                .WithMany()
+                .HasForeignKey(e => e.SongId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // ExcludedDuplicatePair entity configuration

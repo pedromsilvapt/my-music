@@ -84,6 +84,7 @@ public class SongDeleteService(
         await DeleteAuditNonConformitiesAsync(songIds, cancellationToken);
         await DeletePlayHistoriesAsync(songIds, cancellationToken);
         await DeletePurchasedSongsAsync(songIds, cancellationToken);
+        await NullDeviceSyncSessionRecordSongIdsAsync(songIds, cancellationToken);
 
         var deletedCount = await db.Songs
             .Where(s => songIds.Contains(s.Id))
@@ -236,5 +237,16 @@ public class SongDeleteService(
             .Where(p => p.SongId != null && songIds.Contains(p.SongId.Value))
             .ExecuteDeleteAsync(ct);
         logger.LogDebug("Deleted {Count} PurchasedSongs", count);
+    }
+
+    private async Task NullDeviceSyncSessionRecordSongIdsAsync(long[] songIds, CancellationToken ct)
+    {
+        var count = await db.DeviceSyncSessionRecords
+            .Where(r => r.SongId != null && songIds.Contains(r.SongId.Value))
+            .ExecuteUpdateAsync(s => s.SetProperty(r => r.SongId, (long?)null), ct);
+        if (count > 0)
+        {
+            logger.LogDebug("Nulled SongId on {Count} DeviceSyncSessionRecords", count);
+        }
     }
 }
