@@ -119,13 +119,10 @@ public class SyncActionsServer(
     }
 
     public async Task<DeviceSyncSessionRecord> ActionSkipped(
-        string filePath, long? songId = null, DateTime? modifiedAt = null,
-        string? reason = null, CancellationToken cancellationToken = default)
+        string filePath, long? songId = null, string? reason = null,
+        CancellationToken cancellationToken = default)
     {
-        JsonElement? data = modifiedAt.HasValue
-            ? SyncActionDataSerializer.Serialize(new SongModifiedAtData { ModifiedAt = modifiedAt })
-            : null;
-        var record = CreateRecord(filePath, SyncRecordAction.Skipped, data, songId, reason: reason);
+        var record = CreateRecord(filePath, SyncRecordAction.Skipped, data: null, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 

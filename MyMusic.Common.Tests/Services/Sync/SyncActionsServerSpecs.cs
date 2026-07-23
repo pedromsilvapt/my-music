@@ -434,28 +434,14 @@ public class SyncActionsServerSpecs
     #region ActionSkipped
 
     [Fact]
-    public async Task ActionSkipped_CreatesRecord_WithCorrectActionAndModifiedAt()
-    {
-        var (_, _, _, _, server) = Setup();
-        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
-
-        var record = await server.ActionSkipped("/music/song.mp3", modifiedAt: modifiedAt);
-
-        record.Action.ShouldBe(SyncRecordAction.Skipped);
-        record.FilePath.ShouldBe("/music/song.mp3");
-        record.Data.ShouldNotBeNull();
-        var data = record.Data.Value;
-        data.GetProperty("modifiedAt").GetString().ShouldBe(modifiedAt.ToString("O"));
-    }
-
-    [Fact]
-    public async Task ActionSkipped_WithoutModifiedAt_CreatesRecordWithNullData()
+    public async Task ActionSkipped_CreatesRecordWithNullData()
     {
         var (_, _, _, _, server) = Setup();
 
         var record = await server.ActionSkipped("/music/song.mp3");
 
         record.Action.ShouldBe(SyncRecordAction.Skipped);
+        record.FilePath.ShouldBe("/music/song.mp3");
         record.Data.ShouldBeNull();
     }
 
@@ -632,7 +618,7 @@ public class SyncActionsServerSpecs
         db.SaveChanges();
         var songDeviceId = songDevice.Id;
 
-        await server.ActionSkipped("/music/song.mp3", modifiedAt: DateTime.UtcNow);
+        await server.ActionSkipped("/music/song.mp3");
 
         var unchanged = db.SongDevices.First(sd => sd.Id == songDeviceId);
         unchanged.LastSyncedModifiedAt.ShouldBeNull();

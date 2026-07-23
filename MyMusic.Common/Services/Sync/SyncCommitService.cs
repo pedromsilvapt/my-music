@@ -361,23 +361,13 @@ public class SyncCommitService(
         }
     }
 
-    private async Task ProcessSkippedAsync(
+    private Task ProcessSkippedAsync(
         MusicDbContext db, long sessionId, long deviceId, DeviceSyncSessionRecord record, bool isDryRun,
         CancellationToken cancellationToken)
     {
-        if (isDryRun)
-            return;
-
-        var data = SyncActionDataSerializer.Deserialize<SongModifiedAtData>(record.Data);
-        var modifiedAt = data?.ModifiedAt;
-        if (modifiedAt == null)
-            return;
-
-        var songDevice = await FindSongDeviceByIds(db, deviceId, record, data?.SongId, cancellationToken);
-        if (songDevice != null)
-        {
-            songDevice.LastSyncedModifiedAt = modifiedAt.Value.ToUniversalTime();
-        }
+        // Skipped actions should not, by definition, do anything. They only exist to record
+        // that a file was observed and intentionally not mutated during the sync session
+        return Task.CompletedTask;
     }
 
     private async Task ProcessUpdateTimestampAsync(
