@@ -12,34 +12,27 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Controllers;
 
-public class DevicesControllerResolveConflictsSpecs
+public class SyncControllerResolveConflictsSpecs
 {
-    private DevicesController CreateController(Scenario scenario)
+    private SyncController CreateController(Scenario scenario, ISyncActionsServerFactory? factory = null)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
+        return new SyncController(
+            Substitute.For<ILogger<SyncController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            Substitute.For<ISyncActionsServerFactory>(),
+            scenario.FileSystem,
+            SyncControllerHelpers.CreateSyncStartService(scenario),
+            SyncControllerHelpers.CreateSyncCompleteService(scenario),
+            SyncControllerHelpers.CreateSyncCancelService(scenario),
             Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+            SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
+            SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
+            SyncControllerHelpers.CreateSyncCheckService(scenario),
+            SyncControllerHelpers.CreateSyncResolveConflictsService(scenario, factory),
+            DevicesControllerHelpers.SessionLookup);
     }
 
     private Song CreateSongWithChecksum(MusicDbContext db, long ownerId, byte[] content, string checksumAlgorithm = "XxHash128")
@@ -210,29 +203,7 @@ public class DevicesControllerResolveConflictsSpecs
     {
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
-        var currentUser = Substitute.For<MyMusic.Common.Services.ICurrentUser>();
-        currentUser.Id.Returns(scenario.AdminUser.Id);
-        var controller = new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
-            currentUser,
-            scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            factory,
-            Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+        var controller = CreateController(scenario, factory);
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
         {
@@ -283,29 +254,7 @@ public class DevicesControllerResolveConflictsSpecs
     {
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
-        var currentUser = Substitute.For<MyMusic.Common.Services.ICurrentUser>();
-        currentUser.Id.Returns(scenario.AdminUser.Id);
-        var controller = new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
-            currentUser,
-            scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            factory,
-            Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+        var controller = CreateController(scenario, factory);
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
         {
@@ -394,29 +343,7 @@ public class DevicesControllerResolveConflictsSpecs
         // ModifiedAt newer than FileModifiedAt must NOT inflate the new LastSyncedModifiedAt.
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
-        var currentUser = Substitute.For<MyMusic.Common.Services.ICurrentUser>();
-        currentUser.Id.Returns(scenario.AdminUser.Id);
-        var controller = new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
-            currentUser,
-            scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            factory,
-            Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+        var controller = CreateController(scenario, factory);
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
         {
@@ -441,7 +368,7 @@ public class DevicesControllerResolveConflictsSpecs
 
         // Local file mtime is older than FileModifiedAt -> new LastSynced should be FileModifiedAt (the max).
         var localModifiedAt = fileModifiedAt.AddMinutes(-30);
-        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
 
         var request = new SyncResolveConflictsRequest
         {

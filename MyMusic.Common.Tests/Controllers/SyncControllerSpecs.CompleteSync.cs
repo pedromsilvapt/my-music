@@ -30,6 +30,7 @@ public class SyncControllerCompleteSyncSpecs
             SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
             SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
             Substitute.For<ISyncCheckService>(),
+            Substitute.For<ISyncResolveConflictsService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 

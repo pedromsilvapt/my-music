@@ -33,6 +33,7 @@ public class SyncController(
     ISyncPendingActionsService syncPendingActionsService,
     ISyncDeviceSongsService syncDeviceSongsService,
     ISyncCheckService syncCheckService,
+    ISyncResolveConflictsService syncResolveConflictsService,
     ISyncSessionLookupService sessionLookup) : ControllerBase
 {
     [HttpPost("{deviceId:long}/sync/start")]
@@ -185,6 +186,46 @@ public class SyncController(
         {
             Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
             Counts = SyncActionCounts.FromRecords(result.Records.Where(r => r.Action != SyncRecordAction.UpdateLocal && r.Action != SyncRecordAction.Conflict)),
+        };
+    }
+
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/resolve-conflicts")]
+    [RequestSizeLimit(100_000_000)]
+    public async Task<ActionResult<SyncResolveConflictsResponse>> ResolveConflicts(
+        long deviceId,
+        long sessionId,
+        [FromBody] SyncResolveConflictsRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await syncResolveConflictsService.ResolveAsync(
+            deviceId,
+            sessionId,
+            currentUser.Id,
+            new SyncResolveConflictsInput
+            {
+                Conflicts = request.Conflicts.Select(c => new SyncResolveConflictItem
+                {
+                    Path = c.Path,
+                    SongId = c.SongId,
+                    FileContentBase64 = c.FileContentBase64,
+                    LocalModifiedAt = c.LocalModifiedAt,
+                }).ToList(),
+                PotentialUpdates = request.PotentialUpdates.Select(u => new SyncResolvePotentialUpdateItem
+                {
+                    Path = u.Path,
+                    SongId = u.SongId,
+                    FileContentBase64 = u.FileContentBase64,
+                    LocalModifiedAt = u.LocalModifiedAt,
+                    LastSyncedAt = u.LastSyncedAt,
+                }).ToList(),
+            },
+            cancellationToken);
+        if (result == null) return NotFound();
+
+        return new SyncResolveConflictsResponse
+        {
+            Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+            Counts = SyncActionCounts.FromRecords(result.Records),
         };
     }
 }

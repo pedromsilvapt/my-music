@@ -71,4 +71,21 @@ internal static class SyncControllerHelpers
             config,
             Substitute.For<ILogger<SyncCheckService>>());
     }
+
+    public static ISyncResolveConflictsService CreateSyncResolveConflictsService(Scenario scenario, ISyncActionsServerFactory? factory = null)
+    {
+        var config = Microsoft.Extensions.Options.Options.Create(new Config
+        {
+            MusicRepositoryPath = "/music",
+            DefaultNamingTemplate = "{{ simple_label }}{{ extension }}",
+        });
+        return new SyncResolveConflictsService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
+            factory ?? new SyncActionsServerFactory(),
+            DevicesControllerHelpers.PathResolver,
+            config,
+            Substitute.For<ILogger<SyncResolveConflictsService>>());
+    }
 }
