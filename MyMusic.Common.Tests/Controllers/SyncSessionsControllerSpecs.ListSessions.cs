@@ -20,7 +20,9 @@ public class SyncSessionsControllerListSessionsSpecs
         return new SyncSessionsController(
             Substitute.For<ILogger<SyncSessionsController>>(),
             currentUser,
-            SyncSessionsControllerHelpers.CreateSyncSessionListService(scenario));
+            SyncSessionsControllerHelpers.CreateSyncSessionListService(scenario),
+            SyncSessionsControllerHelpers.CreateSyncSessionRecordsQueryService(scenario),
+            SyncSessionsControllerHelpers.CreateSyncSessionFilterValuesService(scenario));
     }
 
     [Fact]

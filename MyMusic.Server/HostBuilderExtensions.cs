@@ -114,6 +114,10 @@ public static class HostBuilderExtensions
         // Per-operation sync session services (Phase 5 of the controllers refactor).
         builder.Services.AddScoped<ISyncSessionListService, SyncSessionListService>();
 
+        // Per-operation sync session services (Phase 6 of the controllers refactor).
+        builder.Services.AddScoped<ISyncSessionRecordsQueryService, SyncSessionRecordsQueryService>();
+        builder.Services.AddScoped<ISyncSessionFilterValuesService, SyncSessionFilterValuesService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();
