@@ -297,7 +297,7 @@ export default function SessionDetailScreen() {
             case 'skipped': return session.skippedCount;
             case 'createlocal': return session.createLocalCount;
             case 'updatelocal': return session.updateLocalCount;
-            case 'delete': return session.deleteCount;
+            case 'delete': return session.deleteLocalCount;
             case 'link': return session.linkCount;
             case 'unlink': return session.unlinkCount;
             case 'rename': return session.renameCount;
@@ -421,7 +421,7 @@ export default function SessionDetailScreen() {
                                 <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
                             </View>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.deleteCount}</Text>
+                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.deleteLocalCount}</Text>
                                 <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Deleted</Text>
                             </View>
                             <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>

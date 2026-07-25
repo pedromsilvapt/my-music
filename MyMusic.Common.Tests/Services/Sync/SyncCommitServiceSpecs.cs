@@ -285,10 +285,10 @@ public class SyncCommitServiceSpecs
 
     #endregion
 
-    #region Delete / Unlink
+    #region DeleteLocal / Unlink
 
     [Theory]
-    [InlineData(SyncRecordAction.Delete)]
+    [InlineData(SyncRecordAction.DeleteLocal)]
     [InlineData(SyncRecordAction.Unlink)]
     public async Task DeleteAndUnlink_RemovesSongDevice(SyncRecordAction action)
     {
@@ -303,7 +303,7 @@ public class SyncCommitServiceSpecs
     }
 
     [Theory]
-    [InlineData(SyncRecordAction.Delete)]
+    [InlineData(SyncRecordAction.DeleteLocal)]
     [InlineData(SyncRecordAction.Unlink)]
     public async Task DeleteAndUnlink_DryRun_SkipsRemoval(SyncRecordAction action)
     {
@@ -763,10 +763,10 @@ public class SyncCommitServiceSpecs
 
     #endregion
 
-    #region Delete / Unlink FindSongDeviceByIds Fallback
+    #region DeleteLocal / Unlink FindSongDeviceByIds Fallback
 
     [Theory]
-    [InlineData(SyncRecordAction.Delete)]
+    [InlineData(SyncRecordAction.DeleteLocal)]
     [InlineData(SyncRecordAction.Unlink)]
     public async Task DeleteAndUnlink_WhenNoSongId_FallsBackToDevicePathLookup(SyncRecordAction action)
     {

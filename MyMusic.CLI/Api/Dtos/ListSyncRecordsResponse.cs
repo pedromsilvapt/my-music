@@ -33,7 +33,7 @@ public record SyncRecordResponseItem
 
     public string Source => Action switch
     {
-        SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.Delete => "Client",
+        SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.DeleteLocal => "Client",
         SyncRecordAction.CreateRemote or SyncRecordAction.UpdateRemote or SyncRecordAction.Link or SyncRecordAction.Skipped or SyncRecordAction.Conflict or SyncRecordAction.UpdateTimestamp or SyncRecordAction.Error => "Server",
         _ => throw new InvalidOperationException($"Unknown sync record action: {Action}")
     };

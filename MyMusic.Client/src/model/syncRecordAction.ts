@@ -13,7 +13,7 @@ export const SyncRecordAction = {
   UpdateRemote: 'UpdateRemote',
   CreateLocal: 'CreateLocal',
   UpdateLocal: 'UpdateLocal',
-  Delete: 'Delete',
+  DeleteLocal: 'DeleteLocal',
   Link: 'Link',
   Unlink: 'Unlink',
   Rename: 'Rename',

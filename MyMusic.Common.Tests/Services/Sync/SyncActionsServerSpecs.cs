@@ -261,16 +261,16 @@ public class SyncActionsServerSpecs
 
     #endregion
 
-    #region ActionDelete
+    #region ActionDeleteLocal
 
     [Fact]
     public async Task ActionDelete_CreatesRecord_WithCorrectActionAndData()
     {
         var (_, _, _, _, song, server) = SetupWithSong();
 
-        var record = await server.ActionDelete("/music/song.mp3", song.Id);
+        var record = await server.ActionDeleteLocal("/music/song.mp3", song.Id);
 
-        record.Action.ShouldBe(SyncRecordAction.Delete);
+        record.Action.ShouldBe(SyncRecordAction.DeleteLocal);
         record.FilePath.ShouldBe("/music/song.mp3");
         record.SongId.ShouldBe(song.Id);
         record.Data.ShouldNotBeNull();
@@ -283,9 +283,9 @@ public class SyncActionsServerSpecs
     {
         var (_, _, _, _, server) = Setup();
 
-        var record = await server.ActionDelete("/music/song.mp3");
+        var record = await server.ActionDeleteLocal("/music/song.mp3");
 
-        record.Action.ShouldBe(SyncRecordAction.Delete);
+        record.Action.ShouldBe(SyncRecordAction.DeleteLocal);
         record.Data.ShouldNotBeNull();
         var data = record.Data.Value;
         data.TryGetProperty("songId", out var songIdProp).ShouldBeTrue();
@@ -307,7 +307,7 @@ public class SyncActionsServerSpecs
         db.SaveChanges();
         var songDeviceId = songDevice.Id;
 
-        await server.ActionDelete("/music/song.mp3", song.Id);
+        await server.ActionDeleteLocal("/music/song.mp3", song.Id);
 
         db.SongDevices.Any(sd => sd.Id == songDeviceId).ShouldBeTrue();
     }
@@ -868,7 +868,7 @@ public class SyncActionsServerSpecs
     {
         var (_, _, _, _, song, server) = SetupWithSong();
 
-        var record = await server.ActionDelete("/music/song.mp3", song.Id, reason: "Song deleted from library");
+        var record = await server.ActionDeleteLocal("/music/song.mp3", song.Id, reason: "Song deleted from library");
 
         record.Reason.ShouldBe("Song deleted from library");
     }

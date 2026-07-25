@@ -74,7 +74,7 @@ export const SyncActionSchema = z.enum(['Download', 'Upload', 'Remove']);
 export type SyncAction = z.infer<typeof SyncActionSchema>;
 
 /** Represents the result of what action was performed during a specific sync session. */
-export const SyncRecordActionSchema = z.enum(['CreateRemote', 'UpdateRemote', 'CreateLocal', 'UpdateLocal', 'Delete', 'Link', 'Unlink', 'Rename', 'Skipped', 'Conflict', 'UpdateTimestamp', 'Error']);
+export const SyncRecordActionSchema = z.enum(['CreateRemote', 'UpdateRemote', 'CreateLocal', 'UpdateLocal', 'DeleteLocal', 'Link', 'Unlink', 'Rename', 'Skipped', 'Conflict', 'UpdateTimestamp', 'Error']);
 
 export type SyncRecordAction = z.infer<typeof SyncRecordActionSchema>;
 
@@ -152,7 +152,7 @@ export const SyncRecordItemSchema = z.discriminatedUnion('action', [
     SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateRemote'), data: UpdateRemoteDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('CreateLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
-    SyncRecordItemBaseSchema.extend({ action: z.literal('Delete'), data: z.null().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('DeleteLocal'), data: z.null().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('Unlink'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('Link'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('Rename'), data: RenameDataSchema.nullable().optional() }),
@@ -178,7 +178,7 @@ export const SyncActionCountsSchema = z.object({
     skippedCount: z.number(),
     createLocalCount: z.number(),
     updateLocalCount: z.number(),
-    deleteCount: z.number(),
+    deleteLocalCount: z.number(),
     linkCount: z.number(),
     unlinkCount: z.number(),
     renameCount: z.number(),
@@ -208,7 +208,7 @@ export const SyncCommitResponseSchema = z.object({
     skippedCount: z.number(),
     createLocalCount: z.number(),
     updateLocalCount: z.number(),
-    deleteCount: z.number(),
+    deleteLocalCount: z.number(),
     linkCount: z.number(),
     unlinkCount: z.number(),
     renameCount: z.number(),
@@ -226,7 +226,7 @@ export const SyncCompleteResponseSchema = z.object({
     skippedCount: z.number(),
     createLocalCount: z.number(),
     updateLocalCount: z.number(),
-    deleteCount: z.number(),
+    deleteLocalCount: z.number(),
     linkCount: z.number(),
     unlinkCount: z.number(),
     renameCount: z.number(),
@@ -377,7 +377,7 @@ export const SyncSessionItemSchema = z.object({
     skippedCount: z.number(),
     createLocalCount: z.number(),
     updateLocalCount: z.number(),
-    deleteCount: z.number(),
+    deleteLocalCount: z.number(),
     linkCount: z.number(),
     unlinkCount: z.number(),
     renameCount: z.number(),

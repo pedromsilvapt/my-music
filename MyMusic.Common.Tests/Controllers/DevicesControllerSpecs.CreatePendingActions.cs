@@ -82,7 +82,7 @@ public class DevicesControllerCreatePendingActionsSpecs
     }
 
     [Fact]
-    public async Task CreatePendingActions_RemoveSyncAction_CreatesUnlinkRecord()
+    public async Task CreatePendingActions_RemoveSyncAction_CreatesDeleteLocalRecord()
     {
         var scenario = new Scenario();
         var factory = new SyncActionsServerFactory();
@@ -97,14 +97,14 @@ public class DevicesControllerCreatePendingActionsSpecs
 
         response.Value.ShouldNotBeNull();
         response.Value.Records.Count.ShouldBe(1);
-        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.DeleteLocal);
         response.Value.Records[0].FilePath.ShouldBe(expectedPath);
 
         var records = await scenario.DbContext.DeviceSyncSessionRecords
             .Where(r => r.SessionId == session.Id)
             .ToListAsync();
         records.Count.ShouldBe(1);
-        records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        records[0].Action.ShouldBe(SyncRecordAction.DeleteLocal);
     }
 
     [Fact]

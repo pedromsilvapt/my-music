@@ -37,7 +37,7 @@ public enum SyncRecordAction
     UpdateRemote,
     CreateLocal,
     UpdateLocal,
-    Delete,
+    DeleteLocal,
     Link,
     Unlink,
     Rename,

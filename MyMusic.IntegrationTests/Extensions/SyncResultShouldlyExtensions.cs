@@ -17,7 +17,7 @@ public static class SyncResultShouldlyExtensions
         int? updateRemote = null,
         int? createLocal = null,
         int? updateLocal = null,
-        int? delete = null,
+        int? deleteLocal = null,
         int? link = null,
         int? unlink = null,
         int? rename = null,
@@ -35,7 +35,7 @@ public static class SyncResultShouldlyExtensions
         AssertCounter(nameof(result.UpdateRemote), result.UpdateRemote, updateRemote, result.ApiRecordCounts);
         AssertCounter(nameof(result.CreateLocal), result.CreateLocal, createLocal, result.ApiRecordCounts);
         AssertCounter(nameof(result.UpdateLocal), result.UpdateLocal, updateLocal, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Delete), result.Delete, delete, result.ApiRecordCounts);
+        AssertCounter(nameof(result.DeleteLocal), result.DeleteLocal, deleteLocal, result.ApiRecordCounts);
         AssertCounter(nameof(result.Link), result.Link, link, result.ApiRecordCounts);
         AssertCounter(nameof(result.Unlink), result.Unlink, unlink, result.ApiRecordCounts);
         AssertCounter(nameof(result.Rename), result.Rename, rename, result.ApiRecordCounts);

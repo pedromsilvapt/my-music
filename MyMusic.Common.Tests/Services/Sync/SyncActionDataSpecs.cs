@@ -304,7 +304,7 @@ public class SyncActionDataSpecs
     }
 
     [Fact]
-    public void DeleteData_WithSongId_RoundTrips()
+    public void DeleteLocalData_WithSongId_RoundTrips()
     {
         var element = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = 10 });
         var result = SyncActionDataSerializer.Deserialize<SongModifiedAtData>(element);
@@ -314,7 +314,7 @@ public class SyncActionDataSpecs
     }
 
     [Fact]
-    public void DeleteData_WithNullSongId_StoresNullSongId()
+    public void DeleteLocalData_WithNullSongId_StoresNullSongId()
     {
         var data = new SongModifiedAtData { SongId = null };
         var element = SyncActionDataSerializer.Serialize(data);

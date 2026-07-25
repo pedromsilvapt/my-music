@@ -89,8 +89,8 @@ public class SyncCommitService(
             case SyncRecordAction.UpdateLocal:
                 await ProcessUpdateLocalAsync(db, sessionId, deviceId, record, isDryRun, cancellationToken);
                 break;
-            case SyncRecordAction.Delete:
-                await ProcessDeleteAsync(db, sessionId, deviceId, record, isDryRun, cancellationToken);
+            case SyncRecordAction.DeleteLocal:
+                await ProcessDeleteLocalAsync(db, sessionId, deviceId, record, isDryRun, cancellationToken);
                 break;
             case SyncRecordAction.Link:
                 await ProcessLinkAsync(db, sessionId, deviceId, record, isDryRun, createdSongIdsByChecksum, cancellationToken);
@@ -275,7 +275,7 @@ public class SyncCommitService(
         }
     }
 
-    private async Task ProcessDeleteAsync(
+    private async Task ProcessDeleteLocalAsync(
         MusicDbContext db, long sessionId, long deviceId, DeviceSyncSessionRecord record, bool isDryRun,
         CancellationToken cancellationToken)
     {
@@ -401,6 +401,8 @@ public class SyncCommitService(
     {
         // Exclude Unlink: created by orphan detection itself, PendingActions (server-side), or CheckSync (Remove);
         // its FilePath does not correspond to a client-reported path.
+        // Note: DeleteLocal records (server-initiated removal) ARE included in validFilePaths
+        // so that the SongDevice being removed is not double-processed as an orphan.
         var validFilePaths = records
             .Where(r => r.Action != SyncRecordAction.Unlink)
             .Select(GetClientPath)
@@ -583,7 +585,7 @@ public class SyncCommitService(
 
     private static bool IsClientActionType(SyncRecordAction action) =>
         action is SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal
-            or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.Delete;
+            or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.DeleteLocal;
 
     private static void AcknowledgeServerActionRecords(List<DeviceSyncSessionRecord> records)
     {

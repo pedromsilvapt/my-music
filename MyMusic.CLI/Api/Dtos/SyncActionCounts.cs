@@ -7,7 +7,7 @@ public record SyncActionCounts
     public int SkippedCount { get; init; }
     public int CreateLocalCount { get; init; }
     public int UpdateLocalCount { get; init; }
-    public int DeleteCount { get; init; }
+    public int DeleteLocalCount { get; init; }
     public int LinkCount { get; init; }
     public int UnlinkCount { get; init; }
     public int RenameCount { get; init; }

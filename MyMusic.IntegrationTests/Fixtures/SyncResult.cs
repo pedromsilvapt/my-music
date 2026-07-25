@@ -10,7 +10,7 @@ public record SyncResult
     public int UpdateRemote { get; init; }
     public int CreateLocal { get; init; }
     public int UpdateLocal { get; init; }
-    public int Delete { get; init; }
+    public int DeleteLocal { get; init; }
     public int Link { get; init; }
     public int Unlink { get; init; }
     public int Rename { get; init; }
@@ -20,7 +20,7 @@ public record SyncResult
     public int Error { get; init; }
     public Dictionary<string, int>? ApiRecordCounts { get; init; }
 
-    public int TotalChanges => CreateRemote + UpdateRemote + CreateLocal + UpdateLocal + Delete + Link + Unlink + Rename;
+    public int TotalChanges => CreateRemote + UpdateRemote + CreateLocal + UpdateLocal + DeleteLocal + Link + Unlink + Rename;
 
     public static SyncResult ParseCliOutput(int exitCode, string standardOutput)
     {
@@ -32,7 +32,7 @@ public record SyncResult
             UpdateRemote = GetCounterValue(standardOutput, "UpdateRemote"),
             CreateLocal = GetCounterValue(standardOutput, "CreateLocal"),
             UpdateLocal = GetCounterValue(standardOutput, "UpdateLocal"),
-            Delete = GetCounterValue(standardOutput, "Delete"),
+            DeleteLocal = GetCounterValue(standardOutput, "DeleteLocal"),
             Link = GetCounterValue(standardOutput, "Link"),
             Unlink = GetCounterValue(standardOutput, "Unlink"),
             Rename = GetCounterValue(standardOutput, "Rename"),

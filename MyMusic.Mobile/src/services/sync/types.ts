@@ -35,7 +35,7 @@ export interface SyncActionCounts {
     skippedCount: number;
     createLocalCount: number;
     updateLocalCount: number;
-    deleteCount: number;
+    deleteLocalCount: number;
     linkCount: number;
     unlinkCount: number;
     renameCount: number;
@@ -50,7 +50,7 @@ function addDeltaToResult(result: SyncResult, delta: SyncActionCounts): SyncResu
         updateRemote: result.updateRemote + delta.updateRemoteCount,
         createLocal: result.createLocal + delta.createLocalCount,
         updateLocal: result.updateLocal + delta.updateLocalCount,
-        delete: result.delete + delta.deleteCount,
+        deleteLocal: result.deleteLocal + delta.deleteLocalCount,
         link: result.link + delta.linkCount,
         unlink: result.unlink + delta.unlinkCount,
         rename: result.rename + delta.renameCount,
@@ -70,7 +70,7 @@ export interface SyncResult {
     updateRemote: number;
     createLocal: number;
     updateLocal: number;
-    delete: number;
+    deleteLocal: number;
     link: number;
     unlink: number;
     rename: number;
@@ -177,7 +177,7 @@ export interface ISyncApiClient {
         skippedCount: number;
         createLocalCount: number;
         updateLocalCount: number;
-        deleteCount: number;
+        deleteLocalCount: number;
         linkCount: number;
         unlinkCount: number;
         renameCount: number;
@@ -196,7 +196,7 @@ export interface ISyncApiClient {
         skippedCount: number;
         createLocalCount: number;
         updateLocalCount: number;
-        deleteCount: number;
+        deleteLocalCount: number;
         linkCount: number;
         unlinkCount: number;
         renameCount: number;

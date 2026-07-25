@@ -91,7 +91,7 @@ public class HistoryShowCommand(
                                $"{ColorizeCounter(session?.SkippedCount ?? 0, "grey")} skipped, " +
                                $"{ColorizeCounter(session?.CreateLocalCount ?? 0, "blue")} downloaded, " +
                                $"{ColorizeCounter(session?.UpdateLocalCount ?? 0, "blue")} updated (local), " +
-                               $"{ColorizeCounter(session?.DeleteCount ?? 0, "red")} deleted, " +
+                                $"{ColorizeCounter(session?.DeleteLocalCount ?? 0, "red")} deleted (local), " +
                                $"{ColorizeCounter(session?.LinkCount ?? 0, "green")} linked, " +
                                $"{ColorizeCounter(session?.UnlinkCount ?? 0, "red")} unlinked, " +
                                $"{ColorizeCounter(session?.RenameCount ?? 0, "teal")} renamed, " +
@@ -127,9 +127,9 @@ public class HistoryShowCommand(
             PrintRecordGroup(SyncRecordAction.UpdateLocal, grouped, "blue");
         }
 
-        if (requestedActions.Contains(SyncRecordAction.Delete))
+        if (requestedActions.Contains(SyncRecordAction.DeleteLocal))
         {
-            PrintRecordGroup(SyncRecordAction.Delete, grouped, "red");
+            PrintRecordGroup(SyncRecordAction.DeleteLocal, grouped, "red");
         }
 
         if (requestedActions.Contains(SyncRecordAction.Link))
@@ -207,7 +207,8 @@ public class HistoryShowCommand(
         ["ur"] = SyncRecordAction.UpdateRemote,
         ["cl"] = SyncRecordAction.CreateLocal,
         ["ul"] = SyncRecordAction.UpdateLocal,
-        ["del"] = SyncRecordAction.Delete,
+        ["del"] = SyncRecordAction.DeleteLocal,
+        ["del-local"] = SyncRecordAction.DeleteLocal,
         ["link"] = SyncRecordAction.Link,
         ["unlink"] = SyncRecordAction.Unlink,
         ["ren"] = SyncRecordAction.Rename,
@@ -296,7 +297,7 @@ public class HistoryShowCommand(
         [CommandArgument(0, "[SESSION_ID]")] public long? SessionId { get; set; }
 
         [CommandOption("-c|--counters")]
-        [Description("Counter filters: cr=CreateRemote, ur=UpdateRemote, cl=CreateLocal, ul=UpdateLocal, del=Delete, link=Link, unlink=Unlink, ren=Rename, skip=Skipped, conf=Conflict, ts=UpdateTimestamp, err=Error. Comma-separated or repeat -c. Also accepts full names.")]
+        [Description("Counter filters: cr=CreateRemote, ur=UpdateRemote, cl=CreateLocal, ul=UpdateLocal, del/del-local=DeleteLocal, link=Link, unlink=Unlink, ren=Rename, skip=Skipped, conf=Conflict, ts=UpdateTimestamp, err=Error. Comma-separated or repeat -c. Also accepts full names.")]
         public string[] Counters { get; set; } = [];
 
         [CommandOption("-a|--all")] public bool ShowAll { get; set; }

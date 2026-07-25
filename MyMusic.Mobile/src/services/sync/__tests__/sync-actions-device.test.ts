@@ -1,10 +1,10 @@
-import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDelete, actionRename, actionConflict} from '../sync-actions-device';
+import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict} from '../sync-actions-device';
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncResult, ActionResult} from '../types';
 import {addDeltaToResult} from '../types';
 
 const ZERO_COUNTS = {
     createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-    createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+    createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
     linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0,
     updateTimestampCount: 0, errorCount: 0,
 };
@@ -49,7 +49,7 @@ function createMockUserPrompt(overrides: Partial<IUserPrompt> = {}): IUserPrompt
 function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
     const result: SyncResult = {
         createRemote: 0, updateRemote: 0, createLocal: 0,
-        updateLocal: 0, delete: 0, link: 0,
+        updateLocal: 0, deleteLocal: 0, link: 0,
         unlink: 0, rename: 0, skipped: 0,
         conflict: 0, updateTimestamp: 0, error: 0,
     };
@@ -405,10 +405,10 @@ describe('actionUpdateLocal', () => {
     });
 });
 
-describe('actionDelete', () => {
+describe('actionDeleteLocal', () => {
     test('with user confirmation deletes and acknowledges', async () => {
         const apiClient = createMockApiClient({
-            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteCount: 1}}),
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
         });
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(true),
@@ -418,13 +418,13 @@ describe('actionDelete', () => {
         });
         const ctx = createContext();
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
         if (result && result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result).not.toBeNull();
-        expect(result!.action).toBe('Delete');
+        expect(result!.action).toBe('DeleteLocal');
         expect(result!.source).toBe('Server');
-        expect(ctx.result.delete).toBe(1);
+        expect(ctx.result.deleteLocal).toBe(1);
         expect(fileOps.deleteFile).toHaveBeenCalledWith('/music/song.mp3');
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1]});
     });
@@ -439,17 +439,17 @@ describe('actionDelete', () => {
         });
         const ctx = createContext();
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
 
         expect(result).toBeNull();
-        expect(ctx.result.delete).toBe(0);
+        expect(ctx.result.deleteLocal).toBe(0);
         expect(fileOps.deleteFile).not.toHaveBeenCalled();
         expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
     });
 
     test('with autoConfirm skips prompt', async () => {
         const apiClient = createMockApiClient({
-            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteCount: 1}}),
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
         });
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(true),
@@ -462,12 +462,12 @@ describe('actionDelete', () => {
             },
         });
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
         if (result && result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result).not.toBeNull();
-        expect(result!.action).toBe('Delete');
-        expect(ctx.result.delete).toBe(1);
+        expect(result!.action).toBe('DeleteLocal');
+        expect(ctx.result.deleteLocal).toBe(1);
         expect(userPrompt.confirmDeletion).not.toHaveBeenCalled();
     });
 
@@ -479,10 +479,10 @@ describe('actionDelete', () => {
         const userPrompt = createMockUserPrompt();
         const ctx = createContext();
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
 
         expect(result).toBeNull();
-        expect(ctx.result.delete).toBe(0);
+        expect(ctx.result.deleteLocal).toBe(0);
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [99]});
         expect(fileOps.deleteFile).not.toHaveBeenCalled();
     });
@@ -500,17 +500,17 @@ describe('actionDelete', () => {
             },
         });
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
 
         expect(result).toBeNull();
-        expect(ctx.result.delete).toBe(0);
+        expect(ctx.result.deleteLocal).toBe(0);
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [99]});
         expect(fileOps.deleteFile).not.toHaveBeenCalled();
     });
 
     test('dry-run does not delete but acknowledges', async () => {
         const apiClient = createMockApiClient({
-            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteCount: 1}}),
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
         });
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(true),
@@ -523,19 +523,19 @@ describe('actionDelete', () => {
             },
         });
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
         if (result && result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result).not.toBeNull();
-        expect(result!.action).toBe('Delete');
-        expect(ctx.result.delete).toBe(1);
+        expect(result!.action).toBe('DeleteLocal');
+        expect(ctx.result.deleteLocal).toBe(1);
         expect(fileOps.deleteFile).not.toHaveBeenCalled();
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1]});
     });
 
     test('returns recordId from input parameter', async () => {
         const apiClient = createMockApiClient({
-            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteCount: 1}}),
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
         });
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(true),
@@ -543,10 +543,46 @@ describe('actionDelete', () => {
         const userPrompt = createMockUserPrompt();
         const ctx = createContext({options: {force: false, dryRun: false, autoConfirm: true, treatConflictsAsErrors: false, scannerType: 'fileSystem'}});
 
-        const result = await actionDelete(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
 
         expect(result).not.toBeNull();
         expect(result!.recordId).toBe(99);
+    });
+});
+
+describe('actionUnlink', () => {
+    test('acknowledges only, does not delete file', async () => {
+        const mockAcknowledge = jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, unlinkCount: 1}});
+        const apiClient = createMockApiClient({
+            acknowledgeAction: mockAcknowledge,
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            deleteFile: jest.fn(),
+        });
+        const ctx = createContext();
+
+        const result = await actionUnlink(apiClient, ctx, 'song.mp3', 1, 5, 'Orphaned');
+
+        expect(result).not.toBeNull();
+        expect(result!.action).toBe('Unlink');
+        expect(result!.recordId).toBe(5);
+        expect(fileOps.deleteFile).not.toHaveBeenCalled();
+        expect(mockAcknowledge).toHaveBeenCalledWith(1, 1, { recordIds: [5] });
+    });
+
+    test('does not require fileOps or userPrompt', async () => {
+        const mockAcknowledge = jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, unlinkCount: 1}});
+        const apiClient = createMockApiClient({
+            acknowledgeAction: mockAcknowledge,
+        });
+        const ctx = createContext();
+
+        const result = await actionUnlink(apiClient, ctx, 'gone.mp3', undefined, 10);
+
+        expect(result).not.toBeNull();
+        expect(result!.action).toBe('Unlink');
+        expect(mockAcknowledge).toHaveBeenCalledWith(1, 1, { recordIds: [10] });
     });
 });
 

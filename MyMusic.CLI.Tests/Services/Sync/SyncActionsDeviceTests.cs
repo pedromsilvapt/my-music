@@ -261,45 +261,58 @@ public class SyncActionsDeviceTests
     }
 
     [Fact]
-    public async Task ActionDeleteAsync_WithUserConfirmation_DeletesFile()
+    public async Task ActionDeleteLocalAsync_WithUserConfirmation_DeletesFile()
     {
         var device = CreateDevice();
 
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _userPrompt.ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
 
-        var result = await device.ActionDeleteAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
+        var result = await device.ActionDeleteLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
 
         result.ShouldNotBeNull();
-        result.Action.ShouldBe("Delete");
+        result.Action.ShouldBe("DeleteLocal");
         await _fileOps.Received(1).DeleteFileAsync("/music/test.mp3", Arg.Any<CancellationToken>());
         await _apiClient.Received(1).AcknowledgeActionAsync(1, Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ActionDeleteAsync_UserCancels_ReturnsNull()
+    public async Task ActionDeleteLocalAsync_UserCancels_ReturnsNull()
     {
         var device = CreateDevice();
 
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _userPrompt.ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
 
-        var result = await device.ActionDeleteAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
+        var result = await device.ActionDeleteLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
 
         result.ShouldBeNull();
         await _fileOps.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ActionDeleteAsync_MissingFile_AcknowledgesWithoutDeleting()
+    public async Task ActionDeleteLocalAsync_MissingFile_AcknowledgesWithoutDeleting()
     {
         var device = CreateDevice();
 
         _fileOps.FileExists(Arg.Any<string>()).Returns(false);
 
-        var result = await device.ActionDeleteAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
+        var result = await device.ActionDeleteLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
 
         result.ShouldBeNull();
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionUnlinkAsync_AcknowledgesOnly_DoesNotDeleteFile()
+    {
+        var device = CreateDevice();
+
+        var result = await device.ActionUnlinkAsync(1, 1, songId: 1, "test.mp3", dryRun: false, recordId: 1);
+
+        result.ShouldNotBeNull();
+        result.Action.ShouldBe("Unlink");
+        await _fileOps.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _apiClient.Received(1).AcknowledgeActionAsync(1, Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>());
     }
 

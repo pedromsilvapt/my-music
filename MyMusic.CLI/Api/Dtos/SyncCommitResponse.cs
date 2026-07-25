@@ -7,7 +7,7 @@ public record SyncCommitResponse
     public required int SkippedCount { get; init; }
     public required int CreateLocalCount { get; init; }
     public required int UpdateLocalCount { get; init; }
-    public required int DeleteCount { get; init; }
+    public required int DeleteLocalCount { get; init; }
     public required int LinkCount { get; init; }
     public required int UnlinkCount { get; init; }
     public required int RenameCount { get; init; }

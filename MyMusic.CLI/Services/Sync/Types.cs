@@ -14,7 +14,7 @@ public enum SyncRecordAction
     UpdateRemote,
     CreateLocal,
     UpdateLocal,
-    Delete,
+    DeleteLocal,
     Link,
     Unlink,
     Rename,
@@ -52,7 +52,7 @@ public record SyncResult
     public int UpdateRemote { get; init; }
     public int CreateLocal { get; init; }
     public int UpdateLocal { get; init; }
-    public int Delete { get; init; }
+    public int DeleteLocal { get; init; }
     public int Link { get; init; }
     public int Unlink { get; init; }
     public int Rename { get; init; }
@@ -71,7 +71,7 @@ public record SyncResult
         UpdateRemote = UpdateRemote + delta.UpdateRemoteCount,
         CreateLocal = CreateLocal + delta.CreateLocalCount,
         UpdateLocal = UpdateLocal + delta.UpdateLocalCount,
-        Delete = Delete + delta.DeleteCount,
+        DeleteLocal = DeleteLocal + delta.DeleteLocalCount,
         Link = Link + delta.LinkCount,
         Unlink = Unlink + delta.UnlinkCount,
         Rename = Rename + delta.RenameCount,
@@ -89,7 +89,7 @@ public record SyncActionCounts
     public int SkippedCount { get; init; }
     public int CreateLocalCount { get; init; }
     public int UpdateLocalCount { get; init; }
-    public int DeleteCount { get; init; }
+    public int DeleteLocalCount { get; init; }
     public int LinkCount { get; init; }
     public int UnlinkCount { get; init; }
     public int RenameCount { get; init; }
@@ -106,7 +106,7 @@ public record SyncActionCounts
         SkippedCount = SkippedCount + other.SkippedCount,
         CreateLocalCount = CreateLocalCount + other.CreateLocalCount,
         UpdateLocalCount = UpdateLocalCount + other.UpdateLocalCount,
-        DeleteCount = DeleteCount + other.DeleteCount,
+        DeleteLocalCount = DeleteLocalCount + other.DeleteLocalCount,
         LinkCount = LinkCount + other.LinkCount,
         UnlinkCount = UnlinkCount + other.UnlinkCount,
         RenameCount = RenameCount + other.RenameCount,
@@ -122,7 +122,7 @@ public record SyncActionCounts
         SkippedCount = api.SkippedCount,
         CreateLocalCount = api.CreateLocalCount,
         UpdateLocalCount = api.UpdateLocalCount,
-        DeleteCount = api.DeleteCount,
+        DeleteLocalCount = api.DeleteLocalCount,
         LinkCount = api.LinkCount,
         UnlinkCount = api.UnlinkCount,
         RenameCount = api.RenameCount,
@@ -191,7 +191,7 @@ public record SyncRecordItem
 
     public string Source => Action switch
     {
-        SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.Delete => "Client",
+        SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.DeleteLocal => "Client",
         SyncRecordAction.CreateRemote or SyncRecordAction.UpdateRemote or SyncRecordAction.Link or SyncRecordAction.Skipped or SyncRecordAction.Conflict or SyncRecordAction.UpdateTimestamp or SyncRecordAction.Error => "Server",
         _ => throw new InvalidOperationException($"Unknown sync record action: {Action}")
     };
@@ -266,7 +266,7 @@ public record CompleteSyncResult
     public int SkippedCount { get; init; }
     public int CreateLocalCount { get; init; }
     public int UpdateLocalCount { get; init; }
-    public int DeleteCount { get; init; }
+    public int DeleteLocalCount { get; init; }
     public int LinkCount { get; init; }
     public int UnlinkCount { get; init; }
     public int RenameCount { get; init; }
@@ -287,7 +287,7 @@ public record CommitSyncResult
     public int SkippedCount { get; init; }
     public int CreateLocalCount { get; init; }
     public int UpdateLocalCount { get; init; }
-    public int DeleteCount { get; init; }
+    public int DeleteLocalCount { get; init; }
     public int LinkCount { get; init; }
     public int UnlinkCount { get; init; }
     public int RenameCount { get; init; }

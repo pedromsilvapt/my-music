@@ -14,7 +14,7 @@ export function createSyncContext(
         updateRemote: 0,
         createLocal: 0,
         updateLocal: 0,
-        delete: 0,
+        deleteLocal: 0,
         link: 0,
         unlink: 0,
         rename: 0,

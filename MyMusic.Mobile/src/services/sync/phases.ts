@@ -3,7 +3,7 @@ import { SyncActionCounts, addDeltaToResult } from './types';
 import type { RenameData } from '../../api/types';
 import { SyncCancelledError } from './errors';
 import { safeToIsoString, chunkArray, formatFilePath } from './utils';
-import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionDelete, actionConflict, actionRename } from './sync-actions-device';
+import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename } from './sync-actions-device';
 
 const EMPTY_COUNTS: SyncActionCounts = {
     createRemoteCount: 0,
@@ -11,7 +11,7 @@ const EMPTY_COUNTS: SyncActionCounts = {
     skippedCount: 0,
     createLocalCount: 0,
     updateLocalCount: 0,
-    deleteCount: 0,
+    deleteLocalCount: 0,
     linkCount: 0,
     unlinkCount: 0,
     renameCount: 0,
@@ -277,14 +277,29 @@ export async function serverActionsPhase (
                     ctx.result = addDeltaToResult(ctx.result, result.counts);
                 }
             }
-        } else if (record.action === 'Unlink' || record.action === 'Delete') {
-            const result = await actionDelete(
+        } else if (record.action === 'DeleteLocal') {
+            const result = await actionDeleteLocal(
                 deps.apiClient,
                 deps.fileOps,
                 deps.userPrompt,
                 ctx,
                 record.filePath,
                 ctx.decodedRepoPath,
+                record.songId ?? undefined,
+                record.id,
+                record.reason ?? undefined
+            );
+            if (result) {
+                serverResults.push(result);
+                if (result.counts) {
+                    ctx.result = addDeltaToResult(ctx.result, result.counts);
+                }
+            }
+        } else if (record.action === 'Unlink') {
+            const result = await actionUnlink(
+                deps.apiClient,
+                ctx,
+                record.filePath,
                 record.songId ?? undefined,
                 record.id,
                 record.reason ?? undefined
@@ -318,7 +333,7 @@ export async function serverActionsPhase (
 
         onProgress({
             createLocal: ctx.result.createLocal,
-            delete: ctx.result.delete,
+            deleteLocal: ctx.result.deleteLocal,
             processedFiles: pendingActions.indexOf(record) + 1,
             totalFiles: pendingActions.length,
         });
@@ -345,7 +360,7 @@ export async function commitPhase (
     ctx.result.skipped = commitResponse.skippedCount;
     ctx.result.createLocal = commitResponse.createLocalCount;
     ctx.result.updateLocal = commitResponse.updateLocalCount;
-    ctx.result.delete = commitResponse.deleteCount;
+    ctx.result.deleteLocal = commitResponse.deleteLocalCount;
     ctx.result.link = commitResponse.linkCount;
     ctx.result.unlink = commitResponse.unlinkCount;
     ctx.result.rename = commitResponse.renameCount;
@@ -369,7 +384,7 @@ export async function completePhase (
     ctx.result.skipped = completeResponse.skippedCount;
     ctx.result.createLocal = completeResponse.createLocalCount;
     ctx.result.updateLocal = completeResponse.updateLocalCount;
-    ctx.result.delete = completeResponse.deleteCount;
+    ctx.result.deleteLocal = completeResponse.deleteLocalCount;
     ctx.result.link = completeResponse.linkCount;
     ctx.result.unlink = completeResponse.unlinkCount;
     ctx.result.rename = completeResponse.renameCount;

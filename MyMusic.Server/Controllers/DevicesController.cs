@@ -606,7 +606,7 @@ public class DevicesController(
             records.Count(r => r.Action == SyncRecordAction.UpdateRemote),
             records.Count(r => r.Action == SyncRecordAction.Skipped),
             records.Count(r => r.Action == SyncRecordAction.CreateLocal || r.Action == SyncRecordAction.UpdateLocal),
-            records.Count(r => r.Action == SyncRecordAction.Delete || r.Action == SyncRecordAction.Unlink),
+            records.Count(r => r.Action == SyncRecordAction.DeleteLocal || r.Action == SyncRecordAction.Unlink),
             records.Count(r => r.Action == SyncRecordAction.Error));
 
         return new SyncCompleteResponse
@@ -616,7 +616,7 @@ public class DevicesController(
             SkippedCount = records.Count(r => r.Action == SyncRecordAction.Skipped),
             CreateLocalCount = records.Count(r => r.Action == SyncRecordAction.CreateLocal),
             UpdateLocalCount = records.Count(r => r.Action == SyncRecordAction.UpdateLocal),
-            DeleteCount = records.Count(r => r.Action == SyncRecordAction.Delete),
+            DeleteLocalCount = records.Count(r => r.Action == SyncRecordAction.DeleteLocal),
             LinkCount = records.Count(r => r.Action == SyncRecordAction.Link),
             UnlinkCount = records.Count(r => r.Action == SyncRecordAction.Unlink),
             RenameCount = records.Count(r => r.Action == SyncRecordAction.Rename),
@@ -700,7 +700,7 @@ public class DevicesController(
             SkippedCount = counts.GetValueOrDefault(SyncRecordAction.Skipped),
             CreateLocalCount = counts.GetValueOrDefault(SyncRecordAction.CreateLocal),
             UpdateLocalCount = counts.GetValueOrDefault(SyncRecordAction.UpdateLocal),
-            DeleteCount = counts.GetValueOrDefault(SyncRecordAction.Delete),
+            DeleteLocalCount = counts.GetValueOrDefault(SyncRecordAction.DeleteLocal),
             LinkCount = counts.GetValueOrDefault(SyncRecordAction.Link),
             UnlinkCount = counts.GetValueOrDefault(SyncRecordAction.Unlink),
             RenameCount = counts.GetValueOrDefault(SyncRecordAction.Rename),
@@ -873,16 +873,13 @@ public class DevicesController(
                 };
                 allRecords.Add(record);
             }
-            else if (existingSongDevice.Song == null)
+            // When a Song is deleted, the deletion services always null SongId and set SyncAction = Remove,
+            // so the Song == null case is covered by the Remove branch below. The `|| Song == null` is kept
+            // defensively in case that invariant is ever broken - we still want to delete the file on the device.
+            else if (existingSongDevice.SyncAction == SongSyncAction.Remove || existingSongDevice.Song == null)
             {
-                logger.LogDebug("CheckSync: Path='{Path}' -> SKIPPED (Song was deleted, SongDevice kept for tracking removal)", clientFile.Path);
-                var record = await syncActions.ActionSkipped(clientFile.Path, existingSongDevice.SongId, reason: "Song was deleted, SongDevice kept for tracking removal", cancellationToken: cancellationToken);
-                allRecords.Add(record);
-            }
-            else if (existingSongDevice.SyncAction == SongSyncAction.Remove)
-            {
-                logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> UNLINK (marked for removal)", clientFile.Path, existingSongDevice.SongId);
-                var record = await syncActions.ActionUnlink(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
+                logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> DELETE_LOCAL (marked for removal or song deleted)", clientFile.Path, existingSongDevice.SongId);
+                var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal or deleted on server", cancellationToken);
                 allRecords.Add(record);
             }
             else if (request.Force)
@@ -1020,7 +1017,7 @@ public class DevicesController(
 
                 if (existingSongDevice.SyncAction == SongSyncAction.Remove)
                 {
-                    var record = await syncActions.ActionUnlink(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
+                    var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                     allRecords.Add(record);
                 }
                 else if (existingSongDevice.LastSyncedModifiedAt != null)
@@ -1316,17 +1313,14 @@ public class DevicesController(
     {
         logger.LogInformation("CreatePendingActionsForDevice: DeviceId={DeviceId}, Template={NamingTemplate}, Default={DefaultNamingTemplate}", deviceId, namingTemplate ?? "(null)", config.Value.DefaultNamingTemplate);
 
-        var existingRecordSongIds = await context.DeviceSyncSessionRecords
-            .Where(r => r.SessionId == sessionId && r.SongId != null)
-            .Select(r => r.SongId!.Value)
-            .ToHashSetAsync(cancellationToken);
-
         var songDevices = await context.SongDevices
             .IncludeSongMetadata("Song")
             .Where(sd => sd.DeviceId == deviceId
                 && sd.SyncAction != null
                 && sd.SyncAction != SongSyncAction.Upload
-                && !existingRecordSongIds.Contains(sd.SongId!.Value))
+                && !context.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath)
+                && (sd.SongId == null
+                    || !context.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.SongId == sd.SongId)))
             .ToListAsync(cancellationToken);
 
         var allExistingPaths = await context.SongDevices
@@ -1344,7 +1338,7 @@ public class DevicesController(
         {
             if (sd.SyncAction == SongSyncAction.Remove)
             {
-                var record = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.Unlink, sd.DevicePath, sd.SongId, sd.SyncActionReason);
+                var record = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.DeleteLocal, sd.DevicePath, sd.SongId, sd.SyncActionReason);
                 createdRecords.Add(record);
             }
             else if (sd.SyncAction == SongSyncAction.Download)

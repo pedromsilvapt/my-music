@@ -96,7 +96,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should remove all local files
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBe(unlink: 3);
+        result2.ShouldBe(deleteLocal: 3);
 
         // Verify all local files were removed
         App.FileExists("Dylan/The Alibi/The Alibi - Dylan.mp3").ShouldBeFalse();

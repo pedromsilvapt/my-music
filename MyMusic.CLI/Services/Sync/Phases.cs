@@ -351,11 +351,22 @@ public class Phases(
                     ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
             }
-            else if (record.Action == SyncRecordAction.Unlink || record.Action == SyncRecordAction.Delete)
+            else if (record.Action == SyncRecordAction.DeleteLocal)
             {
-                var result = await syncActions.ActionDeleteAsync(
+                var result = await syncActions.ActionDeleteLocalAsync(
                     ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
                     ctx.Options.DryRun, ctx.Options.AutoConfirm, record.Id, record.Reason, ct);
+
+                if (result?.Counts != null)
+                {
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
+                }
+            }
+            else if (record.Action == SyncRecordAction.Unlink)
+            {
+                var result = await syncActions.ActionUnlinkAsync(
+                    ctx.DeviceId, ctx.SessionId, record.SongId, record.FilePath,
+                    ctx.Options.DryRun, record.Id, record.Reason, ct);
 
                 if (result?.Counts != null)
                 {
@@ -403,9 +414,9 @@ public class Phases(
         }, ct);
 
         logger.LogInformation(
-            "Commit result: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {Delete} deleted, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
+            "Commit result: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {DeleteLocal} deleted local, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
             commitResult.CreateRemoteCount, commitResult.UpdateRemoteCount, commitResult.SkippedCount,
-            commitResult.CreateLocalCount, commitResult.UpdateLocalCount, commitResult.DeleteCount,
+            commitResult.CreateLocalCount, commitResult.UpdateLocalCount, commitResult.DeleteLocalCount,
             commitResult.LinkCount, commitResult.UnlinkCount, commitResult.RenameCount,
             commitResult.ConflictCount, commitResult.UpdateTimestampCount,
             commitResult.ErrorCount);
@@ -417,7 +428,7 @@ public class Phases(
             Skipped = commitResult.SkippedCount,
             CreateLocal = commitResult.CreateLocalCount,
             UpdateLocal = commitResult.UpdateLocalCount,
-            Delete = commitResult.DeleteCount,
+            DeleteLocal = commitResult.DeleteLocalCount,
             Link = commitResult.LinkCount,
             Unlink = commitResult.UnlinkCount,
             Rename = commitResult.RenameCount,
@@ -448,9 +459,9 @@ public class Phases(
         }, ct);
 
         logger.LogInformation(
-            "Sync complete: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {Delete} deleted, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
+            "Sync complete: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {DeleteLocal} deleted local, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
             completeResponse.CreateRemoteCount, completeResponse.UpdateRemoteCount, completeResponse.SkippedCount,
-            completeResponse.CreateLocalCount, completeResponse.UpdateLocalCount, completeResponse.DeleteCount,
+            completeResponse.CreateLocalCount, completeResponse.UpdateLocalCount, completeResponse.DeleteLocalCount,
             completeResponse.LinkCount, completeResponse.UnlinkCount, completeResponse.RenameCount,
             completeResponse.ConflictCount, completeResponse.UpdateTimestampCount,
             completeResponse.ErrorCount);
@@ -462,7 +473,7 @@ public class Phases(
             Skipped = completeResponse.SkippedCount,
             CreateLocal = completeResponse.CreateLocalCount,
             UpdateLocal = completeResponse.UpdateLocalCount,
-            Delete = completeResponse.DeleteCount,
+            DeleteLocal = completeResponse.DeleteLocalCount,
             Link = completeResponse.LinkCount,
             Unlink = completeResponse.UnlinkCount,
             Rename = completeResponse.RenameCount,

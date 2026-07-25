@@ -83,7 +83,7 @@ export class NodeApiClient implements ISyncApiClient {
         const records = this._parseRecords(response.records ?? []);
         return {
             records,
-            counts: response.counts ?? { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 },
+            counts: response.counts ?? { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 },
         };
     }
 
@@ -132,7 +132,7 @@ export class NodeApiClient implements ISyncApiClient {
         skippedCount: number;
         createLocalCount: number;
         updateLocalCount: number;
-        deleteCount: number;
+        deleteLocalCount: number;
         linkCount: number;
         unlinkCount: number;
         renameCount: number;
@@ -157,7 +157,7 @@ export class NodeApiClient implements ISyncApiClient {
         skippedCount: number;
         createLocalCount: number;
         updateLocalCount: number;
-        deleteCount: number;
+        deleteLocalCount: number;
         linkCount: number;
         unlinkCount: number;
         renameCount: number;

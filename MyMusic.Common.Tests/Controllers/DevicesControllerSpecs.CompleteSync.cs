@@ -137,7 +137,7 @@ public class DevicesControllerCompleteSyncSpecs
         response.Value.SkippedCount.ShouldBe(1);
         response.Value.LinkCount.ShouldBe(1);
         response.Value.UpdateRemoteCount.ShouldBe(0);
-        response.Value.DeleteCount.ShouldBe(0);
+        response.Value.DeleteLocalCount.ShouldBe(0);
         response.Value.UnlinkCount.ShouldBe(0);
         response.Value.ErrorCount.ShouldBe(0);
     }

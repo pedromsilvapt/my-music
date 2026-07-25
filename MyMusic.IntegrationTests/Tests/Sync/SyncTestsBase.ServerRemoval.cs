@@ -27,7 +27,7 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should delete the local file
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBe(unlink: 1);
+        result2.ShouldBe(deleteLocal: 1);
 
         // Verify local file was removed
         App.FileExists(expectedPath).ShouldBeFalse();
@@ -57,9 +57,35 @@ public abstract partial class SyncTestsBase
 
         // Run sync again - should remove the local file
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBe(unlink: 1);
+        result2.ShouldBe(deleteLocal: 1);
 
         // Verify local file was removed
         App.FileExists(expectedPath).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Sync_ShouldDeleteLocalFileWhenSongHardDeletedOnServer()
+    {
+        // Seed song on server associated with this device
+        var serverSongs = await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] }]);
+
+        // Sync to download the song to the device
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Verify file exists locally
+        var expectedPath = "Dylan/The Alibi/The Alibi - Dylan.mp3";
+        App.FileShouldExist(expectedPath);
+
+        // Hard-delete the song on the server via the browser UI
+        await new DeleteSongFlow(serverSongs[0].Title).ExecuteAsync(Page);
+
+        // Sync again, to delete the local file
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(deleteLocal: 1);
+
+        // Verify local file was removed
+        App.FileShouldNotExist(expectedPath);
     }
 }

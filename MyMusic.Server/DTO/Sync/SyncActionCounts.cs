@@ -9,7 +9,7 @@ public record SyncActionCounts
     public int SkippedCount { get; init; }
     public int CreateLocalCount { get; init; }
     public int UpdateLocalCount { get; init; }
-    public int DeleteCount { get; init; }
+    public int DeleteLocalCount { get; init; }
     public int LinkCount { get; init; }
     public int UnlinkCount { get; init; }
     public int RenameCount { get; init; }
@@ -27,7 +27,7 @@ public record SyncActionCounts
             SkippedCount = counts.GetValueOrDefault(SyncRecordAction.Skipped),
             CreateLocalCount = counts.GetValueOrDefault(SyncRecordAction.CreateLocal),
             UpdateLocalCount = counts.GetValueOrDefault(SyncRecordAction.UpdateLocal),
-            DeleteCount = counts.GetValueOrDefault(SyncRecordAction.Delete),
+            DeleteLocalCount = counts.GetValueOrDefault(SyncRecordAction.DeleteLocal),
             LinkCount = counts.GetValueOrDefault(SyncRecordAction.Link),
             UnlinkCount = counts.GetValueOrDefault(SyncRecordAction.Unlink),
             RenameCount = counts.GetValueOrDefault(SyncRecordAction.Rename),
@@ -46,7 +46,7 @@ public record SyncActionCounts
             SkippedCount = action == SyncRecordAction.Skipped ? count : 0,
             CreateLocalCount = action == SyncRecordAction.CreateLocal ? count : 0,
             UpdateLocalCount = action == SyncRecordAction.UpdateLocal ? count : 0,
-            DeleteCount = action == SyncRecordAction.Delete ? count : 0,
+            DeleteLocalCount = action == SyncRecordAction.DeleteLocal ? count : 0,
             LinkCount = action == SyncRecordAction.Link ? count : 0,
             UnlinkCount = action == SyncRecordAction.Unlink ? count : 0,
             RenameCount = action == SyncRecordAction.Rename ? count : 0,
@@ -65,7 +65,7 @@ public record SyncActionCounts
             SkippedCount = SkippedCount + other.SkippedCount,
             CreateLocalCount = CreateLocalCount + other.CreateLocalCount,
             UpdateLocalCount = UpdateLocalCount + other.UpdateLocalCount,
-            DeleteCount = DeleteCount + other.DeleteCount,
+            DeleteLocalCount = DeleteLocalCount + other.DeleteLocalCount,
             LinkCount = LinkCount + other.LinkCount,
             UnlinkCount = UnlinkCount + other.UnlinkCount,
             RenameCount = RenameCount + other.RenameCount,

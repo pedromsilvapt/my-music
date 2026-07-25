@@ -165,6 +165,9 @@ public class MusicDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.SongId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(e => new { e.SessionId, e.FilePath });
+            entity.HasIndex(e => new { e.SessionId, e.SongId });
         });
 
         // ExcludedDuplicatePair entity configuration

@@ -65,12 +65,12 @@ public class SyncActionsServer(
         return await SaveRecord(record, cancellationToken);
     }
 
-    public async Task<DeviceSyncSessionRecord> ActionDelete(
+    public async Task<DeviceSyncSessionRecord> ActionDeleteLocal(
         string filePath, long? songId = null, string? reason = null,
         CancellationToken cancellationToken = default)
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId });
-        var record = CreateRecord(filePath, SyncRecordAction.Delete, data, songId, reason: reason);
+        var record = CreateRecord(filePath, SyncRecordAction.DeleteLocal, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 

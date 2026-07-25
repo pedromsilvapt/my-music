@@ -14,7 +14,7 @@ export interface SyncProgress {
     updateRemote: number;
     createLocal: number;
     updateLocal: number;
-    delete: number;
+    deleteLocal: number;
     link: number;
     unlink: number;
     rename: number;
@@ -62,7 +62,7 @@ const initialProgress: SyncProgress = {
     updateRemote: 0,
     createLocal: 0,
     updateLocal: 0,
-    delete: 0,
+    deleteLocal: 0,
     link: 0,
     unlink: 0,
     rename: 0,

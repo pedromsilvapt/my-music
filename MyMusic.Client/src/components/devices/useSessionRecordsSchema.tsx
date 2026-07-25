@@ -25,7 +25,7 @@ function getActionColor(action: string): string {
             return 'teal';
         case 'UpdateLocal':
             return 'cyan';
-        case 'Delete':
+        case 'DeleteLocal':
             return 'red';
         case 'Link':
             return 'lime';

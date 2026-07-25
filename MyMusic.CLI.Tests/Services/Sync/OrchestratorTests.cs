@@ -170,7 +170,7 @@ public class OrchestratorTests
                 Skipped = 1,
                 CreateLocal = 1,
                 UpdateLocal = 0,
-                Delete = 0,
+                DeleteLocal = 0,
                 Link = 0,
                 Unlink = 0,
                 Rename = 0,

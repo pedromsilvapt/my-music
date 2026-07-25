@@ -70,7 +70,7 @@ function printResults(result: SyncResult): void {
     console.log(`UpdateRemote: ${result.updateRemote}`);
     console.log(`CreateLocal: ${result.createLocal}`);
     console.log(`UpdateLocal: ${result.updateLocal}`);
-    console.log(`Delete: ${result.delete}`);
+    console.log(`DeleteLocal: ${result.deleteLocal}`);
     console.log(`Link: ${result.link}`);
     console.log(`Unlink: ${result.unlink}`);
     console.log(`Rename: ${result.rename}`);

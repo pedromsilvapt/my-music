@@ -19,7 +19,7 @@ public record SyncSessionItem
     public required int SkippedCount { get; init; }
     public required int CreateLocalCount { get; init; }
     public required int UpdateLocalCount { get; init; }
-    public required int DeleteCount { get; init; }
+    public required int DeleteLocalCount { get; init; }
     public required int LinkCount { get; init; }
     public required int UnlinkCount { get; init; }
     public required int RenameCount { get; init; }
@@ -42,7 +42,7 @@ public record SyncSessionItem
             SkippedCount = session.Records.Count(r => r.Action == SyncRecordAction.Skipped),
             CreateLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.CreateLocal),
             UpdateLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateLocal),
-            DeleteCount = session.Records.Count(r => r.Action == SyncRecordAction.Delete),
+            DeleteLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.DeleteLocal),
             LinkCount = session.Records.Count(r => r.Action == SyncRecordAction.Link),
             UnlinkCount = session.Records.Count(r => r.Action == SyncRecordAction.Unlink),
             RenameCount = session.Records.Count(r => r.Action == SyncRecordAction.Rename),

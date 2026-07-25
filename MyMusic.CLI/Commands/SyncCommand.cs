@@ -63,7 +63,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
             summaryTable.AddRow("↑ UpdateRemote:", ColorizeCounter(syncResult.UpdateRemote, "teal"));
             summaryTable.AddRow("↓ CreateLocal:", ColorizeCounter(syncResult.CreateLocal, "blue"));
             summaryTable.AddRow("↓ UpdateLocal:", ColorizeCounter(syncResult.UpdateLocal, "blue"));
-            summaryTable.AddRow("× Delete:", ColorizeCounter(syncResult.Delete, "red"));
+            summaryTable.AddRow("× DeleteLocal:", ColorizeCounter(syncResult.DeleteLocal, "red"));
             summaryTable.AddRow("↗ Link:", ColorizeCounter(syncResult.Link, "green"));
             summaryTable.AddRow("↘ Unlink:", ColorizeCounter(syncResult.Unlink, "red"));
             summaryTable.AddRow("» Rename:", ColorizeCounter(syncResult.Rename, "teal"));
@@ -111,7 +111,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
                      $"{ColorizeCounter(p.Result.UpdateRemote, "teal", "↑")} " +
                      $"{ColorizeCounter(p.Result.CreateLocal, "blue", "↓")} " +
                      $"{ColorizeCounter(p.Result.UpdateLocal, "blue", "↓")} " +
-                     $"{ColorizeCounter(p.Result.Delete, "red", "×")} " +
+                     $"{ColorizeCounter(p.Result.DeleteLocal, "red", "×")} " +
                      $"{ColorizeCounter(p.Result.Skipped, "grey", "-")} " +
                      $"{ColorizeCounter(p.Result.Conflict, "yellow", "⚠")} " +
                      $"{ColorizeCounter(p.Result.Error, "red", "!")} | " +

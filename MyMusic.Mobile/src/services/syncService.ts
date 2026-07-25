@@ -24,7 +24,7 @@ export interface SyncResult {
     updateRemote: number;
     createLocal: number;
     updateLocal: number;
-    delete: number;
+    deleteLocal: number;
     link: number;
     unlink: number;
     rename: number;

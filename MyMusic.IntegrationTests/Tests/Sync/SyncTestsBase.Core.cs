@@ -279,9 +279,9 @@ public abstract partial class SyncTestsBase
 
         // Even though the song was marked for remove after the edit, it should still remove the original DevicePath
         var result2 = await App.SyncAsync(new SyncOptions());
-        result2.ShouldBe(unlink: 1);
+        result2.ShouldBe(deleteLocal: 1);
 
         // Verify the local file was actually deleted
-        App.FileShouldNotExist(originalPath, "Unlink must target the existing DevicePath, not the new templated path");
+        App.FileShouldNotExist(originalPath, "DeleteLocal must target the existing DevicePath, not the new templated path");
     }
 }

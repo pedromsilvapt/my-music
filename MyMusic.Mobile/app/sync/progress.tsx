@@ -288,9 +288,9 @@ export default function SyncProgressScreen() {
                     <View style={styles.stat}>
                         <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>↓ {progress.updateLocal}</Text>
                     </View>
-                    {progress.delete > 0 && (
+                    {progress.deleteLocal > 0 && (
                         <View style={styles.stat}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>× {progress.delete}</Text>
+                            <Text style={[styles.statValue, {fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.error}]}>× {progress.deleteLocal}</Text>
                         </View>
                     )}
                     <View style={styles.stat}>

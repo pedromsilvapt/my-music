@@ -15,7 +15,7 @@ jest.mock('../sync-actions-device', () => ({
     actionUpdateRemote: jest.fn(),
     actionCreateLocal: jest.fn(),
     actionUpdateLocal: jest.fn(),
-    actionDelete: jest.fn(),
+    actionDeleteLocal: jest.fn(),
     actionConflict: jest.fn(),
 }));
 
@@ -28,30 +28,30 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
             potentialConflicts: [],
             potentialUpdates: [],
             skippedRecordIds: [],
-            counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
+            counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
         }),
-        uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
+        uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
         commitSync: jest.fn().mockResolvedValue({
             createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-            createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+            createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
             linkCount: 0, unlinkCount: 0, renameCount: 0,
             conflictCount: 0, updateTimestampCount: 0, errorCount: 0,
             committedAt: new Date(),
         }),
         completeSync: jest.fn().mockResolvedValue({
             createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-            createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+            createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
             linkCount: 0, unlinkCount: 0, renameCount: 0,
             conflictCount: 0, updateTimestampCount: 0, errorCount: 0,
         }),
         createPendingActions: jest.fn().mockResolvedValue({records: []}),
-        acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
+        acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
         resolveConflicts: jest.fn().mockResolvedValue({
             records: [],
-            counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
+            counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
         }),
         downloadSong: jest.fn().mockResolvedValue(new Blob(['data'])),
-        reportSyncError: jest.fn().mockResolvedValue({counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1}}),
+        reportSyncError: jest.fn().mockResolvedValue({counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1}}),
     };
 
     const mockConfig: ISyncConfig = {
@@ -115,7 +115,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
 function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
     const result: SyncResult = {
         createRemote: 0, updateRemote: 0, createLocal: 0,
-        updateLocal: 0, delete: 0, link: 0,
+        updateLocal: 0, deleteLocal: 0, link: 0,
         unlink: 0, rename: 0, skipped: 0,
         conflict: 0, updateTimestamp: 0, error: 0,
     };

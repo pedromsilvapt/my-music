@@ -9,7 +9,7 @@ const EMPTY_COUNTS: SyncActionCounts = {
     skippedCount: 0,
     createLocalCount: 0,
     updateLocalCount: 0,
-    deleteCount: 0,
+    deleteLocalCount: 0,
     linkCount: 0,
     unlinkCount: 0,
     renameCount: 0,
@@ -227,7 +227,7 @@ export async function actionUpdateLocal(
     return actionCreateLocal(apiClient, fileOps, userPrompt, ctx, songId, path, decodedRepoPath, recordId, reason);
 }
 
-export async function actionDelete(
+export async function actionDeleteLocal(
     apiClient: ISyncApiClient,
     fileOps: IFileOps,
     userPrompt: IUserPrompt,
@@ -264,7 +264,7 @@ export async function actionDelete(
     if (ctx.options.dryRun) {
         const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId ?? 0] });
         return {
-            action: 'Delete',
+            action: 'DeleteLocal',
             filePath: path,
             source: 'Server',
             reason: baseReason,
@@ -279,7 +279,7 @@ export async function actionDelete(
         const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId ?? 0] });
 
         return {
-            action: 'Delete',
+            action: 'DeleteLocal',
             filePath: path,
             source: 'Server',
             reason: baseReason,
@@ -298,6 +298,34 @@ export async function actionDelete(
             songId,
         };
     }
+}
+
+/**
+ * Acknowledges an Unlink record without touching the local filesystem.
+ * Unlink is emitted by orphan detection when the client's local file is
+ * already gone; the server only needs to sever the SongDevice association.
+ */
+export async function actionUnlink(
+    apiClient: ISyncApiClient,
+    ctx: SyncContext,
+    path: string,
+    songId?: number,
+    recordId?: number,
+    reason?: string
+): Promise<ActionResult | null> {
+    const baseReason = reason ?? 'Orphaned: path not present locally';
+
+    const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId ?? 0] });
+
+    return {
+        action: 'Unlink',
+        filePath: path,
+        source: 'Server',
+        reason: baseReason,
+        songId,
+        recordId,
+        counts: ackResult.counts,
+    };
 }
 
 export async function actionRename(

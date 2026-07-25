@@ -50,7 +50,7 @@ public class HistoryListCommand(
             table.AddColumn("Updated");
             table.AddColumn("Skipped");
             table.AddColumn("Downloaded");
-            table.AddColumn("Deleted");
+            table.AddColumn("Deleted (Local)");
             table.AddColumn("Linked");
             table.AddColumn("Unlinked");
             table.AddColumn("Renamed");
@@ -80,7 +80,7 @@ public class HistoryListCommand(
                     ColorizeCounter(session.UpdateRemoteCount, "teal"),
                     ColorizeCounter(session.SkippedCount, "grey"),
                     ColorizeCounter(session.CreateLocalCount, "blue"),
-                    ColorizeCounter(session.DeleteCount, "red"),
+                    ColorizeCounter(session.DeleteLocalCount, "red"),
                     ColorizeCounter(session.LinkCount, "green"),
                     ColorizeCounter(session.UnlinkCount, "red"),
                     ColorizeCounter(session.RenameCount, "teal"),

@@ -247,7 +247,7 @@ public class DevicesControllerSyncCheckSpecs
     }
 
     [Fact]
-    public async Task CheckSync_UnchangedFile_SyncActionRemove_CreatesUnlinkRecord()
+    public async Task CheckSync_UnchangedFile_SyncActionRemove_CreatesDeleteLocalRecord()
     {
         var scenario = new Scenario();
         var device = scenario.CreateDevice();
@@ -273,9 +273,9 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        var unlinkRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
-        unlinkRecords.Count.ShouldBe(1);
-        unlinkRecords[0].SongId.ShouldBe(song.Id);
+        var deleteLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.DeleteLocal).ToList();
+        deleteLocalRecords.Count.ShouldBe(1);
+        deleteLocalRecords[0].SongId.ShouldBe(song.Id);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Remove);
@@ -284,11 +284,11 @@ public class DevicesControllerSyncCheckSpecs
             .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
             .ToListAsync();
         records.Count.ShouldBe(1);
-        records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        records[0].Action.ShouldBe(SyncRecordAction.DeleteLocal);
     }
 
     [Fact]
-    public async Task CheckSync_ServerNewer_SyncActionRemove_CreatesUnlinkRecord()
+    public async Task CheckSync_ServerNewer_SyncActionRemove_CreatesDeleteLocalRecord()
     {
         var scenario = new Scenario();
         var device = scenario.CreateDevice();
@@ -314,8 +314,8 @@ public class DevicesControllerSyncCheckSpecs
 
         var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
 
-        var unlinkRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
-        unlinkRecords.Count.ShouldBe(1);
+        var deleteLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.DeleteLocal).ToList();
+        deleteLocalRecords.Count.ShouldBe(1);
 
         var updatedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         updatedSd.SyncAction.ShouldBe(SongSyncAction.Remove);
@@ -324,7 +324,7 @@ public class DevicesControllerSyncCheckSpecs
             .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Skipped)
             .ToListAsync();
         records.Count.ShouldBe(1);
-        records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        records[0].Action.ShouldBe(SyncRecordAction.DeleteLocal);
     }
 
     [Fact]

@@ -158,39 +158,28 @@ public class SyncActionsDevice(
         var baseReason = reason ?? (isUpdate ? "Server-initiated update" : "Server-initiated download");
         var fullPath = Path.Combine(repositoryPath, relativePath);
 
-        if (dryRun)
-        {
-            var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
-            {
-                RecordIds = [recordId]
-            }, ct);
-
-            return new ActionResult(
-                actionName,
-                relativePath,
-                Source: "Server",
-                Reason: baseReason,
-                SongId: songId,
-                RecordId: recordId,
-                Counts: ackResult.Counts);
-        }
-
         var tempPath = fullPath + ".tmp";
         try
         {
-            await fileOps.EnsureDirectoryAsync(fullPath, ct);
-
-            await using var stream = await apiClient.DownloadSongAsync(songId!.Value, ct);
-            await fileOps.WriteFileAsync(tempPath, stream, ct);
-
-            if (isUpdate)
+            // Dry-run skips the download/move, so there is no real file modification time to report.
+            DateTime? modifiedAt = null;
+            if (!dryRun)
             {
-                await fileOps.DeleteFileAsync(fullPath, ct);
+                await fileOps.EnsureDirectoryAsync(fullPath, ct);
+
+                await using var stream = await apiClient.DownloadSongAsync(songId!.Value, ct);
+                await fileOps.WriteFileAsync(tempPath, stream, ct);
+
+                if (isUpdate)
+                {
+                    await fileOps.DeleteFileAsync(fullPath, ct);
+                }
+
+                await fileOps.MoveFileAsync(tempPath, fullPath, ct);
+
+                modifiedAt = await fileOps.GetModificationTimeAsync(fullPath, ct);
             }
 
-            await fileOps.MoveFileAsync(tempPath, fullPath, ct);
-
-            var modifiedAt = await fileOps.GetModificationTimeAsync(fullPath, ct);
             var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
             {
                 RecordIds = [recordId],
@@ -220,7 +209,7 @@ public class SyncActionsDevice(
         }
     }
 
-    public async Task<ActionResult?> ActionDeleteAsync(
+    public async Task<ActionResult?> ActionDeleteLocalAsync(
         long deviceId,
         long sessionId,
         string repositoryPath,
@@ -255,31 +244,50 @@ public class SyncActionsDevice(
 
         var baseReason = reason ?? "Server-initiated removal";
 
-        if (dryRun)
-        {
-            var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
-            {
-                RecordIds = [recordId]
-            }, ct);
-
-            return new ActionResult("Delete", relativePath, Source: "Server", Reason: baseReason, SongId: songId, RecordId: recordId, Counts: ackResult.Counts);
-        }
-
         try
         {
-            await fileOps.DeleteFileAsync(fullPath, ct);
+            if (!dryRun)
+            {
+                await fileOps.DeleteFileAsync(fullPath, ct);
+            }
+
             var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
             {
                 RecordIds = [recordId]
             }, ct);
 
-            return new ActionResult("Delete", relativePath, Source: "Server", Reason: baseReason, SongId: songId, RecordId: recordId, Counts: ackResult.Counts);
+            return new ActionResult("DeleteLocal", relativePath, Source: "Server", Reason: baseReason, SongId: songId, RecordId: recordId, Counts: ackResult.Counts);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete file: {Path}", relativePath);
             return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: ex.Message, Reason: $"{baseReason} failed", SongId: songId);
         }
+    }
+
+    /// <summary>
+    /// Acknowledges an Unlink record without touching the local filesystem.
+    /// Unlink is emitted by orphan detection when the client's local file is
+    /// already gone; the server only needs to sever the SongDevice association.
+    /// </summary>
+    public async Task<ActionResult?> ActionUnlinkAsync(
+        long deviceId,
+        long sessionId,
+        long? songId,
+        string relativePath,
+        bool dryRun,
+        long recordId,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        var baseReason = reason ?? "Orphaned: path not present locally";
+
+        var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
+        {
+            RecordIds = [recordId]
+        }, ct);
+
+        return new ActionResult("Unlink", relativePath, Source: "Server", Reason: baseReason, SongId: songId, RecordId: recordId, Counts: ackResult.Counts);
     }
 
     public async Task<ActionResult?> ActionRenameAsync(
@@ -295,19 +303,9 @@ public class SyncActionsDevice(
         var fullPath = Path.Combine(repositoryPath, relativePath);
         var previousFullPath = Path.Combine(repositoryPath, previousRelativePath);
 
-        if (dryRun)
-        {
-            var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
-            {
-                RecordIds = [recordId]
-            }, ct);
-
-            return new ActionResult("Renamed", relativePath, Source: "Server", Reason: $"Renamed from '{previousRelativePath}'", RecordId: recordId, Counts: ackResult.Counts);
-        }
-
         try
         {
-            if (fileOps.FileExists(previousFullPath))
+            if (!dryRun && fileOps.FileExists(previousFullPath))
             {
                 await fileOps.EnsureDirectoryAsync(fullPath, ct);
                 await fileOps.MoveFileAsync(previousFullPath, fullPath, ct);

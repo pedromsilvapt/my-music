@@ -25,7 +25,7 @@ export interface SyncSessionItem {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   updateLocalCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  deleteCount: number;
+  deleteLocalCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   linkCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */

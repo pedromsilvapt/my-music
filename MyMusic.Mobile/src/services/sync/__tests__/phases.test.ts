@@ -1,5 +1,5 @@
 import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase } from '../phases';
-import { actionCreateRemote, actionUpdateRemote, actionDelete, actionConflict, actionRename } from '../sync-actions-device';
+import { actionCreateRemote, actionUpdateRemote, actionDeleteLocal, actionUnlink, actionConflict, actionRename } from '../sync-actions-device';
 import type { SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt, SyncRecordItem } from '../types';
 import type { RenameData } from '../../../api/types';
 
@@ -17,7 +17,8 @@ jest.mock('../sync-actions-device', () => ({
     actionUpdateRemote: jest.fn(),
     actionCreateLocal: jest.fn(),
     actionUpdateLocal: jest.fn(),
-    actionDelete: jest.fn(),
+    actionDeleteLocal: jest.fn(),
+    actionUnlink: jest.fn(),
     actionConflict: jest.fn(),
     actionRename: jest.fn(),
 }));
@@ -26,25 +27,25 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
     const mockApiClient: ISyncApiClient = {
         startSync: jest.fn().mockResolvedValue({ sessionId: 1 }),
         checkSync: jest.fn(),
-        uploadFile: jest.fn().mockResolvedValue({ success: true, songId: 1, recordId: null, action: null, data: null, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
+        uploadFile: jest.fn().mockResolvedValue({ success: true, songId: 1, recordId: null, action: null, data: null, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
         commitSync: jest.fn().mockResolvedValue({
             createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-            createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+            createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
             linkCount: 0, unlinkCount: 0, renameCount: 0,
             conflictCount: 0, updateTimestampCount: 0, errorCount: 0,
             committedAt: new Date(),
         }),
         completeSync: jest.fn().mockResolvedValue({
             createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-            createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+            createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
             linkCount: 0, unlinkCount: 0, renameCount: 0,
             conflictCount: 0, updateTimestampCount: 0, errorCount: 0,
         }),
         createPendingActions: jest.fn().mockResolvedValue({ records: [] }),
-        acknowledgeAction: jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
+        acknowledgeAction: jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
         resolveConflicts: jest.fn(),
         downloadSong: jest.fn().mockResolvedValue(new Blob(['data'])),
-        reportSyncError: jest.fn().mockResolvedValue({ counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 } }),
+        reportSyncError: jest.fn().mockResolvedValue({ counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 } }),
     };
 
     const mockConfig: ISyncConfig = {
@@ -108,7 +109,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
 function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
     const result: SyncResult = {
         createRemote: 0, updateRemote: 0, createLocal: 0,
-        updateLocal: 0, delete: 0, link: 0,
+        updateLocal: 0, deleteLocal: 0, link: 0,
         unlink: 0, rename: 0, skipped: 0,
         conflict: 0, updateTimestamp: 0, error: 0,
     };
@@ -231,7 +232,7 @@ describe('completePhase', () => {
         expect(ctx.result.updateRemote).toBe(5);
         expect(ctx.result.skipped).toBe(20);
         expect(ctx.result.createLocal).toBe(3);
-        expect(ctx.result.delete).toBe(2);
+        expect(ctx.result.deleteLocal).toBe(2);
         expect(ctx.result.error).toBe(1);
     });
 
@@ -241,7 +242,7 @@ describe('completePhase', () => {
                 ...createMockDeps().apiClient,
                 completeSync: jest.fn().mockResolvedValue({
                     createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-                    createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+                    createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
                     linkCount: 0, unlinkCount: 0, renameCount: 0,
                     conflictCount: 0, updateTimestampCount: 0, errorCount: 0,
                 }),
@@ -262,7 +263,7 @@ describe('completePhase', () => {
                 ...createMockDeps().apiClient,
                 completeSync: jest.fn().mockResolvedValue({
                     createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
-                    createLocalCount: 0, updateLocalCount: 0, deleteCount: 0,
+                    createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
                     linkCount: 0, unlinkCount: 0, renameCount: 0,
                     conflictCount: 0, updateTimestampCount: 0, errorCount: 0,
                 }),
@@ -487,12 +488,12 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
 });
 
 describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
-    const mockedActionDelete = actionDelete as jest.MockedFunction<typeof actionDelete>;
+    const mockedActionUnlink = actionUnlink as jest.MockedFunction<typeof actionUnlink>;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        mockedActionDelete.mockResolvedValue({
-            action: 'Delete',
+        mockedActionUnlink.mockResolvedValue({
+            action: 'Unlink',
             filePath: 'existing-song.mp3',
             source: 'Server',
             songId: 1,
@@ -520,13 +521,10 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
 
         await serverActionsPhase(deps, ctx, onProgress);
 
-        expect(mockedActionDelete).toHaveBeenCalledWith(
+        expect(mockedActionUnlink).toHaveBeenCalledWith(
             deps.apiClient,
-            deps.fileOps,
-            deps.userPrompt,
             ctx,
             'existing-song.mp3',
-            '/music',
             1,
             1,
             'Server removed'
@@ -534,7 +532,7 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
     });
 
     test('Unlink action for path in uploadedPaths is skipped and acknowledged', async () => {
-        const mockAcknowledge = jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } });
+        const mockAcknowledge = jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } });
         const deps = createMockDeps({
             apiClient: {
                 ...createMockDeps().apiClient,
@@ -556,7 +554,7 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
 
         await serverActionsPhase(deps, ctx, onProgress);
 
-        expect(mockedActionDelete).not.toHaveBeenCalled();
+        expect(mockedActionUnlink).not.toHaveBeenCalled();
         expect(mockAcknowledge).toHaveBeenCalledWith(1, 1, { recordIds: [1] });
     });
 
@@ -581,13 +579,10 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
 
         await serverActionsPhase(deps, ctx, onProgress);
 
-        expect(mockedActionDelete).toHaveBeenCalledWith(
+        expect(mockedActionUnlink).toHaveBeenCalledWith(
             deps.apiClient,
-            deps.fileOps,
-            deps.userPrompt,
             ctx,
             'existing-song.mp3',
-            '/music',
             1,
             1,
             'Server removed'
@@ -595,7 +590,7 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
     });
 
     test('Uploaded-path records are acknowledged during dry-run', async () => {
-        const mockAcknowledge = jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } });
+        const mockAcknowledge = jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } });
         const deps = createMockDeps({
             apiClient: {
                 ...createMockDeps().apiClient,
@@ -621,7 +616,7 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
 
         await serverActionsPhase(deps, ctx, onProgress);
 
-        expect(mockedActionDelete).not.toHaveBeenCalled();
+        expect(mockedActionUnlink).not.toHaveBeenCalled();
         expect(mockAcknowledge).toHaveBeenCalledWith(1, 1, { recordIds: [1] });
     });
 });
@@ -724,7 +719,7 @@ describe('serverActionsPhase - Rename action', () => {
             source: 'Server',
             reason: "Renamed from 'original-song.mp3'",
             recordId: 5,
-            counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 1, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 },
+            counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 1, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 },
         });
 
         const deps = createMockDeps();
@@ -751,12 +746,12 @@ describe('serverActionsPhase - Rename action', () => {
 });
 
 describe('serverActionsPhase - createPendingActions call', () => {
-    const mockedActionDelete = actionDelete as jest.MockedFunction<typeof actionDelete>;
+    const mockedActionDelete = actionDeleteLocal as jest.MockedFunction<typeof actionDeleteLocal>;
 
     beforeEach(() => {
         jest.clearAllMocks();
         mockedActionDelete.mockResolvedValue({
-            action: 'Delete',
+            action: 'DeleteLocal',
             filePath: 'song-to-delete.mp3',
             source: 'Server',
             songId: 1,
@@ -764,7 +759,7 @@ describe('serverActionsPhase - createPendingActions call', () => {
     });
 
     test('calls createPendingActions and merges results with existing pendingActions', async () => {
-        const existingRecord: SyncRecordItem = { id: 1, filePath: 'existing-record.mp3', action: 'Delete', songId: 1, data: null, reason: 'Server removed', acknowledged: false, processedAt: '' };
+        const existingRecord: SyncRecordItem = { id: 1, filePath: 'existing-record.mp3', action: 'DeleteLocal', songId: 1, data: null, reason: 'Server removed', acknowledged: false, processedAt: '' };
         const newRecord: SyncRecordItem = { id: 2, filePath: 'new-record.mp3', action: 'Unlink', songId: 2, data: { songId: 2 }, reason: 'Server unlinked', acknowledged: false, processedAt: '' };
 
         const deps = createMockDeps({
