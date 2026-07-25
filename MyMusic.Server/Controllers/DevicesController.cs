@@ -40,7 +40,8 @@ public class DevicesController(
     IDeviceListService deviceListService,
     IDeviceGetService deviceGetService,
     IDeviceCreateService deviceCreateService,
-    IDeviceUpdateService deviceUpdateService) : ControllerBase
+    IDeviceUpdateService deviceUpdateService,
+    IDeviceDeleteService deviceDeleteService) : ControllerBase
 {
     [HttpGet]
     public async Task<ListDevicesResponse> List(
@@ -119,41 +120,8 @@ public class DevicesController(
     [HttpDelete("{deviceId:long}")]
     public async Task<IActionResult> Delete(long deviceId, CancellationToken cancellationToken)
     {
-        var device = await FindDeviceAsync(deviceId, cancellationToken);
-        if (device == null) return NotFound();
-
-        var sessionsForDevice = await context.DeviceSyncSessions
-            .Where(s => s.DeviceId == deviceId)
-            .Select(s => new { s.Id, s.RepositoryPath })
-            .ToListAsync(cancellationToken);
-
-        foreach (var session in sessionsForDevice)
-        {
-            StagingDirectoryCleanupService.DeleteStagingDirectory(fileSystem, session.RepositoryPath, session.Id, logger);
-        }
-
-        await context.SongDevices
-            .Where(sd => sd.DeviceId == deviceId)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        await context.DeviceSyncSessionRecords
-            .Where(r => context.DeviceSyncSessions
-                .Where(s => s.DeviceId == deviceId)
-                .Select(s => s.Id)
-                .Contains(r.SessionId))
-            .ExecuteDeleteAsync(cancellationToken);
-
-        await context.DeviceSyncSessions
-            .Where(s => s.DeviceId == deviceId)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        await context.Devices
-            .Where(d => d.Id == deviceId)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        logger.LogInformation("Deleted device {DeviceId} for user {UserId}", deviceId, currentUser.Id);
-
-        return NoContent();
+        var deleted = await deviceDeleteService.DeleteAsync(deviceId, cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
 
     [HttpGet("{deviceId:long}", Name = "GetDevice")]

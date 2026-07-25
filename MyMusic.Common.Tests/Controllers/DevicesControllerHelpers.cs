@@ -37,4 +37,12 @@ internal static class DevicesControllerHelpers
             DeviceLookup,
             currentUser,
             Substitute.For<ILogger<DeviceUpdateService>>());
+
+    public static IDeviceDeleteService CreateDeviceDeleteService(Scenario scenario, ICurrentUser currentUser) =>
+        new DeviceDeleteService(
+            scenario.DbContext,
+            DeviceLookup,
+            currentUser,
+            scenario.FileSystem,
+            Substitute.For<ILogger<DeviceDeleteService>>());
 }

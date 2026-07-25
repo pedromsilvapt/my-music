@@ -54,7 +54,7 @@ Each phase: write/update tests first, implement, run tests, update status flag.
 - [x] **Phase 0 — Shared helpers.** Extract `IDeviceLookupService` (FindDeviceAsync), `ISyncSessionLookupService` (FindSessionAsync, GetActiveSessionAsync), `ISyncPathResolver` (ComputePendingActionPath, GetUniquePath), `ISyncComparisonHelper` (IsNewerThan). Register in DI. DevicesController keeps using them via injection until its own phases run.
 - [x] **Phase 1 — Device List & Get.** `DeviceListService`, `DeviceGetService`. DevicesController.List/Get become thin.
 - [x] **Phase 2 — Device Create & Update.** `DeviceCreateService`, `DeviceUpdateService`.
-- [ ] **Phase 3 — Device Delete.** `DeviceDeleteService` (device + sessions + SongDevices + session records + staging cleanup).
+- [x] **Phase 3 — Device Delete.** `DeviceDeleteService` (device + sessions + SongDevices + session records + staging cleanup).
 - [ ] **Phase 4 — Device filter values.** `DeviceFilterValuesService` (filter metadata stays in controller).
 - [ ] **Phase 5 — SyncSessionsController split + ListSessions.** Create `SyncSessionsController`; extract `SyncSessionListService`. Move `ListSessions` endpoint.
 - [ ] **Phase 6 — Session records query & filter values.** `SyncSessionRecordsQueryService`, `SyncSessionFilterValuesService`. Move records/filter-metadata/filter-values endpoints.

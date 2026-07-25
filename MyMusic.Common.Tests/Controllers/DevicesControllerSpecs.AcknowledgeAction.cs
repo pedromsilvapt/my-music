@@ -35,7 +35,8 @@ public class DevicesControllerAcknowledgeActionSpecs
             DevicesControllerHelpers.CreateDeviceListService(scenario),
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser)
+            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser)
         );
     }
 
