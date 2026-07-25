@@ -29,7 +29,11 @@ public class DevicesControllerCancelSyncSpecs
             scenario.FileSystem,
             Substitute.For<ISyncActionsServerFactory>(),
             _syncCommitService,
-            Substitute.For<ISyncUploadService>()
+            Substitute.For<ISyncUploadService>(),
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
+            DevicesControllerHelpers.PathResolver,
+            DevicesControllerHelpers.ComparisonHelper
         );
     }
 

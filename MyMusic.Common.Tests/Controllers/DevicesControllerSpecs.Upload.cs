@@ -37,7 +37,11 @@ public class DevicesControllerUploadSpecs
             scenario.FileSystem,
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
             Substitute.For<ISyncCommitService>(),
-            syncUploadService
+            syncUploadService,
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
+            DevicesControllerHelpers.PathResolver,
+            DevicesControllerHelpers.ComparisonHelper
         );
     }
 

@@ -13,6 +13,7 @@ using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
 using MyMusic.Server.DTO.Devices;
 using MyMusic.Server.DTO.Filters;
@@ -31,7 +32,11 @@ public class DevicesController(
     IFileSystem fileSystem,
     ISyncActionsServerFactory syncActionsServerFactory,
     ISyncCommitService syncCommitService,
-    ISyncUploadService syncUploadService) : ControllerBase
+    ISyncUploadService syncUploadService,
+    IDeviceLookupService deviceLookup,
+    ISyncSessionLookupService sessionLookup,
+    ISyncPathResolver pathResolver,
+    ISyncComparisonHelper comparisonHelper) : ControllerBase
 {
     [HttpGet]
     public async Task<ListDevicesResponse> List(
@@ -1442,47 +1447,12 @@ public class DevicesController(
         };
     }
 
-    private static (string Path, string? PreviousPath) ComputePendingActionPath(
+    private (string Path, string? PreviousPath) ComputePendingActionPath(
         SongDevice sd, TemplateNamingStrategy namingStrategy, HashSet<string> usedPaths)
-    {
-        if (sd.Song != null)
-        {
-            var metadata = EntityConverter.ToSong(sd.Song);
-            var naming = NamingMetadata.FromPath(sd.DevicePath);
-            var basePath = namingStrategy.Generate(metadata, naming);
-            var newPath = basePath == sd.DevicePath
-                ? basePath
-                : GetUniquePath(basePath, usedPaths);
+        => pathResolver.ComputePendingActionPath(sd, namingStrategy, usedPaths);
 
-            return newPath != sd.DevicePath
-                ? (newPath, sd.DevicePath)
-                : (sd.DevicePath, null);
-        }
-
-        return (sd.DevicePath, null);
-    }
-
-    private static string GetUniquePath(string basePath, HashSet<string> existingPaths)
-    {
-        if (!existingPaths.Contains(basePath))
-        {
-            return basePath;
-        }
-
-        var directory = Path.GetDirectoryName(basePath) ?? "";
-        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(basePath);
-        var extension = Path.GetExtension(basePath);
-
-        var counter = 2;
-        string newPath;
-        do
-        {
-            newPath = Path.Combine(directory, $"{fileNameWithoutExt} ({counter}){extension}");
-            counter++;
-        } while (existingPaths.Contains(newPath));
-
-        return newPath;
-    }
+    private string GetUniquePath(string basePath, HashSet<string> existingPaths)
+        => pathResolver.GetUniquePath(basePath, existingPaths);
 
 
     [HttpGet("filter-metadata")]
@@ -1584,12 +1554,8 @@ public class DevicesController(
         return new FilterValuesResponse { Values = values };
     }
 
-    private static bool IsNewerThan(DateTime current, DateTime reference)
-    {
-        // The dates that are saved in the database by EF Core seem to lose the precision for the last digit
-        // it is always 0 (zero) when reading it back, so we make the comparison without it in both values
-        return current.Ticks / 10 > reference.Ticks / 10;
-    }
+    private bool IsNewerThan(DateTime current, DateTime reference)
+        => comparisonHelper.IsNewerThan(current, reference);
 
     private static Dictionary<string, string> GetSessionRecordFieldMappings()
     {
@@ -1603,25 +1569,16 @@ public class DevicesController(
     }
 
     private async Task<Device?> FindDeviceAsync(long deviceId, CancellationToken cancellationToken)
-    {
-        return await context.Devices
-            .Where(d => d.Id == deviceId && d.OwnerId == currentUser.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+        => await deviceLookup.FindDeviceAsync(context, deviceId, currentUser.Id, cancellationToken);
 
     private async Task<DeviceSyncSession?> FindSessionAsync(long sessionId, long deviceId, CancellationToken cancellationToken)
-    {
-        return await context.DeviceSyncSessions
-            .Where(s => s.Id == sessionId && s.DeviceId == deviceId && s.Device.OwnerId == currentUser.Id)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+        => await sessionLookup.FindSessionAsync(context, sessionId, deviceId, currentUser.Id, cancellationToken);
 
     private async Task<ActionResult<DeviceSyncSession>> GetActiveSessionAsync(long sessionId, long deviceId, CancellationToken cancellationToken)
     {
-        var session = await FindSessionAsync(sessionId, deviceId, cancellationToken);
-        if (session == null) return NotFound();
-        if (session.Status != SyncSessionStatus.InProgress)
-            throw new Exception($"Sync session {sessionId} is not in progress (status: {session.Status})");
-        return session;
+        var result = await sessionLookup.GetActiveSessionAsync(context, sessionId, deviceId, currentUser.Id, cancellationToken);
+        if (result.Found) return result.Session!;
+        if (result.Failure == ActiveSessionFailure.NotFound) return NotFound();
+        throw new Exception($"Sync session {result.NotInProgressSessionId} is not in progress (status: {result.NotInProgressStatus})");
     }
 }

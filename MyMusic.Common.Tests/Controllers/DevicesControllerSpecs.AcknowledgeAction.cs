@@ -27,7 +27,11 @@ public class DevicesControllerAcknowledgeActionSpecs
             Substitute.For<System.IO.Abstractions.IFileSystem>(),
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
             syncCommitService ?? Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>()
+            Substitute.For<ISyncUploadService>(),
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
+            DevicesControllerHelpers.PathResolver,
+            DevicesControllerHelpers.ComparisonHelper
         );
     }
 

@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using MyMusic.Common;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
 using MyMusic.OpenTelemetry;
 using MyMusic.Server.Services;
@@ -89,6 +90,12 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IArtworkDeleteService, ArtworkDeleteService>();
 
         builder.Services.AddScoped<ISyncActionsServerFactory, SyncActionsServerFactory>();
+
+        // Shared sync/device lookup and helper services (Phase 0 of the controllers refactor).
+        builder.Services.AddScoped<IDeviceLookupService, DeviceLookupService>();
+        builder.Services.AddScoped<ISyncSessionLookupService, SyncSessionLookupService>();
+        builder.Services.AddSingleton<ISyncPathResolver, SyncPathResolver>();
+        builder.Services.AddSingleton<ISyncComparisonHelper, SyncComparisonHelper>();
 
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
