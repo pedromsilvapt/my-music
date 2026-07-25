@@ -137,28 +137,6 @@ public class DevicesController(
         };
     }
 
-    [HttpGet("{deviceId:long}/sessions")]
-    public async Task<ActionResult<ListSyncSessionsResponse>> ListSessions(
-        long deviceId,
-        [FromQuery] int count = 5,
-        CancellationToken cancellationToken = default)
-    {
-        var device = await FindDeviceAsync(deviceId, cancellationToken);
-        if (device == null) return NotFound();
-
-        var sessions = await context.DeviceSyncSessions
-            .Include(s => s.Records)
-            .Where(s => s.DeviceId == deviceId)
-            .OrderByDescending(s => s.StartedAt)
-            .Take(count)
-            .ToListAsync(cancellationToken);
-
-        return new ListSyncSessionsResponse
-        {
-            Sessions = sessions.Select(SyncSessionItem.FromEntity).ToList(),
-        };
-    }
-
     private const int InProgressSafetyThresholdSeconds = 10;
 
     [HttpDelete("{deviceId:long}/sessions/{sessionId:long}")]

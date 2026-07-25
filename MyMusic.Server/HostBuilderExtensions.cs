@@ -111,6 +111,9 @@ public static class HostBuilderExtensions
         // Per-operation device services (Phase 4 of the controllers refactor).
         builder.Services.AddScoped<IDeviceFilterValuesService, DeviceFilterValuesService>();
 
+        // Per-operation sync session services (Phase 5 of the controllers refactor).
+        builder.Services.AddScoped<ISyncSessionListService, SyncSessionListService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();

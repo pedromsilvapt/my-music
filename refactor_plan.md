@@ -56,7 +56,7 @@ Each phase: write/update tests first, implement, run tests, update status flag.
 - [x] **Phase 2 — Device Create & Update.** `DeviceCreateService`, `DeviceUpdateService`.
 - [x] **Phase 3 — Device Delete.** `DeviceDeleteService` (device + sessions + SongDevices + session records + staging cleanup).
 - [x] **Phase 4 — Device filter values.** `DeviceFilterValuesService` (filter metadata stays in controller).
-- [ ] **Phase 5 — SyncSessionsController split + ListSessions.** Create `SyncSessionsController`; extract `SyncSessionListService`. Move `ListSessions` endpoint.
+- [x] **Phase 5 — SyncSessionsController split + ListSessions.** Create `SyncSessionsController`; extract `SyncSessionListService`. Move `ListSessions` endpoint.
 - [ ] **Phase 6 — Session records query & filter values.** `SyncSessionRecordsQueryService`, `SyncSessionFilterValuesService`. Move records/filter-metadata/filter-values endpoints.
 - [ ] **Phase 7 — Session delete & prune.** `SyncSessionDeleteService`, `SyncSessionPruneService`.
 - [ ] **Phase 8 — SyncController split + Start & Complete.** Create `SyncController`; `SyncStartService`, `SyncCompleteService`. Move start/complete endpoints.
