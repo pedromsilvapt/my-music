@@ -59,7 +59,7 @@ Each phase: write/update tests first, implement, run tests, update status flag.
 - [x] **Phase 5 — SyncSessionsController split + ListSessions.** Create `SyncSessionsController`; extract `SyncSessionListService`. Move `ListSessions` endpoint.
 - [x] **Phase 6 — Session records query & filter values.** `SyncSessionRecordsQueryService`, `SyncSessionFilterValuesService`. Move records/filter-metadata/filter-values endpoints.
 - [x] **Phase 7 — Session delete & prune.** `SyncSessionDeleteService`, `SyncSessionPruneService`.
-- [ ] **Phase 8 — SyncController split + Start & Complete.** Create `SyncController`; `SyncStartService`, `SyncCompleteService`. Move start/complete endpoints.
+- [x] **Phase 8 — SyncController split + Start & Complete.** Create `SyncController`; `SyncStartService`, `SyncCompleteService`. Move start/complete endpoints.
 - [ ] **Phase 9 — Cancel & Commit.** `SyncCancelService`; thin `CommitSync` delegating to existing `ISyncCommitService` + `ISyncSessionLookupService` + staging cleanup (MapCommitResponse helpers move to a `SyncCommitResponseMapper` static or DTO).
 - [ ] **Phase 10 — Pending actions & device songs.** `SyncPendingActionsService` (absorbs `CreatePendingActionsForDevice` + naming helpers via `ISyncPathResolver`), `SyncDeviceSongsService`.
 - [ ] **Phase 11 — Sync Check.** `SyncCheckService` (the ~280-line method; uses `ISyncPathResolver`, `ISyncComparisonHelper`, `ISyncActionsServerFactory`).

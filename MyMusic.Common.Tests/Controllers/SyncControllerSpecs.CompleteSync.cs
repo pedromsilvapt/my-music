@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
@@ -10,34 +11,18 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Controllers;
 
-public class DevicesControllerCompleteSyncSpecs
+public class SyncControllerCompleteSyncSpecs
 {
-    private DevicesController CreateController(Scenario scenario)
+    private SyncController CreateController(Scenario scenario)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
+        return new SyncController(
+            Substitute.For<ILogger<SyncController>>(),
             currentUser,
-            scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+            SyncControllerHelpers.CreateSyncStartService(scenario),
+            SyncControllerHelpers.CreateSyncCompleteService(scenario));
     }
 
     [Fact]
@@ -150,5 +135,21 @@ public class DevicesControllerCompleteSyncSpecs
         response.Value.DeleteLocalCount.ShouldBe(0);
         response.Value.UnlinkCount.ShouldBe(0);
         response.Value.ErrorCount.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task CompleteSync_SessionNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var device = scenario.CreateDevice();
+
+        // Act
+        var response = await controller.CompleteSync(device.Id, 9999,
+            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+
+        // Assert
+        response.Result.ShouldBeOfType<NotFoundResult>();
     }
 }

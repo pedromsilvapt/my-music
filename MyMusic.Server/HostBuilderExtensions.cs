@@ -122,6 +122,10 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISyncSessionDeleteService, SyncSessionDeleteService>();
         builder.Services.AddScoped<ISyncSessionPruneService, SyncSessionPruneService>();
 
+        // Per-operation sync workflow services (Phase 8 of the controllers refactor).
+        builder.Services.AddScoped<ISyncStartService, SyncStartService>();
+        builder.Services.AddScoped<ISyncCompleteService, SyncCompleteService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();
