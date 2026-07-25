@@ -41,7 +41,8 @@ public class DevicesController(
     IDeviceGetService deviceGetService,
     IDeviceCreateService deviceCreateService,
     IDeviceUpdateService deviceUpdateService,
-    IDeviceDeleteService deviceDeleteService) : ControllerBase
+    IDeviceDeleteService deviceDeleteService,
+    IDeviceFilterValuesService deviceFilterValuesService) : ControllerBase
 {
     [HttpGet]
     public async Task<ListDevicesResponse> List(
@@ -1451,39 +1452,9 @@ public class DevicesController(
         [FromQuery] string? search = null,
         [FromQuery] int limit = 15)
     {
-        var query = field switch
-        {
-            "name" => context.Devices
-                .Where(d => d.OwnerId == currentUser.Id)
-                .Select(d => d.Name)
-                .Distinct(),
-            "icon" => context.Devices
-                .Where(d => d.OwnerId == currentUser.Id)
-                .Select(d => d.Icon)
-                .Where(v => v != null)
-                .Cast<string>()
-                .Distinct(),
-            "color" => context.Devices
-                .Where(d => d.OwnerId == currentUser.Id)
-                .Select(d => d.Color)
-                .Where(v => v != null)
-                .Cast<string>()
-                .Distinct(),
-            _ => Enumerable.Empty<string>().AsQueryable(),
-        };
+        var result = await deviceFilterValuesService.GetAsync(currentUser.Id, field, search, limit, cancellationToken);
 
-        if (!string.IsNullOrEmpty(search))
-        {
-            var searchLower = search.ToLower();
-            query = query.Where(v => v.ToLower().Contains(searchLower));
-        }
-
-        var values = await query
-            .OrderBy(v => v)
-            .Take(limit)
-            .ToListAsync(cancellationToken);
-
-        return new FilterValuesResponse { Values = values };
+        return new FilterValuesResponse { Values = result.Values };
     }
 
     private bool IsNewerThan(DateTime current, DateTime reference)

@@ -38,7 +38,8 @@ public class DevicesControllerCommitSyncSpecs
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
             DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser)
+            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
         );
     }
 

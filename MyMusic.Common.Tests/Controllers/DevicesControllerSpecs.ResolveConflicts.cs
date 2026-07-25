@@ -37,7 +37,8 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
             DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser)
+            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
         );
     }
 
@@ -229,7 +230,8 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
             DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser)
+            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
         );
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
@@ -301,7 +303,8 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
             DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser)
+            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
         );
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
@@ -411,7 +414,8 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
             DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser)
+            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
         );
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession

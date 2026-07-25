@@ -45,4 +45,7 @@ internal static class DevicesControllerHelpers
             currentUser,
             scenario.FileSystem,
             Substitute.For<ILogger<DeviceDeleteService>>());
+
+    public static IDeviceFilterValuesService CreateDeviceFilterValuesService(Scenario scenario) =>
+        new DeviceFilterValuesService(scenario.DbContext);
 }
