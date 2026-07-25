@@ -118,6 +118,10 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISyncSessionRecordsQueryService, SyncSessionRecordsQueryService>();
         builder.Services.AddScoped<ISyncSessionFilterValuesService, SyncSessionFilterValuesService>();
 
+        // Per-operation sync session services (Phase 7 of the controllers refactor).
+        builder.Services.AddScoped<ISyncSessionDeleteService, SyncSessionDeleteService>();
+        builder.Services.AddScoped<ISyncSessionPruneService, SyncSessionPruneService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();

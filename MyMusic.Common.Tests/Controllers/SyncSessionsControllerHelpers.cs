@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
@@ -26,4 +27,18 @@ internal static class SyncSessionsControllerHelpers
 
     public static ISyncSessionFilterValuesService CreateSyncSessionFilterValuesService(Scenario scenario) =>
         new SyncSessionFilterValuesService(scenario.DbContext);
+
+    public static ISyncSessionDeleteService CreateSyncSessionDeleteService(Scenario scenario, IFileSystem? fileSystem = null) =>
+        new SyncSessionDeleteService(
+            scenario.DbContext,
+            DevicesControllerHelpers.SessionLookup,
+            fileSystem ?? scenario.FileSystem,
+            Substitute.For<ILogger<SyncSessionDeleteService>>());
+
+    public static ISyncSessionPruneService CreateSyncSessionPruneService(Scenario scenario, IFileSystem? fileSystem = null) =>
+        new SyncSessionPruneService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            fileSystem ?? scenario.FileSystem,
+            Substitute.For<ILogger<SyncSessionPruneService>>());
 }

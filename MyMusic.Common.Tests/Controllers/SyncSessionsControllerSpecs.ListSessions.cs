@@ -22,7 +22,9 @@ public class SyncSessionsControllerListSessionsSpecs
             currentUser,
             SyncSessionsControllerHelpers.CreateSyncSessionListService(scenario),
             SyncSessionsControllerHelpers.CreateSyncSessionRecordsQueryService(scenario),
-            SyncSessionsControllerHelpers.CreateSyncSessionFilterValuesService(scenario));
+            SyncSessionsControllerHelpers.CreateSyncSessionFilterValuesService(scenario),
+            SyncSessionsControllerHelpers.CreateSyncSessionDeleteService(scenario),
+            SyncSessionsControllerHelpers.CreateSyncSessionPruneService(scenario));
     }
 
     [Fact]

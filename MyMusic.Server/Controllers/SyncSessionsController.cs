@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Sync;
+using MyMusic.Server.DTO.Devices;
 using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Sync;
 
@@ -21,7 +22,9 @@ public class SyncSessionsController(
     ICurrentUser currentUser,
     ISyncSessionListService sessionListService,
     ISyncSessionRecordsQueryService sessionRecordsQueryService,
-    ISyncSessionFilterValuesService sessionFilterValuesService) : ControllerBase
+    ISyncSessionFilterValuesService sessionFilterValuesService,
+    ISyncSessionDeleteService sessionDeleteService,
+    ISyncSessionPruneService sessionPruneService) : ControllerBase
 {
     [HttpGet("{deviceId:long}/sessions")]
     public async Task<ActionResult<ListSyncSessionsResponse>> ListSessions(
@@ -159,5 +162,34 @@ public class SyncSessionsController(
             cancellationToken);
 
         return new FilterValuesResponse { Values = result.Values };
+    }
+
+    [HttpDelete("{deviceId:long}/sessions/{sessionId:long}")]
+    public async Task<ActionResult<DeleteSessionResponse>> DeleteSession(
+        long deviceId,
+        long sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await sessionDeleteService.DeleteAsync(sessionId, deviceId, currentUser.Id, cancellationToken);
+
+        if (result.Failure == SyncSessionDeleteFailure.NotFound) return NotFound();
+        if (result.Failure == SyncSessionDeleteFailure.InProgress)
+        {
+            throw new Exception("Cannot delete a session that is currently in progress");
+        }
+
+        return new DeleteSessionResponse { Success = true };
+    }
+
+    [HttpPost("{deviceId:long}/sessions/prune")]
+    public async Task<ActionResult<PruneSessionsResponse>> PruneSessions(
+        long deviceId,
+        [FromBody] PruneSessionsRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await sessionPruneService.PruneAsync(deviceId, currentUser.Id, request.All, cancellationToken);
+        if (result.Failure == SyncSessionPruneFailure.NotFound) return NotFound();
+
+        return new PruneSessionsResponse { DeletedCount = result.DeletedCount };
     }
 }
