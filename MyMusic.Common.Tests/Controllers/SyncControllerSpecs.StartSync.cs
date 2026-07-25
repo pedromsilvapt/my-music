@@ -27,6 +27,8 @@ public class SyncControllerStartSyncSpecs
             SyncControllerHelpers.CreateSyncCompleteService(scenario),
             SyncControllerHelpers.CreateSyncCancelService(scenario),
             Substitute.For<ISyncCommitService>(),
+            SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
+            SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
             DevicesControllerHelpers.SessionLookup);
     }
 

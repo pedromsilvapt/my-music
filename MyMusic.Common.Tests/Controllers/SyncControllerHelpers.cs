@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
+using MyMusic.Common;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
@@ -34,4 +35,22 @@ internal static class SyncControllerHelpers
             DevicesControllerHelpers.SessionLookup,
             scenario.FileSystem,
             Substitute.For<ILogger<SyncCancelService>>());
+
+    public static ISyncPendingActionsService CreateSyncPendingActionsService(Scenario scenario) =>
+        new SyncPendingActionsService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.PathResolver,
+            Microsoft.Extensions.Options.Options.Create(new Config
+            {
+                MusicRepositoryPath = "/music",
+                DefaultNamingTemplate = "{{ simple_label }}{{ extension }}",
+            }),
+            Substitute.For<ILogger<SyncPendingActionsService>>());
+
+    public static ISyncDeviceSongsService CreateSyncDeviceSongsService(Scenario scenario) =>
+        new SyncDeviceSongsService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            Substitute.For<ILogger<SyncDeviceSongsService>>());
 }

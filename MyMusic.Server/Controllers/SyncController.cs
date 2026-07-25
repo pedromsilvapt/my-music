@@ -8,6 +8,7 @@ using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Sync;
+using MyMusic.Server.DTO.Devices;
 using MyMusic.Server.DTO.Sync;
 
 namespace MyMusic.Server.Controllers;
@@ -29,6 +30,8 @@ public class SyncController(
     ISyncCompleteService syncCompleteService,
     ISyncCancelService syncCancelService,
     ISyncCommitService syncCommitService,
+    ISyncPendingActionsService syncPendingActionsService,
+    ISyncDeviceSongsService syncDeviceSongsService,
     ISyncSessionLookupService sessionLookup) : ControllerBase
 {
     [HttpPost("{deviceId:long}/sync/start")]
@@ -125,5 +128,34 @@ public class SyncController(
         logger.LogInformation("Committed sync session {SessionId} for device {DeviceId}", sessionId, deviceId);
 
         return SyncCommitResponseMapper.Map(result, session.CompletedAt.Value);
+    }
+
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/pending-actions")]
+    public async Task<ActionResult<CreatePendingActionsResponse>> CreatePendingActions(long deviceId, long sessionId, CancellationToken cancellationToken)
+    {
+        var result = await syncPendingActionsService.CreateAsync(deviceId, sessionId, currentUser.Id, cancellationToken);
+        if (result == null) return NotFound();
+
+        return new CreatePendingActionsResponse
+        {
+            Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+        };
+    }
+
+    [HttpGet("{deviceId:long}/sync/songs")]
+    public async Task<ActionResult<GetDeviceSongsResponse>> GetDeviceSongs(long deviceId, CancellationToken cancellationToken)
+    {
+        var result = await syncDeviceSongsService.GetAsync(deviceId, currentUser.Id, cancellationToken);
+        if (result == null) return NotFound();
+
+        return new GetDeviceSongsResponse
+        {
+            Songs = result.Songs.Select(s => new DeviceSongItem
+            {
+                SongId = s.SongId,
+                Path = s.Path,
+                Action = s.Action,
+            }).ToList(),
+        };
     }
 }
