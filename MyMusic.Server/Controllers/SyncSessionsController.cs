@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Sync;
@@ -18,7 +17,6 @@ namespace MyMusic.Server.Controllers;
 [ApiController]
 [Route("devices")]
 public class SyncSessionsController(
-    ILogger<SyncSessionsController> logger,
     ICurrentUser currentUser,
     ISyncSessionListService sessionListService,
     ISyncSessionRecordsQueryService sessionRecordsQueryService,

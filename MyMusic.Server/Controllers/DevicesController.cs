@@ -1,17 +1,14 @@
 using System.Globalization;
 using System.IO.Abstractions;
-using System.Text.Json;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
-using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
@@ -24,19 +21,13 @@ namespace MyMusic.Server.Controllers;
 [ApiController]
 [Route("devices")]
 public class DevicesController(
-    ILogger<DevicesController> logger,
     ICurrentUser currentUser,
     MusicDbContext context,
     IConfiguration configuration,
-    IOptions<Config> config,
     IFileSystem fileSystem,
-    ISyncActionsServerFactory syncActionsServerFactory,
-    ISyncCommitService syncCommitService,
     ISyncUploadService syncUploadService,
     IDeviceLookupService deviceLookup,
     ISyncSessionLookupService sessionLookup,
-    ISyncPathResolver pathResolver,
-    ISyncComparisonHelper comparisonHelper,
     IDeviceListService deviceListService,
     IDeviceGetService deviceGetService,
     IDeviceCreateService deviceCreateService,
@@ -185,14 +176,6 @@ public class DevicesController(
         };
     }
 
-    private (string Path, string? PreviousPath) ComputePendingActionPath(
-        SongDevice sd, TemplateNamingStrategy namingStrategy, HashSet<string> usedPaths)
-        => pathResolver.ComputePendingActionPath(sd, namingStrategy, usedPaths);
-
-    private string GetUniquePath(string basePath, HashSet<string> existingPaths)
-        => pathResolver.GetUniquePath(basePath, existingPaths);
-
-
     [HttpGet("filter-metadata")]
     public FilterMetadataResponse GetFilterMetadata() =>
         new()
@@ -261,9 +244,6 @@ public class DevicesController(
 
         return new FilterValuesResponse { Values = result.Values };
     }
-
-    private bool IsNewerThan(DateTime current, DateTime reference)
-        => comparisonHelper.IsNewerThan(current, reference);
 
     private async Task<Device?> FindDeviceAsync(long deviceId, CancellationToken cancellationToken)
         => await deviceLookup.FindDeviceAsync(context, deviceId, currentUser.Id, cancellationToken);

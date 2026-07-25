@@ -20,19 +20,13 @@ public class DevicesControllerSessionDeletionSpecs
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
         return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
             Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             scenario.FileSystem,
-            Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>(),
             Substitute.For<ISyncUploadService>(),
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
             DevicesControllerHelpers.CreateDeviceListService(scenario),
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),

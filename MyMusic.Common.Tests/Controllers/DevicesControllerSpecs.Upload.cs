@@ -29,19 +29,13 @@ public class DevicesControllerUploadSpecs
             Substitute.For<ILogger<SyncUploadService>>());
 
         return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
             currentUser,
             scenario.DbContext,
             config,
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             scenario.FileSystem,
-            factory ?? Substitute.For<ISyncActionsServerFactory>(),
-            Substitute.For<ISyncCommitService>(),
             syncUploadService,
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
             DevicesControllerHelpers.CreateDeviceListService(scenario),
             DevicesControllerHelpers.CreateDeviceGetService(scenario),
             DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),

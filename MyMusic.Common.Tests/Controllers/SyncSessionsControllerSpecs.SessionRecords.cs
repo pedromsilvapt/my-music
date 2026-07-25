@@ -18,7 +18,6 @@ public class SyncSessionsControllerSessionRecordsSpecs
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
         return new SyncSessionsController(
-            Substitute.For<ILogger<SyncSessionsController>>(),
             currentUser,
             SyncSessionsControllerHelpers.CreateSyncSessionListService(scenario),
             SyncSessionsControllerHelpers.CreateSyncSessionRecordsQueryService(scenario),
