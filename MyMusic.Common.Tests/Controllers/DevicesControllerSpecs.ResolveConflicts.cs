@@ -354,4 +354,83 @@ public class DevicesControllerResolveConflictsSpecs
         var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         unchangedSd.LastSyncedModifiedAt.ShouldBe(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     }
+
+    [Fact]
+    public async Task ResolveConflicts_ChecksumsMatch_NewLastSyncedUsesFileModifiedAtNotModifiedAt()
+    {
+        // When checksums match (no file content change), the server resolves by updating
+        // LastSyncedModifiedAt to max(local, FileModifiedAt). Since FileModifiedAt reflects
+        // the last file-content change (not metadata edits), a metadata-only edit that bumped
+        // ModifiedAt newer than FileModifiedAt must NOT inflate the new LastSyncedModifiedAt.
+        var scenario = new Scenario();
+        var factory = new SyncActionsServerFactory();
+        var currentUser = Substitute.For<MyMusic.Common.Services.ICurrentUser>();
+        currentUser.Id.Returns(scenario.AdminUser.Id);
+        var controller = new DevicesController(
+            Substitute.For<ILogger<DevicesController>>(),
+            currentUser,
+            scenario.DbContext,
+            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
+            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
+            Substitute.For<System.IO.Abstractions.IFileSystem>(),
+            factory,
+            Substitute.For<ISyncCommitService>(),
+            Substitute.For<ISyncUploadService>()
+        );
+        var device = scenario.CreateDevice();
+        var session = new DeviceSyncSession
+        {
+            DeviceId = device.Id,
+            Device = device,
+            StartedAt = DateTime.UtcNow,
+            Status = SyncSessionStatus.InProgress,
+            IsDryRun = false,
+            Records = []
+        };
+        scenario.DbContext.DeviceSyncSessions.Add(session);
+        scenario.DbContext.SaveChanges();
+
+        var content = new byte[] { 10, 20, 30 };
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
+        // FileModifiedAt is OLDER than ModifiedAt (metadata edit happened after last file change).
+        var fileModifiedAt = DateTime.UtcNow.AddHours(-3);
+        var modifiedAt = DateTime.UtcNow.AddHours(-1);
+        song.ModifiedAt = modifiedAt;
+        song.FileModifiedAt = fileModifiedAt;
+        scenario.DbContext.SaveChanges();
+
+        // Local file mtime is older than FileModifiedAt -> new LastSynced should be FileModifiedAt (the max).
+        var localModifiedAt = fileModifiedAt.AddMinutes(-30);
+        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    FileContentBase64 = Convert.ToBase64String(content),
+                    LocalModifiedAt = localModifiedAt,
+                }
+            ],
+            PotentialUpdates = []
+        };
+
+        await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
+
+        var tsRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.UpdateTimestamp)
+            .ToListAsync();
+        tsRecords.Count.ShouldBe(1);
+
+        // The new LastSynced timestamp must be max(local, FileModifiedAt) = fileModifiedAt,
+        // NOT max(local, ModifiedAt) = modifiedAt. This is the core behavior change: a
+        // metadata-only edit (ModifiedAt bumped) must NOT inflate the new sync timestamp.
+        var tsData = System.Text.Json.JsonSerializer.Deserialize<UpdateTimestampData>(tsRecords[0].Data!.Value, System.Text.Json.JsonSerializerOptions.Default);
+        tsData.ShouldNotBeNull();
+        tsData.NewTimestamp.ShouldBe(fileModifiedAt, "NewLastSynced should be max(local, FileModifiedAt), not the newer ModifiedAt");
+        tsData.NewTimestamp.ShouldNotBe(modifiedAt, "NewLastSynced must NOT use the metadata-bumped ModifiedAt");
+    }
 }

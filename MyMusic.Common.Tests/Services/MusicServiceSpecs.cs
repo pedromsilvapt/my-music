@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Models;
 using MyMusic.Common.Services;
 using MyMusic.Common.Tests.Utilities;
 using NSubstitute;
@@ -223,6 +224,83 @@ public class MusicServiceSpecs
 
         var artistAfterSecond = scenario.DbContext.Artists.First(a => a.Name == "My Artist");
         artistAfterSecond.SongsCount.ShouldBe(songsCountAfterFirst);
+    }
+
+    [Fact]
+    public async Task ImportMusic_ReImportSameChecksum_BumpsModifiedAtButNotFileModifiedAt()
+    {
+        // Re-importing an existing song whose file content has NOT changed (same checksum) must
+        // bump ModifiedAt (any row-level field may have changed) but NOT FileModifiedAt, which
+        // only changes on checksum change. This is the core "minimize updates during sync" behavior.
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+
+        // First import: creates the song and seeds timestamps from the file's mtime.
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        var job1 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job1, scenario.AdminUser.Id, "/music",
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job1.Exceptions.ShouldBeEmpty();
+
+        var song = LoadSongs(scenario.DbContext).Single();
+        var originalFileModifiedAt = song.FileModifiedAt;
+        originalFileModifiedAt.ShouldNotBeNull();
+
+        // Second import: re-import the SAME file (same checksum) via the metadata overload with
+        // an explicit SongId pointing at the existing song. The re-import branch must detect the
+        // unchanged checksum and leave FileModifiedAt alone, while still bumping ModifiedAt.
+        var sourcePath = "/music/Song.mp3";
+        var reimportModifiedAt = originalFileModifiedAt!.Value.AddHours(1);
+        var metadata = new SongImportMetadata(sourcePath, DateTime.UtcNow, reimportModifiedAt, song.Id);
+        var job2 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job2, scenario.AdminUser.Id, [metadata],
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job2.Exceptions.ShouldBeEmpty();
+
+        var updatedSong = LoadSongs(scenario.DbContext).Single();
+        updatedSong.FileModifiedAt.ShouldBe(originalFileModifiedAt, "FileModifiedAt must NOT change when checksum is unchanged");
+        updatedSong.ModifiedAt.ShouldBe(reimportModifiedAt, "ModifiedAt must bump on every re-import (row-level change), regardless of checksum");
+    }
+
+    [Fact]
+    public async Task ImportMusic_ReImportDifferentChecksum_BumpsFileModifiedAtAndModifiedAt()
+    {
+        // Re-importing an existing song whose file content HAS changed (different checksum) must
+        // bump both FileModifiedAt and ModifiedAt to the new file mtime.
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+
+        // First import: creates the song with the original content.
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        var job1 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job1, scenario.AdminUser.Id, "/music",
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job1.Exceptions.ShouldBeEmpty();
+
+        var song = LoadSongs(scenario.DbContext).Single();
+        var originalChecksum = song.Checksum;
+        var originalFileModifiedAt = song.FileModifiedAt;
+        originalFileModifiedAt.ShouldNotBeNull();
+
+        // Replace the file on disk with different content (different checksum) and re-import via
+        // the metadata overload pointing at the same SongId.
+        MockMusicFile.CreateWithDifferentContent(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        var reimportModifiedAt = originalFileModifiedAt!.Value.AddHours(2);
+        var metadata = new SongImportMetadata("/music/Song.mp3", DateTime.UtcNow, reimportModifiedAt, song.Id);
+        var job2 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job2, scenario.AdminUser.Id, [metadata],
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+        job2.Exceptions.ShouldBeEmpty();
+        job2.SkipReasons.ShouldBeEmpty($"Re-import should not skip. SkipReasons: {string.Join(", ", job2.SkipReasons.Select(r => r.Message))}");
+
+        // Re-importing with a different checksum should update the existing song, not create a second one.
+        var songsAfterReimport = LoadSongs(scenario.DbContext);
+        songsAfterReimport.Count.ShouldBe(1, "Re-import with different checksum should update the existing song, not create a new one");
+
+        var updatedSong = songsAfterReimport.Single();
+        updatedSong.FileModifiedAt.ShouldBe(reimportModifiedAt, "FileModifiedAt must be bumped to the new file mtime when checksum changes");
+        updatedSong.ModifiedAt.ShouldBe(reimportModifiedAt, "ModifiedAt must be bumped to the new file mtime when checksum changes");
+        updatedSong.Checksum.ShouldNotBe(originalChecksum);
     }
 
     private static List<Song> LoadSongs(MusicDbContext context)

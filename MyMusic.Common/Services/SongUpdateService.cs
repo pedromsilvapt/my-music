@@ -61,6 +61,9 @@ public class SongUpdateService(
             var reason = BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames);
             await MarkSongDevicesForDownloadAsync(db, songId, reason, cancellationToken);
             logger.LogInformation("Marked devices for download for song {SongId}, saving changes", songId);
+
+            // The file content actually changed: record the file-level modification time
+            song.FileModifiedAt = DateTime.UtcNow;
         }
         else
         {
@@ -105,6 +108,9 @@ public class SongUpdateService(
             {
                 var reason = BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames);
                 await MarkSongDevicesForDownloadAsync(db, songId, reason, cancellationToken);
+
+                // The file content actually changed: record the file-level modification time
+                song.FileModifiedAt = DateTime.UtcNow;
             }
 
             await db.SaveChangesAsync(cancellationToken);

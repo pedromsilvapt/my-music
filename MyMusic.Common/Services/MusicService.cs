@@ -629,6 +629,7 @@ public class MusicService(
                         // Timestamps
                         song.CreatedAt = importSongMetadata.CreatedAt.ToUniversalTime();
                         song.ModifiedAt = importSongMetadata.ModifiedAt.ToUniversalTime();
+                        song.FileModifiedAt = importSongMetadata.ModifiedAt.ToUniversalTime();
                         song.AddedAt = DateTime.UtcNow;
                         // Repository Id
                         song.OwnerId = userId;
@@ -686,6 +687,11 @@ public class MusicService(
                         db.RemoveRange(genresDiff.Removed);
                     }
 
+                    // Capture the previous checksum before overwriting it below; used to decide
+                    // whether the file content actually changed (and thus whether the file-level
+                    // modification timestamps should be bumped).
+                    var previousChecksum = song.Checksum;
+
                     song.Title = effectiveTitle;
                     song.Label = metadata.FullLabel;
                     song.Year = metadata.Year;
@@ -702,7 +708,18 @@ public class MusicService(
                     song.Genres = songGenres;
                     song.Devices = song.Devices is { Count: > 0 } ? song.Devices : songDevices;
                     song.Artists = songArtists;
+
+                    // ModifiedAt reflects any row-level change and must bump on every re-import,
+                    // since not all DB-row fields impact the file (e.g. rating, lyrics, labels).
                     song.ModifiedAt = importSongMetadata.ModifiedAt.ToUniversalTime();
+
+                    // FileModifiedAt tracks the file-content change time and only bumps when the
+                    // checksum actually changes, so metadata-only re-imports don't trigger
+                    // unnecessary device updates.
+                    if (checksum != previousChecksum)
+                    {
+                        song.FileModifiedAt = importSongMetadata.ModifiedAt.ToUniversalTime();
+                    }
 
                     if (cover is not null)
                     {

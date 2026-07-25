@@ -46,11 +46,27 @@ public class Song
 
     [MaxLength(64)] public required string ChecksumAlgorithm { get; set; }
 
+    /// <summary>
+    /// Represents when this song was added to this database (when the row was created
+    /// </summary>
     public required DateTime? AddedAt { get; set; }
 
+    /// <summary>
+    /// Represents the very first date when the song was created. Should never change.
+    /// In any kind of "merge"-like operation, the earliest of these dates should always prevail
+    /// </summary>
     public required DateTime CreatedAt { get; set; }
 
+    /// <summary>
+    /// Must be updated every time any field on this entity changes
+    /// </summary>
     public required DateTime ModifiedAt { get; set; }
+
+    /// <summary>
+    /// Must be updated only when the file checksum changes
+    /// </summary>
+    // TODO: Make FileModifiedAt non-nullable once the backfill migration has run everywhere
+    public DateTime? FileModifiedAt { get; set; }
 
     public required List<SongArtist> Artists { get; set; }
 

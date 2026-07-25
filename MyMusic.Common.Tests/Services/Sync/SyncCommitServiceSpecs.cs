@@ -62,6 +62,28 @@ public class SyncCommitServiceSpecs
         return new SyncTestContext(scenario, db, device, session, user, song, service, mockFs);
     }
 
+    /// <summary>
+    /// Setup that wires the <see cref="SyncCommitService"/> to a real <see cref="MusicService"/>
+    /// instead of an NSubstitute mock. This is needed for specs that assert on the side effects of
+    /// <see cref="MusicService.AddSongsToDevice"/> (e.g. the FileModifiedAt rollback in
+    /// <see cref="ProcessLinkAsync"/>), which the mock cannot reproduce.
+    /// </summary>
+    private SyncTestContext SetupWithSongAndRealMusicService(bool dryRun = false)
+    {
+        var scenario = new Scenario();
+        var db = scenario.DbContext;
+        var user = scenario.AdminUser;
+        var artist = scenario.CreateArtist("Artist");
+        var album = scenario.CreateAlbum("Album", artist);
+        var song = scenario.CreateSong("Song", album: album);
+        var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
+        var session = scenario.CreateSession(device, isDryRun: dryRun);
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var realMusicService = scenario.CreateMusicService();
+        var service = new SyncCommitService(scenario.FileSystem, realMusicService, _loggerFactory, _logger);
+        return new SyncTestContext(scenario, db, device, session, user, song, service, mockFs);
+    }
+
 
 
     private DeviceSyncSessionRecord AddSkippedRecord(Scenario scenario, long sessionId, string filePath, long songId)
@@ -344,6 +366,82 @@ public class SyncCommitServiceSpecs
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, cancellationToken: default);
 
         await AssertAddSongsToDeviceNotCalled();
+    }
+
+    [Fact]
+    public async Task Link_FileModifiedAtNewerThanLastSynced_RollsBackFileModifiedAtNotModifiedAt()
+    {
+        // FileModifiedAt is newer than the device's LastSyncedModifiedAt, meaning the
+        // device's file is older than the server's last file-content change. The rollback
+        // should bring song.FileModifiedAt down to the device's last-synced time so that
+        // future syncs don't keep flagging the device. song.ModifiedAt must NOT be touched.
+        var ctx = SetupWithSongAndRealMusicService();
+        var originalModifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        var originalFileModifiedAt = new DateTime(2025, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        var deviceLastSynced = new DateTime(2025, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        // Re-seed the song with explicit timestamps for this scenario
+        ctx.Song!.ModifiedAt = originalModifiedAt;
+        ctx.Song.FileModifiedAt = originalFileModifiedAt;
+        ctx.Db.SaveChanges();
+
+        var data = CreateSyncData(ctx.Song.Id, deviceLastSynced, checksum: "abc", algorithm: "XxHash128");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: data, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var updatedSong = ctx.Db.Songs.First(s => s.Id == ctx.Song.Id);
+        updatedSong.FileModifiedAt.ShouldBe(deviceLastSynced, "FileModifiedAt should be rolled back to the device's last-synced time");
+        updatedSong.ModifiedAt.ShouldBe(originalModifiedAt, "ModifiedAt must NOT be rolled back (only FileModifiedAt is sync-relevant)");
+    }
+
+    [Fact]
+    public async Task Link_FileModifiedAtOlderThanLastSynced_DoesNotRollBack()
+    {
+        // FileModifiedAt is older than the device's LastSyncedModifiedAt, meaning the
+        // device already has a file at least as new as the server's. No rollback needed.
+        var ctx = SetupWithSongAndRealMusicService();
+        var originalModifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        var originalFileModifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        var deviceLastSynced = new DateTime(2025, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        ctx.Song!.ModifiedAt = originalModifiedAt;
+        ctx.Song.FileModifiedAt = originalFileModifiedAt;
+        ctx.Db.SaveChanges();
+
+        var data = CreateSyncData(ctx.Song.Id, deviceLastSynced, checksum: "abc", algorithm: "XxHash128");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: data, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var updatedSong = ctx.Db.Songs.First(s => s.Id == ctx.Song.Id);
+        updatedSong.FileModifiedAt.ShouldBe(originalFileModifiedAt, "FileModifiedAt should not be rolled back when already older than last-synced");
+        updatedSong.ModifiedAt.ShouldBe(originalModifiedAt, "ModifiedAt should not be touched");
+    }
+
+    [Fact]
+    public async Task Link_FileModifiedAtNull_FallsBackToModifiedAtForComparison()
+    {
+        // Defensive: when FileModifiedAt is null (e.g. not yet backfilled), the
+        // comparison should fall back to ModifiedAt so sync does not break.
+        var ctx = SetupWithSongAndRealMusicService();
+        var originalModifiedAt = new DateTime(2025, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        var deviceLastSynced = new DateTime(2025, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+
+        ctx.Song!.ModifiedAt = originalModifiedAt;
+        ctx.Song.FileModifiedAt = null;
+        ctx.Db.SaveChanges();
+
+        var data = CreateSyncData(ctx.Song.Id, deviceLastSynced, checksum: "abc", algorithm: "XxHash128");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: data, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var updatedSong = ctx.Db.Songs.First(s => s.Id == ctx.Song.Id);
+        // With null FileModifiedAt, comparison uses ModifiedAt (newer than last-synced) -> rollback occurs.
+        // The rollback writes to FileModifiedAt (the new sync-relevant column), leaving ModifiedAt untouched.
+        updatedSong.FileModifiedAt.ShouldBe(deviceLastSynced, "FileModifiedAt should be set to the device's last-synced time when the null-fallback comparison triggers a rollback");
+        updatedSong.ModifiedAt.ShouldBe(originalModifiedAt, "ModifiedAt must NOT be rolled back");
     }
 
     #endregion

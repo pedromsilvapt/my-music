@@ -294,6 +294,64 @@ public class SongUpdateServiceSpecs
         updatedSong.Artists.Select(a => a.Artist.Name).ShouldContain("New Artist");
     }
 
+    [Fact]
+    public async Task UpdateSong_ChecksumChanged_UpdatesFileModifiedAt()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
+        var originalFileModifiedAt = DateTime.UtcNow.AddDays(-10);
+        var song = scenario.CreateSong("My Song",
+            checksum: checksum, checksumAlgorithm: algo,
+            repositoryPath: $"/data/My Song.mp3",
+            fileModifiedAt: originalFileModifiedAt);
+
+        // A title change rewrites the file -> new checksum
+        var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        var updatedSong = scenario.DbContext.Songs.First(s => s.Id == song.Id);
+        updatedSong.FileModifiedAt.ShouldNotBeNull();
+        updatedSong.FileModifiedAt.Value.ShouldBeGreaterThan(originalFileModifiedAt);
+    }
+
+    [Fact]
+    public async Task UpdateSong_ChecksumUnchanged_DoesNotUpdateFileModifiedAt()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
+        var originalFileModifiedAt = DateTime.UtcNow.AddDays(-10);
+        var song = scenario.CreateSong("My Song",
+            checksum: checksum, checksumAlgorithm: algo,
+            repositoryPath: $"/data/My Song.mp3",
+            fileModifiedAt: originalFileModifiedAt);
+
+        // First update rewrites the file (title change) -> new checksum
+        var firstUpdate = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
+        await service.UpdateSong(scenario.DbContext, song.Id, firstUpdate);
+
+        var songAfterFirst = scenario.DbContext.Songs.First(s => s.Id == song.Id);
+        var fileModifiedAtAfterFirst = songAfterFirst.FileModifiedAt!.Value;
+        var checksumAfterFirst = songAfterFirst.Checksum;
+
+        // Second update with the same title -> identical file content -> checksum unchanged
+        var secondUpdate = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, secondUpdate);
+
+        // Assert
+        var songAfterSecond = scenario.DbContext.Songs.First(s => s.Id == song.Id);
+        songAfterSecond.Checksum.ShouldBe(checksumAfterFirst);
+        songAfterSecond.FileModifiedAt.ShouldBe(fileModifiedAtAfterFirst);
+    }
+
     #region Helpers
 
     private void AddSongToDevice(MusicDbContext db, Song song, Device device, string path,

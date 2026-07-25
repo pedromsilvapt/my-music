@@ -558,4 +558,156 @@ public class DevicesControllerSyncCheckSpecs
         trackedSongs.Select(s => s.Entity.Id).ShouldNotContain(unrelatedSong2.Id);
         trackedSongs.Select(s => s.Entity.Id).ShouldContain(matchedSong.Id);
     }
+
+    [Fact]
+    public async Task CheckSync_MetadataOnlyEdit_ModifiedAtBumpedButFileModifiedAtUnchanged_SkipsFile()
+    {
+        // A metadata-only edit (e.g. rating/lyrics change) bumps ModifiedAt but NOT FileModifiedAt.
+        // The sync comparison now uses FileModifiedAt, so the file should be SKIPPED rather than
+        // triggering an unnecessary UpdateLocal on the device.
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var fileModifiedAt = lastSynced.AddMinutes(-10);
+        // ModifiedAt is NEWER than last-synced (metadata edit happened), but FileModifiedAt is OLDER (file unchanged).
+        var modifiedAt = DateTime.UtcNow.AddHours(-1);
+
+        var song = scenario.CreateSong("Song", modifiedAt: modifiedAt, fileModifiedAt: fileModifiedAt);
+        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        // Client file is unchanged (matches last-synced).
+        var clientModified = lastSynced.AddMinutes(-5);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.ShouldBeEmpty("Metadata-only edit should NOT trigger UpdateLocal because FileModifiedAt is unchanged");
+
+        var skippedRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Skipped).ToList();
+        skippedRecords.Count.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task CheckSync_FileContentChanged_FileModifiedAtNewerThanLastSynced_ReturnsUpdateLocalRecord()
+    {
+        // When the file content actually changed, FileModifiedAt is bumped newer than last-synced.
+        // This SHOULD trigger an UpdateLocal so the device downloads the new file.
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var fileModifiedAt = DateTime.UtcNow.AddHours(-1);
+        // ModifiedAt is OLDER than last-synced (no metadata edit since), but FileModifiedAt is NEWER.
+        var modifiedAt = lastSynced.AddMinutes(-10);
+
+        var song = scenario.CreateSong("Song", modifiedAt: modifiedAt, fileModifiedAt: fileModifiedAt);
+        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = lastSynced.AddMinutes(-5);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.Count.ShouldBe(1, "File content change (FileModifiedAt newer than last-synced) should trigger UpdateLocal");
+        updateLocalRecords[0].SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task CheckSync_FileModifiedAtNull_FallsBackToModifiedAtForComparison()
+    {
+        // Defensive: when FileModifiedAt is null (e.g. not yet backfilled), the
+        // comparison should fall back to ModifiedAt so sync behaves as before.
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var serverModified = DateTime.UtcNow.AddHours(-1);
+
+        var song = scenario.CreateSong("Song", modifiedAt: serverModified, fileModifiedAt: null);
+        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = lastSynced;
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var updateLocalRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateLocal).ToList();
+        updateLocalRecords.Count.ShouldBe(1, "With null FileModifiedAt, comparison falls back to ModifiedAt (newer than last-synced) -> UpdateLocal");
+    }
+
+    [Fact]
+    public async Task CheckSync_MetadataOnlyEdit_BothNewerThanLastSynced_ReturnsConflictUsingFileModifiedAt()
+    {
+        // Both client file and server metadata changed since last sync. But the file content
+        // on the server did NOT change (FileModifiedAt older than last-synced). With the new
+        // logic, the server side is considered unchanged -> no Conflict; client newer -> UpdateRemote.
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-3);
+        // Metadata edit bumped ModifiedAt, but the file content did not change (FileModifiedAt older).
+        var modifiedAt = DateTime.UtcNow.AddHours(-1);
+        var fileModifiedAt = lastSynced.AddMinutes(-10);
+
+        var song = scenario.CreateSong("Song", modifiedAt: modifiedAt, fileModifiedAt: fileModifiedAt);
+        var sd = scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        var clientModified = DateTime.UtcNow.AddHours(-2);
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = clientModified, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var conflictRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.Conflict).ToList();
+        conflictRecords.ShouldBeEmpty("No conflict: server file content unchanged (FileModifiedAt older than last-synced) even though metadata changed");
+
+        var updateRemoteRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateRemote).ToList();
+        updateRemoteRecords.Count.ShouldBe(1, "Client file is newer than last-synced and server file unchanged -> UpdateRemote");
+    }
 }

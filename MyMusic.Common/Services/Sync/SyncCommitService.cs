@@ -179,8 +179,8 @@ public class SyncCommitService(
         var songAfterCreate = songId.HasValue && songId.Value > 0
             ? await db.Songs.FindAsync([songId.Value], cancellationToken)
             : null;
-        logger.LogInformation("ProcessCreateRemoteAsync: path={Path}, songId={SongId}, song.ModifiedAtTicks={SongModifiedAtTicks}, sdIsNull={SdIsNull}, lastSyncedIsNull={LastSyncedIsNull}",
-            record.FilePath, songId, songAfterCreate?.ModifiedAt.Ticks, songDevice == null, songDevice?.LastSyncedModifiedAt == null);
+        logger.LogInformation("ProcessCreateRemoteAsync: path={Path}, songId={SongId}, song.FileModifiedAtTicks={SongFileModifiedAtTicks}, sdIsNull={SdIsNull}, lastSyncedIsNull={LastSyncedIsNull}",
+            record.FilePath, songId, songAfterCreate?.FileModifiedAt?.Ticks, songDevice == null, songDevice?.LastSyncedModifiedAt == null);
     }
 
     private async Task ProcessUpdateRemoteAsync(
@@ -314,13 +314,20 @@ public class SyncCommitService(
             (modifiedAt ?? DateTime.UtcNow).ToUniversalTime(), cancellationToken);
 
         var song = await db.Songs.FindAsync([songId.Value], cancellationToken);
-        logger.LogInformation("ProcessLinkAsync: path={Path}, songId={SongId}, song.ModifiedAtTicks={SongModifiedAtTicks}, songDeviceIsNull={SongDeviceIsNull}, lastSyncedIsNull={LastSyncedIsNull}",
-            record.FilePath, songId, song?.ModifiedAt.Ticks, songDevice == null, songDevice?.LastSyncedModifiedAt == null);
-        if (songDevice != null && song != null && song.ModifiedAt > songDevice.LastSyncedModifiedAt)
+        logger.LogInformation("ProcessLinkAsync: path={Path}, songId={SongId}, song.FileModifiedAtTicks={SongFileModifiedAtTicks}, songDeviceIsNull={SongDeviceIsNull}, lastSyncedIsNull={LastSyncedIsNull}",
+            record.FilePath, songId, song?.FileModifiedAt?.Ticks, songDevice == null, songDevice?.LastSyncedModifiedAt == null);
+
+        // The sync rollback uses FileModifiedAt (the file-content change time), not ModifiedAt
+        // (which also bumps on metadata-only edits). When the device's last-synced time is older
+        // than the server's last file-content change, the song's FileModifiedAt is rolled back so
+        // the device is not perpetually flagged as out-of-date. Null FileModifiedAt falls back to
+        // ModifiedAt defensively (e.g. rows not yet backfilled).
+        var songFileModifiedAt = song?.FileModifiedAt ?? song?.ModifiedAt;
+        if (songDevice != null && song != null && songFileModifiedAt > songDevice.LastSyncedModifiedAt)
         {
-            logger.LogInformation("ProcessLinkAsync: UPDATING song.ModifiedAt from {OldValueTicks} to {NewValueTicks} for path={Path}",
-                song.ModifiedAt.Ticks, songDevice.LastSyncedModifiedAt.Value.Ticks, record.FilePath);
-            song.ModifiedAt = songDevice.LastSyncedModifiedAt.Value.ToUniversalTime();
+            logger.LogInformation("ProcessLinkAsync: UPDATING song.FileModifiedAt from {OldValueTicks} to {NewValueTicks} for path={Path}",
+                songFileModifiedAt.Value.Ticks, songDevice.LastSyncedModifiedAt.Value.Ticks, record.FilePath);
+            song.FileModifiedAt = songDevice.LastSyncedModifiedAt.Value.ToUniversalTime();
         }
     }
 
