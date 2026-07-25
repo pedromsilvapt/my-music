@@ -284,4 +284,91 @@ public abstract partial class SyncTestsBase
         // Verify the local file was actually deleted
         App.FileShouldNotExist(originalPath, "DeleteLocal must target the existing DevicePath, not the new templated path");
     }
+
+    /// <summary>
+    /// Sync, Remove, Edit (new name), and Add (to device) again should apply to the same
+    /// device file.
+    ///
+    /// 1. Create loal song file
+    /// 2. Run sync, expect createdRemote: 1
+    /// 3. Simulate the user managing devices and removing the song from the device
+    /// 4. Edit the song, update title (append a (Live) to it)
+    /// 5. Simulate the user managing devices and adding back the song to the device
+    /// 6. Sync again, expect update local + rename
+    /// 7. Assert only one file exists locally, and has the updated name
+    /// </summary>
+    [Fact]
+    public async Task Sync_ShouldRenameFileWhenSongRemovedReAddedAndTitleChanged()
+    {
+        // Create a local song file on the device
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[1]);
+
+        // Run CLI sync to upload the song to the server
+        var result = await App.SyncAsync(new SyncOptions());
+        result.ShouldBe(createRemote: 1);
+
+        // Simulate the user removing the song from the device via Manage Devices
+        await new ManageSongDevicesFlow("The Alibi", App.DeviceName, "Remove").ExecuteAsync(Page);
+
+        // Edit the song title on the server, appending (Live) to the original title
+        await new EditSongFlow("The Alibi", new(Title: "The Alibi (Live)")).ExecuteAsync(Page);
+
+        // Simulate the user adding the song back to the device via Manage Devices
+        await new ManageSongDevicesFlow("The Alibi (Live)", App.DeviceName, "Add").ExecuteAsync(Page);
+
+        // Run CLI sync again; the local file should be updated and renamed, not re-downloaded
+        result = await App.SyncAsync(new SyncOptions());
+        result.ShouldBe(updateLocal: 1, rename: 1);
+
+        // Assert only one file exists locally, with the updated templated name
+        var expectedNewPath = "Dylan/The Alibi/The Alibi (Live) - Dylan.mp3";
+        App.GetAllFiles().ShouldBeEquivalentTo(new List<string> { expectedNewPath });
+
+        // Validate the remaining file has the updated title metadata
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(expectedNewPath), title: "The Alibi (Live)");
+    }
+
+
+    /// <summary>
+    /// Sync, Edit (new name), Remove, and Add (to device) again should apply
+    /// the Update Local and Rename.
+    ///
+    /// 1. Create loal song file
+    /// 2. Run sync, expect createdRemote: 1
+    /// 4. Edit the song, update title (append a (Live) to it)
+    /// 3. Manage devices and remove the song from the device
+    /// 5. Manage devices and add back the song to the device
+    /// 6. Sync again, expect update local + rename
+    /// 7. Assert only one file exists locally, and has the updated name
+    /// </summary>
+    [Fact]
+    public async Task Sync_ShouldRenameFileWhenSongEditedRemovedReAdded()
+    {
+        // Create a local song file on the device
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[1]);
+
+        // Run CLI sync to upload the song to the server
+        var result = await App.SyncAsync(new SyncOptions());
+        result.ShouldBe(createRemote: 1);
+
+        // Edit the song title on the server, appending (Live) to the original title
+        await new EditSongFlow("The Alibi", new(Title: "The Alibi (Live)")).ExecuteAsync(Page);
+
+        // Simulate the user removing the song from the device via Manage Devices
+        await new ManageSongDevicesFlow("The Alibi (Live)", App.DeviceName, "Remove").ExecuteAsync(Page);
+
+        // Simulate the user adding the song back to the device via Manage Devices
+        await new ManageSongDevicesFlow("The Alibi (Live)", App.DeviceName, "Add").ExecuteAsync(Page);
+
+        // Run CLI sync again; the local file should be updated and renamed, not re-downloaded
+        result = await App.SyncAsync(new SyncOptions());
+        result.ShouldBe(updateLocal: 1, rename: 1);
+
+        // Assert only one file exists locally, with the updated templated name
+        var expectedNewPath = "Dylan/The Alibi/The Alibi (Live) - Dylan.mp3";
+        App.GetAllFiles().ShouldBeEquivalentTo(new List<string> { expectedNewPath });
+
+        // Validate the remaining file has the updated title metadata
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(expectedNewPath), title: "The Alibi (Live)");
+    }
 }

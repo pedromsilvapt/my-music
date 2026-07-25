@@ -108,7 +108,6 @@ public class MusicService(
         {
             songDevice.SyncAction = null;
             songDevice.SyncActionReason = null;
-            songDevice.DevicePath = namingStrategy.Generate(EntityConverter.ToSong(song), naming);
 
             db.Update(songDevice);
         }
