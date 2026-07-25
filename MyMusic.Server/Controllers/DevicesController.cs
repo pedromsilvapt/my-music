@@ -36,7 +36,9 @@ public class DevicesController(
     IDeviceLookupService deviceLookup,
     ISyncSessionLookupService sessionLookup,
     ISyncPathResolver pathResolver,
-    ISyncComparisonHelper comparisonHelper) : ControllerBase
+    ISyncComparisonHelper comparisonHelper,
+    IDeviceListService deviceListService,
+    IDeviceGetService deviceGetService) : ControllerBase
 {
     [HttpGet]
     public async Task<ListDevicesResponse> List(
@@ -45,43 +47,16 @@ public class DevicesController(
         [FromQuery] string? filter = null,
         [FromQuery] bool includeSongs = false)
     {
-        var query = context.Devices
-            .Where(d => d.OwnerId == currentUser.Id);
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            query = FuzzySearchHelper.ApplyFuzzySearch(query, search, d => d.SearchableText);
-        }
-
-        if (!string.IsNullOrWhiteSpace(filter))
-        {
-            var filterExpression = DynamicFilterBuilder.BuildFilterFromDsl<Device>(filter);
-            query = query.Where(filterExpression);
-        }
-
-        var devices = await query.ToListAsync(cancellationToken);
-        var deviceIds = devices.Select(d => d.Id).ToList();
-
-        var songDeviceGroups = await context.SongDevices
-            .Where(sd => sd.SongId != null && deviceIds.Contains(sd.DeviceId))
-            .GroupBy(sd => sd.DeviceId)
-            .Select(g => new
-            {
-                DeviceId = g.Key,
-                Count = g.Count(),
-                SongRefs = includeSongs ? g.ToList() : null
-            })
-            .ToDictionaryAsync(x => x.DeviceId, x => x, cancellationToken);
+        var result = await deviceListService.ListAsync(currentUser.Id, search, filter, includeSongs, cancellationToken);
 
         return new ListDevicesResponse
         {
-            Devices = devices.Select(d =>
+            Devices = result.Devices.Select(entry =>
             {
-                var group = songDeviceGroups.GetValueOrDefault(d.Id);
-                var songs = includeSongs
-                    ? (group?.SongRefs?.Select(sd => new DeviceSongRef { Id = sd.SongId!.Value, Path = sd.DevicePath, SyncAction = sd.SyncAction?.ToString() }).ToList() ?? [])
-                    : null;
-                return ListDeviceItem.FromEntity(d, group?.Count ?? 0, songs);
+                var songs = entry.SongRefs?
+                    .Select(sr => new DeviceSongRef { Id = sr.SongId, Path = sr.DevicePath, SyncAction = sr.SyncAction?.ToString() })
+                    .ToList();
+                return ListDeviceItem.FromEntity(entry.Device, entry.SongCount, songs);
             }).ToList(),
         };
     }
@@ -191,16 +166,12 @@ public class DevicesController(
     [HttpGet("{deviceId:long}", Name = "GetDevice")]
     public async Task<ActionResult<GetDeviceResponse>> Get(long deviceId, CancellationToken cancellationToken)
     {
-        var device = await FindDeviceAsync(deviceId, cancellationToken);
-        if (device == null) return NotFound();
-
-        var songCount = await context.SongDevices
-            .Where(sd => sd.DeviceId == deviceId)
-            .CountAsync(cancellationToken);
+        var result = await deviceGetService.GetAsync(deviceId, currentUser.Id, cancellationToken);
+        if (result == null) return NotFound();
 
         return new GetDeviceResponse
         {
-            Device = GetDeviceItem.FromEntity(device, songCount),
+            Device = GetDeviceItem.FromEntity(result.Device, result.SongCount),
         };
     }
 

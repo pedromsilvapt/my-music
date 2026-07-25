@@ -16,4 +16,9 @@ internal static class DevicesControllerHelpers
     public static ISyncPathResolver PathResolver => new SyncPathResolver();
 
     public static ISyncComparisonHelper ComparisonHelper => new SyncComparisonHelper();
+
+    public static IDeviceListService CreateDeviceListService(Scenario scenario) => new DeviceListService(scenario.DbContext);
+
+    public static IDeviceGetService CreateDeviceGetService(Scenario scenario) =>
+        new DeviceGetService(scenario.DbContext, DeviceLookup);
 }

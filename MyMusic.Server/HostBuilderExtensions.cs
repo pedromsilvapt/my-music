@@ -97,6 +97,10 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<ISyncPathResolver, SyncPathResolver>();
         builder.Services.AddSingleton<ISyncComparisonHelper, SyncComparisonHelper>();
 
+        // Per-operation device services (Phase 1 of the controllers refactor).
+        builder.Services.AddScoped<IDeviceListService, DeviceListService>();
+        builder.Services.AddScoped<IDeviceGetService, DeviceGetService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();

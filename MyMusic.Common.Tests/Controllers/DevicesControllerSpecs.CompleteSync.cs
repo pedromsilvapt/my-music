@@ -30,7 +30,9 @@ public class DevicesControllerCompleteSyncSpecs
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper
+            DevicesControllerHelpers.ComparisonHelper,
+            DevicesControllerHelpers.CreateDeviceListService(scenario),
+            DevicesControllerHelpers.CreateDeviceGetService(scenario)
         );
     }
 

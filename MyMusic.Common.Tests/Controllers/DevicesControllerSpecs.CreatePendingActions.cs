@@ -43,7 +43,9 @@ public class DevicesControllerCreatePendingActionsSpecs
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper
+            DevicesControllerHelpers.ComparisonHelper,
+            DevicesControllerHelpers.CreateDeviceListService(scenario),
+            DevicesControllerHelpers.CreateDeviceGetService(scenario)
         );
     }
 

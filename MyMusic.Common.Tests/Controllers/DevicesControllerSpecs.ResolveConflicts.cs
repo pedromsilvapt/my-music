@@ -32,7 +32,9 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper
+            DevicesControllerHelpers.ComparisonHelper,
+            DevicesControllerHelpers.CreateDeviceListService(scenario),
+            DevicesControllerHelpers.CreateDeviceGetService(scenario)
         );
     }
 
@@ -219,7 +221,9 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper
+            DevicesControllerHelpers.ComparisonHelper,
+            DevicesControllerHelpers.CreateDeviceListService(scenario),
+            DevicesControllerHelpers.CreateDeviceGetService(scenario)
         );
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
@@ -286,7 +290,9 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper
+            DevicesControllerHelpers.ComparisonHelper,
+            DevicesControllerHelpers.CreateDeviceListService(scenario),
+            DevicesControllerHelpers.CreateDeviceGetService(scenario)
         );
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
@@ -391,7 +397,9 @@ public class DevicesControllerResolveConflictsSpecs
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper
+            DevicesControllerHelpers.ComparisonHelper,
+            DevicesControllerHelpers.CreateDeviceListService(scenario),
+            DevicesControllerHelpers.CreateDeviceGetService(scenario)
         );
         var device = scenario.CreateDevice();
         var session = new DeviceSyncSession
