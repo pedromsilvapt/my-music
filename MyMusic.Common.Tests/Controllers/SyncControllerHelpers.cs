@@ -1,6 +1,7 @@
 using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common;
+using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
@@ -87,5 +88,40 @@ internal static class SyncControllerHelpers
             DevicesControllerHelpers.PathResolver,
             config,
             Substitute.For<ILogger<SyncResolveConflictsService>>());
+    }
+
+    public static ISyncReportErrorService CreateSyncReportErrorService(Scenario scenario, ISyncActionsServerFactory? factory = null) =>
+        new SyncReportErrorService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
+            factory ?? Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<ILogger<SyncReportErrorService>>());
+
+    public static ISyncAcknowledgeService CreateSyncAcknowledgeService(Scenario scenario, ISyncCommitService? commitService = null) =>
+        new SyncAcknowledgeService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            commitService ?? CreateRealAcknowledgeCommitService(),
+            Substitute.For<ILogger<SyncAcknowledgeService>>());
+
+    /// <summary>
+    /// Builds a substitute <see cref="ISyncCommitService"/> whose
+    /// <see cref="ISyncCommitService.AcknowledgeRecordsAsync"/> delegates to the real
+    /// <see cref="SyncCommitService.AcknowledgeRecords"/> static implementation, mirroring the
+    /// production wiring where <see cref="SyncAcknowledgeService"/> wraps that method.
+    /// </summary>
+    public static ISyncCommitService CreateRealAcknowledgeCommitService()
+    {
+        var service = Substitute.For<ISyncCommitService>();
+        service.AcknowledgeRecordsAsync(Arg.Any<List<DeviceSyncSessionRecord>>(), Arg.Any<DateTime?>())
+            .Returns(call =>
+            {
+                SyncCommitService.AcknowledgeRecords(
+                    call.ArgAt<List<DeviceSyncSessionRecord>>(0),
+                    call.ArgAt<DateTime?>(1));
+                return Task.CompletedTask;
+            });
+        return service;
     }
 }

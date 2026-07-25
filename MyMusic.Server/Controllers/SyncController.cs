@@ -34,6 +34,8 @@ public class SyncController(
     ISyncDeviceSongsService syncDeviceSongsService,
     ISyncCheckService syncCheckService,
     ISyncResolveConflictsService syncResolveConflictsService,
+    ISyncReportErrorService syncReportErrorService,
+    ISyncAcknowledgeService syncAcknowledgeService,
     ISyncSessionLookupService sessionLookup) : ControllerBase
 {
     [HttpPost("{deviceId:long}/sync/start")]
@@ -225,6 +227,57 @@ public class SyncController(
         return new SyncResolveConflictsResponse
         {
             Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+            Counts = SyncActionCounts.FromRecords(result.Records),
+        };
+    }
+
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/error")]
+    public async Task<ActionResult<ReportSyncErrorResponse>> ReportSyncError(long deviceId, long sessionId,
+        [FromBody] ReportSyncErrorRequest request, CancellationToken cancellationToken)
+    {
+        var result = await syncReportErrorService.ReportErrorAsync(
+            deviceId,
+            sessionId,
+            currentUser.Id,
+            new SyncReportErrorInput
+            {
+                FilePath = request.FilePath,
+                ErrorMessage = request.ErrorMessage,
+                SongId = request.SongId,
+            },
+            cancellationToken);
+        if (!result.Found)
+        {
+            return result.Failure == SyncReportErrorFailure.SessionNotFound
+                ? NotFound($"Sync session not found with id {sessionId}")
+                : NotFound();
+        }
+
+        return new ReportSyncErrorResponse
+        {
+            Counts = SyncActionCounts.FromAction(SyncRecordAction.Error),
+        };
+    }
+
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/acknowledge")]
+    public async Task<ActionResult<AcknowledgeActionResponse>> AcknowledgeAction(long deviceId, long sessionId,
+        [FromBody] AcknowledgeActionRequest request, CancellationToken cancellationToken)
+    {
+        var result = await syncAcknowledgeService.AcknowledgeAsync(
+            deviceId,
+            currentUser.Id,
+            new SyncAcknowledgeInput
+            {
+                RecordIds = request.RecordIds,
+                ModifiedAt = request.ModifiedAt,
+            },
+            cancellationToken);
+        if (!result.Found) return NotFound();
+        if (result.BadRequest) return BadRequest("RecordIds is required");
+
+        return new AcknowledgeActionResponse
+        {
+            Success = true,
             Counts = SyncActionCounts.FromRecords(result.Records),
         };
     }

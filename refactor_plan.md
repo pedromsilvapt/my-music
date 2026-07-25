@@ -64,7 +64,7 @@ Each phase: write/update tests first, implement, run tests, update status flag.
 - [x] **Phase 10 — Pending actions & device songs.** `SyncPendingActionsService` (absorbs `CreatePendingActionsForDevice` + naming helpers via `ISyncPathResolver`), `SyncDeviceSongsService`.
 - [x] **Phase 11 — Sync Check.** `SyncCheckService` (the ~280-line method; uses `ISyncPathResolver`, `ISyncComparisonHelper`, `ISyncActionsServerFactory`).
 - [x] **Phase 12 — Resolve Conflicts.** `SyncResolveConflictsService` (the ~190-line method).
-- [ ] **Phase 13 — Report error & Acknowledge.** `SyncReportErrorService`, `SyncAcknowledgeService` (acknowledge wraps existing `ISyncCommitService.AcknowledgeRecordsAsync`).
+- [x] **Phase 13 — Report error & Acknowledge.** `SyncReportErrorService`, `SyncAcknowledgeService` (acknowledge wraps existing `ISyncCommitService.AcknowledgeRecordsAsync`).
 - [ ] **Phase 14 — Final cleanup.** Remove leftover private helpers from controllers, verify all routes unchanged, run full unit test suite + targeted integration tests, confirm no file >500 lines.
 
 ## Verification per phase

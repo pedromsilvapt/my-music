@@ -31,6 +31,8 @@ public class DevicesControllerSyncCheckSpecs
             SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
             SyncControllerHelpers.CreateSyncCheckService(scenario, factory),
             Substitute.For<ISyncResolveConflictsService>(),
+            Substitute.For<ISyncReportErrorService>(),
+            Substitute.For<ISyncAcknowledgeService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 

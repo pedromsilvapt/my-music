@@ -13,35 +13,30 @@ namespace MyMusic.Common.Tests.Controllers;
 
 public class DevicesControllerAcknowledgeActionSpecs
 {
-    private DevicesController CreateController(Scenario scenario, ISyncCommitService? syncCommitService = null, ISyncActionsServerFactory? factory = null)
+    private SyncController CreateController(Scenario scenario, ISyncCommitService? syncCommitService = null)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
+        return new SyncController(
+            Substitute.For<ILogger<SyncController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            factory ?? Substitute.For<ISyncActionsServerFactory>(),
-            syncCommitService ?? Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+            scenario.FileSystem,
+            SyncControllerHelpers.CreateSyncStartService(scenario),
+            SyncControllerHelpers.CreateSyncCompleteService(scenario),
+            SyncControllerHelpers.CreateSyncCancelService(scenario),
+            Substitute.For<ISyncCommitService>(),
+            SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
+            SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
+            Substitute.For<ISyncCheckService>(),
+            Substitute.For<ISyncResolveConflictsService>(),
+            Substitute.For<ISyncReportErrorService>(),
+            SyncControllerHelpers.CreateSyncAcknowledgeService(scenario, syncCommitService),
+            DevicesControllerHelpers.SessionLookup);
     }
 
-    private ISyncCommitService CreateRealAcknowledgeService()
+    private static ISyncCommitService CreateRealAcknowledgeService()
     {
         var service = Substitute.For<ISyncCommitService>();
         service.AcknowledgeRecordsAsync(Arg.Any<List<DeviceSyncSessionRecord>>(), Arg.Any<DateTime?>())

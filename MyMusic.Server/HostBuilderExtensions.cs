@@ -139,6 +139,10 @@ public static class HostBuilderExtensions
         // Per-operation sync workflow services (Phase 12 of the controllers refactor).
         builder.Services.AddScoped<ISyncResolveConflictsService, SyncResolveConflictsService>();
 
+        // Per-operation sync workflow services (Phase 13 of the controllers refactor).
+        builder.Services.AddScoped<ISyncReportErrorService, SyncReportErrorService>();
+        builder.Services.AddScoped<ISyncAcknowledgeService, SyncAcknowledgeService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();

@@ -137,64 +137,6 @@ public class DevicesController(
         };
     }
 
-    [HttpPost("{deviceId:long}/sync/{sessionId:long}/error")]
-    public async Task<ActionResult<ReportSyncErrorResponse>> ReportSyncError(long deviceId, long sessionId,
-        [FromBody] ReportSyncErrorRequest request, CancellationToken cancellationToken)
-    {
-        var device = await FindDeviceAsync(deviceId, cancellationToken);
-        if (device == null) return NotFound();
-
-        var session = await context.DeviceSyncSessions
-            .Where(s => s.Id == sessionId && s.DeviceId == deviceId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (session == null)
-        {
-            return NotFound($"Sync session not found with id {sessionId}");
-        }
-
-        var syncActions = syncActionsServerFactory.Create(context, sessionId, deviceId, session.IsDryRun);
-        var record = await syncActions.ActionError(request.FilePath, request.ErrorMessage, request.SongId, reason: request.ErrorMessage, cancellationToken);
-
-        return new ReportSyncErrorResponse
-        {
-            Counts = SyncActionCounts.FromAction(SyncRecordAction.Error),
-        };
-    }
-
-    [HttpPost("{deviceId:long}/sync/{sessionId:long}/acknowledge")]
-    public async Task<ActionResult<AcknowledgeActionResponse>> AcknowledgeAction(long deviceId, long sessionId,
-        [FromBody] AcknowledgeActionRequest request, CancellationToken cancellationToken)
-    {
-        var device = await FindDeviceAsync(deviceId, cancellationToken);
-        if (device == null) return NotFound();
-
-        if (request.RecordIds is not { Count: > 0 })
-        {
-            return BadRequest("RecordIds is required");
-        }
-
-        var records = await context.DeviceSyncSessionRecords
-            .Where(r => request.RecordIds.Contains(r.Id) && r.Session.DeviceId == deviceId)
-            .ToListAsync(cancellationToken);
-
-        var acknowledgedRecords = new List<DeviceSyncSessionRecord>();
-
-        await syncCommitService.AcknowledgeRecordsAsync(records, request.ModifiedAt);
-
-        acknowledgedRecords.AddRange(records);
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Acknowledged {Count} records for device {DeviceId}", acknowledgedRecords.Count, deviceId);
-
-        return new AcknowledgeActionResponse
-        {
-            Success = true,
-            Counts = SyncActionCounts.FromRecords(acknowledgedRecords),
-        };
-    }
-
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/upload")]
     [RequestSizeLimit(100_000_000)]
     public async Task<ActionResult<SyncUploadResponse>> UploadFile(

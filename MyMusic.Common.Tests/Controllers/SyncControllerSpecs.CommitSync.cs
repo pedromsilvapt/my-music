@@ -33,6 +33,8 @@ public class SyncControllerCommitSyncSpecs
             SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
             Substitute.For<ISyncCheckService>(),
             Substitute.For<ISyncResolveConflictsService>(),
+            Substitute.For<ISyncReportErrorService>(),
+            Substitute.For<ISyncAcknowledgeService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 
