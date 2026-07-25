@@ -21,8 +21,13 @@ public class SyncControllerStartSyncSpecs
         return new SyncController(
             Substitute.For<ILogger<SyncController>>(),
             currentUser,
+            scenario.DbContext,
+            scenario.FileSystem,
             SyncControllerHelpers.CreateSyncStartService(scenario, factory),
-            SyncControllerHelpers.CreateSyncCompleteService(scenario));
+            SyncControllerHelpers.CreateSyncCompleteService(scenario),
+            SyncControllerHelpers.CreateSyncCancelService(scenario),
+            Substitute.For<ISyncCommitService>(),
+            DevicesControllerHelpers.SessionLookup);
     }
 
     [Fact]

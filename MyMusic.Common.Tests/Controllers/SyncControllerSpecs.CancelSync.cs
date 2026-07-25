@@ -11,48 +11,38 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Controllers;
 
-public class DevicesControllerCancelSyncSpecs
+public class SyncControllerCancelSyncSpecs
 {
-    private readonly ISyncCommitService _syncCommitService = Substitute.For<ISyncCommitService>();
-
-    private DevicesController CreateController(Scenario scenario)
+    private SyncController CreateController(Scenario scenario)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
+        return new SyncController(
+            Substitute.For<ILogger<SyncController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>(),
             scenario.FileSystem,
-            Substitute.For<ISyncActionsServerFactory>(),
-            _syncCommitService,
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+            SyncControllerHelpers.CreateSyncStartService(scenario),
+            SyncControllerHelpers.CreateSyncCompleteService(scenario),
+            SyncControllerHelpers.CreateSyncCancelService(scenario),
+            Substitute.For<ISyncCommitService>(),
+            DevicesControllerHelpers.SessionLookup);
     }
 
     [Fact]
     public async Task CancelSync_InProgressSession_SetsStatusToCancelled()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: "/data");
 
+        // Act
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
+        // Assert
         var updated = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == session.Id);
         updated.Status.ShouldBe(SyncSessionStatus.Cancelled);
         updated.CompletedAt.ShouldNotBeNull();
@@ -62,6 +52,7 @@ public class DevicesControllerCancelSyncSpecs
     [Fact]
     public async Task CancelSync_InProgressSession_DeletesStagingDirectory()
     {
+        // Arrange
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var controller = CreateController(scenario);
@@ -73,8 +64,10 @@ public class DevicesControllerCancelSyncSpecs
         mockFs.AddDirectory(stagingDir);
         mockFs.AddFile($"{stagingDir}/test.mp3", new MockFileData("data"));
 
+        // Act
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
+        // Assert
         mockFs.Directory.Exists(stagingDir).ShouldBeFalse();
         response.Value.StagingDirectoryDeleted.ShouldBeTrue();
     }
@@ -82,13 +75,16 @@ public class DevicesControllerCancelSyncSpecs
     [Fact]
     public async Task CancelSync_NoStagingDirectory_ReportsNotDeleted()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: "/data");
 
+        // Act
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
+        // Assert
         response.Value.StagingDirectoryDeleted.ShouldBeFalse();
         response.Value.SessionId.ShouldBe(session.Id);
     }
@@ -96,24 +92,29 @@ public class DevicesControllerCancelSyncSpecs
     [Fact]
     public async Task CancelSync_NoRepositoryPath_ReportsNotDeleted()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: null);
 
+        // Act
         var response = await controller.CancelSync(device.Id, session.Id, CancellationToken.None);
 
+        // Assert
         response.Value.StagingDirectoryDeleted.ShouldBeFalse();
     }
 
     [Fact]
     public async Task CancelSync_CommittedSession_ThrowsException()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
 
+        // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
             controller.CancelSync(device.Id, session.Id, CancellationToken.None));
     }
@@ -121,11 +122,13 @@ public class DevicesControllerCancelSyncSpecs
     [Fact]
     public async Task CancelSync_CompletedSession_ThrowsException()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed);
 
+        // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
             controller.CancelSync(device.Id, session.Id, CancellationToken.None));
     }
@@ -133,11 +136,13 @@ public class DevicesControllerCancelSyncSpecs
     [Fact]
     public async Task CancelSync_AlreadyCancelledSession_ThrowsException()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled);
 
+        // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
             controller.CancelSync(device.Id, session.Id, CancellationToken.None));
     }
@@ -145,18 +150,22 @@ public class DevicesControllerCancelSyncSpecs
     [Fact]
     public async Task CancelSync_SessionNotFound_ReturnsNotFound()
     {
+        // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var device = scenario.CreateDevice();
 
+        // Act
         var result = await controller.CancelSync(device.Id, 9999, CancellationToken.None);
 
+        // Assert
         result.Result.ShouldBeOfType<NotFoundResult>();
     }
 
     [Fact]
     public async Task CancelSync_OtherUsersSession_ReturnsNotFound()
     {
+        // Arrange
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
         var controller = CreateController(scenario);
@@ -171,8 +180,10 @@ public class DevicesControllerCancelSyncSpecs
         scenario.DbContext.SaveChanges();
         var session = scenario.CreateSession(otherDevice, status: SyncSessionStatus.InProgress);
 
+        // Act
         var result = await controller.CancelSync(otherDevice.Id, session.Id, CancellationToken.None);
 
+        // Assert
         result.Result.ShouldBeOfType<NotFoundResult>();
     }
 }

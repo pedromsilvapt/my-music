@@ -137,97 +137,6 @@ public class DevicesController(
         };
     }
 
-    [HttpPost("{deviceId:long}/sync/{sessionId:long}/cancel")]
-    public async Task<ActionResult<SyncCancelResponse>> CancelSync(long deviceId, long sessionId,
-        CancellationToken cancellationToken)
-    {
-        var session = await FindSessionAsync(sessionId, deviceId, cancellationToken);
-        if (session == null) return NotFound();
-
-        if (session.Status != SyncSessionStatus.InProgress)
-        {
-            throw new Exception($"Sync session {sessionId} cannot be cancelled (status: {session.Status})");
-        }
-
-        session.Status = SyncSessionStatus.Cancelled;
-        session.CompletedAt = DateTime.UtcNow;
-
-        var stagingDeleted = StagingDirectoryCleanupService.DeleteStagingDirectory(fileSystem, session.RepositoryPath, session.Id, logger);
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Cancelled sync session {SessionId} for device {DeviceId}", sessionId, deviceId);
-
-        return new SyncCancelResponse
-        {
-            SessionId = sessionId,
-            StagingDirectoryDeleted = stagingDeleted,
-        };
-    }
-
-    [HttpPost("{deviceId:long}/sync/{sessionId:long}/commit")]
-    public async Task<ActionResult<SyncCommitResponse>> CommitSync(long deviceId, long sessionId,
-        [FromBody] SyncCommitRequest? request, CancellationToken cancellationToken)
-    {
-        var session = await FindSessionAsync(sessionId, deviceId, cancellationToken);
-        if (session == null) return NotFound();
-
-        if (session.Status != SyncSessionStatus.InProgress && session.Status != SyncSessionStatus.Committed)
-        {
-            throw new Exception($"Sync session {sessionId} cannot be committed (status: {session.Status})");
-        }
-
-        if (session.Status == SyncSessionStatus.Committed)
-        {
-            var existingRecords = await context.DeviceSyncSessionRecords
-                .Where(r => r.SessionId == sessionId)
-                .ToListAsync(cancellationToken);
-
-            return MapCommitResponse(existingRecords, session.CompletedAt ?? DateTime.UtcNow);
-        }
-
-        var direction = request?.Direction?.ToLowerInvariant() ?? "both";
-
-        var result = await syncCommitService.CommitAsync(context, sessionId, deviceId, session.IsDryRun, direction, cancellationToken);
-
-        session.Status = SyncSessionStatus.Committed;
-        session.CompletedAt = DateTime.UtcNow;
-
-        StagingDirectoryCleanupService.DeleteStagingDirectory(fileSystem, session.RepositoryPath, session.Id, logger);
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Committed sync session {SessionId} for device {DeviceId}", sessionId, deviceId);
-
-        return MapCommitResponse(result, session.CompletedAt.Value);
-    }
-
-    private static SyncCommitResponse MapCommitResponse(Dictionary<SyncRecordAction, int> counts, DateTime committedAt)
-    {
-        return new SyncCommitResponse
-        {
-            CreateRemoteCount = counts.GetValueOrDefault(SyncRecordAction.CreateRemote),
-            UpdateRemoteCount = counts.GetValueOrDefault(SyncRecordAction.UpdateRemote),
-            SkippedCount = counts.GetValueOrDefault(SyncRecordAction.Skipped),
-            CreateLocalCount = counts.GetValueOrDefault(SyncRecordAction.CreateLocal),
-            UpdateLocalCount = counts.GetValueOrDefault(SyncRecordAction.UpdateLocal),
-            DeleteLocalCount = counts.GetValueOrDefault(SyncRecordAction.DeleteLocal),
-            LinkCount = counts.GetValueOrDefault(SyncRecordAction.Link),
-            UnlinkCount = counts.GetValueOrDefault(SyncRecordAction.Unlink),
-            RenameCount = counts.GetValueOrDefault(SyncRecordAction.Rename),
-            ConflictCount = counts.GetValueOrDefault(SyncRecordAction.Conflict),
-            UpdateTimestampCount = counts.GetValueOrDefault(SyncRecordAction.UpdateTimestamp),
-            ErrorCount = counts.GetValueOrDefault(SyncRecordAction.Error),
-            CommittedAt = committedAt,
-        };
-    }
-
-    private static SyncCommitResponse MapCommitResponse(SyncCommitResult result, DateTime committedAt)
-        => MapCommitResponse(result.ActionCounts, committedAt);
-
-    private static SyncCommitResponse MapCommitResponse(List<DeviceSyncSessionRecord> records, DateTime committedAt)
-        => MapCommitResponse(records.GroupBy(r => r.Action).ToDictionary(g => g.Key, g => g.Count()), committedAt);
-
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/pending-actions")]
     public async Task<ActionResult<CreatePendingActionsResponse>> CreatePendingActions(long deviceId, long sessionId, CancellationToken cancellationToken)
     {
@@ -1035,9 +944,6 @@ public class DevicesController(
 
     private async Task<Device?> FindDeviceAsync(long deviceId, CancellationToken cancellationToken)
         => await deviceLookup.FindDeviceAsync(context, deviceId, currentUser.Id, cancellationToken);
-
-    private async Task<DeviceSyncSession?> FindSessionAsync(long sessionId, long deviceId, CancellationToken cancellationToken)
-        => await sessionLookup.FindSessionAsync(context, sessionId, deviceId, currentUser.Id, cancellationToken);
 
     private async Task<ActionResult<DeviceSyncSession>> GetActiveSessionAsync(long sessionId, long deviceId, CancellationToken cancellationToken)
     {

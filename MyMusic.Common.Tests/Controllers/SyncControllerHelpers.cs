@@ -1,3 +1,4 @@
+using System.IO.Abstractions;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
@@ -26,4 +27,11 @@ internal static class SyncControllerHelpers
             scenario.DbContext,
             DevicesControllerHelpers.SessionLookup,
             Substitute.For<ILogger<SyncCompleteService>>());
+
+    public static ISyncCancelService CreateSyncCancelService(Scenario scenario) =>
+        new SyncCancelService(
+            scenario.DbContext,
+            DevicesControllerHelpers.SessionLookup,
+            scenario.FileSystem,
+            Substitute.For<ILogger<SyncCancelService>>());
 }
