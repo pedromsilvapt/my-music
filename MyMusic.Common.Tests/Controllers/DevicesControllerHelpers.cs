@@ -1,5 +1,8 @@
+using Microsoft.Extensions.Logging;
+using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
+using NSubstitute;
 
 namespace MyMusic.Common.Tests.Controllers;
 
@@ -21,4 +24,17 @@ internal static class DevicesControllerHelpers
 
     public static IDeviceGetService CreateDeviceGetService(Scenario scenario) =>
         new DeviceGetService(scenario.DbContext, DeviceLookup);
+
+    public static IDeviceCreateService CreateDeviceCreateService(Scenario scenario, ICurrentUser currentUser) =>
+        new DeviceCreateService(
+            scenario.DbContext,
+            currentUser,
+            Substitute.For<ILogger<DeviceCreateService>>());
+
+    public static IDeviceUpdateService CreateDeviceUpdateService(Scenario scenario, ICurrentUser currentUser) =>
+        new DeviceUpdateService(
+            scenario.DbContext,
+            DeviceLookup,
+            currentUser,
+            Substitute.For<ILogger<DeviceUpdateService>>());
 }

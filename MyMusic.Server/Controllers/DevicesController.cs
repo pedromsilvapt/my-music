@@ -38,7 +38,9 @@ public class DevicesController(
     ISyncPathResolver pathResolver,
     ISyncComparisonHelper comparisonHelper,
     IDeviceListService deviceListService,
-    IDeviceGetService deviceGetService) : ControllerBase
+    IDeviceGetService deviceGetService,
+    IDeviceCreateService deviceCreateService,
+    IDeviceUpdateService deviceUpdateService) : ControllerBase
 {
     [HttpGet]
     public async Task<ListDevicesResponse> List(
@@ -65,28 +67,21 @@ public class DevicesController(
     public async Task<ActionResult<CreateDeviceResponse>> Create([FromBody] CreateDeviceRequest request,
         CancellationToken cancellationToken)
     {
-        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken);
-        if (user == null) return NotFound("User not found");
-
-        var device = new Device
-        {
-            Name = request.Name,
-            Icon = request.Icon,
-            Color = request.Color,
-            NamingTemplate = request.NamingTemplate,
-            ImportOnPurchase = request.ImportOnPurchase,
-            OwnerId = currentUser.Id,
-            Owner = user,
-        };
-
-        context.Devices.Add(device);
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Created device {DeviceName} with ID {DeviceId} for user {UserId}, Template={NamingTemplate}", device.Name, device.Id, currentUser.Id, device.NamingTemplate ?? "(null)");
+        var result = await deviceCreateService.CreateAsync(
+            new DeviceCreateInput
+            {
+                Name = request.Name,
+                Icon = request.Icon,
+                Color = request.Color,
+                NamingTemplate = request.NamingTemplate,
+                ImportOnPurchase = request.ImportOnPurchase,
+            },
+            cancellationToken);
+        if (result == null) return NotFound("User not found");
 
         return new CreateDeviceResponse
         {
-            Device = CreateDeviceItem.FromEntity(device),
+            Device = CreateDeviceItem.FromEntity(result.Device),
         };
     }
 
@@ -94,21 +89,19 @@ public class DevicesController(
     public async Task<ActionResult<UpdateDeviceResponse>> Update(long deviceId, [FromBody] UpdateDeviceRequest request,
         CancellationToken cancellationToken)
     {
-        var device = await FindDeviceAsync(deviceId, cancellationToken);
-        if (device == null) return NotFound();
+        var result = await deviceUpdateService.UpdateAsync(
+            deviceId,
+            new DeviceUpdateInput
+            {
+                Icon = request.Icon,
+                Color = request.Color,
+                NamingTemplate = request.NamingTemplate,
+                ImportOnPurchase = request.ImportOnPurchase,
+            },
+            cancellationToken);
+        if (result == null) return NotFound();
 
-        device.Icon = request.Icon;
-        device.Color = request.Color;
-        device.NamingTemplate = request.NamingTemplate;
-        if (request.ImportOnPurchase.HasValue)
-        {
-            device.ImportOnPurchase = request.ImportOnPurchase.Value;
-        }
-
-        await context.SaveChangesAsync(cancellationToken);
-
-        logger.LogInformation("Updated device {DeviceId} for user {UserId}", deviceId, currentUser.Id);
-
+        var device = result.Device;
         return new UpdateDeviceResponse
         {
             Device = new UpdateDeviceItem

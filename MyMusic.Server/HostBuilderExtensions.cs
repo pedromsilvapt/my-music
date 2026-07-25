@@ -101,6 +101,10 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IDeviceListService, DeviceListService>();
         builder.Services.AddScoped<IDeviceGetService, DeviceGetService>();
 
+        // Per-operation device services (Phase 2 of the controllers refactor).
+        builder.Services.AddScoped<IDeviceCreateService, DeviceCreateService>();
+        builder.Services.AddScoped<IDeviceUpdateService, DeviceUpdateService>();
+
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();

@@ -43,7 +43,9 @@ public class DevicesControllerUploadSpecs
             DevicesControllerHelpers.PathResolver,
             DevicesControllerHelpers.ComparisonHelper,
             DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario)
+            DevicesControllerHelpers.CreateDeviceGetService(scenario),
+            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
+            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser)
         );
     }
 
