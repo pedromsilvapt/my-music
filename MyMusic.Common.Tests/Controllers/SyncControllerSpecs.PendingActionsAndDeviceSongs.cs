@@ -32,6 +32,7 @@ public class SyncControllerPendingActionsSpecs
             Substitute.For<ISyncCommitService>(),
             SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
             SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
+            Substitute.For<ISyncCheckService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 
@@ -219,6 +220,7 @@ public class SyncControllerDeviceSongsSpecs
             Substitute.For<ISyncCommitService>(),
             SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
             SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
+            Substitute.For<ISyncCheckService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 

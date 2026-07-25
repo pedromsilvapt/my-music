@@ -32,6 +32,7 @@ public class SyncController(
     ISyncCommitService syncCommitService,
     ISyncPendingActionsService syncPendingActionsService,
     ISyncDeviceSongsService syncDeviceSongsService,
+    ISyncCheckService syncCheckService,
     ISyncSessionLookupService sessionLookup) : ControllerBase
 {
     [HttpPost("{deviceId:long}/sync/start")]
@@ -156,6 +157,34 @@ public class SyncController(
                 Path = s.Path,
                 Action = s.Action,
             }).ToList(),
+        };
+    }
+
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/check")]
+    public async Task<ActionResult<SyncCheckResponse>> CheckSync(long deviceId, long sessionId, [FromBody] SyncCheckRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await syncCheckService.CheckAsync(
+            deviceId,
+            sessionId,
+            currentUser.Id,
+            new SyncCheckInput
+            {
+                Files = request.Files.Select(f => new SyncCheckFileInfo
+                {
+                    Path = f.Path,
+                    ModifiedAt = f.ModifiedAt,
+                    CreatedAt = f.CreatedAt,
+                }).ToList(),
+                Force = request.Force,
+            },
+            cancellationToken);
+        if (result == null) return NotFound();
+
+        return new SyncCheckResponse
+        {
+            Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+            Counts = SyncActionCounts.FromRecords(result.Records.Where(r => r.Action != SyncRecordAction.UpdateLocal && r.Action != SyncRecordAction.Conflict)),
         };
     }
 }

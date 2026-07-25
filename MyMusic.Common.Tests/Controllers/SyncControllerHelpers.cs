@@ -53,4 +53,22 @@ internal static class SyncControllerHelpers
             scenario.DbContext,
             DevicesControllerHelpers.DeviceLookup,
             Substitute.For<ILogger<SyncDeviceSongsService>>());
+
+    public static ISyncCheckService CreateSyncCheckService(Scenario scenario, ISyncActionsServerFactory? factory = null)
+    {
+        var config = Microsoft.Extensions.Options.Options.Create(new Config
+        {
+            MusicRepositoryPath = "/music",
+            DefaultNamingTemplate = "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}",
+        });
+        return new SyncCheckService(
+            scenario.DbContext,
+            DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
+            factory ?? new SyncActionsServerFactory(),
+            DevicesControllerHelpers.PathResolver,
+            DevicesControllerHelpers.ComparisonHelper,
+            config,
+            Substitute.For<ILogger<SyncCheckService>>());
+    }
 }

@@ -13,39 +13,24 @@ namespace MyMusic.Common.Tests.Controllers;
 
 public class DevicesControllerSyncCheckSpecs
 {
-    private DevicesController CreateController(Scenario scenario, ISyncActionsServerFactory? factory = null)
+    private SyncController CreateController(Scenario scenario, ISyncActionsServerFactory? factory = null)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        var config = Substitute.For<Microsoft.Extensions.Options.IOptions<Config>>();
-        config.Value.Returns(new Config
-        {
-            MusicRepositoryPath = "/music",
-            DefaultNamingTemplate = "{{ album.artist.name ?? artists[0].name ?? \"Unknown\" }}/{{ album.name ?? \"No Album\" }}/{{ simple_label }}{{ extension ?? \".mp3\" }}"
-        });
-
-        return new DevicesController(
-            Substitute.For<ILogger<DevicesController>>(),
+        return new SyncController(
+            Substitute.For<ILogger<SyncController>>(),
             currentUser,
             scenario.DbContext,
-            Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>(),
-            config,
-            Substitute.For<System.IO.Abstractions.IFileSystem>(),
-            factory ?? Substitute.For<ISyncActionsServerFactory>(),
+            scenario.FileSystem,
+            SyncControllerHelpers.CreateSyncStartService(scenario),
+            SyncControllerHelpers.CreateSyncCompleteService(scenario),
+            SyncControllerHelpers.CreateSyncCancelService(scenario),
             Substitute.For<ISyncCommitService>(),
-            Substitute.For<ISyncUploadService>(),
-            DevicesControllerHelpers.DeviceLookup,
-            DevicesControllerHelpers.SessionLookup,
-            DevicesControllerHelpers.PathResolver,
-            DevicesControllerHelpers.ComparisonHelper,
-            DevicesControllerHelpers.CreateDeviceListService(scenario),
-            DevicesControllerHelpers.CreateDeviceGetService(scenario),
-            DevicesControllerHelpers.CreateDeviceCreateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceUpdateService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceDeleteService(scenario, currentUser),
-            DevicesControllerHelpers.CreateDeviceFilterValuesService(scenario)
-        );
+            SyncControllerHelpers.CreateSyncPendingActionsService(scenario),
+            SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
+            SyncControllerHelpers.CreateSyncCheckService(scenario, factory),
+            DevicesControllerHelpers.SessionLookup);
     }
 
 
@@ -719,5 +704,82 @@ public class DevicesControllerSyncCheckSpecs
 
         var updateRemoteRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.UpdateRemote).ToList();
         updateRemoteRecords.Count.ShouldBe(1, "Client file is newer than last-synced and server file unchanged -> UpdateRemote");
+    }
+
+    [Fact]
+    public async Task CheckSync_NoMatchingSongDevice_ReturnsCreateRemoteRecord()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/new.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(device.Id, session.Id, request, CancellationToken.None);
+
+        var createRemoteRecords = response.Value.Records.Where(r => r.Action == SyncRecordAction.CreateRemote).ToList();
+        createRemoteRecords.Count.ShouldBe(1);
+        createRemoteRecords[0].FilePath.ShouldBe("/music/new.mp3");
+        createRemoteRecords[0].SongId.ShouldBeNull();
+
+        // CreateRemote is tentative (inline record) and should not be persisted during CheckSync.
+        var dbRecords = await scenario.DbContext.DeviceSyncSessionRecords
+            .Where(r => r.SessionId == session.Id && r.Action == SyncRecordAction.CreateRemote)
+            .ToListAsync();
+        dbRecords.ShouldBeEmpty("CreateRemote records should not be persisted to DB during CheckSync (tentative)");
+    }
+
+    [Fact]
+    public async Task CheckSync_DeviceNotFound_ReturnsNotFound()
+    {
+        var scenario = new Scenario();
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(9999, 0, request, CancellationToken.None);
+
+        response.Result.ShouldBeOfType<NotFoundResult>();
+    }
+
+    [Fact]
+    public async Task CheckSync_OtherUsersDevice_ReturnsNotFound()
+    {
+        var scenario = new Scenario();
+        var otherUser = scenario.CreateUser("Other", "other");
+        var otherDevice = scenario.CreateDevice("OtherPhone", ownerId: otherUser.Id);
+        var session = scenario.CreateSession(otherDevice, status: SyncSessionStatus.InProgress);
+        var factory = new SyncActionsServerFactory();
+        var controller = CreateController(scenario, factory);
+
+        var request = new SyncCheckRequest
+        {
+            Files =
+            [
+                new SyncFileInfoItem { Path = "/music/song.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }
+            ],
+            Force = false,
+        };
+
+        var response = await controller.CheckSync(otherDevice.Id, session.Id, request, CancellationToken.None);
+
+        response.Result.ShouldBeOfType<NotFoundResult>();
     }
 }
