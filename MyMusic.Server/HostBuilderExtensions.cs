@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.IO.Abstractions;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Json;
@@ -8,8 +7,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using MyMusic.Common;
 using MyMusic.Common.Services;
-using MyMusic.Common.Services.Devices;
-using MyMusic.Common.Services.Sync;
 using MyMusic.OpenTelemetry;
 using MyMusic.Server.Services;
 using Scalar.AspNetCore;
@@ -36,21 +33,18 @@ public static class HostBuilderExtensions
 
     public static T UseMyMusicServer<T>(this T builder) where T : IHostApplicationBuilder
     {
+        // Configuration, logging and telemetry
         builder.Configuration.AddEnvironmentVariables("MYMUSIC_");
-
         builder.Logging.AddSimpleConsole(c => c.SingleLine = true);
         builder.Services.AddMyMusicOpenTelemetry(builder.Configuration, "MyMusic.Server");
-        // builder.Services.ConfigureHttpJsonOptions(opts =>
-        // {
-        //     var enumConverter = new JsonStringEnumConverter();
-        //     opts.SerializerOptions.Converters.Add(enumConverter);
-        // });
+        builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
+
+        // JSON, MVC and OpenAPI
         builder.Services.Configure<JsonOptions>(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.Configure<MvcJsonOptions>(o =>
             o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
         builder.Services.AddControllers();
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddSingleton<IFileSystem, FileSystem>();
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi(options =>
         {
@@ -70,95 +64,11 @@ public static class HostBuilderExtensions
             { Type = JsonSchemaType.Integer | JsonSchemaType.Null, Format = "int64" });
 
             options.AddSchemaTransformer<TypeTransformer>();
-
-            // options.AddSchemaTransformer((schema, context, cancellationToken) =>
-            // {
-            //     if (schema.Type?.Contains("integer") == true)
-            //     {
-            //         schema.Type = "integer";
-            //         schema.Pattern = null;
-            //     }
-            //     return Task.CompletedTask;
-            // });
         });
+
+        // Server-only services
         builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
-        builder.Services.AddScoped<IUserDeleteService, UserDeleteService>();
-        builder.Services.AddScoped<ISongDeleteService, SongDeleteService>();
-        builder.Services.AddScoped<IAlbumDeleteService, AlbumDeleteService>();
-        builder.Services.AddScoped<IArtistDeleteService, ArtistDeleteService>();
-        builder.Services.AddScoped<IGenreDeleteService, GenreDeleteService>();
-        builder.Services.AddScoped<IArtworkDeleteService, ArtworkDeleteService>();
-
-        builder.Services.AddScoped<ISyncActionsServerFactory, SyncActionsServerFactory>();
-
-        // Shared sync/device lookup and helper services (Phase 0 of the controllers refactor).
-        builder.Services.AddScoped<IDeviceLookupService, DeviceLookupService>();
-        builder.Services.AddScoped<ISyncSessionLookupService, SyncSessionLookupService>();
-        builder.Services.AddSingleton<ISyncPathResolver, SyncPathResolver>();
-        builder.Services.AddSingleton<ISyncComparisonHelper, SyncComparisonHelper>();
-
-        // Per-operation device services (Phase 1 of the controllers refactor).
-        builder.Services.AddScoped<IDeviceListService, DeviceListService>();
-        builder.Services.AddScoped<IDeviceGetService, DeviceGetService>();
-
-        // Per-operation device services (Phase 2 of the controllers refactor).
-        builder.Services.AddScoped<IDeviceCreateService, DeviceCreateService>();
-        builder.Services.AddScoped<IDeviceUpdateService, DeviceUpdateService>();
-
-        // Per-operation device services (Phase 3 of the controllers refactor).
-        builder.Services.AddScoped<IDeviceDeleteService, DeviceDeleteService>();
-
-        // Per-operation device services (Phase 4 of the controllers refactor).
-        builder.Services.AddScoped<IDeviceFilterValuesService, DeviceFilterValuesService>();
-
-        // Per-operation sync session services (Phase 5 of the controllers refactor).
-        builder.Services.AddScoped<ISyncSessionListService, SyncSessionListService>();
-
-        // Per-operation sync session services (Phase 6 of the controllers refactor).
-        builder.Services.AddScoped<ISyncSessionRecordsQueryService, SyncSessionRecordsQueryService>();
-        builder.Services.AddScoped<ISyncSessionFilterValuesService, SyncSessionFilterValuesService>();
-
-        // Per-operation sync session services (Phase 7 of the controllers refactor).
-        builder.Services.AddScoped<ISyncSessionDeleteService, SyncSessionDeleteService>();
-        builder.Services.AddScoped<ISyncSessionPruneService, SyncSessionPruneService>();
-
-        // Per-operation sync workflow services (Phase 8 of the controllers refactor).
-        builder.Services.AddScoped<ISyncStartService, SyncStartService>();
-        builder.Services.AddScoped<ISyncCompleteService, SyncCompleteService>();
-
-        // Per-operation sync workflow services (Phase 9 of the controllers refactor).
-        builder.Services.AddScoped<ISyncCancelService, SyncCancelService>();
-
-        // Per-operation sync workflow services (Phase 10 of the controllers refactor).
-        builder.Services.AddScoped<ISyncPendingActionsService, SyncPendingActionsService>();
-        builder.Services.AddScoped<ISyncDeviceSongsService, SyncDeviceSongsService>();
-
-        // Per-operation sync workflow services (Phase 11 of the controllers refactor).
-        builder.Services.AddScoped<ISyncCheckService, SyncCheckService>();
-
-        // Per-operation sync workflow services (Phase 12 of the controllers refactor).
-        builder.Services.AddScoped<ISyncResolveConflictsService, SyncResolveConflictsService>();
-
-        // Per-operation sync workflow services (Phase 13 of the controllers refactor).
-        builder.Services.AddScoped<ISyncReportErrorService, SyncReportErrorService>();
-        builder.Services.AddScoped<ISyncAcknowledgeService, SyncAcknowledgeService>();
-
-        builder.Services.AddDistributedMemoryCache();
-        builder.Services.AddHttpClient();
-        builder.Services.AddScoped<IImageCacheService, ImageCacheService>();
-        builder.Services.AddScoped<IThumbnailProxyService, ThumbnailProxyService>();
-        builder.Services.AddScoped<IImageComparisonService, ImageComparisonService>();
-        builder.Services.AddScoped<ISoundalikeMergeService, SoundalikeMergeService>();
-        builder.Services.AddScoped<ISoundalikeResolutionService, SoundalikeResolutionService>();
-
-        builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
-        builder.Services.Configure<ThumbnailCacheConfig>(builder.Configuration.GetSection("ThumbnailCache"));
-
-        // Register the API path resolver as singleton
         builder.Services.AddSingleton<IApiPathResolver, ApiPathResolver>();
-
-        // Register MetadataDiffBuilder with simple type registration
-        builder.Services.AddScoped<MetadataDiffBuilder>();
 
         return builder;
     }
