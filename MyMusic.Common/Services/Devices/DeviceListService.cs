@@ -49,13 +49,15 @@ public class DeviceListService(MusicDbContext db) : IDeviceListService
         var entries = devices.Select(d =>
         {
             var group = songDeviceGroups.GetValueOrDefault(d.Id);
+            // When includeSongs is true, SongRefs MUST be a non-null list (empty when
+            // the device has no songs) so clients can always treat it as present.
             var songRefs = includeSongs
-                ? group?.SongRefs?.Select(sd => new DeviceListSongRef
+                ? (group?.SongRefs?.Select(sd => new DeviceListSongRef
                 {
                     SongId = sd.SongId!.Value,
                     DevicePath = sd.DevicePath,
                     SyncAction = sd.SyncAction,
-                }).ToList()
+                }).ToList() ?? [])
                 : null;
             return new DeviceListEntry
             {

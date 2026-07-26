@@ -184,6 +184,23 @@ public class DeviceListServiceSpecs
     }
 
     [Fact]
+    public async Task List_IncludeSongs_EmptyDevice_ReturnsEmptySongRefs()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        scenario.CreateDevice("Empty");
+
+        // Act
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: true, CancellationToken.None);
+
+        // Assert: when includeSongs=true, SongRefs MUST be a non-null empty list,
+        // never null, so clients can treat it as always-present.
+        var entry = result.Devices.Single();
+        entry.SongRefs.ShouldNotBeNull();
+        entry.SongRefs.Count.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task List_IncludeSongs_ReflectsSyncAction()
     {
         // Arrange
