@@ -40,11 +40,8 @@ public record SyncAcknowledgeResult
 
 /// <summary>
 /// Acknowledges client-action sync records for a device owned by the current user, delegating the
-/// per-record acknowledge logic to <see cref="ISyncCommitService.AcknowledgeRecordsAsync"/>
-/// (per the refactor plan: "acknowledge wraps existing ISyncCommitService.AcknowledgeRecordsAsync").
-/// Extracted from <c>DevicesController.AcknowledgeAction</c> as part of Phase 13 of the controllers
-/// refactor so the controller stays thin (input/output + DTO mapping only). Reuses
-/// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check; does not reimplement the
+/// per-record acknowledge logic to <see cref="ISyncCommitService.AcknowledgeRecordsAsync"/>.
+/// Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check; does not reimplement the
 /// acknowledge record mutation logic.
 /// </summary>
 public interface ISyncAcknowledgeService

@@ -7,7 +7,7 @@ using NSubstitute;
 namespace MyMusic.Common.Tests.Controllers;
 
 /// <summary>
-/// Provides real (non-mocked) instances of the Phase 0 shared helper services so that
+/// Provides real (non-mocked) instances of the shared helper services so that
 /// <see cref="DevicesController"/> specs exercise the actual delegation wiring end-to-end.
 /// </summary>
 internal static class DevicesControllerHelpers

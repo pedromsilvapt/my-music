@@ -4,8 +4,8 @@ namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
 /// Fetches a single <see cref="Device"/> owned by a user along with its song count.
-/// Extracted from DevicesController.Get. Reuses <see cref="IDeviceLookupService"/> for
-/// the device lookup to keep device identity operations centralized.
+/// Reuses <see cref="IDeviceLookupService"/> for the device lookup to keep device identity
+/// operations centralized.
 /// </summary>
 public interface IDeviceGetService
 {

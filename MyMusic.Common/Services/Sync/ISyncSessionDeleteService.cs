@@ -26,9 +26,9 @@ public sealed class SyncSessionDeleteResult
 
 /// <summary>
 /// Deletes a single <see cref="DeviceSyncSession"/> owned by the current user, along with its
-/// <see cref="DeviceSyncSessionRecord"/> rows and staging directory. Extracted from
-/// DevicesController.DeleteSession. Reuses <see cref="ISyncSessionLookupService"/> for the
-/// identity check and <see cref="StagingDirectoryCleanupService"/> for staging cleanup.
+/// <see cref="DeviceSyncSessionRecord"/> rows and staging directory. Reuses
+/// <see cref="ISyncSessionLookupService"/> for the identity check and
+/// <see cref="StagingDirectoryCleanupService"/> for staging cleanup.
 /// </summary>
 public interface ISyncSessionDeleteService
 {

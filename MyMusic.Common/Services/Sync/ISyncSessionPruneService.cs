@@ -28,8 +28,7 @@ public sealed class SyncSessionPruneResult
 /// <summary>
 /// Prunes old/completed <see cref="DeviceSyncSession"/> entities for a device owned by the current
 /// user, along with their <see cref="DeviceSyncSessionRecord"/> rows and staging directories.
-/// Extracted from DevicesController.PruneSessions. Reuses
-/// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the identity check and
+/// Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the identity check and
 /// <see cref="StagingDirectoryCleanupService"/> for staging cleanup.
 /// </summary>
 public interface ISyncSessionPruneService

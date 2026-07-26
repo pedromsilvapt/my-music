@@ -3,9 +3,9 @@ using MyMusic.Common.Entities;
 namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
-/// Updates an existing <see cref="Device"/> owned by the current user. Extracted from
-/// DevicesController.Update so the controller stays thin. Reuses <see cref="IDeviceLookupService"/>
-/// for the device lookup to keep device identity operations centralized.
+/// Updates an existing <see cref="Device"/> owned by the current user. Reuses
+/// <see cref="IDeviceLookupService"/> for the device lookup to keep device identity operations
+/// centralized.
 /// </summary>
 public interface IDeviceUpdateService
 {

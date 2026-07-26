@@ -9,11 +9,11 @@ namespace MyMusic.Common.Tests.Controllers;
 
 /// <summary>
 /// Provides real (non-mocked) instances of the dependencies required by
-/// <see cref="MyMusic.Server.Controllers.SyncSessionsController"/> so that its specs
+/// <see cref="MyMusic.Server.Controllers.DeviceSyncSessionsController"/> so that its specs
 /// exercise the actual delegation wiring end-to-end. Reuses the shared lookup helpers
 /// from <see cref="DevicesControllerHelpers"/> to keep identity operations centralized.
 /// </summary>
-internal static class SyncSessionsControllerHelpers
+internal static class DeviceSyncSessionsControllerHelpers
 {
     public static ISyncSessionListService CreateSyncSessionListService(Scenario scenario) =>
         new SyncSessionListService(

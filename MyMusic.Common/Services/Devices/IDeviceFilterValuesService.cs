@@ -2,16 +2,14 @@ namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
 /// Returns the distinct values for a single device filter field, scoped to the current
-/// owner. Extracted from DevicesController.GetFilterValues so the controller stays thin
-/// (input/output + DTO mapping only). The filter metadata endpoint (pure static output)
-/// remains in the controller.
+/// owner. The filter metadata endpoint (pure static output) remains in the controller.
 /// </summary>
 public interface IDeviceFilterValuesService
 {
     /// <summary>
     /// Returns the distinct, ordered, optionally searched, and limited values for the
     /// given <paramref name="field"/> across the devices owned by <paramref name="ownerId"/>.
-    /// Unknown fields return an empty list (mirrors the prior controller behavior).
+    /// Unknown fields return an empty list.
     /// </summary>
     Task<DeviceFilterValuesResult> GetAsync(
         long ownerId,

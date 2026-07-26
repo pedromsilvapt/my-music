@@ -10,20 +10,20 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Controllers;
 
-public class SyncSessionsControllerListSessionsSpecs
+public class DeviceSyncSessionsControllerListSessionsSpecs
 {
-    private SyncSessionsController CreateController(Scenario scenario)
+    private DeviceSyncSessionsController CreateController(Scenario scenario)
     {
         var currentUser = Substitute.For<ICurrentUser>();
         currentUser.Id.Returns(scenario.AdminUser.Id);
 
-        return new SyncSessionsController(
+        return new DeviceSyncSessionsController(
             currentUser,
-            SyncSessionsControllerHelpers.CreateSyncSessionListService(scenario),
-            SyncSessionsControllerHelpers.CreateSyncSessionRecordsQueryService(scenario),
-            SyncSessionsControllerHelpers.CreateSyncSessionFilterValuesService(scenario),
-            SyncSessionsControllerHelpers.CreateSyncSessionDeleteService(scenario),
-            SyncSessionsControllerHelpers.CreateSyncSessionPruneService(scenario));
+            DeviceSyncSessionsControllerHelpers.CreateSyncSessionListService(scenario),
+            DeviceSyncSessionsControllerHelpers.CreateSyncSessionRecordsQueryService(scenario),
+            DeviceSyncSessionsControllerHelpers.CreateSyncSessionFilterValuesService(scenario),
+            DeviceSyncSessionsControllerHelpers.CreateSyncSessionDeleteService(scenario),
+            DeviceSyncSessionsControllerHelpers.CreateSyncSessionPruneService(scenario));
     }
 
     [Fact]

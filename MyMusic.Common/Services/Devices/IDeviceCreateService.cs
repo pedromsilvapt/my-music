@@ -3,8 +3,7 @@ using MyMusic.Common.Entities;
 namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
-/// Creates a new <see cref="Device"/> scoped to the current user. Extracted from
-/// DevicesController.Create so the controller stays thin (input/output + DTO mapping only).
+/// Creates a new <see cref="Device"/> scoped to the current user.
 /// </summary>
 public interface IDeviceCreateService
 {

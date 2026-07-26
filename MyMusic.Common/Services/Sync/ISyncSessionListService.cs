@@ -5,8 +5,7 @@ namespace MyMusic.Common.Services.Sync;
 /// <summary>
 /// Lists the most recent <see cref="DeviceSyncSession"/> entities for a device owned by the
 /// current user, with their <see cref="DeviceSyncSession.Records"/> loaded for action-count
-/// aggregation. Extracted from DevicesController.ListSessions. Reuses
-/// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for device identity checks so not-found / foreign-device
+/// aggregation. Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for device identity checks so not-found / foreign-device
 /// cases resolve to <c>null</c> (which the controller maps to <c>NotFound</c>).
 /// </summary>
 public interface ISyncSessionListService

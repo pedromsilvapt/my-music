@@ -22,9 +22,7 @@ public record SyncDeviceSongsResult
 
 /// <summary>
 /// Lists the <see cref="SongDevice"/> entries for a device owned by the current user, projecting
-/// <c>SongId</c>, <c>DevicePath</c> and the current <see cref="SongSyncAction"/> (if any). Extracted
-/// from DevicesController.GetDeviceSongs as part of Phase 10 of the controllers refactor so the
-/// controller stays thin (input/output + DTO mapping only). Reuses
+/// <c>SongId</c>, <c>DevicePath</c> and the current <see cref="SongSyncAction"/> (if any). Reuses
 /// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check.
 /// </summary>
 public interface ISyncDeviceSongsService

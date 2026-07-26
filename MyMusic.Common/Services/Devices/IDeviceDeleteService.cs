@@ -4,8 +4,7 @@ namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
 /// Deletes a <see cref="Device"/> and all of its associated data (sync sessions, sync session
-/// records, SongDevices, and staging directories) for the current user. Extracted from
-/// DevicesController.Delete so the controller stays thin (input/output only). Reuses
+/// records, SongDevices, and staging directories) for the current user. Reuses
 /// <see cref="IDeviceLookupService"/> for device identity and <see cref="StagingDirectoryCleanupService"/>
 /// for staging cleanup to avoid duplicating that logic.
 /// </summary>

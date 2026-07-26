@@ -15,10 +15,7 @@ public record SyncPendingActionsResult
 /// Generates <see cref="DeviceSyncSessionRecord"/> entries for a device's pending <see cref="SongDevice"/>
 /// sync actions (<see cref="SongSyncAction.Remove"/>, <see cref="SongSyncAction.Download"/>), applying
 /// naming-template path resolution and unique-path collision handling via <see cref="ISyncPathResolver"/>.
-/// Extracted from DevicesController.CreatePendingActions (and its private
-/// <c>CreatePendingActionsForDevice</c> helper) as part of Phase 10 of the controllers refactor so the
-/// controller stays thin (input/output + DTO mapping only). Reuses
-/// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check and
+/// Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check and
 /// <see cref="ISyncPathResolver"/> for naming/path-collision logic.
 /// </summary>
 public interface ISyncPendingActionsService

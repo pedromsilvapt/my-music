@@ -61,9 +61,7 @@ public record SyncResolveConflictsResult
 /// compared against the server song checksum: matching checksums produce a timestamp-update record
 /// (no file transfer), while differing checksums produce a conflict record (conflicts) or an
 /// update-local record (potential updates, optionally followed by a rename record when the naming
-/// template changed the target path). Extracted from <c>DevicesController.ResolveConflicts</c>
-/// (the ~190-line method) as part of Phase 12 of the controllers refactor so the controller stays
-/// thin (input/output + DTO mapping only). Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> and
+/// template changed the target path). Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> and
 /// <see cref="ISyncSessionLookupService"/> for identity checks, <see cref="ISyncPathResolver"/>
 /// for naming/path-collision logic, and <see cref="ISyncActionsServerFactory"/> to persist the
 /// records.

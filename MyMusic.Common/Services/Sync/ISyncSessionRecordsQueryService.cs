@@ -5,11 +5,9 @@ namespace MyMusic.Common.Services.Sync;
 /// <summary>
 /// Queries <see cref="DeviceSyncSessionRecord"/> rows for a single sync session, applying the
 /// optional DSL filter, backward-compatible <c>actions</c> comma filter, sorting, and offset-based
-/// pagination. Extracted from <see cref="MyMusic.Server.Controllers.DevicesController"/> so the
-/// controller stays thin (input/output + DTO mapping only). Reuses
-/// <see cref="ISyncSessionLookupService"/> for the session identity/ownership check so not-found
-/// and foreign-device cases resolve to <c>null</c> (which the controller maps to
-/// <c>NotFound</c>).
+/// pagination. Reuses <see cref="ISyncSessionLookupService"/> for the session identity/ownership
+/// check so not-found and foreign-device cases resolve to <c>null</c> (which the controller maps
+/// to <c>NotFound</c>).
 /// </summary>
 public interface ISyncSessionRecordsQueryService
 {

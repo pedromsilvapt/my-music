@@ -44,8 +44,7 @@ public enum SyncCompleteFailure
 /// <summary>
 /// Completes a <see cref="DeviceSyncSession"/> previously committed for a device owned by the
 /// current user, updating the device's <see cref="Device.LastSyncAt"/> (non-dry-run only) and
-/// aggregating the session's records into per-action counts. Extracted from
-/// DevicesController.CompleteSync so the controller stays thin. Reuses
+/// aggregating the session's records into per-action counts. Reuses
 /// <see cref="ISyncSessionLookupService"/> for the session identity check.
 /// </summary>
 public interface ISyncCompleteService

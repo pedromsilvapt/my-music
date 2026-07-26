@@ -4,7 +4,7 @@ namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
 /// Lists the current user's <see cref="Device"/> entities with optional fuzzy search,
-/// DSL filtering, and per-device song counts/refs. Extracted from DevicesController.List.
+/// DSL filtering, and per-device song counts/refs.
 /// </summary>
 public interface IDeviceListService
 {

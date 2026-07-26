@@ -11,12 +11,11 @@ namespace MyMusic.Server.Controllers;
 /// <summary>
 /// Sync session lifecycle endpoints (list, records, filters, delete, prune). Lives under the
 /// <c>devices</c> route prefix so session endpoints keep their existing paths
-/// (<c>/devices/{deviceId}/sessions</c>, ...). Extracted from <see cref="DevicesController"/>
-/// as part of the controllers refactor (Phase 5+).
+/// (<c>/devices/{deviceId}/sessions</c>, ...).
 /// </summary>
 [ApiController]
-[Route("devices")]
-public class SyncSessionsController(
+[Route("devices/{deviceId:long}/sessions")]
+public class DeviceSyncSessionsController(
     ICurrentUser currentUser,
     ISyncSessionListService sessionListService,
     ISyncSessionRecordsQueryService sessionRecordsQueryService,
@@ -24,7 +23,7 @@ public class SyncSessionsController(
     ISyncSessionDeleteService sessionDeleteService,
     ISyncSessionPruneService sessionPruneService) : ControllerBase
 {
-    [HttpGet("{deviceId:long}/sessions")]
+    [HttpGet]
     public async Task<ActionResult<ListSyncSessionsResponse>> ListSessions(
         long deviceId,
         [FromQuery] int count = 5,
@@ -39,7 +38,7 @@ public class SyncSessionsController(
         };
     }
 
-    [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records")]
+    [HttpGet("{sessionId:long}/records")]
     public async Task<ActionResult<ListSyncRecordsResponse>> GetSessionRecords(
         long deviceId,
         long sessionId,
@@ -73,7 +72,7 @@ public class SyncSessionsController(
         };
     }
 
-    [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records/filter-metadata")]
+    [HttpGet("{sessionId:long}/records/filter-metadata")]
     public FilterMetadataResponse GetSessionRecordsFilterMetadata(
         long deviceId,
         long sessionId)
@@ -141,7 +140,7 @@ public class SyncSessionsController(
         };
     }
 
-    [HttpGet("{deviceId:long}/sessions/{sessionId:long}/records/filter-values")]
+    [HttpGet("{sessionId:long}/records/filter-values")]
     public async Task<FilterValuesResponse> GetSessionRecordsFilterValues(
         long deviceId,
         long sessionId,
@@ -162,7 +161,7 @@ public class SyncSessionsController(
         return new FilterValuesResponse { Values = result.Values };
     }
 
-    [HttpDelete("{deviceId:long}/sessions/{sessionId:long}")]
+    [HttpDelete("{sessionId:long}")]
     public async Task<ActionResult<DeleteSessionResponse>> DeleteSession(
         long deviceId,
         long sessionId,
@@ -179,7 +178,7 @@ public class SyncSessionsController(
         return new DeleteSessionResponse { Success = true };
     }
 
-    [HttpPost("{deviceId:long}/sessions/prune")]
+    [HttpPost("prune")]
     public async Task<ActionResult<PruneSessionsResponse>> PruneSessions(
         long deviceId,
         [FromBody] PruneSessionsRequest request,

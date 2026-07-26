@@ -5,9 +5,7 @@ namespace MyMusic.Server.DTO.Sync;
 
 /// <summary>
 /// Maps a <see cref="SyncCommitResult"/> (or the raw session records of an already-committed
-/// session) into a <see cref="SyncCommitResponse"/>. Extracted from DevicesController.CommitSync
-/// as part of Phase 9 of the controllers refactor so the controller stays thin
-/// (input/output + DTO mapping only).
+/// session) into a <see cref="SyncCommitResponse"/>.
 /// </summary>
 public static class SyncCommitResponseMapper
 {

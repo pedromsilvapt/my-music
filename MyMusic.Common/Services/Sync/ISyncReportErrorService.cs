@@ -55,9 +55,7 @@ public enum SyncReportErrorFailure
 
 /// <summary>
 /// Records a client-reported sync error for a device sync session owned by the current user.
-/// Extracted from <c>DevicesController.ReportSyncError</c> as part of Phase 13 of the controllers
-/// refactor so the controller stays thin (input/output + DTO mapping only). Reuses
-/// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check,
+/// Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check,
 /// <see cref="ISyncSessionLookupService"/> for the session lookup, and
 /// <see cref="ISyncActionsServerFactory"/> to persist the <c>Error</c> record.
 /// </summary>

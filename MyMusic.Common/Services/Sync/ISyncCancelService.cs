@@ -12,10 +12,8 @@ public record SyncCancelResult
 /// <summary>
 /// Cancels an in-progress <see cref="DeviceSyncSession"/> for a device owned by the current
 /// user, marking the session as <see cref="SyncSessionStatus.Cancelled"/> and deleting the
-/// session's staging directory. Extracted from DevicesController.CancelSync as part of Phase 9
-/// of the controllers refactor so the controller stays thin (input/output + DTO mapping only).
-/// Reuses <see cref="ISyncSessionLookupService"/> for the session identity check and
-/// <see cref="StagingDirectoryCleanupService"/> for staging cleanup.
+/// session's staging directory. Reuses <see cref="ISyncSessionLookupService"/> for the session
+/// identity check and <see cref="StagingDirectoryCleanupService"/> for staging cleanup.
 /// </summary>
 public interface ISyncCancelService
 {

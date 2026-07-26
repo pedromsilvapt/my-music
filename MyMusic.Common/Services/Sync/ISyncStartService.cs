@@ -35,9 +35,8 @@ public record SyncStartResult
 
 /// <summary>
 /// Starts a new <see cref="DeviceSyncSession"/> for a device owned by the current user,
-/// optionally recording client-reported scan errors. Extracted from
-/// DevicesController.StartSync so the controller stays thin (input/output + DTO mapping only).
-/// Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check and
+/// optionally recording client-reported scan errors. Reuses
+/// <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> for the device identity check and
 /// <see cref="ISyncActionsServerFactory"/> to record scan errors.
 /// </summary>
 public interface ISyncStartService

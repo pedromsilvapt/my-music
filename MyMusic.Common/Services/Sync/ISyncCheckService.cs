@@ -38,9 +38,7 @@ public record SyncCheckResult
 /// Compares client-reported device files against the server's <see cref="SongDevice"/> state for
 /// a device owned by the current user, producing <see cref="DeviceSyncSessionRecord"/> entries
 /// describing the required sync actions (create/update/delete remote, update local, conflict,
-/// skipped, ...). Extracted from <c>DevicesController.CheckSync</c> (the ~280-line method) as part
-/// of Phase 11 of the controllers refactor so the controller stays thin (input/output + DTO
-/// mapping only). Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> and <see cref="ISyncSessionLookupService"/>
+/// skipped, ...). Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> and <see cref="ISyncSessionLookupService"/>
 /// for identity checks, <see cref="ISyncPathResolver"/> for naming/path-collision logic,
 /// <see cref="ISyncComparisonHelper"/> for timestamp comparisons, and
 /// <see cref="ISyncActionsServerFactory"/> to persist the records that are not tentative.

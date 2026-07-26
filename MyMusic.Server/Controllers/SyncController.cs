@@ -16,8 +16,7 @@ namespace MyMusic.Server.Controllers;
 /// <summary>
 /// Sync workflow endpoints (start/complete/cancel/commit/check/resolve/upload/error/acknowledge/
 /// pending-actions/device-songs). Lives under the <c>devices</c> route prefix so the workflow
-/// endpoints keep their existing paths (<c>/devices/{deviceId}/sync/start</c>, ...). Extracted
-/// from <see cref="DevicesController"/> as part of the controllers refactor (Phase 8+).
+/// endpoints keep their existing paths (<c>/devices/{deviceId}/sync/start</c>, ...).
 /// </summary>
 [ApiController]
 [Route("devices")]
