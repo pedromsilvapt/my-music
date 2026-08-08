@@ -77,7 +77,10 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     public async Task SelectRowByIndexAsync(int rowIndex)
     {
         var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");
-        await row.ClickAsync();
+        // Click the duration cell (plain text) to avoid hitting anchors/svgs
+        // inside other columns that suppress row selection and trigger navigation.
+        var safeCell = row.Locator("td[data-testid^='collection-cell-duration-']");
+        await safeCell.ClickAsync();
     }
 
     /// <summary>
@@ -86,8 +89,11 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     public async Task CtrlClickRowByIndexAsync(int rowIndex)
     {
         var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");
-        await row.ScrollIntoViewIfNeededAsync();
-        var box = await row.BoundingBoxAsync();
+        // Use the duration cell (plain text) as the click target to avoid hitting
+        // anchors/svgs that suppress selection and trigger navigation.
+        var safeCell = row.Locator("td[data-testid^='collection-cell-duration-']");
+        await safeCell.ScrollIntoViewIfNeededAsync();
+        var box = await safeCell.BoundingBoxAsync();
         if (box == null)
             throw new InvalidOperationException($"Row {rowIndex} not found");
 
@@ -137,9 +143,10 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         });
 
     /// <summary>
-    /// Clicks the Actions menu button in the floating bar and returns the menu dropdown locator.
+    /// Clicks the Actions menu button in the floating bar and returns the open menu dropdown
+    /// wrapped in a <see cref="SongsActionsMenuComponent"/>.
     /// </summary>
-    public async Task<ILocator> OpenFloatingActionsMenuAsync()
+    public async Task<SongsActionsMenuComponent> OpenFloatingActionsMenuAsync()
     {
         var floatingBar = GetFloatingActionsBar();
         await floatingBar.WaitForAsync(new() { State = WaitForSelectorState.Visible });
@@ -150,6 +157,6 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         // The Mantine Menu dropdown is a sibling of the button, rendered in a portal
         var menuDropdown = Root.Page.Locator(".mantine-Menu-dropdown").Last;
         await menuDropdown.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-        return menuDropdown;
+        return new SongsActionsMenuComponent(menuDropdown);
     }
 }

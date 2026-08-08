@@ -33,6 +33,19 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
         return -1;
     }
 
+    public async Task<int> CountRowsByTitleAsync(string title)
+    {
+        var rowCount = await GetRowCountAsync();
+        var matches = 0;
+        for (int i = 0; i < rowCount; i++)
+        {
+            var cellTitle = await GetCellValueAsync(i, "title");
+            if (cellTitle == title)
+                matches++;
+        }
+        return matches;
+    }
+
     public async Task<SongDetailsPage> GoToSongDetailsAsync(int rowIndex)
     {
         var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");

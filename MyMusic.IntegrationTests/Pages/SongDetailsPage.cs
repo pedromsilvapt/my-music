@@ -13,6 +13,28 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         await Assertions.Expect(Root).ToHaveAttributeAsync("data-loading", "false", new() { Timeout = 10000 });
     }
 
+    public async Task<long> GetIdAsync()
+    {
+        var url = Page.Url.TrimEnd('/').Split('/').Last();
+        return long.Parse(url);
+    }
+
+    public async Task<AlbumDetailsPage> ClickAlbumLinkAsync()
+    {
+        await Root.Locator("a[href^='/albums/']").First.ClickAsync();
+        var albumPage = new AlbumDetailsPage(Page);
+        await albumPage.WaitForLoadedAsync();
+        return albumPage;
+    }
+
+    public async Task<ArtistDetailsPage> ClickArtistLinkAsync(int index = 0)
+    {
+        await Root.Locator("a[href^='/artists/']").Nth(index).ClickAsync();
+        var artistPage = new ArtistDetailsPage(Page);
+        await artistPage.WaitForLoadedAsync();
+        return artistPage;
+    }
+
     public async Task<string> GetTitleAsync()
     {
         return await Title.InnerTextAsync();
@@ -37,6 +59,32 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         if (count == 0)
             return null;
         return await albumLink.First.InnerTextAsync();
+    }
+
+    /// <summary>
+    /// The album's id parsed from the album anchor's href, or null when the song has no album link.
+    /// </summary>
+    public async Task<long?> GetAlbumIdAsync()
+    {
+        var albumLink = Root.Locator("a[href^='/albums/']");
+        var count = await albumLink.CountAsync();
+        if (count == 0)
+            return null;
+        var href = await albumLink.First.GetAttributeAsync("href");
+        return href is null ? null : long.Parse(href.TrimEnd('/').Split('/').Last());
+    }
+
+    /// <summary>
+    /// The first artist's id parsed from its anchor href.
+    /// </summary>
+    public async Task<long?> GetArtistIdAsync()
+    {
+        var artistLink = Root.Locator("a[href^='/artists/']");
+        var count = await artistLink.CountAsync();
+        if (count == 0)
+            return null;
+        var href = await artistLink.First.GetAttributeAsync("href");
+        return href is null ? null : long.Parse(href.TrimEnd('/').Split('/').Last());
     }
 
     public async Task<int?> GetYearAsync()
@@ -135,6 +183,19 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         var dialog = Page.GetByRole(AriaRole.Dialog);
         await dialog.WaitForAsync();
         return new ManagePlaylistsDialogComponent(dialog);
+    }
+
+    public async Task<ManageSharingDialogComponent> OpenManageSharingDialogAsync()
+    {
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Manage Sharing" }).ClickAsync();
+        var dialog = Page.GetByRole(AriaRole.Dialog);
+        await dialog.WaitForAsync();
+        return new ManageSharingDialogComponent(dialog);
+    }
+
+    public async Task DownloadAsync()
+    {
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Download" }).ClickAsync();
     }
 
     /// <summary>

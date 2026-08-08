@@ -7,4 +7,5 @@ public record ValidateSongOptions(
     int? Year = null,
     bool? Explicit = null,
     string[]? Genres = null,
-    string? RepositoryPath = null);
+    string? RepositoryPath = null,
+    long? SongId = null);

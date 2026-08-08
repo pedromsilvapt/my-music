@@ -11,11 +11,9 @@ public class DeleteSongsBulkFlow(params string[] songTitles) : IFlow
 {
     public async Task ExecuteAsync(IPage page)
     {
-        await new PerformSongsActionFlow(songTitles).ExecuteAsync(page);
+        var menu = await new PerformSongsActionFlow(songTitles).ExecuteAsync(page);
 
-        var deleteMenuItem = page.GetByText($"Delete {songTitles.Length} Songs");
-        await deleteMenuItem.WaitForAsync(new() { State = WaitForSelectorState.Visible });
-        await deleteMenuItem.ClickAsync();
+        await menu.DeleteAsync();
 
         var confirmDialog = new ConfirmDialogComponent(page.GetByRole(AriaRole.Dialog));
         await confirmDialog.WaitForVisibleAsync();

@@ -68,5 +68,11 @@ public class ValidateSongDetailsFlow : IFlow
             var repositoryPath = await songDetails.GetRepositoryPathAsync();
             repositoryPath.ShouldBe(_expected.RepositoryPath);
         }
+
+        if (_expected.SongId is not null)
+        {
+            var songId = await songDetails.GetIdAsync();
+            songId.ShouldBe(_expected.SongId.Value, "Song id should match the expected value");
+        }
     }
 }

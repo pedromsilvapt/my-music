@@ -80,6 +80,7 @@ public abstract class IntegrationTestBase : PageTest
     public override BrowserNewContextOptions ContextOptions()
     {
         var options = base.ContextOptions();
+        options.AcceptDownloads = true;
 
         if (RecordVideoEnabled)
         {
@@ -239,7 +240,7 @@ public abstract class IntegrationTestBase : PageTest
     /// page so the UI reflects the new user.
     /// </summary>
     /// <param name="index">Zero-based index into <see cref="Users"/>.</param>
-    /// <param name="reloadPage">If true, navigates to <see cref="BaseUrl"/> after switching.</param>
+    /// <param name="reloadPage">If true, reloads the current page after switching.</param>
     protected async Task SwitchUserAsync(int index, bool reloadPage = false)
     {
         if (index < 0 || index >= _users.Count)
@@ -259,7 +260,7 @@ public abstract class IntegrationTestBase : PageTest
 
         if (reloadPage)
         {
-            await Page.GotoAsync(BaseUrl);
+            await Page.ReloadAsync();
         }
     }
 
