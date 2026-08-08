@@ -13,6 +13,7 @@ public record ListUserItem
     public required string Username { get; set; }
     public required string Name { get; set; }
     public required string ColorScheme { get; set; }
+    public required string Language { get; set; }
     public required double Volume { get; set; }
     public required bool IsMuted { get; set; }
     public required bool AutoDownloadOnPurchase { get; set; }
@@ -24,6 +25,7 @@ public record ListUserItem
             Name = user.Name,
             Username = user.Username,
             ColorScheme = user.ColorScheme,
+            Language = user.Language,
             Volume = user.Volume,
             IsMuted = user.IsMuted,
             AutoDownloadOnPurchase = user.AutoDownloadOnPurchase,

@@ -106,7 +106,8 @@ export const postDevicesDeviceIdSyncStart = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullSyncStartRequest)
+    body: JSON.stringify(
+      nullSyncStartRequest,)
   }
 )
 
@@ -201,7 +202,8 @@ export const postDevicesDeviceIdSyncSessionIdComplete = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullSyncCompleteRequest)
+    body: JSON.stringify(
+      nullSyncCompleteRequest,)
   }
 )
 
@@ -390,7 +392,8 @@ export const postDevicesDeviceIdSyncSessionIdCommit = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullSyncCommitRequest)
+    body: JSON.stringify(
+      nullSyncCommitRequest,)
   }
 )
 
@@ -613,7 +616,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSyncSongsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSyncSongs>>>
@@ -710,7 +713,8 @@ export const postDevicesDeviceIdSyncSessionIdCheck = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(syncCheckRequest)
+    body: JSON.stringify(
+      syncCheckRequest,)
   }
 )
 
@@ -805,7 +809,8 @@ export const postDevicesDeviceIdSyncSessionIdResolveConflicts = async (deviceId:
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(syncResolveConflictsRequest)
+    body: JSON.stringify(
+      syncResolveConflictsRequest,)
   }
 )
 
@@ -900,7 +905,8 @@ export const postDevicesDeviceIdSyncSessionIdError = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(reportSyncErrorRequest)
+    body: JSON.stringify(
+      reportSyncErrorRequest,)
   }
 )
 
@@ -995,7 +1001,8 @@ export const postDevicesDeviceIdSyncSessionIdAcknowledge = async (deviceId: numb
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(acknowledgeActionRequest)
+    body: JSON.stringify(
+      acknowledgeActionRequest,)
   }
 )
 

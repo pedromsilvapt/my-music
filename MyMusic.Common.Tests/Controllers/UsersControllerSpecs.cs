@@ -10,7 +10,7 @@ using Shouldly;
 
 namespace MyMusic.Common.Tests.Controllers;
 
-public class UsersControllerSpecs
+public partial class UsersControllerSpecs
 {
     private UsersController CreateController(Scenario scenario)
     {

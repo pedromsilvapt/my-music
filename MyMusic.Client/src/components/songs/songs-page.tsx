@@ -1,6 +1,7 @@
 import {Text, Group} from "@mantine/core";
 import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useManageSharingContext} from "../../contexts/manage-sharing-context.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -19,6 +20,7 @@ export interface SongsPageProps {
 }
 
 export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
+    const {t} = useTranslation("common");
     const queryClient = useQueryClient();
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
     const {registerRefetch: registerSharingRefetch, unregisterRefetch: unregisterSharingRefetch} = useManageSharingContext();
@@ -74,7 +76,11 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
     };
 
     const elements = songs?.songs ?? [];
-    const pageTitle = isSharedView ? `Shared by ${sharerName ?? "Unknown"}` : undefined;
+    const pageTitle = isSharedView
+        ? sharerName
+            ? t("songs.sharedBy", {name: sharerName})
+            : t("songs.sharedByUnknown")
+        : undefined;
 
     const content = (
         <div
@@ -97,7 +103,7 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
-                searchPlaceholder="Search songs..."
+                searchPlaceholder={t("songs.searchPlaceholder")}
             />
             {!isSharedView && (
                 <SongImportProgress

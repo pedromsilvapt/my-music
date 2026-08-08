@@ -16,6 +16,7 @@ public record CreateUserItem : ListUserItem
             Name = user.Name,
             Username = user.Username,
             ColorScheme = user.ColorScheme,
+            Language = user.Language,
             Volume = user.Volume,
             IsMuted = user.IsMuted,
             AutoDownloadOnPurchase = user.AutoDownloadOnPurchase,

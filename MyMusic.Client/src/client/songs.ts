@@ -268,7 +268,8 @@ export const batchUpdateSongs = async (batchUpdateSongsRequest: BatchUpdateSongs
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchUpdateSongsRequest)
+    body: JSON.stringify(
+      batchUpdateSongsRequest,)
   }
 )
 
@@ -367,7 +368,8 @@ export const deleteSongs = async (batchDeleteSongsRequest: BatchDeleteSongsReque
     ...options,
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchDeleteSongsRequest)
+    body: JSON.stringify(
+      batchDeleteSongsRequest,)
   }
 )
 
@@ -502,7 +504,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLocalSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLocalSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetLocalSongQueryResult = NonNullable<Awaited<ReturnType<typeof getLocalSong>>>
@@ -597,7 +599,8 @@ export const updateSong = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateSongRequest)
+    body: JSON.stringify(
+      updateSongRequest,)
   }
 )
 
@@ -723,7 +726,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type DownloadSongQueryResult = NonNullable<Awaited<ReturnType<typeof downloadSong>>>
@@ -811,7 +814,8 @@ if(importSongsBody.sourceFolder !== undefined) {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', ...options?.headers },
-    body: formUrlEncoded
+    body:
+      formUrlEncoded,
   }
 )
 
@@ -919,7 +923,8 @@ if(uploadSongBody.createdAt !== undefined) {
     ...options,
     method: 'POST'
     ,
-    body: formData
+    body:
+      formData,
   }
 )
 
@@ -1116,7 +1121,8 @@ export const toggleFavorites = async (toggleFavoritesRequest: ToggleFavoritesReq
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(toggleFavoritesRequest)
+    body: JSON.stringify(
+      toggleFavoritesRequest,)
   }
 )
 
@@ -1252,7 +1258,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSongDevices>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetSongDevicesQueryResult = NonNullable<Awaited<ReturnType<typeof getSongDevices>>>
@@ -1346,7 +1352,8 @@ export const updateSongDevices = async (updateSongDevicesRequest: UpdateSongDevi
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateSongDevicesRequest)
+    body: JSON.stringify(
+      updateSongDevicesRequest,)
   }
 )
 
@@ -2351,7 +2358,8 @@ export const batchMultiUpdateSongs = async (batchMultiUpdateSongsRequest: BatchM
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchMultiUpdateSongsRequest)
+    body: JSON.stringify(
+      batchMultiUpdateSongsRequest,)
   }
 )
 

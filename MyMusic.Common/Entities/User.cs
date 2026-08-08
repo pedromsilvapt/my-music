@@ -12,6 +12,8 @@ public class User
 
     [MaxLength(10)] public string ColorScheme { get; set; } = "auto";
 
+    [MaxLength(10)] public string Language { get; set; } = "en";
+
     public double Volume { get; set; } = 1.0;
 
     public bool IsMuted { get; set; } = false;

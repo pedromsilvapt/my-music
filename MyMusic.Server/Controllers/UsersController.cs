@@ -67,6 +67,16 @@ public class UsersController(
             user.ColorScheme = body.ColorScheme;
         }
 
+        if (body.Language is not null)
+        {
+            if (!SupportedLanguages.Contains(body.Language))
+            {
+                return BadRequest($"Unsupported language '{body.Language}'.");
+            }
+
+            user.Language = body.Language;
+        }
+
         if (body.Volume != null)
         {
             if (body.Volume < 0 || body.Volume > 1)

@@ -252,7 +252,8 @@ export const createPlaylist = async (createPlaylistRequest: CreatePlaylistReques
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createPlaylistRequest)
+    body: JSON.stringify(
+      createPlaylistRequest,)
   }
 )
 
@@ -387,7 +388,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlaylist>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPlaylist>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetPlaylistQueryResult = NonNullable<Awaited<ReturnType<typeof getPlaylist>>>
@@ -482,7 +483,8 @@ export const updatePlaylist = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updatePlaylistRequest)
+    body: JSON.stringify(
+      updatePlaylistRequest,)
   }
 )
 
@@ -663,7 +665,8 @@ export const addSongsToPlaylist = async (id: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(addSongsToPlaylistRequest)
+    body: JSON.stringify(
+      addSongsToPlaylistRequest,)
   }
 )
 
@@ -866,7 +869,8 @@ export const setStopAfterPlayback = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(setStopAfterPlaybackRequest)
+    body: JSON.stringify(
+      setStopAfterPlaybackRequest,)
   }
 )
 
@@ -964,7 +968,8 @@ export const batchSetStopAfterPlayback = async (batchSetStopAfterPlaybackRequest
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchSetStopAfterPlaybackRequest)
+    body: JSON.stringify(
+      batchSetStopAfterPlaybackRequest,)
   }
 )
 
@@ -1065,7 +1070,8 @@ export const setSkipNextPlayback = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(setSkipNextPlaybackRequest)
+    body: JSON.stringify(
+      setSkipNextPlaybackRequest,)
   }
 )
 
@@ -1163,7 +1169,8 @@ export const batchSetSkipNextPlayback = async (batchSetSkipNextPlaybackRequest: 
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchSetSkipNextPlaybackRequest)
+    body: JSON.stringify(
+      batchSetSkipNextPlaybackRequest,)
   }
 )
 
@@ -1251,7 +1258,8 @@ export const managePlaylistSongs = async (managePlaylistSongsRequest: ManagePlay
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(managePlaylistSongsRequest)
+    body: JSON.stringify(
+      managePlaylistSongsRequest,)
   }
 )
 
@@ -1481,7 +1489,8 @@ export const replaceQueue = async (replaceQueueRequest: ReplaceQueueRequest, opt
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(replaceQueueRequest)
+    body: JSON.stringify(
+      replaceQueueRequest,)
   }
 )
 
@@ -1580,7 +1589,8 @@ export const setQueueCurrentSongById = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(setCurrentSongRequest)
+    body: JSON.stringify(
+      setCurrentSongRequest,)
   }
 )
 
@@ -1672,7 +1682,8 @@ export const setQueueCurrentSong = async (setCurrentSongRequest: SetCurrentSongR
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(setCurrentSongRequest)
+    body: JSON.stringify(
+      setCurrentSongRequest,)
   }
 )
 
@@ -1770,7 +1781,8 @@ export const addToQueue = async (addToQueueRequest: AddToQueueRequest, options?:
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(addToQueueRequest)
+    body: JSON.stringify(
+      addToQueueRequest,)
   }
 )
 
@@ -1868,7 +1880,8 @@ export const removeFromQueue = async (removeFromQueueRequest: RemoveFromQueueReq
     ...options,
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(removeFromQueueRequest)
+    body: JSON.stringify(
+      removeFromQueueRequest,)
   }
 )
 
@@ -1966,7 +1979,8 @@ export const reorderQueue = async (reorderQueueRequest: ReorderQueueRequest, opt
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(reorderQueueRequest)
+    body: JSON.stringify(
+      reorderQueueRequest,)
   }
 )
 
@@ -2064,7 +2078,8 @@ export const shuffleQueue = async (shuffleQueueRequest: ShuffleQueueRequest, opt
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(shuffleQueueRequest)
+    body: JSON.stringify(
+      shuffleQueueRequest,)
   }
 )
 
@@ -2293,7 +2308,8 @@ export const addToFavorites = async (addSongsToPlaylistRequest: AddSongsToPlayli
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(addSongsToPlaylistRequest)
+    body: JSON.stringify(
+      addSongsToPlaylistRequest,)
   }
 )
 
@@ -2620,7 +2636,8 @@ export const createQueue = async (createQueueRequest: CreateQueueRequest, option
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createQueueRequest)
+    body: JSON.stringify(
+      createQueueRequest,)
   }
 )
 
@@ -2720,7 +2737,8 @@ export const renameQueue = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(renameQueueRequest)
+    body: JSON.stringify(
+      renameQueueRequest,)
   }
 )
 

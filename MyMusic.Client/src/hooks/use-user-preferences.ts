@@ -2,12 +2,14 @@ import {useMantineColorScheme} from "@mantine/core";
 import {useEffect} from "react";
 import {useGetCurrentUser, useUpdateCurrentUser} from "../client/users";
 import type {GetUserItem} from "../model/getUserItem";
+import {DEFAULT_LANGUAGE, i18n, isSupportedLanguage} from "../locales";
 
 const DEFAULT_USER: GetUserItem = {
     id: 0,
     username: "",
     name: "",
     colorScheme: "auto",
+    language: DEFAULT_LANGUAGE,
     volume: 1.0,
     isMuted: false,
     autoDownloadOnPurchase: false,
@@ -36,9 +38,25 @@ export function useUserPreferences() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user.colorScheme, isLoading]);
 
+    useEffect(() => {
+        const language = isSupportedLanguage(user.language) ? user.language : DEFAULT_LANGUAGE;
+        if (i18n.language !== language) {
+            void i18n.changeLanguage(language);
+        }
+        document.documentElement.lang = language;
+    }, [user.language]);
+
     const updateColorScheme = async (colorScheme: "light" | "dark" | "auto") => {
         await updateMutation.mutateAsync({data: {colorScheme}});
         setColorScheme(colorScheme);
+    };
+
+    const updateLanguage = async (language: string) => {
+        await updateMutation.mutateAsync({data: {language}});
+        if (isSupportedLanguage(language)) {
+            void i18n.changeLanguage(language);
+            document.documentElement.lang = language;
+        }
     };
 
     const updateVolume = async (volume: number) => {
@@ -57,10 +75,12 @@ export function useUserPreferences() {
         user,
         isLoading,
         colorScheme: user.colorScheme as "light" | "dark" | "auto",
+        language: user.language,
         volume: user.volume,
         isMuted: user.isMuted,
         autoDownloadOnPurchase: user.autoDownloadOnPurchase,
         updateColorScheme,
+        updateLanguage,
         updateVolume,
         updateIsMuted,
         updateAutoDownloadOnPurchase,

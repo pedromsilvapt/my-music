@@ -1,4 +1,4 @@
-import {computePosition, flip, offset, shift} from '@floating-ui/dom';
+import {computePosition, flip, offset, shift} from '@floating-ui/react';
 import {CloseButton, Group, Paper, Portal, Text, Transition} from "@mantine/core";
 import {useLayoutEffect, useMemo, useRef, useState} from "react";
 import {useContextMenuStore} from "../../../stores/context-menu-store.tsx";

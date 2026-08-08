@@ -1,0 +1,28 @@
+{
+    "appName": "MyMusic",
+    "nav": {
+        "nowPlaying": "A reproduzir",
+        "home": "Início",
+        "songs": "Músicas",
+        "songsMine": "Minhas",
+        "albums": "Álbuns",
+        "artists": "Artistas",
+        "playlists": "Listas",
+        "devices": "Dispositivos",
+        "history": "Histórico",
+        "audits": "Auditorias",
+        "purchases": "Compras",
+        "settings": "Definições"
+    },
+    "theme": {
+        "toggle": "Alternar esquema de cores",
+        "light": "Claro",
+        "dark": "Escuro",
+        "system": "Sistema"
+    },
+    "songs": {
+        "searchPlaceholder": "Pesquisar músicas...",
+        "sharedBy": "Partilhado por {{name}}",
+        "sharedByUnknown": "Partilhado por Desconhecido"
+    }
+}

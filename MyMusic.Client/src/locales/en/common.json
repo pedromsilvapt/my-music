@@ -1,0 +1,28 @@
+{
+    "appName": "MyMusic",
+    "nav": {
+        "nowPlaying": "Now Playing",
+        "home": "Home",
+        "songs": "Songs",
+        "songsMine": "Mine",
+        "albums": "Albums",
+        "artists": "Artists",
+        "playlists": "Playlists",
+        "devices": "Devices",
+        "history": "History",
+        "audits": "Audits",
+        "purchases": "Purchases",
+        "settings": "Settings"
+    },
+    "theme": {
+        "toggle": "Toggle color scheme",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+    },
+    "songs": {
+        "searchPlaceholder": "Search songs...",
+        "sharedBy": "Shared by {{name}}",
+        "sharedByUnknown": "Shared by Unknown"
+    }
+}

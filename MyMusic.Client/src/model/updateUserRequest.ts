@@ -8,6 +8,8 @@ OpenAPI spec version: 1.0.0
 export interface UpdateUserRequest {
   /** @nullable */
   colorScheme?: string | null;
+  /** @nullable */
+  language?: string | null;
   /**
      * @nullable
      * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$

@@ -230,7 +230,8 @@ export const createWishlist = async (createWishlistRequest: CreateWishlistReques
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(createWishlistRequest)
+    body: JSON.stringify(
+      createWishlistRequest,)
   }
 )
 

@@ -17,6 +17,7 @@ import {
 } from '@tabler/icons-react';
 import './styles';
 import {Link, Outlet} from "@tanstack/react-router";
+import {useTranslation} from "react-i18next";
 import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
 import {useSharers} from "../hooks/use-sharers";
@@ -26,6 +27,7 @@ import Player from "./player/player.tsx";
 import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
 
 function App() {
+    const {t} = useTranslation("common");
     const [mobileOpened, {toggle: toggleMobile}] = useDisclosure();
     const [desktopOpened, {toggle: toggleDesktop}] = useDisclosure(true);
 
@@ -46,7 +48,7 @@ function App() {
                     <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" data-testid="topbar-mobile-burger"/>
                     <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" data-testid="topbar-desktop-burger"/>
                     <Group justify="space-between" style={{flex: 1}} data-testid="topbar-title">
-                        MyMusic
+                        {t("appName")}
                     </Group>
                     <Group gap="xs">
                         <Text size="sm" visibleFrom="sm" data-testid="topbar-username">{user.name}</Text>
@@ -66,7 +68,7 @@ function App() {
                         href="/player"
                         key="player"
                         leftSection={<IconPlayerPlay stroke={2}/>}
-                        label="Now Playing"
+                        label={t("nav.nowPlaying")}
                     />
 
                     <Divider my="md"/>
@@ -76,20 +78,20 @@ function App() {
                         renderRoot={(props) => <Link to={"/"} {...props} />}
                         key="home"
                         leftSection={<IconHome stroke={2}/>}
-                        label="Home"
+                        label={t("nav.home")}
                     />
                     <NavLink
                         data-testid="nav-songs"
                         renderRoot={(props) => <Link to={"/songs"} {...props} />}
                         href="/songs"
                         leftSection={<IconMusic stroke={2}/>}
-                        label="Songs"
+                        label={t("nav.songs")}
                         children={sharers.length > 0 ? (
                             <>
                                 <NavLink
                                     data-testid="nav-songs-mine"
                                     renderRoot={(props) => <Link to={"/songs"} activeOptions={{exact: true}} {...props} />}
-                                    label="Mine"
+                                    label={t("nav.songsMine")}
                                     leftSection={<IconUser size={16}/>}
                                     style={{paddingLeft: "2rem"}}
                                 />
@@ -111,56 +113,56 @@ function App() {
                         renderRoot={(props) => <Link to={"/albums"} {...props} />}
                         key="albums"
                         leftSection={<IconDisc stroke={2}/>}
-                        label="Albums"
+                        label={t("nav.albums")}
                     />
                     <NavLink
                         data-testid="nav-artists"
                         renderRoot={(props) => <Link to={"/artists"} {...props} />}
                         key="artists"
                         leftSection={<IconUsers stroke={2}/>}
-                        label="Artists"
+                        label={t("nav.artists")}
                     />
                     <NavLink
                         data-testid="nav-playlists"
                         renderRoot={(props) => <Link to={"/playlists"} {...props} />}
                         key="playlists"
                         leftSection={<IconPlaylist stroke={2}/>}
-                        label="Playlists"
+                        label={t("nav.playlists")}
                     />
                     <NavLink
                         data-testid="nav-devices"
                         renderRoot={(props) => <Link to={"/devices"} {...props} />}
                         key="devices"
                         leftSection={<IconDevices stroke={2}/>}
-                        label="Devices"
+                        label={t("nav.devices")}
                     />
                     <NavLink
                         data-testid="nav-history"
                         renderRoot={(props) => <Link to={"/history"} {...props} />}
                         key="history"
                         leftSection={<IconHistory stroke={2}/>}
-                        label="History"
+                        label={t("nav.history")}
                     />
                     <NavLink
                         data-testid="nav-audits"
                         renderRoot={(props) => <Link to={"/audits"} {...props} />}
                         key="audits"
                         leftSection={<IconClipboardCheck stroke={2}/>}
-                        label="Audits"
+                        label={t("nav.audits")}
                     />
                     <NavLink
                         data-testid="nav-purchases"
                         renderRoot={(props) => <Link to={"/purchases"} {...props} />}
                         key="purchases"
                         leftSection={<IconShoppingCart stroke={2}/>}
-                        label="Purchases"
+                        label={t("nav.purchases")}
                     />
                     <NavLink
                         data-testid="nav-settings"
                         renderRoot={(props) => <Link to={"/settings"} {...props} />}
                         key="settings"
                         leftSection={<IconSettings stroke={2}/>}
-                        label="Settings"
+                        label={t("nav.settings")}
                     />
                 </ScrollArea>
             </AppShell.Navbar>

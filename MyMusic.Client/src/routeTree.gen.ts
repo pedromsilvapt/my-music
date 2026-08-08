@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SongsRouteImport } from './routes/songs'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PurchasesRouteImport } from './routes/purchases'
 import { Route as PlayerRouteImport } from './routes/player'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -34,6 +35,11 @@ import { Route as DevicesDeviceIdSessionsSessionIdRouteImport } from './routes/d
 const SongsRoute = SongsRouteImport.update({
   id: '/songs',
   path: '/songs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PurchasesRoute = PurchasesRouteImport.update({
@@ -146,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/player': typeof PlayerRoute
   '/purchases': typeof PurchasesRoute
+  '/settings': typeof SettingsRoute
   '/songs': typeof SongsRouteWithChildren
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/artists/$artistId': typeof ArtistsArtistIdRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/player': typeof PlayerRoute
   '/purchases': typeof PurchasesRoute
+  '/settings': typeof SettingsRoute
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/artists/$artistId': typeof ArtistsArtistIdRoute
   '/audits/$auditId': typeof AuditsAuditIdRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/player': typeof PlayerRoute
   '/purchases': typeof PurchasesRoute
+  '/settings': typeof SettingsRoute
   '/songs': typeof SongsRouteWithChildren
   '/albums/$albumId': typeof AlbumsAlbumIdRoute
   '/artists/$artistId': typeof ArtistsArtistIdRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/player'
     | '/purchases'
+    | '/settings'
     | '/songs'
     | '/albums/$albumId'
     | '/artists/$artistId'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/player'
     | '/purchases'
+    | '/settings'
     | '/albums/$albumId'
     | '/artists/$artistId'
     | '/audits/$auditId'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/player'
     | '/purchases'
+    | '/settings'
     | '/songs'
     | '/albums/$albumId'
     | '/artists/$artistId'
@@ -282,6 +294,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   PlayerRoute: typeof PlayerRoute
   PurchasesRoute: typeof PurchasesRoute
+  SettingsRoute: typeof SettingsRoute
   SongsRoute: typeof SongsRouteWithChildren
   AuditsAuditIdRoute: typeof AuditsAuditIdRoute
   PlaylistsPlaylistIdRoute: typeof PlaylistsPlaylistIdRoute
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       path: '/songs'
       fullPath: '/songs'
       preLoaderRoute: typeof SongsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/purchases': {
@@ -491,6 +511,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   PlayerRoute: PlayerRoute,
   PurchasesRoute: PurchasesRoute,
+  SettingsRoute: SettingsRoute,
   SongsRoute: SongsRouteWithChildren,
   AuditsAuditIdRoute: AuditsAuditIdRoute,
   PlaylistsPlaylistIdRoute: PlaylistsPlaylistIdRoute,

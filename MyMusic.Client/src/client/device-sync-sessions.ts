@@ -147,7 +147,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessions>>>
@@ -298,7 +298,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined && sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(deviceId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsSessionIdRecordsQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecords>>>
@@ -443,7 +443,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined && sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(deviceId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsSessionIdRecordsFilterMetadataQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterMetadata>>>
@@ -594,7 +594,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined && sessionId !== null && sessionId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(deviceId && sessionId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDevicesDeviceIdSessionsSessionIdRecordsFilterValuesQueryResult = NonNullable<Awaited<ReturnType<typeof getDevicesDeviceIdSessionsSessionIdRecordsFilterValues>>>
@@ -793,7 +793,8 @@ export const postDevicesDeviceIdSessionsPrune = async (deviceId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(pruneSessionsRequest)
+    body: JSON.stringify(
+      pruneSessionsRequest,)
   }
 )
 

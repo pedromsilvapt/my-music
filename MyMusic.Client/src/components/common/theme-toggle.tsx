@@ -1,9 +1,11 @@
 import {ActionIcon, Menu, useComputedColorScheme} from "@mantine/core";
 import {IconDeviceDesktop, IconMoon, IconSun} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 
 import {useUserPreferences} from "../../hooks/use-user-preferences";
 
 export default function ThemeToggle() {
+    const {t} = useTranslation("common");
     const {colorScheme, updateColorScheme, isUpdating} = useUserPreferences();
     const computedColorScheme = useComputedColorScheme("light");
 
@@ -15,7 +17,7 @@ export default function ThemeToggle() {
                 <ActionIcon
                     variant="default"
                     size="lg"
-                    aria-label="Toggle color scheme"
+                    aria-label={t("theme.toggle")}
                     loading={isUpdating}
                     data-testid="topbar-theme-toggle"
                 >
@@ -32,21 +34,21 @@ export default function ThemeToggle() {
                     onClick={() => updateColorScheme("light")}
                     disabled={colorScheme === "light"}
                 >
-                    Light
+                    {t("theme.light")}
                 </Menu.Item>
                 <Menu.Item
                     leftSection={<IconMoon {...iconProps} />}
                     onClick={() => updateColorScheme("dark")}
                     disabled={colorScheme === "dark"}
                 >
-                    Dark
+                    {t("theme.dark")}
                 </Menu.Item>
                 <Menu.Item
                     leftSection={<IconDeviceDesktop {...iconProps} />}
                     onClick={() => updateColorScheme("auto")}
                     disabled={colorScheme === "auto"}
                 >
-                    System
+                    {t("theme.system")}
                 </Menu.Item>
             </Menu.Dropdown>
         </Menu>

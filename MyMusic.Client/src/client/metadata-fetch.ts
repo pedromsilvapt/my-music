@@ -107,7 +107,8 @@ export const postMetadataFetchBatch = async (nullBatchMetadataFetchRequest?: nul
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullBatchMetadataFetchRequest)
+    body: JSON.stringify(
+      nullBatchMetadataFetchRequest,)
   }
 )
 
@@ -247,7 +248,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: songId !== null && songId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(songId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetMetadataFetchSongSongIdQueryResult = NonNullable<Awaited<ReturnType<typeof getMetadataFetchSongSongId>>>
@@ -347,7 +348,8 @@ export const postMetadataFetchSongSongIdApply = async (songId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullApplyMetadataRequest)
+    body: JSON.stringify(
+      nullApplyMetadataRequest,)
   }
 )
 
@@ -570,7 +572,8 @@ export const postMetadataFetchRequeue = async (nullRequeueFailedMetadataRequest?
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullRequeueFailedMetadataRequest)
+    body: JSON.stringify(
+      nullRequeueFailedMetadataRequest,)
   }
 )
 

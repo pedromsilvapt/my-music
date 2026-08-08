@@ -276,7 +276,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditRule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditRule>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAuditRuleQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditRule>>>
@@ -610,7 +610,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditNonConformities>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditNonConformities>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type ListAuditNonConformitiesQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditNonConformities>>>
@@ -700,7 +700,8 @@ export const setAuditWaiver = async (id: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(setWaiverRequest)
+    body: JSON.stringify(
+      setWaiverRequest,)
   }
 )
 
@@ -864,7 +865,8 @@ export const batchSetAuditWaiver = async (batchSetWaiverRequest: BatchSetWaiverR
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchSetWaiverRequest)
+    body: JSON.stringify(
+      batchSetWaiverRequest,)
   }
 )
 
@@ -946,7 +948,8 @@ export const batchDeleteAuditNonConformities = async (batchDeleteNonConformities
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(batchDeleteNonConformitiesRequest)
+    body: JSON.stringify(
+      batchDeleteNonConformitiesRequest,)
   }
 )
 
@@ -1160,7 +1163,8 @@ export const updateSoundalikeSelection = async (nonConformityId: number,
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateSoundalikeSelectionRequest)
+    body: JSON.stringify(
+      updateSoundalikeSelectionRequest,)
   }
 )
 
@@ -1248,7 +1252,8 @@ export const excludeDuplicatePair = async (excludeDuplicatePairRequest: ExcludeD
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(excludeDuplicatePairRequest)
+    body: JSON.stringify(
+      excludeDuplicatePairRequest,)
   }
 )
 
@@ -1590,7 +1595,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAuditNonConformityFilterMetadataQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditNonConformityFilterMetadata>>>
@@ -1732,7 +1737,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetAuditNonConformityFilterValuesQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditNonConformityFilterValues>>>
@@ -1831,7 +1836,8 @@ export const resolveSoundalikes = async (resolveSoundalikesRequest: ResolveSound
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(resolveSoundalikesRequest)
+    body: JSON.stringify(
+      resolveSoundalikesRequest,)
   }
 )
 
