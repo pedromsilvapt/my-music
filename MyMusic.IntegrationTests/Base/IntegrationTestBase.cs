@@ -27,15 +27,46 @@ public abstract class IntegrationTestBase : PageTest
     private IntegrationTestTelemetry? _telemetry;
     private readonly ITestOutputHelper _output;
 
+    private readonly List<TestUser> _users = [];
+    private string _currentUserName = $"Test-{Guid.NewGuid()}";
+
     public static readonly string BaseUrl =
         Environment.GetEnvironmentVariable("BASE_URL") is { } envUrl && !string.IsNullOrEmpty(envUrl)
             ? envUrl
             : "http://localhost:5001";
 
+    /// <summary>
+    /// Number of test users to create at initialization. Override in a subclass to
+    /// create additional users. Default is 1, preserving existing single-user behavior.
+    /// </summary>
+    protected virtual int UserCount => 1;
+
+    /// <summary>
+    /// All test users created during initialization. Index 0 is the primary user.
+    /// </summary>
+    protected IReadOnlyList<TestUser> Users => _users;
+
+    /// <summary>
+    /// The currently active user for API requests and browser context.
+    /// Defaults to <see cref="Users"/>[0] after initialization.
+    /// Use <see cref="SwitchUserAsync"/> to change it during a test.
+    /// </summary>
+    protected TestUser CurrentUser { get; private set; } = null!;
+
     protected IAPIRequestContext RequestContext { get; private set; } = null!;
-    protected string UserName { get; } = $"Test-{Guid.NewGuid()}";
+
+    /// <summary>
+    /// Username of the current user. Delegates to <see cref="CurrentUser"/>.
+    /// </summary>
+    protected string UserName => CurrentUser.UserName;
+
     protected string ServerRepositoryBase => $"/app/data/music/{UserName}";
-    protected long UserId { get; private set; }
+
+    /// <summary>
+    /// Id of the current user. Delegates to <see cref="CurrentUser"/>.
+    /// </summary>
+    protected long UserId => CurrentUser.Id;
+
     protected ILogger Logger => _telemetry.TestsLogger;
     protected IntegrationTestTelemetry Telemetry => _telemetry;
 
@@ -73,7 +104,7 @@ public abstract class IntegrationTestBase : PageTest
         InitializeTelemetry();
         await StartTraceRecordingAsync();
         await InitializeRequestContextAsync();
-        await CreateTestUser();
+        await CreateTestUsers();
         await ConfigureBrowserContextAsync();
         await Page.GotoAsync(BaseUrl);
     }
@@ -98,7 +129,7 @@ public abstract class IntegrationTestBase : PageTest
             BaseURL = BaseUrl,
             ExtraHTTPHeaders = new Dictionary<string, string>
             {
-                ["X-MyMusic-UserName"] = UserName,
+                ["X-MyMusic-UserName"] = _currentUserName,
             },
         });
     }
@@ -107,7 +138,7 @@ public abstract class IntegrationTestBase : PageTest
     {
         await Context.SetExtraHTTPHeadersAsync(new Dictionary<string, string>
         {
-            ["X-MyMusic-UserName"] = UserName,
+            ["X-MyMusic-UserName"] = _currentUserName,
         });
 
         await Context.RouteAsync("**/*", async route =>
@@ -120,15 +151,15 @@ public abstract class IntegrationTestBase : PageTest
             var isNavigationRequest = request.IsNavigationRequest;
 
             var span = _telemetry.StartParallelRequestSpan(
-                requestId, 
-                method, 
-                url, 
-                resourceType, 
+                requestId,
+                method,
+                url,
+                resourceType,
                 isNavigationRequest);
-            
+
             var headers = request.Headers.ToDictionary(k => k.Key, k => k.Value);
-            headers["X-MyMusic-UserName"] = UserName;
-            
+            headers["X-MyMusic-UserName"] = _currentUserName;
+
             if (span != null)
             {
                 headers["traceparent"] = IntegrationTestTelemetry.CreateW3CTraceParent(span.Context);
@@ -141,12 +172,12 @@ public abstract class IntegrationTestBase : PageTest
         {
             var request = response.Request;
             var requestId = request.GetHashCode().ToString();
-            
+
             var contentLength = response.Headers.TryGetValue("content-length", out var lengthStr)
                 && long.TryParse(lengthStr, out var length)
                 ? length
                 : (long?)null;
-            
+
             _telemetry.StopParallelRequestSpan(requestId, response.Status, contentLength);
         };
 
@@ -157,9 +188,84 @@ public abstract class IntegrationTestBase : PageTest
         };
     }
 
+    /// <summary>
+    /// Creates <see cref="UserCount"/> test users, populating <see cref="Users"/>
+    /// and setting <see cref="CurrentUser"/> to the first one.
+    /// </summary>
+    protected virtual async Task CreateTestUsers()
+    {
+        for (var i = 0; i < UserCount; i++)
+        {
+            var userName = i == 0 ? _currentUserName : $"Test-{Guid.NewGuid()}";
+            var user = await CreateOneTestUser(userName);
+            _users.Add(user);
+        }
+
+        CurrentUser = _users[0];
+        _currentUserName = CurrentUser.UserName;
+    }
+
+    /// <summary>
+    /// Creates a single test user via the API. Override to customize user creation.
+    /// The <see cref="RequestContext"/> is available and carries the first user's header
+    /// (or the previous user's if creating subsequent users).
+    /// </summary>
+    protected virtual async Task<TestUser> CreateOneTestUser(string userName)
+    {
+        var response = await RequestContext.PostWithTraceAsync("/api/users", new()
+        {
+            DataObject = new
+            {
+                user = new
+                {
+                    username = userName,
+                    name = userName,
+                },
+            },
+        });
+
+        response.Ok.ShouldBeTrue($"Failed to create test user: {response.Status} {response.StatusText}");
+
+        var json = await response.JsonAsync();
+        var id = json?.GetProperty("user").GetProperty("id").GetInt64()
+            ?? throw new InvalidOperationException("Failed to get user ID from response");
+
+        return new TestUser(id, userName);
+    }
+
+    /// <summary>
+    /// Switches the current user to <see cref="Users"/>[<paramref name="index"/>], updating
+    /// the API request context and browser context headers. Optionally reloads the browser
+    /// page so the UI reflects the new user.
+    /// </summary>
+    /// <param name="index">Zero-based index into <see cref="Users"/>.</param>
+    /// <param name="reloadPage">If true, navigates to <see cref="BaseUrl"/> after switching.</param>
+    protected async Task SwitchUserAsync(int index, bool reloadPage = false)
+    {
+        if (index < 0 || index >= _users.Count)
+            throw new ArgumentOutOfRangeException(nameof(index), index,
+                $"User index {index} is out of range. {_users.Count} user(s) were created.");
+
+        CurrentUser = _users[index];
+        _currentUserName = CurrentUser.UserName;
+
+        await RequestContext.DisposeAsync();
+        await InitializeRequestContextAsync();
+
+        await Context.SetExtraHTTPHeadersAsync(new Dictionary<string, string>
+        {
+            ["X-MyMusic-UserName"] = _currentUserName,
+        });
+
+        if (reloadPage)
+        {
+            await Page.GotoAsync(BaseUrl);
+        }
+    }
+
     public override async ValueTask DisposeAsync()
     {
-        await RemoveTestUser();
+        await RemoveTestUsers();
         await RequestContext.DisposeAsync();
         await Page.CloseAsync();
 
@@ -175,6 +281,21 @@ public abstract class IntegrationTestBase : PageTest
         }
 
         _telemetry.Dispose();
+    }
+
+    /// <summary>
+    /// Deletes all created test users via the API. The server cascades all owned data
+    /// (songs, albums, artists, devices, playlists, etc.) and removes the user's
+    /// music directory on disk.
+    /// </summary>
+    protected virtual async Task RemoveTestUsers()
+    {
+        foreach (var user in _users)
+        {
+            var response = await RequestContext.DeleteWithTraceAsync($"/api/users/{user.Id}");
+            response.Ok.ShouldBeTrue(
+                $"Failed to delete test user '{user.UserName}': {response.Status} {response.StatusText}");
+        }
     }
 
     private async Task SaveTraceAsync()
@@ -208,32 +329,5 @@ public abstract class IntegrationTestBase : PageTest
         {
             Logger.LogError(ex, "Video failed: {Message}", ex.Message);
         }
-    }
-
-    protected virtual async Task CreateTestUser()
-    {
-        var response = await RequestContext.PostWithTraceAsync("/api/users", new()
-        {
-            DataObject = new
-            {
-                user = new
-                {
-                    username = UserName,
-                    name = UserName,
-                },
-            },
-        });
-
-        response.Ok.ShouldBeTrue($"Failed to create test user: {response.Status} {response.StatusText}");
-
-        var json = await response.JsonAsync();
-        UserId = json?.GetProperty("user").GetProperty("id").GetInt64()
-            ?? throw new InvalidOperationException("Failed to get user ID from response");
-    }
-
-    protected virtual async Task RemoveTestUser()
-    {
-        var response = await RequestContext.DeleteWithTraceAsync($"/api/users/{UserId}");
-        response.Ok.ShouldBeTrue($"Failed to delete test user: {response.Status} {response.StatusText}");
     }
 }

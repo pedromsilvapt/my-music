@@ -53,6 +53,33 @@ The `test-results/` directory is gitignored. Recordings are only created when th
 
 ---
 
+## Multi-User Tests
+
+By default, each test gets a single user. Override `UserCount` in a subclass to create more:
+
+```csharp
+public class SharingTests(ITestOutputHelper output) : IntegrationTestBase(output)
+{
+    protected override int UserCount => 2;
+
+    [Fact]
+    public async Task User2_CannotSeeUser1_Playlist()
+    {
+        // CurrentUser is Users[0] by default
+        await SwitchUserAsync(1, reloadPage: true);
+        // Now RequestContext and browser use Users[1]
+    }
+}
+```
+
+- `Users` — all created users (index 0 is the default).
+- `CurrentUser` — the active user (API + browser). Delegates `UserName`/`UserId`.
+- `SwitchUserAsync(int index, bool reloadPage = false)` — switches current user, recreates `RequestContext`, updates browser headers, optionally reloads the page.
+
+All users are deleted in `DisposeAsync`. Existing single-user tests are unaffected.
+
+---
+
 ## Version Synchronization
 
 The Playwright version used by the integration test Docker image must stay in sync with the .NET package version.
