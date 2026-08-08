@@ -15,6 +15,7 @@ public class DynamicFilterBuilderSpecs
         ["genre.name"] = "Genres.Genre.Name",
         ["device.name"] = "Devices.Device.Name",
         ["playlist.name"] = "PlaylistSongs.Playlist.Name",
+        ["sharing.name"] = "SongSharings.User.Name",
     };
 
     private static (MusicDbContext DbContext, User Owner, List<Song> Songs, List<Artist> Artists, List<Genre> Genres,
@@ -138,6 +139,7 @@ public class DynamicFilterBuilderSpecs
             Genres = genres.Select(g => new SongGenre { Genre = g, GenreId = g.Id }).ToList(),
             Devices = [],
             Sources = [],
+            SongSharings = [],
         };
     }
 
@@ -147,6 +149,7 @@ public class DynamicFilterBuilderSpecs
             .Include(s => s.Album)
             .Include(s => s.Artists).ThenInclude(sa => sa.Artist)
             .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
+            .Include(s => s.SongSharings).ThenInclude(ss => ss.User)
             .AsSplitQuery();
 
         if (!string.IsNullOrWhiteSpace(filter))
@@ -1322,6 +1325,107 @@ public class DynamicFilterBuilderSpecs
 
         // Assert
         AssertResultsMatch(sqliteResults, memoryResults, new long[] { 1, 2, 3, 4, 5, 6, 9, 10 });
+    }
+
+    #endregion
+
+    #region Batch 9b: Sharing Field (sharing.name)
+
+    [Fact]
+    public void Sharing_Eq_ImplicitAny()
+    {
+        // Arrange — songs 1 and 2 are shared with alice; others are not
+        var (context, _, songs, _, _, _) = SetupTestData();
+        var alice = new User { Name = "alice", Username = "alice" };
+        var bob = new User { Name = "bob", Username = "bob" };
+        context.Users.AddRange(alice, bob);
+        context.SaveChanges();
+        AddShare(songs[0], alice, context); // Echoes → alice
+        AddShare(songs[1], alice, context); // Comfortably Numb → alice
+        AddShare(songs[2], bob, context);   // Come Together → bob
+
+        // Act
+        var sqliteResults = ExecuteFilterOnSqlite(context, @"sharing.name = ""alice""");
+        var memoryResults = ExecuteFilterOnMemory(songs, @"sharing.name = ""alice""");
+
+        // Assert — songs shared with alice (implicit Any quantifier)
+        AssertResultsMatch(sqliteResults, memoryResults, new long[] { 1, 2 });
+    }
+
+    [Fact]
+    public void Sharing_Contains_ImplicitAny()
+    {
+        // Arrange — shares seeded with ali* and bob* names
+        var (context, _, songs, _, _, _) = SetupTestData();
+        var alice = new User { Name = "alice", Username = "alice" };
+        var bob = new User { Name = "bob", Username = "bob" };
+        context.Users.AddRange(alice, bob);
+        context.SaveChanges();
+        AddShare(songs[0], alice, context); // Echoes → alice
+        AddShare(songs[1], bob, context);   // Comfortably Numb → bob
+
+        // Act
+        var sqliteResults = ExecuteFilterOnSqlite(context, @"sharing.name contains ""ali""");
+        var memoryResults = ExecuteFilterOnMemory(songs, @"sharing.name contains ""ali""");
+
+        // Assert — only the song shared with a recipient whose name contains "ali"
+        AssertResultsMatch(sqliteResults, memoryResults, new long[] { 1 });
+    }
+
+    [Fact]
+    public void Sharing_In_ImplicitAny()
+    {
+        // Arrange — songs shared with alice and bob
+        var (context, _, songs, _, _, _) = SetupTestData();
+        var alice = new User { Name = "alice", Username = "alice" };
+        var bob = new User { Name = "bob", Username = "bob" };
+        var carol = new User { Name = "carol", Username = "carol" };
+        context.Users.AddRange(alice, bob, carol);
+        context.SaveChanges();
+        AddShare(songs[0], alice, context); // Echoes → alice
+        AddShare(songs[1], bob, context);   // Comfortably Numb → bob
+        AddShare(songs[2], carol, context); // Come Together → carol
+
+        // Act
+        var sqliteResults = ExecuteFilterOnSqlite(context, @"sharing.name in [""alice"", ""bob""]");
+        var memoryResults = ExecuteFilterOnMemory(songs, @"sharing.name in [""alice"", ""bob""]");
+
+        // Assert — songs shared with alice OR bob (implicit Any quantifier)
+        AssertResultsMatch(sqliteResults, memoryResults, new long[] { 1, 2 });
+    }
+
+    [Fact]
+    public void Sharing_Neq_ImplicitAll()
+    {
+        // Arrange — song 1 shared with alice only; song 2 shared with alice and bob
+        var (context, _, songs, _, _, _) = SetupTestData();
+        var alice = new User { Name = "alice", Username = "alice" };
+        var bob = new User { Name = "bob", Username = "bob" };
+        context.Users.AddRange(alice, bob);
+        context.SaveChanges();
+        AddShare(songs[0], alice, context); // Echoes → alice
+        AddShare(songs[1], alice, context); // Comfortably Numb → alice
+        AddShare(songs[1], bob, context);   // Comfortably Numb → bob
+
+        // Act
+        var sqliteResults = ExecuteFilterOnSqlite(context, @"sharing.name != ""bob""");
+        var memoryResults = ExecuteFilterOnMemory(songs, @"sharing.name != ""bob""");
+
+        // Assert — implicit All: songs where NO recipient is bob (excludes song 2; song 9 has no shares, vacuously true)
+        AssertResultsMatch(sqliteResults, memoryResults, new long[] { 1, 3, 4, 5, 6, 7, 8, 9, 10 });
+    }
+
+    private static void AddShare(Song song, User recipient, MusicDbContext context)
+    {
+        song.SongSharings.Add(new SongSharing
+        {
+            Song = song,
+            SongId = song.Id,
+            User = recipient,
+            UserId = recipient.Id,
+            CreatedAt = DateTime.UtcNow,
+        });
+        context.SaveChanges();
     }
 
     #endregion

@@ -27,6 +27,7 @@ import type {
 import type {
   CreateGenreRequest,
   CreateGenreResponse,
+  ListGenresParams,
   ListGenresResponse
 } from '../model';
 
@@ -69,17 +70,24 @@ export type listGenresResponseSuccess = (listGenresResponse200TextPlain | listGe
 
 export type listGenresResponse = (listGenresResponseSuccess)
 
-export const getListGenresUrl = () => {
+export const getListGenresUrl = (params?: ListGenresParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/genres`
+  return stringifiedParams.length > 0 ? `/api/genres?${stringifiedParams}` : `/api/genres`
 }
 
-export const listGenres = async ( options?: RequestInit): Promise<listGenresResponse> => {
+export const listGenres = async (params?: ListGenresParams, options?: RequestInit): Promise<listGenresResponse> => {
 
-  const res = await fetch(getListGenresUrl(),
+  const res = await fetch(getListGenresUrl(params),
   {
     ...options,
     method: 'GET'
@@ -99,23 +107,23 @@ export const listGenres = async ( options?: RequestInit): Promise<listGenresResp
 
 
 
-export const getListGenresQueryKey = () => {
+export const getListGenresQueryKey = (params?: ListGenresParams,) => {
     return [
-    'api','genres'
+    'api','genres', ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListGenresQueryOptions = <TData = Awaited<ReturnType<typeof listGenres>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>>, fetch?: RequestInit}
+export const getListGenresQueryOptions = <TData = Awaited<ReturnType<typeof listGenres>>, TError = unknown>(params?: ListGenresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>>, fetch?: RequestInit}
 ) => {
 
 const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListGenresQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListGenresQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGenres>>> = ({ signal }) => listGenres({ signal, ...fetchOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGenres>>> = ({ signal }) => listGenres(params, { signal, ...fetchOptions });
 
 
 
@@ -129,7 +137,7 @@ export type ListGenresQueryError = unknown
 
 
 export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>> & Pick<
+ params: undefined |  ListGenresParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listGenres>>,
           TError,
@@ -139,7 +147,7 @@ export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TE
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>> & Pick<
+ params?: ListGenresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listGenres>>,
           TError,
@@ -149,16 +157,16 @@ export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TE
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>>, fetch?: RequestInit}
+ params?: ListGenresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
 export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>>, fetch?: RequestInit}
+ params?: ListGenresParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listGenres>>, TError, TData>>, fetch?: RequestInit}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListGenresQueryOptions(options)
+  const queryOptions = getListGenresQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -167,10 +175,10 @@ export function useListGenres<TData = Awaited<ReturnType<typeof listGenres>>, TE
 
 
 export const invalidateListGenres = async (
- queryClient: QueryClient,  options?: InvalidateOptions
+ queryClient: QueryClient, params?: ListGenresParams, options?: InvalidateOptions
   ): Promise<QueryClient> => {
 
-  await queryClient.invalidateQueries({ queryKey: getListGenresQueryKey() }, options);
+  await queryClient.invalidateQueries({ queryKey: getListGenresQueryKey(params) }, options);
 
   return queryClient;
 }

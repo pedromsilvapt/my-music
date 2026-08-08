@@ -8,4 +8,9 @@ OpenAPI spec version: 1.0.0
 export type ListSongsParams = {
 filter?: string;
 search?: string;
+/**
+ * @nullable
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+ownerId?: number | null;
 };

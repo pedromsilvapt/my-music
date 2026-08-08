@@ -61,6 +61,8 @@ public class MusicDbContext : DbContext
 
     public DbSet<ExcludedDuplicatePair> ExcludedDuplicatePairs { get; set; } = null!;
 
+    public DbSet<SongSharing> SongSharings { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -186,6 +188,24 @@ public class MusicDbContext : DbContext
             entity.HasOne(e => e.Owner)
                 .WithMany()
                 .HasForeignKey(e => e.OwnerId);
+        });
+
+        // SongSharing entity configuration
+        // Both FKs are explicitly Cascade: deleting the owner's Song removes their shares,
+        // and deleting the recipient User removes shares targeted at them. Without explicit
+        // Cascade on both sides, EF conventions pick Restrict for one FK and the delete would
+        // be blocked.
+        modelBuilder.Entity<SongSharing>(entity =>
+        {
+            entity.HasOne(e => e.Song)
+                .WithMany(s => s.SongSharings)
+                .HasForeignKey(e => e.SongId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

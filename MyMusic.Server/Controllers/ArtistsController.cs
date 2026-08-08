@@ -21,10 +21,17 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         MusicDbContext context,
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] long? ownerId = null)
     {
-        var query = context.Artists
-            .Where(a => a.OwnerId == currentUser.Id);
+        // ownerId null/self → my library (unchanged behavior);
+        // ownerId another user → artists that user owns which are linked to ≥1 song shared with me
+        // (path: Artist.Songs is List<SongArtist>, SongArtist.Song is the linked Song).
+        var query = (ownerId is null || ownerId == currentUser.Id
+                ? context.Artists.Where(a => a.OwnerId == currentUser.Id)
+                : context.Artists.Where(a =>
+                    a.OwnerId == ownerId.Value &&
+                    a.Songs.Any(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -84,19 +91,39 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
     public async Task<GetArtistResponse> Get(long id, [FromQuery] ArtistSongFilter songFilter, MusicDbContext context,
         CancellationToken cancellationToken)
     {
+        // Load the artist with sharing rows so the recipient view can trim to shared songs/albums.
         var artist = await context.Artists
             .Include(a => a.Albums)
             .IncludeSongMetadata("Songs.Song")
-            .FirstOrDefaultAsync(a => a.Id == id && a.OwnerId == currentUser.Id, cancellationToken);
+            .Include("Songs.Song.SongSharings")
+            .FirstOrDefaultAsync(a =>
+                a.Id == id &&
+                (a.OwnerId == currentUser.Id ||
+                 a.Songs.Any(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))),
+                cancellationToken);
 
         if (artist == null)
         {
             throw new Exception($"Artist not found with id {id}");
         }
 
+        // Recipient view: trim to only songs shared with me, and the albums linked to those songs.
+        // Safe because this GET never calls SaveChanges — reassigning the nav collections on a
+        // tracked entity never touches the DB, and the DTO reads the trimmed lists. (AsNoTracking
+        // can't be used here: the Artist include path creates a cycle Artist→Songs→Song→Artists→Artist,
+        // which EF rejects for no-tracking queries.)
+        if (artist.OwnerId != currentUser.Id)
+        {
+            artist.Songs = artist.Songs
+                .Where(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))
+                .ToList();
+            var accessibleAlbumIds = artist.Songs.Select(sa => sa.Song.AlbumId).ToHashSet();
+            artist.Albums = artist.Albums.Where(a => accessibleAlbumIds.Contains(a.Id)).ToList();
+        }
+
         return new GetArtistResponse
         {
-            Artist = GetArtistResponseArtist.FromEntity(artist, songFilter),
+            Artist = GetArtistResponseArtist.FromEntity(artist, songFilter, currentUser.Id),
         };
     }
 
@@ -119,12 +146,19 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         MusicDbContext context,
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
-        [FromQuery] int limit = 15)
+        [FromQuery] int limit = 15,
+        [FromQuery] long? ownerId = null)
     {
+        // Mirror List's ownerId scoping so autocomplete reflects the active view.
+        var scoped = ownerId is null || ownerId == currentUser.Id
+            ? context.Artists.Where(a => a.OwnerId == currentUser.Id)
+            : context.Artists.Where(a =>
+                a.OwnerId == ownerId.Value &&
+                a.Songs.Any(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id)));
+
         var query = field switch
         {
-            "name" => context.Artists
-                .Where(a => a.OwnerId == currentUser.Id)
+            "name" => scoped
                 .Select(a => a.Name)
                 .Distinct(),
             _ => Enumerable.Empty<string>().AsQueryable(),

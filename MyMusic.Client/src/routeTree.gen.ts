@@ -27,6 +27,7 @@ import { Route as PlaylistsPlaylistIdRouteImport } from './routes/playlists.$pla
 import { Route as AuditsAuditIdRouteImport } from './routes/audits.$auditId'
 import { Route as ArtistsArtistIdRouteImport } from './routes/artists.$artistId'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums.$albumId'
+import { Route as SongsSharedOwnerIdRouteImport } from './routes/songs.shared.$ownerId'
 import { Route as DevicesDeviceIdSessionsIndexRouteImport } from './routes/devices.$deviceId.sessions.index'
 import { Route as DevicesDeviceIdSessionsSessionIdRouteImport } from './routes/devices.$deviceId.sessions.$sessionId'
 
@@ -120,6 +121,11 @@ const AlbumsAlbumIdRoute = AlbumsAlbumIdRouteImport.update({
   path: '/$albumId',
   getParentRoute: () => AlbumsRoute,
 } as any)
+const SongsSharedOwnerIdRoute = SongsSharedOwnerIdRouteImport.update({
+  id: '/shared/$ownerId',
+  path: '/shared/$ownerId',
+  getParentRoute: () => SongsRoute,
+} as any)
 const DevicesDeviceIdSessionsIndexRoute =
   DevicesDeviceIdSessionsIndexRouteImport.update({
     id: '/devices/$deviceId/sessions/',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/devices/': typeof DevicesIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
+  '/songs/shared/$ownerId': typeof SongsSharedOwnerIdRoute
   '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
   '/devices/$deviceId/sessions/': typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/devices': typeof DevicesIndexRoute
   '/playlists': typeof PlaylistsIndexRoute
   '/songs': typeof SongsIndexRoute
+  '/songs/shared/$ownerId': typeof SongsSharedOwnerIdRoute
   '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
   '/devices/$deviceId/sessions': typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/devices/': typeof DevicesIndexRoute
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
+  '/songs/shared/$ownerId': typeof SongsSharedOwnerIdRoute
   '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
   '/devices/$deviceId/sessions/': typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/devices/'
     | '/playlists/'
     | '/songs/'
+    | '/songs/shared/$ownerId'
     | '/devices/$deviceId/sessions/$sessionId'
     | '/devices/$deviceId/sessions/'
   fileRoutesByTo: FileRoutesByTo
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/devices'
     | '/playlists'
     | '/songs'
+    | '/songs/shared/$ownerId'
     | '/devices/$deviceId/sessions/$sessionId'
     | '/devices/$deviceId/sessions'
   id:
@@ -259,6 +270,7 @@ export interface FileRouteTypes {
     | '/devices/'
     | '/playlists/'
     | '/songs/'
+    | '/songs/shared/$ownerId'
     | '/devices/$deviceId/sessions/$sessionId'
     | '/devices/$deviceId/sessions/'
   fileRoutesById: FileRoutesById
@@ -408,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlbumsAlbumIdRouteImport
       parentRoute: typeof AlbumsRoute
     }
+    '/songs/shared/$ownerId': {
+      id: '/songs/shared/$ownerId'
+      path: '/shared/$ownerId'
+      fullPath: '/songs/shared/$ownerId'
+      preLoaderRoute: typeof SongsSharedOwnerIdRouteImport
+      parentRoute: typeof SongsRoute
+    }
     '/devices/$deviceId/sessions/': {
       id: '/devices/$deviceId/sessions/'
       path: '/devices/$deviceId/sessions'
@@ -454,11 +473,13 @@ const ArtistsRouteWithChildren =
 interface SongsRouteChildren {
   SongsSongIdRoute: typeof SongsSongIdRoute
   SongsIndexRoute: typeof SongsIndexRoute
+  SongsSharedOwnerIdRoute: typeof SongsSharedOwnerIdRoute
 }
 
 const SongsRouteChildren: SongsRouteChildren = {
   SongsSongIdRoute: SongsSongIdRoute,
   SongsIndexRoute: SongsIndexRoute,
+  SongsSharedOwnerIdRoute: SongsSharedOwnerIdRoute,
 }
 
 const SongsRouteWithChildren = SongsRoute._addFileChildren(SongsRouteChildren)

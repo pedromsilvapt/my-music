@@ -2,7 +2,7 @@
 
 set -e
 
-SERVER_URL="${MYMUSIC_SERVER_URL:-http://localhost:8080}"
+SERVER_URL="${MYMUSIC_SERVER_URL:-http://localhost:5000}"
 
 if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Usage: $0 <username> <display_name>"

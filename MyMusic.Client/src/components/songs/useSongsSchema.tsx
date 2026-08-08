@@ -13,6 +13,7 @@ import {
     IconPlayerSkipForward,
     IconPlayerStop,
     IconPlaylistAdd,
+    IconShare,
     IconTrash,
     IconX
 } from "@tabler/icons-react";
@@ -25,8 +26,10 @@ import {useDeleteSongs} from "../../client/songs";
 import {useGetDevices} from "../../client/devices";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
+import {useManageSharingContext} from "../../contexts/manage-sharing-context";
 import {useQueue, useQueueMutations} from "../../contexts/player-context";
 import {useToggleFavorites} from "../../hooks/use-favorites";
+import {useImportSharedSongWithSongsInvalidation} from "../../hooks/use-import-shared-song";
 import {useQueueList} from "../../hooks/use-queues";
 import type {GetPlaylistSongItem, ListSongItem} from "../../model";
 import {isPlaylistSong} from "../../utils/type-guards";
@@ -106,6 +109,8 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
     const playHandler = usePlayHandler(nowPlaying, {visibleQueueId: effectiveVisibleQueueId, currentQueueId: effectiveCurrentQueueId});
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
+    const {open: openManageSharing} = useManageSharingContext();
+    const importSharedSong = useImportSharedSongWithSongsInvalidation();
     const {data: filterMetadata} = useFilterMetadata('songs');
 
     const {data: devicesData} = useGetDevices();
@@ -240,8 +245,21 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
 
         actions: (elems) => {
             const allAreFavorites = elems.every(s => s.isFavorite);
+            const ownedSongs = elems.filter(s => !s.isShared);
+            const sharedSongs = elems.filter(s => s.isShared);
 
             return [
+                ...(sharedSongs.length > 0 ? [{
+                    name: "import-shared",
+                    renderIcon: () => <IconDownload/>,
+                    renderLabel: () => `Import ${sharedSongs.length === 1 ? 'Song' : `${sharedSongs.length} Songs`}`,
+                    onClick: (songs: ListSongItem[]) => {
+                        const shared = songs.filter(s => s.isShared);
+                        for (const song of shared) {
+                            importSharedSong.mutate({songId: song.id});
+                        }
+                    },
+                }] : []),
                 {group: "Manage"},
                 {
                     name: "favorite",
@@ -267,6 +285,15 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         openManageDevices(songs.map(s => s.id));
                     },
                 },
+                ...(ownedSongs.length > 0 ? [{
+                    name: "manage-sharing",
+                    renderIcon: () => <IconShare/>,
+                    renderLabel: () => `Share ${ownedSongs.length === 1 ? 'Song' : `${ownedSongs.length} Songs`}`,
+                    onClick: (songs: ListSongItem[]) => {
+                        const owned = songs.filter(s => !s.isShared);
+                        openManageSharing(owned.map(s => s.id));
+                    },
+                }] : []),
                 {
                     name: 'download',
                     renderIcon: () => <IconDownload/>,
@@ -389,5 +416,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                               lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, openManageSharing, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
 }

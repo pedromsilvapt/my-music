@@ -15,6 +15,16 @@
           "NamingTemplate": "{{simple_label}}.mp3"
         }
       ]
+    },
+    {
+      "username": "user-1",
+      "name": "User 1",
+      "devices": []
+    },
+    {
+      "username": "user-2",
+      "name": "User 2",
+      "devices": []
     }
   ]
 }

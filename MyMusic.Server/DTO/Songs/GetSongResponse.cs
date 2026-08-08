@@ -31,8 +31,14 @@ public record GetSongResponseSong
     public decimal? Rating { get; set; }
     public string? RepositoryPath { get; set; }
     public int? Track { get; set; }
+    public required bool IsShared { get; set; }
 
-    public static GetSongResponseSong FromEntity(Entities.Song song) =>
+    /// <summary>
+    /// Maps a <see cref="Entities.Song"/> to a <see cref="GetSongResponseSong"/>, computing
+    /// <see cref="IsShared"/> against <paramref name="currentUserId"/> (true when the song is
+    /// owned by another user, i.e. surfaced via sharing).
+    /// </summary>
+    public static GetSongResponseSong FromEntity(Entities.Song song, long currentUserId) =>
         new()
         {
             Id = song.Id,
@@ -57,6 +63,7 @@ public record GetSongResponseSong
             Rating = song.Rating,
             RepositoryPath = song.RepositoryPath,
             Track = song.Track,
+            IsShared = song.OwnerId != currentUserId,
         };
 }
 

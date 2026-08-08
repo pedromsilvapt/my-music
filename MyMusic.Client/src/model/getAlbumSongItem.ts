@@ -31,4 +31,5 @@ export interface GetAlbumSongItem {
   isFavorite: boolean;
   isExplicit: boolean;
   hasLyrics: boolean;
+  isShared: boolean;
 }

@@ -16,12 +16,20 @@ public class GenresController(ILogger<GenresController> logger, ICurrentUser cur
     [HttpGet(Name = "ListGenres")]
     public async Task<ListGenresResponse> List(
         MusicDbContext context,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] long? ownerId = null)
     {
-        var genres = await context.Genres
-            .Include(g => g.Songs)
-            .Where(g => g.OwnerId == currentUser.Id)
-            .ToListAsync(cancellationToken);
+        // ownerId null/self → my library (unchanged behavior);
+        // ownerId another user → genres that user owns which are linked to ≥1 song shared with me
+        // (path: Genre.Songs is List<SongGenre>, SongGenre.Song is the linked Song).
+        var query = (ownerId is null || ownerId == currentUser.Id
+                ? context.Genres.Where(g => g.OwnerId == currentUser.Id)
+                : context.Genres.Where(g =>
+                    g.OwnerId == ownerId.Value &&
+                    g.Songs.Any(sg => sg.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))))
+            .Include(g => g.Songs);
+
+        var genres = await query.ToListAsync(cancellationToken);
 
         return new ListGenresResponse
         {

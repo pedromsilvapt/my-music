@@ -12,4 +12,9 @@ search?: string;
  * @pattern ^-?(?:0|[1-9]\d*)$
  */
 limit?: number;
+/**
+ * @nullable
+ * @pattern ^-?(?:0|[1-9]\d*)$
+ */
+ownerId?: number | null;
 };

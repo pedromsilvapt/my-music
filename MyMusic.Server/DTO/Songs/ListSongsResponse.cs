@@ -21,16 +21,22 @@ public record ListSongItem
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
     public required bool HasLyrics { get; set; }
+    public required bool IsShared { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime? AddedAt { get; set; }
 
-    public static ListSongItem FromEntity(Entities.Song song)
+    /// <summary>
+    /// Maps a <see cref="Entities.Song"/> to a <see cref="ListSongItem"/>, computing
+    /// <see cref="IsShared"/> against <paramref name="currentUserId"/> (true when the song is
+    /// owned by another user, i.e. surfaced via sharing). Use this overload from song-list
+    /// endpoints that may include shared songs.
+    /// </summary>
+    public static ListSongItem FromEntity(Entities.Song song, long currentUserId)
     {
         var artists = song.Artists.Select(a => ListSongsArtist.FromEntity(a.Artist)).ToList();
         var genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList();
         var album = ListSongsAlbum.FromEntity(song.Album);
         var devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).DistinctBy(d => d.Id).ToList();
-
         return new ListSongItem
         {
             Id = song.Id,
@@ -45,10 +51,19 @@ public record ListSongItem
             IsFavorite = song.IsFavorite,
             IsExplicit = song.Explicit,
             HasLyrics = song.HasLyrics,
+            IsShared = song.OwnerId != currentUserId,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt
         };
     }
+
+    /// <summary>
+    /// Maps a <see cref="Entities.Song"/> to a <see cref="ListSongItem"/> assuming the caller is
+    /// the owner (IsShared = false). Use <see cref="FromEntity(Entities.Song, long)"/> from
+    /// endpoints that may surface shared songs. Kept for callers that operate only on the
+    /// current user's own library (e.g. audit non-conformities, excluded pairs).
+    /// </summary>
+    public static ListSongItem FromEntity(Entities.Song song) => FromEntity(song, song.OwnerId);
 }
 
 public record ListSongsArtist

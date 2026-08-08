@@ -35,4 +35,30 @@ public static class SongQueryableExtensions
         return result;
     }
 
+    /// <summary>
+    /// Filters <paramref name="query"/> to songs the given <paramref name="userId"/> can read —
+    /// i.e. songs they own <em>or</em> songs that have been shared with them via <see cref="SongSharing"/>.
+    /// Used by single-song read endpoints (Get, Download, GetDevices, GetFilterValues, AutocompleteSongs).
+    /// </summary>
+    /// <remarks>
+    /// Only the Song-scoped shared-access predicate is generalized here. The Album/Artist/Genre
+    /// shared-access predicates differ per entity (Album.Songs vs Artist.Songs.Song vs
+    /// Genre.Songs.Song — through their respective join entities), so they are inlined in each
+    /// controller rather than generalized, to keep the per-entity navigation paths explicit and
+    /// avoid over-abstraction.
+    /// </remarks>
+    public static IQueryable<Song> WhereAccessibleBy(this IQueryable<Song> query, long userId) =>
+        query.Where(s => s.OwnerId == userId || s.SongSharings.Any(ss => ss.UserId == userId));
+
+    /// <summary>
+    /// Filters <paramref name="query"/> to songs owned by <paramref name="ownerId"/> that have been
+    /// shared with <paramref name="currentUserId"/> — the "shared with me by this specific user" view.
+    /// Used by <c>ListSongs</c> when <c>ownerId</c> is another user (gate-by-sharing semantics).
+    /// </summary>
+    public static IQueryable<Song> WhereOwnedOrSharedFromOwner(
+        this IQueryable<Song> query,
+        long currentUserId,
+        long ownerId) =>
+        query.Where(s => s.OwnerId == ownerId && s.SongSharings.Any(ss => ss.UserId == currentUserId));
+
 }

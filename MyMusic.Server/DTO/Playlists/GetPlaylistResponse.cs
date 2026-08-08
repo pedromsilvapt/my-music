@@ -53,6 +53,7 @@ public record GetPlaylistSongItem : ListSongItem
             IsFavorite = false,
             IsExplicit = song.Explicit,
             HasLyrics = song.HasLyrics,
+            IsShared = false,
             CreatedAt = song.CreatedAt,
             AddedAt = song.AddedAt,
             Order = displayOrder,

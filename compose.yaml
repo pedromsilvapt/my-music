@@ -125,17 +125,23 @@ configs:
         reverse_proxy http://dozzle:8080
       }
 
-      :80 {
-        handle_path /api/* {
-          reverse_proxy localhost:5000 {
-            header_up X-MyMusic-UserName admin
+      (tenant) {
+        {args[0]} {
+          handle_path /api/* {
+            reverse_proxy localhost:5000 {
+              header_up X-MyMusic-UserName {args[1]}
+            }
+          }
+
+          handle /* {
+            reverse_proxy localhost:5173
           }
         }
-
-        handle /* {
-          reverse_proxy localhost:5173
-        }
       }
+
+      import tenant :80 admin
+      import tenant :81 user-1
+      import tenant :82 user-2
 
       :5001 {
         handle_path /api/* {

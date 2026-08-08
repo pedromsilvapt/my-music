@@ -1,6 +1,8 @@
+import {Text, Group} from "@mantine/core";
 import {useQueryClient} from "@tanstack/react-query";
 import {useEffect, useState} from "react";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
+import {useManageSharingContext} from "../../contexts/manage-sharing-context.tsx";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useListSongs} from "../../client/songs.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
@@ -11,9 +13,15 @@ import SongImportProgress from "./song-import-progress.tsx";
 
 const SONGS_STATE_KEY = "songs";
 
-export default function SongsPage() {
+export interface SongsPageProps {
+    ownerId?: number;
+    sharerName?: string;
+}
+
+export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
     const queryClient = useQueryClient();
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
+    const {registerRefetch: registerSharingRefetch, unregisterRefetch: unregisterSharingRefetch} = useManageSharingContext();
     const {setCollectionFilter} = useCollectionActions(state => ({
         setCollectionFilter: state.setCollectionFilter,
     }));
@@ -24,14 +32,16 @@ export default function SongsPage() {
     const [importFiles, setImportFiles] = useState<File[]>([]);
     const [showImportProgress, setShowImportProgress] = useState(false);
 
+    const isSharedView = ownerId !== undefined;
+
     const songsQuery = useListSongs(
-        { search: appliedSearch, filter: appliedFilter },
-        { 
-            query: { 
+        {ownerId, search: appliedSearch, filter: appliedFilter},
+        {
+            query: {
                 enabled: true,
-                select: (response) => response.data
-            } 
-        }
+                select: (response) => response.data,
+            },
+        },
     );
 
     const songs = useQueryData(songsQuery, "Failed to fetch songs") ?? {songs: []};
@@ -43,8 +53,13 @@ export default function SongsPage() {
         return () => unregisterRefetch('songs');
     }, [registerRefetch, unregisterRefetch, songsQuery.refetch]);
 
+    useEffect(() => {
+        registerSharingRefetch('songs', songsQuery.refetch);
+        return () => unregisterSharingRefetch('songs');
+    }, [registerSharingRefetch, unregisterSharingRefetch, songsQuery.refetch]);
+
     const handleFilterChange = (newSearch: string, newFilter: string) => {
-        setCollectionFilter(SONGS_STATE_KEY, { search: newSearch, expression: newFilter });
+        setCollectionFilter(SONGS_STATE_KEY, {search: newSearch, expression: newFilter});
     };
 
     const handleFilesDropped = (files: File[]) => {
@@ -59,28 +74,48 @@ export default function SongsPage() {
     };
 
     const elements = songs?.songs ?? [];
+    const pageTitle = isSharedView ? `Shared by ${sharerName ?? "Unknown"}` : undefined;
 
-    return (
-        <SongImportDropzone onFilesDropped={handleFilesDropped}>
-            <div style={{height: 'var(--parent-height)', position: 'relative'}} data-testid="songs">
-                <Collection
-                    key={SONGS_STATE_KEY}
-                    stateKey={SONGS_STATE_KEY}
-                    items={elements}
-                    schema={songsSchema}
-                    isFetching={songsQuery.isFetching}
-                    filterMode="server"
-                    serverSearch={appliedSearch}
-                    serverFilter={appliedFilter}
-                    onServerFilterChange={handleFilterChange}
-                    searchPlaceholder="Search songs..."
-                />
+    const content = (
+        <div
+            style={{height: 'var(--parent-height)', position: 'relative'}}
+            data-testid={isSharedView ? "shared-songs" : "songs"}
+            data-loading={songsQuery.isFetching ? "true" : "false"}
+        >
+            {pageTitle && (
+                <Group justify="space-between" mb="sm">
+                    <Text fw={600} size="lg">{pageTitle}</Text>
+                </Group>
+            )}
+            <Collection
+                key={SONGS_STATE_KEY}
+                stateKey={SONGS_STATE_KEY}
+                items={elements}
+                schema={songsSchema}
+                isFetching={songsQuery.isFetching}
+                filterMode="server"
+                serverSearch={appliedSearch}
+                serverFilter={appliedFilter}
+                onServerFilterChange={handleFilterChange}
+                searchPlaceholder="Search songs..."
+            />
+            {!isSharedView && (
                 <SongImportProgress
                     opened={showImportProgress}
                     onClose={handleImportClose}
                     files={importFiles}
                 />
-            </div>
+            )}
+        </div>
+    );
+
+    if (isSharedView) {
+        return content;
+    }
+
+    return (
+        <SongImportDropzone onFilesDropped={handleFilesDropped}>
+            {content}
         </SongImportDropzone>
     );
 }

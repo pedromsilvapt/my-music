@@ -94,6 +94,7 @@ public class SyncControllerResolveConflictsSpecs
             Genres = [],
             Devices = [],
             Sources = [],
+            SongSharings = [],
         };
         db.Add(song);
         db.SaveChanges();

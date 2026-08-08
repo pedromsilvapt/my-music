@@ -9,6 +9,7 @@ import {createRoot} from 'react-dom/client'
 import {CollectionStoreProvider} from "./contexts/collection-context.tsx";
 import ManageDevicesProvider from "./contexts/manage-devices-context.tsx";
 import ManagePlaylistsProvider from "./contexts/manage-playlists-context.tsx";
+import ManageSharingProvider from "./contexts/manage-sharing-context.tsx";
 import {PlayerProvider} from "./contexts/player-context.tsx";
 import {ArtworkLightboxProvider} from "./contexts/artwork-lightbox-context.tsx";
 import VolumeInitializer from "./components/volume-initializer.tsx";
@@ -57,9 +58,11 @@ createRoot(document.getElementById('root')!).render(
                                     <QueueInitializer/>
                                     <ManagePlaylistsProvider>
                                         <ManageDevicesProvider>
-                                            <CollectionStoreProvider>
-                                                <RouterProvider router={router}/>
-                                            </CollectionStoreProvider>
+                                            <ManageSharingProvider>
+                                                <CollectionStoreProvider>
+                                                    <RouterProvider router={router}/>
+                                                </CollectionStoreProvider>
+                                            </ManageSharingProvider>
                                         </ManageDevicesProvider>
                                     </ManagePlaylistsProvider>
                                 </QueueManagerProvider>

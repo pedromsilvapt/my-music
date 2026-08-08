@@ -31,6 +31,7 @@ export interface ListSongItem {
   isFavorite: boolean;
   isExplicit: boolean;
   hasLyrics: boolean;
+  isShared: boolean;
   createdAt: string;
   /** @nullable */
   addedAt?: string | null;

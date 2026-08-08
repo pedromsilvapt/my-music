@@ -28,6 +28,7 @@ function makePlaylistSong (id: number, order: number, stopAfterPlayback = false)
         isFavorite: false,
         isExplicit: false,
         hasLyrics: false,
+        isShared: false,
         createdAt: '2025-01-01T00:00:00Z',
     };
 }
@@ -46,6 +47,7 @@ function makeListSong (id: number): ListSongItem {
         isFavorite: false,
         isExplicit: false,
         hasLyrics: false,
+        isShared: false,
         createdAt: '2025-01-01T00:00:00Z',
     };
 }

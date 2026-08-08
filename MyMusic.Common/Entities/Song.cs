@@ -78,6 +78,8 @@ public class Song
 
     public List<PlaylistSong> PlaylistSongs { get; set; } = [];
 
+    public required List<SongSharing> SongSharings { get; set; } = [];
+
     [Projectable] public int DurationSeconds => (int)Duration.TotalSeconds;
 
     [Projectable]
@@ -91,6 +93,8 @@ public class Song
     [Projectable] public int ArtistCount => Artists.Count;
 
     [Projectable] public int GenreCount => Genres.Count;
+
+    [Projectable] public bool IsShared => SongSharings.Count > 0;
 
     [Projectable] public string SearchableText => (Label ?? "") + " " + (Album.Name ?? "");
 }

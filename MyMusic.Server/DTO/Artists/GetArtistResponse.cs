@@ -26,7 +26,7 @@ public record GetArtistResponseArtist
     public required List<GetArtistResponseAlbum> Albums { get; set; }
     public required List<GetArtistSongItem> Songs { get; set; }
 
-    public static GetArtistResponseArtist FromEntity(Entities.Artist artist, ArtistSongFilter songFilter)
+    public static GetArtistResponseArtist FromEntity(Entities.Artist artist, ArtistSongFilter songFilter, long currentUserId)
     {
         var songs = songFilter switch
         {
@@ -44,7 +44,7 @@ public record GetArtistResponseArtist
             SongsCount = artist.SongsCount,
             CreatedAt = artist.CreatedAt,
             Albums = artist.Albums.Select(GetArtistResponseAlbum.FromEntity).ToList(),
-            Songs = songs.Select(GetArtistSongItem.FromEntity).ToList(),
+            Songs = songs.Select(sa => GetArtistSongItem.FromEntity(sa, currentUserId)).ToList(),
         };
     }
 }
@@ -103,8 +103,9 @@ public record GetArtistSongItem
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
     public required bool HasLyrics { get; set; }
+    public required bool IsShared { get; set; }
 
-    public static GetArtistSongItem FromEntity(Entities.SongArtist songArtist)
+    public static GetArtistSongItem FromEntity(Entities.SongArtist songArtist, long currentUserId)
     {
         var song = songArtist.Song;
         return new GetArtistSongItem
@@ -121,6 +122,7 @@ public record GetArtistSongItem
             IsFavorite = false,
             IsExplicit = song.Explicit,
             HasLyrics = song.HasLyrics,
+            IsShared = song.OwnerId != currentUserId,
         };
     }
 }

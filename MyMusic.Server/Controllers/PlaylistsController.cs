@@ -23,6 +23,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         [FromQuery] string? search = null,
         [FromQuery] string? filter = null)
     {
+        // Owner-only by design — sharing applies to song metadata, not personal collections.
         var query = context.Playlists
             .Where(p => p.OwnerId == currentUser.Id);
 

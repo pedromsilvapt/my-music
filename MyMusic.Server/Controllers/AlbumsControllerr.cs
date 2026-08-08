@@ -21,10 +21,16 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         MusicDbContext context,
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] long? ownerId = null)
     {
-        var query = context.Albums
-            .Where(a => a.OwnerId == currentUser.Id);
+        // ownerId null/self → my library (unchanged behavior);
+        // ownerId another user → albums that user owns which are linked to ≥1 song shared with me.
+        var query = (ownerId is null || ownerId == currentUser.Id
+                ? context.Albums.Where(a => a.OwnerId == currentUser.Id)
+                : context.Albums.Where(a =>
+                    a.OwnerId == ownerId.Value &&
+                    a.Songs.Any(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id))));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -92,19 +98,37 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
     [HttpGet("{id:long}", Name = "GetAlbum")]
     public async Task<GetAlbumResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
     {
+        // Load the album with sharing rows so the recipient view can trim to shared songs.
         var album = await context.Albums
             .Include(a => a.Artist)
             .IncludeSongMetadata("Songs", includeAlbum: false)
-            .FirstOrDefaultAsync(a => a.Id == id && a.OwnerId == currentUser.Id, cancellationToken);
+            .Include("Songs.SongSharings")
+            .FirstOrDefaultAsync(a =>
+                a.Id == id &&
+                (a.OwnerId == currentUser.Id ||
+                 a.Songs.Any(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id))),
+                cancellationToken);
 
         if (album == null)
         {
             throw new Exception($"Album not found with id {id}");
         }
 
+        // Recipient view: trim to only songs shared with me. Safe because this GET never calls
+        // SaveChanges — reassigning the nav collection on a tracked entity never touches the DB,
+        // and the DTO reads the trimmed list. (AsNoTracking can't be used here: the Artist include
+        // path creates a cycle Artist→Songs→Song→Artists→Artist, which EF rejects for no-tracking
+        // queries.)
+        if (album.OwnerId != currentUser.Id)
+        {
+            album.Songs = album.Songs
+                .Where(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id))
+                .ToList();
+        }
+
         return new GetAlbumResponse
         {
-            Album = GetAlbumResponseAlbum.FromEntity(album),
+            Album = GetAlbumResponseAlbum.FromEntity(album, currentUser.Id),
         };
     }
 
@@ -169,12 +193,19 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         MusicDbContext context,
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
-        [FromQuery] int limit = 15)
+        [FromQuery] int limit = 15,
+        [FromQuery] long? ownerId = null)
     {
+        // Mirror List's ownerId scoping so autocomplete reflects the active view.
+        var scoped = ownerId is null || ownerId == currentUser.Id
+            ? context.Albums.Where(a => a.OwnerId == currentUser.Id)
+            : context.Albums.Where(a =>
+                a.OwnerId == ownerId.Value &&
+                a.Songs.Any(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id)));
+
         var query = field switch
         {
-            "name" => context.Albums
-                .Where(a => a.OwnerId == currentUser.Id)
+            "name" => scoped
                 .Select(a => a.Name)
                 .Distinct(),
             _ => Enumerable.Empty<string>().AsQueryable(),

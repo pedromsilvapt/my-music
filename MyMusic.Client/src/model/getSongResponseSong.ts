@@ -58,4 +58,5 @@ export interface GetSongResponseSong {
      * @pattern ^-?(?:0|[1-9]\d*)$
      */
   track?: number | null;
+  isShared: boolean;
 }

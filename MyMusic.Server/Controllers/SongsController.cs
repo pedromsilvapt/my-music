@@ -50,10 +50,14 @@ public class SongsController(
         MusicDbContext context,
         CancellationToken cancellationToken,
         [FromQuery] string? filter = null,
-        [FromQuery] string? search = null)
+        [FromQuery] string? search = null,
+        [FromQuery] long? ownerId = null)
     {
-        var query = context.Songs
-            .Where(s => s.OwnerId == currentUser.Id)
+        // ownerId null or self → my library (unchanged behavior);
+        // ownerId another user → only songs that owner has shared with me (gate-by-sharing).
+        var query = (ownerId is null || ownerId == currentUser.Id
+                ? context.Songs.Where(s => s.OwnerId == currentUser.Id)
+                : context.Songs.WhereOwnedOrSharedFromOwner(currentUser.Id, ownerId.Value))
             .IncludeSongMetadata()
             .AsSplitQuery();
 
@@ -74,7 +78,7 @@ public class SongsController(
 
         return new ListSongsResponse
         {
-            Songs = songs.Select(ListSongItem.FromEntity).ToList(),
+            Songs = songs.Select(s => ListSongItem.FromEntity(s, currentUser.Id)).ToList(),
         };
     }
 
@@ -82,7 +86,8 @@ public class SongsController(
     public async Task<GetSongResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
     {
         var song = await context.Songs
-            .Where(s => s.Id == id && s.OwnerId == currentUser.Id)
+            .Where(s => s.Id == id)
+            .WhereAccessibleBy(currentUser.Id)
             .IncludeSongMetadata()
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -93,7 +98,7 @@ public class SongsController(
 
         return new GetSongResponse
         {
-            Song = GetSongResponseSong.FromEntity(song),
+            Song = GetSongResponseSong.FromEntity(song, currentUser.Id),
         };
     }
 
@@ -102,7 +107,9 @@ public class SongsController(
         CancellationToken cancellationToken)
     {
         var song = await context.Songs
-            .SingleOrDefaultAsync(s => s.Id == id && s.OwnerId == currentUser.Id, cancellationToken);
+            .Where(s => s.Id == id)
+            .WhereAccessibleBy(currentUser.Id)
+            .SingleOrDefaultAsync(cancellationToken);
 
         if (song == null)
         {
@@ -146,6 +153,7 @@ public class SongsController(
         return new { success = true };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot upload on the owner's behalf.
     [HttpPost("upload", Name = "UploadSong")]
     public async Task<UploadSongResponse> Upload(
         IFormFile file,
@@ -242,6 +250,7 @@ public class SongsController(
         return string.Format(formattedTemplate, args);
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot favorite/unfavorite the owner's song.
     [HttpPost("{id:long}/favorite", Name = "ToggleSongFavorite")]
     public async Task<ToggleFavoriteResponse> ToggleFavorite(long id, MusicDbContext context,
         CancellationToken cancellationToken)
@@ -264,6 +273,7 @@ public class SongsController(
         };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot batch-favorite the owner's songs.
     [HttpPost("favorites", Name = "ToggleFavorites")]
     public async Task<ToggleFavoritesResponse> ToggleFavorites([FromBody] ToggleFavoritesRequest request,
         MusicDbContext context, CancellationToken cancellationToken)
@@ -296,6 +306,18 @@ public class SongsController(
     public async Task<GetSongDevicesResponse> GetDevices(long id, MusicDbContext context,
         CancellationToken cancellationToken)
     {
+        // Read-only devices view — shared recipients can view which of *their* devices
+        // (if any) hold this song. Write access (UpdateDevices) stays owner-only.
+        var songAccessible = await context.Songs
+            .Where(s => s.Id == id)
+            .WhereAccessibleBy(currentUser.Id)
+            .AnyAsync(cancellationToken);
+
+        if (!songAccessible)
+        {
+            throw new Exception($"Song not found with id {id}");
+        }
+
         var devices = await context.Devices
             .Where(d => d.OwnerId == currentUser.Id)
             .ToListAsync(cancellationToken);
@@ -323,6 +345,7 @@ public class SongsController(
         return new GetSongDevicesResponse { Devices = items };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot change the owner's device mapping.
     [HttpPut("devices", Name = "UpdateSongDevices")]
     public async Task<UpdateSongDevicesResponse> UpdateDevices(
         [FromBody] UpdateSongDevicesRequest request,
@@ -445,11 +468,11 @@ public class SongsController(
         var query = field switch
         {
             "title" => context.Songs
-                .Where(s => s.OwnerId == currentUser.Id)
+                .WhereAccessibleBy(currentUser.Id)
                 .Select(s => s.Title)
                 .Distinct(),
             "label" => context.Songs
-                .Where(s => s.OwnerId == currentUser.Id)
+                .WhereAccessibleBy(currentUser.Id)
                 .Select(s => s.Label)
                 .Distinct(),
             "album.name" => context.Albums
@@ -472,6 +495,10 @@ public class SongsController(
                 .Where(p => p.OwnerId == currentUser.Id)
                 .Select(p => p.Name)
                 .Distinct(),
+            "sharing.name" => context.SongSharings
+                .Where(ss => ss.Song.OwnerId == currentUser.Id)
+                .Select(ss => ss.User.Name)
+                .Distinct(),
             _ => Enumerable.Empty<string>().AsQueryable(),
         };
 
@@ -489,6 +516,7 @@ public class SongsController(
         return new FilterValuesResponse { Values = values };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot edit the owner's song metadata.
     [HttpPut("{id:long}", Name = "UpdateSong")]
     public async Task<UpdateSongResponse> Update(
         long id,
@@ -546,6 +574,7 @@ public class SongsController(
         return new BatchUpdateSongsResponse { Songs = results };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot delete the owner's songs.
     [HttpDelete(Name = "DeleteSongs")]
     public async Task<BatchDeleteSongsResponse> Delete(
         [FromBody] BatchDeleteSongsRequest request,
@@ -599,7 +628,7 @@ public class SongsController(
         [FromQuery] int limit = 15)
     {
         var query = context.Songs
-            .Where(s => s.OwnerId == currentUser.Id)
+            .WhereAccessibleBy(currentUser.Id)
             .Include(s => s.Album)
             .Include(s => s.Artists)
             .ThenInclude(a => a.Artist)
@@ -814,6 +843,16 @@ public class SongsController(
         },
         new()
         {
+            Name = "sharing.name",
+            EntityPath = "SongSharings.User.Name",
+            Type = "string",
+            Description = "Recipient the song is shared with (by username)",
+            IsCollection = true,
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+            SupportsDynamicValues = true,
+        },
+        new()
+        {
             Name = "searchableText",
             Type = "string",
             Description = "Combined searchable text (title + album + label)",
@@ -952,6 +991,7 @@ public class SongsController(
         };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot trigger metadata fetch on the owner's song.
     [HttpPost("{id:long}/fetch-metadata", Name = "FetchSongMetadata")]
     public async Task<ActionResult<FetchMetadataResponse>> FetchMetadata(
         long id,

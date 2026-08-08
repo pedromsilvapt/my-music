@@ -945,6 +945,7 @@ public class AuditRulesSpecs
             Artists = [],
             Devices = [],
             Sources = [],
+            SongSharings = [],
             RepositoryPath = "/test/Owner 2 Song Without Cover.mp3",
             Checksum = Guid.NewGuid().ToString(),
             ChecksumAlgorithm = "SHA256",

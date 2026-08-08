@@ -42,6 +42,7 @@ public class DevicesController(
         [FromQuery] string? filter = null,
         [FromQuery] bool includeSongs = false)
     {
+        // Owner-only by design — sharing applies to song metadata, not personal collections.
         var result = await deviceListService.ListAsync(currentUser.Id, search, filter, includeSongs, cancellationToken);
 
         return new ListDevicesResponse

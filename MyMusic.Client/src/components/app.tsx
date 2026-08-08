@@ -10,6 +10,7 @@ import {
     IconPlayerPlay,
     IconPlaylist,
     IconSettings,
+    IconShare,
     IconShoppingCart,
     IconUser,
     IconUsers
@@ -18,6 +19,7 @@ import './styles';
 import {Link, Outlet} from "@tanstack/react-router";
 import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
+import {useSharers} from "../hooks/use-sharers";
 import {useUserPreferences} from "../hooks/use-user-preferences";
 import ThemeToggle from "./common/theme-toggle.tsx";
 import Player from "./player/player.tsx";
@@ -30,6 +32,7 @@ function App() {
     usePlayerQueueInitializer();
     const footerVisible = useIsPlayerActive();
     const {user} = useUserPreferences();
+    const {sharers} = useSharers();
 
     return (
         <AppShell
@@ -81,6 +84,27 @@ function App() {
                         href="/songs"
                         leftSection={<IconMusic stroke={2}/>}
                         label="Songs"
+                        children={sharers.length > 0 ? (
+                            <>
+                                <NavLink
+                                    data-testid="nav-songs-mine"
+                                    renderRoot={(props) => <Link to={"/songs"} activeOptions={{exact: true}} {...props} />}
+                                    label="Mine"
+                                    leftSection={<IconUser size={16}/>}
+                                    style={{paddingLeft: "2rem"}}
+                                />
+                                {sharers.map((sharer) => (
+                                    <NavLink
+                                        key={sharer.id}
+                                        data-testid={`nav-songs-shared-${sharer.id}`}
+                                        renderRoot={(props) => <Link to={"/songs/shared/$ownerId"} params={{ownerId: String(sharer.id)}} {...props} />}
+                                        label={sharer.name}
+                                        leftSection={<IconShare size={16}/>}
+                                        style={{paddingLeft: "2rem"}}
+                                    />
+                                ))}
+                            </>
+                        ) : undefined}
                     />
                     <NavLink
                         data-testid="nav-albums"

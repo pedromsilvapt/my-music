@@ -52,6 +52,10 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IGenreDeleteService, GenreDeleteService>();
         builder.Services.AddScoped<IArtworkDeleteService, ArtworkDeleteService>();
 
+        // Share services
+        builder.Services.AddScoped<ISongShareService, SongShareService>();
+        builder.Services.AddScoped<ISharedSongImportService, SharedSongImportService>();
+
         // Device services
         builder.Services.AddScoped<IDeviceLookupService, DeviceLookupService>();
         builder.Services.AddScoped<IDeviceListService, DeviceListService>();
