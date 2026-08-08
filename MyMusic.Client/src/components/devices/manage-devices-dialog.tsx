@@ -2,6 +2,7 @@ import {Badge, Box, Button, Collapse, Group, Modal, ScrollArea, SegmentedControl
 import {notifications} from "@mantine/notifications";
 import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {IconChevronDown, IconChevronUp} from "@tabler/icons-react";
 import {useGetDevices} from "../../client/devices.ts";
 import {useListSongs, useUpdateSongDevices} from "../../client/songs.ts";
@@ -26,15 +27,16 @@ export default function ManageDevicesDialog({
                                                songIds,
                                                onSuccess
                                            }: ManageDevicesDialogProps) {
+    const {t} = useTranslation(["devices", "common"]);
     const devicesQuery = useGetDevices({ includeSongs: true }, {query: {enabled: opened}});
-    const devicesResponse = useQueryData(devicesQuery, "Failed to fetch devices") ?? {data: {devices: []}};
+    const devicesResponse = useQueryData(devicesQuery, t("devices:page.fetchFailed")) ?? {data: {devices: []}};
     const devices = devicesResponse.data.devices ?? [];
 
     const songsQuery = useListSongs(
         songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
         {query: {enabled: opened && songIds.length > 0}}
     );
-    const songsResponse = useQueryData(songsQuery, "Failed to fetch songs") ?? {data: {songs: []}};
+    const songsResponse = useQueryData(songsQuery, t("devices:manageDialog.fetchSongsFailed")) ?? {data: {songs: []}};
     const managedSongs = songsResponse?.data?.songs ?? [];
 
     const queryClient = useQueryClient();
@@ -57,9 +59,9 @@ export default function ManageDevicesDialog({
                 const errorResponse = error as { response?: { data?: { detail?: string } }; message?: string } | null;
                 const errorMessage = errorResponse?.response?.data?.detail
                     ?? errorResponse?.message
-                    ?? 'Failed to update devices. Please try again.';
+                    ?? t("devices:manageDialog.updateFailedFallback");
                 notifications.show({
-                    title: 'Error',
+                    title: t("common:status.error"),
                     message: errorMessage,
                     color: 'red',
                 });
@@ -120,11 +122,11 @@ export default function ManageDevicesDialog({
     };
 
     return (
-        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Devices" centered
+        <Modal opened={opened} onClose={handleCancel} size="lg" title={t("devices:manageDialog.title")} centered
                zIndex={ZINDEX_MODAL}>
             <Stack>
                 <Text size="sm" c="dimmed">
-                    Managing {songIds.length} song{songIds.length !== 1 ? "s" : ""}
+                    {t("devices:manageDialog.managing", {count: songIds.length})}
                 </Text>
 
                 <ScrollArea h={400}>
@@ -145,10 +147,10 @@ export default function ManageDevicesDialog({
 
                 <Group justify="flex-end">
                     <Button variant="default" onClick={handleCancel}>
-                        Cancel
+                        {t("common:actions.cancel")}
                     </Button>
                     <Button onClick={handleApply} loading={updateDevices.isPending}>
-                        Apply
+                        {t("common:actions.apply")}
                     </Button>
                 </Group>
             </Stack>
@@ -166,6 +168,7 @@ interface DeviceRowProps {
 }
 
 function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onChange}: DeviceRowProps) {
+    const {t} = useTranslation(["devices", "common"]);
     // We can assume `device.songs` is never null only because in the query above, `includeSongs` is hardcoded to true
     const deviceSongIdSet = new Set(device.songs!.map(s => s.id));
     const deviceSongPathMap = new Map(device.songs!.map(s => [s.id, s.path]));
@@ -201,9 +204,9 @@ function DeviceRow({device, managedSongs, value, expanded, onToggleExpand, onCha
                         value={value}
                         onChange={(v) => onChange(v as DeviceSelection)}
                         data={[
-                            {label: <Text inherit c="gray">None</Text>, value: 'none'},
-                            {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
-                            {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>Remove</Text>, value: 'remove'},
+                            {label: <Text inherit c="gray">{t("common:common.none")}</Text>, value: 'none'},
+                            {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>{t("common:common.add")}</Text>, value: 'add'},
+                            {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>{t("common:common.remove")}</Text>, value: 'remove'},
                         ]}
                         size="xs"
                     />

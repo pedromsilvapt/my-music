@@ -1,0 +1,34 @@
+{
+    "createModal": {
+        "title": "Criar Lista",
+        "nameLabel": "Nome da Lista",
+        "namePlaceholder": "A Minha Lista",
+        "create": "Criar"
+    },
+    "manageDialog": {
+        "title": "Gerir Listas",
+        "fetchPlaylistsFailed": "Falha ao obter as listas",
+        "fetchSongsFailed": "Falha ao obter as músicas",
+        "managing_one": "A gerir {{count}} música",
+        "managing_other": "A gerir {{count}} músicas",
+        "newPlaylistPlaceholder": "Nome da nova lista"
+    },
+    "page": {
+        "title": "Listas",
+        "createPlaylist": "Criar Lista",
+        "fetchFailed": "Falha ao obter as listas",
+        "searchPlaceholder": "Pesquisar listas..."
+    },
+    "detailPage": {
+        "fetchFailed": "Falha ao obter a lista"
+    },
+    "schema": {
+        "manageGroup": "Gerir",
+        "columns": {
+            "name": "Nome",
+            "songs": "Músicas",
+            "created": "Criada",
+            "modified": "Modificada"
+        }
+    }
+}

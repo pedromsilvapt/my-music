@@ -20,6 +20,7 @@ import type {ContextModalProps} from "@mantine/modals";
 import {useQueryClient} from "@tanstack/react-query";
 import {IconChevronLeft, IconChevronRight, IconRefresh, IconSearch} from "@tabler/icons-react";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {
     useBatchMultiUpdateSongs,
     useUpdateSong,
@@ -118,6 +119,7 @@ export default function SongEditorContextModal({
     id,
     innerProps,
 }: ContextModalProps<SongEditorContextModalInnerProps>) {
+    const {t} = useTranslation(["songs", "common"]);
     const [songs, setSongs] = useState<GetSongResponseSong[]>([]);
     const [loading, setLoading] = useState(true);
     const [editStates, setEditStates] = useState<Map<number, SongEditState>>(new Map());
@@ -268,8 +270,8 @@ export default function SongEditorContextModal({
             onSuccess: (response, variables) => {
                 if (response.status >= 400) {
                     const responseData = response.data as { detail?: string } | undefined;
-                    const errorDetail = responseData?.detail || "Unknown error";
-                    notifications.show({title: "Error", message: `Failed to update song: ${errorDetail}`, color: "red"});
+                    const errorDetail = responseData?.detail || t("songs:editModal.unknownError");
+                    notifications.show({title: t("common:status.error"), message: t("songs:editModal.updateFailed", {error: errorDetail}), color: "red"});
                     return;
                 }
 
@@ -299,7 +301,7 @@ export default function SongEditorContextModal({
 
                 queryClient.invalidateQueries({queryKey: ["api", "songs"]});
                 queryClient.invalidateQueries({queryKey: ["api", "audits"]});
-                notifications.show({title: "Success", message: "Song updated successfully", color: "green"});
+                notifications.show({title: t("common:status.success"), message: t("songs:editModal.updatedSuccessfully"), color: "green"});
                 if (shouldCloseAfterSave.current) {
                     handleClose();
                 } else if (currentIndex < songs.length - 1) {
@@ -308,7 +310,7 @@ export default function SongEditorContextModal({
                 shouldCloseAfterSave.current = false;
             },
             onError: (error) => {
-                notifications.show({title: "Error", message: `Failed to update song: ${error}`, color: "red"});
+                notifications.show({title: t("common:status.error"), message: t("songs:editModal.updateFailed", {error: String(error)}), color: "red"});
             },
         },
     });
@@ -318,8 +320,8 @@ export default function SongEditorContextModal({
             onSuccess: (response) => {
                 if (response.status >= 400) {
                     const responseData = response.data as { detail?: string } | undefined;
-                    const errorDetail = responseData?.detail || "Unknown error";
-                    notifications.show({title: "Error", message: `Failed to update songs: ${errorDetail}`, color: "red"});
+                    const errorDetail = responseData?.detail || t("songs:editModal.unknownError");
+                    notifications.show({title: t("common:status.error"), message: t("songs:editModal.updateFailedPlural", {error: errorDetail}), color: "red"});
                     return;
                 }
 
@@ -358,18 +360,18 @@ export default function SongEditorContextModal({
                 queryClient.invalidateQueries({queryKey: ["api", "audits"]});
                 const failed = response.data.songs.filter((s: BatchMultiUpdateSongResult) => !s.success);
                 if (failed.length === 0) {
-                    notifications.show({title: "Success", message: "All songs updated successfully", color: "green"});
+                    notifications.show({title: t("common:status.success"), message: t("songs:editModal.allUpdatedSuccessfully"), color: "green"});
                 } else {
                     notifications.show({
-                        title: "Partial Success",
-                        message: `${failed.length} of ${songs.length} songs failed to update`,
+                        title: t("common:status.partialSuccess"),
+                        message: t("songs:editModal.partialSuccess", {failed: failed.length, total: songs.length}),
                         color: "yellow",
                     });
                 }
                 handleClose();
             },
             onError: (error) => {
-                notifications.show({title: "Error", message: `Failed to update songs: ${error}`, color: "red"});
+                notifications.show({title: t("common:status.error"), message: t("songs:editModal.updateFailedPlural", {error: String(error)}), color: "red"});
             },
         },
     });
@@ -446,11 +448,14 @@ export default function SongEditorContextModal({
             id: a.id,
             name: a.name,
             coverId: a.coverId,
-            subtitle: a.albumCount && a.songCount 
-                ? `${a.albumCount} albums, ${a.songCount} songs`
+            subtitle: a.albumCount && a.songCount
+                ? t("songs:tagsAutocomplete.countsJoined", {
+                    albums: t("songs:tagsAutocomplete.albumCount", {count: a.albumCount}),
+                    songs: t("songs:tagsAutocomplete.songCount", {count: a.songCount})
+                })
                 : undefined,
         }));
-    }, []);
+    }, [t]);
 
     const searchGenres = useCallback(async (query: string): Promise<TagsAutocompleteItem[]> => {
         const response = await autocompleteGenres({ search: query });
@@ -463,7 +468,7 @@ export default function SongEditorContextModal({
         });
 
         if (songsToSave.length === 0) {
-            notifications.show({title: "Info", message: "No changes to save", color: "blue"});
+            notifications.show({title: t("common:status.info"), message: t("songs:editModal.noChangesToSave"), color: "blue"});
             return;
         }
 
@@ -579,7 +584,7 @@ export default function SongEditorContextModal({
             shouldCloseAfterSave.current = closeAfterSave;
             updateSong.mutate({ id: currentState.song.id, data: update });
         } else {
-            notifications.show({title: "Info", message: "No changes to save", color: "blue"});
+            notifications.show({title: t("common:status.info"), message: t("songs:editModal.noChangesToSave"), color: "blue"});
         }
     };
 
@@ -589,7 +594,7 @@ export default function SongEditorContextModal({
         });
 
         if (songsToSave.length === 0) {
-            notifications.show({title: "Info", message: "No changes to save", color: "blue"});
+            notifications.show({title: t("common:status.info"), message: t("songs:editModal.noChangesToSave"), color: "blue"});
             return;
         }
 
@@ -859,7 +864,7 @@ export default function SongEditorContextModal({
 
                     {hasMetadata && metadataFieldCount > 0 && (
                         <Checkbox
-                            label="Apply Changes"
+                            label={t("songs:editModal.applyChanges")}
                             checked={applyChangesState.checked}
                             indeterminate={applyChangesState.indeterminate}
                             onChange={(e) => handleSelectAll(e.currentTarget.checked)}
@@ -876,7 +881,7 @@ export default function SongEditorContextModal({
                         )}
                         {hasMetadata && currentState.metadata?.title && (
                             <Box style={{flex: 1}}>
-                                <Input.Wrapper label="Title (old)">
+                                <Input.Wrapper label={t("songs:editModal.fieldOld", {field: t("songs:editModal.fields.title")})}>
                                     <Input
                                         value={currentState.metadata.title.old ?? ""}
                                         readOnly
@@ -897,8 +902,8 @@ export default function SongEditorContextModal({
                         )}
                         <Box style={{flex: 1}}>
                             <TextInput
-                                label={hasMetadata && currentState.metadata?.title ? "Title (new)" : "Title"}
-                                placeholder="Song title"
+                                label={hasMetadata && currentState.metadata?.title ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.title")}) : t("songs:editModal.fields.title")}
+                                placeholder={t("songs:editModal.placeholders.title")}
                                 value={currentState.form.title}
                                 onChange={(e) => handleFormChange({title: e.target.value})}
                                 disabled={hasMetadata && !!currentState.metadata?.title && !currentState.checkboxes.title}
@@ -928,7 +933,7 @@ export default function SongEditorContextModal({
                         )}
                         {hasMetadata && currentState.metadata?.year && (
                             <Box style={{flex: 1}}>
-                                <Input.Wrapper label="Year (old)">
+                                <Input.Wrapper label={t("songs:editModal.fieldOld", {field: t("songs:editModal.fields.year")})}>
                                     <Input
                                         value={currentState.metadata.year.old ?? ""}
                                         readOnly
@@ -949,8 +954,8 @@ export default function SongEditorContextModal({
                         )}
                         <Box style={{flex: 1}}>
                             <NumberInput
-                                label={hasMetadata && currentState.metadata?.year ? "Year (new)" : "Year"}
-                                placeholder="Release year"
+                                label={hasMetadata && currentState.metadata?.year ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.year")}) : t("songs:editModal.fields.year")}
+                                placeholder={t("songs:editModal.placeholders.year")}
                                 value={currentState.form.year ?? undefined}
                                 onChange={(val) => handleFormChange({year: typeof val === 'number' ? val : undefined})}
                                 disabled={hasMetadata && !!currentState.metadata?.year && !currentState.checkboxes.year}
@@ -973,8 +978,8 @@ export default function SongEditorContextModal({
                     <Group gap="xs" align="flex-start">
                         <Box style={{flex: 1}}>
                             <AutocompleteField
-                                label="Album"
-                                placeholder="Album name"
+                                label={t("songs:editModal.fields.album")}
+                                placeholder={t("songs:editModal.placeholders.album")}
                                 value={currentState.form.album?.name ? {id: currentState.form.album.id, name: currentState.form.album.name} : null}
                                 onChange={handleAlbumChange}
                                 onSearch={searchAlbums}
@@ -993,14 +998,14 @@ export default function SongEditorContextModal({
                     <Group gap="xs" align="flex-start">
                         <Box style={{flex: 1}}>
                             <AutocompleteField
-                                label="Album Artist"
-                                placeholder="Album artist"
+                                label={t("songs:editModal.fields.albumArtist")}
+                                placeholder={t("songs:editModal.placeholders.albumArtist")}
                                 value={currentState.form.albumArtist?.name ? {id: currentState.form.albumArtist.id, name: currentState.form.albumArtist.name} : null}
                                 onChange={(item) => handleFormChange({albumArtist: item && typeof item !== 'string' ? {id: item.id, name: item.name} : {id: 0, name: ""}})}
                                 onSearch={searchArtistsForAutocomplete}
                                 showArtwork
                                 testId="edit-song-album-artist"
-                                error={albumArtistMismatch ? `Not in the song's artists list` : undefined}
+                                error={albumArtistMismatch ? t("songs:editModal.albumArtistNotInList") : undefined}
                                 disabled={isAlbumArtistDisabled}
                                 diffMode={hasMetadata && !!currentState.metadata?.albumArtist}
                                 originalValue={currentState.song.album?.artist ? { id: currentState.song.album.artist.id, name: currentState.song.album.artist.name } : null}
@@ -1014,11 +1019,11 @@ export default function SongEditorContextModal({
                     <Group gap="xs" align="flex-start">
                         <Box style={{flex: 1}}>
                             <TagsAutocompleteField
-                                label="Artists"
+                                label={t("songs:editModal.fields.artists")}
                                 value={currentState.form.artists}
                                 onChange={(items) => handleFormChange({artists: items})}
                                 onSearch={searchArtists}
-                                placeholder="Add artist..."
+                                placeholder={t("songs:editModal.placeholders.artists")}
                                 showArtwork
                                 testId="edit-song-artists"
                                 disabled={hasMetadata && !!currentState.metadata?.artists && !currentState.checkboxes.artists}
@@ -1034,11 +1039,11 @@ export default function SongEditorContextModal({
                     <Group gap="xs" align="flex-start">
                         <Box style={{flex: 1}}>
                             <TagsAutocompleteField
-                                label="Genres"
+                                label={t("songs:editModal.fields.genres")}
                                 value={currentState.form.genres.map(g => ({id: g.id, name: g.name}))}
                                 onChange={(items) => handleFormChange({genres: items})}
                                 onSearch={searchGenres}
-                                placeholder="Add genre..."
+                                placeholder={t("songs:editModal.placeholders.genres")}
                                 testId="edit-song-genres"
                                 disabled={hasMetadata && !!currentState.metadata?.genres && !currentState.checkboxes.genres}
                                 diffMode={hasMetadata && !!currentState.metadata?.genres}
@@ -1060,7 +1065,7 @@ export default function SongEditorContextModal({
                         )}
                         {hasMetadata && currentState.metadata?.lyrics && (
                             <Box style={{flex: 1}}>
-                                <Input.Wrapper label="Lyrics (old)">
+                                <Input.Wrapper label={t("songs:editModal.fieldOld", {field: t("songs:editModal.fields.lyrics")})}>
                                     <Textarea
                                         value={currentState.metadata.lyrics.old ?? ""}
                                         readOnly
@@ -1084,8 +1089,8 @@ export default function SongEditorContextModal({
                         )}
                         <Box style={{flex: 1}}>
                             <Textarea
-                                label={hasMetadata && currentState.metadata?.lyrics ? "Lyrics (new)" : "Lyrics"}
-                                placeholder="Song lyrics"
+                                label={hasMetadata && currentState.metadata?.lyrics ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.lyrics")}) : t("songs:editModal.fields.lyrics")}
+                                placeholder={t("songs:editModal.placeholders.lyrics")}
                                 value={currentState.form.lyrics}
                                 onChange={(e) => handleFormChange({lyrics: e.target.value})}
                                 minRows={lyricsMinRows}
@@ -1118,7 +1123,7 @@ export default function SongEditorContextModal({
                         )}
                         {hasMetadata && currentState.metadata?.rating && (
                             <Box style={{flex: 1}}>
-                                <Input.Wrapper label="Rating (old)">
+                                <Input.Wrapper label={t("songs:editModal.fieldOld", {field: t("songs:editModal.fields.rating")})}>
                                     <Rating
                                         fractions={2}
                                         value={currentState.metadata.rating.old ?? 0}
@@ -1136,7 +1141,7 @@ export default function SongEditorContextModal({
                         )}
                         <Box style={{flex: 1}}>
                             <Input.Wrapper 
-                                label={hasMetadata && currentState.metadata?.rating ? "Rating (new)" : "Rating"}
+                                label={hasMetadata && currentState.metadata?.rating ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.rating")}) : t("songs:editModal.fields.rating")}
                                 data-testid="edit-song-rating"
                             >
                                 <Rating
@@ -1159,11 +1164,11 @@ export default function SongEditorContextModal({
                         )}
                         {hasMetadata && currentState.metadata?.explicit != undefined && (
                             <Box style={{flex: 1}}>
-                                <Input.Wrapper label="Explicit (old)">
+                                <Input.Wrapper label={t("songs:editModal.fieldOld", {field: t("songs:editModal.fields.explicit")})}>
                                     <Switch
                                         checked={currentState.metadata.explicit?.old ?? false}
                                         readOnly
-                                        label={currentState.metadata.explicit?.old ? "Yes" : "No"}
+                                        label={currentState.metadata.explicit?.old ? t("common:common.yes") : t("common:common.no")}
                                         styles={{
                                             track: {
                                                 borderColor: currentState.checkboxes.explicit
@@ -1177,7 +1182,7 @@ export default function SongEditorContextModal({
                         )}
                         <Box style={{flex: 1}}>
                             <Switch
-                                label={hasMetadata && currentState.metadata?.explicit != undefined ? "Explicit (new)" : "Explicit"}
+                                label={hasMetadata && currentState.metadata?.explicit != undefined ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.explicit")}) : t("songs:editModal.fields.explicit")}
                                 checked={currentState.form.explicit}
                                 onChange={(e) => handleFormChange({explicit: e.currentTarget.checked})}
                                 disabled={hasMetadata && currentState.metadata?.explicit != undefined && !currentState.checkboxes.explicit}
@@ -1189,7 +1194,7 @@ export default function SongEditorContextModal({
                     <Group gap="xs" align="flex-start">
                         <Box style={{flex: 1}}>
                             <CoverUploadField
-                                label={hasMetadata && currentState.metadata?.cover ? "Cover (new)" : "Cover"}
+                                label={hasMetadata && currentState.metadata?.cover ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.cover")}) : t("songs:editModal.fields.cover")}
                                 value={currentState.form.cover}
                                 onChange={(val, dimensions) => handleFormChange({cover: val, coverDimensions: dimensions, coverUrl: undefined})}
                                 currentDimensions={currentState.form.coverDimensions}
@@ -1214,7 +1219,7 @@ export default function SongEditorContextModal({
                         onClick={handleAutoFetchMetadata}
                         disabled={isLoading}
                         loading={isAutoFetchPending}
-                        title="Auto-fetch metadata"
+                        title={t("songs:editModal.autoFetchMetadata")}
                     >
                         <IconRefresh/>
                     </ActionIcon>
@@ -1223,14 +1228,14 @@ export default function SongEditorContextModal({
                         size="lg"
                         onClick={() => setMetadataSearchOpened(true)}
                         disabled={isLoading}
-                        title="Search metadata"
+                        title={t("songs:editModal.searchMetadata")}
                     >
                         <IconSearch/>
                     </ActionIcon>
                 </Group>
                 <Group gap="xs">
                     <Button variant="subtle" onClick={handleClose}>
-                        Cancel
+                        {t("common:actions.cancel")}
                     </Button>
                     {isMultiSong && (
                         <Button 
@@ -1243,11 +1248,11 @@ export default function SongEditorContextModal({
                             loading={batchMultiUpdateSongs.isPending} 
                             disabled={isLoading || modifiedCountUpToCurrent === 0}
                         >
-                            Save Modified ({modifiedCountUpToCurrent})
+                            {t("songs:editModal.saveModified", {count: modifiedCountUpToCurrent})}
                         </Button>
                     )}
                     <Button onClick={isMultiSong ? handleSaveAll : () => handleSaveCurrent(true)} loading={isLoading} disabled={isMultiSong ? false : modifiedCountUpToCurrent === 0}>
-                        {isMultiSong ? "Save All" : "Save"}
+                        {isMultiSong ? t("songs:editModal.saveAll") : t("common:actions.save")}
                     </Button>
                 </Group>
             </Group>

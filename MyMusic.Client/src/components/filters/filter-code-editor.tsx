@@ -1,5 +1,6 @@
 import Editor, {type Monaco, type OnMount} from "@monaco-editor/react";
 import {useEffect, useRef} from "react";
+import {i18n} from "../../locales";
 import type {FilterFieldMetadata, FilterMetadataResponse} from "./use-filter-metadata.ts";
 
 interface FilterCodeEditorProps {
@@ -60,7 +61,7 @@ const getFieldCompletions = (range: unknown, fields: FilterFieldMetadata[]): Com
         label: field.name,
         kind: 10,
         insertText: field.name,
-        documentation: `${field.description}${field.isComputed ? " (computed)" : ""}`,
+        documentation: `${field.description}${field.isComputed ? ` ${i18n.t("filters:codeEditor.computed")}` : ""}`,
         range,
         detail: field.type,
     }));
@@ -68,23 +69,23 @@ const getFieldCompletions = (range: unknown, fields: FilterFieldMetadata[]): Com
 
 const getOperatorCompletions = (range: unknown): CompletionItem[] => {
     const operators = [
-        {label: "=", insertText: "=", doc: "Equals"},
-        {label: "!=", insertText: "!=", doc: "Not equals"},
-        {label: ">", insertText: ">", doc: "Greater than"},
-        {label: ">=", insertText: ">=", doc: "Greater than or equal"},
-        {label: "<", insertText: "<", doc: "Less than"},
-        {label: "<=", insertText: "<=", doc: "Less than or equal"},
-        {label: "~", insertText: "~", doc: "Contains (string)"},
-        {label: "contains", insertText: "contains", doc: "Contains (string)"},
-        {label: "startsWith", insertText: "startsWith", doc: "Starts with"},
-        {label: "endsWith", insertText: "endsWith", doc: "Ends with"},
-        {label: "in", insertText: "in [$1]", doc: "In list"},
-        {label: "notIn", insertText: "notIn [$1]", doc: "Not in list"},
-        {label: "between", insertText: "between $1 and $2", doc: "Between two values"},
-        {label: "isNull", insertText: "isNull", doc: "Is null"},
-        {label: "isNotNull", insertText: "isNotNull", doc: "Is not null"},
-        {label: "isTrue", insertText: "isTrue", doc: "Is true"},
-        {label: "isFalse", insertText: "isFalse", doc: "Is false"},
+        {label: "=", insertText: "=", doc: i18n.t("filters:codeEditor.operators.equals")},
+        {label: "!=", insertText: "!=", doc: i18n.t("filters:codeEditor.operators.notEquals")},
+        {label: ">", insertText: ">", doc: i18n.t("filters:codeEditor.operators.greaterThan")},
+        {label: ">=", insertText: ">=", doc: i18n.t("filters:codeEditor.operators.greaterThanOrEqual")},
+        {label: "<", insertText: "<", doc: i18n.t("filters:codeEditor.operators.lessThan")},
+        {label: "<=", insertText: "<=", doc: i18n.t("filters:codeEditor.operators.lessThanOrEqual")},
+        {label: "~", insertText: "~", doc: i18n.t("filters:codeEditor.operators.contains")},
+        {label: "contains", insertText: "contains", doc: i18n.t("filters:codeEditor.operators.contains")},
+        {label: "startsWith", insertText: "startsWith", doc: i18n.t("filters:codeEditor.operators.startsWith")},
+        {label: "endsWith", insertText: "endsWith", doc: i18n.t("filters:codeEditor.operators.endsWith")},
+        {label: "in", insertText: "in [$1]", doc: i18n.t("filters:codeEditor.operators.inList")},
+        {label: "notIn", insertText: "notIn [$1]", doc: i18n.t("filters:codeEditor.operators.notInList")},
+        {label: "between", insertText: "between $1 and $2", doc: i18n.t("filters:codeEditor.operators.between")},
+        {label: "isNull", insertText: "isNull", doc: i18n.t("filters:codeEditor.operators.isNull")},
+        {label: "isNotNull", insertText: "isNotNull", doc: i18n.t("filters:codeEditor.operators.isNotNull")},
+        {label: "isTrue", insertText: "isTrue", doc: i18n.t("filters:codeEditor.operators.isTrue")},
+        {label: "isFalse", insertText: "isFalse", doc: i18n.t("filters:codeEditor.operators.isFalse")},
     ];
 
     return operators.map((op) => ({
@@ -173,13 +174,13 @@ const getDynamicValueCompletions = async (
 
 const getKeywordCompletions = (range: unknown): CompletionItem[] => {
     return [
-        {label: "and", kind: 14, insertText: "and", documentation: "Logical AND", range},
-        {label: "or", kind: 14, insertText: "or", documentation: "Logical OR", range},
+        {label: "and", kind: 14, insertText: "and", documentation: i18n.t("filters:codeEditor.keywords.and"), range},
+        {label: "or", kind: 14, insertText: "or", documentation: i18n.t("filters:codeEditor.keywords.or"), range},
         {
             label: "group",
             kind: 15,
             insertText: "($1)",
-            documentation: "Group expressions",
+            documentation: i18n.t("filters:codeEditor.keywords.group"),
             range,
             insertTextRules: 4,
         },
@@ -192,14 +193,14 @@ const getQuantifierCompletions = (range: unknown): CompletionItem[] => {
             label: "any",
             kind: 14,
             insertText: "any].",
-            documentation: "At least one element matches (default for positive operators)",
+            documentation: i18n.t("filters:codeEditor.quantifiers.any"),
             range,
         },
         {
             label: "all",
             kind: 14,
             insertText: "all].",
-            documentation: "All elements must match (default for negative operators)",
+            documentation: i18n.t("filters:codeEditor.quantifiers.all"),
             range,
         },
     ];

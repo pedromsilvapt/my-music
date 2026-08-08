@@ -1,6 +1,7 @@
 import {Text, Tooltip} from "@mantine/core";
 import {IconBasketDown} from "@tabler/icons-react";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {type SourceSong} from "../../model";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import SongAlbum from "../common/fields/song-album.tsx";
@@ -13,6 +14,7 @@ import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 export function useSourceSongsSchema(
     onPurchase: (songs: SourceSong[]) => void,
 ) {
+    const {t} = useTranslation(["sources", "common"]);
     const {data: filterMetadata} = useFilterMetadata('sources');
 
     return useMemo(() => ({
@@ -30,14 +32,14 @@ export function useSourceSongsSchema(
             },
             {
                 name: 'title',
-                displayName: 'Title',
+                displayName: t("sources:schema.columns.title"),
                 render: row => <SongTitle title={row.title} link={row.link} isExplicit={row.explicit}/>,
                 width: '2fr',
                 sortable: true,
             },
             {
                 name: 'artists',
-                displayName: 'Artists',
+                displayName: t("sources:schema.columns.artists"),
                 render: row => <SongArtists artists={row.artists}/>,
                 width: '1fr',
                 sortable: true,
@@ -45,29 +47,29 @@ export function useSourceSongsSchema(
             },
             {
                 name: 'album',
-                displayName: 'Album',
-                render: row => <SongAlbum name={row.album?.name ?? '(no album)'} link={row.album?.link}/>,
+                displayName: t("sources:schema.columns.album"),
+                render: row => <SongAlbum name={row.album?.name ?? t("sources:schema.noAlbum")} link={row.album?.link}/>,
                 width: '1fr',
                 sortable: true,
                 getValue: song => song.album?.name,
             },
             {
                 name: 'year',
-                displayName: 'Year',
+                displayName: t("sources:schema.columns.year"),
                 render: row => row.year,
                 sortable: true,
                 getValue: song => song.year ?? 0,
             },
             {
                 name: 'duration',
-                displayName: 'Duration',
+                displayName: t("sources:schema.columns.duration"),
                 render: row => row.duration,
                 sortable: true,
                 getValue: song => song.duration ?? '',
             },
             {
                 name: 'price',
-                displayName: 'Price',
+                displayName: t("sources:schema.columns.price"),
                 render: row => row.price?.toFixed(2) ?? '-',
                 sortable: true,
                 getValue: song => song.price ?? 0,
@@ -79,7 +81,7 @@ export function useSourceSongsSchema(
                 {
                     name: "purchase",
                     renderIcon: () => <IconBasketDown/>,
-                    renderLabel: () => "Purchase",
+                    renderLabel: () => t("sources:schema.purchase"),
                     onClick: (songs) => onPurchase(songs),
                     primary: true
                 }
@@ -96,5 +98,5 @@ export function useSourceSongsSchema(
             albumId: row.album.id,
             link: row.album.link
         } : undefined} year={row.year} c="gray"/>,
-    }) as CollectionSchema<SourceSong>, [onPurchase, filterMetadata]);
+    }) as CollectionSchema<SourceSong>, [onPurchase, filterMetadata, t]);
 }

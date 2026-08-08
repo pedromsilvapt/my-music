@@ -1,0 +1,16 @@
+{
+    "page": {
+        "fetchFailed": "Falha ao obter o histórico de reprodução",
+        "startDatePlaceholder": "Data de início",
+        "endDatePlaceholder": "Data de fim"
+    },
+    "schema": {
+        "columns": {
+            "title": "Título",
+            "artist": "Artista",
+            "album": "Álbum",
+            "device": "Dispositivo",
+            "playedAt": "Reproduzida Em"
+        }
+    }
+}

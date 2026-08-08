@@ -1,6 +1,7 @@
 import {ActionIcon, Button, Group, Popover, Stack, Text, TextInput, Tooltip} from "@mantine/core";
 import {IconCode, IconFilter, IconSearch, IconX} from "@tabler/icons-react";
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {FilterCodeEditor} from "../../filters/filter-code-editor.tsx";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
 
@@ -27,11 +28,12 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                       filterValue,
                                       onFilterChange,
                                       onApply,
-                                      placeholder = "Search...",
+                                      placeholder,
                                       filterMode,
                                       filterMetadata,
                                       fetchFilterValues,
                                   }, ref) {
+        const {t} = useTranslation(["collection", "common"]);
         const searchInputRef = useRef<HTMLInputElement>(null);
 
         useImperativeHandle(ref, () => ({
@@ -114,7 +116,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
             <Group gap="sm" align="center" justify="space-between" style={{flex: 1}}>
                 <TextInput
                     ref={searchInputRef}
-                    placeholder={placeholder}
+                    placeholder={placeholder ?? t("collection:filterBar.searchPlaceholder")}
                     leftSection={<IconSearch size={16}/>}
                     value={localSearch}
                     onChange={(e) => handleSearchChange(e.target.value)}
@@ -142,7 +144,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                             shadow="md"
                         >
                             <Popover.Target>
-                                <Tooltip label={showAdvanced ? "Hide advanced filter" : "Show advanced filter"}>
+                                <Tooltip label={showAdvanced ? t("collection:filterBar.hideAdvanced") : t("collection:filterBar.showAdvanced")}>
                                     <Button
                                         variant={hasFilter ? "light" : "subtle"}
                                         leftSection={hasFilter ? <IconFilter size={16}/> : <IconCode size={16}/>}
@@ -150,7 +152,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                         color={hasFilter ? "blue" : "gray"}
                                         size="sm"
                                     >
-                                        Filters
+                                        {t("collection:filterBar.filters")}
                                     </Button>
                                 </Tooltip>
                             </Popover.Target>
@@ -159,10 +161,10 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                 <Stack gap="xs">
                                     <Group justify="space-between" align="center">
                                         <Text size="sm" fw={500} c="dimmed">
-                                            Filter DSL
+                                            {t("collection:filterBar.filterDsl")}
                                         </Text>
                                         <Text size="xs" c="dimmed">
-                                            Press Ctrl+Enter to apply
+                                            {t("collection:filterBar.pressCtrlEnter")}
                                         </Text>
                                     </Group>
 
@@ -176,7 +178,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                     />
 
                                     <Text size="xs" c="dimmed">
-                                        Examples: <code>year &gt;= 2020</code>, <code>name contains "love"</code>
+                                        {t("collection:filterBar.examples")}: <code>year &gt;= 2020</code>, <code>name contains "love"</code>
                                     </Text>
 
                                     <Group justify="space-between" align="center">
@@ -186,14 +188,14 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                             onClick={handleClearFilter}
                                             disabled={!hasFilter}
                                         >
-                                            Clear
+                                            {t("collection:filterBar.clear")}
                                         </Button>
                                         <Button
                                             size="xs"
                                             onClick={handleApply}
                                             disabled={localFilter === filterValue}
                                         >
-                                            Apply
+                                            {t("common:actions.apply")}
                                         </Button>
                                     </Group>
                                 </Stack>

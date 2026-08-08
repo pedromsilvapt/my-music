@@ -8,11 +8,13 @@ import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 
 export default function AlbumDetailPage() {
+    const {t} = useTranslation(["albums", "common"]);
     const {albumId} = useParams({from: '/albums/$albumId'});
     const albumQuery = useGetAlbum(Number(albumId));
-    const albumResponse = useQueryData(albumQuery, "Failed to fetch album");
+    const albumResponse = useQueryData(albumQuery, t("albums:detail.fetchFailed"));
     const album = albumResponse?.data.album ?? null;
 
     const queueContext = useMemo(() => ({
@@ -23,7 +25,7 @@ export default function AlbumDetailPage() {
     const songsSchema = useSongsSchema(false, {queueContext});
 
     if (!album) {
-        return <Box p="md" data-testid="album-detail" data-loading="true">Loading...</Box>;
+        return <Box p="md" data-testid="album-detail" data-loading="true">{t("albums:detail.loading")}</Box>;
     }
 
     const songs = album.songs as unknown as ListSongItem[];
@@ -33,7 +35,7 @@ export default function AlbumDetailPage() {
             <Link to="/albums">
                 <Group gap="xs">
                     <IconArrowBack size={16}/>
-                    <Text size="sm">Back to Albums</Text>
+                    <Text size="sm">{t("albums:detail.backToAlbums")}</Text>
                 </Group>
             </Link>
 
@@ -48,7 +50,7 @@ export default function AlbumDetailPage() {
                     <Anchor component={Link} to={`/artists/${album.artistId}`} size="sm">{album.artistName}</Anchor>
                     <Group gap="md">
                         {album.year && <Text size="sm" c="dimmed">{album.year}</Text>}
-                        <Text size="sm" c="dimmed">{album.songsCount} songs</Text>
+                        <Text size="sm" c="dimmed">{t("albums:detail.songsCount", {count: album.songsCount})}</Text>
                     </Group>
                 </Stack>
             </Flex>

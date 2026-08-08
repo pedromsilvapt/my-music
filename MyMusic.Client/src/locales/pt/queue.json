@@ -1,0 +1,14 @@
+{
+    "switcher": {
+        "renameTitle": "Renomear Fila",
+        "deleteTitle": "Eliminar Fila",
+        "empty": "Ainda não há filas. Clique em Reproduzir para criar uma."
+    },
+    "renameModal": {
+        "nameLabel": "Nome da Fila",
+        "namePlaceholder": "Introduza o nome da fila"
+    },
+    "deleteModal": {
+        "confirm": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser desfeita."
+    }
+}

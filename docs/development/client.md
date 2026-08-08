@@ -203,6 +203,25 @@ useEffect(() => {
 The Mantine hook is cleaner, avoids potential memory leaks from forgotten cleanup, and is consistent with existing
 codebase patterns.
 
+## Translations (i18n)
+
+Translations are managed with `react-i18next`. Namespaces live under `src/locales/<lang>/<ns>.json` and are
+registered in `src/locales/index.ts` (add new namespaces there: import the JSON, add to the `ns` array, and to the
+`resources` object for both `en` and `pt`).
+
+- **Plural convention**: pluralized count labels use i18next `_one`/`_other` suffixes for both `en` and `pt`. CLDR
+  Portuguese has a `many` category, but it only applies to counts ≥ 1,000,000 (never reached in this app), and with
+  `compatibilityJSON: "v4"` i18next resolves pt counts ≥ 2 via `_other`. Pass `{count: n}` as the interpolation
+  variable, e.g. `t('common:count.songs', {count: 5})` resolves to `5 songs` / `5 músicas`.
+- **Shared keys**: shared strings (button labels, status words, generic UI terms, count labels) live under the
+  `common` namespace in `actions.*`, `status.*`, `common.*`, and `count.*`. Reuse them across components with
+  `useTranslation(['<feature>', 'common'])` and reference as `t('common:actions.cancel')`.
+- **Multi-namespace calls**: components that touch two feature namespaces load both plus `common`, e.g.
+  `useTranslation(['songs', 'player', 'common'])`, and reference keys with explicit prefixes like
+  `t('songs:editModal.title')`.
+- **Notification strings**: notification messages are translated. Capture the `t` function in scope where the
+  notification fires (e.g. inside a hook or handler) so the active language is used at display time.
+
 ## Integration Testing
 
 Integration tests in **MyMusic.IntegrationTests** verify end-user functionality through Playwright browser interactions with the React frontend.

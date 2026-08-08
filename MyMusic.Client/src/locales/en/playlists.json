@@ -1,0 +1,34 @@
+{
+    "createModal": {
+        "title": "Create Playlist",
+        "nameLabel": "Playlist Name",
+        "namePlaceholder": "My Playlist",
+        "create": "Create"
+    },
+    "manageDialog": {
+        "title": "Manage Playlists",
+        "fetchPlaylistsFailed": "Failed to fetch playlists",
+        "fetchSongsFailed": "Failed to fetch songs",
+        "managing_one": "Managing {{count}} song",
+        "managing_other": "Managing {{count}} songs",
+        "newPlaylistPlaceholder": "New playlist name"
+    },
+    "page": {
+        "title": "Playlists",
+        "createPlaylist": "Create Playlist",
+        "fetchFailed": "Failed to fetch playlists",
+        "searchPlaceholder": "Search playlists..."
+    },
+    "detailPage": {
+        "fetchFailed": "Failed to fetch playlist"
+    },
+    "schema": {
+        "manageGroup": "Manage",
+        "columns": {
+            "name": "Name",
+            "songs": "Songs",
+            "created": "Created",
+            "modified": "Modified"
+        }
+    }
+}

@@ -14,6 +14,7 @@ import {CSS} from "@dnd-kit/utilities";
 import {Box, Group, Stack, Text} from "@mantine/core";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {DRAG_ACTIVATION_DISTANCE, LIST_ARTWORK_SIZE, LIST_GAP, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
@@ -46,6 +47,7 @@ export interface CollectionListProps<M> {
 
 export default function CollectionList<M>(props: CollectionListProps<M>) {
     const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, autoHeight} = props;
+    const {t} = useTranslation(["collection", "common"]);
     const parentRef = useRef<HTMLDivElement>(null)
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -251,7 +253,9 @@ export default function CollectionList<M>(props: CollectionListProps<M>) {
                                 }
                                 <Box flex={1}>
                                     <Text size="md">
-                                        {selectionStore.getState().selectedKeys.size > 1 ? `Dragging ${selectionStore.getState().selectedKeys.size} items` : 'Dragging'}
+                                        {selectionStore.getState().selectedKeys.size > 1
+                                            ? t("collection:views.draggingCount", {count: selectionStore.getState().selectedKeys.size})
+                                            : t("collection:views.dragging")}
                                     </Text>
                                 </Box>
                             </Group>

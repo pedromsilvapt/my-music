@@ -3,6 +3,7 @@ import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {IconCheck, IconEdit, IconTrash, IconX} from "@tabler/icons-react";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import type {ListAuditNonConformityItem, ListSongsArtist} from "../../model";
 import type {CollectionSchema} from "../common/collection/collection";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
@@ -22,6 +23,7 @@ export function useAuditNonConformitiesSchema(
     onSetWaiver: (ids: number[], hasWaiver: boolean, reason?: string | null) => void,
     onDelete: (ids: number[]) => void
 ): CollectionSchema<ListAuditNonConformityItemWithSong> {
+    const {t} = useTranslation(["audits", "songs", "common"]);
     const {data: filterMetadata} = useFilterMetadata('audits', ruleId);
 
     const fetchFilterValues = useFetchData(
@@ -33,7 +35,7 @@ export function useAuditNonConformitiesSchema(
             });
             return response.data.values ?? [];
         },
-        (field: string) => `Failed to fetch filter values for field "${field}"`
+        (field: string) => t("audits:schema.fetchFilterValuesFailed", {field})
     );
 
     return useMemo(() => ({
@@ -52,7 +54,7 @@ export function useAuditNonConformitiesSchema(
             },
             {
                 name: 'title',
-                displayName: 'Title',
+                displayName: t("audits:schema.columns.title"),
                 render: nc => <SongTitle title={nc.song.title} songId={nc.song.id} isExplicit={nc.song.isExplicit}/>,
                 width: '2fr',
                 sortable: true,
@@ -60,7 +62,7 @@ export function useAuditNonConformitiesSchema(
             },
             {
                 name: 'artists',
-                displayName: 'Artists',
+                displayName: t("audits:schema.columns.artists"),
                 render: nc => <SongArtists artists={nc.song.artists}/>,
                 getValue: nc => nc.song.artists?.[0]?.name,
                 width: '1fr',
@@ -68,7 +70,7 @@ export function useAuditNonConformitiesSchema(
             },
             {
                 name: 'album',
-                displayName: 'Album',
+                displayName: t("audits:schema.columns.album"),
                 render: nc => <SongAlbum name={nc.song.album.name} albumId={nc.song.album.id}/>,
                 getValue: nc => nc.song.album.name,
                 width: '1fr',
@@ -76,18 +78,18 @@ export function useAuditNonConformitiesSchema(
             },
             {
                 name: 'waiver',
-                displayName: 'Status',
+                displayName: t("audits:schema.columns.status"),
                 render: nc => nc.hasWaiver ? (
-                    <Badge color="yellow" variant="light" size="sm">Waived</Badge>
+                    <Badge color="yellow" variant="light" size="sm">{t("audits:schema.waived")}</Badge>
                 ) : (
-                    <Badge color="gray" variant="light" size="sm">Pending</Badge>
+                    <Badge color="gray" variant="light" size="sm">{t("audits:schema.pending")}</Badge>
                 ),
                 width: 80,
                 align: 'center',
             },
             {
                 name: 'createdAt',
-                displayName: 'Detected',
+                displayName: t("audits:schema.columns.detected"),
                 render: nc => new Date(nc.createdAt).toLocaleDateString(),
                 sortable: true,
                 getValue: nc => nc.createdAt,
@@ -102,16 +104,16 @@ export function useAuditNonConformitiesSchema(
             const uniqueRuleIds = [...new Set(elems.map(nc => nc.auditRuleId))];
 
             return [
-                {group: "Edit"},
+                {group: t("common:actions.edit")},
                 {
                     name: "edit-songs",
                     renderIcon: () => <IconEdit/>,
-                    renderLabel: () => `Edit ${uniqueSongIds.length === 1 ? 'Song' : `${uniqueSongIds.length} Songs`}`,
+                    renderLabel: () => uniqueSongIds.length === 1 ? t("songs:schema.editSingle") : t("songs:schema.editPlural", {count: uniqueSongIds.length}),
                     onClick: () => {
                         if (uniqueSongIds.length > 0) {
                             modals.openContextModal({
                                 modal: 'song-editor',
-                                title: 'Edit Song',
+                                title: t("songs:schema.editTitle"),
                                 size: SONG_EDITOR_MODAL_SIZE,
                                 innerProps: { songIds: uniqueSongIds, auditRuleIds: uniqueRuleIds },
                             });
@@ -119,11 +121,11 @@ export function useAuditNonConformitiesSchema(
                     },
                 },
                 {divider: true},
-                {group: "Waiver"},
+                {group: t("audits:schema.group.waiver")},
                 !allHaveWaiver ? {
                     name: "grant-waiver",
                     renderIcon: () => <IconCheck/>,
-                    renderLabel: () => `Grant Waiver`,
+                    renderLabel: () => t("audits:grantWaiver.title"),
                     onClick: (items: ListAuditNonConformityItem[]) => {
                         const ids = items.filter(nc => !nc.hasWaiver).map(nc => nc.id);
                         if (ids.length > 0) {
@@ -134,7 +136,7 @@ export function useAuditNonConformitiesSchema(
                 someHaveWaiver ? {
                     name: "remove-waiver",
                     renderIcon: () => <IconX/>,
-                    renderLabel: () => `Remove Waiver`,
+                    renderLabel: () => t("audits:schema.removeWaiver"),
                     onClick: (items: ListAuditNonConformityItem[]) => {
                         const ids = items.filter(nc => nc.hasWaiver).map(nc => nc.id);
                         if (ids.length > 0) {
@@ -146,7 +148,7 @@ export function useAuditNonConformitiesSchema(
                 {
                     name: "remove",
                     renderIcon: () => <IconTrash/>,
-                    renderLabel: () => `Remove`,
+                    renderLabel: () => t("common:common.remove"),
                     onClick: (items: ListAuditNonConformityItem[]) => {
                         const ids = items.map(nc => nc.id);
                         if (ids.length > 0) {
@@ -166,11 +168,11 @@ export function useAuditNonConformitiesSchema(
                     {nc.song.artists.map((a: ListSongsArtist) => a.name).join(', ')} • {nc.song.album.name}
                 </Text>
                 {nc.hasWaiver ? (
-                    <Badge color="yellow" variant="light" size="xs">Waived</Badge>
+                    <Badge color="yellow" variant="light" size="xs">{t("audits:schema.waived")}</Badge>
                 ) : (
-                    <Badge color="gray" variant="light" size="xs">Pending</Badge>
+                    <Badge color="gray" variant="light" size="xs">{t("audits:schema.pending")}</Badge>
                 )}
             </Group>
         ),
-    }) as CollectionSchema<ListAuditNonConformityItemWithSong>, [onSetWaiver, onDelete, filterMetadata, fetchFilterValues]);
+    }) as CollectionSchema<ListAuditNonConformityItemWithSong>, [onSetWaiver, onDelete, filterMetadata, fetchFilterValues, t]);
 }

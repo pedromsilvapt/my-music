@@ -1,0 +1,32 @@
+{
+    "controls": {
+        "playPreviousTrack": "Play Previous Track in Queue",
+        "previous": "Previous",
+        "pauseCurrentTrack": "Pause Current Track",
+        "playCurrentTrack": "Play Current Track",
+        "pause": "Pause",
+        "play": "Play",
+        "playNextTrack": "Play Next Track in Queue",
+        "next": "Next"
+    },
+    "volume": {
+        "unmute": "Unmute",
+        "mute": "Mute"
+    },
+    "notifications": {
+        "playbackBlockedTitle": "Playback blocked",
+        "playbackBlockedMessage": "Browser requires user interaction to play audio",
+        "playbackStoppedTitle": "Playback stopped",
+        "playbackStoppedMessage": "All remaining songs in the queue are flagged to skip.",
+        "autoplayBlockedTitle": "Autoplay blocked",
+        "autoplayBlockedMessage": "Click Play to resume playback",
+        "loadingFailedTitle": "Loading failed",
+        "loadingFailedMessage": "Retrying... (attempt {{attempt}}/{{total}})",
+        "songLoadFailedTitle": "Failed to load song",
+        "songLoadFailedNamed": "\"{{title}}\" could not be loaded.",
+        "songLoadFailed": "Current song could not be loaded.",
+        "stoppedAfterSongTitle": "Stopped after this song",
+        "stoppedAfterSongMessage": "Stopped after \"{{title}}\"",
+        "stopAfterClearFailedMessage": "Failed to clear stop-after flag. The flag may still be set."
+    }
+}

@@ -15,6 +15,7 @@ import {Box, Group, SimpleGrid, Stack, Text} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {DRAG_ACTIVATION_DISTANCE, GRID_ELEM_SIZE, GRID_GAP, GRID_ROW_HEIGHT} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
@@ -79,6 +80,7 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
     const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, scrollToIndex, scrollRequestId, sortable, height, onReorderBatch, onReorder, autoHeight} = props;
     const {lanes, parentRef, elemSize, gap} = props;
+    const {t} = useTranslation(["collection", "common"]);
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
 
@@ -286,7 +288,9 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
                                 <Group>
                                     <Box flex={1}>
                                         <Text size="md" lineClamp={1}>
-                                            {selectionStore.getState().selectedKeys.size > 1 ? `Dragging ${selectionStore.getState().selectedKeys.size} items` : 'Dragging'}
+                                            {selectionStore.getState().selectedKeys.size > 1
+                                                ? t("collection:views.draggingCount", {count: selectionStore.getState().selectedKeys.size})
+                                                : t("collection:views.dragging")}
                                         </Text>
                                     </Box>
                                 </Group>

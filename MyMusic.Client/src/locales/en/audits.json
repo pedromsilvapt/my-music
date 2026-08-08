@@ -1,0 +1,117 @@
+{
+    "page": {
+        "fetchFailed": "Failed to fetch audit rules",
+        "noRules": "No audit rules available"
+    },
+    "autoFetch": {
+        "label": "Auto-fetch Metadata"
+    },
+    "taskMonitor": {
+        "link": "Monitor Tasks",
+        "title": "Metadata Fetch Progress",
+        "loadingQueueStatus": "Loading queue status...",
+        "loadQueueStatusFailed": "Failed to load queue status. Please try again later.",
+        "overallProgress": "Overall Progress",
+        "completedOf": "{{completed}} / {{total}} completed",
+        "queuedCount": "{{count}} queued",
+        "processingCount": "{{count}} processing",
+        "completedCount": "{{count}} completed",
+        "failedCount": "{{count}} failed",
+        "failedTasks": "Failed Tasks",
+        "loadingFailedTasks": "Loading failed tasks...",
+        "noFailedTasks": "No failed tasks to display.",
+        "processingComplete": "Processing Complete",
+        "allTasksProcessed_one": "All tasks have been processed. {{count}} song had metadata fetched successfully.",
+        "allTasksProcessed_other": "All tasks have been processed. {{count}} songs had metadata fetched successfully.",
+        "failedTasksAlert_one": "{{count}} task failed. You can retry the failed tasks below.",
+        "failedTasksAlert_other": "{{count}} tasks failed. You can retry the failed tasks below.",
+        "clearAllTasks": "Clear All Tasks & Metadata",
+        "retryFailedTasks": "Retry Failed Tasks",
+        "confirmClearAllTitle": "Confirm Clear All",
+        "confirmClearAllBody": "This will permanently delete all metadata fetch tasks and all auto-fetched metadata. This action cannot be undone.",
+        "clearAll": "Clear All",
+        "failureReasons": {
+            "serviceUnavailable": "Service Unavailable",
+            "noMetadataFound": "No Metadata Found",
+            "networkError": "Network Error",
+            "systemError": "System Error",
+            "timeout": "Timeout"
+        }
+    },
+    "soundalike": {
+        "fetchFailed": "Failed to fetch soundalike groups",
+        "instructions": "Click a song to mark it as primary. Then choose an action for each remaining song: delete, merge metadata then delete, or keep.",
+        "noDuplicates": "No duplicate songs detected",
+        "matchScore": "Match Score: {{score}}%",
+        "unknownAlbum": "Unknown Album",
+        "lyrics": "Lyrics",
+        "actions": {
+            "delete": "Delete",
+            "merge": "Merge"
+        },
+        "confirmTitle": "Confirm Resolution",
+        "confirmProcessLabel": "You are about to process",
+        "groupCount_one": "{{count}} group",
+        "groupCount_other": "{{count}} groups",
+        "confirmSongsToDelete_one": "{{count}} song will be deleted",
+        "confirmSongsToDelete_other": "{{count}} songs will be deleted",
+        "confirmSongsToMerge_one": "{{count}} song will have metadata merged first",
+        "confirmSongsToMerge_other": "{{count}} songs will have metadata merged first",
+        "deleting": "Deleting: {{titles}}",
+        "mergingThenDeleting": "Merging then deleting: {{titles}}",
+        "keeping": "Keeping: {{titles}}",
+        "resolveButton_one": "Resolve {{count}} Group",
+        "resolveButton_other": "Resolve {{count}} Groups",
+        "resolveSuccess_one": "Resolved {{count}} duplicate group",
+        "resolveSuccess_other": "Resolved {{count}} duplicate groups",
+        "resolveFailed": "Failed to resolve duplicates: {{error}}",
+        "preview": {
+            "year": "Year: {{value}}",
+            "lyrics": "Lyrics",
+            "artwork": "Artwork",
+            "bitrate": "Bitrate: {{value}} kbps",
+            "genres": "Genres: {{value}}",
+            "artists": "Artists: {{value}}"
+        },
+        "toolbar": {
+            "removeDuplicates": "Remove Duplicates ({{count}})"
+        }
+    },
+    "grantWaiver": {
+        "title": "Grant Waiver",
+        "confirm": "Grant Waiver",
+        "waivePrompt_one": "Enter an optional reason for waiving {{count}} non-conformity:",
+        "waivePrompt_other": "Enter an optional reason for waiving {{count}} non-conformities:",
+        "reasonLabel": "Waiver Reason",
+        "reasonPlaceholder": "Optional reason for the waiver..."
+    },
+    "detail": {
+        "fetchFailed": "Failed to fetch audit rule",
+        "titleFallback": "Audit Rule",
+        "resetTitle": "Reset Audit Rule",
+        "resetConfirm": "Are you sure you want to clear all non-conformities for \"{{name}}\"? This action cannot be undone.",
+        "thisAuditRule": "this audit rule",
+        "runScan": "Run Scan"
+    },
+    "default": {
+        "searchPlaceholder": "Search non-conformities...",
+        "skippedNonConformities_one": "{{count}} non-conformity without an associated song was skipped",
+        "skippedNonConformities_other": "{{count}} non-conformities without associated songs were skipped"
+    },
+    "schema": {
+        "fetchFilterValuesFailed": "Failed to fetch filter values for field \"{{field}}\"",
+        "columns": {
+            "title": "Title",
+            "artists": "Artists",
+            "album": "Album",
+            "status": "Status",
+            "detected": "Detected"
+        },
+        "waived": "Waived",
+        "pending": "Pending",
+        "group": {
+            "waiver": "Waiver"
+        },
+        "removeWaiver": "Remove Waiver"
+    }
+}

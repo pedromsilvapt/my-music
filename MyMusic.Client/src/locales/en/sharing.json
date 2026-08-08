@@ -1,0 +1,15 @@
+{
+    "manageDialog": {
+        "title": "Manage Sharing",
+        "fetchSongsFailed": "Failed to fetch songs",
+        "fetchUsersFailed": "Failed to fetch users",
+        "fetchCurrentUserFailed": "Failed to fetch current user",
+        "fetchSharesFailed": "Failed to fetch song shares",
+        "noOwnedSongs": "No owned songs selected",
+        "managing_one": "Managing {{count}} song",
+        "managing_other": "Managing {{count}} songs",
+        "filterPlaceholder": "Filter by username or name",
+        "noRecipients": "No recipients found",
+        "updateFailedFallback": "Failed to update sharing. Please try again."
+    }
+}

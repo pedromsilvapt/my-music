@@ -1,5 +1,6 @@
 import {Card, Group, Text, Tooltip, useComputedColorScheme} from "@mantine/core";
 import {IconPointFilled} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 import type {ListSongItem} from "../../model";
 
 export interface ManageSongItemProps {
@@ -10,6 +11,7 @@ export interface ManageSongItemProps {
 }
 
 export default function ManageSongItem({song, isIncluded, path, syncAction}: ManageSongItemProps) {
+    const {t} = useTranslation(["common"]);
     const colorScheme = useComputedColorScheme('light');
     const artistsText = song.artists.map(a => a.name).join(', ');
     const titleArtistsText = `${song.title} • ${artistsText}`;
@@ -35,7 +37,7 @@ export default function ManageSongItem({song, isIncluded, path, syncAction}: Man
                             <Text data-testid="song-path" size="xs" truncate c="dimmed" style={{fontFamily: 'monospace'}}>{path}</Text>
                         </Tooltip>
                         {syncAction && actionColor && (
-                            <Tooltip label={syncAction === 'Remove' ? 'To Delete' : `To ${syncAction}`} withinPortal={false}>
+                            <Tooltip label={syncAction === 'Remove' ? t("common:common.toDelete") : t("common:common.toAction", {action: syncAction})} withinPortal={false}>
                                 <IconPointFilled data-testid="sync-action" data-action={syncAction} size={14} color={actionColor} style={{flexShrink: 0}}/>
                             </Tooltip>
                         )}

@@ -2,6 +2,7 @@ import {Button, Group, Title} from "@mantine/core";
 import {IconPlus} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -11,6 +12,7 @@ import {usePlaylistsSchema} from "./usePlaylistsSchema.tsx";
 const PLAYLISTS_STATE_KEY = "playlists";
 
 export default function PlaylistsPage() {
+    const {t} = useTranslation(["playlists", "common"]);
     const [opened, setOpened] = useState(false);
     const {setCollectionFilter} = useCollectionActions(state => ({
         setCollectionFilter: state.setCollectionFilter,
@@ -30,14 +32,14 @@ export default function PlaylistsPage() {
             const response = await fetch(url);
 
             if (!response.ok) {
-                throw new Error("Failed to fetch playlists");
+                throw new Error(t("playlists:page.fetchFailed"));
             }
 
             return response.json();
         },
     });
 
-    const playlists = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {playlists: []};
+    const playlists = useQueryData(playlistsQuery, t("playlists:page.fetchFailed")) ?? {playlists: []};
 
     const playlistsSchema = usePlaylistsSchema();
 
@@ -50,9 +52,9 @@ export default function PlaylistsPage() {
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="playlists">
             <Group justify="space-between" mb="md">
-                <Title order={2}>Playlists</Title>
+                <Title order={2}>{t("playlists:page.title")}</Title>
                 <Button leftSection={<IconPlus size={16}/>} onClick={() => setOpened(true)}>
-                    Create Playlist
+                    {t("playlists:page.createPlaylist")}
                 </Button>
             </Group>
 
@@ -73,7 +75,7 @@ export default function PlaylistsPage() {
                     serverSearch={appliedSearch}
                     serverFilter={appliedFilter}
                     onServerFilterChange={handleFilterChange}
-                    searchPlaceholder="Search playlists..."
+                    searchPlaceholder={t("playlists:page.searchPlaceholder")}
                 />
             </div>
         </div>

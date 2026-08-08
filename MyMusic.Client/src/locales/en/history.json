@@ -1,0 +1,16 @@
+{
+    "page": {
+        "fetchFailed": "Failed to fetch play history",
+        "startDatePlaceholder": "Start date",
+        "endDatePlaceholder": "End date"
+    },
+    "schema": {
+        "columns": {
+            "title": "Title",
+            "artist": "Artist",
+            "album": "Album",
+            "device": "Device",
+            "playedAt": "Played At"
+        }
+    }
+}

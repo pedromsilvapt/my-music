@@ -1,4 +1,5 @@
 import {useCallback} from "react";
+import {useTranslation} from "react-i18next";
 import {autocompleteSongs} from "../../client/songs.ts";
 import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
 
@@ -13,14 +14,15 @@ interface SongAutocompleteFieldProps {
 }
 
 export default function SongAutocompleteField({
-                                                   label,
-                                                   placeholder = "Search for a song...",
-                                                   value,
-                                                   onChange,
-                                                   disabled,
-                                                   error,
-                                                   leftSection,
-                                               }: SongAutocompleteFieldProps) {
+                                                    label,
+                                                    placeholder,
+                                                    value,
+                                                    onChange,
+                                                    disabled,
+                                                    error,
+                                                    leftSection,
+                                                }: SongAutocompleteFieldProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const handleSearch = useCallback(async (query: string) => {
         if (query.length < 1) return [];
         const response = await autocompleteSongs({search: query, limit: 15});
@@ -44,7 +46,7 @@ export default function SongAutocompleteField({
     return (
         <AutocompleteField
             label={label}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("songs:songAutocomplete.searchPlaceholder")}
             value={value}
             onChange={handleChange}
             onSearch={handleSearch}

@@ -1,5 +1,6 @@
 import {Button} from "@mantine/core";
 import {IconRefresh} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 import {useBatchMetadataFetch} from "../../hooks/useBatchMetadataFetch";
 
 interface AutoFetchButtonProps {
@@ -7,6 +8,7 @@ interface AutoFetchButtonProps {
 }
 
 export function AutoFetchButton({onSuccess}: AutoFetchButtonProps) {
+    const {t} = useTranslation(["audits", "common"]);
     const batchFetch = useBatchMetadataFetch();
 
     const handleClick = () => {
@@ -24,7 +26,7 @@ export function AutoFetchButton({onSuccess}: AutoFetchButtonProps) {
             loading={batchFetch.isPending}
             variant="light"
         >
-            Auto-fetch Metadata
+            {t("audits:autoFetch.label")}
         </Button>
     );
 }

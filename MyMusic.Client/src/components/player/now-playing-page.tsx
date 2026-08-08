@@ -1,5 +1,6 @@
 import {Group, Popover, Stack, Text} from "@mantine/core";
 import {IconChevronDown} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 import {useQueueMutations} from "../../contexts/player-context";
 import {useVisibleQueue} from "../../hooks/use-visible-queue";
 import {usePlaybackStore} from "../../stores/playback-store";
@@ -11,6 +12,7 @@ import {PlayingDot} from "../queue/playing-dot";
 import {useDisclosure} from "@mantine/hooks";
 
 export default function NowPlayingPage() {
+    const {t} = useTranslation(["player", "queue", "common"]);
     const {reorder, reorderBatch} = useQueueMutations();
     const {queue, currentSongId: visibleQueueCurrentSongId, queueId} = useVisibleQueue();
     const scrollToCurrentRequestId = usePlaybackStore((s: { scrollToCurrentRequestId: number }) => s.scrollToCurrentRequestId);
@@ -35,7 +37,7 @@ export default function NowPlayingPage() {
     };
 
     const visibleQueue = queues.find(q => q.id === visibleQueueId);
-    const queueName = visibleQueue?.name ?? 'Now Playing';
+    const queueName = visibleQueue?.name ?? t("common:nav.nowPlaying");
 
     return (
         <Stack gap="md" style={{height: 'var(--parent-height)'}} data-testid="player">
@@ -59,7 +61,7 @@ export default function NowPlayingPage() {
                                     {queueName}
                                 </Text>
                                 <Text size="sm" c="dimmed">
-                                    {queue.length} {queue.length === 1 ? 'song' : 'songs'}
+                                    {t("common:count.songs", {count: queue.length})}
                                 </Text>
                             </Group>
                             {queues.length > 1 && (

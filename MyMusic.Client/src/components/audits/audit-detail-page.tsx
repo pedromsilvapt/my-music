@@ -3,6 +3,7 @@ import {modals} from "@mantine/modals";
 import {IconRefresh, IconTrash} from '@tabler/icons-react';
 import {useParams} from "@tanstack/react-router";
 import {useCallback, useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {
     useGetAuditRule,
     useListAuditNonConformities,
@@ -21,6 +22,7 @@ const AUDIT_CUSTOM_COMPONENTS: Record<string, React.ComponentType<{onToolbarChan
 const AUDIT_STATE_KEY = "audit-detail";
 
 export default function AuditDetailPage() {
+    const {t} = useTranslation(["audits", "common"]);
     const {auditId} = useParams({from: '/audits/$auditId'});
     const id = parseInt(auditId, 10);
 
@@ -43,7 +45,7 @@ export default function AuditDetailPage() {
         }
     );
 
-    const ruleResponse = useQueryData(ruleQuery, "Failed to fetch audit rule");
+    const ruleResponse = useQueryData(ruleQuery, t("audits:detail.fetchFailed"));
     const nonConformitiesResponse = nonConformitiesQuery.data ?? {nonConformities: [], total: 0};
 
     const refetchNonConformities = nonConformitiesQuery.refetch;
@@ -74,13 +76,13 @@ export default function AuditDetailPage() {
 
     const handleReset = useCallback(() => {
         modals.openConfirmModal({
-            title: 'Reset Audit Rule',
+            title: t("audits:detail.resetTitle"),
             children: (
                 <Text size="sm">
-                    Are you sure you want to clear all non-conformities for &quot;{rule?.name ?? 'this audit rule'}&quot;? This action cannot be undone.
+                    {t("audits:detail.resetConfirm", {name: rule?.name ?? t("audits:detail.thisAuditRule")})}
                 </Text>
             ),
-            labels: {confirm: 'Reset', cancel: 'Cancel'},
+            labels: {confirm: t("common:actions.reset"), cancel: t("common:actions.cancel")},
             confirmProps: {color: 'red'},
             onConfirm: async () => {
                 setResetting(true);
@@ -93,7 +95,7 @@ export default function AuditDetailPage() {
                 }
             },
         });
-    }, [id, rule?.name, resetMutation, refetchNonConformities, ruleQuery]);
+    }, [id, rule?.name, resetMutation, refetchNonConformities, ruleQuery, t]);
 
     const handleFilterChange = useCallback((newSearch: string, newFilter: string) => {
         setCollectionFilter(AUDIT_STATE_KEY, { search: newSearch, expression: newFilter });
@@ -106,9 +108,9 @@ export default function AuditDetailPage() {
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
             <Group justify="space-between" mb="md">
                 <Group>
-                    <Title order={2}>{rule?.name ?? 'Audit Rule'}</Title>
+                    <Title order={2}>{rule?.name ?? t("audits:detail.titleFallback")}</Title>
                     <Badge color={rule?.nonConformityCount ? 'red' : 'green'}>
-                        {rule?.nonConformityCount ?? 0} issues
+                        {t("common:count.issues", {count: rule?.nonConformityCount ?? 0})}
                     </Badge>
                 </Group>
                 <Group>
@@ -121,14 +123,14 @@ export default function AuditDetailPage() {
                         variant="light"
                         color="red"
                     >
-                        Reset
+                        {t("common:actions.reset")}
                     </Button>
                     <Button
                         leftSection={<IconRefresh size={16}/>}
                         onClick={handleScan}
                         loading={scanning}
                     >
-                        Run Scan
+                        {t("audits:detail.runScan")}
                     </Button>
                 </Group>
             </Group>

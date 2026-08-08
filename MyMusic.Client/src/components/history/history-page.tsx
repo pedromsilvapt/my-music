@@ -2,6 +2,7 @@ import {Group} from "@mantine/core";
 import {DateInput} from "@mantine/dates";
 import {IconCalendar, IconSearch} from "@tabler/icons-react";
 import {useMemo, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useListPlayHistory} from "../../client/play-history.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import CollectionToolbar from "../common/collection/collection-toolbar.tsx";
@@ -13,6 +14,7 @@ import {usePlayHistorySchema} from "./usePlayHistorySchema.tsx";
 const HISTORY_LIMIT = 100;
 
 export default function HistoryPage() {
+    const {t} = useTranslation(["history", "common"]);
     const [selectedSong, setSelectedSong] = useState<AutocompleteItem | null>(null);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
@@ -42,7 +44,7 @@ export default function HistoryPage() {
 
     const playHistoryResponse = useQueryData(
         playHistoryQuery,
-        "Failed to fetch play history"
+        t("history:page.fetchFailed")
     ) ?? {data: {items: [], total: 0}};
 
     const historySchema = usePlayHistorySchema();
@@ -95,14 +97,14 @@ export default function HistoryPage() {
                                     leftSection={<IconSearch size={16}/>}
                                 />
                                 <DateInput
-                                    placeholder="Start date"
+                                    placeholder={t("history:page.startDatePlaceholder")}
                                     value={startDate}
                                     onChange={handleStartDateChange}
                                     leftSection={<IconCalendar size={16}/>}
                                     clearable
                                 />
                                 <DateInput
-                                    placeholder="End date"
+                                    placeholder={t("history:page.endDatePlaceholder")}
                                     value={endDate}
                                     onChange={handleEndDateChange}
                                     leftSection={<IconCalendar size={16}/>}

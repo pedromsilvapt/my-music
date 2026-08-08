@@ -2,6 +2,7 @@ import {ActionIcon, Box, Checkbox, Group, Skeleton, Stack, Text, TextInput} from
 import {notifications} from "@mantine/notifications";
 import {IconClipboard, IconDownload, IconMusic, IconUpload, IconWorld, IconX} from "@tabler/icons-react";
 import {useCallback, useEffect, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
 import {useBackgroundArtwork} from "../../hooks/useBackgroundArtwork";
 import {fetchArtworkAsDataUrl} from "../../utils/artwork.ts";
@@ -28,7 +29,7 @@ interface CoverUploadFieldProps {
 }
 
 export default function CoverUploadField({
-                                             label = "Cover Artwork",
+                                             label,
                                              value,
                                              onChange,
                                              currentDimensions,
@@ -39,6 +40,7 @@ export default function CoverUploadField({
                                              oldCoverUrl,
                                              coverUrl,
                                            }: CoverUploadFieldProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const [url, setUrl] = useState("");
     const [loading, setLoading] = useState(false);
     const [previewDimensions, setPreviewDimensions] = useState<CoverDimensions | null>(currentDimensions ?? null);
@@ -117,7 +119,7 @@ export default function CoverUploadField({
 
     const handleFileUpload = useCallback(async (file: File) => {
         if (!file.type.startsWith("image/")) {
-            notifications.show({title: "Error", message: "Please select an image file", color: "red"});
+            notifications.show({title: t("common:status.error"), message: t("songs:coverUpload.selectImage"), color: "red"});
             return;
         }
 
@@ -132,11 +134,11 @@ export default function CoverUploadField({
             };
             reader.readAsDataURL(file);
         } catch {
-            notifications.show({title: "Error", message: "Failed to load image", color: "red"});
+            notifications.show({title: t("common:status.error"), message: t("songs:coverUpload.loadImageFailed"), color: "red"});
         } finally {
             setLoading(false);
         }
-    }, [loadImageFromBase64, onChange]);
+    }, [loadImageFromBase64, onChange, t]);
 
     const handlePaste = useCallback(async () => {
         try {
@@ -150,11 +152,11 @@ export default function CoverUploadField({
                     return;
                 }
             }
-            notifications.show({title: "Error", message: "No image found in clipboard", color: "red"});
+            notifications.show({title: t("common:status.error"), message: t("songs:coverUpload.noImageInClipboard"), color: "red"});
         } catch {
-            notifications.show({title: "Error", message: "Failed to paste from clipboard", color: "red"});
+            notifications.show({title: t("common:status.error"), message: t("songs:coverUpload.pasteFailed"), color: "red"});
         }
-    }, [handleFileUpload]);
+    }, [handleFileUpload, t]);
 
     const handleUrlDownload = useCallback(async () => {
         if (!url) return;
@@ -162,18 +164,18 @@ export default function CoverUploadField({
         setLoading(true);
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error("Failed to download image");
+            if (!response.ok) throw new Error(t("songs:coverUpload.downloadFailed"));
 
             const blob = await response.blob();
             const file = new File([blob], "downloaded-image.png", {type: blob.type});
             await handleFileUpload(file);
             setUrl("");
         } catch {
-            notifications.show({title: "Error", message: "Failed to download image from URL", color: "red"});
+            notifications.show({title: t("common:status.error"), message: t("songs:coverUpload.downloadFromUrlFailed"), color: "red"});
         } finally {
             setLoading(false);
         }
-    }, [url, handleFileUpload]);
+    }, [url, handleFileUpload, t]);
 
     const handleClear = useCallback(() => {
         onChange(null, null);
@@ -203,7 +205,7 @@ export default function CoverUploadField({
         setSelectedSong(song);
 
         if (!song.coverId) {
-            notifications.show({ title: "No Cover", message: "Selected song has no cover artwork", color: "yellow" });
+            notifications.show({ title: t("songs:coverUpload.noCover"), message: t("songs:coverUpload.songHasNoCover"), color: "yellow" });
             return;
         }
 
@@ -213,11 +215,11 @@ export default function CoverUploadField({
             setPreviewDimensions(dimensions);
             onChange({ id: song.coverId }, dimensions);
         } catch {
-            notifications.show({ title: "Error", message: "Failed to load cover from selected song", color: "red" });
+            notifications.show({ title: t("common:status.error"), message: t("songs:coverUpload.loadCoverFromSongFailed"), color: "red" });
         } finally {
             setLoading(false);
         }
-    }, [onChange]);
+    }, [onChange, t]);
 
     const handleOpenLightbox = useCallback((src: string) => {
         openLightbox(src);
@@ -240,14 +242,14 @@ export default function CoverUploadField({
                         onChange={(e) => onCheckChange(e.currentTarget.checked)}
                     />
                 )}
-                <Text size="sm" fw={500}>{label}</Text>
+                <Text size="sm" fw={500}>{label ?? t("songs:coverUpload.defaultLabel")}</Text>
             </Group>
 
             {showSideBySide ? (
                 <Group align="flex-start" gap="md">
                     <Group gap="md">
                         <Stack gap="xs" align="center">
-                            <Text size="xs" c={isChecked ? "red" : "dimmed"}>Old</Text>
+                            <Text size="xs" c={isChecked ? "red" : "dimmed"}>{t("songs:coverUpload.old")}</Text>
                             <Box
                                 style={{
                                     width: 120,
@@ -266,7 +268,7 @@ export default function CoverUploadField({
                                 {oldCoverUrl ? (
                                     <img
                                         src={oldCoverUrl.startsWith("data:") ? oldCoverUrl : oldCoverUrl}
-                                        alt="Old Cover"
+                                        alt={t("songs:editModal.fields.cover") + " (" + t("songs:coverUpload.old") + ")"}
                                         style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
                                     />
                                 ) : (
@@ -278,7 +280,7 @@ export default function CoverUploadField({
                                     {oldCoverDimensions.width} x {oldCoverDimensions.height}
                                 </Text>
                             ) : (
-                                <Text size="xs" c="dimmed">no size</Text>
+                                <Text size="xs" c="dimmed">{t("songs:coverUpload.noSize")}</Text>
                             )}
                         </Stack>
 
@@ -287,7 +289,7 @@ export default function CoverUploadField({
                         </Stack>
 
                         <Stack gap="xs" align="center">
-                            <Text size="xs" c={isChecked ? "green" : "dimmed"}>New</Text>
+                            <Text size="xs" c={isChecked ? "green" : "dimmed"}>{t("songs:coverUpload.new")}</Text>
                             <Box
                                 style={{
                                     width: 120,
@@ -309,12 +311,12 @@ export default function CoverUploadField({
                             ) : showBackgroundError ? (
                                 <Box style={{ textAlign: "center", padding: "8px" }}>
                                     <IconMusic size={30} color="var(--mantine-color-red-6)" />
-                                    <Text size="xs" c="red" mt={4}>Failed to load</Text>
+                                    <Text size="xs" c="red" mt={4}>{t("songs:coverUpload.loadFailed")}</Text>
                                 </Box>
                             ) : previewSrc ? (
                                 <img
                                     src={previewSrc}
-                                    alt="New Cover"
+                                    alt={t("songs:editModal.fields.cover") + " (" + t("songs:coverUpload.new") + ")"}
                                     style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
                                 />
                             ) : (
@@ -322,13 +324,13 @@ export default function CoverUploadField({
                             )}
                             </Box>
                             {showBackgroundLoading ? (
-                                <Text size="xs" c="dimmed">Loading...</Text>
+                                <Text size="xs" c="dimmed">{t("common:common.loading")}</Text>
                             ) : newCoverDimensions ? (
                                 <Text size="xs" c="dimmed">
                                     {newCoverDimensions.width} x {newCoverDimensions.height}
                                 </Text>
                             ) : (
-                                <Text size="xs" c="dimmed">no size</Text>
+                                <Text size="xs" c="dimmed">{t("songs:coverUpload.noSize")}</Text>
                             )}
                         </Stack>
                     </Group>
@@ -352,7 +354,7 @@ export default function CoverUploadField({
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={disabled || !isChecked}
                                 loading={loading}
-                                title="Upload file"
+                                title={t("songs:coverUpload.uploadFile")}
                             >
                                 <IconUpload/>
                             </ActionIcon>
@@ -361,7 +363,7 @@ export default function CoverUploadField({
                                 size="lg"
                                 onClick={handlePaste}
                                 disabled={disabled || !isChecked}
-                                title="Paste from clipboard"
+                                title={t("songs:coverUpload.pasteFromClipboard")}
                             >
                                 <IconClipboard/>
                             </ActionIcon>
@@ -370,7 +372,7 @@ export default function CoverUploadField({
                                 size="lg"
                                 onClick={() => setCoverSourceMode('url')}
                                 disabled={disabled || !isChecked}
-                                title="From URL"
+                                title={t("songs:coverUpload.fromUrl")}
                             >
                                 <IconWorld/>
                             </ActionIcon>
@@ -379,7 +381,7 @@ export default function CoverUploadField({
                                 size="lg"
                                 onClick={() => setCoverSourceMode('song')}
                                 disabled={disabled || !isChecked}
-                                title="From existing song"
+                                title={t("songs:coverUpload.fromExistingSong")}
                             >
                                 <IconMusic/>
                             </ActionIcon>
@@ -390,7 +392,7 @@ export default function CoverUploadField({
                                     color="red"
                                     onClick={handleClear}
                                     disabled={disabled || !isChecked}
-                                    title="Remove cover"
+                                    title={t("songs:coverUpload.removeCover")}
                                 >
                                     <IconX/>
                                 </ActionIcon>
@@ -400,7 +402,7 @@ export default function CoverUploadField({
                         {coverSourceMode === 'url' ? (
                             <Group gap="xs" align="flex-end">
                                 <TextInput
-                                    placeholder="Paste image URL..."
+                                    placeholder={t("songs:coverUpload.pasteImageUrl")}
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
                                     style={{flex: 1}}
@@ -412,14 +414,14 @@ export default function CoverUploadField({
                                     onClick={handleUrlDownload}
                                     disabled={!url || disabled || !isChecked}
                                     loading={loading}
-                                    title="Download from URL"
+                                    title={t("songs:coverUpload.downloadFromUrl")}
                                 >
                                     <IconDownload/>
                                 </ActionIcon>
                             </Group>
                         ) : (
                             <AutocompleteField
-                                placeholder="Search for a song to use its cover..."
+                                placeholder={t("songs:coverUpload.searchForSong")}
                                 value={selectedSong}
                                 onChange={handleSongSelect}
                                 onSearch={searchSongs}
@@ -454,12 +456,12 @@ export default function CoverUploadField({
                             ) : showBackgroundError ? (
                                 <Box style={{ textAlign: "center", padding: "8px" }}>
                                     <IconMusic size={40} color="var(--mantine-color-red-6)" />
-                                    <Text size="xs" c="red" mt={4}>Failed to load</Text>
+                                    <Text size="xs" c="red" mt={4}>{t("songs:coverUpload.loadFailed")}</Text>
                                 </Box>
                             ) : previewSrc ? (
                                 <img
                                     src={previewSrc}
-                                    alt="Cover"
+                                    alt={t("songs:editModal.fields.cover")}
                                     style={{maxWidth: "100%", maxHeight: "100%", objectFit: "contain"}}
                                 />
                             ) : (
@@ -467,13 +469,13 @@ export default function CoverUploadField({
                             )}
                         </Box>
                         {showBackgroundLoading ? (
-                            <Text size="xs" c="dimmed">Loading...</Text>
+                            <Text size="xs" c="dimmed">{t("common:common.loading")}</Text>
                         ) : previewDimensions ? (
                             <Text size="xs" c="dimmed">
                                 {previewDimensions.width} x {previewDimensions.height}
                             </Text>
                         ) : (
-                            <Text size="xs" c="dimmed">no size</Text>
+                            <Text size="xs" c="dimmed">{t("songs:coverUpload.noSize")}</Text>
                         )}
                     </Stack>
 
@@ -496,7 +498,7 @@ export default function CoverUploadField({
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={disabled || (diffMode && !isChecked)}
                                 loading={loading}
-                                title="Upload file"
+                                title={t("songs:coverUpload.uploadFile")}
                             >
                                 <IconUpload/>
                             </ActionIcon>
@@ -505,7 +507,7 @@ export default function CoverUploadField({
                                 size="lg"
                                 onClick={handlePaste}
                                 disabled={disabled || (diffMode && !isChecked)}
-                                title="Paste from clipboard"
+                                title={t("songs:coverUpload.pasteFromClipboard")}
                             >
                                 <IconClipboard/>
                             </ActionIcon>
@@ -514,7 +516,7 @@ export default function CoverUploadField({
                                 size="lg"
                                 onClick={() => setCoverSourceMode('url')}
                                 disabled={disabled || (diffMode && !isChecked)}
-                                title="From URL"
+                                title={t("songs:coverUpload.fromUrl")}
                             >
                                 <IconWorld/>
                             </ActionIcon>
@@ -523,7 +525,7 @@ export default function CoverUploadField({
                                 size="lg"
                                 onClick={() => setCoverSourceMode('song')}
                                 disabled={disabled || (diffMode && !isChecked)}
-                                title="From existing song"
+                                title={t("songs:coverUpload.fromExistingSong")}
                             >
                                 <IconMusic/>
                             </ActionIcon>
@@ -534,7 +536,7 @@ export default function CoverUploadField({
                                     color="red"
                                     onClick={handleClear}
                                     disabled={disabled || (diffMode && !isChecked)}
-                                    title="Remove cover"
+                                    title={t("songs:coverUpload.removeCover")}
                                 >
                                     <IconX/>
                                 </ActionIcon>
@@ -544,7 +546,7 @@ export default function CoverUploadField({
                         {coverSourceMode === 'url' ? (
                             <Group gap="xs" align="flex-end">
                                 <TextInput
-                                    placeholder="Paste image URL..."
+                                    placeholder={t("songs:coverUpload.pasteImageUrl")}
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
                                     style={{flex: 1}}
@@ -556,14 +558,14 @@ export default function CoverUploadField({
                                     onClick={handleUrlDownload}
                                     disabled={!url || disabled || (diffMode && !isChecked)}
                                     loading={loading}
-                                    title="Download from URL"
+                                    title={t("songs:coverUpload.downloadFromUrl")}
                                 >
                                     <IconDownload/>
                                 </ActionIcon>
                             </Group>
                         ) : (
                             <AutocompleteField
-                                placeholder="Search for a song to use its cover..."
+                                placeholder={t("songs:coverUpload.searchForSong")}
                                 value={selectedSong}
                                 onChange={handleSongSelect}
                                 onSearch={searchSongs}

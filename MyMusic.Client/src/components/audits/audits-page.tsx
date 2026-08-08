@@ -2,19 +2,21 @@ import {Badge, Button, Group, Paper, Text, Title} from "@mantine/core";
 import {IconClipboardCheck, IconRefresh} from '@tabler/icons-react';
 import {Link} from "@tanstack/react-router";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useListAuditRules} from "../../client/audits.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useBatchMetadataFetch} from "../../hooks/useBatchMetadataFetch";
 import {TaskMonitorLink} from "./task-monitor-link";
 
 export default function AuditsPage() {
+    const {t} = useTranslation(["audits", "common"]);
     const auditRulesQuery = useListAuditRules();
     const batchFetch = useBatchMetadataFetch();
     const [message, setMessage] = useState<string | null>(null);
 
     const auditRulesResponse = useQueryData(
         auditRulesQuery,
-        "Failed to fetch audit rules"
+        t("audits:page.fetchFailed")
     ) ?? {data: {rules: []}};
 
     const rules = auditRulesResponse?.data?.rules ?? [];
@@ -31,7 +33,7 @@ export default function AuditsPage() {
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="audits">
             <Group justify="space-between" mb="md">
-                <Title order={2}>Audits</Title>
+                <Title order={2}>{t("common:nav.audits")}</Title>
                 <Group gap="sm">
                     <TaskMonitorLink />
                     <Button
@@ -40,7 +42,7 @@ export default function AuditsPage() {
                         loading={batchFetch.isPending}
                         variant="light"
                     >
-                        Auto-fetch Metadata
+                        {t("audits:autoFetch.label")}
                     </Button>
                 </Group>
             </Group>
@@ -72,7 +74,7 @@ export default function AuditsPage() {
                                 </div>
                             </Group>
                             <Badge color={rule.nonConformityCount > 0 ? 'red' : 'green'}>
-                                {rule.nonConformityCount} issues
+                                {t("common:count.issues", {count: rule.nonConformityCount})}
                             </Badge>
                         </Group>
                     </Paper>
@@ -80,7 +82,7 @@ export default function AuditsPage() {
 
                 {rules.length === 0 && (
                     <Text c="dimmed" ta="center" mt="xl">
-                        No audit rules available
+                        {t("audits:page.noRules")}
                     </Text>
                 )}
             </div>

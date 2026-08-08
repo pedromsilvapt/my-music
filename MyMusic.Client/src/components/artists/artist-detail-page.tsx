@@ -10,8 +10,10 @@ import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 
 export default function ArtistDetailPage() {
+    const {t} = useTranslation(["artists", "common"]);
     const {artistId} = useParams({from: '/artists/$artistId'});
     const search = useSearch({from: '/artists/$artistId'});
     const navigate = useNavigate({from: '/artists/$artistId'});
@@ -21,7 +23,7 @@ export default function ArtistDetailPage() {
     const artistQuery = useGetArtist(Number(artistId), {
         songFilter: songFilter === 'own' ? ArtistSongFilter.Own : songFilter === 'other' ? ArtistSongFilter.Other : ArtistSongFilter.All
     });
-    const artistResponse = useQueryData(artistQuery, "Failed to fetch artist");
+    const artistResponse = useQueryData(artistQuery, t("artists:detail.fetchFailed"));
     const artist = artistResponse?.data.artist ?? null;
 
     const albumsSchema = useAlbumsSchema();
@@ -34,7 +36,7 @@ export default function ArtistDetailPage() {
     const songsSchema = useSongsSchema(false, {queueContext});
 
     if (!artist) {
-        return <Box p="md" data-testid="artist-detail" data-loading="true">Loading...</Box>;
+        return <Box p="md" data-testid="artist-detail" data-loading="true">{t("artists:detail.loading")}</Box>;
     }
 
     const albums = artist.albums as unknown as ListAlbumItem[];
@@ -45,7 +47,7 @@ export default function ArtistDetailPage() {
             <Link to="/artists">
                 <Group gap="xs">
                     <IconArrowBack size={16}/>
-                    <Text size="sm">Back to Artists</Text>
+                    <Text size="sm">{t("artists:detail.backToArtists")}</Text>
                 </Group>
             </Link>
 
@@ -58,14 +60,14 @@ export default function ArtistDetailPage() {
                 <Stack gap="xs">
                     <Text size="xl" fw={700}>{artist.name}</Text>
                     <Group gap="md">
-                        <Text size="sm" c="dimmed">{artist.albumsCount} albums</Text>
-                        <Text size="sm" c="dimmed">{artist.songsCount} songs</Text>
+                        <Text size="sm" c="dimmed">{t("artists:detail.albumsCount", {count: artist.albumsCount})}</Text>
+                        <Text size="sm" c="dimmed">{t("artists:detail.songsCount", {count: artist.songsCount})}</Text>
                     </Group>
                 </Stack>
             </Flex>
 
             <Box>
-                <Text size="lg" fw={600} mb="sm">Albums</Text>
+                <Text size="lg" fw={600} mb="sm">{t("artists:detail.albums")}</Text>
                 <Collection
                     initialView="grid"
                     stateKey="artist-albums"
@@ -77,7 +79,7 @@ export default function ArtistDetailPage() {
 
             <Box>
                 <Group justify="space-between" mb="sm">
-                    <Text size="lg" fw={600}>Songs</Text>
+                    <Text size="lg" fw={600}>{t("artists:detail.songs")}</Text>
                     <SegmentedControl
                         size="xs"
                         value={songFilter}
@@ -85,9 +87,9 @@ export default function ArtistDetailPage() {
                             navigate({search: {songFilter: value as 'all' | 'own' | 'other'}});
                         }}
                         data={[
-                            {label: 'All', value: 'all'},
-                            {label: 'Own Albums', value: 'own'},
-                            {label: 'Other Albums', value: 'other'},
+                            {label: t("artists:detail.songFilter.all"), value: 'all'},
+                            {label: t("artists:detail.songFilter.own"), value: 'own'},
+                            {label: t("artists:detail.songFilter.other"), value: 'other'},
                         ]}
                     />
                 </Group>

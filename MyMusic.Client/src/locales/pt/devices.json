@@ -1,0 +1,84 @@
+{
+    "page": {
+        "searchPlaceholder": "Pesquisar dispositivos...",
+        "fetchFailed": "Falha ao obter os dispositivos"
+    },
+    "manageDialog": {
+        "title": "Gerir Dispositivos",
+        "fetchSongsFailed": "Falha ao obter as músicas",
+        "managing_one": "A gerir {{count}} música",
+        "managing_other": "A gerir {{count}} músicas",
+        "updateFailedFallback": "Falha ao atualizar os dispositivos. Tente novamente."
+    },
+    "sessionsPage": {
+        "fetchFailed": "Falha ao obter as sessões do dispositivo",
+        "fetchDeviceFailed": "Falha ao obter o dispositivo",
+        "deviceFallback": "Dispositivo {{id}}",
+        "sessions": "Sessões",
+        "deleteTitle": "Eliminar Sessão de Sincronização",
+        "deleteConfirmSingle": "Tem a certeza que pretende eliminar a sessão #{{id}}? Isto também eliminará todos os registos de sincronização associados. Esta ação não pode ser desfeita.",
+        "deleteConfirmPlural": "Tem a certeza que pretende eliminar {{count}} sessões? Isto também eliminará todos os registos de sincronização associados. Esta ação não pode ser desfeita.",
+        "deletedTitle": "Sessão Eliminada",
+        "deletedMessage": "A sessão #{{id}} foi eliminada.",
+        "deleteFailed": "Falha ao eliminar a sessão #{{id}}"
+    },
+    "recordsPage": {
+        "fetchFailed": "Falha ao obter os registos da sessão",
+        "fetchDeviceFailed": "Falha ao obter o dispositivo",
+        "deviceFallback": "Dispositivo {{id}}",
+        "session": "Sessão {{id}}",
+        "records": "Registos",
+        "searchPlaceholder": "Pesquisar caminhos de ficheiros..."
+    },
+    "schema": {
+        "manageGroup": "Gerir",
+        "deleteTitle": "Eliminar Dispositivo",
+        "deleteConfirmSingle": "Tem a certeza que pretende eliminar \"{{name}}\"? Isto também removerá todas as músicas e o histórico de sincronização associados. Esta ação não pode ser desfeita.",
+        "deleteConfirmPlural": "Tem a certeza que pretende eliminar {{count}} dispositivos? Isto também removerá todas as músicas e o histórico de sincronização associados. Esta ação não pode ser desfeita.",
+        "deletedTitle": "Dispositivo Eliminado",
+        "deletedMessage": "O dispositivo \"{{name}}\" foi eliminado.",
+        "deleteFailed": "Falha ao eliminar o dispositivo \"{{name}}\"",
+        "viewSessions": "Ver Sessões",
+        "default": "Predefinido",
+        "never": "Nunca",
+        "inProgress": "Em Curso",
+        "sessionId": "Sessão {{id}}",
+        "sessionTitle": "Sessão #{{id}}",
+        "resolves": "resolve #{{id}}",
+        "columns": {
+            "name": "Nome",
+            "songs": "Músicas",
+            "namingTemplate": "Modelo de Nomenclatura",
+            "lastSync": "Última Sincronização",
+            "id": "ID",
+            "startedAt": "Iniciada Em",
+            "duration": "Duração",
+            "status": "Estado",
+            "dryRun": "Simulação",
+            "createRemote": "CrtRem",
+            "updateRemote": "UpdRem",
+            "skipped": "Ignoradas",
+            "createLocal": "CrtLoc",
+            "updateLocal": "UpdLoc",
+            "deleteLocal": "DeleteLocal",
+            "link": "Link",
+            "unlink": "Unlink",
+            "rename": "Rename",
+            "conflicts": "Conflitos",
+            "updateTimestamp": "UpdTs",
+            "errors": "Erros",
+            "repositoryPath": "Caminho do Repositório",
+            "filePath": "Caminho do Ficheiro",
+            "song": "Música",
+            "action": "Ação",
+            "data": "Dados",
+            "reason": "Razão",
+            "resolves": "Resolve",
+            "processedAt": "Processada Em"
+        }
+    },
+    "badge": {
+        "toDelete": "{{name}} - Para Eliminar",
+        "toAction": "{{name}} - Para {{action}}"
+    }
+}

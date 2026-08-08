@@ -2,6 +2,7 @@ import {Anchor, Tooltip} from "@mantine/core";
 import {IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import type {ListArtistItem} from "../../model";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
@@ -10,6 +11,7 @@ import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 
 
 export function useArtistsSchema() {
+    const {t} = useTranslation(["artists", "common"]);
     const {data: filterMetadata} = useFilterMetadata('artists');
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
@@ -42,7 +44,7 @@ export function useArtistsSchema() {
             },
             {
                 name: 'name',
-                displayName: 'Name',
+                displayName: t("artists:schema.columns.name"),
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
                         <Anchor component={Link} to={`/artists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
@@ -52,7 +54,7 @@ export function useArtistsSchema() {
             },
             {
                 name: 'albumsCount',
-                displayName: 'Albums',
+                displayName: t("artists:schema.columns.albums"),
                 render: row => row.albumsCount,
                 width: '60px',
                 align: 'center',
@@ -60,7 +62,7 @@ export function useArtistsSchema() {
             },
             {
                 name: 'songsCount',
-                displayName: 'Songs',
+                displayName: t("artists:schema.columns.songs"),
                 render: row => row.songsCount,
                 width: '60px',
                 align: 'center',
@@ -68,7 +70,7 @@ export function useArtistsSchema() {
             },
             {
                 name: 'createdAt',
-                displayName: 'Created At',
+                displayName: t("artists:schema.columns.createdAt"),
                 render: row => row.createdAt,
                 sortable: true,
                 hidden: true,
@@ -89,6 +91,6 @@ export function useArtistsSchema() {
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
             <Anchor component={Link} to={`/artists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
-        renderListSubTitle: (row) => row.albumsCount + ' albums',
-    }) as CollectionSchema<ListArtistItem>, [filterMetadata, fetchFilterValues]);
+        renderListSubTitle: (row) => t("artists:schema.albumsCount", {count: row.albumsCount}),
+    }) as CollectionSchema<ListArtistItem>, [filterMetadata, fetchFilterValues, t]);
 }

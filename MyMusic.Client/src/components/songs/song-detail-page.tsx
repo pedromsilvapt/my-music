@@ -21,6 +21,7 @@ import {
 import {useCallback} from "react";
 import {Link, useNavigate, useParams} from "@tanstack/react-router";
 import {saveAs} from 'file-saver';
+import {useTranslation} from "react-i18next";
 
 import {getDownloadSongUrl, useDeleteSongs, useGetLocalSong} from "../../client/songs.ts";
 import {modals} from '@mantine/modals';
@@ -38,10 +39,11 @@ import ExplicitLabel from "../common/explicit-label.tsx";
 import DeviceBadge from "../devices/device-badge.tsx";
 
 export default function SongDetailPage() {
+    const {t} = useTranslation(["songs", "common"]);
     const {songId} = useParams({from: '/songs/$songId'});
     const navigate = useNavigate();
     const songQuery = useGetLocalSong(Number(songId));
-    const songResponse = useQueryData(songQuery, "Failed to fetch song");
+    const songResponse = useQueryData(songQuery, t("songs:detailPage.fetchFailed"));
     const song = songResponse?.data.song ?? null;
     const {play, playNext, playLast} = useQueueMutations();
     const toggleFavorite = useToggleFavorite();
@@ -53,13 +55,13 @@ export default function SongDetailPage() {
     const handleDelete = useCallback(() => {
         if (!song) return;
         modals.openConfirmModal({
-            title: 'Delete Song',
+            title: t("songs:detailPage.deleteTitle"),
             children: (
                 <Text size="sm">
-                    Are you sure you want to delete &quot;{song.title}&quot;? This action cannot be undone.
+                    {t("songs:detailPage.deleteConfirm", {name: song.title})}
                 </Text>
             ),
-            labels: {confirm: 'Delete', cancel: 'Cancel'},
+            labels: {confirm: t("common:actions.delete"), cancel: t("common:actions.cancel")},
             confirmProps: {color: 'red'},
             onConfirm: () => {
                 deleteSongs.mutate({data: {songIds: [song.id]}}, {
@@ -69,10 +71,10 @@ export default function SongDetailPage() {
                 });
             },
         });
-    }, [song, deleteSongs, navigate]);
+    }, [song, deleteSongs, navigate, t]);
 
     if (!song) {
-        return <Box p="md" data-testid="song-detail" data-loading="true">Loading...</Box>;
+        return <Box p="md" data-testid="song-detail" data-loading="true">{t("common:common.loading")}</Box>;
     }
 
     return (
@@ -80,7 +82,7 @@ export default function SongDetailPage() {
             <Link to="/songs">
                 <Group gap="xs">
                     <IconArrowBack size={16}/>
-                    <Text size="sm">Back to Songs</Text>
+                    <Text size="sm">{t("songs:detailPage.backToSongs")}</Text>
                 </Group>
             </Link>
 
@@ -115,7 +117,7 @@ export default function SongDetailPage() {
                             </Tooltip>
                         )}
                         {song.isExplicit &&
-                            <ExplicitLabel visible={true}><Text size="sm">Explicit</Text></ExplicitLabel>}
+                            <ExplicitLabel visible={true}><Text size="sm">{t("songs:detailPage.explicit")}</Text></ExplicitLabel>}
                     </Group>
                     <Group gap="xs" data-testid="song-genres">
                         <IconTag size={16}/>
@@ -124,7 +126,7 @@ export default function SongDetailPage() {
                                 <Text key={genre.id} size="sm" c="dimmed" data-testid="genre-item">{genre.name}</Text>
                             ))
                         ) : (
-                            <Text size="sm" c="dimmed">No genres</Text>
+                            <Text size="sm" c="dimmed">{t("songs:detailPage.noGenres")}</Text>
                         )}
                     </Group>
                     {song.repositoryPath && (
@@ -145,20 +147,20 @@ export default function SongDetailPage() {
                                  />
                              ))
                         ) : (
-                            <Text size="sm" c="dimmed">No devices</Text>
+                            <Text size="sm" c="dimmed">{t("songs:detailPage.noDevices")}</Text>
                         )}
                     </Group>
                     <Group gap="sm">
                         <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => play([{...song, isShared: false}])}>
-                            Play
+                            {t("songs:schema.play")}
                         </Button>
                         <Group gap="xs">
                             <ActionIcon variant="outline" size="lg" onClick={() => playNext([{...song, isShared: false}])}
-                                        title="Play Next">
+                                        title={t("songs:schema.playNext")}>
                                 <IconArrowRightDashed/>
                             </ActionIcon>
                             <ActionIcon variant="outline" size="lg" onClick={() => playLast([{...song, isShared: false}])}
-                                        title="Play Last">
+                                        title={t("songs:schema.playLast")}>
                                 <IconArrowForward/>
                             </ActionIcon>
                         </Group>
@@ -167,33 +169,33 @@ export default function SongDetailPage() {
                             variant={song.isFavorite ? "filled" : "default"}
                             onClick={() => toggleFavorite.mutate({id: song.id})}
                         >
-                            {song.isFavorite ? "Unfavorite" : "Favorite"}
+                            {song.isFavorite ? t("songs:schema.unfavorite") : t("songs:schema.favorite")}
                         </Button>
                         <Button
                             leftSection={<IconEdit/>}
                             variant="default"
                             onClick={() => modals.openContextModal({
                                 modal: 'song-editor',
-                                title: 'Edit Song',
+                                title: t("songs:detailPage.editTitle"),
                                 size: SONG_EDITOR_MODAL_SIZE,
                                 innerProps: { songIds: [song.id] },
                             })}
                         >
-                            Edit
+                            {t("common:actions.edit")}
                         </Button>
                         <Button
                             leftSection={<IconPlaylistAdd/>}
                             variant="default"
                             onClick={() => openManagePlaylists([song.id])}
                         >
-                            Manage Playlists
+                            {t("songs:schema.managePlaylists")}
                         </Button>
                         <Button
                             leftSection={<IconDevicesCog/>}
                             variant="default"
                             onClick={() => openManageDevices([song.id])}
                         >
-                            Manage Devices
+                            {t("songs:schema.manageDevices")}
                         </Button>
                         {!song.isShared && (
                             <Button
@@ -201,7 +203,7 @@ export default function SongDetailPage() {
                                 variant="default"
                                 onClick={() => openManageSharing([song.id])}
                             >
-                                Manage Sharing
+                                {t("songs:schema.manageSharing")}
                             </Button>
                         )}
                         <Button
@@ -209,7 +211,7 @@ export default function SongDetailPage() {
                             variant="default"
                             onClick={() => saveAs(getDownloadSongUrl(song.id))}
                         >
-                            Download
+                            {t("songs:schema.download")}
                         </Button>
                         <Button
                             leftSection={<IconTrash/>}
@@ -217,17 +219,17 @@ export default function SongDetailPage() {
                             color="red"
                             onClick={handleDelete}
                         >
-                            Delete
+                            {t("common:actions.delete")}
                         </Button>
                     </Group>
                 </Stack>
             </Flex>
 
             <Box>
-                <Text size="lg" fw={600} mb="sm">Lyrics</Text>
+                <Text size="lg" fw={600} mb="sm">{t("songs:detailPage.lyrics")}</Text>
                 {song.lyrics
                     ? <Text style={{whiteSpace: 'pre-wrap'}}>{song.lyrics}</Text>
-                    : <Alert color="gray" title="Lyrics not found on this song"/>
+                    : <Alert color="gray" title={t("songs:detailPage.lyricsNotFound")}/>
                 }
             </Box>
         </Stack>

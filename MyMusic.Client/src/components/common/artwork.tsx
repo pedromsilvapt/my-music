@@ -3,6 +3,7 @@ import {IconPhotoScan, IconPlayerPlayFilled, IconZoomIn} from "@tabler/icons-rea
 import type {MouseEvent} from "react";
 import * as React from "react";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {DEFAULT_ARTWORK_SIZE} from "../../consts.ts";
 import {useArtworkLightbox} from "../../contexts/artwork-lightbox-context.tsx";
 import {useContextMenuTrigger} from "../../hooks/use-context-menu-trigger";
@@ -20,6 +21,7 @@ interface ArtworkProps {
 
 export default function Artwork(props: ArtworkProps) {
     const {id, placeholderIcon, enablePreview = true} = props;
+    const {t} = useTranslation(["common"]);
     const size = props.size ?? DEFAULT_ARTWORK_SIZE;
     const {openLightbox} = useArtworkLightbox();
 
@@ -129,7 +131,7 @@ export default function Artwork(props: ArtworkProps) {
                         leftSection={<IconZoomIn size={16}/>}
                         onClick={handlePreview}
                     >
-                        Preview
+                        {t("common:artwork.preview")}
                     </Menu.Item>
                 )}
             />

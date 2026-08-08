@@ -1,6 +1,7 @@
 import {Modal} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {useCallback, useEffect, useMemo, useState, useRef} from "react";
+import {useTranslation} from "react-i18next";
 import {useSearchMetadataAllSources} from "../../client/sources.ts";
 import {useManualFetchMetadata} from "../../hooks/useManualFetchMetadata";
 import type {SongMetadataDiff} from "../../model/songMetadataDiff";
@@ -26,6 +27,7 @@ export default function MetadataSearchModal({
     song,
     onSelect,
 }: MetadataSearchModalProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const [search, setSearch] = useState("");
     const [debouncedSearch] = useDebouncedValue(search, API_SEARCH_DEBOUNCE_MS);
 
@@ -39,7 +41,7 @@ export default function MetadataSearchModal({
         query: {enabled: opened && debouncedSearch.length > 0},
     });
 
-    const searchResponse = useQueryData(searchQuery, "Failed to search metadata") ?? {data: {results: []}};
+    const searchResponse = useQueryData(searchQuery, t("songs:metadataSearch.searchFailed")) ?? {data: {results: []}};
     const results = searchResponse?.data?.results ?? [];
     const isFetching = searchQuery.isFetching;
 
@@ -76,7 +78,7 @@ export default function MetadataSearchModal({
         <Modal
             opened={opened}
             onClose={onClose}
-            title="Search Metadata"
+            title={t("songs:metadataSearch.title")}
             size="lg"
             centered
             zIndex={ZINDEX_DRAWER}
@@ -93,7 +95,7 @@ export default function MetadataSearchModal({
                     filterMode="server"
                     serverSearch={debouncedSearch}
                     onServerFilterChange={(searchValue) => setSearch(searchValue)}
-                    searchPlaceholder="Search for song metadata..."
+                    searchPlaceholder={t("songs:metadataSearch.searchPlaceholder")}
                     toolbar={(p) => (
                         <CollectionToolbar
                             {...p}

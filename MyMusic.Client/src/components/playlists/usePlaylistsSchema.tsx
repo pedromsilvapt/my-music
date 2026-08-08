@@ -2,6 +2,7 @@ import {Anchor, Text, Tooltip} from "@mantine/core";
 import {IconPlaylist, IconTrash} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {useDeletePlaylist} from "../../client/playlists.ts";
 import type {ListPlaylistItem} from "../../model";
 import {TEXT_COLOR} from "../../utils/colors.ts";
@@ -10,6 +11,7 @@ import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 
 export function usePlaylistsSchema() {
+    const {t} = useTranslation(["playlists", "common"]);
     const deletePlaylist = useDeletePlaylist();
     const {data: filterMetadata} = useFilterMetadata('playlists');
 
@@ -43,7 +45,7 @@ export function usePlaylistsSchema() {
             },
             {
                 name: 'name',
-                displayName: 'Name',
+                displayName: t("playlists:schema.columns.name"),
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
                         <Anchor component={Link} to={`/playlists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
@@ -53,7 +55,7 @@ export function usePlaylistsSchema() {
             },
             {
                 name: 'songCount',
-                displayName: 'Songs',
+                displayName: t("playlists:schema.columns.songs"),
                 render: row => row.songCount,
                 width: 80,
                 align: 'center',
@@ -61,14 +63,14 @@ export function usePlaylistsSchema() {
             },
             {
                 name: 'createdAt',
-                displayName: 'Created',
+                displayName: t("playlists:schema.columns.created"),
                 render: row => row.createdAt,
                 width: '1fr',
                 sortable: true,
             },
             {
                 name: 'modifiedAt',
-                displayName: 'Modified',
+                displayName: t("playlists:schema.columns.modified"),
                 render: row => row.modifiedAt ?? '',
                 width: '1fr',
                 sortable: true,
@@ -78,11 +80,11 @@ export function usePlaylistsSchema() {
 
         actions: () => {
             return [
-                {group: "Manage"},
+                {group: t("playlists:schema.manageGroup")},
                 {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,
-                    renderLabel: () => "Delete",
+                    renderLabel: () => t("common:actions.delete"),
                     onClick: (playlists: ListPlaylistItem[]) => {
                         for (const playlist of playlists) {
                             deletePlaylist.mutate({id: playlist.id});
@@ -101,6 +103,6 @@ export function usePlaylistsSchema() {
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
             <Anchor component={Link} to={`/playlists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
-        renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
-    }) as CollectionSchema<ListPlaylistItem>, [deletePlaylist, filterMetadata, fetchFilterValues]);
+        renderListSubTitle: (row) => <Text c="gray">{t("common:count.songs", {count: row.songCount})}</Text>,
+    }) as CollectionSchema<ListPlaylistItem>, [deletePlaylist, filterMetadata, fetchFilterValues, t]);
 }

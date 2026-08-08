@@ -1,0 +1,32 @@
+{
+    "controls": {
+        "playPreviousTrack": "Reproduzir faixa anterior da fila",
+        "previous": "Anterior",
+        "pauseCurrentTrack": "Pausar faixa atual",
+        "playCurrentTrack": "Reproduzir faixa atual",
+        "pause": "Pausar",
+        "play": "Reproduzir",
+        "playNextTrack": "Reproduzir próxima faixa da fila",
+        "next": "Seguinte"
+    },
+    "volume": {
+        "unmute": "Ativar som",
+        "mute": "Silenciar"
+    },
+    "notifications": {
+        "playbackBlockedTitle": "Reprodução bloqueada",
+        "playbackBlockedMessage": "O navegador requer interação do utilizador para reproduzir áudio",
+        "playbackStoppedTitle": "Reprodução parada",
+        "playbackStoppedMessage": "Todas as músicas restantes na fila estão marcadas para saltar.",
+        "autoplayBlockedTitle": "Reprodução automática bloqueada",
+        "autoplayBlockedMessage": "Clique em Reproduzir para retomar a reprodução",
+        "loadingFailedTitle": "Falha ao carregar",
+        "loadingFailedMessage": "A tentar novamente... (tentativa {{attempt}}/{{total}})",
+        "songLoadFailedTitle": "Falha ao carregar a música",
+        "songLoadFailedNamed": "Não foi possível carregar \"{{title}}\".",
+        "songLoadFailed": "Não foi possível carregar a música atual.",
+        "stoppedAfterSongTitle": "Parada após esta música",
+        "stoppedAfterSongMessage": "Parada após \"{{title}}\"",
+        "stopAfterClearFailedMessage": "Falha ao limpar o sinalizador de parar após a reprodução. O sinalizador pode continuar definido."
+    }
+}

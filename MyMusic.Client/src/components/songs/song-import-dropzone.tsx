@@ -1,6 +1,7 @@
 import {Dropzone} from "@mantine/dropzone";
 import {Group, Stack, Text, ThemeIcon} from "@mantine/core";
 import {IconMusic} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 
 const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a'];
@@ -19,6 +20,7 @@ function isAudioFile(file: File): boolean {
 }
 
 export default function SongImportDropzone({onFilesDropped, children}: SongImportDropzoneProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const handleDrop = (files: File[]) => {
         const audioFiles = files.filter(isAudioFile);
         if (audioFiles.length > 0) {
@@ -67,10 +69,10 @@ export default function SongImportDropzone({onFilesDropped, children}: SongImpor
                         </ThemeIcon>
                         <Stack gap="xs" align="center">
                             <Text size="xl" fw={700} c="white">
-                                Drop audio files here
+                                {t("songs:import.dropTitle")}
                             </Text>
                             <Text size="sm" c="dimmed">
-                                Supports MP3 and M4A files
+                                {t("songs:import.dropHelp")}
                             </Text>
                         </Stack>
                     </Group>

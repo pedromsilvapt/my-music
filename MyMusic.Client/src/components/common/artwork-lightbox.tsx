@@ -1,5 +1,6 @@
 import {Box, Overlay, Portal} from "@mantine/core";
 import {useCallback, useEffect, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {RemoveScroll} from "react-remove-scroll";
 import {ZINDEX_LIGHTBOX, ZINDEX_MODAL} from "../../consts.ts";
 
@@ -13,6 +14,7 @@ type ZoomLevel = "fit" | 100;
 
 export default function ArtworkLightbox(props: ArtworkLightboxProps) {
     const {opened, onClose, src} = props;
+    const {t} = useTranslation(["common"]);
 
     const [zoom, setZoom] = useState<ZoomLevel>("fit");
     const [position, setPosition] = useState({x: 0, y: 0});
@@ -216,7 +218,7 @@ export default function ArtworkLightbox(props: ArtworkLightboxProps) {
                         <img
                             ref={imgRef}
                             src={src}
-                            alt="Artwork preview"
+                            alt={t("common:artwork.previewAlt")}
                             onLoad={handleImgLoad}
                             style={{
                                 maxWidth: "none",

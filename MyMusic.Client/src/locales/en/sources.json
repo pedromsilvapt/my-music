@@ -1,0 +1,51 @@
+{
+    "page": {
+        "fetchFailed": "Failed to fetch sources",
+        "noSourcesTitle": "No Sources Configured",
+        "noSourcesBody": "No sources are currently configured. Click the edit button in the toolbar to add sources."
+    },
+    "manageDialog": {
+        "title": "Manage Sources",
+        "createdMessage": "Source created successfully",
+        "createFailed": "Failed to create source",
+        "updatedMessage": "Source updated successfully",
+        "updateFailed": "Failed to update source",
+        "deletedMessage": "Source deleted successfully",
+        "deleteFailed": "Failed to delete source",
+        "unsavedChangesTitle": "Unsaved Changes",
+        "unsavedChangesBody": "You have unsaved changes. Discard them?",
+        "discardChanges": "Discard Changes",
+        "createNew": "Create New",
+        "deleteSourceTitle": "Delete source",
+        "emptySelection": "Select a source to edit or create a new one",
+        "fields": {
+            "name": "Name",
+            "namePlaceholder": "Source name",
+            "icon": "Icon",
+            "iconPlaceholder": "Icon name (e.g., IconMusic)",
+            "address": "Address",
+            "addressPlaceholder": "Source address / URL",
+            "isPaid": "Is Paid"
+        }
+    },
+    "search": {
+        "fetchFailed": "Failed to search songs",
+        "showAllResults": "Show all results",
+        "showMatchedResults": "Show matched results"
+    },
+    "toolbar": {
+        "manageSources": "Manage sources"
+    },
+    "schema": {
+        "noAlbum": "(no album)",
+        "purchase": "Purchase",
+        "columns": {
+            "title": "Title",
+            "artists": "Artists",
+            "album": "Album",
+            "year": "Year",
+            "duration": "Duration",
+            "price": "Price"
+        }
+    }
+}

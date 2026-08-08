@@ -1,0 +1,32 @@
+{
+    "page": {
+        "fetchFailed": "Falha ao obter os artistas",
+        "searchPlaceholder": "Pesquisar artistas..."
+    },
+    "detail": {
+        "fetchFailed": "Falha ao obter o artista",
+        "loading": "A carregar...",
+        "backToArtists": "Voltar aos Artistas",
+        "albums": "Álbuns",
+        "songs": "Músicas",
+        "albumsCount_one": "{{count}} álbum",
+        "albumsCount_other": "{{count}} álbuns",
+        "songsCount_one": "{{count}} música",
+        "songsCount_other": "{{count}} músicas",
+        "songFilter": {
+            "all": "Todos",
+            "own": "Álbuns Próprios",
+            "other": "Outros Álbuns"
+        }
+    },
+    "schema": {
+        "columns": {
+            "name": "Nome",
+            "albums": "Álbuns",
+            "songs": "Músicas",
+            "createdAt": "Criado Em"
+        },
+        "albumsCount_one": "{{count}} álbum",
+        "albumsCount_other": "{{count}} álbuns"
+    }
+}

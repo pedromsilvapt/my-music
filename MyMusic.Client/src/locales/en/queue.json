@@ -1,0 +1,14 @@
+{
+    "switcher": {
+        "renameTitle": "Rename Queue",
+        "deleteTitle": "Delete Queue",
+        "empty": "No queues yet. Click Play to create one."
+    },
+    "renameModal": {
+        "nameLabel": "Queue Name",
+        "namePlaceholder": "Enter queue name"
+    },
+    "deleteModal": {
+        "confirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    }
+}

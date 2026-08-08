@@ -1,0 +1,23 @@
+{
+    "page": {
+        "fetchFailed": "Falha ao obter os álbuns",
+        "searchPlaceholder": "Pesquisar álbuns..."
+    },
+    "detail": {
+        "fetchFailed": "Falha ao obter o álbum",
+        "loading": "A carregar...",
+        "backToAlbums": "Voltar aos Álbuns",
+        "songsCount_one": "{{count}} música",
+        "songsCount_other": "{{count}} músicas"
+    },
+    "schema": {
+        "columns": {
+            "name": "Nome",
+            "year": "Ano",
+            "songs": "Músicas",
+            "createdAt": "Criado Em"
+        },
+        "songsCount_one": "{{count}} música",
+        "songsCount_other": "{{count}} músicas"
+    }
+}

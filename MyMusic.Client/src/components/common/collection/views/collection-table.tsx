@@ -17,6 +17,7 @@ import {useElementSize} from "@mantine/hooks";
 import {IconArrowDown, IconArrowUp, IconSelector} from "@tabler/icons-react";
 import {useVirtualizer, type VirtualItem, Virtualizer} from "@tanstack/react-virtual";
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {DRAG_ACTIVATION_DISTANCE, VIRTUALIZER_OVERSCAN} from "../../../../consts.ts";
 import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
@@ -56,6 +57,7 @@ export interface CollectionTableProps<M> {
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, onSort, sort: propSort, autoHeight} = props;
+    const {t} = useTranslation(["collection", "common"]);
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -340,7 +342,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                     )}
                     {isDraggingMultiple && (
                         <Box bg="blue.1" p="xs" style={{borderRadius: 4}}>
-                            Dragging {selectionStore.getState().selectedKeys.size} items
+                            {t("collection:views.draggingCount", {count: selectionStore.getState().selectedKeys.size})}
                         </Box>
                     )}
                 </DragOverlay>

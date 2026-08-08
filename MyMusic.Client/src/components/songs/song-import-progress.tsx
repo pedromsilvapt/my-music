@@ -1,6 +1,7 @@
 import {useState, useEffect, useRef, useCallback} from "react";
 import {Modal, Stack, Text, Progress, Group, ThemeIcon, Button, ScrollArea, Box} from "@mantine/core";
 import {IconCheck, IconX, IconLoader, IconFileMusic} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 import {useUploadSong} from "../../client/songs";
 import {ZINDEX_MODAL} from "../../consts";
 
@@ -19,6 +20,7 @@ interface SongImportProgressProps {
 }
 
 export default function SongImportProgress({opened, onClose, files}: SongImportProgressProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const [importFiles, setImportFiles] = useState<SongImportFile[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isCanceled, setIsCanceled] = useState(false);
@@ -104,12 +106,12 @@ export default function SongImportProgress({opened, onClose, files}: SongImportP
                 i === index ? {
                     ...f,
                     status: 'error',
-                    error: error instanceof Error ? error.message : 'Upload failed',
+                    error: error instanceof Error ? error.message : t("songs:import.uploadFailed"),
                     progress: 0
                 } : f
             ));
         }
-    }, [uploadMutation]);
+    }, [uploadMutation, t]);
 
     useEffect(() => {
         if (!opened || isCanceled || isUploadingRef.current) {
@@ -146,7 +148,7 @@ export default function SongImportProgress({opened, onClose, files}: SongImportP
         <Modal
             opened={opened}
             onClose={isComplete ? onClose : handleCancel}
-            title={isComplete ? "Import Complete" : "Importing Songs"}
+            title={isComplete ? t("songs:import.complete") : t("songs:import.importing")}
             centered
             zIndex={ZINDEX_MODAL}
             size="lg"
@@ -156,8 +158,8 @@ export default function SongImportProgress({opened, onClose, files}: SongImportP
             <Stack gap="md">
                 <Group justify="space-between">
                     <Text size="sm" c="dimmed">
-                        {completedCount} of {importFiles.length} completed
-                        {errorCount > 0 && ` (${errorCount} failed)`}
+                        {t("songs:import.completedOf", {completed: completedCount, total: importFiles.length})}
+                        {errorCount > 0 && t("songs:import.failedSuffix", {count: errorCount})}
                     </Text>
                     <Text size="sm" fw={500}>
                         {Math.round(overallProgress)}%
@@ -176,10 +178,10 @@ export default function SongImportProgress({opened, onClose, files}: SongImportP
 
                 <Group justify="flex-end" gap="sm">
                     {isComplete ? (
-                        <Button onClick={onClose}>Done</Button>
+                        <Button onClick={onClose}>{t("songs:import.done")}</Button>
                     ) : (
                         <Button variant="light" color="red" onClick={handleCancel}>
-                            Cancel
+                            {t("common:actions.cancel")}
                         </Button>
                     )}
                 </Group>

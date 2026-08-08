@@ -1,6 +1,7 @@
 import {computePosition, flip, offset, shift} from '@floating-ui/react';
 import {CloseButton, Group, Paper, Portal, Text, Transition} from "@mantine/core";
 import {useLayoutEffect, useMemo, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useContextMenuStore} from "../../../stores/context-menu-store.tsx";
 import CollectionActions from "./collection-actions.tsx";
 import type {CollectionSchemaAction} from "./collection-schema.tsx";
@@ -28,6 +29,7 @@ const isElementInViewport = (el: HTMLElement) => {
 
 export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps<M>) {
     const {items, itemKey, selectionStore, actionsFn, containerRef, portalTarget, onClearSelection} = props;
+    const {t} = useTranslation(["collection", "common"]);
     const floatingRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({x: 0, y: 0, placement: 'bottom-start' as string});
 
@@ -128,10 +130,10 @@ export default function SelectionFloatingBar<M>(props: SelectionFloatingBarProps
                         <CloseButton
                             size="sm"
                             onClick={onClearSelection}
-                            title="Clear selection"
+                            title={t("common:common.clearSelection")}
                         />
                         <Text size="sm" fw={500}>
-                            {selection.length} selected
+                            {t("collection:selectionBar.selected", {count: selection.length})}
                         </Text>
                         <CollectionActions
                             actions={actions}

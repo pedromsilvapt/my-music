@@ -1,10 +1,12 @@
 import {Button, Group, Badge} from "@mantine/core";
 import {IconActivity, IconRefresh} from "@tabler/icons-react";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {TaskMonitorModal} from "./task-monitor-modal";
 import {useMetadataQueueStatus} from "../../hooks/useMetadataQueueStatus";
 
 export function TaskMonitorLink() {
+    const {t} = useTranslation(["audits", "common"]);
     const [modalOpen, setModalOpen] = useState(false);
     const {data: status} = useMetadataQueueStatus();
 
@@ -20,7 +22,7 @@ export function TaskMonitorLink() {
                 color={hasFailures ? "red" : activeTasks > 0 ? "blue" : "gray"}
             >
                 <Group gap="xs">
-                    <span>Monitor Tasks</span>
+                    <span>{t("audits:taskMonitor.link")}</span>
                     {activeTasks > 0 && (
                         <Badge size="sm" color="blue" circle>
                             {activeTasks}
@@ -28,7 +30,7 @@ export function TaskMonitorLink() {
                     )}
                     {hasFailures && (
                         <Badge size="sm" color="red" leftSection={<IconRefresh size={10} />}>
-                            {status.failed} failed
+                            {t("audits:taskMonitor.failedCount", {count: status.failed})}
                         </Badge>
                     )}
                 </Group>

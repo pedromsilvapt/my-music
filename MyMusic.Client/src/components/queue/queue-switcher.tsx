@@ -1,6 +1,7 @@
 import {ActionIcon, Group, Stack, Text} from '@mantine/core';
 import {modals} from '@mantine/modals';
 import {IconPencil, IconPlaylist, IconTrash} from '@tabler/icons-react';
+import {useTranslation} from 'react-i18next';
 import type {ListQueueItem} from '../../model';
 import {PlayingDot} from './playing-dot';
 
@@ -13,11 +14,13 @@ interface QueueSwitcherProps {
 }
 
 export function QueueSwitcher({queues, visibleQueueId, currentQueueId, onViewQueue, onClosePopover}: QueueSwitcherProps) {
+    const {t} = useTranslation(["queue", "common"]);
+
     const handleOpenRename = (queue: ListQueueItem) => {
         onClosePopover?.();
         modals.openContextModal({
             modal: 'rename-queue',
-            title: 'Rename Queue',
+            title: t("queue:switcher.renameTitle"),
             innerProps: {
                 queueId: queue.id,
                 queueName: queue.name,
@@ -29,7 +32,7 @@ export function QueueSwitcher({queues, visibleQueueId, currentQueueId, onViewQue
         onClosePopover?.();
         modals.openContextModal({
             modal: 'delete-queue',
-            title: 'Delete Queue',
+            title: t("queue:switcher.deleteTitle"),
             innerProps: {
                 queueId: queue.id,
                 queueName: queue.name,
@@ -41,7 +44,7 @@ export function QueueSwitcher({queues, visibleQueueId, currentQueueId, onViewQue
         <Stack gap="xs">
             {queues.length === 0 ? (
                 <Text size="sm" c="dimmed" ta="center" py="md">
-                    No queues yet. Click Play to create one.
+                    {t("queue:switcher.empty")}
                 </Text>
             ) : (
                 queues.map(queue => {
@@ -77,7 +80,7 @@ export function QueueSwitcher({queues, visibleQueueId, currentQueueId, onViewQue
                                     {queue.name}
                                 </Text>
                                 <Text size="xs" c="dimmed">
-                                    {queue.songCount} {queue.songCount === 1 ? 'song' : 'songs'}
+                                    {t("common:count.songs", {count: queue.songCount})}
                                 </Text>
                             </Group>
 

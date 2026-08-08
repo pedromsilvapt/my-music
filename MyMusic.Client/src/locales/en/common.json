@@ -20,6 +20,75 @@
         "dark": "Dark",
         "system": "System"
     },
+    "actions": {
+        "cancel": "Cancel",
+        "save": "Save",
+        "apply": "Apply",
+        "delete": "Delete",
+        "edit": "Edit",
+        "download": "Download",
+        "reset": "Reset",
+        "close": "Close",
+        "confirm": "Confirm",
+        "retry": "Retry",
+        "discard": "Discard"
+    },
+    "status": {
+        "error": "Error",
+        "success": "Success",
+        "info": "Info",
+        "warning": "Warning",
+        "partialSuccess": "Partial success"
+    },
+    "common": {
+        "loading": "Loading...",
+        "yes": "Yes",
+        "no": "No",
+        "none": "None",
+        "back": "Back",
+        "all": "All",
+        "keep": "Keep",
+        "remove": "Remove",
+        "add": "Add",
+        "deleteAll": "Delete all",
+        "clearSelection": "Clear selection",
+        "dragToReorder": "Drag to reorder",
+        "free": "Free",
+        "toDelete": "To Delete",
+        "toAction": "To {{action}}",
+        "underConstruction": "Under construction"
+    },
+    "artwork": {
+        "preview": "Preview",
+        "previewAlt": "Artwork preview"
+    },
+    "metadataFetchError": {
+        "title": "Failed to Load Metadata",
+        "body": "An error occurred while fetching metadata suggestions. You can still edit the song manually.",
+        "errorLabel": "Error"
+    },
+    "songTitle": {
+        "stopAfterPlayback": "Playback will stop after this song",
+        "skipNextPlayback": "This song will be skipped after playback"
+    },
+    "count": {
+        "songs_one": "{{count}} song",
+        "songs_other": "{{count}} songs",
+        "albums_one": "{{count}} album",
+        "albums_other": "{{count}} albums",
+        "artists_one": "{{count}} artist",
+        "artists_other": "{{count}} artists",
+        "playlists_one": "{{count}} playlist",
+        "playlists_other": "{{count}} playlists",
+        "devices_one": "{{count}} device",
+        "devices_other": "{{count}} devices",
+        "issues_one": "{{count}} issue",
+        "issues_other": "{{count}} issues",
+        "groups_one": "{{count}} group",
+        "groups_other": "{{count}} groups",
+        "failures_one": "{{count}} failure",
+        "failures_other": "{{count}} failures"
+    },
     "songs": {
         "searchPlaceholder": "Search songs...",
         "sharedBy": "Shared by {{name}}",

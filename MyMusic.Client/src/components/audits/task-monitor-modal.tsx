@@ -25,6 +25,7 @@ import {useRequeueFailedTasks} from "../../hooks/useRequeueFailedTasks";
 import {useFailedTasks, type FailureReason} from "../../hooks/useFailedTasks";
 import {useClearAllTasks} from "../../hooks/useClearAllTasks";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 
 interface TaskMonitorModalProps {
     opened: boolean;
@@ -48,7 +49,25 @@ function getFailureColor(reason: FailureReason): string {
     }
 }
 
+function getFailureReasonKey(reason: FailureReason): string {
+    switch (reason) {
+        case "ServiceUnavailable":
+            return "serviceUnavailable";
+        case "NoMetadataFound":
+            return "noMetadataFound";
+        case "NetworkError":
+            return "networkError";
+        case "SystemError":
+            return "systemError";
+        case "Timeout":
+            return "timeout";
+        default:
+            return "networkError";
+    }
+}
+
 export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
+    const {t} = useTranslation(["audits", "common"]);
     const {data: status, isLoading, error} = useMetadataQueueStatus();
     const {data: failedTasks, isLoading: isLoadingFailed} = useFailedTasks();
     const requeueMutation = useRequeueFailedTasks();
@@ -84,9 +103,9 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
 
     if (isLoading) {
         return (
-            <Modal opened={opened} onClose={onClose} title="Metadata Fetch Progress" size="lg">
+            <Modal opened={opened} onClose={onClose} title={t("audits:taskMonitor.title")} size="lg">
                 <Stack align="center" py="xl">
-                    <Text>Loading queue status...</Text>
+                    <Text>{t("audits:taskMonitor.loadingQueueStatus")}</Text>
                 </Stack>
             </Modal>
         );
@@ -94,9 +113,9 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
 
     if (error) {
         return (
-            <Modal opened={opened} onClose={onClose} title="Metadata Fetch Progress" size="lg">
-                <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red">
-                    Failed to load queue status. Please try again later.
+            <Modal opened={opened} onClose={onClose} title={t("audits:taskMonitor.title")} size="lg">
+                <Alert icon={<IconAlertCircle size={16} />} title={t("common:status.error")} color="red">
+                    {t("audits:taskMonitor.loadQueueStatusFailed")}
                 </Alert>
             </Modal>
         );
@@ -106,7 +125,7 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
         <Modal
             opened={opened}
             onClose={onClose}
-            title="Metadata Fetch Progress"
+            title={t("audits:taskMonitor.title")}
             size="lg"
         >
             <Stack gap="md">
@@ -114,9 +133,9 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                 <Card withBorder>
                     <Stack gap="sm">
                         <Group justify="space-between">
-                            <Text fw={500}>Overall Progress</Text>
+                            <Text fw={500}>{t("audits:taskMonitor.overallProgress")}</Text>
                             <Text size="sm" c="dimmed">
-                                {status?.completed} / {status?.total} completed
+                                {t("audits:taskMonitor.completedOf", {completed: status?.completed, total: status?.total})}
                             </Text>
                         </Group>
                         <Progress
@@ -127,17 +146,17 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                         />
                         <Group gap="xs">
                             <Badge color="blue" variant="light" leftSection={<IconClock size={12} />}>
-                                {status?.queued || 0} queued
+                                {t("audits:taskMonitor.queuedCount", {count: status?.queued || 0})}
                             </Badge>
                             <Badge color="orange" variant="light">
-                                {status?.processing || 0} processing
+                                {t("audits:taskMonitor.processingCount", {count: status?.processing || 0})}
                             </Badge>
                             <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
-                                {status?.completed || 0} completed
+                                {t("audits:taskMonitor.completedCount", {count: status?.completed || 0})}
                             </Badge>
                             {hasFailures && (
                                 <Badge color="red" variant="light" leftSection={<IconX size={12} />}>
-                                    {status?.failed} failed
+                                    {t("audits:taskMonitor.failedCount", {count: status?.failed})}
                                 </Badge>
                             )}
                         </Group>
@@ -151,16 +170,16 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                             <Group justify="space-between">
                                 <Text fw={500}>
                                     <IconList size={16} style={{marginRight: 8}} />
-                                    Failed Tasks
+                                    {t("audits:taskMonitor.failedTasks")}
                                 </Text>
-                                <Badge color="red">{status?.failed} failures</Badge>
+                                <Badge color="red">{t("common:count.failures", {count: status?.failed})}</Badge>
                             </Group>
                             <Divider />
                             <ScrollArea h={200}>
                                 <Stack gap="xs">
                                     {isLoadingFailed ? (
                                         <Text size="sm" c="dimmed" ta="center" py="md">
-                                            Loading failed tasks...
+                                            {t("audits:taskMonitor.loadingFailedTasks")}
                                         </Text>
                                     ) : failedTasks && failedTasks.length > 0 ? (
                                         failedTasks.map((failure) => (
@@ -175,14 +194,14 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                                                         </Text>
                                                     </Stack>
                                                     <Badge color={getFailureColor(failure.reason)} size="sm">
-                                                        {failure.reason.replace(/([A-Z])/g, ' $1').trim()}
+                                                        {t(`audits:taskMonitor.failureReasons.${getFailureReasonKey(failure.reason)}`)}
                                                     </Badge>
                                                 </Group>
                                             </Card>
                                         ))
                                     ) : (
                                         <Text size="sm" c="dimmed" ta="center" py="md">
-                                            No failed tasks to display.
+                                            {t("audits:taskMonitor.noFailedTasks")}
                                         </Text>
                                     )}
                                 </Stack>
@@ -197,15 +216,14 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                         <Stack gap="sm">
                             <Text fw={500} size="lg">
                                 <IconCheck size={20} style={{marginRight: 8, verticalAlign: "middle"}} />
-                                Processing Complete
+                                {t("audits:taskMonitor.processingComplete")}
                             </Text>
                             <Text size="sm">
-                                All tasks have been processed. {status?.completed} songs had metadata
-                                fetched successfully.
+                                {t("audits:taskMonitor.allTasksProcessed", {count: status?.completed})}
                             </Text>
                             {hasFailures && (
                                 <Alert color="yellow" icon={<IconAlertCircle size={16} />}>
-                                    {status?.failed} task(s) failed. You can retry the failed tasks below.
+                                    {t("audits:taskMonitor.failedTasksAlert", {count: status?.failed})}
                                 </Alert>
                             )}
                         </Stack>
@@ -221,11 +239,11 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                         onClick={handleClearAll}
                         loading={clearAllMutation.isPending}
                     >
-                        Clear All Tasks & Metadata
+                        {t("audits:taskMonitor.clearAllTasks")}
                     </Button>
                     <Group gap="sm">
                         <Button variant="light" onClick={onClose}>
-                            Close
+                            {t("common:actions.close")}
                         </Button>
                         {hasFailures && (
                             <Button
@@ -234,7 +252,7 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
                                 loading={requeueMutation.isPending}
                                 color="orange"
                             >
-                                Retry Failed Tasks
+                                {t("audits:taskMonitor.retryFailedTasks")}
                             </Button>
                         )}
                     </Group>
@@ -245,19 +263,19 @@ export function TaskMonitorModal({opened, onClose}: TaskMonitorModalProps) {
             <Modal
                 opened={confirmModalOpened}
                 onClose={() => setConfirmModalOpened(false)}
-                title="Confirm Clear All"
+                title={t("audits:taskMonitor.confirmClearAllTitle")}
                 size="sm"
             >
                 <Stack gap="md">
                     <Alert color="red" icon={<IconAlertCircle size={16} />}>
-                        This will permanently delete all metadata fetch tasks and all auto-fetched metadata. This action cannot be undone.
+                        {t("audits:taskMonitor.confirmClearAllBody")}
                     </Alert>
                     <Group justify="flex-end" gap="sm">
                         <Button variant="light" onClick={() => setConfirmModalOpened(false)}>
-                            Cancel
+                            {t("common:actions.cancel")}
                         </Button>
                         <Button color="red" onClick={confirmClearAll} loading={clearAllMutation.isPending}>
-                            Clear All
+                            {t("audits:taskMonitor.clearAll")}
                         </Button>
                     </Group>
                 </Stack>

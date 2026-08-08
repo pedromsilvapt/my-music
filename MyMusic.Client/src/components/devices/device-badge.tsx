@@ -1,5 +1,6 @@
 import {Badge, Group, parseThemeColor, Text, Tooltip, useMantineTheme} from "@mantine/core";
 import {IconPointFilled} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 import TablerIcon from "../common/tabler-icon.tsx";
 
 interface DeviceBadgeProps {
@@ -12,6 +13,7 @@ interface DeviceBadgeProps {
 
 export default function DeviceBadge({name, icon, color, syncAction, showTooltip = true}: DeviceBadgeProps) {
     const theme = useMantineTheme();
+    const {t} = useTranslation(["devices", "common"]);
 
     const badgeColor = color || 'gray';
     const badgeThemeColor = parseThemeColor({color: badgeColor, theme});
@@ -20,7 +22,9 @@ export default function DeviceBadge({name, icon, color, syncAction, showTooltip 
     const actionColor = getActionColor(syncAction, badgeThemeColor.isLight);
 
     const tooltipLabel = syncAction
-        ? `${name} - To ${syncAction === 'Remove' ? 'Delete' : syncAction}`
+        ? (syncAction === 'Remove'
+            ? t("devices:badge.toDelete", {name})
+            : t("devices:badge.toAction", {name, action: syncAction}))
         : name;
 
     const badge = (

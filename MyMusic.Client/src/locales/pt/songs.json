@@ -1,0 +1,152 @@
+{
+    "detailPage": {
+        "backToSongs": "Voltar às Músicas",
+        "explicit": "Explícito",
+        "noGenres": "Sem géneros",
+        "noDevices": "Sem dispositivos",
+        "lyrics": "Letra",
+        "lyricsNotFound": "Letra não encontrada nesta música",
+        "fetchFailed": "Falha ao obter a música",
+        "deleteTitle": "Eliminar Música",
+        "deleteConfirm": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser desfeita.",
+        "editTitle": "Editar Música"
+    },
+    "page": {
+        "fetchFailed": "Falha ao obter as músicas"
+    },
+    "editModal": {
+        "unknownError": "Erro desconhecido",
+        "updateFailed": "Falha ao atualizar a música: {{error}}",
+        "updateFailedPlural": "Falha ao atualizar as músicas: {{error}}",
+        "updatedSuccessfully": "Música atualizada com sucesso",
+        "allUpdatedSuccessfully": "Todas as músicas atualizadas com sucesso",
+        "partialSuccess": "{{failed}} de {{total}} músicas falharam ao atualizar",
+        "noChangesToSave": "Sem alterações para guardar",
+        "applyChanges": "Aplicar Alterações",
+        "autoFetchMetadata": "Obter metadados automaticamente",
+        "searchMetadata": "Pesquisar metadados",
+        "saveModified": "Guardar Modificadas ({{count}})",
+        "saveAll": "Guardar Todas",
+        "albumArtistNotInList": "Não está na lista de artistas da música",
+        "fieldOld": "{{field}} (antigo)",
+        "fieldNew": "{{field}} (novo)",
+        "fields": {
+            "title": "Título",
+            "year": "Ano",
+            "album": "Álbum",
+            "albumArtist": "Artista do Álbum",
+            "artists": "Artistas",
+            "genres": "Géneros",
+            "lyrics": "Letra",
+            "rating": "Avaliação",
+            "explicit": "Explícito",
+            "cover": "Capa"
+        },
+        "placeholders": {
+            "title": "Título da música",
+            "year": "Ano de lançamento",
+            "album": "Nome do álbum",
+            "albumArtist": "Artista do álbum",
+            "artists": "Adicionar artista...",
+            "genres": "Adicionar género...",
+            "lyrics": "Letra da música"
+        }
+    },
+    "import": {
+        "dropTitle": "Largue os ficheiros de áudio aqui",
+        "dropHelp": "Suporta ficheiros MP3 e M4A",
+        "importing": "A importar músicas",
+        "complete": "Importação Concluída",
+        "completedOf": "{{completed}} de {{total}} concluídas",
+        "failedSuffix": " ({{count}} falharam)",
+        "done": "Concluído",
+        "uploadFailed": "Falha no envio"
+    },
+    "metadataSearch": {
+        "title": "Pesquisar Metadados",
+        "searchPlaceholder": "Pesquisar metadados da música...",
+        "searchFailed": "Falha ao pesquisar metadados",
+        "sourcePrefix": "Fonte: {{name}}",
+        "apply": "Aplicar",
+        "columns": {
+            "title": "Título",
+            "artists": "Artistas",
+            "source": "Fonte"
+        }
+    },
+    "coverUpload": {
+        "defaultLabel": "Capa do Álbum",
+        "selectImage": "Selecione um ficheiro de imagem",
+        "loadImageFailed": "Falha ao carregar a imagem",
+        "noImageInClipboard": "Nenhuma imagem encontrada na área de transferência",
+        "pasteFailed": "Falha ao colar da área de transferência",
+        "downloadFailed": "Falha ao descarregar a imagem",
+        "downloadFromUrlFailed": "Falha ao descarregar a imagem do URL",
+        "noCover": "Sem Capa",
+        "songHasNoCover": "A música selecionada não tem capa",
+        "loadCoverFromSongFailed": "Falha ao carregar a capa da música selecionada",
+        "old": "Antiga",
+        "new": "Nova",
+        "noSize": "sem tamanho",
+        "loadFailed": "Falha ao carregar",
+        "uploadFile": "Enviar ficheiro",
+        "pasteFromClipboard": "Colar da área de transferência",
+        "fromUrl": "Do URL",
+        "fromExistingSong": "De uma música existente",
+        "removeCover": "Remover capa",
+        "downloadFromUrl": "Descarregar do URL",
+        "pasteImageUrl": "Colar URL da imagem...",
+        "searchForSong": "Pesquisar uma música para usar a capa..."
+    },
+    "autocomplete": {
+        "original": "Original: {{value}}"
+    },
+    "tagsAutocomplete": {
+        "original": "Original: {{value}}",
+        "albumCount": "{{count}} álbuns",
+        "songCount": "{{count}} músicas",
+        "countsJoined": "{{albums}}, {{songs}}"
+    },
+    "songAutocomplete": {
+        "searchPlaceholder": "Pesquisar uma música..."
+    },
+    "schema": {
+        "deleteTitle": "Eliminar Música",
+        "deleteTitlePlural": "Eliminar {{count}} Músicas",
+        "deleteConfirmSingle": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser desfeita.",
+        "deleteConfirmPlural": "Tem a certeza que pretende eliminar {{count}} músicas? Esta ação não pode ser desfeita.",
+        "importSingle": "Importar Música",
+        "importPlural": "Importar {{count}} Músicas",
+        "shareSingle": "Partilhar Música",
+        "sharePlural": "Partilhar {{count}} Músicas",
+        "editSingle": "Editar Música",
+        "editPlural": "Editar {{count}} Músicas",
+        "editTitle": "Editar Música",
+        "manageGroup": "Gerir",
+        "queueGroup": "Fila",
+        "unfavorite": "Remover dos Favoritos",
+        "favorite": "Adicionar aos Favoritos",
+        "managePlaylists": "Gerir Listas",
+        "manageDevices": "Gerir Dispositivos",
+        "manageSharing": "Gerir Partilhas",
+        "download": "Descarregar",
+        "play": "Reproduzir",
+        "playNext": "Reproduzir a Seguir",
+        "playLast": "Reproduzir no Fim",
+        "stopAfterThisSong": "Parar Após Esta Música",
+        "skipThisSong": "Saltar Esta Música",
+        "shuffle": "Aleatório",
+        "removeFromQueue": "Remover da Fila",
+        "columns": {
+            "title": "Título",
+            "artists": "Artistas",
+            "album": "Álbum",
+            "genres": "Géneros",
+            "year": "Ano",
+            "duration": "Duração",
+            "devices": "Dispositivos",
+            "createdAt": "Criado A",
+            "addedAt": "Adicionado A"
+        }
+    }
+}

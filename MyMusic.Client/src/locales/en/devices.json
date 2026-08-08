@@ -1,0 +1,84 @@
+{
+    "page": {
+        "searchPlaceholder": "Search devices...",
+        "fetchFailed": "Failed to fetch devices"
+    },
+    "manageDialog": {
+        "title": "Manage Devices",
+        "fetchSongsFailed": "Failed to fetch songs",
+        "managing_one": "Managing {{count}} song",
+        "managing_other": "Managing {{count}} songs",
+        "updateFailedFallback": "Failed to update devices. Please try again."
+    },
+    "sessionsPage": {
+        "fetchFailed": "Failed to fetch device sessions",
+        "fetchDeviceFailed": "Failed to fetch device",
+        "deviceFallback": "Device {{id}}",
+        "sessions": "Sessions",
+        "deleteTitle": "Delete Sync Session",
+        "deleteConfirmSingle": "Are you sure you want to delete session #{{id}}? This will also delete all associated sync records. This action cannot be undone.",
+        "deleteConfirmPlural": "Are you sure you want to delete {{count}} sessions? This will also delete all associated sync records. This action cannot be undone.",
+        "deletedTitle": "Session Deleted",
+        "deletedMessage": "Session #{{id}} has been deleted.",
+        "deleteFailed": "Failed to delete session #{{id}}"
+    },
+    "recordsPage": {
+        "fetchFailed": "Failed to fetch session records",
+        "fetchDeviceFailed": "Failed to fetch device",
+        "deviceFallback": "Device {{id}}",
+        "session": "Session {{id}}",
+        "records": "Records",
+        "searchPlaceholder": "Search file paths..."
+    },
+    "schema": {
+        "manageGroup": "Manage",
+        "deleteTitle": "Delete Device",
+        "deleteConfirmSingle": "Are you sure you want to delete \"{{name}}\"? This will also remove all associated songs and sync history. This action cannot be undone.",
+        "deleteConfirmPlural": "Are you sure you want to delete {{count}} devices? This will also remove all associated songs and sync history. This action cannot be undone.",
+        "deletedTitle": "Device Deleted",
+        "deletedMessage": "Device \"{{name}}\" has been deleted.",
+        "deleteFailed": "Failed to delete device \"{{name}}\"",
+        "viewSessions": "View Sessions",
+        "default": "Default",
+        "never": "Never",
+        "inProgress": "In Progress",
+        "sessionId": "Session {{id}}",
+        "sessionTitle": "Session #{{id}}",
+        "resolves": "resolves #{{id}}",
+        "columns": {
+            "name": "Name",
+            "songs": "Songs",
+            "namingTemplate": "Naming Template",
+            "lastSync": "Last Sync",
+            "id": "ID",
+            "startedAt": "Started At",
+            "duration": "Duration",
+            "status": "Status",
+            "dryRun": "Dry Run",
+            "createRemote": "CrtRem",
+            "updateRemote": "UpdRem",
+            "skipped": "Skipped",
+            "createLocal": "CrtLoc",
+            "updateLocal": "UpdLoc",
+            "deleteLocal": "DeleteLocal",
+            "link": "Link",
+            "unlink": "Unlink",
+            "rename": "Rename",
+            "conflicts": "Conflicts",
+            "updateTimestamp": "UpdTs",
+            "errors": "Errors",
+            "repositoryPath": "Repository Path",
+            "filePath": "File Path",
+            "song": "Song",
+            "action": "Action",
+            "data": "Data",
+            "reason": "Reason",
+            "resolves": "Resolves",
+            "processedAt": "Processed At"
+        }
+    },
+    "badge": {
+        "toDelete": "{{name}} - To Delete",
+        "toAction": "{{name}} - To {{action}}"
+    }
+}

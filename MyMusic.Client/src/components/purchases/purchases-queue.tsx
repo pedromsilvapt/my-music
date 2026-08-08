@@ -1,5 +1,6 @@
 import {saveAs} from 'file-saver';
 import {Switch} from '@mantine/core';
+import {useTranslation} from "react-i18next";
 import {useDeleteManyPurchases, useDeletePurchase, useRequeuePurchase} from "../../client/purchases.ts";
 import {getDownloadSongUrl} from "../../client/songs.ts";
 import {type ListPurchaseItem} from "../../model";
@@ -9,6 +10,7 @@ import {useUserPreferences} from "../../hooks/use-user-preferences.ts";
 export type PurchasesQueueProps = object;
 
 export default function PurchasesQueue() {
+    const {t} = useTranslation(["purchases", "common"]);
     const requeuePurchase = useRequeuePurchase();
     const deletePurchase = useDeletePurchase();
     const deleteManyPurchases = useDeleteManyPurchases();
@@ -49,7 +51,7 @@ export default function PurchasesQueue() {
     return <>
         <div style={{height: '100%'}}>
             <Switch
-                label="Auto-download purchased songs"
+                label={t("purchases:queue.autoDownloadLabel")}
                 checked={autoDownloadOnPurchase}
                 onChange={(e) => updateAutoDownloadOnPurchase(e.currentTarget.checked)}
                 disabled={isUpdating}

@@ -20,7 +20,7 @@ export interface SongsPageProps {
 }
 
 export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
-    const {t} = useTranslation("common");
+    const {t} = useTranslation(["songs", "common"]);
     const queryClient = useQueryClient();
     const {registerRefetch, unregisterRefetch} = useManagePlaylistsContext();
     const {registerRefetch: registerSharingRefetch, unregisterRefetch: unregisterSharingRefetch} = useManageSharingContext();
@@ -46,7 +46,7 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
         },
     );
 
-    const songs = useQueryData(songsQuery, "Failed to fetch songs") ?? {songs: []};
+    const songs = useQueryData(songsQuery, t("songs:page.fetchFailed")) ?? {songs: []};
 
     const songsSchema = useSongsSchema();
 
@@ -78,8 +78,8 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
     const elements = songs?.songs ?? [];
     const pageTitle = isSharedView
         ? sharerName
-            ? t("songs.sharedBy", {name: sharerName})
-            : t("songs.sharedByUnknown")
+            ? t("common:songs.sharedBy", {name: sharerName})
+            : t("common:songs.sharedByUnknown")
         : undefined;
 
     const content = (
@@ -103,7 +103,7 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
-                searchPlaceholder={t("songs.searchPlaceholder")}
+                searchPlaceholder={t("common:songs.searchPlaceholder")}
             />
             {!isSharedView && (
                 <SongImportProgress

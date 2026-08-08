@@ -1,5 +1,6 @@
 import {useParams, Link} from "@tanstack/react-router";
 import {useEffect} from "react";
+import {useTranslation} from "react-i18next";
 import {Anchor, Breadcrumbs, Text} from "@mantine/core";
 import {useGetDevicesDeviceIdSessions, useDeleteDevicesDeviceIdSessionsSessionId, useGetDevice} from "../../client/devices.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -10,15 +11,16 @@ import {notifications} from "@mantine/notifications";
 import type {SyncSessionItem} from "../../model";
 
 export default function DeviceSessionsPage() {
+    const {t} = useTranslation(["devices", "common"]);
     const {deviceId} = useParams({from: '/devices/$deviceId/sessions/'});
     const deviceIdNum = parseInt(deviceId, 10);
     
     const deviceQuery = useGetDevice(deviceIdNum, {});
-    const deviceResponse = useQueryData(deviceQuery, "Failed to fetch device");
+    const deviceResponse = useQueryData(deviceQuery, t("devices:sessionsPage.fetchDeviceFailed"));
     const device = deviceResponse?.data?.device;
     
     const sessionsQuery = useGetDevicesDeviceIdSessions(deviceIdNum, {});
-    const sessionsResponse = useQueryData(sessionsQuery, "Failed to fetch device sessions");
+    const sessionsResponse = useQueryData(sessionsQuery, t("devices:sessionsPage.fetchFailed"));
     
     const deleteSession = useDeleteDevicesDeviceIdSessionsSessionId();
     const sessionsSchema = useDeviceSessionsSchema(deviceIdNum);
@@ -33,16 +35,15 @@ export default function DeviceSessionsPage() {
     
     const handleDelete = (selectedSessions: SyncSessionItem[]) => {
         modals.openConfirmModal({
-            title: 'Delete Sync Session',
+            title: t("devices:sessionsPage.deleteTitle"),
             children: (
                 <Text size="sm">
-                    Are you sure you want to delete {selectedSessions.length === 1
-                    ? `session #${selectedSessions[0]!.id}`
-                    : `${selectedSessions.length} sessions`}? 
-                    This will also delete all associated sync records. This action cannot be undone.
+                    {selectedSessions.length === 1
+                        ? t("devices:sessionsPage.deleteConfirmSingle", {id: selectedSessions[0]!.id})
+                        : t("devices:sessionsPage.deleteConfirmPlural", {count: selectedSessions.length})}
                 </Text>
             ),
-            labels: {confirm: 'Delete', cancel: 'Cancel'},
+            labels: {confirm: t("common:actions.delete"), cancel: t("common:actions.cancel")},
             confirmProps: {color: 'red'},
             onConfirm: () => {
                 selectedSessions.forEach(session => {
@@ -51,16 +52,16 @@ export default function DeviceSessionsPage() {
                         {
                             onSuccess: () => {
                                 notifications.show({
-                                    title: 'Session Deleted',
-                                    message: `Session #${session.id} has been deleted.`,
+                                    title: t("devices:sessionsPage.deletedTitle"),
+                                    message: t("devices:sessionsPage.deletedMessage", {id: session.id}),
                                     color: 'green',
                                 });
                                 refetch();
                             },
                             onError: (error) => {
                                 notifications.show({
-                                    title: 'Error',
-                                    message: `Failed to delete session #${session.id}`,
+                                    title: t("common:status.error"),
+                                    message: t("devices:sessionsPage.deleteFailed", {id: session.id}),
                                     color: 'red',
                                 });
                                 console.error('Failed to delete session:', error);
@@ -76,22 +77,22 @@ export default function DeviceSessionsPage() {
     const schemaWithDelete = {
         ...sessionsSchema,
         actions: () => [
-            {group: "Manage"},
+            {group: t("devices:schema.manageGroup")},
             {
                 name: "delete",
                 renderIcon: () => <span>🗑️</span>,
-                renderLabel: () => "Delete",
+                renderLabel: () => t("common:actions.delete"),
                 onClick: handleDelete,
             }
         ]
     };
     
-    const deviceName = device?.name ?? `Device ${deviceId}`;
+    const deviceName = device?.name ?? t("devices:sessionsPage.deviceFallback", {id: deviceId});
     
     const breadcrumbItems = [
-        {title: 'Devices', href: '/devices', isLast: false},
+        {title: t("common:nav.devices"), href: '/devices', isLast: false},
         {title: deviceName, href: `/devices/${deviceId}/sessions`, isLast: false},
-        {title: 'Sessions', href: `/devices/${deviceId}/sessions`, isLast: true},
+        {title: t("devices:sessionsPage.sessions"), href: `/devices/${deviceId}/sessions`, isLast: true},
     ];
     
     return (

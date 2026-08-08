@@ -1,5 +1,6 @@
 import {Button, Group, Stack,} from '@mantine/core';
 import {IconShoppingCartX} from "@tabler/icons-react";
+import {useTranslation} from "react-i18next";
 import {type ListPurchaseItem} from "../../model";
 import CollectionToolbar from "../common/collection/collection-toolbar.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -22,6 +23,7 @@ export default function PurchasesQueueList({
                                                onClearCompleted,
                                                onClearAll,
                                            }: PurchasesQueueListProps) {
+    const {t} = useTranslation(["purchases", "common"]);
     const {data: data} = usePurchasedSongsQuery();
 
     const purchasesSchema = usePurchasedSongsSchema(
@@ -57,7 +59,7 @@ export default function PurchasesQueueList({
                                         disabled={!hasCompleted}
                                        leftSection={<IconShoppingCartX/>}
                                    >
-                                       Clear Completed
+                                       {t("purchases:queueList.clearCompleted")}
                                    </Button>
                                    <Button
                                        variant="light"
@@ -66,7 +68,7 @@ export default function PurchasesQueueList({
                                        disabled={!hasAnySongs}
                                        leftSection={<IconShoppingCartX/>}
                                    >
-                                       Clear All
+                                       {t("purchases:queueList.clearAll")}
                                    </Button>
                                </Group>}
             />

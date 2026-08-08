@@ -1,10 +1,12 @@
 import {useQuery} from "@tanstack/react-query";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import {useArtistsSchema} from "./useArtistsSchema.tsx";
 
 export default function ArtistsPage() {
+    const {t} = useTranslation(["artists", "common"]);
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
@@ -19,14 +21,14 @@ export default function ArtistsPage() {
             const response = await fetch(url);
 
             if (!response.ok) {
-                throw new Error("Failed to fetch artists");
+                throw new Error(t("artists:page.fetchFailed"));
             }
 
             return response.json();
         },
     });
 
-    const artists = useQueryData(artistsQuery, "Failed to fetch artists") ?? {artists: []};
+    const artists = useQueryData(artistsQuery, t("artists:page.fetchFailed")) ?? {artists: []};
 
     const artistsSchema = useArtistsSchema();
 
@@ -49,7 +51,7 @@ export default function ArtistsPage() {
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
-                searchPlaceholder="Search artists..."
+                searchPlaceholder={t("artists:page.searchPlaceholder")}
             />
         </div>
     );

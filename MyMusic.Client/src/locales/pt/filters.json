@@ -1,0 +1,42 @@
+{
+    "bar": {
+        "advanced": "Avançado",
+        "clearFilter": "Limpar filtro",
+        "hideAdvanced": "Ocultar filtro avançado",
+        "showAdvanced": "Mostrar filtro avançado",
+        "filterDsl": "DSL de Filtro",
+        "pressCtrlEnter": "Prima Ctrl+Enter para aplicar",
+        "examples": "Exemplos",
+        "clear": "Limpar"
+    },
+    "codeEditor": {
+        "computed": "(calculado)",
+        "operators": {
+            "equals": "Igual",
+            "notEquals": "Diferente",
+            "greaterThan": "Maior que",
+            "greaterThanOrEqual": "Maior ou igual",
+            "lessThan": "Menor que",
+            "lessThanOrEqual": "Menor ou igual",
+            "contains": "Contém (texto)",
+            "startsWith": "Começa com",
+            "endsWith": "Termina com",
+            "inList": "Na lista",
+            "notInList": "Fora da lista",
+            "between": "Entre dois valores",
+            "isNull": "É nulo",
+            "isNotNull": "Não é nulo",
+            "isTrue": "É verdadeiro",
+            "isFalse": "É falso"
+        },
+        "keywords": {
+            "and": "E lógico",
+            "or": "OU lógico",
+            "group": "Agrupar expressões"
+        },
+        "quantifiers": {
+            "any": "Pelo menos um elemento corresponde (predefinição para operadores positivos)",
+            "all": "Todos os elementos devem corresponder (predefinição para operadores negativos)"
+        }
+    }
+}

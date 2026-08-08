@@ -1,4 +1,5 @@
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useGetDevices} from "../../client/devices.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {GetDevicesParams} from "../../model";
@@ -6,6 +7,7 @@ import Collection from "../common/collection/collection.tsx";
 import {useDevicesSchema} from "./useDevicesSchema.tsx";
 
 export default function DevicesPage() {
+    const {t} = useTranslation(["devices", "common"]);
     const [appliedSearch, setAppliedSearch] = useState("");
     const [appliedFilter, setAppliedFilter] = useState("");
 
@@ -16,7 +18,7 @@ export default function DevicesPage() {
 
     const devicesQuery = useGetDevices(params);
 
-    const devices = useQueryData(devicesQuery, "Failed to fetch devices");
+    const devices = useQueryData(devicesQuery, t("devices:page.fetchFailed"));
 
     const devicesSchema = useDevicesSchema();
 
@@ -39,7 +41,7 @@ export default function DevicesPage() {
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
-                searchPlaceholder="Search devices..."
+                searchPlaceholder={t("devices:page.searchPlaceholder")}
             />
         </div>
     );

@@ -1,0 +1,31 @@
+{
+    "queueIndicator": {
+        "title": "Purchases Queue"
+    },
+    "queue": {
+        "autoDownloadLabel": "Auto-download purchased songs"
+    },
+    "queueList": {
+        "clearCompleted": "Clear Completed",
+        "clearAll": "Clear All"
+    },
+    "schema": {
+        "download": "Download",
+        "requeue": "Requeue",
+        "clear": "Clear",
+        "columns": {
+            "title": "Title",
+            "subTitle": "SubTitle",
+            "status": "Status"
+        },
+        "status": {
+            "queued": "Queued",
+            "acquiring": "Acquiring",
+            "completed": "Completed",
+            "failed": "Failed"
+        }
+    },
+    "page": {
+        "fetchFailed": "Failed to fetch purchases"
+    }
+}

@@ -11,6 +11,7 @@ import {
 import {useDebouncedValue} from "@mantine/hooks";
 import {IconDisc} from "@tabler/icons-react";
 import {useCallback, useEffect, useMemo, useState} from "react";
+import {useTranslation} from "react-i18next";
 import Artwork from "../common/artwork";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -56,9 +57,10 @@ export default function AutocompleteField({
                                                onCheckChange,
                                                 showArtwork = false,
                                                 originalDisplayValue,
-                                                leftSection,
-                                                testId,
-                                            }: AutocompleteFieldProps) {
+                                                 leftSection,
+                                                 testId,
+                                             }: AutocompleteFieldProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const [query, setQuery] = useState(value?.name || "");
     const [items, setItems] = useState<AutocompleteItem[]>([]);
     const [loading, setLoading] = useState(false);
@@ -167,7 +169,7 @@ export default function AutocompleteField({
                         />
                     )}
                     <Box style={{flex: 1}}>
-                        <Input.Wrapper label={label + " (old)"}>
+                        <Input.Wrapper label={t("songs:editModal.fieldOld", {field: label})}>
                             <Input
                                 value={originalDisplayValue}
                                 readOnly
@@ -182,7 +184,7 @@ export default function AutocompleteField({
                         </Input.Wrapper>
                     </Box>
                     <Box style={{flex: 1}}>
-                        <Input.Wrapper label={label + " (new)"}>
+                        <Input.Wrapper label={t("songs:editModal.fieldNew", {field: label})}>
                             <Autocomplete
                                 placeholder={placeholder}
                                 value={query}
@@ -242,7 +244,7 @@ export default function AutocompleteField({
             />
             {hasChanged && (
                 <Text size="xs" c="dimmed" mt={4}>
-                    Original: {originalDisplayValue ?? originalValue?.name}
+                    {t("songs:autocomplete.original", {value: originalDisplayValue ?? originalValue?.name})}
                     {!originalDisplayValue && originalValue?.subtitle && ` (${originalValue.subtitle})`}
                 </Text>
             )}

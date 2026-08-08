@@ -1,6 +1,7 @@
 import {Button, Group, Stack, TextInput} from '@mantine/core';
 import type {ContextModalProps} from '@mantine/modals';
 import {useState} from 'react';
+import {useTranslation} from 'react-i18next';
 import {useRenameQueue} from '../../client/playlists.ts';
 
 interface RenameQueueModalInnerProps {
@@ -14,6 +15,7 @@ export default function RenameQueueModal({
     id,
     innerProps,
 }: ContextModalProps<RenameQueueModalInnerProps>) {
+    const {t} = useTranslation(["queue", "common"]);
     const [name, setName] = useState(innerProps.queueName);
 
     const renameQueue = useRenameQueue({
@@ -34,8 +36,8 @@ export default function RenameQueueModal({
     return (
         <Stack>
             <TextInput
-                label="Queue Name"
-                placeholder="Enter queue name"
+                label={t("queue:renameModal.nameLabel")}
+                placeholder={t("queue:renameModal.namePlaceholder")}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {
@@ -47,10 +49,10 @@ export default function RenameQueueModal({
             />
             <Group justify="flex-end">
                 <Button variant="subtle" onClick={() => context.closeModal(id)}>
-                    Cancel
+                    {t("common:actions.cancel")}
                 </Button>
                 <Button onClick={handleRename} loading={renameQueue.isPending}>
-                    Save
+                    {t("common:actions.save")}
                 </Button>
             </Group>
         </Stack>

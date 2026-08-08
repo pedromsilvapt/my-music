@@ -1,9 +1,11 @@
 import {useListPurchases} from "../../client/purchases.ts";
+import {useTranslation} from "react-i18next";
 import {PURCHASE_REFETCH_INTERVAL_MS} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListPurchaseItem} from "../../model";
 
 export default function usePurchasedSongsQuery() {
+    const {t} = useTranslation(["purchases", "common"]);
     const purchasesQuery = useListPurchases({
         query: {
             refetchInterval: (query) =>
@@ -13,7 +15,7 @@ export default function usePurchasedSongsQuery() {
 
     const purchasesResponse = useQueryData(
         purchasesQuery,
-        "Failed to fetch purchases"
+        t("purchases:page.fetchFailed")
     );
 
     if (!purchasesResponse) {

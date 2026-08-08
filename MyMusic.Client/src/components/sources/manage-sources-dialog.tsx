@@ -27,6 +27,7 @@ import type {CreateSourceData, ListSourceItem} from "../../model";
 import TablerIcon from "../common/tabler-icon.tsx";
 import {IconAlertTriangle, IconPlus, IconTrash} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useListSources} from "../../client/sources.ts";
 
 interface ManageSourcesDialogProps {
@@ -65,9 +66,10 @@ function hasChanges(edited: SourceFormData | null, original: SourceFormData | nu
 }
 
 export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDialogProps) {
+    const {t} = useTranslation(["sources", "common"]);
     const colorScheme = useComputedColorScheme('light');
     const sourcesQuery = useListSources({query: {enabled: opened}});
-    const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
+    const sourcesResponse = useQueryData(sourcesQuery, t("sources:page.fetchFailed")) ?? {data: {sources: []}};
     const sources = sourcesResponse.data.sources;
 
     const queryClient = useQueryClient();
@@ -99,15 +101,15 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
                     setOriginalData(sourceToFormData(newSource));
                 }
                 notifications.show({
-                    title: 'Success',
-                    message: 'Source created successfully',
+                    title: t("common:status.success"),
+                    message: t("sources:manageDialog.createdMessage"),
                     color: 'green'
                 });
             },
             onError: (error) => {
                 notifications.show({
-                    title: 'Error',
-                    message: 'Failed to create source',
+                    title: t("common:status.error"),
+                    message: t("sources:manageDialog.createFailed"),
                     color: 'red'
                 });
                 console.error('Failed to create source:', error);
@@ -123,15 +125,15 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
                     setOriginalData({...editedData});
                 }
                 notifications.show({
-                    title: 'Success',
-                    message: 'Source updated successfully',
+                    title: t("common:status.success"),
+                    message: t("sources:manageDialog.updatedMessage"),
                     color: 'green'
                 });
             },
             onError: (error) => {
                 notifications.show({
-                    title: 'Error',
-                    message: 'Failed to update source',
+                    title: t("common:status.error"),
+                    message: t("sources:manageDialog.updateFailed"),
                     color: 'red'
                 });
                 console.error('Failed to update source:', error);
@@ -144,8 +146,8 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
             onSuccess: () => {
                 queryClient.invalidateQueries({queryKey: getListSourcesQueryKey()});
                 notifications.show({
-                    title: 'Success',
-                    message: 'Source deleted successfully',
+                    title: t("common:status.success"),
+                    message: t("sources:manageDialog.deletedMessage"),
                     color: 'green'
                 });
                 setSelectedId(null);
@@ -154,8 +156,8 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
             },
             onError: (error) => {
                 notifications.show({
-                    title: 'Error',
-                    message: 'Failed to delete source',
+                    title: t("common:status.error"),
+                    message: t("sources:manageDialog.deleteFailed"),
                     color: 'red'
                 });
                 console.error('Failed to delete source:', error);
@@ -257,22 +259,22 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
             opened={opened}
             onClose={handleClose}
             size="xl"
-            title="Manage Sources"
+            title={t("sources:manageDialog.title")}
             centered
             zIndex={ZINDEX_MODAL}
         >
             {showConfirmDiscard && (
                 <Alert
                     icon={<IconAlertTriangle/>}
-                    title="Unsaved Changes"
+                    title={t("sources:manageDialog.unsavedChangesTitle")}
                     color="yellow"
                     mb="md"
                     style={{position: 'absolute', top: 60, left: 20, right: 20, zIndex: ZINDEX_MODAL + 1}}
                 >
-                    <Text size="sm" mb="sm">You have unsaved changes. Discard them?</Text>
+                    <Text size="sm" mb="sm">{t("sources:manageDialog.unsavedChangesBody")}</Text>
                     <Group gap="xs">
-                        <Button size="xs" variant="default" onClick={handleCancelDiscard}>Cancel</Button>
-                        <Button size="xs" color="yellow" onClick={handleConfirmDiscard}>Discard Changes</Button>
+                        <Button size="xs" variant="default" onClick={handleCancelDiscard}>{t("common:actions.cancel")}</Button>
+                        <Button size="xs" color="yellow" onClick={handleConfirmDiscard}>{t("sources:manageDialog.discardChanges")}</Button>
                     </Group>
                 </Alert>
             )}
@@ -286,7 +288,7 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
                         disabled={selectedId === 'new'}
                         fullWidth
                     >
-                        Create New
+                        {t("sources:manageDialog.createNew")}
                     </Button>
                     <ScrollArea flex={1}>
                         <Stack gap="xs">
@@ -336,28 +338,28 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
                         <>
                             <Stack gap="sm">
                                 <TextInput
-                                    label="Name"
-                                    placeholder="Source name"
+                                    label={t("sources:manageDialog.fields.name")}
+                                    placeholder={t("sources:manageDialog.fields.namePlaceholder")}
                                     value={editedData.name}
                                     onChange={(e) => handleFieldChange('name', e.target.value)}
                                     required
                                 />
                                 <TextInput
-                                    label="Icon"
-                                    placeholder="Icon name (e.g., IconMusic)"
+                                    label={t("sources:manageDialog.fields.icon")}
+                                    placeholder={t("sources:manageDialog.fields.iconPlaceholder")}
                                     value={editedData.icon}
                                     onChange={(e) => handleFieldChange('icon', e.target.value)}
                                     required
                                 />
                                 <TextInput
-                                    label="Address"
-                                    placeholder="Source address / URL"
+                                    label={t("sources:manageDialog.fields.address")}
+                                    placeholder={t("sources:manageDialog.fields.addressPlaceholder")}
                                     value={editedData.address}
                                     onChange={(e) => handleFieldChange('address', e.target.value)}
                                     required
                                 />
                                 <Switch
-                                    label="Is Paid"
+                                    label={t("sources:manageDialog.fields.isPaid")}
                                     checked={editedData.isPaid}
                                     onChange={(e) => handleFieldChange('isPaid', e.currentTarget.checked)}
                                 />
@@ -371,7 +373,7 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
                                         size="lg"
                                         onClick={handleDelete}
                                         loading={isDeleting}
-                                        title="Delete source"
+                                        title={t("sources:manageDialog.deleteSourceTitle")}
                                     >
                                         <IconTrash size={18}/>
                                     </ActionIcon>
@@ -380,21 +382,21 @@ export default function ManageSourcesDialog({opened, onClose}: ManageSourcesDial
                                 )}
                                 <Group gap="xs">
                                     <Button variant="default" onClick={handleClose}>
-                                        Cancel
+                                        {t("common:actions.cancel")}
                                     </Button>
                                     <Button
                                         onClick={handleSave}
                                         loading={isSaving}
                                         disabled={!hasUnsavedChanges || !isValid}
                                     >
-                                        Save
+                                        {t("common:actions.save")}
                                     </Button>
                                 </Group>
                             </Group>
                         </>
                     ) : (
                         <Center flex={1}>
-                            <Text c="dimmed">Select a source to edit or create a new one</Text>
+                            <Text c="dimmed">{t("sources:manageDialog.emptySelection")}</Text>
                         </Center>
                     )}
                 </Stack>

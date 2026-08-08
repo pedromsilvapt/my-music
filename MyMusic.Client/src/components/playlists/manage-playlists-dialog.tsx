@@ -1,6 +1,7 @@
 import {ActionIcon, Badge, Box, Button, Collapse, Group, Modal, ScrollArea, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
 import {useQueryClient} from "@tanstack/react-query";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {IconChevronDown, IconChevronUp, IconPlus, IconX} from "@tabler/icons-react";
 import {useListPlaylists, useManagePlaylistSongs} from "../../client/playlists.ts";
 import {useListSongs} from "../../client/songs.ts";
@@ -24,13 +25,14 @@ export default function ManagePlaylistsDialog({
                                                    songIds,
                                                    onSuccess
                                                }: ManagePlaylistsDialogProps) {
+    const {t} = useTranslation(["playlists", "common"]);
     const playlistsQuery = useListPlaylists(undefined, {
         query: {
             enabled: opened,
             refetchOnMount: 'always'
         }
     });
-    const playlistsResponse = useQueryData(playlistsQuery, "Failed to fetch playlists") ?? {data: {playlists: []}};
+    const playlistsResponse = useQueryData(playlistsQuery, t("playlists:manageDialog.fetchPlaylistsFailed")) ?? {data: {playlists: []}};
 
     const playlists = playlistsResponse?.data?.playlists ?? [];
 
@@ -38,7 +40,7 @@ export default function ManagePlaylistsDialog({
         songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
         {query: {enabled: songIds.length > 0}}
     );
-    const songsResponse = useQueryData(songsQuery, "Failed to fetch songs") ?? {data: {songs: []}};
+    const songsResponse = useQueryData(songsQuery, t("playlists:manageDialog.fetchSongsFailed")) ?? {data: {songs: []}};
     const managedSongs = songsResponse?.data?.songs ?? [];
 
     const queryClient = useQueryClient();
@@ -142,10 +144,10 @@ export default function ManagePlaylistsDialog({
     };
 
     return (
-        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Playlists" centered zIndex={ZINDEX_MODAL}>
+        <Modal opened={opened} onClose={handleCancel} size="lg" title={t("playlists:manageDialog.title")} centered zIndex={ZINDEX_MODAL}>
             <Stack>
                 <Text size="sm" c="dimmed">
-                    Managing {songIds.length} song{songIds.length !== 1 ? "s" : ""}
+                    {t("playlists:manageDialog.managing", {count: songIds.length})}
                 </Text>
 
                 <ScrollArea h={400}>
@@ -179,7 +181,7 @@ export default function ManagePlaylistsDialog({
                 <Group justify="space-between" align="center">
                     <Group gap="xs">
                         <TextInput
-                            placeholder="New playlist name"
+                            placeholder={t("playlists:manageDialog.newPlaylistPlaceholder")}
                             value={newPlaylistName}
                             onChange={(e) => setNewPlaylistName(e.target.value)}
                             onKeyDown={(e) => {
@@ -198,10 +200,10 @@ export default function ManagePlaylistsDialog({
                     </Group>
                     <Group>
                         <Button variant="default" onClick={handleCancel}>
-                            Cancel
+                            {t("common:actions.cancel")}
                         </Button>
                         <Button onClick={handleApply} loading={manageSongs.isPending}>
-                            Apply
+                            {t("common:actions.apply")}
                         </Button>
                     </Group>
                 </Group>
@@ -228,6 +230,7 @@ interface NewPlaylistRowProps {
 }
 
 function NewPlaylistRow({entry, onNameChange, onSelectionChange, onRemove}: NewPlaylistRowProps) {
+    const {t} = useTranslation(["playlists", "common"]);
     return (
         <Group justify="space-between" wrap="nowrap" data-testid="playlist-row" data-playlist-id={-1} data-playlist-name={entry.name}>
             <TextInput
@@ -242,8 +245,8 @@ function NewPlaylistRow({entry, onNameChange, onSelectionChange, onRemove}: NewP
                     value={entry.selection}
                     onChange={(v) => onSelectionChange(v as PlaylistSelection)}
                     data={[
-                        {label: <Text inherit c="gray">None</Text>, value: 'none'},
-                        {label: <Text inherit c={entry.selection === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
+                        {label: <Text inherit c="gray">{t("common:common.none")}</Text>, value: 'none'},
+                        {label: <Text inherit c={entry.selection === 'add' ? 'green' : 'gray'}>{t("common:common.add")}</Text>, value: 'add'},
                     ]}
                     size="xs"
                 />
@@ -263,6 +266,7 @@ interface PlaylistRowProps {
 }
 
 function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps) {
+    const {t} = useTranslation(["playlists", "common"]);
     const [expanded, setExpanded] = useState(false);
 
     const playlistSongIdSet = new Set(playlist.songIds);
@@ -289,9 +293,9 @@ function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps
                     value={value}
                     onChange={(v) => onChange(v as PlaylistSelection)}
                     data={[
-                        {label: <Text inherit c="gray">None</Text>, value: 'none'},
-                        {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
-                        {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>Remove</Text>, value: 'remove'},
+                        {label: <Text inherit c="gray">{t("common:common.none")}</Text>, value: 'none'},
+                        {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>{t("common:common.add")}</Text>, value: 'add'},
+                        {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>{t("common:common.remove")}</Text>, value: 'remove'},
                     ]}
                     size="xs"
                 />

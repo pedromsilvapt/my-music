@@ -1,5 +1,6 @@
 import {IconCheck, IconMusic} from "@tabler/icons-react";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import type {SearchMetadataResult} from "../../model";
 import Artwork from "../common/artwork";
 import type {CollectionSchema} from "../common/collection/collection";
@@ -11,6 +12,7 @@ export type MetadataSearchItem = SearchMetadataResult & { id: string };
 export function useMetadataSearchSchema(
     onApply: (result: MetadataSearchItem) => void,
 ): CollectionSchema<MetadataSearchItem> {
+    const {t} = useTranslation(["songs", "common"]);
     return useMemo(() => ({
         key: (item: MetadataSearchItem) => item.id,
         searchVector: (item: MetadataSearchItem) =>
@@ -44,7 +46,7 @@ export function useMetadataSearchSchema(
                 segments.push(String(item.song.year));
             }
 
-            segments.push(`Source: ${item.sourceName}`);
+            segments.push(t("songs:metadataSearch.sourcePrefix", {name: item.sourceName}));
 
             return <>{sepBy(segments, " • ")}</>;
         },
@@ -63,19 +65,19 @@ export function useMetadataSearchSchema(
             },
             {
                 name: "title",
-                displayName: "Title",
+                displayName: t("songs:metadataSearch.columns.title"),
                 render: (item: MetadataSearchItem) => item.song.title,
                 width: "2fr",
             },
             {
                 name: "artists",
-                displayName: "Artists",
+                displayName: t("songs:metadataSearch.columns.artists"),
                 render: (item: MetadataSearchItem) => item.song.artists.map(a => a.name).join(", "),
                 width: "1fr",
             },
             {
                 name: "source",
-                displayName: "Source",
+                displayName: t("songs:metadataSearch.columns.source"),
                 render: (item: MetadataSearchItem) => item.sourceName,
                 width: "1fr",
             },
@@ -91,7 +93,7 @@ export function useMetadataSearchSchema(
                 name: "apply",
                 primary: true,
                 renderIcon: () => <IconCheck size={16}/>,
-                renderLabel: () => "Apply",
+                renderLabel: () => t("songs:metadataSearch.apply"),
                 onClick: (items: MetadataSearchItem[]) => {
                     if (items.length > 0) {
                         onApply(items[0]!);
@@ -99,5 +101,5 @@ export function useMetadataSearchSchema(
                 },
             },
         ],
-    }), [onApply]);
+    }), [onApply, t]);
 }

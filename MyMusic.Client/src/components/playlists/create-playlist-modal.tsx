@@ -1,5 +1,6 @@
 import {Button, Group, Modal, Stack, TextInput} from "@mantine/core";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useCreatePlaylist} from "../../client/playlists.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 
@@ -10,6 +11,7 @@ interface CreatePlaylistModalProps {
 }
 
 export default function CreatePlaylistModal({opened, onClose, onSuccess}: CreatePlaylistModalProps) {
+    const {t} = useTranslation(["playlists", "common"]);
     const [name, setName] = useState("");
 
     const createPlaylist = useCreatePlaylist({
@@ -29,11 +31,11 @@ export default function CreatePlaylistModal({opened, onClose, onSuccess}: Create
     };
 
     return (
-        <Modal opened={opened} onClose={onClose} title="Create Playlist" centered zIndex={ZINDEX_MODAL}>
+        <Modal opened={opened} onClose={onClose} title={t("playlists:createModal.title")} centered zIndex={ZINDEX_MODAL}>
             <Stack>
                 <TextInput
-                    label="Playlist Name"
-                    placeholder="My Playlist"
+                    label={t("playlists:createModal.nameLabel")}
+                    placeholder={t("playlists:createModal.namePlaceholder")}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     onKeyDown={(e) => {
@@ -45,10 +47,10 @@ export default function CreatePlaylistModal({opened, onClose, onSuccess}: Create
                 />
                 <Group justify="flex-end">
                     <Button variant="subtle" onClick={onClose}>
-                        Cancel
+                        {t("common:actions.cancel")}
                     </Button>
                     <Button onClick={handleCreate} loading={createPlaylist.isPending}>
-                        Create
+                        {t("playlists:createModal.create")}
                     </Button>
                 </Group>
             </Stack>

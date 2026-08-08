@@ -1,0 +1,36 @@
+{
+    "actions": {
+        "menuLabel": "Actions"
+    },
+    "filterBar": {
+        "searchPlaceholder": "Search...",
+        "hideAdvanced": "Hide advanced filter",
+        "showAdvanced": "Show advanced filter",
+        "filters": "Filters",
+        "filterDsl": "Filter DSL",
+        "pressCtrlEnter": "Press Ctrl+Enter to apply",
+        "examples": "Examples",
+        "clear": "Clear"
+    },
+    "toolbar": {
+        "table": "Table",
+        "grid": "Grid",
+        "list": "List",
+        "sortBy": "Sort By",
+        "addSortField": "Add sort field",
+        "noSortableFields": "No sortable fields available",
+        "ascending": "Ascending",
+        "descending": "Descending",
+        "selectAll": "Select all",
+        "customize": "Customize"
+    },
+    "selectionBar": {
+        "selected_one": "{{count}} selected",
+        "selected_other": "{{count}} selected"
+    },
+    "views": {
+        "dragging": "Dragging",
+        "draggingCount_one": "Dragging {{count}} item",
+        "draggingCount_other": "Dragging {{count}} items"
+    }
+}

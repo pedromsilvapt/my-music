@@ -3,6 +3,7 @@ import type {TagsInputProps} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {IconUser} from "@tabler/icons-react";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import Artwork from "../common/artwork";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -48,6 +49,7 @@ export default function TagsAutocompleteField({
                                                     showArtwork = false,
                                                     testId,
                                                 }: TagsAutocompleteFieldProps) {
+    const {t} = useTranslation(["songs", "common"]);
     const [items, setItems] = useState<TagsAutocompleteItem[]>([]);
     const [query, setQuery] = useState("");
     const pendingSelectedIdRef = useRef<number | null>(null);
@@ -138,8 +140,8 @@ export default function TagsAutocompleteField({
         const item = itemsById.get(id);
         if (!item) return null;
         const counts = [];
-        if (item.albumCount !== undefined) counts.push(`${item.albumCount} albums`);
-        if (item.songCount !== undefined) counts.push(`${item.songCount} songs`);
+        if (item.albumCount !== undefined) counts.push(t("songs:tagsAutocomplete.albumCount", {count: item.albumCount}));
+        if (item.songCount !== undefined) counts.push(t("songs:tagsAutocomplete.songCount", {count: item.songCount}));
         return (
             <Group gap="sm" wrap="nowrap">
                 <Artwork
@@ -174,7 +176,7 @@ export default function TagsAutocompleteField({
                         />
                     )}
                     <Box style={{flex: 1}}>
-                        <Input.Wrapper label={label + " (old)"}>
+                        <Input.Wrapper label={t("songs:editModal.fieldOld", {field: label})}>
                             <Input
                                 value={originalDisplayValue}
                                 readOnly
@@ -189,7 +191,7 @@ export default function TagsAutocompleteField({
                         </Input.Wrapper>
                     </Box>
                     <Box style={{flex: 1}}>
-                        <Input.Wrapper label={label + " (new)"}>
+                        <Input.Wrapper label={t("songs:editModal.fieldNew", {field: label})}>
                             <TagsInput
                                 placeholder={placeholder}
                                 value={tags}
@@ -243,7 +245,7 @@ export default function TagsAutocompleteField({
             />
             {hasChanged && (
                 <Text size="xs" c="dimmed" mt={4}>
-                    Original: {originalDisplayValue ?? (originalValue && originalValue.map(o => o.name).join(", "))}
+                    {t("songs:tagsAutocomplete.original", {value: originalDisplayValue ?? (originalValue && originalValue.map(o => o.name).join(", "))})}
                 </Text>
             )}
         </div>

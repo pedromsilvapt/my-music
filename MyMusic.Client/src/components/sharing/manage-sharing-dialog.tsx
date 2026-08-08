@@ -1,6 +1,7 @@
 import {Badge, Box, Button, Collapse, Group, Modal, ScrollArea, SegmentedControl, Stack, Text, TextInput} from "@mantine/core";
 import {notifications} from "@mantine/notifications";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {IconChevronDown, IconChevronUp, IconShare} from "@tabler/icons-react";
 import {useListSongSharesBatch} from "../../client/song-sharing.ts";
 import {useListSongs} from "../../client/songs.ts";
@@ -25,21 +26,22 @@ export default function ManageSharingDialog({
                                                 onClose,
                                                 songIds,
                                                 onSuccess
-                                            }: ManageSharingDialogProps) {
+                                               }: ManageSharingDialogProps) {
+    const {t} = useTranslation(["sharing", "common"]);
     const songsQuery = useListSongs(
         songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
         {query: {enabled: opened && songIds.length > 0}}
     );
-    const songsResponse = useQueryData(songsQuery, "Failed to fetch songs") ?? {data: {songs: []}};
+    const songsResponse = useQueryData(songsQuery, t("sharing:manageDialog.fetchSongsFailed")) ?? {data: {songs: []}};
     const songs = songsResponse?.data?.songs ?? [];
     const ownedSongs = songs.filter(s => !s.isShared);
 
     const usersQuery = useListUsers({query: {enabled: opened, refetchOnMount: 'always'}});
-    const usersResponse = useQueryData(usersQuery, "Failed to fetch users") ?? {data: {users: []}};
+    const usersResponse = useQueryData(usersQuery, t("sharing:manageDialog.fetchUsersFailed")) ?? {data: {users: []}};
     const users = usersResponse?.data?.users ?? [];
 
     const currentUserQuery = useGetCurrentUser({query: {enabled: opened}});
-    const currentUserResponse = useQueryData(currentUserQuery, "Failed to fetch current user");
+    const currentUserResponse = useQueryData(currentUserQuery, t("sharing:manageDialog.fetchCurrentUserFailed"));
     const currentUserId = currentUserResponse?.data?.user?.id;
 
     const recipients = users.filter(u => u.id !== currentUserId);
@@ -48,7 +50,7 @@ export default function ManageSharingDialog({
         ownedSongs.length > 0 ? {songIds: ownedSongs.map(s => s.id).join(',')} : undefined,
         {query: {enabled: opened && ownedSongs.length > 0}}
     );
-    const sharesResponse = useQueryData(sharesQuery, "Failed to fetch song shares") ?? {data: {shares: []}};
+    const sharesResponse = useQueryData(sharesQuery, t("sharing:manageDialog.fetchSharesFailed")) ?? {data: {shares: []}};
     const existingShares = sharesResponse?.data?.shares ?? [];
 
     const [selections, setSelections] = useState<Map<number, ShareSelection>>(new Map());
@@ -68,9 +70,9 @@ export default function ManageSharingDialog({
                 const errorResponse = error as { response?: { data?: { detail?: string } }; message?: string } | null;
                 const errorMessage = errorResponse?.response?.data?.detail
                     ?? errorResponse?.message
-                    ?? 'Failed to update sharing. Please try again.';
+                    ?? t("sharing:manageDialog.updateFailedFallback");
                 notifications.show({
-                    title: 'Error',
+                    title: t("common:status.error"),
                     message: errorMessage,
                     color: 'red',
                 });
@@ -153,18 +155,18 @@ export default function ManageSharingDialog({
     }
 
     return (
-        <Modal opened={opened} onClose={handleCancel} size="lg" title="Manage Sharing" centered
+        <Modal opened={opened} onClose={handleCancel} size="lg" title={t("sharing:manageDialog.title")} centered
                zIndex={ZINDEX_MODAL}>
             <Stack data-testid="manage-sharing"
                    data-loading={sharesQuery.isFetching ? "true" : "false"}>
                 <Group justify="space-between" align="center">
                     <Text size="sm" c="dimmed">
                         {ownedSongs.length === 0
-                            ? "No owned songs selected"
-                            : `Managing ${ownedSongs.length} song${ownedSongs.length !== 1 ? "s" : ""}`}
+                            ? t("sharing:manageDialog.noOwnedSongs")
+                            : t("sharing:manageDialog.managing", {count: ownedSongs.length})}
                     </Text>
                     <TextInput
-                        placeholder="Filter by username or name"
+                        placeholder={t("sharing:manageDialog.filterPlaceholder")}
                         value={userSearch}
                         onChange={(e) => setUserSearch(e.target.value)}
                         size="xs"
@@ -173,7 +175,7 @@ export default function ManageSharingDialog({
                 </Group>
 
                 {ownedSongs.length === 0 ? (
-                    <Text c="dimmed" ta="center" py="xl">No owned songs selected</Text>
+                    <Text c="dimmed" ta="center" py="xl">{t("sharing:manageDialog.noOwnedSongs")}</Text>
                 ) : (
                     <ScrollArea h={400}>
                         <Stack gap="sm">
@@ -190,7 +192,7 @@ export default function ManageSharingDialog({
                                 />
                             ))}
                             {filteredRecipients.length === 0 && (
-                                <Text c="dimmed" ta="center" py="sm">No recipients found</Text>
+                                <Text c="dimmed" ta="center" py="sm">{t("sharing:manageDialog.noRecipients")}</Text>
                             )}
                         </Stack>
                     </ScrollArea>
@@ -198,7 +200,7 @@ export default function ManageSharingDialog({
 
                 <Group justify="flex-end">
                     <Button variant="default" onClick={handleCancel}>
-                        Cancel
+                        {t("common:actions.cancel")}
                     </Button>
                     <Button
                         onClick={handleApply}
@@ -206,7 +208,7 @@ export default function ManageSharingDialog({
                         disabled={ownedSongs.length === 0}
                         leftSection={<IconShare size={16}/>}
                     >
-                        Apply
+                        {t("common:actions.apply")}
                     </Button>
                 </Group>
             </Stack>
@@ -225,6 +227,7 @@ interface ShareRowProps {
 }
 
 function ShareRow({user, sharedSongIds, ownedSongs, expanded, onToggleExpand, value, onChange}: ShareRowProps) {
+    const {t} = useTranslation(["sharing", "common"]);
     const matchCount = ownedSongs.filter(s => sharedSongIds.has(s.id)).length;
 
     return (
@@ -254,9 +257,9 @@ function ShareRow({user, sharedSongIds, ownedSongs, expanded, onToggleExpand, va
                         value={value}
                         onChange={(v) => onChange(v as ShareSelection)}
                         data={[
-                            {label: <Text inherit c="gray">None</Text>, value: 'none'},
-                            {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>Add</Text>, value: 'add'},
-                            {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>Remove</Text>, value: 'remove'},
+                            {label: <Text inherit c="gray">{t("common:common.none")}</Text>, value: 'none'},
+                            {label: <Text inherit c={value === 'add' ? 'green' : 'gray'}>{t("common:common.add")}</Text>, value: 'add'},
+                            {label: <Text inherit c={value === 'remove' ? 'red' : 'gray'}>{t("common:common.remove")}</Text>, value: 'remove'},
                         ]}
                         size="xs"
                     />

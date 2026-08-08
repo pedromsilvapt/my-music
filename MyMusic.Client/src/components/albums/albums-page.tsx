@@ -1,4 +1,5 @@
 import {useQuery} from "@tanstack/react-query";
+import {useTranslation} from "react-i18next";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -7,6 +8,7 @@ import {useAlbumsSchema} from "./useAlbumsSchema.tsx";
 const ALBUMS_STATE_KEY = "albums";
 
 export default function AlbumsPage() {
+    const {t} = useTranslation(["albums", "common"]);
     const {setCollectionFilter} = useCollectionActions(state => ({
         setCollectionFilter: state.setCollectionFilter,
     }));
@@ -25,14 +27,14 @@ export default function AlbumsPage() {
             const response = await fetch(url);
 
             if (!response.ok) {
-                throw new Error("Failed to fetch albums");
+                throw new Error(t("albums:page.fetchFailed"));
             }
 
             return response.json();
         },
     });
 
-    const albums = useQueryData(albumsQuery, "Failed to fetch albums") ?? {albums: []};
+    const albums = useQueryData(albumsQuery, t("albums:page.fetchFailed")) ?? {albums: []};
 
     const albumsSchema = useAlbumsSchema();
 
@@ -54,7 +56,7 @@ export default function AlbumsPage() {
                 serverSearch={appliedSearch}
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
-                searchPlaceholder="Search albums..."
+                searchPlaceholder={t("albums:page.searchPlaceholder")}
             />
         </div>
     );

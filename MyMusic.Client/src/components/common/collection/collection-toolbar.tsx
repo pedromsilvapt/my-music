@@ -23,6 +23,7 @@ import {
     IconX
 } from "@tabler/icons-react";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {ZINDEX_MODAL} from "../../../consts.ts";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
 import {CollectionFilterBar, type CollectionFilterBarRef} from "./collection-filter-bar.tsx";
@@ -65,6 +66,7 @@ export interface CollectionToolbarProps<M> {
 }
 
 export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
+    const {t} = useTranslation(["collection", "common"]);
     const [search, setSearch] = useUncontrolled({
         value: props.search,
         defaultValue: '',
@@ -143,7 +145,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                     {...attributes}
                     {...listeners}
                     className={styles.dragHandle}
-                    title="Drag to reorder"
+                    title={t("common:common.dragToReorder")}
                 >
                     <IconGripVertical size={14}/>
                 </ActionIcon>
@@ -152,7 +154,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                     size="sm"
                     variant="subtle"
                     onClick={() => props.onSort?.(field.field)}
-                    title={field.direction === 'asc' ? 'Ascending' : 'Descending'}
+                    title={field.direction === 'asc' ? t("collection:toolbar.ascending") : t("collection:toolbar.descending")}
                 >
                     {field.direction === 'asc' ? <IconArrowUp size={14}/> : <IconArrowDown size={14}/>}
                 </ActionIcon>
@@ -161,7 +163,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                     variant="subtle"
                     color="red"
                     onClick={() => props.onSortRemove?.(field.field)}
-                    title="Remove"
+                    title={t("common:common.remove")}
                 >
                     <IconX size={14}/>
                 </ActionIcon>
@@ -185,7 +187,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconTableFilled size={16}/>
-                                <Text visibleFrom="sm">Table</Text>
+                                <Text visibleFrom="sm">{t("collection:toolbar.table")}</Text>
                             </Center>
                         ),
                     },
@@ -194,7 +196,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconLayoutGridFilled size={16}/>
-                                <Text visibleFrom="sm">Grid</Text>
+                                <Text visibleFrom="sm">{t("collection:toolbar.grid")}</Text>
                             </Center>
                         ),
                     },
@@ -203,7 +205,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         label: (
                             <Center style={{gap: 10}}>
                                 <IconListDetails size={16}/>
-                                <Text visibleFrom="sm">List</Text>
+                                <Text visibleFrom="sm">{t("collection:toolbar.list")}</Text>
                             </Center>
                         ),
                     },
@@ -233,8 +235,8 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                 <ActionIcon
                     variant="default"
                     size="lg"
-                    aria-label="Select all"
-                    title="Select all"
+                    aria-label={t("collection:toolbar.selectAll")}
+                    title={t("collection:toolbar.selectAll")}
                     onClick={props.onSelectAll}
                 >
                     <IconSelectAll/>
@@ -250,8 +252,8 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                     <ActionIcon
                         variant="default"
                         size="lg"
-                        aria-label="Customize"
-                        title="Customize"
+                        aria-label={t("collection:toolbar.customize")}
+                        title={t("collection:toolbar.customize")}
                         onClick={togglePopover}
                     >
                         <IconSettings/>
@@ -259,7 +261,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                 </Popover.Target>
                 <Popover.Dropdown>
                     <Stack gap="sm">
-                        <Text size="sm" fw="bold">Sort By</Text>
+                        <Text size="sm" fw="bold">{t("collection:toolbar.sortBy")}</Text>
 
                         {sortFields.length > 0 && (
                             <DndContext
@@ -284,7 +286,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                             <Menu shadow="md" width={200} withinPortal={false}>
                                 <Menu.Target>
                                     <Button variant="light" size="xs" leftSection={<IconArrowUp size={14}/>}>
-                                        Add sort field
+                                        {t("collection:toolbar.addSortField")}
                                     </Button>
                                 </Menu.Target>
                                 <Menu.Dropdown>
@@ -301,7 +303,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
                         )}
 
                         {sortFields.length === 0 && availableFields.length === 0 && (
-                            <Text size="xs" c="dimmed">No sortable fields available</Text>
+                            <Text size="xs" c="dimmed">{t("collection:toolbar.noSortableFields")}</Text>
                         )}
                     </Stack>
                 </Popover.Dropdown>

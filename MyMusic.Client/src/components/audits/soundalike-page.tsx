@@ -4,6 +4,7 @@ import {useGetSoundalikeDuplicates, useUpdateSoundalikeSelection} from "../../cl
 import {useResolveSoundalikes} from "../../hooks/useResolveSoundalikes.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useCallback, useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import type {SoundalikeDuplicateGroup} from "../../model/soundalikeDuplicateGroup.ts";
 import type {GetSoundalikeDuplicatesResponse} from "../../model/getSoundalikeDuplicatesResponse.ts";
 import type {SoundalikeSongItem} from "../../model/soundalikeSongItem.ts";
@@ -54,6 +55,7 @@ function toSelectionRequest(selection: GroupSelection) {
 }
 
 export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
+    const {t} = useTranslation(["audits", "common"]);
     const soundalikesQuery = useGetSoundalikeDuplicates();
     const resolveMutation = useResolveSoundalikes();
     const selectionMutation = useUpdateSoundalikeSelection();
@@ -62,7 +64,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
 
     const soundalikesResponse = useQueryData(
         soundalikesQuery,
-        "Failed to fetch soundalike groups"
+        t("audits:soundalike.fetchFailed")
     );
 
     const groups: SoundalikeDuplicateGroup[] = (soundalikesResponse as { data: GetSoundalikeDuplicatesResponse } | null)?.data?.groups ?? [];
@@ -166,8 +168,8 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
             {
                 onSuccess: () => {
                     notifications.show({
-                        title: "Success",
-                        message: `Resolved ${resolutions.length} duplicate group(s)`,
+                        title: t("common:status.success"),
+                        message: t("audits:soundalike.resolveSuccess", {count: resolutions.length}),
                         color: "green"
                     });
                     setSelectedGroups(new Map());
@@ -175,8 +177,8 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                 },
                 onError: (error: unknown) => {
                     notifications.show({
-                        title: "Error",
-                        message: `Failed to resolve duplicates: ${error}`,
+                        title: t("common:status.error"),
+                        message: t("audits:soundalike.resolveFailed", {error: `${error}`}),
                         color: "red"
                     });
                 }
@@ -189,32 +191,32 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
 
         if (!primarySong.year && secondarySongs.some(s => s.year)) {
             const year = secondarySongs.find(s => s.year)?.year;
-            if (year) changes.push(`Year: ${year}`);
+            if (year) changes.push(t("audits:soundalike.preview.year", {value: year}));
         }
 
         if (!primarySong.hasLyrics && secondarySongs.some(s => s.hasLyrics)) {
-            changes.push("Lyrics");
+            changes.push(t("audits:soundalike.preview.lyrics"));
         }
 
         if (!primarySong.cover && secondarySongs.some(s => s.cover)) {
-            changes.push("Artwork");
+            changes.push(t("audits:soundalike.preview.artwork"));
         }
 
         if (!primarySong.bitrate && secondarySongs.some(s => s.bitrate)) {
             const bitrate = secondarySongs.find(s => s.bitrate)?.bitrate;
-            if (bitrate) changes.push(`Bitrate: ${bitrate} kbps`);
+            if (bitrate) changes.push(t("audits:soundalike.preview.bitrate", {value: bitrate}));
         }
 
         const newGenres = secondarySongs.flatMap(s => s.genres)
             .filter(g => !primarySong.genres.some(pg => pg.id === g.id));
         if (newGenres.length > 0) {
-            changes.push(`Genres: ${newGenres.map(g => g.name).join(', ')}`);
+            changes.push(t("audits:soundalike.preview.genres", {value: newGenres.map(g => g.name).join(', ')}));
         }
 
         const newArtists = secondarySongs.flatMap(s => s.artists)
             .filter(a => !primarySong.artists.some(pa => pa.id === a.id));
         if (newArtists.length > 0) {
-            changes.push(`Artists: ${newArtists.map(a => a.name).join(', ')}`);
+            changes.push(t("audits:soundalike.preview.artists", {value: newArtists.map(a => a.name).join(', ')}));
         }
 
         return changes;
@@ -251,7 +253,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
     return (
         <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
             <Text c="dimmed" mb="md">
-                Click a song to mark it as primary. Then choose an action for each remaining song: delete, merge metadata then delete, or keep.
+                {t("audits:soundalike.instructions")}
             </Text>
 
             <div style={{flex: 1, overflow: 'auto'}}>
@@ -268,7 +270,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
 
                     {groups.length === 0 && (
                         <Text c="dimmed" ta="center" mt="xl">
-                            No duplicate songs detected
+                            {t("audits:soundalike.noDuplicates")}
                         </Text>
                     )}
                 </Stack>
@@ -277,17 +279,17 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
             <Modal
                 opened={confirmModalOpen}
                 onClose={() => setConfirmModalOpen(false)}
-                title="Confirm Resolution"
+                title={t("audits:soundalike.confirmTitle")}
                 size="lg"
             >
                 <Stack>
                     <Text>
-                        You are about to process <strong>{selectedGroups.size} group(s)</strong>:
+                        {t("audits:soundalike.confirmProcessLabel")} <strong>{t("audits:soundalike.groupCount", {count: selectedGroups.size})}</strong>:
                     </Text>
                     <Group gap="md">
-                        <Text size="sm"><strong>{getTotalSongsToDelete()}</strong> song(s) will be deleted</Text>
+                        <Text size="sm"><strong>{getTotalSongsToDelete()}</strong> {t("audits:soundalike.confirmSongsToDelete", {count: getTotalSongsToDelete()})}</Text>
                         {getTotalSongsToMerge() > 0 && (
-                            <Text size="sm"><strong>{getTotalSongsToMerge()}</strong> song(s) will have metadata merged first</Text>
+                            <Text size="sm"><strong>{getTotalSongsToMerge()}</strong> {t("audits:soundalike.confirmSongsToMerge", {count: getTotalSongsToMerge()})}</Text>
                         )}
                     </Group>
 
@@ -324,17 +326,17 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                                 ) : null}
                                 {deleteSongs.length > 0 && (
                                     <Text size="sm" c="dimmed">
-                                        Deleting: {deleteSongs.map(s => s.title).join(', ')}
+                                        {t("audits:soundalike.deleting", {titles: deleteSongs.map(s => s.title).join(', ')})}
                                     </Text>
                                 )}
                                 {mergeSongs.length > 0 && (
                                     <Text size="sm" c="dimmed">
-                                        Merging then deleting: {mergeSongs.map(s => s.title).join(', ')}
+                                        {t("audits:soundalike.mergingThenDeleting", {titles: mergeSongs.map(s => s.title).join(', ')})}
                                     </Text>
                                 )}
                                 {keepSongs.length > 0 && (
                                     <Text size="sm" c="dimmed">
-                                        Keeping: {keepSongs.map(s => s.title).join(', ')}
+                                        {t("audits:soundalike.keeping", {titles: keepSongs.map(s => s.title).join(', ')})}
                                     </Text>
                                 )}
                             </Card>
@@ -345,7 +347,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
 
                     <Group justify="flex-end">
                         <Button variant="default" onClick={() => setConfirmModalOpen(false)}>
-                            Cancel
+                            {t("common:actions.cancel")}
                         </Button>
                         <Button
                             color="red"
@@ -353,7 +355,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                             onClick={handleResolve}
                             loading={resolveMutation.isPending}
                         >
-                            Resolve {selectedGroups.size} Group(s)
+                            {t("audits:soundalike.resolveButton", {count: selectedGroups.size})}
                         </Button>
                     </Group>
                 </Stack>
@@ -370,6 +372,7 @@ interface SoundalikeGroupCardProps {
 }
 
 function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: SoundalikeGroupCardProps) {
+    const {t} = useTranslation(["audits", "common"]);
     const colorScheme = useComputedColorScheme('light');
     const matchPercentage = Math.round(group.matchScore * 100);
 
@@ -379,16 +382,16 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
     const keepBadgeVariant = colorScheme === 'dark' ? 'white' : 'light';
 
     const actionBadgeProps: Record<Exclude<SongAction, typeof SecondaryAction.Keep>, { color: string; label: string }> = {
-        [SecondaryAction.Delete]: { color: 'red', label: 'Delete' },
-        [SecondaryAction.Merge]: { color: 'orange', label: 'Merge' },
+        [SecondaryAction.Delete]: { color: 'red', label: t("audits:soundalike.actions.delete") },
+        [SecondaryAction.Merge]: { color: 'orange', label: t("audits:soundalike.actions.merge") },
     };
 
     return (
         <Card shadow="sm" padding="lg" radius="md" withBorder>
             <Group justify="space-between" mb="md">
-                <Text fw={500}>Match Score: {matchPercentage}%</Text>
+                <Text fw={500}>{t("audits:soundalike.matchScore", {score: matchPercentage})}</Text>
                 <Text size="sm" c="dimmed">
-                    {group.songs.length} songs
+                    {t("common:count.songs", {count: group.songs.length})}
                 </Text>
             </Group>
 
@@ -422,7 +425,7 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                             </Text>
                                         </ExplicitLabel>
                                         <Text size="sm" c={isPrimary ? primaryText : "dimmed"} lineClamp={1} style={{textDecoration: songAction ? 'line-through' : undefined}}>
-                                            {song.artists.map(a => a.name).join(', ')} • {song.album?.name ?? 'Unknown Album'}
+                                            {song.artists.map(a => a.name).join(', ')} • {song.album?.name ?? t("audits:soundalike.unknownAlbum")}
                                         </Text>
                                         <Tooltip label={song.createdAt ? new Date(song.createdAt).toLocaleString() : undefined} disabled={!song.createdAt} openDelay={500}>
                                             <Text size="xs" c={isPrimary ? primaryText : "dimmed"} lineClamp={1} style={{textDecoration: songAction ? 'line-through' : undefined}}>
@@ -438,7 +441,7 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                     </div>
                                 </Group>
                                 <Group gap="xs" wrap="nowrap">
-                                    {isPrimary && <Badge color="blue" variant={keepBadgeVariant}>Keep</Badge>}
+                                    {isPrimary && <Badge color="blue" variant={keepBadgeVariant}>{t("common:common.keep")}</Badge>}
                                     {!isPrimary && hasSelection && songAction && (
                                         <>
                                             {(['Delete', 'Merge'] as const).map(action => {
@@ -483,7 +486,7 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                         </>
                                     )}
                                     {song.year && <Text size="sm" c={isPrimary ? primaryText : "dimmed"}>{song.year}</Text>}
-                                    {song.hasLyrics && <Badge variant="light" color="grape">Lyrics</Badge>}
+                                    {song.hasLyrics && <Badge variant="light" color="grape">{t("audits:soundalike.lyrics")}</Badge>}
                                 </Group>
                             </Group>
                         </Card>

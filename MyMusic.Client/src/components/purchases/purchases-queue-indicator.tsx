@@ -3,6 +3,7 @@ import {ActionIcon, Center, Drawer, type MantineColor, RingProgress} from "@mant
 import {useDisclosure} from "@mantine/hooks";
 import {IconAlertTriangleFilled, IconCheck, IconLoader, IconPlayerPauseFilled,} from "@tabler/icons-react";
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {useQueryClient} from "@tanstack/react-query";
 import {getGetCurrentUserQueryKey} from "../../client/users.ts";
 import {ZINDEX_DRAWER, ZINDEX_MODAL} from "../../consts.ts";
@@ -13,6 +14,7 @@ import {useAutoDownload} from "./use-auto-download.ts";
 export type PurchasesQueueIndicatorProps = object;
 
 export default function PurchasesQueueIndicator() {
+    const {t} = useTranslation(["purchases", "common"]);
     const [opened, {open, close}] = useDisclosure(false);
     const queryClient = useQueryClient();
 
@@ -42,7 +44,7 @@ export default function PurchasesQueueIndicator() {
     const sections = usePurchasesQueueIndicatorSections(counts, total);
 
     return <>
-        <Drawer opened={opened} onClose={close} size="xl" title="Purchases Queue" zIndex={ZINDEX_DRAWER}
+        <Drawer opened={opened} onClose={close} size="xl" title={t("purchases:queueIndicator.title")} zIndex={ZINDEX_DRAWER}
                 overlayProps={{zIndex: ZINDEX_MODAL}}
                   styles={{
                     content: { display: 'flex', flexDirection: 'column' },

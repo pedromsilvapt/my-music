@@ -1,0 +1,152 @@
+{
+    "detailPage": {
+        "backToSongs": "Back to Songs",
+        "explicit": "Explicit",
+        "noGenres": "No genres",
+        "noDevices": "No devices",
+        "lyrics": "Lyrics",
+        "lyricsNotFound": "Lyrics not found on this song",
+        "fetchFailed": "Failed to fetch song",
+        "deleteTitle": "Delete Song",
+        "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+        "editTitle": "Edit Song"
+    },
+    "page": {
+        "fetchFailed": "Failed to fetch songs"
+    },
+    "editModal": {
+        "unknownError": "Unknown error",
+        "updateFailed": "Failed to update song: {{error}}",
+        "updateFailedPlural": "Failed to update songs: {{error}}",
+        "updatedSuccessfully": "Song updated successfully",
+        "allUpdatedSuccessfully": "All songs updated successfully",
+        "partialSuccess": "{{failed}} of {{total}} songs failed to update",
+        "noChangesToSave": "No changes to save",
+        "applyChanges": "Apply Changes",
+        "autoFetchMetadata": "Auto-fetch metadata",
+        "searchMetadata": "Search metadata",
+        "saveModified": "Save Modified ({{count}})",
+        "saveAll": "Save All",
+        "albumArtistNotInList": "Not in the song's artists list",
+        "fieldOld": "{{field}} (old)",
+        "fieldNew": "{{field}} (new)",
+        "fields": {
+            "title": "Title",
+            "year": "Year",
+            "album": "Album",
+            "albumArtist": "Album Artist",
+            "artists": "Artists",
+            "genres": "Genres",
+            "lyrics": "Lyrics",
+            "rating": "Rating",
+            "explicit": "Explicit",
+            "cover": "Cover"
+        },
+        "placeholders": {
+            "title": "Song title",
+            "year": "Release year",
+            "album": "Album name",
+            "albumArtist": "Album artist",
+            "artists": "Add artist...",
+            "genres": "Add genre...",
+            "lyrics": "Song lyrics"
+        }
+    },
+    "import": {
+        "dropTitle": "Drop audio files here",
+        "dropHelp": "Supports MP3 and M4A files",
+        "importing": "Importing Songs",
+        "complete": "Import Complete",
+        "completedOf": "{{completed}} of {{total}} completed",
+        "failedSuffix": " ({{count}} failed)",
+        "done": "Done",
+        "uploadFailed": "Upload failed"
+    },
+    "metadataSearch": {
+        "title": "Search Metadata",
+        "searchPlaceholder": "Search for song metadata...",
+        "searchFailed": "Failed to search metadata",
+        "sourcePrefix": "Source: {{name}}",
+        "apply": "Apply",
+        "columns": {
+            "title": "Title",
+            "artists": "Artists",
+            "source": "Source"
+        }
+    },
+    "coverUpload": {
+        "defaultLabel": "Cover Artwork",
+        "selectImage": "Please select an image file",
+        "loadImageFailed": "Failed to load image",
+        "noImageInClipboard": "No image found in clipboard",
+        "pasteFailed": "Failed to paste from clipboard",
+        "downloadFailed": "Failed to download image",
+        "downloadFromUrlFailed": "Failed to download image from URL",
+        "noCover": "No Cover",
+        "songHasNoCover": "Selected song has no cover artwork",
+        "loadCoverFromSongFailed": "Failed to load cover from selected song",
+        "old": "Old",
+        "new": "New",
+        "noSize": "no size",
+        "loadFailed": "Failed to load",
+        "uploadFile": "Upload file",
+        "pasteFromClipboard": "Paste from clipboard",
+        "fromUrl": "From URL",
+        "fromExistingSong": "From existing song",
+        "removeCover": "Remove cover",
+        "downloadFromUrl": "Download from URL",
+        "pasteImageUrl": "Paste image URL...",
+        "searchForSong": "Search for a song to use its cover..."
+    },
+    "autocomplete": {
+        "original": "Original: {{value}}"
+    },
+    "tagsAutocomplete": {
+        "original": "Original: {{value}}",
+        "albumCount": "{{count}} albums",
+        "songCount": "{{count}} songs",
+        "countsJoined": "{{albums}}, {{songs}}"
+    },
+    "songAutocomplete": {
+        "searchPlaceholder": "Search for a song..."
+    },
+    "schema": {
+        "deleteTitle": "Delete Song",
+        "deleteTitlePlural": "Delete {{count}} Songs",
+        "deleteConfirmSingle": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+        "deleteConfirmPlural": "Are you sure you want to delete {{count}} songs? This action cannot be undone.",
+        "importSingle": "Import Song",
+        "importPlural": "Import {{count}} Songs",
+        "shareSingle": "Share Song",
+        "sharePlural": "Share {{count}} Songs",
+        "editSingle": "Edit Song",
+        "editPlural": "Edit {{count}} Songs",
+        "editTitle": "Edit Song",
+        "manageGroup": "Manage",
+        "queueGroup": "Queue",
+        "unfavorite": "Unfavorite",
+        "favorite": "Favorite",
+        "managePlaylists": "Manage Playlists",
+        "manageDevices": "Manage Devices",
+        "manageSharing": "Manage Sharing",
+        "download": "Download",
+        "play": "Play",
+        "playNext": "Play Next",
+        "playLast": "Play Last",
+        "stopAfterThisSong": "Stop After This Song",
+        "skipThisSong": "Skip This Song",
+        "shuffle": "Shuffle",
+        "removeFromQueue": "Remove from Queue",
+        "columns": {
+            "title": "Title",
+            "artists": "Artists",
+            "album": "Album",
+            "genres": "Genres",
+            "year": "Year",
+            "duration": "Duration",
+            "devices": "Devices",
+            "createdAt": "Created At",
+            "addedAt": "Added At"
+        }
+    }
+}

@@ -1,6 +1,7 @@
 import {Component, type ErrorInfo, type ReactNode} from 'react';
 import {Alert, Button, Stack, Text} from '@mantine/core';
 import {IconAlertCircle, IconRefresh} from '@tabler/icons-react';
+import {i18n} from '../../locales';
 
 interface Props {
     children: ReactNode;
@@ -66,18 +67,17 @@ export class MetadataFetchErrorBoundary extends Component<Props, State> {
             return (
                 <Alert
                     icon={<IconAlertCircle size={24} />}
-                    title="Failed to Load Metadata"
+                    title={i18n.t("common:metadataFetchError.title")}
                     color="red"
                     variant="filled"
                 >
                     <Stack gap="sm">
                         <Text size="sm">
-                            An error occurred while fetching metadata suggestions. 
-                            You can still edit the song manually.
+                            {i18n.t("common:metadataFetchError.body")}
                         </Text>
                         {this.state.error && (
                             <Text size="xs" c="red.2">
-                                Error: {this.state.error.message}
+                                {i18n.t("common:metadataFetchError.errorLabel")}: {this.state.error.message}
                             </Text>
                         )}
                         <Button
@@ -87,7 +87,7 @@ export class MetadataFetchErrorBoundary extends Component<Props, State> {
                             onClick={this.resetErrorBoundary}
                             size="sm"
                         >
-                            Retry
+                            {i18n.t("common:actions.retry")}
                         </Button>
                     </Stack>
                 </Alert>

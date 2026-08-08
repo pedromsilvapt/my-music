@@ -20,6 +20,75 @@
         "dark": "Escuro",
         "system": "Sistema"
     },
+    "actions": {
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "apply": "Aplicar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "download": "Descarregar",
+        "reset": "Repor",
+        "close": "Fechar",
+        "confirm": "Confirmar",
+        "retry": "Tentar novamente",
+        "discard": "Descartar"
+    },
+    "status": {
+        "error": "Erro",
+        "success": "Sucesso",
+        "info": "Informação",
+        "warning": "Aviso",
+        "partialSuccess": "Sucesso parcial"
+    },
+    "common": {
+        "loading": "A carregar...",
+        "yes": "Sim",
+        "no": "Não",
+        "none": "Nenhum",
+        "back": "Voltar",
+        "all": "Todos",
+        "keep": "Manter",
+        "remove": "Remover",
+        "add": "Adicionar",
+        "deleteAll": "Eliminar tudo",
+        "clearSelection": "Limpar seleção",
+        "dragToReorder": "Arraste para reordenar",
+        "free": "Grátis",
+        "toDelete": "Para Eliminar",
+        "toAction": "Para {{action}}",
+        "underConstruction": "Em construção"
+    },
+    "artwork": {
+        "preview": "Pré-visualizar",
+        "previewAlt": "Pré-visualização da capa"
+    },
+    "metadataFetchError": {
+        "title": "Falha ao Carregar Metadados",
+        "body": "Ocorreu um erro ao obter sugestões de metadados. Ainda pode editar a música manualmente.",
+        "errorLabel": "Erro"
+    },
+    "songTitle": {
+        "stopAfterPlayback": "A reprodução irá parar após esta música",
+        "skipNextPlayback": "Esta música será ignorada após a reprodução"
+    },
+    "count": {
+        "songs_one": "{{count}} música",
+        "songs_other": "{{count}} músicas",
+        "albums_one": "{{count}} álbum",
+        "albums_other": "{{count}} álbuns",
+        "artists_one": "{{count}} artista",
+        "artists_other": "{{count}} artistas",
+        "playlists_one": "{{count}} lista",
+        "playlists_other": "{{count}} listas",
+        "devices_one": "{{count}} dispositivo",
+        "devices_other": "{{count}} dispositivos",
+        "issues_one": "{{count}} problema",
+        "issues_other": "{{count}} problemas",
+        "groups_one": "{{count}} grupo",
+        "groups_other": "{{count}} grupos",
+        "failures_one": "{{count}} falha",
+        "failures_other": "{{count}} falhas"
+    },
     "songs": {
         "searchPlaceholder": "Pesquisar músicas...",
         "sharedBy": "Partilhado por {{name}}",

@@ -1,5 +1,6 @@
 import {Button, Group, Stack, Text} from '@mantine/core';
 import type {ContextModalProps} from '@mantine/modals';
+import {useTranslation} from 'react-i18next';
 import {useDeleteQueue} from '../../client/playlists.ts';
 
 interface DeleteQueueModalInnerProps {
@@ -13,6 +14,7 @@ export default function DeleteQueueModal({
     id,
     innerProps,
 }: ContextModalProps<DeleteQueueModalInnerProps>) {
+    const {t} = useTranslation(["queue", "common"]);
     const deleteQueue = useDeleteQueue({
         mutation: {
             onSuccess: () => {
@@ -29,14 +31,14 @@ export default function DeleteQueueModal({
     return (
         <Stack>
             <Text>
-                Are you sure you want to delete "{innerProps.queueName}"? This action cannot be undone.
+                {t("queue:deleteModal.confirm", {name: innerProps.queueName})}
             </Text>
             <Group justify="flex-end">
                 <Button variant="subtle" onClick={() => context.closeModal(id)}>
-                    Cancel
+                    {t("common:actions.cancel")}
                 </Button>
                 <Button color="red" onClick={handleDelete} loading={deleteQueue.isPending}>
-                    Delete
+                    {t("common:actions.delete")}
                 </Button>
             </Group>
         </Stack>

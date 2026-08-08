@@ -2,6 +2,7 @@ import {Anchor, Tooltip} from "@mantine/core";
 import {IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import type {ListAlbumItem} from "../../model";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
@@ -9,6 +10,7 @@ import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 
 export function useAlbumsSchema() {
+    const {t} = useTranslation(["albums", "common"]);
     const {data: filterMetadata} = useFilterMetadata('albums');
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
@@ -41,7 +43,7 @@ export function useAlbumsSchema() {
             },
             {
                 name: 'name',
-                displayName: 'Name',
+                displayName: t("albums:schema.columns.name"),
                 render: row =>
                     <Tooltip label={row.name} openDelay={500}>
                         <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
@@ -51,7 +53,7 @@ export function useAlbumsSchema() {
             },
             {
                 name: 'year',
-                displayName: 'Year',
+                displayName: t("albums:schema.columns.year"),
                 render: row => row.year,
                 width: '60px',
                 align: 'center',
@@ -59,7 +61,7 @@ export function useAlbumsSchema() {
             },
             {
                 name: 'songsCount',
-                displayName: 'Songs',
+                displayName: t("albums:schema.columns.songs"),
                 render: row => row.songsCount,
                 width: '60px',
                 align: 'center',
@@ -67,7 +69,7 @@ export function useAlbumsSchema() {
             },
             {
                 name: 'createdAt',
-                displayName: 'Created At',
+                displayName: t("albums:schema.columns.createdAt"),
                 render: row => row.createdAt,
                 sortable: true,
                 hidden: true,
@@ -88,6 +90,6 @@ export function useAlbumsSchema() {
         renderListTitle: (row) => <Tooltip label={row.name} openDelay={500}>
             <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
-        renderListSubTitle: (row) => row.songsCount + ' songs',
-    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues]);
+        renderListSubTitle: (row) => t("albums:schema.songsCount", {count: row.songsCount}),
+    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues, t]);
 }

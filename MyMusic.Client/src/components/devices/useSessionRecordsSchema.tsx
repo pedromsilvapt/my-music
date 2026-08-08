@@ -1,4 +1,5 @@
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {Badge, Code, Text, Tooltip} from "@mantine/core";
 import {useQuery} from "@tanstack/react-query";
 import type {SyncRecordResponseItem} from "../../model";
@@ -62,6 +63,7 @@ function formatData(data: unknown): string {
 }
 
 export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
+    const {t} = useTranslation(["devices", "common"]);
     // Fetch filter metadata for session records
     const {data: filterMetadata} = useQuery<FilterMetadataResponse>({
         queryKey: ["session-records-filter-metadata", deviceId, sessionId],
@@ -95,7 +97,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
         columns: [
             {
                 name: 'filePath',
-                displayName: 'File Path',
+                displayName: t("devices:schema.columns.filePath"),
                 render: row => (
                     <Tooltip label={row.filePath} openDelay={500}>
                         <Code style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
@@ -107,19 +109,19 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
             },
             {
                 name: 'song',
-                displayName: 'Song',
+                displayName: t("devices:schema.columns.song"),
                 render: row => <SessionRecordSong songInfo={row.songInfo} />,
                 width: '2fr',
             },
             {
                 name: 'action',
-                displayName: 'Action',
+                displayName: t("devices:schema.columns.action"),
                 render: row => <Badge color={getActionColor(row.action)}>{row.action}</Badge>,
                 width: 110,
             },
             {
                 name: 'data',
-                displayName: 'Data',
+                displayName: t("devices:schema.columns.data"),
                 render: row => {
                     const formatted = formatData(row.data);
                     return formatted !== '-' ? (
@@ -134,7 +136,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
             },
             {
                 name: 'reason',
-                displayName: 'Reason',
+                displayName: t("devices:schema.columns.reason"),
                 render: row => row.reason ? (
                     <Tooltip label={row.reason} openDelay={500}>
                         <Text lineClamp={1} style={{maxWidth: '200px'}}>
@@ -146,7 +148,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
             },
             {
                 name: 'resolvesConflictRecordId',
-                displayName: 'Resolves',
+                displayName: t("devices:schema.columns.resolves"),
                 render: row => row.resolvesConflictRecordId != null ? (
                     <Badge color="yellow" variant="light" size="sm">
                         #{row.resolvesConflictRecordId}
@@ -157,7 +159,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
             },
             {
                 name: 'processedAt',
-                displayName: 'Processed At',
+                displayName: t("devices:schema.columns.processedAt"),
                 render: row => <Text>{row.processedAt ? formatDateTime(row.processedAt) : '-'}</Text>,
                 width: '1fr',
             },
@@ -173,9 +175,9 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
         renderListSubTitle: (row, lineClamp) => (
             <div>
                 <Text c="gray" size="sm" lineClamp={lineClamp}>
-                    {row.action}{row.resolvesConflictRecordId != null ? ` resolves #${row.resolvesConflictRecordId}` : ''}
+                    {row.action}{row.resolvesConflictRecordId != null ? ` ${t("devices:schema.resolves", {id: row.resolvesConflictRecordId})}` : ''}
                 </Text>
             </div>
         ),
-    }) as CollectionSchema<RecordWithId>, [filterMetadata, fetchFilterValues]);
+    }) as CollectionSchema<RecordWithId>, [filterMetadata, fetchFilterValues, t]);
 }

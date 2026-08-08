@@ -1,0 +1,23 @@
+{
+    "page": {
+        "fetchFailed": "Failed to fetch albums",
+        "searchPlaceholder": "Search albums..."
+    },
+    "detail": {
+        "fetchFailed": "Failed to fetch album",
+        "loading": "Loading...",
+        "backToAlbums": "Back to Albums",
+        "songsCount_one": "{{count}} song",
+        "songsCount_other": "{{count}} songs"
+    },
+    "schema": {
+        "columns": {
+            "name": "Name",
+            "year": "Year",
+            "songs": "Songs",
+            "createdAt": "Created At"
+        },
+        "songsCount_one": "{{count}} song",
+        "songsCount_other": "{{count}} songs"
+    }
+}

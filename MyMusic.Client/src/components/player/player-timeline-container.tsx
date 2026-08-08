@@ -1,6 +1,7 @@
 import {useRef} from 'react';
 import {useShallow} from 'zustand/react/shallow';
 import {notifications} from '@mantine/notifications';
+import {useTranslation} from 'react-i18next';
 import {useMediaSession} from "../../hooks/use-media-session";
 import {usePlayHistoryTracker} from "../../hooks/use-play-history.ts";
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
@@ -15,6 +16,7 @@ const TIME_UPDATE_DEBOUNCE_INTERVAL_SECONDS = .25;
 const MAX_LOAD_RETRIES = 3;
 
 export default function PlayerTimelineContainer() {
+    const {t} = useTranslation(["player", "queue", "common"]);
     usePlayHistoryTracker();
     useMediaSession();
 
@@ -83,8 +85,8 @@ export default function PlayerTimelineContainer() {
             if (err instanceof DOMException && err.name === 'NotAllowedError') {
                 console.warn('[PlayerTimelineContainer] Autoplay blocked by browser - user interaction required');
                 notifications.show({
-                    title: 'Autoplay blocked',
-                    message: 'Click Play to resume playback',
+                    title: t("player:notifications.autoplayBlockedTitle"),
+                    message: t("player:notifications.autoplayBlockedMessage"),
                     color: 'yellow',
                     autoClose: 5000,
                 });
@@ -116,16 +118,16 @@ export default function PlayerTimelineContainer() {
 
         if (retryCount < MAX_LOAD_RETRIES) {
             notifications.show({
-                title: 'Loading failed',
-                message: `Retrying... (attempt ${retryCount + 1}/${MAX_LOAD_RETRIES})`,
+                title: t("player:notifications.loadingFailedTitle"),
+                message: t("player:notifications.loadingFailedMessage", {attempt: retryCount + 1, total: MAX_LOAD_RETRIES}),
                 color: 'yellow',
                 autoClose: 3000,
             });
             incrementPlaybackKey();
         } else {
             notifications.show({
-                title: 'Failed to load song',
-                message: currentSong ? `"${currentSong.title}" could not be loaded.` : 'Current song could not be loaded.',
+                title: t("player:notifications.songLoadFailedTitle"),
+                message: currentSong ? t("player:notifications.songLoadFailedNamed", {title: currentSong.title}) : t("player:notifications.songLoadFailed"),
                 color: 'red',
                 autoClose: 5000,
             });
@@ -137,8 +139,8 @@ export default function PlayerTimelineContainer() {
                     wavesurferRef.current?.stop();
                     setIsPlaying(false);
                     notifications.show({
-                        title: 'Playback stopped',
-                        message: 'All remaining songs in the queue are flagged to skip.',
+                        title: t("player:notifications.playbackStoppedTitle"),
+                        message: t("player:notifications.playbackStoppedMessage"),
                         autoClose: 4000,
                     });
                 }
@@ -160,8 +162,8 @@ export default function PlayerTimelineContainer() {
         if (currentSong?.stopAfterPlayback) {
             setIsPlaying(false);
             notifications.show({
-                title: 'Stopped after this song',
-                message: `Stopped after "${currentSong.title}"`,
+                title: t("player:notifications.stoppedAfterSongTitle"),
+                message: t("player:notifications.stoppedAfterSongMessage", {title: currentSong.title}),
                 autoClose: 4000,
             });
             if (queueId != null && currentSongId != null) {
@@ -176,8 +178,8 @@ export default function PlayerTimelineContainer() {
                     {
                         onError: () => {
                             notifications.show({
-                                title: 'Error',
-                                message: 'Failed to clear stop-after flag. The flag may still be set.',
+                                title: t("common:status.error"),
+                                message: t("player:notifications.stopAfterClearFailedMessage"),
                                 color: 'red',
                                 autoClose: 4000,
                             });
@@ -194,8 +196,8 @@ export default function PlayerTimelineContainer() {
             wavesurferRef.current?.stop();
             setIsPlaying(false);
             notifications.show({
-                title: 'Playback stopped',
-                message: 'All remaining songs in the queue are flagged to skip.',
+                title: t("player:notifications.playbackStoppedTitle"),
+                message: t("player:notifications.playbackStoppedMessage"),
                 autoClose: 4000,
             });
         }

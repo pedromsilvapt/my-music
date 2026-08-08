@@ -1,0 +1,31 @@
+{
+    "queueIndicator": {
+        "title": "Fila de Compras"
+    },
+    "queue": {
+        "autoDownloadLabel": "Descarregar automaticamente as músicas compradas"
+    },
+    "queueList": {
+        "clearCompleted": "Limpar Concluídas",
+        "clearAll": "Limpar Tudo"
+    },
+    "schema": {
+        "download": "Descarregar",
+        "requeue": "Repor na Fila",
+        "clear": "Limpar",
+        "columns": {
+            "title": "Título",
+            "subTitle": "Subtítulo",
+            "status": "Estado"
+        },
+        "status": {
+            "queued": "Em Fila",
+            "acquiring": "A Adquirir",
+            "completed": "Concluída",
+            "failed": "Falhou"
+        }
+    },
+    "page": {
+        "fetchFailed": "Falha ao obter as compras"
+    }
+}

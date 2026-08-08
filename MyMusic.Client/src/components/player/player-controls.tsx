@@ -1,6 +1,7 @@
 import {ActionIcon, Group} from '@mantine/core';
 import {IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlayerSkipForward} from "@tabler/icons-react";
 import {useCallback} from "react";
+import {useTranslation} from "react-i18next";
 
 export interface PlayerControlsProps {
     isPlaying: boolean;
@@ -13,6 +14,7 @@ export interface PlayerControlsProps {
 
 export default function PlayerControls(props: PlayerControlsProps) {
     const {isPlaying, setIsPlaying, hasPrevious, hasNext, playPrevious, playNext} = props;
+    const {t} = useTranslation(["player", "common"]);
     const onPlayPause = useCallback(() => {
         setIsPlaying(!isPlaying);
     }, [setIsPlaying, isPlaying]);
@@ -22,8 +24,8 @@ export default function PlayerControls(props: PlayerControlsProps) {
             <ActionIcon
                 variant="default"
                 size="lg"
-                aria-label="Play Previous Track in Queue"
-                title="Previous"
+                aria-label={t("player:controls.playPreviousTrack")}
+                title={t("player:controls.previous")}
                 disabled={!hasPrevious}
                 onClick={playPrevious}
             >
@@ -32,8 +34,8 @@ export default function PlayerControls(props: PlayerControlsProps) {
             <ActionIcon
                 variant="default"
                 size="xl"
-                aria-label={isPlaying ? "Pause Current Track" : "Play Current Track"}
-                title={isPlaying ? "Pause" : "Play"}
+                aria-label={isPlaying ? t("player:controls.pauseCurrentTrack") : t("player:controls.playCurrentTrack")}
+                title={isPlaying ? t("player:controls.pause") : t("player:controls.play")}
                 onClick={onPlayPause}
             >
                 {isPlaying ? <IconPlayerPause/> : <IconPlayerPlay/>}
@@ -41,8 +43,8 @@ export default function PlayerControls(props: PlayerControlsProps) {
             <ActionIcon
                 variant="default"
                 size="lg"
-                aria-label="Play Next Track in Queue"
-                title="Next"
+                aria-label={t("player:controls.playNextTrack")}
+                title={t("player:controls.next")}
                 disabled={!hasNext}
                 onClick={playNext}
             >

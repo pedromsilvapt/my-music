@@ -368,6 +368,12 @@ public record ListSongsResponse
 - Use `useUncontrolled` from `@mantine/hooks` for controlled/uncontrolled props
 - Use `useDebouncedValue` from `@mantine/hooks` for debouncing, not manual `setTimeout`
 
+## Internationalization (Client)
+
+- Uses `i18next` + `react-i18next`; JSON locales live in `MyMusic.Client/src/locales/<lang>/<namespace>.json`, configured in `src/locales/index.ts`
+- Default/fallback language is `en`; supported languages are `en` and `pt` (add `pt` files for every new namespace)
+- Translate via `useTranslation(["<namespace>", "common"])`; new namespaces must be registered in `src/locales/index.ts` and added to both `en` and `pt`
+
 ## React Native & Expo Rules
 
 - Use `configService` for all config access; never modify AsyncStorage or use stores for persisted config

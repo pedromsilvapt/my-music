@@ -1,0 +1,117 @@
+{
+    "page": {
+        "fetchFailed": "Falha ao obter as regras de auditoria",
+        "noRules": "Sem regras de auditoria disponíveis"
+    },
+    "autoFetch": {
+        "label": "Obter Metadados Automaticamente"
+    },
+    "taskMonitor": {
+        "link": "Monitorizar Tarefas",
+        "title": "Progresso da Obtenção de Metadados",
+        "loadingQueueStatus": "A carregar o estado da fila...",
+        "loadQueueStatusFailed": "Falha ao carregar o estado da fila. Tente novamente mais tarde.",
+        "overallProgress": "Progresso Geral",
+        "completedOf": "{{completed}} / {{total}} concluídas",
+        "queuedCount": "{{count}} em espera",
+        "processingCount": "{{count}} em processamento",
+        "completedCount": "{{count}} concluídas",
+        "failedCount": "{{count}} falharam",
+        "failedTasks": "Tarefas Falhadas",
+        "loadingFailedTasks": "A carregar tarefas falhadas...",
+        "noFailedTasks": "Sem tarefas falhadas para apresentar.",
+        "processingComplete": "Processamento Concluído",
+        "allTasksProcessed_one": "Todas as tarefas foram processadas. Metadados obtidos com sucesso para {{count}} música.",
+        "allTasksProcessed_other": "Todas as tarefas foram processadas. Metadados obtidos com sucesso para {{count}} músicas.",
+        "failedTasksAlert_one": "{{count}} tarefa falhou. Pode tentar novamente as tarefas falhadas abaixo.",
+        "failedTasksAlert_other": "{{count}} tarefas falharam. Pode tentar novamente as tarefas falhadas abaixo.",
+        "clearAllTasks": "Limpar Todas as Tarefas e Metadados",
+        "retryFailedTasks": "Tentar Novamente as Tarefas Falhadas",
+        "confirmClearAllTitle": "Confirmar Limpeza Total",
+        "confirmClearAllBody": "Isto eliminará permanentemente todas as tarefas de obtenção de metadados e todos os metadados obtidos automaticamente. Esta ação não pode ser desfeita.",
+        "clearAll": "Limpar Tudo",
+        "failureReasons": {
+            "serviceUnavailable": "Serviço Indisponível",
+            "noMetadataFound": "Sem Metadados Encontrados",
+            "networkError": "Erro de Rede",
+            "systemError": "Erro de Sistema",
+            "timeout": "Tempo Esgotado"
+        }
+    },
+    "soundalike": {
+        "fetchFailed": "Falha ao obter os grupos de músicas semelhantes",
+        "instructions": "Clique numa música para a marcar como principal. Depois escolha uma ação para cada música restante: eliminar, fundir metadados e eliminar, ou manter.",
+        "noDuplicates": "Sem músicas duplicadas detetadas",
+        "matchScore": "Pontuação de Correspondência: {{score}}%",
+        "unknownAlbum": "Álbum Desconhecido",
+        "lyrics": "Letra",
+        "actions": {
+            "delete": "Eliminar",
+            "merge": "Fundir"
+        },
+        "confirmTitle": "Confirmar Resolução",
+        "confirmProcessLabel": "Está prestes a processar",
+        "groupCount_one": "{{count}} grupo",
+        "groupCount_other": "{{count}} grupos",
+        "confirmSongsToDelete_one": "{{count}} música será eliminada",
+        "confirmSongsToDelete_other": "{{count}} músicas serão eliminadas",
+        "confirmSongsToMerge_one": "{{count}} música terá os metadados fundidos primeiro",
+        "confirmSongsToMerge_other": "{{count}} músicas terão os metadados fundidos primeiro",
+        "deleting": "A eliminar: {{titles}}",
+        "mergingThenDeleting": "A fundir e depois eliminar: {{titles}}",
+        "keeping": "A manter: {{titles}}",
+        "resolveButton_one": "Resolver {{count}} Grupo",
+        "resolveButton_other": "Resolver {{count}} Grupos",
+        "resolveSuccess_one": "{{count}} grupo de músicas semelhantes resolvido",
+        "resolveSuccess_other": "{{count}} grupos de músicas semelhantes resolvidos",
+        "resolveFailed": "Falha ao resolver as músicas duplicadas: {{error}}",
+        "preview": {
+            "year": "Ano: {{value}}",
+            "lyrics": "Letra",
+            "artwork": "Arte",
+            "bitrate": "Taxa de bits: {{value}} kbps",
+            "genres": "Géneros: {{value}}",
+            "artists": "Artistas: {{value}}"
+        },
+        "toolbar": {
+            "removeDuplicates": "Remover Duplicadas ({{count}})"
+        }
+    },
+    "grantWaiver": {
+        "title": "Conceder Isenção",
+        "confirm": "Conceder Isenção",
+        "waivePrompt_one": "Introduza uma razão opcional para isentar {{count}} não conformidade:",
+        "waivePrompt_other": "Introduza uma razão opcional para isentar {{count}} não conformidades:",
+        "reasonLabel": "Razão da Isenção",
+        "reasonPlaceholder": "Razão opcional para a isenção..."
+    },
+    "detail": {
+        "fetchFailed": "Falha ao obter a regra de auditoria",
+        "titleFallback": "Regra de Auditoria",
+        "resetTitle": "Repor Regra de Auditoria",
+        "resetConfirm": "Tem a certeza que pretende limpar todas as não conformidades de \"{{name}}\"? Esta ação não pode ser desfeita.",
+        "thisAuditRule": "esta regra de auditoria",
+        "runScan": "Executar Verificação"
+    },
+    "default": {
+        "searchPlaceholder": "Pesquisar não conformidades...",
+        "skippedNonConformities_one": "{{count}} não conformidade sem música associada foi ignorada",
+        "skippedNonConformities_other": "{{count}} não conformidades sem músicas associadas foram ignoradas"
+    },
+    "schema": {
+        "fetchFilterValuesFailed": "Falha ao obter os valores do filtro para o campo \"{{field}}\"",
+        "columns": {
+            "title": "Título",
+            "artists": "Artistas",
+            "album": "Álbum",
+            "status": "Estado",
+            "detected": "Detetada"
+        },
+        "waived": "Isenta",
+        "pending": "Pendente",
+        "group": {
+            "waiver": "Isenção"
+        },
+        "removeWaiver": "Remover Isenção"
+    }
+}

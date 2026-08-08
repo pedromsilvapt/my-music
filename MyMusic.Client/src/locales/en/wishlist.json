@@ -1,0 +1,20 @@
+{
+    "modal": {
+        "title": "Wishlist",
+        "addCurrentSearch": "Add Current Search",
+        "empty": "No wishlist items yet. Search for songs and click \"Add Current Search\" to track results.",
+        "filterLabel": "Filter: {{filter}}",
+        "badgeUpdated": "Updated",
+        "badgeActive": "Active",
+        "unknownError": "Unknown error",
+        "addedTitle": "Added to Wishlist",
+        "addedMessage": "Tracking \"{{query}}\" for changes",
+        "addFailed": "Failed to add to wishlist: {{error}}",
+        "updatedTitle": "Updated",
+        "updatedMessage": "Wishlist item hash updated",
+        "updateFailed": "Failed to update: {{error}}",
+        "removedTitle": "Removed",
+        "deletedMessage": "Wishlist item deleted",
+        "deleteFailed": "Failed to delete: {{error}}"
+    }
+}

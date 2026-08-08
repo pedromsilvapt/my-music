@@ -21,6 +21,7 @@ import {saveAs} from 'file-saver';
 import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {getDownloadSongUrl} from "../../client/songs";
 import {useDeleteSongs} from "../../client/songs";
 import {useGetDevices} from "../../client/devices";
@@ -56,6 +57,7 @@ export interface UseSongsSchemaOptions {
 }
 
 export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
+    const {t} = useTranslation(["songs", "common"]);
     const {play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback} = useQueueMutations();
     const {setIsFavorite} = usePlaybackActions(s => ({setIsFavorite: s.setIsFavorite}));
     const {queue, currentSongId: queueCurrentSongId} = useQueue();
@@ -86,21 +88,21 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
     const deleteSongs = useDeleteSongs();
     const handleDelete = useCallback((songs: ListSongItem[]) => {
         modals.openConfirmModal({
-            title: songs.length === 1 ? 'Delete Song' : `Delete ${songs.length} Songs`,
+            title: songs.length === 1 ? t("songs:schema.deleteTitle") : t("songs:schema.deleteTitlePlural", {count: songs.length}),
             children: (
                 <Text size="sm">
-                    Are you sure you want to delete {songs.length === 1
-                    ? `"${songs[0]!.title}"`
-                    : `${songs.length} songs`}? This action cannot be undone.
+                    {songs.length === 1
+                        ? t("songs:schema.deleteConfirmSingle", {name: songs[0]!.title})
+                        : t("songs:schema.deleteConfirmPlural", {count: songs.length})}
                 </Text>
             ),
-            labels: {confirm: 'Delete', cancel: 'Cancel'},
+            labels: {confirm: t("common:actions.delete"), cancel: t("common:actions.cancel")},
             confirmProps: {color: 'red'},
             onConfirm: () => {
                 deleteSongs.mutate({data: {songIds: songs.map(s => s.id)}});
             },
         });
-    }, [deleteSongs]);
+    }, [deleteSongs, t]);
 
     const queueContext = useMemo(() => 
         options?.queueContext ?? {type: 'songs' as const}, 
@@ -153,7 +155,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'title',
-                displayName: 'Title',
+                displayName: t("songs:schema.columns.title"),
                 render: row => {
                     const visibleQueueCurrentSongId = effectiveVisibleQueueCurrentSongId ?? visibleQueue?.currentSongId;
                     const isCurrentSongOfVisibleQueue = visibleQueueCurrentSongId === row.id;
@@ -179,7 +181,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'artists',
-                displayName: 'Artists',
+                displayName: t("songs:schema.columns.artists"),
                 render: row => <SongArtists artists={row.artists}/>,
                 getValue: song => song.artists?.[0].name,
                 width: '1fr',
@@ -187,7 +189,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'album',
-                displayName: 'Album',
+                displayName: t("songs:schema.columns.album"),
                 render: row => <SongAlbum name={row.album.name} albumId={row.album.id}/>,
                 getValue: song => song.album.name,
                 width: '1fr',
@@ -195,7 +197,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'genres',
-                displayName: 'Genres',
+                displayName: t("songs:schema.columns.genres"),
                 render: row => row.genres.map(((genre, i) => <>
                     {i > 0 && ', '}
                     <Anchor key={genre.id} c={TEXT_COLOR}>{genre.name}</Anchor>
@@ -204,7 +206,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'year',
-                displayName: 'Year',
+                displayName: t("songs:schema.columns.year"),
                 render: row => row.year,
                 align: 'center',
                 width: 55,
@@ -212,7 +214,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'duration',
-                displayName: 'Duration',
+                displayName: t("songs:schema.columns.duration"),
                 render: row => row.duration,
                 align: 'right',
                 width: 80,
@@ -220,14 +222,14 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'devices',
-                displayName: 'Devices',
+                displayName: t("songs:schema.columns.devices"),
                 render: row => <SongDevicesCell song={row} allDevices={allDevices} />,
                 align: 'center',
                 width: 90,
             },
             {
                 name: 'createdAt',
-                displayName: 'Created At',
+                displayName: t("songs:schema.columns.createdAt"),
                 render: row => row.createdAt,
                 sortable: true,
                 hidden: true,
@@ -235,7 +237,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             },
             {
                 name: 'addedAt',
-                displayName: 'Added At',
+                displayName: t("songs:schema.columns.addedAt"),
                 render: row => row.addedAt ?? '',
                 sortable: true,
                 hidden: true,
@@ -252,7 +254,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 ...(sharedSongs.length > 0 ? [{
                     name: "import-shared",
                     renderIcon: () => <IconDownload/>,
-                    renderLabel: () => `Import ${sharedSongs.length === 1 ? 'Song' : `${sharedSongs.length} Songs`}`,
+                    renderLabel: () => sharedSongs.length === 1 ? t("songs:schema.importSingle") : t("songs:schema.importPlural", {count: sharedSongs.length}),
                     onClick: (songs: ListSongItem[]) => {
                         const shared = songs.filter(s => s.isShared);
                         for (const song of shared) {
@@ -260,11 +262,11 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         }
                     },
                 }] : []),
-                {group: "Manage"},
+                {group: t("songs:schema.manageGroup")},
                 {
                     name: "favorite",
                     renderIcon: () => allAreFavorites ? <IconHeartFilled/> : <IconHeart/>,
-                    renderLabel: () => allAreFavorites ? "Unfavorite" : "Favorite",
+                    renderLabel: () => allAreFavorites ? t("songs:schema.unfavorite") : t("songs:schema.favorite"),
                     onClick: (songs: ListSongItem[]) => {
                         toggleFavorites.mutate({data: {ids: songs.map(s => s.id)}});
                     },
@@ -272,7 +274,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 {
                     name: "manage-playlists",
                     renderIcon: () => <IconPlaylistAdd/>,
-                    renderLabel: () => "Manage Playlists",
+                    renderLabel: () => t("songs:schema.managePlaylists"),
                     onClick: (songs: ListSongItem[]) => {
                         openManagePlaylists(songs.map(s => s.id));
                     },
@@ -280,7 +282,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 {
                     name: "manage-devices",
                     renderIcon: () => <IconDevicesCog/>,
-                    renderLabel: () => "Manage Devices",
+                    renderLabel: () => t("songs:schema.manageDevices"),
                     onClick: (songs: ListSongItem[]) => {
                         openManageDevices(songs.map(s => s.id));
                     },
@@ -288,7 +290,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 ...(ownedSongs.length > 0 ? [{
                     name: "manage-sharing",
                     renderIcon: () => <IconShare/>,
-                    renderLabel: () => `Share ${ownedSongs.length === 1 ? 'Song' : `${ownedSongs.length} Songs`}`,
+                    renderLabel: () => ownedSongs.length === 1 ? t("songs:schema.shareSingle") : t("songs:schema.sharePlural", {count: ownedSongs.length}),
                     onClick: (songs: ListSongItem[]) => {
                         const owned = songs.filter(s => !s.isShared);
                         openManageSharing(owned.map(s => s.id));
@@ -297,7 +299,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 {
                     name: 'download',
                     renderIcon: () => <IconDownload/>,
-                    renderLabel: () => "Download",
+                    renderLabel: () => t("songs:schema.download"),
                     onClick: (songs: ListSongItem[]) => {
                         for (const song of songs) {
                             saveAs(getDownloadSongUrl(song.id));
@@ -307,11 +309,11 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 {
                     name: "edit",
                     renderIcon: () => <IconEdit/>,
-                    renderLabel: () => `Edit ${elems.length === 1 ? 'Song' : `${elems.length} Songs`}`,
+                    renderLabel: () => elems.length === 1 ? t("songs:schema.editSingle") : t("songs:schema.editPlural", {count: elems.length}),
                     onClick: (songs: ListSongItem[]) => {
                         modals.openContextModal({
                             modal: 'song-editor',
-                            title: 'Edit Song',
+                            title: t("songs:schema.editTitle"),
                             size: SONG_EDITOR_MODAL_SIZE,
                             innerProps: { songIds: songs.map(s => s.id) },
                         });
@@ -320,26 +322,26 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,
-                    renderLabel: () => `Delete ${elems.length === 1 ? 'Song' : `${elems.length} Songs`}`,
+                    renderLabel: () => elems.length === 1 ? t("songs:schema.deleteTitle") : t("songs:schema.deleteTitlePlural", {count: elems.length}),
                     onClick: handleDelete,
                 },
-                {group: "Queue"},
+                {group: t("songs:schema.queueGroup")},
                 {
                     name: "play",
                     renderIcon: () => <IconPlayerPlayFilled/>,
-                    renderLabel: () => "Play",
+                    renderLabel: () => t("songs:schema.play"),
                     onClick: (songs: ListSongItem[]) => play(songs),
                 },
                 {
                     name: "play-next",
                     renderIcon: () => <IconArrowRightDashed/>,
-                    renderLabel: () => "Play Next",
+                    renderLabel: () => t("songs:schema.playNext"),
                     onClick: (songs: ListSongItem[]) => playNext(songs),
                 },
                 {
                     name: "play-last",
                     renderIcon: () => <IconArrowForward/>,
-                    renderLabel: () => "Play Last",
+                    renderLabel: () => t("songs:schema.playLast"),
                     onClick: (songs: ListSongItem[]) => playLast(songs),
                 },
                 ...(nowPlaying ? [
@@ -351,7 +353,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                                 ? <IconPlayerStop color="var(--mantine-color-red-5)"/>
                                 : <IconPlayerStop style={{opacity: 0.4}}/>;
                         },
-                        renderLabel: () => "Stop After This Song",
+                        renderLabel: () => t("songs:schema.stopAfterThisSong"),
                         onClick: (songs: ListSongItem[]) => {
                             if (!effectiveQueueId) return;
                             const allHaveFlag = songs.every(s => isPlaylistSong(s) && s.stopAfterPlayback);
@@ -368,7 +370,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                                 ? <IconPlayerSkipForward color="var(--mantine-color-yellow-5)"/>
                                 : <IconPlayerSkipForward style={{opacity: 0.4}}/>;
                         },
-                        renderLabel: () => "Skip This Song",
+                        renderLabel: () => t("songs:schema.skipThisSong"),
                         onClick: (songs: ListSongItem[]) => {
                             if (!effectiveQueueId) return;
                             const allHaveFlag = songs.every(s => isPlaylistSong(s) && s.skipNextPlayback);
@@ -380,7 +382,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                     {
                         name: "shuffle",
                         renderIcon: () => <IconArrowsShuffle/>,
-                        renderLabel: () => "Shuffle",
+                        renderLabel: () => t("songs:schema.shuffle"),
                         onClick: (songs: ListSongItem[]) => {
                             const songIds = new Set(songs.map(s => s.id));
                             const indices = queue
@@ -392,7 +394,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                     {
                         name: "remove-from-queue",
                         renderIcon: () => <IconX/>,
-                        renderLabel: () => "Remove from Queue",
+                        renderLabel: () => t("songs:schema.removeFromQueue"),
                         onClick: (songs: ListSongItem[]) => {
                             const songIds = songs.map(s => s.id);
                             removeBySongIds(songIds, queueCurrentSongId);
@@ -416,5 +418,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                               lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, openManageSharing, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId]);
+    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, openManageSharing, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, t]);
 }

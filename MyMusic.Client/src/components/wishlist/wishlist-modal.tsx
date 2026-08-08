@@ -2,6 +2,7 @@ import {Badge, Button, Group, Modal, ScrollArea, Stack, Text, ThemeIcon} from "@
 import {notifications} from "@mantine/notifications";
 import {IconHeart, IconTrash} from "@tabler/icons-react";
 import {useCallback} from "react";
+import {useTranslation} from "react-i18next";
 import {useListSources} from "../../client/sources";
 import {useCreateWishlistMutation, useRemoveWishlistMutation, useUpdateWishlistMutation, useWishlist} from "../../hooks/use-wishlist";
 import type {ListSourceItem} from "../../model";
@@ -26,6 +27,7 @@ export default function WishlistModal({
     currentFilter,
     onItemClick
 }: WishlistModalProps) {
+    const {t} = useTranslation(["wishlist", "common"]);
     const {data: wishlistResponse, isPending} = useWishlist();
     const {data: sourcesResponse} = useListSources();
     const createMutation = useCreateWishlistMutation();
@@ -54,69 +56,69 @@ export default function WishlistModal({
             onSuccess: (response) => {
                 if (response.status >= 400) {
                     const responseData = response.data as { detail?: string } | undefined;
-                    const errorDetail = responseData?.detail || "Unknown error";
+                    const errorDetail = responseData?.detail || t("wishlist:modal.unknownError");
                     notifications.show({
-                        title: "Error",
-                        message: `Failed to add to wishlist: ${errorDetail}`,
+                        title: t("common:status.error"),
+                        message: t("wishlist:modal.addFailed", {error: errorDetail}),
                         color: "red"
                     });
                     return;
                 }
                 
                 notifications.show({
-                    title: "Added to Wishlist",
-                    message: `Tracking "${currentQuery}" for changes`,
+                    title: t("wishlist:modal.addedTitle"),
+                    message: t("wishlist:modal.addedMessage", {query: currentQuery}),
                     color: "green"
                 });
                 onClose();
             },
             onError: (error) => {
                 notifications.show({
-                    title: "Error",
-                    message: `Failed to add to wishlist: ${error}`,
+                    title: t("common:status.error"),
+                    message: t("wishlist:modal.addFailed", {error: String(error)}),
                     color: "red"
                 });
             }
         });
-    }, [currentSource, currentQuery, currentFilter, createMutation, onClose]);
+    }, [currentSource, currentQuery, currentFilter, createMutation, onClose, t]);
 
     const handleKeep = useCallback((id: number) => {
         updateMutation.mutate({id}, {
             onSuccess: () => {
                 notifications.show({
-                    title: "Updated",
-                    message: "Wishlist item hash updated",
+                    title: t("wishlist:modal.updatedTitle"),
+                    message: t("wishlist:modal.updatedMessage"),
                     color: "green"
                 });
             },
             onError: (error) => {
                 notifications.show({
-                    title: "Error",
-                    message: `Failed to update: ${error}`,
+                    title: t("common:status.error"),
+                    message: t("wishlist:modal.updateFailed", {error: String(error)}),
                     color: "red"
                 });
             }
         });
-    }, [updateMutation]);
+    }, [updateMutation, t]);
 
     const handleDelete = useCallback((id: number) => {
         deleteMutation.mutate({id}, {
             onSuccess: () => {
                 notifications.show({
-                    title: "Removed",
-                    message: "Wishlist item deleted",
+                    title: t("wishlist:modal.removedTitle"),
+                    message: t("wishlist:modal.deletedMessage"),
                     color: "green"
                 });
             },
             onError: (error) => {
                 notifications.show({
-                    title: "Error",
-                    message: `Failed to delete: ${error}`,
+                    title: t("common:status.error"),
+                    message: t("wishlist:modal.deleteFailed", {error: String(error)}),
                     color: "red"
                 });
             }
         });
-    }, [deleteMutation]);
+    }, [deleteMutation, t]);
 
     const canAddCurrentSearch = currentSource && currentQuery.trim();
     const hasItems = items.length > 0;
@@ -130,7 +132,7 @@ export default function WishlistModal({
                     <ThemeIcon variant="light" color="red">
                         <IconHeart size={16}/>
                     </ThemeIcon>
-                    <Text fw={500}>Wishlist</Text>
+                    <Text fw={500}>{t("wishlist:modal.title")}</Text>
                 </Group>
             }
             size="lg"
@@ -145,13 +147,13 @@ export default function WishlistModal({
                         onClick={handleAddCurrentSearch}
                         loading={createMutation.isPending}
                     >
-                        Add Current Search
+                        {t("wishlist:modal.addCurrentSearch")}
                     </Button>
                 )}
 
                 {!hasItems && !isPending && (
                     <Text c="dimmed" ta="center" size="sm">
-                        No wishlist items yet. Search for songs and click "Add Current Search" to track results.
+                        {t("wishlist:modal.empty")}
                     </Text>
                 )}
 
@@ -181,7 +183,7 @@ export default function WishlistModal({
                                                 </Text>
                                                 {item.filter && (
                                                     <Text size="xs" c="blue" lineClamp={1}>
-                                                        Filter: {item.filter}
+                                                        {t("wishlist:modal.filterLabel", {filter: item.filter})}
                                                     </Text>
                                                 )}
                                                 {source && (
@@ -192,12 +194,12 @@ export default function WishlistModal({
                                             </Stack>
                                             {item.status === WishlistItemStatus.Updated && (
                                                 <Badge color="yellow" variant="light">
-                                                    Updated
+                                                    {t("wishlist:modal.badgeUpdated")}
                                                 </Badge>
                                             )}
                                             {item.status === WishlistItemStatus.Active && (
                                                 <Badge color="green" variant="light">
-                                                    Active
+                                                    {t("wishlist:modal.badgeActive")}
                                                 </Badge>
                                             )}
                                         </Group>
@@ -212,7 +214,7 @@ export default function WishlistModal({
                                                     }}
                                                     loading={updateMutation.isPending}
                                                 >
-                                                    Keep
+                                                    {t("common:common.keep")}
                                                 </Button>
                                             )}
                                             <Button

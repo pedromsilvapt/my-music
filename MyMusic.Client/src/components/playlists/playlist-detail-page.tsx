@@ -1,15 +1,17 @@
 import {useParams} from "@tanstack/react-router";
 import {useEffect, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {useGetPlaylist} from "../../client/playlists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 
 export default function PlaylistDetailPage() {
+    const {t} = useTranslation(["playlists", "common"]);
     const {playlistId} = useParams({from: '/playlists/$playlistId'});
     const id = parseInt(playlistId, 10);
     const playlistQuery = useGetPlaylist(id);
-    const playlistResponse = useQueryData(playlistQuery, "Failed to fetch playlist");
+    const playlistResponse = useQueryData(playlistQuery, t("playlists:detailPage.fetchFailed"));
 
     const queueContext = useMemo(() => ({
         type: 'playlist' as const,

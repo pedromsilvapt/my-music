@@ -2,6 +2,7 @@ import {Alert, Button, Center, Group} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {useQueryClient} from "@tanstack/react-query";
 import {useCallback, useEffect, useRef, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {getListPurchasesQueryKey, useCreatePurchase} from "../../client/purchases.ts";
 import {useListSources, type searchSongsResponse, useSearchSongs} from "../../client/sources.ts";
 import {API_SEARCH_DEBOUNCE_MS} from "../../consts.ts";
@@ -18,6 +19,7 @@ import {useDisclosure} from "@mantine/hooks";
 import {usePurchasesStore} from "../../stores/purchases-store.ts";
 
 export default function SourcesSearch() {
+    const {t} = useTranslation(["sources", "common"]);
     const queryClient = useQueryClient()
     const searchInputRef = useRef<CollectionFilterBarRef>(null);
 
@@ -36,7 +38,7 @@ export default function SourcesSearch() {
     }, [debouncedSearch, appliedFilter]);
 
     const sourcesQuery = useListSources();
-    const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
+    const sourcesResponse = useQueryData(sourcesQuery, t("sources:page.fetchFailed")) ?? {data: {sources: []}};
     const sources = sourcesResponse?.data?.sources ?? [];
 
     const searchSongsQuery = useSearchSongs(source?.id ?? 0, debouncedSearch, {filter: appliedFilter, fuzzyMatch}, {
@@ -48,7 +50,7 @@ export default function SourcesSearch() {
 
     const searchSongsResponse = useQueryData(
         searchSongsQuery,
-        "Failed to search songs"
+        t("sources:search.fetchFailed")
     ) ?? {data: []};
 
     const {addPendingAutoDownload} = usePurchasesStore();
@@ -105,11 +107,11 @@ export default function SourcesSearch() {
                     <Center style={{flex: 1}}>
                         <Alert
                             icon={<IconAlertCircle/>}
-                            title="No Sources Configured"
+                            title={t("sources:page.noSourcesTitle")}
                             color="yellow"
                             style={{maxWidth: 400}}
                         >
-                            No sources are currently configured. Click the edit button in the toolbar to add sources.
+                            {t("sources:page.noSourcesBody")}
                         </Alert>
                     </Center>
                 </div>
@@ -149,7 +151,7 @@ export default function SourcesSearch() {
                             leftSection={fuzzyMatch ? <IconFilter size={16}/> : <IconFilterOff size={16}/>}
                             onClick={() => setFuzzyMatch(!fuzzyMatch)}
                         >
-                            {fuzzyMatch ? "Show all results" : "Show matched results"}
+                            {fuzzyMatch ? t("sources:search.showAllResults") : t("sources:search.showMatchedResults")}
                         </Button>
                     </Group>
                 </div>

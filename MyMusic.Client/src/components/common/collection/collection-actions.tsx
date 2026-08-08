@@ -2,6 +2,7 @@ import {ActionIcon, Box, Group, Menu, Tooltip} from "@mantine/core";
 import {useUncontrolled} from "@mantine/hooks";
 import {IconDotsVertical} from "@tabler/icons-react";
 import {useCallback} from "react";
+import {useTranslation} from "react-i18next";
 import type {CollectionSchemaAction, CollectionSchemaActionButton} from "./collection-schema.tsx";
 import {getCollectionActionKey} from "./collection-action-utils.ts";
 import {useSelectionStoreContext} from "./selection-store.ts";
@@ -15,6 +16,7 @@ export interface CollectionActionsProps<M> {
 }
 
 export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
+    const {t} = useTranslation(["collection", "common"]);
     const [opened, setOpened] = useUncontrolled({
         value: props.opened,
         defaultValue: false,
@@ -49,8 +51,8 @@ export default function CollectionActions<M>(props: CollectionActionsProps<M>) {
                     <ActionIcon
                         variant="default"
                         size={props.size ?? 'md'}
-                        aria-label="Actions"
-                        title="Actions"
+                        aria-label={t("collection:actions.menuLabel")}
+                        title={t("collection:actions.menuLabel")}
                     >
                         <IconDotsVertical/>
                     </ActionIcon>

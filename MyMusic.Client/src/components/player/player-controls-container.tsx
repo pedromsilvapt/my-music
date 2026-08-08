@@ -1,10 +1,12 @@
 import {notifications} from '@mantine/notifications';
+import {useTranslation} from "react-i18next";
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
 import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerControls from './player-controls';
 import {useWavesurferRef} from './wavesurfer-context';
 
 export default function PlayerControlsContainer() {
+    const {t} = useTranslation(["player", "queue", "common"]);
     const wavesurferRef = useWavesurferRef();
     const isPlaying = usePlaybackStore((s) =>
         s.current.type === 'LOADED' ? s.current.isPlaying : false
@@ -24,8 +26,8 @@ export default function PlayerControlsContainer() {
                     if (err instanceof DOMException && err.name === 'NotAllowedError') {
                         console.warn('[PlayerControlsContainer] play() blocked - user interaction required');
                         notifications.show({
-                            title: 'Playback blocked',
-                            message: 'Browser requires user interaction to play audio',
+                            title: t("player:notifications.playbackBlockedTitle"),
+                            message: t("player:notifications.playbackBlockedMessage"),
                             color: 'yellow',
                             autoClose: 4000,
                         });
@@ -44,8 +46,8 @@ export default function PlayerControlsContainer() {
         if (result?.allRemainingSkipped) {
             setIsPlaying(false);
             notifications.show({
-                title: 'Playback stopped',
-                message: 'All remaining songs in the queue are flagged to skip.',
+                title: t("player:notifications.playbackStoppedTitle"),
+                message: t("player:notifications.playbackStoppedMessage"),
                 autoClose: 4000,
             });
         }

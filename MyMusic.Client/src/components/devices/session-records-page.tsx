@@ -1,5 +1,6 @@
 import {useParams, Link} from "@tanstack/react-router";
 import {useEffect, useState, useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {Anchor, Breadcrumbs, Text} from "@mantine/core";
 import {useGetDevicesDeviceIdSessionsSessionIdRecords, useGetDevice} from "../../client/devices.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -14,14 +15,15 @@ const SEARCH_DEBOUNCE_MS = 300;
 type RecordWithId = Omit<SyncRecordResponseItem, 'id'> & { id: string };
 
 export default function SessionRecordsPage() {
+    const {t} = useTranslation(["devices", "common"]);
     const {deviceId, sessionId} = useParams({from: '/devices/$deviceId/sessions/$sessionId'});
     const deviceIdNum = parseInt(deviceId, 10);
     const sessionIdNum = parseInt(sessionId, 10);
     
     const deviceQuery = useGetDevice(deviceIdNum, {});
-    const deviceResponse = useQueryData(deviceQuery, "Failed to fetch device");
+    const deviceResponse = useQueryData(deviceQuery, t("devices:recordsPage.fetchDeviceFailed"));
     const device = deviceResponse?.data?.device;
-    const deviceName = device?.name ?? `Device ${deviceId}`;
+    const deviceName = device?.name ?? t("devices:recordsPage.deviceFallback", {id: deviceId});
     
     const [searchQuery, setSearchQuery] = useState("");
     const [filterQuery, setFilterQuery] = useState("");
@@ -49,7 +51,7 @@ export default function SessionRecordsPage() {
         }
     );
     
-    const recordsResponse = useQueryData(recordsQuery, "Failed to fetch session records");
+    const recordsResponse = useQueryData(recordsQuery, t("devices:recordsPage.fetchFailed"));
     const recordsSchema = useSessionRecordsSchema(deviceIdNum, sessionIdNum);
     
     const refetch = recordsQuery.refetch;
@@ -73,10 +75,10 @@ export default function SessionRecordsPage() {
     }, []);
     
     const breadcrumbItems = [
-        {title: 'Devices', href: '/devices', isLast: false},
+        {title: t("common:nav.devices"), href: '/devices', isLast: false},
         {title: deviceName, href: `/devices/${deviceId}/sessions`, isLast: false},
-        {title: `Session ${sessionId}`, href: `/devices/${deviceId}/sessions/${sessionId}`, isLast: false},
-        {title: 'Records', href: `/devices/${deviceId}/sessions/${sessionId}`, isLast: true},
+        {title: t("devices:recordsPage.session", {id: sessionId}), href: `/devices/${deviceId}/sessions/${sessionId}`, isLast: false},
+        {title: t("devices:recordsPage.records"), href: `/devices/${deviceId}/sessions/${sessionId}`, isLast: true},
     ];
     
     return (
@@ -104,7 +106,7 @@ export default function SessionRecordsPage() {
                     serverSearch={searchQuery}
                     serverFilter={filterQuery}
                     onServerFilterChange={handleFilterChange}
-                    searchPlaceholder="Search file paths..."
+                    searchPlaceholder={t("devices:recordsPage.searchPlaceholder")}
                 />
             </div>
         </div>

@@ -1,0 +1,51 @@
+{
+    "page": {
+        "fetchFailed": "Falha ao obter as fontes",
+        "noSourcesTitle": "Sem Fontes Configuradas",
+        "noSourcesBody": "Não existem fontes configuradas. Clique no botão de edição na barra de ferramentas para adicionar fontes."
+    },
+    "manageDialog": {
+        "title": "Gerir Fontes",
+        "createdMessage": "Fonte criada com sucesso",
+        "createFailed": "Falha ao criar a fonte",
+        "updatedMessage": "Fonte atualizada com sucesso",
+        "updateFailed": "Falha ao atualizar a fonte",
+        "deletedMessage": "Fonte eliminada com sucesso",
+        "deleteFailed": "Falha ao eliminar a fonte",
+        "unsavedChangesTitle": "Alterações Não Guardadas",
+        "unsavedChangesBody": "Tem alterações não guardadas. Descartá-las?",
+        "discardChanges": "Descartar Alterações",
+        "createNew": "Criar Nova",
+        "deleteSourceTitle": "Eliminar fonte",
+        "emptySelection": "Selecione uma fonte para editar ou criar uma nova",
+        "fields": {
+            "name": "Nome",
+            "namePlaceholder": "Nome da fonte",
+            "icon": "Ícone",
+            "iconPlaceholder": "Nome do ícone (ex.: IconMusic)",
+            "address": "Endereço",
+            "addressPlaceholder": "Endereço / URL da fonte",
+            "isPaid": "É Paga"
+        }
+    },
+    "search": {
+        "fetchFailed": "Falha ao pesquisar músicas",
+        "showAllResults": "Mostrar todos os resultados",
+        "showMatchedResults": "Mostrar resultados correspondentes"
+    },
+    "toolbar": {
+        "manageSources": "Gerir fontes"
+    },
+    "schema": {
+        "noAlbum": "(sem álbum)",
+        "purchase": "Comprar",
+        "columns": {
+            "title": "Título",
+            "artists": "Artistas",
+            "album": "Álbum",
+            "year": "Ano",
+            "duration": "Duração",
+            "price": "Preço"
+        }
+    }
+}

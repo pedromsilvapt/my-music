@@ -10,6 +10,8 @@ import {
     IconX
 } from "@tabler/icons-react";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
+import type {TFunction} from "i18next";
 import {type ListPurchaseItem, PurchasedSongStatus} from "../../model";
 import Artwork from "../common/artwork.tsx";
 import type {CollectionSchemaAction} from "../common/collection/collection-schema.tsx";
@@ -21,6 +23,7 @@ export function usePurchasedSongsSchema(
     onDownload: (purchases: ListPurchaseItem[]) => void,
     onClear: (purchases: ListPurchaseItem[]) => void,
 ) {
+    const {t} = useTranslation(["purchases", "common"]);
     return useMemo(() => ({
         key: row => row.id,
         searchVector: purchase => purchase.title + " " + purchase.subTitle,
@@ -35,22 +38,22 @@ export function usePurchasedSongsSchema(
             },
             {
                 name: 'title',
-                displayName: 'Title',
+                displayName: t("purchases:schema.columns.title"),
                 render: row =>
                     <Tooltip label={row.title} openDelay={500}><Text>{row.title}</Text></Tooltip>,
                 width: '1fr',
             },
             {
                 name: 'subTitle',
-                displayName: 'SubTitle',
+                displayName: t("purchases:schema.columns.subTitle"),
                 render: row => row.subTitle,
                 width: '2fr',
                 align: 'center',
             },
             {
                 name: 'status',
-                displayName: 'Status',
-                render: row => getStatusBadge(row.status),
+                displayName: t("purchases:schema.columns.status"),
+                render: row => getStatusBadge(row.status, t),
                 width: '200px',
                 align: 'center',
             }
@@ -63,7 +66,7 @@ export function usePurchasedSongsSchema(
                 buttons.push({
                     name: "download",
                     renderIcon: () => <IconDownload/>,
-                    renderLabel: () => "Download",
+                    renderLabel: () => t("purchases:schema.download"),
                     onClick: () => onDownload(purchases),
                     primary: true,
                 });
@@ -73,7 +76,7 @@ export function usePurchasedSongsSchema(
                 buttons.push({
                     name: "requeue",
                     renderIcon: () => <IconRefresh/>,
-                    renderLabel: () => "Requeue",
+                    renderLabel: () => t("purchases:schema.requeue"),
                     onClick: () => onRequeue(purchases),
                     primary: true,
                 });
@@ -83,7 +86,7 @@ export function usePurchasedSongsSchema(
                 buttons.push({
                     name: "clear",
                     renderIcon: () => <IconShoppingBagX/>,
-                    renderLabel: () => "Clear",
+                    renderLabel: () => t("purchases:schema.clear"),
                     onClick: () => onClear(purchases),
                     primary: true,
                 })
@@ -103,19 +106,19 @@ export function usePurchasedSongsSchema(
         </Tooltip>,
         renderListSubTitle: (row) => <>
             <Text c="gray">{row.subTitle}</Text>
-            {getStatusBadge(row.status)}
+            {getStatusBadge(row.status, t)}
         </>,
-    }) as CollectionSchema<ListPurchaseItem>, [onRequeue, onDownload, onClear]);
+    }) as CollectionSchema<ListPurchaseItem>, [onRequeue, onDownload, onClear, t]);
 }
 
 
 // Helper function to get status badge
-const getStatusBadge = (status: PurchasedSongStatus) => {
+const getStatusBadge = (status: PurchasedSongStatus, t: TFunction<["purchases", "common"]>) => {
     const config = {
-        [PurchasedSongStatus.Queued]: {color: 'blue', icon: IconClock, label: 'Queued'},
-        [PurchasedSongStatus.Acquiring]: {color: 'yellow', icon: IconLoader, label: 'Acquiring'},
-        [PurchasedSongStatus.Completed]: {color: 'green', icon: IconCheck, label: 'Completed'},
-        [PurchasedSongStatus.Failed]: {color: 'red', icon: IconX, label: 'Failed'},
+        [PurchasedSongStatus.Queued]: {color: 'blue', icon: IconClock, label: t("purchases:schema.status.queued")},
+        [PurchasedSongStatus.Acquiring]: {color: 'yellow', icon: IconLoader, label: t("purchases:schema.status.acquiring")},
+        [PurchasedSongStatus.Completed]: {color: 'green', icon: IconCheck, label: t("purchases:schema.status.completed")},
+        [PurchasedSongStatus.Failed]: {color: 'red', icon: IconX, label: t("purchases:schema.status.failed")},
     };
 
     const {color, icon: Icon, label} = config[status];

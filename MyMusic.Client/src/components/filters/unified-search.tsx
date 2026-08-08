@@ -2,6 +2,7 @@ import {TextInput} from "@mantine/core";
 import {useDebouncedValue} from "@mantine/hooks";
 import {IconSearch} from "@tabler/icons-react";
 import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {FILTER_DEBOUNCE_MS} from "../../consts.ts";
 
 interface UnifiedSearchProps {
@@ -10,7 +11,8 @@ interface UnifiedSearchProps {
     placeholder?: string;
 }
 
-export function UnifiedSearch({value, onChange, placeholder = "Search songs..."}: UnifiedSearchProps) {
+export function UnifiedSearch({value, onChange, placeholder}: UnifiedSearchProps) {
+    const {t} = useTranslation(["filters", "common"]);
     const [localValue, setLocalValue] = useState(value);
     const [debouncedValue] = useDebouncedValue(localValue, FILTER_DEBOUNCE_MS);
 
@@ -22,7 +24,7 @@ export function UnifiedSearch({value, onChange, placeholder = "Search songs..."}
 
     return (
         <TextInput
-            placeholder={placeholder}
+            placeholder={placeholder ?? t("common:songs.searchPlaceholder")}
             value={localValue}
             onChange={(e) => setLocalValue(e.target.value)}
             leftSection={<IconSearch size={16}/>}

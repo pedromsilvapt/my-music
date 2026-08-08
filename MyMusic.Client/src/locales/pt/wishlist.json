@@ -1,0 +1,20 @@
+{
+    "modal": {
+        "title": "Lista de Desejos",
+        "addCurrentSearch": "Adicionar Pesquisa Atual",
+        "empty": "Ainda não existem itens na lista de desejos. Pesquise músicas e clique em \"Adicionar Pesquisa Atual\" para monitorizar os resultados.",
+        "filterLabel": "Filtro: {{filter}}",
+        "badgeUpdated": "Atualizado",
+        "badgeActive": "Ativo",
+        "unknownError": "Erro desconhecido",
+        "addedTitle": "Adicionado à Lista de Desejos",
+        "addedMessage": "A monitorizar \"{{query}}\" para alterações",
+        "addFailed": "Falha ao adicionar à lista de desejos: {{error}}",
+        "updatedTitle": "Atualizado",
+        "updatedMessage": "Hash do item da lista de desejos atualizado",
+        "updateFailed": "Falha ao atualizar: {{error}}",
+        "removedTitle": "Removido",
+        "deletedMessage": "Item da lista de desejos eliminado",
+        "deleteFailed": "Falha ao eliminar: {{error}}"
+    }
+}

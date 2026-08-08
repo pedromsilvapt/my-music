@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {
     useBatchDeleteAuditNonConformities,
     useBatchSetAuditWaiver,
@@ -27,6 +28,7 @@ export default function AuditDefaultComponent({
     serverFilter,
     onServerFilterChange,
 }: AuditDefaultComponentProps) {
+    const {t} = useTranslation(["audits", "common"]);
     const batchSetWaiverMutation = useBatchSetAuditWaiver();
     const batchDeleteMutation = useBatchDeleteAuditNonConformities();
 
@@ -44,8 +46,8 @@ export default function AuditDefaultComponent({
     const skippedCount = nonConformities.length - nonConformitiesWithSongs.length;
     if (skippedCount > 0) {
         notifications.show({
-            title: "Warning",
-            message: `${skippedCount} non-conformity(ies) without associated songs were skipped`,
+            title: t("common:status.warning"),
+            message: t("audits:default.skippedNonConformities", {count: skippedCount}),
             color: "yellow"
         });
     }
@@ -103,7 +105,7 @@ export default function AuditDefaultComponent({
                     serverSearch={serverSearch}
                     serverFilter={serverFilter}
                     onServerFilterChange={onServerFilterChange}
-                    searchPlaceholder="Search non-conformities..."
+                    searchPlaceholder={t("audits:default.searchPlaceholder")}
                 />
             </div>
 

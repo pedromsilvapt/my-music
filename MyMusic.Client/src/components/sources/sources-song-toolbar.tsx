@@ -1,6 +1,7 @@
 import {ActionIcon, Center, Group, SegmentedControl} from "@mantine/core";
 import {useUncontrolled} from "@mantine/hooks";
 import {useEffect, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {useListSources} from "../../client/sources.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSourceItem, SourceSong} from "../../model";
@@ -18,6 +19,7 @@ export interface SourcesSearchToolbarProps extends CollectionToolbarProps<Source
 }
 
 export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
+    const {t} = useTranslation(["sources", "wishlist", "common"]);
     const [source, setSource] = useUncontrolled<ListSourceItem | null | undefined>({
         value: props.source,
         onChange: props.setSource,
@@ -37,7 +39,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
 
     const sourcesQuery = useListSources();
 
-    const sourcesResponse = useQueryData(sourcesQuery, "Failed to fetch sources") ?? {data: {sources: []}};
+    const sourcesResponse = useQueryData(sourcesQuery, t("sources:page.fetchFailed")) ?? {data: {sources: []}};
 
     const sources = sourcesResponse.data.sources;
 
@@ -66,7 +68,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
             setFilter={setFilter}
             searchInputRef={props.searchInputRef}
             filterMode="server"
-            searchPlaceholder="Search songs..."
+            searchPlaceholder={t("common:songs.searchPlaceholder")}
             renderLeftSection={() => (
                 <Group gap="xs" wrap="nowrap">
                     <SegmentedControl
@@ -78,7 +80,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
                         variant="subtle"
                         size="lg"
                         onClick={props.onManageSources}
-                        title="Manage sources"
+                        title={t("sources:toolbar.manageSources")}
                     >
                         <IconPencil size={18}/>
                     </ActionIcon>
@@ -97,7 +99,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
                             props.onApplyFilter?.(filterValue);
                         }}
                         filterMode="server"
-                        placeholder="Search songs..."
+                        placeholder={t("common:songs.searchPlaceholder")}
                         filterMetadata={props.filterMetadata}
                         fetchFilterValues={props.fetchFilterValues}
                     />
@@ -105,7 +107,7 @@ export default function SourcesSearchToolbar(props: SourcesSearchToolbarProps) {
                         variant="subtle"
                         size="lg"
                         onClick={props.onOpenWishlist}
-                        title="Wishlist"
+                        title={t("wishlist:modal.title")}
                     >
                         <IconHeart size={18}/>
                     </ActionIcon>

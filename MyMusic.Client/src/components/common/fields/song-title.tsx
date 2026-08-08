@@ -1,6 +1,7 @@
 import {Anchor, Tooltip} from "@mantine/core";
 import {IconPlayerPauseFilled, IconPlayerPlayFilled, IconPlayerSkipForward, IconPlayerStop} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
+import {useTranslation} from "react-i18next";
 import {TEXT_COLOR} from "../../../utils/colors.ts";
 import ExplicitLabel from "../explicit-label.tsx";
 
@@ -17,6 +18,7 @@ export interface SongTitleProps {
 }
 
 export default function SongTitle(props: SongTitleProps) {
+    const {t} = useTranslation(["common"]);
     let content: React.ReactNode;
 
     if (props.link) {
@@ -31,12 +33,12 @@ export default function SongTitle(props: SongTitleProps) {
 
     return <ExplicitLabel visible={props.isExplicit ?? false}>
         {props.stopAfterPlayback && (
-            <Tooltip label="Playback will stop after this song" openDelay={500}>
+            <Tooltip label={t("common:songTitle.stopAfterPlayback")} openDelay={500}>
                 <IconPlayerStop size={16} style={{marginRight: 4}} color="var(--mantine-color-red-5)"/>
             </Tooltip>
         )}
         {props.skipNextPlayback && (
-            <Tooltip label="This song will be skipped after playback" openDelay={500}>
+            <Tooltip label={t("common:songTitle.skipNextPlayback")} openDelay={500}>
                 <IconPlayerSkipForward size={16} style={{marginRight: 4}} color="var(--mantine-color-yellow-5)"/>
             </Tooltip>
         )}

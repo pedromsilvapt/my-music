@@ -1,5 +1,6 @@
 import {Button, Group, Modal, Stack, Text, Textarea} from "@mantine/core";
 import {useState} from "react";
+import {useTranslation} from "react-i18next";
 import {ZINDEX_MODAL} from "../../consts.ts";
 
 interface GrantWaiverModalProps {
@@ -11,6 +12,7 @@ interface GrantWaiverModalProps {
 }
 
 export default function GrantWaiverModal({opened, onClose, onConfirm, count, loading}: GrantWaiverModalProps) {
+    const {t} = useTranslation(["audits", "common"]);
     const [reason, setReason] = useState("");
 
     const handleConfirm = () => {
@@ -23,17 +25,15 @@ export default function GrantWaiverModal({opened, onClose, onConfirm, count, loa
         onClose();
     };
 
-    const itemText = count === 1 ? "non-conformity" : "non-conformities";
-
     return (
-        <Modal opened={opened} onClose={handleClose} title="Grant Waiver" centered zIndex={ZINDEX_MODAL}>
+        <Modal opened={opened} onClose={handleClose} title={t("audits:grantWaiver.title")} centered zIndex={ZINDEX_MODAL}>
             <Stack>
                 <Text>
-                    Enter an optional reason for waiving {count} {itemText}:
+                    {t("audits:grantWaiver.waivePrompt", {count})}
                 </Text>
                 <Textarea
-                    label="Waiver Reason"
-                    placeholder="Optional reason for the waiver..."
+                    label={t("audits:grantWaiver.reasonLabel")}
+                    placeholder={t("audits:grantWaiver.reasonPlaceholder")}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={3}
@@ -41,10 +41,10 @@ export default function GrantWaiverModal({opened, onClose, onConfirm, count, loa
                 />
                 <Group justify="flex-end">
                     <Button variant="subtle" onClick={handleClose}>
-                        Cancel
+                        {t("common:actions.cancel")}
                     </Button>
                     <Button onClick={handleConfirm} loading={loading}>
-                        Grant Waiver
+                        {t("audits:grantWaiver.confirm")}
                     </Button>
                 </Group>
             </Stack>

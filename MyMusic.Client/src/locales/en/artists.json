@@ -1,0 +1,32 @@
+{
+    "page": {
+        "fetchFailed": "Failed to fetch artists",
+        "searchPlaceholder": "Search artists..."
+    },
+    "detail": {
+        "fetchFailed": "Failed to fetch artist",
+        "loading": "Loading...",
+        "backToArtists": "Back to Artists",
+        "albums": "Albums",
+        "songs": "Songs",
+        "albumsCount_one": "{{count}} album",
+        "albumsCount_other": "{{count}} albums",
+        "songsCount_one": "{{count}} song",
+        "songsCount_other": "{{count}} songs",
+        "songFilter": {
+            "all": "All",
+            "own": "Own Albums",
+            "other": "Other Albums"
+        }
+    },
+    "schema": {
+        "columns": {
+            "name": "Name",
+            "albums": "Albums",
+            "songs": "Songs",
+            "createdAt": "Created At"
+        },
+        "albumsCount_one": "{{count}} album",
+        "albumsCount_other": "{{count}} albums"
+    }
+}

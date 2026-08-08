@@ -1,0 +1,42 @@
+{
+    "bar": {
+        "advanced": "Advanced",
+        "clearFilter": "Clear filter",
+        "hideAdvanced": "Hide advanced filter",
+        "showAdvanced": "Show advanced filter",
+        "filterDsl": "Filter DSL",
+        "pressCtrlEnter": "Press Ctrl+Enter to apply",
+        "examples": "Examples",
+        "clear": "Clear"
+    },
+    "codeEditor": {
+        "computed": "(computed)",
+        "operators": {
+            "equals": "Equals",
+            "notEquals": "Not equals",
+            "greaterThan": "Greater than",
+            "greaterThanOrEqual": "Greater than or equal",
+            "lessThan": "Less than",
+            "lessThanOrEqual": "Less than or equal",
+            "contains": "Contains (string)",
+            "startsWith": "Starts with",
+            "endsWith": "Ends with",
+            "inList": "In list",
+            "notInList": "Not in list",
+            "between": "Between two values",
+            "isNull": "Is null",
+            "isNotNull": "Is not null",
+            "isTrue": "Is true",
+            "isFalse": "Is false"
+        },
+        "keywords": {
+            "and": "Logical AND",
+            "or": "Logical OR",
+            "group": "Group expressions"
+        },
+        "quantifiers": {
+            "any": "At least one element matches (default for positive operators)",
+            "all": "All elements must match (default for negative operators)"
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "manageDialog": {
+        "title": "Gerir Partilhas",
+        "fetchSongsFailed": "Falha ao obter as músicas",
+        "fetchUsersFailed": "Falha ao obter os utilizadores",
+        "fetchCurrentUserFailed": "Falha ao obter o utilizador atual",
+        "fetchSharesFailed": "Falha ao obter as partilhas de músicas",
+        "noOwnedSongs": "Nenhuma música própria selecionada",
+        "managing_one": "A gerir {{count}} música",
+        "managing_other": "A gerir {{count}} músicas",
+        "filterPlaceholder": "Filtrar por nome de utilizador ou nome",
+        "noRecipients": "Nenhum destinatário encontrado",
+        "updateFailedFallback": "Falha ao atualizar as partilhas. Tente novamente."
+    }
+}

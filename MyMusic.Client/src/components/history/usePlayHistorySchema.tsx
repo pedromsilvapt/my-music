@@ -2,11 +2,13 @@ import {Anchor, Text} from "@mantine/core";
 
 import {useNavigate} from "@tanstack/react-router";
 import {useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import type {ListPlayHistoryItem} from "../../model";
 import SongArtwork from "../common/fields/song-artwork";
 import type {CollectionSchema} from "../common/collection/collection";
 
 export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
+    const {t} = useTranslation(["history", "common"]);
     const navigate = useNavigate();
 
     return useMemo(() => ({
@@ -28,7 +30,7 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
             },
             {
                 name: 'songTitle',
-                displayName: 'Title',
+                displayName: t("history:schema.columns.title"),
                 render: row => (
                     <Anchor
                         c="inherit"
@@ -43,7 +45,7 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
             },
             {
                 name: 'artistName',
-                displayName: 'Artist',
+                displayName: t("history:schema.columns.artist"),
                 render: row => row.artistId != null ? (
                     <Anchor
                         c="inherit"
@@ -60,7 +62,7 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
             },
             {
                 name: 'albumName',
-                displayName: 'Album',
+                displayName: t("history:schema.columns.album"),
                 render: row => (
                     <Anchor
                         c="inherit"
@@ -75,14 +77,14 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
             },
             {
                 name: 'deviceName',
-                displayName: 'Device',
+                displayName: t("history:schema.columns.device"),
                 render: row => row.deviceName ?? '-',
                 getValue: row => row.deviceName ?? '',
                 width: '1fr',
             },
             {
                 name: 'playedAt',
-                displayName: 'Played At',
+                displayName: t("history:schema.columns.playedAt"),
                 render: row => new Date(row.playedAt).toLocaleString(),
                 getValue: row => row.playedAt,
                 width: '1fr',
@@ -123,5 +125,5 @@ export function usePlayHistorySchema(): CollectionSchema<ListPlayHistoryItem> {
                 {row.deviceName && ` • ${row.deviceName}`}
             </Text>
         ),
-    }) as CollectionSchema<ListPlayHistoryItem>, [navigate]);
+    }) as CollectionSchema<ListPlayHistoryItem>, [navigate, t]);
 }

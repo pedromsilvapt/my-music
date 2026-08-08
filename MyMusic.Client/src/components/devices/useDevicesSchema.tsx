@@ -3,6 +3,7 @@ import {modals} from "@mantine/modals";
 import {notifications} from "@mantine/notifications";
 import {IconTrash, IconHistory} from "@tabler/icons-react";
 import {useCallback, useMemo} from "react";
+import {useTranslation} from "react-i18next";
 import {Link} from "@tanstack/react-router";
 import {useDeleteDevicesDeviceId} from "../../client/devices.ts";
 import type {ListDeviceItem} from "../../model";
@@ -12,21 +13,21 @@ import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {TEXT_COLOR} from "../../utils/colors.ts";
 
 export function useDevicesSchema() {
+    const {t} = useTranslation(["devices", "common"]);
     const deleteDevice = useDeleteDevicesDeviceId();
     const {data: filterMetadata} = useFilterMetadata('devices');
 
     const handleDelete = useCallback((devices: ListDeviceItem[]) => {
         modals.openConfirmModal({
-            title: 'Delete Device',
+            title: t("devices:schema.deleteTitle"),
             children: (
                 <Text size="sm">
-                    Are you sure you want to delete {devices.length === 1
-                    ? `"${devices[0]!.name}"`
-                    : `${devices.length} devices`}?
-                    This will also remove all associated songs and sync history. This action cannot be undone.
+                    {devices.length === 1
+                        ? t("devices:schema.deleteConfirmSingle", {name: devices[0]!.name})
+                        : t("devices:schema.deleteConfirmPlural", {count: devices.length})}
                 </Text>
             ),
-            labels: {confirm: 'Delete', cancel: 'Cancel'},
+            labels: {confirm: t("common:actions.delete"), cancel: t("common:actions.cancel")},
             confirmProps: {color: 'red'},
             onConfirm: () => {
                 for (const device of devices) {
@@ -35,15 +36,15 @@ export function useDevicesSchema() {
                         {
                             onSuccess: () => {
                                 notifications.show({
-                                    title: 'Device Deleted',
-                                    message: `Device "${device.name}" has been deleted.`,
+                                    title: t("devices:schema.deletedTitle"),
+                                    message: t("devices:schema.deletedMessage", {name: device.name}),
                                     color: 'green',
                                 });
                             },
                             onError: (error) => {
                                 notifications.show({
-                                    title: 'Error',
-                                    message: `Failed to delete device "${device.name}"`,
+                                    title: t("common:status.error"),
+                                    message: t("devices:schema.deleteFailed", {name: device.name}),
                                     color: 'red',
                                 });
                                 console.error('Failed to delete device:', error);
@@ -53,7 +54,7 @@ export function useDevicesSchema() {
                 }
             },
         });
-    }, [deleteDevice]);
+    }, [deleteDevice, t]);
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
         const params = new URLSearchParams({field, limit: "15"});
@@ -81,7 +82,7 @@ export function useDevicesSchema() {
             },
             {
                 name: 'name',
-                displayName: 'Name',
+                displayName: t("devices:schema.columns.name"),
                 render: row => (
                     <Anchor component={Link} to={`/devices/${row.id}/sessions`} c={TEXT_COLOR}>
                         <Text fw={500}>{row.name}</Text>
@@ -92,7 +93,7 @@ export function useDevicesSchema() {
             },
             {
                 name: 'songCount',
-                displayName: 'Songs',
+                displayName: t("devices:schema.columns.songs"),
                 render: row => <Text>{row.songCount}</Text>,
                 width: 80,
                 align: 'center',
@@ -100,14 +101,14 @@ export function useDevicesSchema() {
             },
             {
                 name: 'namingTemplate',
-                displayName: 'Naming Template',
-                render: row => <Code>{row.namingTemplate ?? 'Default'}</Code>,
+                displayName: t("devices:schema.columns.namingTemplate"),
+                render: row => <Code>{row.namingTemplate ?? t("devices:schema.default")}</Code>,
                 width: '2fr',
             },
             {
                 name: 'lastSyncAt',
-                displayName: 'Last Sync',
-                render: row => <Text c="dimmed">{row.lastSyncAt ? new Date(row.lastSyncAt).toLocaleString() : 'Never'}</Text>,
+                displayName: t("devices:schema.columns.lastSync"),
+                render: row => <Text c="dimmed">{row.lastSyncAt ? new Date(row.lastSyncAt).toLocaleString() : t("devices:schema.never")}</Text>,
                 width: 180,
                 sortable: true,
                 getValue: row => row.lastSyncAt ?? null,
@@ -116,11 +117,11 @@ export function useDevicesSchema() {
 
         actions: () => {
             return [
-                {group: "Manage"},
+                {group: t("devices:schema.manageGroup")},
                 {
                     name: "view-sessions",
                     renderIcon: () => <IconHistory/>,
-                    renderLabel: () => "View Sessions",
+                    renderLabel: () => t("devices:schema.viewSessions"),
                     onClick: (devices: ListDeviceItem[]) => {
                         const device = devices[0];
                         if (device) {
@@ -131,7 +132,7 @@ export function useDevicesSchema() {
                 {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,
-                    renderLabel: () => "Delete",
+                    renderLabel: () => t("common:actions.delete"),
                     onClick: handleDelete,
                 }
             ];
@@ -144,6 +145,6 @@ export function useDevicesSchema() {
                 <Text fw={500}>{row.name}</Text>
             </Anchor>
         ),
-        renderListSubTitle: (row) => <Text c="gray">{row.songCount} songs</Text>,
-    }) as CollectionSchema<ListDeviceItem>, [handleDelete, filterMetadata, fetchFilterValues]);
+        renderListSubTitle: (row) => <Text c="gray">{t("common:count.songs", {count: row.songCount})}</Text>,
+    }) as CollectionSchema<ListDeviceItem>, [handleDelete, filterMetadata, fetchFilterValues, t]);
 }
