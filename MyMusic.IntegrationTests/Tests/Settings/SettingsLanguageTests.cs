@@ -1,3 +1,4 @@
+using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
@@ -15,6 +16,10 @@ public class SettingsLanguageTests(ITestOutputHelper output) : IntegrationTestBa
         var settings = await home.Navbar.GoToSettingsAsync();
         await settings.WaitForLoadedAsync();
         await settings.LanguageSelect.SelectAsync("pt");
+
+        // Wait for the mutation + query refetch to settle so the persisted
+        // value is reflected in the hidden input before reloading
+        await settings.LanguageSelect.WaitUntilValueAsync("pt");
 
         // Reload so the preference is re-read from the server
         await Page.ReloadAsync();
@@ -46,8 +51,7 @@ public class SettingsLanguageTests(ITestOutputHelper output) : IntegrationTestBa
         await settings.WaitForLoadedAsync();
         await settings.LanguageSelect.SelectAsync("pt");
 
-        // The navbar settings link label should now be translated
-        var settingsLabel = await home.Navbar.SettingsLink.InnerTextAsync();
-        settingsLabel.ShouldBe("Definições");
+        // Wait for the i18n language switch to complete and the navbar label to update
+        await Assertions.Expect(home.Navbar.SettingsLink).ToHaveTextAsync("Definições");
     }
 }

@@ -54,7 +54,7 @@ export function useUserPreferences() {
     const updateLanguage = async (language: string) => {
         await updateMutation.mutateAsync({data: {language}});
         if (isSupportedLanguage(language)) {
-            void i18n.changeLanguage(language);
+            await i18n.changeLanguage(language);
             document.documentElement.lang = language;
         }
     };

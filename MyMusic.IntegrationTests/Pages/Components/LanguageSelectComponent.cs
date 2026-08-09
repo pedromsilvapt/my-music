@@ -35,6 +35,17 @@ public class LanguageSelectComponent(ILocator root) : BaseComponent(root)
         await option.WaitForAsync(new() { State = WaitForSelectorState.Visible });
         await option.ClickAsync();
     }
+
+    /// <summary>
+    /// Waits until the select's persisted value matches <paramref name="expected"/>.
+    /// Use after <see cref="SelectAsync"/> to wait for the mutation + query refetch
+    /// (and the i18n language switch) to settle before asserting or reloading.
+    /// </summary>
+    public async Task WaitUntilValueAsync(string expected, int timeout = 10000)
+    {
+        var hiddenInput = Root.Page.GetByTestId("settings-language-value");
+        await Assertions.Expect(hiddenInput).ToHaveAttributeAsync("value", expected, new() { Timeout = timeout });
+    }
 }
 
 /// <summary>
