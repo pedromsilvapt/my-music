@@ -223,8 +223,7 @@ export const createGenre = async (createGenreRequest: CreateGenreRequest, option
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createGenreRequest,)
+    body: JSON.stringify(createGenreRequest)
   }
 )
 

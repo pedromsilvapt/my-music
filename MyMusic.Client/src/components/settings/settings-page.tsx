@@ -17,7 +17,7 @@ export default function SettingsPage() {
                     <Text size="sm" c="dimmed" mb="sm">{t("settings:languageHelp")}</Text>
                     <Select
                         data-testid="settings-language"
-                        hiddenInputProps={{ "data-testid": "settings-language-value" }}
+                        hiddenInputProps={{ "data-testid": "settings-language-value" } as React.ComponentPropsWithoutRef<'input'>}
                         label={t("settings:language")}
                         value={currentLanguage}
                         data={LANGUAGE_OPTIONS.map((o) => ({value: o.value, label: o.label}))}

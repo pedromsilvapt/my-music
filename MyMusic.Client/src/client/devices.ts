@@ -233,8 +233,7 @@ export const postDevices = async (createDeviceRequest: CreateDeviceRequest, opti
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createDeviceRequest,)
+    body: JSON.stringify(createDeviceRequest)
   }
 )
 
@@ -333,8 +332,7 @@ export const putDevicesDeviceId = async (deviceId: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateDeviceRequest,)
+    body: JSON.stringify(updateDeviceRequest)
   }
 )
 
@@ -557,7 +555,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(deviceId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevice>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: deviceId !== null && deviceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDevice>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetDeviceQueryResult = NonNullable<Awaited<ReturnType<typeof getDevice>>>
@@ -670,8 +668,7 @@ if(postDevicesDeviceIdSyncSessionIdUploadBody.createdAt !== undefined) {
     ...options,
     method: 'POST'
     ,
-    body:
-      formData,
+    body: formData
   }
 )
 

@@ -129,7 +129,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(songId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSongShares>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: songId !== null && songId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSongShares>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type ListSongSharesQueryResult = NonNullable<Awaited<ReturnType<typeof listSongShares>>>
@@ -224,8 +224,7 @@ export const createSongShare = async (songId: number,
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createSongShareRequest,)
+    body: JSON.stringify(createSongShareRequest)
   }
 )
 
@@ -776,8 +775,7 @@ export const manageSongShares = async (manageSongSharesRequest: ManageSongShares
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      manageSongSharesRequest,)
+    body: JSON.stringify(manageSongSharesRequest)
   }
 )
 

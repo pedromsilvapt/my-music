@@ -228,8 +228,7 @@ export const createArtist = async (createArtistRequest: CreateArtistRequest, opt
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createArtistRequest,)
+    body: JSON.stringify(createArtistRequest)
   }
 )
 
@@ -369,7 +368,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getArtist>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetArtistQueryResult = NonNullable<Awaited<ReturnType<typeof getArtist>>>

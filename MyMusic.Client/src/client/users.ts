@@ -220,8 +220,7 @@ export const createUser = async (createUserRequest: CreateUserRequest, options?:
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createUserRequest,)
+    body: JSON.stringify(createUserRequest)
   }
 )
 
@@ -444,8 +443,7 @@ export const updateCurrentUser = async (updateUserRequest: UpdateUserRequest, op
     ...options,
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateUserRequest,)
+    body: JSON.stringify(updateUserRequest)
   }
 )
 

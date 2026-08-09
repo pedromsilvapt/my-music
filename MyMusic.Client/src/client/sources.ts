@@ -229,8 +229,7 @@ export const createSource = async (createSourceRequest: CreateSourceRequest, opt
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      createSourceRequest,)
+    body: JSON.stringify(createSourceRequest)
   }
 )
 
@@ -359,7 +358,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSource>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSource>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetSourceQueryResult = NonNullable<Awaited<ReturnType<typeof getSource>>>
@@ -454,8 +453,7 @@ export const updateSource = async (id: number,
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(
-      updateSourceRequest,)
+    body: JSON.stringify(updateSourceRequest)
   }
 )
 
@@ -666,7 +664,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(encodedUrl), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: encodedUrl !== null && encodedUrl !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof proxyThumbnail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type ProxyThumbnailQueryResult = NonNullable<Awaited<ReturnType<typeof proxyThumbnail>>>
@@ -812,7 +810,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id && query), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchSongs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && query !== null && query !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchSongs>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type SearchSongsQueryResult = NonNullable<Awaited<ReturnType<typeof searchSongs>>>
@@ -1088,7 +1086,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id && songId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && songId !== null && songId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type GetSongQueryResult = NonNullable<Awaited<ReturnType<typeof getSong>>>
@@ -1228,7 +1226,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id && songId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof purchaseSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && songId !== null && songId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof purchaseSong>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type PurchaseSongQueryResult = NonNullable<Awaited<ReturnType<typeof purchaseSong>>>
@@ -1368,7 +1366,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(id && query), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchAlbums>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && query !== null && query !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchAlbums>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type SearchAlbumsQueryResult = NonNullable<Awaited<ReturnType<typeof searchAlbums>>>
@@ -1504,7 +1502,7 @@ const {query: queryOptions, fetch: fetchOptions} = options ?? {};
 
 
 
-   return  { queryKey, queryFn, enabled: !!(query), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchMetadataAllSources>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: query !== null && query !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchMetadataAllSources>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
 export type SearchMetadataAllSourcesQueryResult = NonNullable<Awaited<ReturnType<typeof searchMetadataAllSources>>>
