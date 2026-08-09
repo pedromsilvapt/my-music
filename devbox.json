@@ -24,8 +24,7 @@
         "dotnet ef database update --project MyMusic.Common --startup-project MyMusic.Server"
       ],
       "bump": [
-        "cd ./MyMusic.Client/",
-        "npx dotnet-bump $1 ../MyMusic.Server/MyMusic.Server.csproj ../MyMusic.CLI/MyMusic.CLI.csproj ../MyMusic.Mobile/package.json ../MyMusic.Mobile/package-lock.json package.json package-lock.json"
+        "./scripts/bump.sh $1"
       ],
       "start:android": [
         "cd ./MyMusic.Mobile",
