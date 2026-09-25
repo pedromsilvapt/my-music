@@ -110,18 +110,43 @@ public class SyncCommitServiceAcknowledgedSpecs
         record.Acknowledged.ShouldBeTrue();
     }
 
-    [Fact]
-    public async Task CommitAsync_DryRun_SucceedsWithUnacknowledgedClientActionRecords()
+    /// <summary>
+    /// Dry-run must fail the commit under exactly the same conditions as a real run, so that a
+    /// dry-run is a faithful preview (clients acknowledge client-action records in both modes).
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CommitAsync_FailsWithUnacknowledgedClientActionRecords_RegardlessOfDryRun(bool isDryRun)
     {
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
-        var session = scenario.CreateSession(device);
+        var session = scenario.CreateSession(device, isDryRun: isDryRun);
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal);
         scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal);
+
+        var ex = await Should.ThrowAsync<InvalidOperationException>(async () =>
+            await service.CommitAsync(db, session.Id, device.Id, isDryRun, cancellationToken: default));
+
+        ex.Message.ShouldContain("unacknowledged client-action records");
+    }
+
+    [Fact]
+    public async Task CommitAsync_DryRun_SucceedsWhenAllClientRecordsAcknowledged()
+    {
+        var scenario = new Scenario();
+        var db = scenario.DbContext;
+        var user = scenario.AdminUser;
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, isDryRun: true);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+
+        scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal, acknowledged: true);
+        scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal, acknowledged: true);
 
         var result = await service.CommitAsync(db, session.Id, device.Id, true, cancellationToken: default);
 

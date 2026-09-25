@@ -31,21 +31,20 @@ public class SyncCommitService(
             .OrderBy(r => r.Id)
             .ToListAsync(cancellationToken);
 
-        if (!isDryRun)
-        {
-            var unacknowledgedClientActions = records
-                .Where(r => !r.Acknowledged && IsClientActionType(r.Action))
-                .ToList();
+        // Validated in dry-run too: clients acknowledge client-action records in both modes, so a
+        // dry-run commit must fail under exactly the same conditions as a real one.
+        var unacknowledgedClientActions = records
+            .Where(r => !r.Acknowledged && IsClientActionType(r.Action))
+            .ToList();
 
-            if (unacknowledgedClientActions.Count > 0)
-            {
-                var unacknowledgedSummary = string.Join(", ",
-                    unacknowledgedClientActions.GroupBy(r => r.Action)
-                        .Select(g => $"{g.Key}: {g.Count()}"));
-                throw new InvalidOperationException(
-                    $"Cannot commit session {sessionId}: {unacknowledgedClientActions.Count} unacknowledged client-action records ({unacknowledgedSummary}). " +
-                    "Client must acknowledge all pending actions before commit.");
-            }
+        if (unacknowledgedClientActions.Count > 0)
+        {
+            var unacknowledgedSummary = string.Join(", ",
+                unacknowledgedClientActions.GroupBy(r => r.Action)
+                    .Select(g => $"{g.Key}: {g.Count()}"));
+            throw new InvalidOperationException(
+                $"Cannot commit session {sessionId}: {unacknowledgedClientActions.Count} unacknowledged client-action records ({unacknowledgedSummary}). " +
+                "Client must acknowledge all pending actions before commit.");
         }
 
         AcknowledgeServerActionRecords(records);
