@@ -1077,44 +1077,32 @@ public class SongsController(
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var results = new List<BatchMultiUpdateSongResult>();
 
-        try
+        foreach (var item in request.Updates)
         {
-            var results = new List<BatchMultiUpdateSongResult>();
+            var update = MapMultiItemToModel(item);
+            var result = await songUpdateService.BatchUpdateSong(context, item.SongId, update, cancellationToken);
 
-            foreach (var item in request.Updates)
+            if (result.Success && result.Song != null)
             {
-                var update = MapMultiItemToModel(item);
-                var result = await songUpdateService.BatchUpdateSong(context, item.SongId, update, cancellationToken);
-
-                if (result.Success && result.Song != null)
+                var song = await context.Songs.FirstOrDefaultAsync(s => s.Id == item.SongId, cancellationToken);
+                if (song != null)
                 {
-                    var song = await context.Songs.FirstOrDefaultAsync(s => s.Id == item.SongId, cancellationToken);
-                    if (song != null)
-                    {
-                        await EvaluateAndRemoveAuditNonConformitiesAsync(context, song, cancellationToken);
-                    }
+                    await EvaluateAndRemoveAuditNonConformitiesAsync(context, song, cancellationToken);
                 }
-
-                results.Add(new BatchMultiUpdateSongResult
-                {
-                    Id = result.Id,
-                    Success = result.Success,
-                    Error = result.Error,
-                    Song = result.Song != null ? MapToDto(result.Song) : null,
-                });
             }
 
-            await transaction.CommitAsync(cancellationToken);
+            results.Add(new BatchMultiUpdateSongResult
+            {
+                Id = result.Id,
+                Success = result.Success,
+                Error = result.Error,
+                Song = result.Song != null ? MapToDto(result.Song) : null,
+            });
+        }
 
-            return new BatchMultiUpdateSongsResponse { Songs = results };
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
+        return new BatchMultiUpdateSongsResponse { Songs = results };
     }
 
     private (Source Source, SourceSong Song) FindClosestMatch(

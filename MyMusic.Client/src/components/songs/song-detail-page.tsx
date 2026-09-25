@@ -24,6 +24,7 @@ import {saveAs} from 'file-saver';
 import {useTranslation} from "react-i18next";
 
 import {getDownloadSongUrl, useDeleteSongs, useGetLocalSong} from "../../client/songs.ts";
+import {useGetSongHistory} from "../../client/song-history.ts";
 import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
@@ -37,6 +38,7 @@ import {formatRelativeDate} from "../../utils/format-relative-date.ts";
 import Artwork from "../common/artwork.tsx";
 import ExplicitLabel from "../common/explicit-label.tsx";
 import DeviceBadge from "../devices/device-badge.tsx";
+import SongVersionsMenu from "./song-versions-menu.tsx";
 
 export default function SongDetailPage() {
     const {t} = useTranslation(["songs", "common"]);
@@ -51,6 +53,13 @@ export default function SongDetailPage() {
     const {open: openManageDevices} = useManageDevicesContext();
     const {open: openManageSharing} = useManageSharingContext();
     const deleteSongs = useDeleteSongs();
+    const historyQuery = useGetSongHistory(Number(songId));
+    const historyItems = (historyQuery.data?.data.history ?? [])
+        .slice()
+        .sort((a, b) => b.songRevision - a.songRevision);
+    const firstRevisionId = historyItems.length > 0
+        ? historyItems[historyItems.length - 1].id
+        : null;
 
     const handleDelete = useCallback(() => {
         if (!song) return;
@@ -78,7 +87,7 @@ export default function SongDetailPage() {
     }
 
     return (
-        <Stack gap="md"  data-testid="song-detail" data-loading={songQuery.isFetching ? "true" : "false"}>
+        <Stack gap="md"  data-testid="song-detail" data-loading={songQuery.isFetching || historyQuery.isFetching ? "true" : "false"}>
             <Link to="/songs">
                 <Group gap="xs">
                     <IconArrowBack size={16}/>
@@ -115,6 +124,13 @@ export default function SongDetailPage() {
                             <Tooltip label={new Date(song.createdAt).toLocaleString()} openDelay={500}>
                                 <Text size="sm" c="dimmed">{formatRelativeDate(song.createdAt)}</Text>
                             </Tooltip>
+                        )}
+                        {song && historyItems.length > 0 && (
+                            <SongVersionsMenu
+                                song={song}
+                                historyItems={historyItems}
+                                firstRevisionId={firstRevisionId}
+                            />
                         )}
                         {song.isExplicit &&
                             <ExplicitLabel visible={true}><Text size="sm">{t("songs:detailPage.explicit")}</Text></ExplicitLabel>}

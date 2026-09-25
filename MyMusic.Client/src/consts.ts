@@ -33,3 +33,5 @@ export const ZINDEX_DRAWER = 1001;
 export const ZINDEX_LIGHTBOX = 1002;
 
 export const SONG_EDITOR_MODAL_SIZE = "lg";
+
+export const SONG_VERSION_MODAL_SIZE = "xl";

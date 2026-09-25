@@ -9,6 +9,8 @@ using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.PlaylistSongs;
+using MyMusic.Common.Services.SongHistory;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Services.Sync;
 
 namespace MyMusic.Common;
@@ -27,6 +29,14 @@ public static class HostBuilderExtensions
         builder.Services.AddHostedService<BitrateBackfillService>();
         builder.Services.AddHostedService<WishlistBackgroundService>();
         builder.Services.AddHostedService<StagingDirectoryCleanupService>();
+        builder.Services.AddHostedService<SongHistoryWorker>();
+
+        // Song history services
+        builder.Services.AddScoped<ISongHistoryDiffService, SongHistoryDiffService>();
+        builder.Services.AddScoped<ISongHistoryThumbnailService, SongHistoryThumbnailService>();
+        builder.Services.AddScoped<ISongHistoryQueryService, SongHistoryQueryService>();
+        builder.Services.AddScoped<ISongHistoryVersionDiffService, SongHistoryVersionDiffService>();
+        builder.Services.AddScoped<ISongHistorySnapshotService, SongHistorySnapshotService>();
 
         // Queues and executors
         builder.Services.AddSingleton<PurchasesQueue>();

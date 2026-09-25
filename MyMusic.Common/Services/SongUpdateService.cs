@@ -28,6 +28,8 @@ public class SongUpdateService(
     public async Task<SongUpdateResult> UpdateSong(MusicDbContext db, long songId, SongUpdateModel update,
         CancellationToken cancellationToken = default)
     {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         var song = await LoadSongAsync(db, songId, cancellationToken);
 
         if (song == null)
@@ -73,6 +75,8 @@ public class SongUpdateService(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Saved changes for song {SongId}", songId);
 
+        await transaction.CommitAsync(cancellationToken);
+
         return MapToResult(song);
     }
 
@@ -91,6 +95,7 @@ public class SongUpdateService(
             };
         }
 
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         try
         {
             var oldChecksum = song.Checksum;
@@ -114,6 +119,8 @@ public class SongUpdateService(
             }
 
             await db.SaveChangesAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
 
             return new BatchUpdateResult
             {

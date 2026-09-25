@@ -14,4 +14,10 @@ public class Config
     public int WishlistMaxResultsToHash { get; set; } = 50;
 
     public bool BitrateBackfillEnabled { get; set; }
+
+    public bool SongHistoryWorkerEnabled { get; set; } = true;
+
+    public int SongHistoryWorkerIntervalSeconds { get; set; } = 10;
+
+    public int SongHistoryWorkerBatchSize { get; set; } = 50;
 }

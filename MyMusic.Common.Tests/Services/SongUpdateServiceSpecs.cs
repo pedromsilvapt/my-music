@@ -352,6 +352,54 @@ public class SongUpdateServiceSpecs
         songAfterSecond.FileModifiedAt.ShouldBe(fileModifiedAtAfterFirst);
     }
 
+    // ---------------------------------------------------------------------
+    // UpdateSong wraps all DB operations in a single transaction so that all
+    // PostgreSQL triggers share the same txid_current() — enabling the
+    // SongHistoryWorker to compact them into a single history row.
+    // ---------------------------------------------------------------------
+    [Fact]
+    public async Task UpdateSong_WrapsInSingleTransaction()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
+        AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
+
+        var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
+
+        // Act — after UpdateSong returns, no transaction should be left open
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert — the transaction was committed and is no longer active
+        scenario.DbContext.Database.CurrentTransaction.ShouldBeNull();
+    }
+
+    // ---------------------------------------------------------------------
+    // BatchUpdateSong wraps all DB operations in a single transaction
+    // ---------------------------------------------------------------------
+    [Fact]
+    public async Task BatchUpdateSong_WrapsInSingleTransaction()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
+        AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
+
+        var update = new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") };
+
+        // Act
+        await service.BatchUpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert — the transaction was committed and is no longer active
+        scenario.DbContext.Database.CurrentTransaction.ShouldBeNull();
+    }
+
     #region Helpers
 
     private void AddSongToDevice(MusicDbContext db, Song song, Device device, string path,

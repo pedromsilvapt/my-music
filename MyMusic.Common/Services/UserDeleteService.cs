@@ -26,6 +26,18 @@ public class UserDeleteService(
         var username = user.Username;
         logger.LogInformation("Deleting user {UserId} ({Username})", id, username);
 
+        // Collect the user's song IDs before any deletion so we can clean up
+        // SongHistory and SongHistoryQueue (which have no FK to Songs and are
+        // not cascaded). Pre-cleanup removes dead-lettered queue entries that
+        // would otherwise block song deletion via the BEFORE DELETE trigger.
+        var songIds = await db.Songs
+            .Where(s => s.OwnerId == id)
+            .Select(s => s.Id)
+            .ToArrayAsync(cancellationToken);
+
+        await DeleteSongHistoryQueuesAsync(songIds, cancellationToken);
+        await DeleteSongHistoriesAsync(songIds, cancellationToken);
+
         await DeleteDeviceSyncSessionRecordsAsync(id, cancellationToken);
         await DeleteDeviceSyncSessionsAsync(id, cancellationToken);
         await DeleteSongDevicesAsync(id, cancellationToken);
@@ -47,13 +59,22 @@ public class UserDeleteService(
         await DeleteGenresAsync(id, cancellationToken);
         await DeleteDevicesAsync(id, cancellationToken);
 
+        // Post-cleanup: the deletion steps above fire PostgreSQL triggers that
+        // enqueue new SongHistoryQueue entries (song BEFORE DELETE, artist/genre/
+        // source/device AFTER INSERT/DELETE). Remove those trigger-created
+        // entries along with any SongHistory rows the worker may have produced
+        // between the pre-cleanup and now.
+        await DeleteSongHistoryQueuesAsync(songIds, cancellationToken);
+        await DeleteSongHistoriesAsync(songIds, cancellationToken);
+
         user.CurrentQueueId = null;
         await db.SaveChangesAsync(cancellationToken);
 
         await DeletePlaylistsAsync(id, cancellationToken);
 
-        db.Users.Remove(user);
-        await db.SaveChangesAsync(cancellationToken);
+        await db.Users
+            .Where(u => u.Id == id)
+            .ExecuteDeleteAsync(cancellationToken);
 
         var musicRepositoryPath = config.Value.MusicRepositoryPath;
         var userMusicDir = fileSystem.Path.Combine(musicRepositoryPath, username);
@@ -304,5 +325,23 @@ public class UserDeleteService(
             .Where(p => p.OwnerId == ownerId)
             .ExecuteDeleteAsync(ct);
         logger.LogDebug("Deleted {Count} Playlists for user {UserId}", playlists, ownerId);
+    }
+
+    private async Task DeleteSongHistoryQueuesAsync(long[] songIds, CancellationToken ct)
+    {
+        if (songIds.Length == 0) return;
+        var count = await db.SongHistoryQueues
+            .Where(q => songIds.Contains(q.SongId))
+            .ExecuteDeleteAsync(ct);
+        logger.LogDebug("Deleted {Count} SongHistoryQueues for user", count);
+    }
+
+    private async Task DeleteSongHistoriesAsync(long[] songIds, CancellationToken ct)
+    {
+        if (songIds.Length == 0) return;
+        var count = await db.SongHistories
+            .Where(h => songIds.Contains(h.SongId))
+            .ExecuteDeleteAsync(ct);
+        logger.LogDebug("Deleted {Count} SongHistories for user", count);
     }
 }

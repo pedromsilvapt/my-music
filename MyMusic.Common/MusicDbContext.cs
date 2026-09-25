@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.SongHistory.Models;
 
 namespace MyMusic.Common;
 
@@ -62,6 +63,10 @@ public class MusicDbContext : DbContext
     public DbSet<ExcludedDuplicatePair> ExcludedDuplicatePairs { get; set; } = null!;
 
     public DbSet<SongSharing> SongSharings { get; set; } = null!;
+
+    public DbSet<SongHistory> SongHistories { get; set; } = null!;
+
+    public DbSet<SongHistoryQueue> SongHistoryQueues { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -207,5 +212,49 @@ public class MusicDbContext : DbContext
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // SongHistory entity configuration
+        // No FK on SongId: individual song deletion preserves history (triggers
+        // enqueue snapshots, worker processes them). UserDeleteService cleans up
+        // both SongHistory and SongHistoryQueue when a user is deleted.
+        modelBuilder.Entity<SongHistory>(entity =>
+        {
+            var jsonConverter = new ValueConverter<SongHistoryDelta, string>(
+                v => JsonSerializer.Serialize(v, SongHistoryJsonOptions.Options),
+                v => DeserializeSongHistoryDelta(v));
+            entity.Property(e => e.Diff).HasConversion(jsonConverter);
+
+            entity.HasIndex(e => new { e.SongId, e.SongRevision }).IsUnique();
+        });
+
+        // SongHistoryQueue entity configuration
+        // No FK on SongId: individual song deletion preserves queue entries
+        // (triggers enqueue snapshots for the worker). UserDeleteService cleans
+        // up both SongHistoryQueue and SongHistory when a user is deleted.
+        modelBuilder.Entity<SongHistoryQueue>(entity =>
+        {
+            var jsonConverter = new ValueConverter<SongSnapshot, string>(
+                v => JsonSerializer.Serialize(v, SongHistoryJsonOptions.Options),
+                v => DeserializeSongSnapshot(v));
+            entity.Property(e => e.Data).HasConversion(jsonConverter);
+
+            entity.Property(e => e.LastError).HasMaxLength(2000);
+
+            entity.Property(e => e.ErrorCount).HasDefaultValue(0);
+
+            entity.HasIndex(e => new { e.SongId, e.SongRevision }).IsUnique();
+            entity.HasIndex(e => e.ProcessedAt);
+            entity.HasIndex(e => e.SongId);
+            entity.HasIndex(e => new { e.SongId, e.TransactionId });
+        });
     }
+
+    private static SongSnapshot DeserializeSongSnapshot(string v)
+        => JsonSerializer.Deserialize<SongSnapshot>(v, SongHistoryJsonOptions.Options)
+           ?? throw new JsonException("Failed to deserialize SongSnapshot");
+
+    private static SongHistoryDelta DeserializeSongHistoryDelta(string v)
+        => string.IsNullOrEmpty(v)
+            ? new SongHistoryDelta()
+            : JsonSerializer.Deserialize<SongHistoryDelta>(v, SongHistoryJsonOptions.Options) ?? new SongHistoryDelta();
 }

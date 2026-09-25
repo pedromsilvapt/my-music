@@ -177,6 +177,23 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         return new EditSongModalComponent(dialog);
     }
 
+    /// <summary>
+    /// Opens the version at <paramref name="index"/> in the versions menu (0 is the newest) and returns its modal.
+    /// </summary>
+    public async Task<SongVersionModalComponent> OpenVersionAsync(int index)
+    {
+        await Root.GetByTestId("song-versions-trigger").ClickAsync();
+        await Page.GetByTestId("song-version-item").Nth(index).ClickAsync();
+
+        await VersionModal.WaitForLoadedAsync();
+        return VersionModal;
+    }
+
+    /// <summary>
+    /// The currently open version modal (see <see cref="OpenVersionAsync"/>).
+    /// </summary>
+    public SongVersionModalComponent VersionModal => new(Page.GetByRole(AriaRole.Dialog));
+
     public async Task<ManagePlaylistsDialogComponent> OpenManagePlaylistsDialogAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Manage Playlists" }).ClickAsync();

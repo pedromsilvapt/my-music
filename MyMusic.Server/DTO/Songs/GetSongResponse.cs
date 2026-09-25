@@ -32,6 +32,7 @@ public record GetSongResponseSong
     public string? RepositoryPath { get; set; }
     public int? Track { get; set; }
     public required bool IsShared { get; set; }
+    public required DateTime ModifiedAt { get; init; }
 
     /// <summary>
     /// Maps a <see cref="Entities.Song"/> to a <see cref="GetSongResponseSong"/>, computing
@@ -64,6 +65,7 @@ public record GetSongResponseSong
             RepositoryPath = song.RepositoryPath,
             Track = song.Track,
             IsShared = song.OwnerId != currentUserId,
+            ModifiedAt = song.ModifiedAt,
         };
 }
 

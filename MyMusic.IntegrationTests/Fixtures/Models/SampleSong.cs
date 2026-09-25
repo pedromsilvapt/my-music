@@ -8,4 +8,5 @@ public record SampleSong(
     int? Year = null,
     string? Lyrics = null,
     string? AlbumArtist = null,
-    long[]? DeviceIds = null);
+    long[]? DeviceIds = null,
+    int VersionsCount = 0);

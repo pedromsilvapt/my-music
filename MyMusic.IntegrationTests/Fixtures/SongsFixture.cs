@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
+using Polly;
 using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures.Models;
 using Shouldly;
@@ -203,6 +205,11 @@ public class SongsFixture
             var songId = json?.GetProperty("songId").GetInt64()
                 ?? throw new InvalidOperationException("Failed to get song ID from response");
 
+            if (song.VersionsCount > 0)
+            {
+                await SeedVersionsAsync(api, songId, song.VersionsCount);
+            }
+
             var devicePaths = new Dictionary<long, string>();
 
             if (song.DeviceIds != null && song.DeviceIds.Length > 0)
@@ -262,6 +269,67 @@ public class SongsFixture
         var songs = await SeedAsync(api, userId, [song], logger);
         return songs[0];
     }
+
+    /// <summary>
+    /// Edits the song's lyrics until it has <paramref name="versionsCount"/> history versions (the upload
+    /// records the first one), then waits for the asynchronous history worker to record all of them.
+    /// </summary>
+    private static async Task SeedVersionsAsync(IAPIRequestContext api, long songId, int versionsCount)
+    {
+        for (var revision = 2; revision <= versionsCount; revision++)
+        {
+            var response = await api.PutWithTraceAsync($"/api/songs/{songId}", new()
+            {
+                DataObject = new
+                {
+                    songId,
+                    lyrics = new { newValue = $"Lyrics of revision {revision}" },
+                },
+            });
+
+            response.Ok.ShouldBeTrue($"Failed to edit song {songId}: {response.Status} {response.StatusText}");
+        }
+
+        await WaitForVersionsCountAsync(api, songId, versionsCount);
+    }
+
+    /// <summary>
+    /// Waits until the song has at least <paramref name="count"/> history versions.
+    /// <para>
+    /// Exception to the "wait for UI state" rule: versions are recorded by an asynchronous background worker
+    /// and never pushed to the client, so the only way to observe them in the UI would be reloading the page
+    /// repeatedly. Polling the (much cheaper) history API is used instead, before navigating to the page.
+    /// </para>
+    /// </summary>
+    public static async Task WaitForVersionsCountAsync(IAPIRequestContext api, long songId, int count)
+    {
+        var pipeline = new ResiliencePipelineBuilder<int>()
+            .AddRetry(new()
+            {
+                ShouldHandle = args => ValueTask.FromResult(args.Outcome.Result < count),
+                MaxRetryAttempts = 30,
+                Delay = TimeSpan.FromSeconds(1),
+                BackoffType = DelayBackoffType.Constant,
+            })
+            .Build();
+
+        var versionsCount = await pipeline.ExecuteAsync(
+            async _ => (await GetHistoryAsync(api, songId)).History.Count);
+
+        versionsCount.ShouldBeGreaterThanOrEqualTo(count, $"Song {songId} should have {count} history versions");
+    }
+
+    private static async Task<SongHistoryResponse> GetHistoryAsync(IAPIRequestContext api, long songId)
+    {
+        var response = await api.GetWithTraceAsync($"/api/songs/{songId}/history");
+        response.Ok.ShouldBeTrue($"Failed to get history of song {songId}: {response.Status} {response.StatusText}");
+
+        return JsonSerializer.Deserialize<SongHistoryResponse>(await response.BodyAsync(), JsonSerializerOptions.Web)!;
+    }
+
+    private record SongHistoryResponse(List<SongHistoryItem> History);
+
+    private record SongHistoryItem(long Id, int SongRevision);
 
     public static async Task MarkSongForRemovalAsync(
         IAPIRequestContext api,

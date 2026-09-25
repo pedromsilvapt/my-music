@@ -1139,6 +1139,111 @@ namespace MyMusic.Common.Migrations
                     b.ToTable("song_genres", (string)null);
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.SongHistory", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Diff")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("diff");
+
+                    b.Property<string>("DiffFormat")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("diff_format");
+
+                    b.Property<long>("SongId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_id");
+
+                    b.Property<int>("SongRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("song_revision");
+
+                    b.HasKey("Id")
+                        .HasName("pk_song_histories");
+
+                    b.HasIndex("SongId", "SongRevision")
+                        .IsUnique()
+                        .HasDatabaseName("ix_song_histories_song_id_song_revision");
+
+                    b.ToTable("song_histories", (string)null);
+                });
+
+            modelBuilder.Entity("MyMusic.Common.Entities.SongHistoryQueue", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("data");
+
+                    b.Property<int>("ErrorCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("error_count");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<long>("SongId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("song_id");
+
+                    b.Property<int>("SongRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("song_revision");
+
+                    b.Property<long?>("TransactionId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("transaction_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_song_history_queues");
+
+                    b.HasIndex("ProcessedAt")
+                        .HasDatabaseName("ix_song_history_queues_processed_at");
+
+                    b.HasIndex("SongId")
+                        .HasDatabaseName("ix_song_history_queues_song_id");
+
+                    b.HasIndex("SongId", "SongRevision")
+                        .IsUnique()
+                        .HasDatabaseName("ix_song_history_queues_song_id_song_revision");
+
+                    b.HasIndex("SongId", "TransactionId")
+                        .HasDatabaseName("ix_song_history_queues_song_id_transaction_id");
+
+                    b.ToTable("song_history_queues", (string)null);
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.SongSharing", b =>
                 {
                     b.Property<long>("Id")

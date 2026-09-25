@@ -9,7 +9,14 @@
         "fetchFailed": "Failed to fetch song",
         "deleteTitle": "Delete Song",
         "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
-        "editTitle": "Edit Song"
+        "editTitle": "Edit Song",
+        "versions": "({{count}} versions)",
+        "versionDiffTitle": "Version History",
+        "versionItem": "Revision {{revision}} - {{relativeDate}}",
+        "versionItemShort": "{{revision}} - {{relativeDate}}",
+        "versionOldLabel": "Old",
+        "versionNewLabel": "New",
+        "versionHeader": "Revision {{revision}} - {{relativeDate}}"
     },
     "page": {
         "fetchFailed": "Failed to fetch songs"

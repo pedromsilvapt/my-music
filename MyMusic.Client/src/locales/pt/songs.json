@@ -9,7 +9,14 @@
         "fetchFailed": "Falha ao obter a música",
         "deleteTitle": "Eliminar Música",
         "deleteConfirm": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser desfeita.",
-        "editTitle": "Editar Música"
+        "editTitle": "Editar Música",
+        "versions": "({{count}} versões)",
+        "versionDiffTitle": "Histórico de Versões",
+        "versionItem": "Revisão {{revision}} - {{relativeDate}}",
+        "versionItemShort": "{{revision}} - {{relativeDate}}",
+        "versionOldLabel": "Antigo",
+        "versionNewLabel": "Novo",
+        "versionHeader": "Revisão {{revision}} - {{relativeDate}}"
     },
     "page": {
         "fetchFailed": "Falha ao obter as músicas"
