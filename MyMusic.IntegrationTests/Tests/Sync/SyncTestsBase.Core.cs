@@ -10,6 +10,11 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: Sync uploads local songs and downloads server changes bidirectionally
+    //   Given a song exists locally
+    //   When the CLI sync runs
+    //   Then the song is created on the server
+    //   And a server-side edit is downloaded on the next sync
     [Fact]
     public async Task Sync_ShouldUploadAndDownloadChanges()
     {
@@ -35,6 +40,12 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(App.GetSongPath("Dylan/The Alibi/Updated Title - Dylan.mp3"), title: "Updated Title");
     }
 
+    // Scenario: Sync merges songs that exist only on the device with songs that exist only on the server
+    //   Given a song exists locally
+    //   And a different song exists on the server associated with this device
+    //   When the CLI sync runs
+    //   Then the local song is created on the server
+    //   And the server song is downloaded to the device
     [Fact]
     public async Task Sync_ShouldMergeDeviceAndServerSongs()
     {
@@ -62,6 +73,12 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
     }
 
+    // Scenario: Sync uploads a device song once and skips it on subsequent syncs
+    //   Given a song exists locally
+    //   When the CLI sync runs
+    //   Then the song is created on the server for this device
+    //   And the local file is kept
+    //   And a second sync skips the song
     [Fact]
     public async Task Sync_ShouldUploadDeviceSongAndIdempotentOnSecondSync()
     {
@@ -84,6 +101,11 @@ public abstract partial class SyncTestsBase
         result2.ShouldBe(skipped: 1);
     }
 
+    // Scenario: Sync downloads a server song once and skips it on subsequent syncs
+    //   Given a song exists on the server associated with this device
+    //   When the CLI sync runs
+    //   Then the song is downloaded with the correct path and metadata
+    //   And a second sync skips the song
     [Fact]
     public async Task Sync_ShouldDownloadServerSongAndIdempotentOnSecondSync()
     {
@@ -106,6 +128,11 @@ public abstract partial class SyncTestsBase
         result2.ShouldBe(skipped: 1);
     }
 
+    // Scenario: Deleting a synced file locally unlinks it from the device without deleting it on the server
+    //   Given a song on the server was downloaded to the device
+    //   When the local file is deleted and the CLI sync runs
+    //   Then the song is unlinked from the device
+    //   And the song still exists on the server
     [Fact]
     public async Task Sync_ShouldRemoveDeviceAssociationWhenSongRemovedFromDevice()
     {
@@ -134,6 +161,11 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(1);
     }
 
+    // Scenario: Local metadata changes are uploaded to the server
+    //   Given a song on the server was downloaded to the device
+    //   When the local file's title is changed and the CLI sync runs
+    //   Then the song is updated on the server
+    //   And the server shows the updated title
     [Fact]
     public async Task Sync_ShouldUploadLocalChangesToServer()
     {
@@ -168,6 +200,11 @@ public abstract partial class SyncTestsBase
             .ExecuteAsync(Page);
     }
 
+    // Scenario: A server song added to the device after creation is downloaded on the next sync
+    //   Given a song exists on the server without any device association
+    //   When the user adds the song to the device via Manage Devices
+    //   And the CLI sync runs
+    //   Then the song is downloaded with the templated path and correct metadata
     [Fact]
     public async Task Sync_ShouldDownloadSongWhenAddedToDeviceAfterServerCreation()
     {
@@ -193,6 +230,11 @@ public abstract partial class SyncTestsBase
             title: songData.Title);
     }
 
+    // Scenario: A server-side title change renames the local file
+    //   Given a song on the server was downloaded to the device
+    //   When the song title is edited on the server and the CLI sync runs
+    //   Then the local file is updated and renamed to the new title
+    //   And the old file no longer exists
     [Fact]
     public async Task Sync_ShouldRenameFileWhenTitleChanges()
     {
@@ -227,6 +269,11 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(App.GetSongPath(newDevicePath), title: newTitle);
     }
 
+    // Scenario: Marking a song as explicit renames the local file
+    //   Given a non-explicit song on the server was downloaded to the device
+    //   When the song is marked as explicit on the server and the CLI sync runs
+    //   Then the local file is updated and renamed with an "(Explicit)" suffix
+    //   And the old file no longer exists
     [Fact]
     public async Task Sync_ShouldRenameFileWhenExplicitFlagChanges()
     {
@@ -258,6 +305,12 @@ public abstract partial class SyncTestsBase
         App.FileExists(explicitPath).ShouldBeTrue("New file should exist with (Explicit) in filename");
     }
 
+    // Scenario: Removing an edited song from the device deletes the original local file
+    //   Given a local song was uploaded to the server
+    //   When the song title is edited on the server
+    //   And the song is then removed from the device via Manage Devices
+    //   And the CLI sync runs
+    //   Then the original local file is deleted (not the new templated path)
     [Fact]
     public async Task Sync_ShouldDeleteOriginalFileWhenMetadataChanged()
     {
@@ -297,6 +350,14 @@ public abstract partial class SyncTestsBase
     /// 6. Sync again, expect update local + rename
     /// 7. Assert only one file exists locally, and has the updated name
     /// </summary>
+    // Scenario: Removing, editing and re-adding a song reuses the existing device file
+    //   Given a local song was uploaded to the server
+    //   When the song is removed from the device via Manage Devices
+    //   And the song title is edited on the server
+    //   And the song is added back to the device via Manage Devices
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed instead of re-downloaded
+    //   And only one file with the updated name exists locally
     [Fact]
     public async Task Sync_ShouldRenameFileWhenSongRemovedReAddedAndTitleChanged()
     {
@@ -341,6 +402,14 @@ public abstract partial class SyncTestsBase
     /// 6. Sync again, expect update local + rename
     /// 7. Assert only one file exists locally, and has the updated name
     /// </summary>
+    // Scenario: Editing, removing and re-adding a song reuses the existing device file
+    //   Given a local song was uploaded to the server
+    //   When the song title is edited on the server
+    //   And the song is removed from the device via Manage Devices
+    //   And the song is added back to the device via Manage Devices
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed instead of re-downloaded
+    //   And only one file with the updated name exists locally
     [Fact]
     public async Task Sync_ShouldRenameFileWhenSongEditedRemovedReAdded()
     {
