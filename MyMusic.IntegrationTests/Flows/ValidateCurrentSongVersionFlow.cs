@@ -1,4 +1,6 @@
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Extensions;
+using MyMusic.IntegrationTests.Models;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
 
@@ -20,25 +22,25 @@ public class ValidateCurrentSongVersionFlow(ValidateCurrentSongVersionOptions ex
             revision.ShouldBe(expected.Revision.Value);
         }
 
-        var oldJson = await modal.GetOldJsonAsync();
+        var oldValues = await modal.GetOldValuesAsync();
         if (expected.HasOldPanel is not null)
         {
-            (oldJson is not null).ShouldBe(expected.HasOldPanel.Value,
+            (oldValues is not null).ShouldBe(expected.HasOldPanel.Value,
                 expected.HasOldPanel.Value
                     ? "A later revision should show the previous values"
                     : "The first revision should not show an old panel");
         }
 
-        foreach (var fragment in expected.Old ?? [])
+        if (expected.Old is not null)
         {
-            oldJson.ShouldNotBeNull("The version should have an old panel");
-            oldJson.ShouldContain(fragment);
+            oldValues.ShouldNotBeNull("The version should have an old panel");
+            oldValues.ShouldMatch(expected.Old);
         }
 
-        var newJson = await modal.GetNewJsonAsync();
-        foreach (var fragment in expected.New ?? [])
+        if (expected.New is not null)
         {
-            newJson.ShouldContain(fragment);
+            var newValues = await modal.GetNewValuesAsync();
+            newValues.ShouldMatch(expected.New);
         }
 
         if (expected.CanGoToPrevious is not null)
@@ -57,14 +59,14 @@ public class ValidateCurrentSongVersionFlow(ValidateCurrentSongVersionOptions ex
 
 /// <param name="Revision">Revision number shown in the modal header.</param>
 /// <param name="HasOldPanel">Whether the old panel is shown (false only for the first revision).</param>
-/// <param name="Old">Text fragments expected in the old panel's JSON.</param>
-/// <param name="New">Text fragments expected in the new panel's JSON.</param>
+/// <param name="Old">Field values expected in the old panel (only non-null fields are checked).</param>
+/// <param name="New">Field values expected in the new panel (only non-null fields are checked).</param>
 /// <param name="CanGoToPrevious">Whether navigating to an older revision is enabled.</param>
 /// <param name="CanGoToNext">Whether navigating to a newer revision is enabled.</param>
 public record ValidateCurrentSongVersionOptions(
     int? Revision = null,
     bool? HasOldPanel = null,
-    string[]? Old = null,
-    string[]? New = null,
+    SongVersionValues? Old = null,
+    SongVersionValues? New = null,
     bool? CanGoToPrevious = null,
     bool? CanGoToNext = null);

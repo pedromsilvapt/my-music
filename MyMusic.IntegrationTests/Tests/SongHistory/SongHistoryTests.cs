@@ -29,8 +29,8 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
 
         // Assert: the newest version shows the title changing from the old value to the new one
         await new ValidateSongVersionFlow(RequestContext, song.Id, "The Alibi (Edited)", versionsCount: 2, new(
-            Old: ["\"title\": \"The Alibi\""],
-            New: ["\"title\": \"The Alibi (Edited)\""]))
+            Old: new() { Title = "The Alibi" },
+            New: new() { Title = "The Alibi (Edited)" }))
             .ExecuteAsync(Page);
     }
 
@@ -45,8 +45,8 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
 
         // Assert: the newest version shows the artists list gaining the new artist
         await new ValidateSongVersionFlow(RequestContext, song.Id, song.Title, versionsCount: 2, new(
-            Old: ["Dylan"],
-            New: ["Dylan", "Freya Ridings"]))
+            Old: new() { Artists = [new() { Name = "Dylan" }] },
+            New: new() { Artists = [new() { Name = "Dylan" }, new() { Name = "Freya Ridings" }] }))
             .ExecuteAsync(Page);
     }
 

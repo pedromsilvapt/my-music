@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Microsoft.Playwright;
+using MyMusic.IntegrationTests.Models;
 
 namespace MyMusic.IntegrationTests.Pages.Components;
 
@@ -31,16 +32,19 @@ public class SongVersionModalComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
-    /// The JSON shown in the old panel, or null when viewing the first revision.
+    /// The values shown in the old panel, or null when viewing the first revision.
     /// </summary>
-    public async Task<string?> GetOldJsonAsync()
+    public async Task<SongVersionValues?> GetOldValuesAsync()
     {
-        return await OldPanel.CountAsync() > 0 ? await OldPanel.InnerTextAsync() : null;
+        return await OldPanel.CountAsync() > 0 ? SongVersionValues.Parse(await OldPanel.InnerTextAsync()) : null;
     }
 
-    public async Task<string> GetNewJsonAsync()
+    /// <summary>
+    /// The values shown in the new panel.
+    /// </summary>
+    public async Task<SongVersionValues> GetNewValuesAsync()
     {
-        return await NewPanel.InnerTextAsync();
+        return SongVersionValues.Parse(await NewPanel.InnerTextAsync());
     }
 
     public async Task<bool> CanGoToPreviousAsync()
