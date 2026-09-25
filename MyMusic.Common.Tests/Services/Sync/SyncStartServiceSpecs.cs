@@ -73,6 +73,44 @@ public class SyncStartServiceSpecs
         session.StartedAt.ShouldBeGreaterThanOrEqualTo(beforeStart);
     }
 
+    [Theory]
+    [InlineData(SyncDirection.Both)]
+    [InlineData(SyncDirection.Up)]
+    [InlineData(SyncDirection.Down)]
+    public async Task StartAsync_StoresDirectionOnSession(SyncDirection direction)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.StartAsync(device.Id, scenario.AdminUser.Id,
+            new SyncStartInput { Direction = direction }, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == result.SessionId);
+        session.Direction.ShouldBe(direction);
+    }
+
+    [Fact]
+    public async Task StartAsync_NoDirection_DefaultsToBoth()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.StartAsync(device.Id, scenario.AdminUser.Id, new SyncStartInput(), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == result.SessionId);
+        session.Direction.ShouldBe(SyncDirection.Both);
+    }
+
     [Fact]
     public async Task StartAsync_DefaultInput_CreatesNonDryRunSessionWithNullRepositoryPath()
     {

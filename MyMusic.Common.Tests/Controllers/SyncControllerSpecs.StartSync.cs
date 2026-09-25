@@ -89,6 +89,25 @@ public class SyncControllerStartSyncSpecs
         session.Status.ShouldBe(SyncSessionStatus.InProgress);
     }
 
+    [Theory]
+    [InlineData(SyncDirection.Up)]
+    [InlineData(SyncDirection.Down)]
+    public async Task StartSync_StoresRequestedDirectionOnSession(SyncDirection direction)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.StartSync(device.Id, new SyncStartRequest { Direction = direction }, CancellationToken.None);
+
+        // Assert
+        response.Value.ShouldNotBeNull();
+        var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == response.Value.SessionId);
+        session.Direction.ShouldBe(direction);
+    }
+
     [Fact]
     public async Task StartSync_NullRequest_CreatesNonDryRunSessionWithNullRepositoryPath()
     {
@@ -105,6 +124,7 @@ public class SyncControllerStartSyncSpecs
         var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == response.Value.SessionId);
         session.IsDryRun.ShouldBeFalse();
         session.RepositoryPath.ShouldBeNull();
+        session.Direction.ShouldBe(SyncDirection.Both);
     }
 
     [Fact]

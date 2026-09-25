@@ -35,19 +35,19 @@ public class SyncCommitServiceSpecs
         SyncCommitService Service,
         MockFileSystem MockFs);
 
-    private SyncTestContext Setup(bool dryRun = false)
+    private SyncTestContext Setup(bool dryRun = false, SyncDirection direction = SyncDirection.Both)
     {
         var scenario = new Scenario();
         var db = scenario.DbContext;
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
-        var session = scenario.CreateSession(device, isDryRun: dryRun);
+        var session = scenario.CreateSession(device, isDryRun: dryRun, direction: direction);
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
         return new SyncTestContext(scenario, db, device, session, user, null, service, mockFs);
     }
 
-    private SyncTestContext SetupWithSong(bool dryRun = false)
+    private SyncTestContext SetupWithSong(bool dryRun = false, SyncDirection direction = SyncDirection.Both)
     {
         var scenario = new Scenario();
         var db = scenario.DbContext;
@@ -56,7 +56,7 @@ public class SyncCommitServiceSpecs
         var album = scenario.CreateAlbum("Album", artist);
         var song = scenario.CreateSong("Song", album: album);
         var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
-        var session = scenario.CreateSession(device, isDryRun: dryRun);
+        var session = scenario.CreateSession(device, isDryRun: dryRun, direction: direction);
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
         return new SyncTestContext(scenario, db, device, session, user, song, service, mockFs);
@@ -68,7 +68,7 @@ public class SyncCommitServiceSpecs
     /// <see cref="MusicService.AddSongsToDevice"/> (e.g. the FileModifiedAt rollback in
     /// <see cref="ProcessLinkAsync"/>), which the mock cannot reproduce.
     /// </summary>
-    private SyncTestContext SetupWithSongAndRealMusicService(bool dryRun = false)
+    private SyncTestContext SetupWithSongAndRealMusicService(bool dryRun = false, SyncDirection direction = SyncDirection.Both)
     {
         var scenario = new Scenario();
         var db = scenario.DbContext;
@@ -77,7 +77,7 @@ public class SyncCommitServiceSpecs
         var album = scenario.CreateAlbum("Album", artist);
         var song = scenario.CreateSong("Song", album: album);
         var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
-        var session = scenario.CreateSession(device, isDryRun: dryRun);
+        var session = scenario.CreateSession(device, isDryRun: dryRun, direction: direction);
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var realMusicService = scenario.CreateMusicService();
         var service = new SyncCommitService(scenario.FileSystem, realMusicService, _loggerFactory, _logger);
@@ -536,7 +536,7 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task Conflict_DoesNotMutateSongDevices()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Down);
         var lastSyncedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", lastSyncedModifiedAt: lastSyncedAt, syncAction: SongSyncAction.Download);
         var localModified = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
@@ -544,7 +544,7 @@ public class SyncCommitServiceSpecs
         var data = CreateConflictData(localModified, serverModified);
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Conflict, data: data, songId: ctx.Song.Id, acknowledged: true);
 
-        var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
+        var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         result.ShouldNotBeNull();
         result.ActionCounts.ShouldContainKey(SyncRecordAction.Conflict);
@@ -572,13 +572,13 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task Error_WithSongId_DoesNotMutateSongDevices()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Down);
         var lastSyncedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", lastSyncedModifiedAt: lastSyncedAt, syncAction: SongSyncAction.Upload);
         var data = CreateErrorData("Something failed");
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Error, data: data, songId: ctx.Song.Id, acknowledged: true);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         var unchanged = GetSongDevice(ctx.Db, sd.Id);
         unchanged.SyncAction.ShouldBe(SongSyncAction.Upload);
@@ -592,13 +592,13 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task UpdateTimestamp_UpdatesLastSyncedModifiedAt()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Down);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var newTimestamp = new DateTime(2025, 7, 1, 12, 0, 0, DateTimeKind.Utc);
         var data = CreateUpdateTimestampData(ctx.Song.Id, newTimestamp);
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateTimestamp, data: data, songId: ctx.Song.Id, acknowledged: true);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         GetSongDevice(ctx.Db, sd.Id).LastSyncedModifiedAt.ShouldBe(newTimestamp);
     }
@@ -714,13 +714,13 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_BothDirection_DetectsOrphansWithNullSyncAction()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Both);
         ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var orphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan.mp3");
         var orphanId = orphan.Id;
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, orphanId).ShouldBeFalse();
         var unlinkRecords = ctx.Db.DeviceSyncSessionRecords.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
@@ -732,13 +732,13 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_BothDirection_IgnoresOrphansWithNonNullSyncAction()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Both);
         ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var notOrphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/not-orphan.mp3", syncAction: SongSyncAction.Download);
         var notOrphanId = notOrphan.Id;
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, notOrphanId).ShouldBeTrue();
     }
@@ -746,7 +746,7 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_UpDirection_DetectsAllOrphans()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Up);
         ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var orphan1 = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan1.mp3");
         var orphan2 = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan2.mp3", syncAction: SongSyncAction.Download);
@@ -754,7 +754,7 @@ public class SyncCommitServiceSpecs
         var orphan2Id = orphan2.Id;
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "up", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, orphan1Id).ShouldBeFalse();
         SongDeviceExists(ctx.Db, orphan2Id).ShouldBeFalse();
@@ -763,11 +763,11 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_UpDirection_ClearsSyncActionsOnValidPaths()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Up);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", syncAction: SongSyncAction.Upload);
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "up", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         var updated = GetSongDevice(ctx.Db, sd.Id);
         updated.SyncAction.ShouldBeNull();
@@ -777,29 +777,47 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_DownDirection_SkipsDetection()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Down);
         var potentialOrphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan.mp3");
         var orphanId = potentialOrphan.Id;
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id);
         ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, orphanId).ShouldBeTrue();
         var unlinkRecords = ctx.Db.DeviceSyncSessionRecords.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
         unlinkRecords.ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData(SyncDirection.Both, true)]
+    [InlineData(SyncDirection.Up, false)]
+    public async Task OrphanDetection_UsesDirectionStoredOnSession(SyncDirection direction, bool pendingDownloadSurvives)
+    {
+        // A SongDevice with a pending Download that the device did not mention is kept in `both`
+        // but treated as an orphan in `up`. The commit must take that decision from the session.
+        var ctx = SetupWithSong(direction: direction);
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        var pending = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/pending.mp3", syncAction: SongSyncAction.Download);
+        var pendingId = pending.Id;
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song!.Id);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        SongDeviceExists(ctx.Db, pendingId).ShouldBe(pendingDownloadSurvives);
+    }
+
     [Fact]
     public async Task OrphanDetection_DryRun_CreatesUnlinkRecordsWithoutRemovingSongDevices()
     {
-        var ctx = SetupWithSong(dryRun: true);
+        var ctx = SetupWithSong(dryRun: true, direction: SyncDirection.Both);
         var orphan = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/orphan.mp3");
         var orphanId = orphan.Id;
         ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/song.mp3", ctx.Song.Id);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, direction: "both", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, orphanId).ShouldBeTrue();
         var unlinkRecords = ctx.Db.DeviceSyncSessionRecords.Where(r => r.Action == SyncRecordAction.Unlink).ToList();
@@ -809,12 +827,12 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_BothDirection_RenameRecord_ProtectsPreviousPathFromOrphaning()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Both);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3");
         var renameData = CreateRenameData("/music/old.mp3", "/music/new.mp3");
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: renameData, songId: ctx.Song.Id, acknowledged: true);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         // The SongDevice at PreviousPath should be preserved (not orphaned) and its path updated to NewPath
         var updated = GetSongDevice(ctx.Db, sd.Id);
@@ -829,12 +847,12 @@ public class SyncCommitServiceSpecs
         // Simulates a future "manual rename" scenario: a Rename record with no paired
         // UpdateLocal/CreateLocal record. The SongDevice at PreviousPath must still be protected
         // from orphan detection (and its path moved to NewPath by ProcessRenameAsync).
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Both);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3");
         var renameData = CreateRenameData("/music/old.mp3", "/music/new.mp3");
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: renameData, songId: ctx.Song.Id, acknowledged: true);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "both", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, sd.Id).ShouldBeTrue();
         GetSongDevice(ctx.Db, sd.Id).DevicePath.ShouldBe("/music/new.mp3");
@@ -844,12 +862,12 @@ public class SyncCommitServiceSpecs
     [Fact]
     public async Task OrphanDetection_UpDirection_RenameRecord_ClearsSyncActionOnPreviousPath()
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Up);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Download);
         var renameData = CreateRenameData("/music/old.mp3", "/music/new.mp3");
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: renameData, songId: ctx.Song.Id, acknowledged: true);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "up", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         // ProcessRenameAsync updates DevicePath and clears SyncAction; the songsToClear block
         // (which uses the same validFilePaths set) is redundant but must not conflict.
@@ -868,11 +886,11 @@ public class SyncCommitServiceSpecs
     [InlineData(SyncRecordAction.Unlink)]
     public async Task DeleteAndUnlink_WhenNoSongId_FallsBackToDevicePathLookup(SyncRecordAction action)
     {
-        var ctx = SetupWithSong();
+        var ctx = SetupWithSong(direction: SyncDirection.Down);
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", action, acknowledged: true);
 
-        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, direction: "down", cancellationToken: default);
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         SongDeviceExists(ctx.Db, sd.Id).ShouldBeFalse();
     }

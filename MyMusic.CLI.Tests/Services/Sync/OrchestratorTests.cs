@@ -59,9 +59,9 @@ public class OrchestratorTests
             .Returns(Task.FromResult(new StartSyncResult { SessionId = 1 }));
         _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CreatePendingActionsResult { Records = [] }));
-        _apiClient.CompleteSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CompleteSyncRequest>(), Arg.Any<CancellationToken>())
+        _apiClient.CompleteSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CompleteSyncResult()));
-        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
+        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CommitSyncResult()));
     }
 
@@ -96,8 +96,8 @@ public class OrchestratorTests
             Arg.Any<CancellationToken>());
         await _apiClient.Received(1).StartSyncAsync(1, Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
         await _apiClient.Received(1).CreatePendingActionsAsync(1, Arg.Any<long>(), Arg.Any<CancellationToken>());
-        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>());
-        await _apiClient.Received(1).CompleteSyncAsync(1, 1, Arg.Any<CompleteSyncRequest>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CompleteSyncAsync(1, 1, Arg.Any<CancellationToken>());
         _keepAwake.Received(1).Deactivate();
     }
 
@@ -144,8 +144,8 @@ public class OrchestratorTests
 
         // Assert
         await _apiClient.Received(1).StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
-        await _apiClient.Received(1).CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>());
-        await _apiClient.Received(1).CompleteSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CompleteSyncRequest>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CompleteSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

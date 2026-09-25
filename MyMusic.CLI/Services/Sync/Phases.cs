@@ -55,11 +55,12 @@ public class Phases(
         var startResponse = await apiClient.StartSyncAsync(ctx.DeviceId, new StartSyncRequest
         {
             DryRun = ctx.Options.DryRun,
+            Direction = ctx.Options.Direction,
             RepositoryPath = ctx.RepositoryPath,
             ScanErrors = scanErrors
         }, ct);
         ctx.SessionId = startResponse.SessionId;
-        logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun})", ctx.SessionId, ctx.Options.DryRun);
+        logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun}, Direction: {Direction})", ctx.SessionId, ctx.Options.DryRun, ctx.Options.Direction);
     }
 
     public async Task UploadPhaseAsync(
@@ -399,19 +400,9 @@ public class Phases(
         IProgress<SyncProgress>? progress,
         CancellationToken ct = default)
     {
-        var directionString = ctx.Options.Direction switch
-        {
-            SyncDirection.Up => "up",
-            SyncDirection.Down => "down",
-            _ => "both"
-        };
+        logger.LogInformation("Committing sync session {SessionId} (direction: {Direction})", ctx.SessionId, ctx.Options.Direction);
 
-        logger.LogInformation("Committing sync session {SessionId} (direction: {Direction})", ctx.SessionId, directionString);
-
-        var commitResult = await apiClient.CommitSyncAsync(ctx.DeviceId, ctx.SessionId, new CommitSyncRequest
-        {
-            Direction = directionString
-        }, ct);
+        var commitResult = await apiClient.CommitSyncAsync(ctx.DeviceId, ctx.SessionId, ct);
 
         logger.LogInformation(
             "Commit result: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {DeleteLocal} deleted local, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",
@@ -446,17 +437,7 @@ public class Phases(
         int filesCount,
         CancellationToken ct = default)
     {
-        var directionString = ctx.Options.Direction switch
-        {
-            SyncDirection.Up => "up",
-            SyncDirection.Down => "down",
-            _ => "both"
-        };
-
-        var completeResponse = await apiClient.CompleteSyncAsync(ctx.DeviceId, ctx.SessionId, new CompleteSyncRequest
-        {
-            Direction = directionString
-        }, ct);
+        var completeResponse = await apiClient.CompleteSyncAsync(ctx.DeviceId, ctx.SessionId, ct);
 
         logger.LogInformation(
             "Sync complete: {CreateRemote} created remote, {UpdateRemote} updated remote, {Skipped} skipped, {CreateLocal} created local, {UpdateLocal} updated local, {DeleteLocal} deleted local, {Link} linked, {Unlink} unlinked, {Rename} renamed, {Conflict} conflicts, {UpdateTimestamp} timestamps updated, {Error} error",

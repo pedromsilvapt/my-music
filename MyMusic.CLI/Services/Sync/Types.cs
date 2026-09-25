@@ -217,6 +217,7 @@ public record SyncFileInfo
 public record StartSyncRequest
 {
     public bool DryRun { get; init; }
+    public SyncDirection Direction { get; init; } = SyncDirection.Both;
     public string? RepositoryPath { get; init; }
     public List<ScanError>? ScanErrors { get; init; }
 }
@@ -254,11 +255,6 @@ public record UploadFileResult
     public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 
-public record CompleteSyncRequest
-{
-    public required string Direction { get; init; }
-}
-
 public record CompleteSyncResult
 {
     public int CreateRemoteCount { get; init; }
@@ -273,11 +269,6 @@ public record CompleteSyncResult
     public int ConflictCount { get; init; }
     public int UpdateTimestampCount { get; init; }
     public int ErrorCount { get; init; }
-}
-
-public record CommitSyncRequest
-{
-    public required string Direction { get; init; }
 }
 
 public record CommitSyncResult

@@ -102,7 +102,7 @@ When a page fetches data, add `data-testid="<page-name>"` and `data-loading` to 
 
 ### Comment Style
 
-Integration tests should use comments with these characteristics: (example based on the test `Sync_ShouldUploadLocalChangesToServer` in [CliSyncTests.cs](./MyMusic.IntegrationTests/Tests/Cli/CliSyncTests.cs)):
+Integration tests should use comments with these characteristics: (example based on the test `Sync_ShouldUploadLocalChangesToServer` in [SyncTestsBase.Core.cs](./MyMusic.IntegrationTests/Tests/Sync/SyncTestsBase.Core.cs)):
 
 1. **Intent-focused**: Comments explain *what* and *why*, not just restating code
 2. **Block-level grouping**: Each logical section gets a comment marking its purpose

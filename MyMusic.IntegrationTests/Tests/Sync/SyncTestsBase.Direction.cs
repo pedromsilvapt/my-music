@@ -1,5 +1,6 @@
 using MyMusic.IntegrationTests.Extensions;
 using MyMusic.IntegrationTests.Fixtures;
+using MyMusic.IntegrationTests.Flows;
 using MyMusic.IntegrationTests.Pages;
 using Shouldly;
 
@@ -29,6 +30,36 @@ public abstract partial class SyncTestsBase
         // Verify the local song exists on the server
         var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
         (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_WithDirectionUp_ShouldKeepLocalFileMarkedForRemovalOnServer(bool dryRun)
+    {
+        if (!App.SupportsSyncDirection())
+        {
+            return; // Application does not support sync direction filtering
+        }
+
+        // Seed a song on the server assigned to this device, and sync it down
+        var serverSongs = await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Mark the song for removal from this device on the server
+        await SongsFixture.MarkSongForRemovalAsync(RequestContext, serverSongs[0].Id, App.DeviceId);
+
+        // Sync with direction=up: the device is the source of truth, so the pending removal is
+        // ignored and the unchanged file is skipped. Dry-run and real run should report the same.
+        var result2 = await App.SyncAsync(new SyncOptions { Direction = SyncDirection.Up, DryRun = dryRun });
+        result2.ShouldBe(skipped: 1, deleteLocal: 0);
+
+        // The local file should be kept, and the song should still be on the device
+        App.FileExists("Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3").ShouldBeTrue();
+        await new ShouldSongExistInDeviceFlow("Wicker Woman", App.DeviceName, shouldExist: true)
+            .ExecuteAsync(Page);
     }
 
     [Fact]

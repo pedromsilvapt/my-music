@@ -201,6 +201,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         var response = await client.StartSyncAsync(deviceId, new SyncStartRequest
         {
             DryRun = request.DryRun,
+            Direction = request.Direction.ToString(),
             RepositoryPath = request.RepositoryPath,
             ScanErrors = request.ScanErrors?.Select(e => new SyncScanErrorItem
             {
@@ -264,9 +265,9 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         };
     }
 
-    public async Task<CompleteSyncResult> CompleteSyncAsync(long deviceId, long sessionId, CompleteSyncRequest request, CancellationToken ct = default)
+    public async Task<CompleteSyncResult> CompleteSyncAsync(long deviceId, long sessionId, CancellationToken ct = default)
     {
-        var response = await client.CompleteSyncAsync(deviceId, sessionId, new SyncCompleteRequest { Direction = request.Direction }, ct);
+        var response = await client.CompleteSyncAsync(deviceId, sessionId, ct);
         return new CompleteSyncResult
         {
             CreateRemoteCount = response.CreateRemoteCount,
@@ -284,9 +285,9 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         };
     }
 
-    public async Task<CommitSyncResult> CommitSyncAsync(long deviceId, long sessionId, CommitSyncRequest request, CancellationToken ct = default)
+    public async Task<CommitSyncResult> CommitSyncAsync(long deviceId, long sessionId, CancellationToken ct = default)
     {
-        var response = await client.CommitSyncAsync(deviceId, sessionId, new SyncCommitRequest { Direction = request.Direction }, ct);
+        var response = await client.CommitSyncAsync(deviceId, sessionId, ct);
         return new CommitSyncResult
         {
             CreateRemoteCount = response.CreateRemoteCount,

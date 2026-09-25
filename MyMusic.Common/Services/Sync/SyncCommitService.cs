@@ -14,7 +14,7 @@ public class SyncCommitService(
 {
     public async Task<SyncCommitResult> CommitAsync(
         MusicDbContext db, long sessionId, long deviceId, bool isDryRun,
-        string direction = "both", CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
     {
         var session = await db.DeviceSyncSessions
             .FirstOrDefaultAsync(s => s.Id == sessionId, cancellationToken);
@@ -59,6 +59,7 @@ public class SyncCommitService(
             await ProcessRecordAsync(db, sessionId, deviceId, record, isDryRun, userId, createdSongIdsByChecksum, cancellationToken);
         }
 
+        var direction = session?.Direction ?? SyncDirection.Both;
         await DetectAndHandleOrphansAsync(db, sessionId, deviceId, records, isDryRun, direction, cancellationToken);
 
         await db.SaveChangesAsync(cancellationToken);
@@ -402,7 +403,7 @@ public class SyncCommitService(
 
     private async Task DetectAndHandleOrphansAsync(
         MusicDbContext db, long sessionId, long deviceId,
-        List<DeviceSyncSessionRecord> records, bool isDryRun, string direction,
+        List<DeviceSyncSessionRecord> records, bool isDryRun, SyncDirection direction,
         CancellationToken cancellationToken)
     {
         // Exclude Unlink: created by orphan detection itself, PendingActions (server-side), or CheckSync (Remove);
@@ -416,7 +417,7 @@ public class SyncCommitService(
 
         List<SongDevice> orphanedSongDevices;
 
-        if (direction == "both")
+        if (direction == SyncDirection.Both)
         {
             orphanedSongDevices = await db.SongDevices
                 .Where(sd => sd.DeviceId == deviceId
@@ -425,7 +426,7 @@ public class SyncCommitService(
                 .Include(sd => sd.Song)
                 .ToListAsync(cancellationToken);
         }
-        else if (direction == "up")
+        else if (direction == SyncDirection.Up)
         {
             orphanedSongDevices = await db.SongDevices
                 .Where(sd => sd.DeviceId == deviceId

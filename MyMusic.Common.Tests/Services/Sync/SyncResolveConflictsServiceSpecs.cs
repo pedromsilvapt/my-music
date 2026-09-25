@@ -387,6 +387,46 @@ public class SyncResolveConflictsServiceSpecs
     }
 
     [Fact]
+    public async Task ResolveAsync_DirectionUp_PotentialUpdateChecksumsDiffer_CreatesSkippedRecordInsteadOfUpdateLocal()
+    {
+        // Arrange: a potential update whose checksum differs, with a device path that would
+        // normally also trigger a Rename. In `up` the device never processes server actions.
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.CreateSongDevice(device, song, "OldName.mp3");
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "OldName.mp3",
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Skipped);
+        record.FilePath.ShouldBe("OldName.mp3");
+        record.SongId.ShouldBe(song.Id);
+        scenario.DbContext.DeviceSyncSessionRecords.ShouldNotContain(r =>
+            r.Action == SyncRecordAction.UpdateLocal || r.Action == SyncRecordAction.Rename);
+    }
+
+    [Fact]
     public async Task ResolveAsync_PotentialUpdateSongDeviceNotFound_SkipsNoRecord()
     {
         // Arrange

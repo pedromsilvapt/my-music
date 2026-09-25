@@ -1,3 +1,5 @@
+using MyMusic.Common.Entities;
+
 namespace MyMusic.Common.Services.Sync;
 
 /// <summary>
@@ -8,6 +10,8 @@ namespace MyMusic.Common.Services.Sync;
 public record SyncStartInput
 {
     public bool DryRun { get; init; }
+
+    public SyncDirection Direction { get; init; } = SyncDirection.Both;
 
     public string? RepositoryPath { get; init; }
 

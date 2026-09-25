@@ -47,11 +47,11 @@ public class SyncControllerCommitSyncSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
+        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
 
         // Act
-        await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         var updated = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == session.Id);
@@ -73,12 +73,12 @@ public class SyncControllerCommitSyncSpecs
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
 
         // Act
-        var response = await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        var response = await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         response.Value.CommittedAt.ShouldBe(existingCommittedAt);
         response.Value.SkippedCount.ShouldBe(1);
-        await _syncCommitService.DidNotReceive().CommitAsync(Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<long>(), Arg.Any<bool>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _syncCommitService.DidNotReceive().CommitAsync(Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<long>(), Arg.Any<bool>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -92,7 +92,7 @@ public class SyncControllerCommitSyncSpecs
 
         // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
-            controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None));
+            controller.CommitSync(device.Id, session.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class SyncControllerCommitSyncSpecs
 
         // Act & Assert
         await Should.ThrowAsync<Exception>(() =>
-            controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None));
+            controller.CommitSync(device.Id, session.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -118,7 +118,7 @@ public class SyncControllerCommitSyncSpecs
         var device = scenario.CreateDevice();
 
         // Act
-        var result = await controller.CommitSync(device.Id, 9999, new SyncCommitRequest(), CancellationToken.None);
+        var result = await controller.CommitSync(device.Id, 9999, CancellationToken.None);
 
         // Assert
         result.Result.ShouldBeOfType<NotFoundResult>();
@@ -143,49 +143,13 @@ public class SyncControllerCommitSyncSpecs
         var session = scenario.CreateSession(otherDevice, status: SyncSessionStatus.InProgress);
 
         // Act
-        var result = await controller.CommitSync(otherDevice.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        var result = await controller.CommitSync(otherDevice.Id, session.Id, CancellationToken.None);
 
         // Assert
         result.Result.ShouldBeOfType<NotFoundResult>();
     }
 
-    [Fact]
-    public async Task CommitSync_DefaultDirectionIsBoth()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var controller = CreateController(scenario);
-        var device = scenario.CreateDevice();
-        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
-            .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
-
-        // Act
-        await controller.CommitSync(device.Id, session.Id, null, CancellationToken.None);
-
-        // Assert
-        await _syncCommitService.Received(1).CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task CommitSync_CustomDirectionPassed()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var controller = CreateController(scenario);
-        var device = scenario.CreateDevice();
-        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
-
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "up", Arg.Any<CancellationToken>())
-            .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
-
-        // Act
-        await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest { Direction = "up" }, CancellationToken.None);
-
-        // Assert
-        await _syncCommitService.Received(1).CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "up", Arg.Any<CancellationToken>());
-    }
 
     [Fact]
     public async Task CommitSync_ReturnsCorrectActionCounts()
@@ -197,7 +161,7 @@ public class SyncControllerCommitSyncSpecs
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
 
         var committedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
+        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult
             {
                 ActionCounts = new Dictionary<SyncRecordAction, int>
@@ -212,7 +176,7 @@ public class SyncControllerCommitSyncSpecs
         var beforeCommit = DateTime.UtcNow;
 
         // Act
-        var response = await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        var response = await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         response.Value.CreateRemoteCount.ShouldBe(2);
@@ -237,11 +201,11 @@ public class SyncControllerCommitSyncSpecs
         mockFs.AddDirectory(stagingDir);
         mockFs.AddFile($"{stagingDir}/test.mp3", new System.IO.Abstractions.TestingHelpers.MockFileData("data"));
 
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
+        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
 
         // Act
-        await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         mockFs.Directory.Exists(stagingDir).ShouldBeFalse();
@@ -256,11 +220,11 @@ public class SyncControllerCommitSyncSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, repositoryPath: null);
 
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, "both", Arg.Any<CancellationToken>())
+        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
 
         // Act
-        var response = await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        var response = await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         response.Value.ShouldNotBeNull();
@@ -275,13 +239,13 @@ public class SyncControllerCommitSyncSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, isDryRun: true);
 
-        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, true, "both", Arg.Any<CancellationToken>())
+        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, true, Arg.Any<CancellationToken>())
             .Returns(new SyncCommitResult { ActionCounts = new Dictionary<SyncRecordAction, int>(), CommittedAt = DateTime.UtcNow });
 
         // Act
-        await controller.CommitSync(device.Id, session.Id, new SyncCommitRequest(), CancellationToken.None);
+        await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
-        await _syncCommitService.Received(1).CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, true, "both", Arg.Any<CancellationToken>());
+        await _syncCommitService.Received(1).CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, true, Arg.Any<CancellationToken>());
     }
 }

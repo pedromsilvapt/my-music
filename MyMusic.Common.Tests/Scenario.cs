@@ -207,10 +207,12 @@ public class Scenario
         SyncSessionStatus status = SyncSessionStatus.InProgress,
         bool isDryRun = false,
         string? repositoryPath = null,
-        DateTime? startedAt = null)
+        DateTime? startedAt = null,
+        SyncDirection direction = SyncDirection.Both)
     {
         var session = new DeviceSyncSession
         {
+            Direction = direction,
             DeviceId = device.Id,
             Device = device,
             StartedAt = startedAt ?? DateTime.UtcNow,

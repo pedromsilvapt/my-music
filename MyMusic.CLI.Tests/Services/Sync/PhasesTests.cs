@@ -61,46 +61,35 @@ public class PhasesTests
         await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(SyncDirection.Both)]
+    [InlineData(SyncDirection.Up)]
+    [InlineData(SyncDirection.Down)]
+    public async Task StartSession_SendsDirection(SyncDirection direction)
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Direction = direction });
+
+        _apiClient.StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new StartSyncResult { SessionId = 1 }));
+
+        await phases.StartSessionAsync(ctx, [], default);
+
+        await _apiClient.Received(1).StartSyncAsync(1, Arg.Is<StartSyncRequest>(r => r.Direction == direction), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
-    public async Task CommitPhase_CallsCommitEndpointWithDirection()
+    public async Task CommitPhase_CallsCommitEndpoint()
     {
         var phases = CreatePhases();
         var ctx = CreateContext();
 
-        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
+        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new CommitSyncResult()));
 
         await phases.CommitPhaseAsync(ctx, null);
 
-        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Is<CommitSyncRequest>(r => r.Direction == "both"), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task CommitPhase_WithDirectionUp_SendsUpDirection()
-    {
-        var phases = CreatePhases();
-        var ctx = CreateContext(options: new SyncOptions { Direction = SyncDirection.Up });
-
-        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new CommitSyncResult()));
-
-        await phases.CommitPhaseAsync(ctx, null);
-
-        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Is<CommitSyncRequest>(r => r.Direction == "up"), Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task CommitPhase_WithDirectionDown_SendsDownDirection()
-    {
-        var phases = CreatePhases();
-        var ctx = CreateContext(options: new SyncOptions { Direction = SyncDirection.Down });
-
-        _apiClient.CommitSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CommitSyncRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new CommitSyncResult()));
-
-        await phases.CommitPhaseAsync(ctx, null);
-
-        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Is<CommitSyncRequest>(r => r.Direction == "down"), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -34,9 +34,7 @@ import type {
   SyncCancelResponse,
   SyncCheckRequest,
   SyncCheckResponse,
-  SyncCommitRequest,
   SyncCommitResponse,
-  SyncCompleteRequest,
   SyncCompleteResponse,
   SyncResolveConflictsRequest,
   SyncResolveConflictsResponse,
@@ -193,15 +191,14 @@ export const getPostDevicesDeviceIdSyncSessionIdCompleteUrl = (deviceId: number,
 }
 
 export const postDevicesDeviceIdSyncSessionIdComplete = async (deviceId: number,
-    sessionId: number,
-    nullSyncCompleteRequest?: null | SyncCompleteRequest, options?: RequestInit): Promise<postDevicesDeviceIdSyncSessionIdCompleteResponse> => {
+    sessionId: number, options?: RequestInit): Promise<postDevicesDeviceIdSyncSessionIdCompleteResponse> => {
 
   const res = await fetch(getPostDevicesDeviceIdSyncSessionIdCompleteUrl(deviceId,sessionId),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullSyncCompleteRequest)
+    method: 'POST'
+
+
   }
 )
 
@@ -216,8 +213,8 @@ export const postDevicesDeviceIdSyncSessionIdComplete = async (deviceId: number,
 
 
 export const getPostDevicesDeviceIdSyncSessionIdCompleteMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, TError,{deviceId: number;sessionId: number;data?: null | SyncCompleteRequest}, TContext>, fetch?: RequestInit}
-): UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, TError,{deviceId: number;sessionId: number;data?: null | SyncCompleteRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, TError,{deviceId: number;sessionId: number}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, TError,{deviceId: number;sessionId: number}, TContext> => {
 
 const mutationKey = ['postDevicesDeviceIdSyncSessionIdComplete'];
 const {mutation: mutationOptions, fetch: fetchOptions} = options ?
@@ -229,10 +226,10 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, {deviceId: number;sessionId: number;data?: null | SyncCompleteRequest}> = (props) => {
-          const {deviceId,sessionId,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, {deviceId: number;sessionId: number}> = (props) => {
+          const {deviceId,sessionId} = props ?? {};
 
-          return  postDevicesDeviceIdSyncSessionIdComplete(deviceId,sessionId,data,fetchOptions)
+          return  postDevicesDeviceIdSyncSessionIdComplete(deviceId,sessionId,fetchOptions)
         }
 
 
@@ -243,15 +240,15 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostDevicesDeviceIdSyncSessionIdCompleteMutationResult = NonNullable<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>>
-    export type PostDevicesDeviceIdSyncSessionIdCompleteMutationBody = null | SyncCompleteRequest | undefined
+
     export type PostDevicesDeviceIdSyncSessionIdCompleteMutationError = unknown
 
     export const usePostDevicesDeviceIdSyncSessionIdComplete = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, TError,{deviceId: number;sessionId: number;data?: null | SyncCompleteRequest}, TContext>, fetch?: RequestInit}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>, TError,{deviceId: number;sessionId: number}, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdComplete>>,
         TError,
-        {deviceId: number;sessionId: number;data?: null | SyncCompleteRequest},
+        {deviceId: number;sessionId: number},
         TContext
       > => {
       return useMutation(getPostDevicesDeviceIdSyncSessionIdCompleteMutationOptions(options), queryClient);
@@ -382,15 +379,14 @@ export const getPostDevicesDeviceIdSyncSessionIdCommitUrl = (deviceId: number,
 }
 
 export const postDevicesDeviceIdSyncSessionIdCommit = async (deviceId: number,
-    sessionId: number,
-    nullSyncCommitRequest?: null | SyncCommitRequest, options?: RequestInit): Promise<postDevicesDeviceIdSyncSessionIdCommitResponse> => {
+    sessionId: number, options?: RequestInit): Promise<postDevicesDeviceIdSyncSessionIdCommitResponse> => {
 
   const res = await fetch(getPostDevicesDeviceIdSyncSessionIdCommitUrl(deviceId,sessionId),
   {
     ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(nullSyncCommitRequest)
+    method: 'POST'
+
+
   }
 )
 
@@ -405,8 +401,8 @@ export const postDevicesDeviceIdSyncSessionIdCommit = async (deviceId: number,
 
 
 export const getPostDevicesDeviceIdSyncSessionIdCommitMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, TError,{deviceId: number;sessionId: number;data?: null | SyncCommitRequest}, TContext>, fetch?: RequestInit}
-): UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, TError,{deviceId: number;sessionId: number;data?: null | SyncCommitRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, TError,{deviceId: number;sessionId: number}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, TError,{deviceId: number;sessionId: number}, TContext> => {
 
 const mutationKey = ['postDevicesDeviceIdSyncSessionIdCommit'];
 const {mutation: mutationOptions, fetch: fetchOptions} = options ?
@@ -418,10 +414,10 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, {deviceId: number;sessionId: number;data?: null | SyncCommitRequest}> = (props) => {
-          const {deviceId,sessionId,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, {deviceId: number;sessionId: number}> = (props) => {
+          const {deviceId,sessionId} = props ?? {};
 
-          return  postDevicesDeviceIdSyncSessionIdCommit(deviceId,sessionId,data,fetchOptions)
+          return  postDevicesDeviceIdSyncSessionIdCommit(deviceId,sessionId,fetchOptions)
         }
 
 
@@ -432,15 +428,15 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PostDevicesDeviceIdSyncSessionIdCommitMutationResult = NonNullable<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>>
-    export type PostDevicesDeviceIdSyncSessionIdCommitMutationBody = null | SyncCommitRequest | undefined
+
     export type PostDevicesDeviceIdSyncSessionIdCommitMutationError = unknown
 
     export const usePostDevicesDeviceIdSyncSessionIdCommit = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, TError,{deviceId: number;sessionId: number;data?: null | SyncCommitRequest}, TContext>, fetch?: RequestInit}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>, TError,{deviceId: number;sessionId: number}, TContext>, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdCommit>>,
         TError,
-        {deviceId: number;sessionId: number;data?: null | SyncCommitRequest},
+        {deviceId: number;sessionId: number},
         TContext
       > => {
       return useMutation(getPostDevicesDeviceIdSyncSessionIdCommitMutationOptions(options), queryClient);

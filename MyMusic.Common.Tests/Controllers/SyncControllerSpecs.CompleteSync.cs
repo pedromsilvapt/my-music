@@ -49,8 +49,7 @@ public class SyncControllerCompleteSyncSpecs
         var beforeComplete = DateTime.UtcNow;
 
         // Act
-        var response = await controller.CompleteSync(device.Id, session.Id,
-            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+        var response = await controller.CompleteSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
@@ -70,8 +69,7 @@ public class SyncControllerCompleteSyncSpecs
         var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed, isDryRun: true);
 
         // Act
-        var response = await controller.CompleteSync(device.Id, session.Id,
-            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+        var response = await controller.CompleteSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         var updatedDevice = await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id);
@@ -90,8 +88,7 @@ public class SyncControllerCompleteSyncSpecs
 
         // Act & Assert
         await Should.ThrowAsync<Exception>(async () =>
-            await controller.CompleteSync(device.Id, session.Id,
-                new SyncCompleteRequest { Direction = "both" }, CancellationToken.None));
+            await controller.CompleteSync(device.Id, session.Id, CancellationToken.None));
     }
 
     [Fact]
@@ -106,8 +103,7 @@ public class SyncControllerCompleteSyncSpecs
         var beforeComplete = DateTime.UtcNow;
 
         // Act
-        var response = await controller.CompleteSync(device.Id, session.Id,
-            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+        var response = await controller.CompleteSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         var updatedSession = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == session.Id);
@@ -135,8 +131,7 @@ public class SyncControllerCompleteSyncSpecs
         scenario.DbContext.SaveChanges();
 
         // Act
-        var response = await controller.CompleteSync(device.Id, session.Id,
-            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+        var response = await controller.CompleteSync(device.Id, session.Id, CancellationToken.None);
 
         // Assert
         response.Value.CreateRemoteCount.ShouldBe(2);
@@ -157,8 +152,7 @@ public class SyncControllerCompleteSyncSpecs
         var device = scenario.CreateDevice();
 
         // Act
-        var response = await controller.CompleteSync(device.Id, 9999,
-            new SyncCompleteRequest { Direction = "both" }, CancellationToken.None);
+        var response = await controller.CompleteSync(device.Id, 9999, CancellationToken.None);
 
         // Assert
         response.Result.ShouldBeOfType<NotFoundResult>();

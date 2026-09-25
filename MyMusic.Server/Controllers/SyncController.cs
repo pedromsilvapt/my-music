@@ -47,6 +47,7 @@ public class SyncController(
             new SyncStartInput
             {
                 DryRun = request?.DryRun ?? false,
+                Direction = request?.Direction ?? SyncDirection.Both,
                 RepositoryPath = request?.RepositoryPath,
                 ScanErrors = request?.ScanErrors?
                     .Select(e => new SyncStartScanError { FilePath = e.FilePath, ErrorMessage = e.ErrorMessage })
@@ -60,7 +61,7 @@ public class SyncController(
 
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/complete")]
     public async Task<ActionResult<SyncCompleteResponse>> CompleteSync(long deviceId, long sessionId,
-        [FromBody] SyncCompleteRequest? request, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var result = await syncCompleteService.CompleteAsync(deviceId, sessionId, currentUser.Id, cancellationToken);
         if (result == null) return NotFound();
@@ -98,7 +99,7 @@ public class SyncController(
 
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/commit")]
     public async Task<ActionResult<SyncCommitResponse>> CommitSync(long deviceId, long sessionId,
-        [FromBody] SyncCommitRequest? request, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var session = await sessionLookup.FindSessionAsync(context, sessionId, deviceId, currentUser.Id, cancellationToken);
         if (session == null) return NotFound();
@@ -117,9 +118,7 @@ public class SyncController(
             return SyncCommitResponseMapper.Map(existingRecords, session.CompletedAt ?? DateTime.UtcNow);
         }
 
-        var direction = request?.Direction?.ToLowerInvariant() ?? "both";
-
-        var result = await syncCommitService.CommitAsync(context, sessionId, deviceId, session.IsDryRun, direction, cancellationToken);
+        var result = await syncCommitService.CommitAsync(context, sessionId, deviceId, session.IsDryRun, cancellationToken);
 
         session.Status = SyncSessionStatus.Committed;
         session.CompletedAt = DateTime.UtcNow;

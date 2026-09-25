@@ -273,6 +273,133 @@ public class SyncCheckServiceSpecs
         dbRecords.Count.ShouldBe(1);
     }
 
+    #region Direction Up
+
+    // In `up` the device is the source of truth: the check phase must never produce records
+    // that require the device to act (DeleteLocal/UpdateLocal/CreateLocal/Rename), since the
+    // client never processes server actions in that direction.
+
+    [Fact]
+    public async Task CheckAsync_DirectionUp_SyncActionRemove_UnchangedFile_ReturnsSkipped()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-1);
+        var song = scenario.CreateSong("Song", modifiedAt: lastSynced.AddMinutes(-10));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: SongSyncAction.Remove);
+
+        // Act
+        var result = await service.CheckAsync(device.Id, session.Id, scenario.AdminUser.Id, InputFor("/music/song.mp3", lastSynced.AddMinutes(-5)), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Skipped);
+        record.SongId.ShouldBe(song.Id);
+        scenario.DbContext.DeviceSyncSessionRecords.ShouldNotContain(r => r.Action == SyncRecordAction.DeleteLocal);
+    }
+
+    [Fact]
+    public async Task CheckAsync_DirectionUp_SyncActionRemove_ClientNewer_ReturnsUpdateRemote()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var song = scenario.CreateSong("Song", modifiedAt: DateTime.UtcNow.AddHours(-3));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: SongSyncAction.Remove);
+
+        // Act
+        var result = await service.CheckAsync(device.Id, session.Id, scenario.AdminUser.Id, InputFor("/music/song.mp3", DateTime.UtcNow.AddHours(-1)), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        record.SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task CheckAsync_DirectionUp_SongDeletedOnServer_ReturnsSkipped()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-1);
+        scenario.CreateSongDevice(device, null, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: SongSyncAction.Remove);
+
+        // Act
+        var result = await service.CheckAsync(device.Id, session.Id, scenario.AdminUser.Id, InputFor("/music/song.mp3", DateTime.UtcNow), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Skipped);
+        record.SongId.ShouldBeNull();
+        scenario.DbContext.DeviceSyncSessionRecords.ShouldNotContain(r => r.Action == SyncRecordAction.DeleteLocal);
+    }
+
+    [Fact]
+    public async Task CheckAsync_DirectionUp_ServerNewerClientUnchanged_ReturnsSkipped()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-2);
+        var song = scenario.CreateSong("Song", modifiedAt: DateTime.UtcNow.AddHours(-1));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        // Act
+        var result = await service.CheckAsync(device.Id, session.Id, scenario.AdminUser.Id, InputFor("/music/song.mp3", lastSynced), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Skipped);
+        record.SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task CheckAsync_DirectionUp_BothServerAndClientNewer_StillReturnsConflict()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var lastSynced = DateTime.UtcNow.AddHours(-3);
+        var song = scenario.CreateSong("Song", modifiedAt: DateTime.UtcNow.AddHours(-1));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3",
+            lastSyncedModifiedAt: lastSynced, syncAction: null);
+
+        // Act
+        var result = await service.CheckAsync(device.Id, session.Id, scenario.AdminUser.Id, InputFor("/music/song.mp3", DateTime.UtcNow.AddHours(-2)), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.Single().Action.ShouldBe(SyncRecordAction.Conflict);
+    }
+
+    #endregion
+
     [Fact]
     public async Task CheckAsync_ClientNewerServerUnchanged_ReturnsUpdateRemoteRecord_Tentative()
     {

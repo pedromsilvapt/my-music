@@ -49,6 +49,7 @@ public class SyncCheckService(
 
         var activeSession = activeSessionResult.Session!;
         var syncActions = syncActionsServerFactory.Create(db, activeSession.Id, deviceId, activeSession.IsDryRun);
+        var isDirectionUp = activeSession.Direction == SyncDirection.Up;
 
         var namingStrategy = new TemplateNamingStrategy(
             device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
@@ -76,10 +77,19 @@ public class SyncCheckService(
                 logger.LogDebug("CheckSync: Path='{Path}' -> CREATE_REMOTE (no existing SongDevice)", clientFile.Path);
                 allRecords.Add(NewCreateRemoteRecord(activeSession.Id, clientFile));
             }
+            // In `up` the device is the source of truth and never processes server actions, so a
+            // pending server removal is ignored (the commit clears it) and the file goes through the
+            // normal comparison below. Only a song deleted on the server can't be compared: skip it.
+            else if (isDirectionUp && existingSongDevice.Song == null)
+            {
+                logger.LogDebug("CheckSync: Path='{Path}' -> SKIPPED (song deleted on server, direction up)", clientFile.Path);
+                var record = await syncActions.ActionSkipped(clientFile.Path, existingSongDevice.SongId, reason: "Song deleted on server; local file kept (direction up)", cancellationToken: cancellationToken);
+                allRecords.Add(record);
+            }
             // When a Song is deleted, the deletion services always null SongId and set SyncAction = Remove,
             // so the Song == null case is covered by the Remove branch below. The `|| Song == null` is kept
             // defensively in case that invariant is ever broken - we still want to delete the file on the device.
-            else if (existingSongDevice.SyncAction == SongSyncAction.Remove || existingSongDevice.Song == null)
+            else if (!isDirectionUp && (existingSongDevice.SyncAction == SongSyncAction.Remove || existingSongDevice.Song == null))
             {
                 logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> DELETE_LOCAL (marked for removal or song deleted)", clientFile.Path, existingSongDevice.SongId);
                 var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal or deleted on server", cancellationToken);
@@ -102,7 +112,7 @@ public class SyncCheckService(
             // Check if the server song was changed after the last sync (device file unchanged).
             else
             {
-                await ProcessServerMaybeNewerAsync(activeSession.Id, deviceId, clientFile, existingSongDevice, syncActions, namingStrategy, allRecords, cancellationToken);
+                await ProcessServerMaybeNewerAsync(activeSession.Id, deviceId, clientFile, existingSongDevice, isDirectionUp, syncActions, namingStrategy, allRecords, cancellationToken);
             }
         }
 
@@ -222,13 +232,15 @@ public class SyncCheckService(
     /// <summary>
     /// Handles the "client file unchanged" branch. When the server song changed since the last
     /// sync, an <c>UpdateLocal</c>/<c>DeleteLocal</c>/<c>CreateLocal</c> is produced depending on
-    /// the device's current state; otherwise the file is skipped.
+    /// the device's current state; otherwise the file is skipped. In <c>up</c> direction the device
+    /// never pulls, so a newer server song is also skipped.
     /// </summary>
     private async Task ProcessServerMaybeNewerAsync(
         long sessionId,
         long deviceId,
         SyncCheckFileInfo clientFile,
         SongDevice existingSongDevice,
+        bool isDirectionUp,
         ISyncActionsServer syncActions,
         TemplateNamingStrategy namingStrategy,
         List<DeviceSyncSessionRecord> allRecords,
@@ -236,7 +248,13 @@ public class SyncCheckService(
     {
         var songFileModifiedAt = existingSongDevice.Song!.FileModifiedAt ?? existingSongDevice.Song.ModifiedAt;
 
-        if (comparisonHelper.IsNewerThan(songFileModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
+        if (isDirectionUp && comparisonHelper.IsNewerThan(songFileModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
+        {
+            logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> SKIPPED (server newer, direction up)", clientFile.Path, existingSongDevice.SongId);
+            var record = await syncActions.ActionSkipped(clientFile.Path, existingSongDevice.SongId, reason: $"Server modified at {songFileModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}, not downloaded (direction up)", cancellationToken: cancellationToken);
+            allRecords.Add(record);
+        }
+        else if (comparisonHelper.IsNewerThan(songFileModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
         {
             logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> UPDATE_LOCAL (server modified {ServerModifiedAt:O}, last synced {LastSynced:O})",
                 clientFile.Path, existingSongDevice.SongId, songFileModifiedAt, existingSongDevice.LastSyncedModifiedAt);

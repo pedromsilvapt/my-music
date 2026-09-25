@@ -31,6 +31,7 @@ public class SyncStartService(
             StartedAt = DateTime.UtcNow,
             Status = SyncSessionStatus.InProgress,
             IsDryRun = input.DryRun,
+            Direction = input.Direction,
             RepositoryPath = input.RepositoryPath,
         };
 
@@ -47,8 +48,8 @@ public class SyncStartService(
         }
 
         logger.LogInformation(
-            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, RepositoryPath: {RepositoryPath})",
-            session.Id, deviceId, session.IsDryRun, session.RepositoryPath);
+            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, Direction: {Direction}, RepositoryPath: {RepositoryPath})",
+            session.Id, deviceId, session.IsDryRun, session.Direction, session.RepositoryPath);
 
         return new SyncStartResult { SessionId = session.Id };
     }

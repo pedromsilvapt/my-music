@@ -58,14 +58,12 @@ public interface IMyMusicClient
     Task<SyncCommitResponse> CommitSyncAsync(
         long deviceId,
         long sessionId,
-        [Body] SyncCommitRequest request,
         CancellationToken ct = default);
 
     [Post("/api/devices/{deviceId}/sync/{sessionId}/complete")]
     Task<SyncCompleteResponse> CompleteSyncAsync(
         long deviceId,
         long sessionId,
-        [Body] SyncCompleteRequest request,
         CancellationToken ct = default);
 
     [Post("/api/devices/{deviceId}/sync/{sessionId}/check")]

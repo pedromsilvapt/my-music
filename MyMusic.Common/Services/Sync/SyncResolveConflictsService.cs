@@ -63,7 +63,7 @@ public class SyncResolveConflictsService(
 
             foreach (var update in input.PotentialUpdates)
             {
-                await ProcessPotentialUpdateAsync(deviceId, update, namingStrategy, usedPaths, syncActions, records, cancellationToken);
+                await ProcessPotentialUpdateAsync(deviceId, update, activeSession.Direction, namingStrategy, usedPaths, syncActions, records, cancellationToken);
             }
         }
 
@@ -152,10 +152,13 @@ public class SyncResolveConflictsService(
     /// differing checksums produce an <c>UpdateLocal</c> record (optionally followed by a
     /// <c>Rename</c> record when the naming template changed the target path). Missing
     /// SongDevice/Song or invalid base64 are skipped or produce an <c>Error</c> record.
+    /// In <c>up</c> direction the device never processes server actions, so differing checksums
+    /// produce a <c>Skipped</c> record instead of <c>UpdateLocal</c>/<c>Rename</c>.
     /// </summary>
     private async Task ProcessPotentialUpdateAsync(
         long deviceId,
         SyncResolvePotentialUpdateItem update,
+        SyncDirection direction,
         TemplateNamingStrategy namingStrategy,
         HashSet<string> usedPaths,
         ISyncActionsServer syncActions,
@@ -204,6 +207,13 @@ public class SyncResolveConflictsService(
             logger.LogInformation(
                 "Resolved potential update for {Path} (SongId={SongId}) - checksums match, updated LastSyncedModifiedAt to {LastSyncedAt}",
                 update.Path, update.SongId, newLastSynced);
+        }
+        else if (direction == SyncDirection.Up)
+        {
+            var songFileModifiedAt = songDevice.Song.FileModifiedAt ?? songDevice.Song.ModifiedAt;
+            var reason = $"Server modified at {songFileModifiedAt:O} is newer than last synced at {update.LastSyncedAt:O}, checksums differ, not downloaded (direction up)";
+            var skippedRecord = await syncActions.ActionSkipped(update.Path, update.SongId, reason, cancellationToken);
+            records.Add(skippedRecord);
         }
         else
         {

@@ -4,7 +4,11 @@ namespace MyMusic.Common.Services.Sync;
 
 public interface ISyncCommitService
 {
-    Task<SyncCommitResult> CommitAsync(MusicDbContext db, long sessionId, long deviceId, bool isDryRun, string direction = "both", CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Executes every record of the session. Orphan handling follows the
+    /// <see cref="DeviceSyncSession.Direction"/> stored on the session when it was started.
+    /// </summary>
+    Task<SyncCommitResult> CommitAsync(MusicDbContext db, long sessionId, long deviceId, bool isDryRun, CancellationToken cancellationToken = default);
 
     Task AcknowledgeRecordsAsync(List<DeviceSyncSessionRecord> records, DateTime? modifiedAt);
 }
