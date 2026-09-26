@@ -124,8 +124,7 @@ export class NodeApiClient implements ISyncApiClient {
 
     async commitSync(
         deviceId: number,
-        sessionId: number,
-        request?: { direction?: string }
+        sessionId: number
     ): Promise<{
         createRemoteCount: number;
         updateRemoteCount: number;
@@ -141,7 +140,7 @@ export class NodeApiClient implements ISyncApiClient {
         errorCount: number;
         committedAt: Date;
     }> {
-        const response: any = await this._post(`/devices/${deviceId}/sync/${sessionId}/commit`, request ?? {});
+        const response: any = await this._post(`/devices/${deviceId}/sync/${sessionId}/commit`, {});
         if (response.committedAt && typeof response.committedAt === 'string') {
             response.committedAt = new Date(response.committedAt);
         }

@@ -169,8 +169,7 @@ export interface ISyncApiClient {
 
     commitSync: (
         deviceId: number,
-        sessionId: number,
-        request?: { direction?: string }
+        sessionId: number
     ) => Promise<{
         createRemoteCount: number;
         updateRemoteCount: number;

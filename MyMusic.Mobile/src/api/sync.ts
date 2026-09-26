@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
 import {apiMultipartRequest, apiRequest} from './client';
 import {ApiError} from './types';
-import type {AcknowledgeActionRequest, PruneSessionsRequest, ReportSyncErrorRequest, SyncCheckRequest, SyncCommitRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
+import type {AcknowledgeActionRequest, PruneSessionsRequest, ReportSyncErrorRequest, SyncCheckRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
 import {
     AcknowledgeActionResponseSchema,
     CreatePendingActionsResponseSchema,
@@ -62,10 +62,9 @@ export async function completeSync(deviceId: number, sessionId: number) {
     });
 }
 
-export async function commitSync(deviceId: number, sessionId: number, request?: SyncCommitRequest) {
+export async function commitSync(deviceId: number, sessionId: number) {
     return apiRequest(`/devices/${deviceId}/sync/${sessionId}/commit`, {
         method: 'POST',
-        body: request ?? {},
         schema: SyncCommitResponseSchema,
     });
 }

@@ -196,12 +196,6 @@ export const SyncCheckResponseSchema = z.object({
 
 export type SyncCheckResponse = z.infer<typeof SyncCheckResponseSchema>;
 
-export const SyncCommitRequestSchema = z.object({
-    direction: z.string().optional(),
-});
-
-export type SyncCommitRequest = z.infer<typeof SyncCommitRequestSchema>;
-
 export const SyncCommitResponseSchema = z.object({
     createRemoteCount: z.number(),
     updateRemoteCount: z.number(),
