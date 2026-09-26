@@ -23,8 +23,7 @@ export default function PlayerTimeline(props: PlayerTimelineProps) {
     const onReady = useCallback((ws: WaveSurfer) => {
         wavesurferRef.current = ws;
         onLoad(ws.getDuration());
-        setIsPlaying(false);
-    }, [wavesurferRef, onLoad, setIsPlaying]);
+    }, [wavesurferRef, onLoad]);
 
     // wavesurfer.js emits "finish" twice when a track ends (from its playback state and from the media
     // "ended" event); only report the first one per playback, so the queue doesn't advance twice

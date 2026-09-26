@@ -38,7 +38,7 @@ type PlaybackActions = {
 
 type PlaybackStore = PlaybackState & PlaybackActions;
 
-function createPlaybackStore(): StoreApi<PlaybackStore> {
+export function createPlaybackStore(): StoreApi<PlaybackStore> {
     return create(
         immer<PlaybackStore>((set) => ({
             autoplay: false,
@@ -63,13 +63,17 @@ function createPlaybackStore(): StoreApi<PlaybackStore> {
                             song: state.current.song,
                             time: 0,
                             duration,
-                            isPlaying: state.autoplay,
+                            // Only playing once the audio actually starts; autoplay stays pending until then
+                            isPlaying: false,
                         };
                     }
                 }),
             setIsPlaying: (isPlaying) =>
                 set((state) => {
-                    if (state.current.type === 'LOADED') {
+                    if (state.current.type === 'LOADING') {
+                        // Not loaded yet: remember whether it should start playing once it is
+                        state.autoplay = isPlaying;
+                    } else if (state.current.type === 'LOADED') {
                         state.current.isPlaying = isPlaying;
                         state.autoplay = false;
                     }
@@ -114,6 +118,16 @@ function createPlaybackStore(): StoreApi<PlaybackStore> {
                 }),
         }))
     );
+}
+
+/**
+ * Whether the player is playing or about to autoplay the current song. Used to show the pause
+ * control while a song is still loading or waiting for the audio to start.
+ */
+export function selectIsPlayingOrPending(state: PlaybackState): boolean {
+    if (state.current.type === 'EMPTY') return false;
+    if (state.current.type === 'LOADED' && state.current.isPlaying) return true;
+    return state.autoplay;
 }
 
 export const PlaybackStoreContext = createContext<StoreApi<PlaybackStore>>(null!);

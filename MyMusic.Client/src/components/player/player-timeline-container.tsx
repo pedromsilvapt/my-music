@@ -1,4 +1,4 @@
-import {useRef} from 'react';
+import {useContext, useRef} from 'react';
 import {useShallow} from 'zustand/react/shallow';
 import {notifications} from '@mantine/notifications';
 import {useTranslation} from 'react-i18next';
@@ -6,7 +6,7 @@ import {useMediaSession} from "../../hooks/use-media-session";
 import {usePlayHistoryTracker} from "../../hooks/use-play-history.ts";
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
 import {useQueue} from '../../hooks/use-queue';
-import {usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
+import {PlaybackStoreContext, usePlaybackActions, usePlaybackStore} from '../../stores/playback-store';
 import PlayerTimeline from './player-timeline';
 import {useWavesurferRef} from './wavesurfer-context';
 import {useBatchSetStopAfterPlayback} from '../../client/playlists';
@@ -24,6 +24,7 @@ export default function PlayerTimelineContainer() {
     const loadRetryCountRef = useRef<number>(0);
     const lastSongIdRef = useRef<number | null>(null);
     const wavesurferRef = useWavesurferRef();
+    const playbackStore = useContext(PlaybackStoreContext);
     const {goForward, hasNext} = usePlayerNavigation();
     const {queue, currentSongId, queueId} = useQueue();
     const {setIsPlaying, setCurrentTime, load, incrementPlaybackKey} = usePlaybackActions((s) => ({
@@ -34,7 +35,7 @@ export default function PlayerTimelineContainer() {
     }));
     const clearStopAfterPlaybackRef = useRef(useBatchSetStopAfterPlayback({}));
 
-    const {song, time, duration, songUrl, autoplay, volume, muted, playbackKey} = usePlaybackStore(
+    const {song, time, duration, songUrl, volume, muted, playbackKey} = usePlaybackStore(
         useShallow((s) => {
             if (s.current.type === 'LOADED') {
                 return {
@@ -42,7 +43,6 @@ export default function PlayerTimelineContainer() {
                     time: s.current.time,
                     duration: s.current.duration,
                     songUrl: `/api/songs/${s.current.song.id}/download`,
-                    autoplay: s.autoplay,
                     volume: s.output.volume,
                     muted: s.output.muted,
                     playbackKey: s.playbackKey,
@@ -54,13 +54,12 @@ export default function PlayerTimelineContainer() {
                     time: 0,
                     duration: 0,
                     songUrl: `/api/songs/${s.current.song.id}/download`,
-                    autoplay: s.autoplay,
                     volume: s.output.volume,
                     muted: s.output.muted,
                     playbackKey: s.playbackKey,
                 };
             }
-            return {song: null, time: 0, duration: 0, songUrl: null, autoplay: false, volume: 1, muted: false, playbackKey: 0};
+            return {song: null, time: 0, duration: 0, songUrl: null, volume: 1, muted: false, playbackKey: 0};
         })
     );
 
@@ -82,6 +81,10 @@ export default function PlayerTimelineContainer() {
         try {
             await wavesurferRef.current.play();
         } catch (err) {
+            // Paused by the user before the audio started
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+
+            setIsPlaying(false);
             if (err instanceof DOMException && err.name === 'NotAllowedError') {
                 console.warn('[PlayerTimelineContainer] Autoplay blocked by browser - user interaction required');
                 notifications.show({
@@ -104,7 +107,8 @@ export default function PlayerTimelineContainer() {
             if (time > 0) {
                 wavesurferRef.current.setTime(time);
             }
-            if (autoplay) {
+            // Read the latest intent: the user may have paused or played while the song was loading
+            if (playbackStore.getState().autoplay) {
                 attemptAutoplay();
             }
         }
