@@ -6,7 +6,7 @@
 
   <!-- ASP.NET Core / Microsoft.Extensions -->
   <ItemGroup>
-    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="10.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.3" />
