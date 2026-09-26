@@ -1,8 +1,9 @@
 import {Menu} from "@mantine/core";
-import {useElementSize, useViewportSize} from "@mantine/hooks";
-import {useEffect, useMemo} from "react";
+import {useViewportSize} from "@mantine/hooks";
+import {useEffect, useLayoutEffect, useMemo, useState} from "react";
 import {useShallow} from "zustand/react/shallow";
 import {useContextMenuStore} from "../../stores/context-menu-store.tsx";
+import {constrainToViewport, type Size} from "./context-menu-position.ts";
 
 interface ContextMenuPortalProps {
     menuId: string;
@@ -10,9 +11,12 @@ interface ContextMenuPortalProps {
 }
 
 export function ContextMenuPortal({menuId, content}: ContextMenuPortalProps) {
-    const {ref: menuRef, width, height} = useElementSize<HTMLDivElement>();
+    // Element kept in state (callback ref) so mounting the dropdown triggers a re-measure,
+    // even on the first open, when it mounts after the render that opened it
+    const [menuEl, setMenuEl] = useState<HTMLDivElement | null>(null);
+    const [size, setSize] = useState<Size>({width: 0, height: 0});
     const {width: viewportWidth, height: viewportHeight} = useViewportSize();
-    
+
     const {isOpen, activeMenuId, position, close} = useContextMenuStore(
         useShallow(state => ({
             isOpen: state.isOpen,
@@ -35,29 +39,33 @@ export function ContextMenuPortal({menuId, content}: ContextMenuPortalProps) {
         return () => document.removeEventListener('click', handleClick);
     }, [isActive, close]);
 
+    useLayoutEffect(() => {
+        if (!menuEl) return;
+
+        // Measure synchronously before paint so the first frame is already constrained
+        const measure = () => setSize(prev =>
+            prev.width === menuEl.offsetWidth && prev.height === menuEl.offsetHeight
+                ? prev
+                : {width: menuEl.offsetWidth, height: menuEl.offsetHeight});
+        measure();
+
+        const observer = new ResizeObserver(measure);
+        observer.observe(menuEl);
+        return () => observer.disconnect();
+    }, [menuEl, position]);
+
     const constrainedPosition = useMemo(() => {
         if (!position) return null;
 
-        let left = position.x;
-        let top = position.y;
-
-        if (left + width > viewportWidth) {
-            left = Math.max(0, left - width);
-        }
-
-        if (top + height > viewportHeight) {
-            top = Math.max(0, top - height);
-        }
-
-        return {left, top};
-    }, [position, width, height, viewportWidth, viewportHeight]);
+        return constrainToViewport(position, size, {width: viewportWidth, height: viewportHeight});
+    }, [position, size, viewportWidth, viewportHeight]);
 
     if (!isActive || !constrainedPosition) return null;
 
     return (
         <Menu opened={true} onClose={close}>
             <Menu.Dropdown
-                ref={menuRef}
+                ref={setMenuEl}
                 styles={{
                     dropdown: {
                         position: 'fixed',
