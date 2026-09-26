@@ -276,8 +276,6 @@ public class Phases(
             return;
         }
 
-        List<SyncRecordItem> recordsToProcess;
-
         logger.LogInformation("Fetching pending actions for device {DeviceId}", ctx.DeviceId);
         var pendingResponse = await apiClient.CreatePendingActionsAsync(ctx.DeviceId, ctx.SessionId, ct);
 
@@ -287,19 +285,11 @@ public class Phases(
             .ToList();
         ctx.PendingServerRecords.AddRange(newRecords);
 
-        recordsToProcess = ctx.PendingServerRecords;
-
-        if (ctx.Options.Direction == SyncDirection.Down)
-        {
-            recordsToProcess = recordsToProcess
-                .Where(r => r.Action == SyncRecordAction.CreateLocal || r.Action == SyncRecordAction.UpdateLocal)
-                .ToList();
-            logger.LogInformation("Found {Count} songs to download", recordsToProcess.Count);
-        }
-        else
-        {
-            logger.LogInformation("Processing {Count} pending actions", recordsToProcess.Count);
-        }
+        // Every client-action record must be processed (and acknowledged), regardless of direction,
+        // otherwise the commit rejects the session. In `down` the server is the source of truth, so
+        // its deletions and renames are applied just like downloads.
+        var recordsToProcess = ctx.PendingServerRecords;
+        logger.LogInformation("Processing {Count} pending actions", recordsToProcess.Count);
 
         var serverTotal = recordsToProcess.Count;
 

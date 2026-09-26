@@ -45,6 +45,8 @@ Direction affects not just what data flows, but how deletions are interpreted. S
 
 In `up`, the server never creates records that require the device to act (`DeleteLocal`, `UpdateLocal`, `CreateLocal`, `Rename`): a pending server removal is ignored and the file is compared normally, and a newer server version is recorded as `Skipped`.
 
+In `down`, the device applies every server-initiated action (`CreateLocal`, `UpdateLocal`, `DeleteLocal`, `Rename`), not only downloads: the server is the source of truth, so its removals and renames are carried out on the device as well.
+
 ## Change Detection
 
 The fundamental question sync must answer for every file is: **has this changed since the last sync?**

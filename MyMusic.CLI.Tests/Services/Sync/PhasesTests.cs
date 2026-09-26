@@ -1,5 +1,6 @@
 namespace MyMusic.CLI.Tests.Services.Sync;
 
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Sync.Types;
@@ -59,6 +60,37 @@ public class PhasesTests
         await phases.ServerActionsPhaseAsync(ctx, null);
 
         await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(SyncDirection.Down, true)]
+    [InlineData(SyncDirection.Down, false)]
+    [InlineData(SyncDirection.Both, true)]
+    [InlineData(SyncDirection.Both, false)]
+    public async Task ServerActionsPhase_AcknowledgesDeleteLocalAndRenameRecords(SyncDirection direction, bool dryRun)
+    {
+        // The server marked one song for removal and renamed another; the local files exist
+        var deleteRecord = CreateRecord("removed.mp3", SyncRecordAction.DeleteLocal);
+        var renameRecord = CreateRecord("new/renamed.mp3", SyncRecordAction.Rename) with
+        {
+            Data = JsonSerializer.SerializeToElement(new { previousPath = "old/renamed.mp3", newPath = "new/renamed.mp3" })
+        };
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(new CreatePendingActionsResult { Records = [deleteRecord, renameRecord] });
+        _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AcknowledgeActionResult { Success = true });
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Direction = direction, DryRun = dryRun, AutoConfirm = true });
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // Both records should be acknowledged, otherwise the commit rejects the session
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1,
+            Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(deleteRecord.Id)), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1,
+            Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(renameRecord.Id)), Arg.Any<CancellationToken>());
     }
 
     [Theory]
