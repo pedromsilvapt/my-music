@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
@@ -324,7 +325,7 @@ public class SyncUploadServiceSpecs
     }
 
     [Fact]
-    public async Task UploadAsync_UpdateDoesNotDowngradeToLink()
+    public async Task UploadAsync_UpdateWithoutDuplicate_CreatesUpdateRemoteRecord()
     {
         var scenario = new Scenario();
         var song = scenario.CreateSong("Song");
@@ -498,4 +499,150 @@ public class SyncUploadServiceSpecs
         result.Record.Action.ShouldBe(SyncRecordAction.Link);
         await _songFileValidate.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
+
+    #region Updated file duplicating another song
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_UpdateDuplicatingAnotherLibrarySong_CreatesLinkToThatSong(bool isDryRun)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var updatedSong = scenario.CreateSong("Updated");
+        var duplicateSong = scenario.CreateSong("Duplicate");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, isDryRun: isDryRun, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, updatedSong, "/music/song.mp3");
+        ArrangeLibraryChecksum(UploadContent, duplicateSong);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = await UploadUpdateAsync(service, scenario, session, songDevice, isDryRun);
+
+        // Assert
+        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        result.Record.SongId.ShouldBe(duplicateSong.Id);
+        result.EffectiveSongId.ShouldBe(duplicateSong.Id);
+        await _songFileValidate.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UploadAsync_UpdateWithUnchangedContent_CreatesUpdateRemoteRecord()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        ArrangeLibraryChecksum(UploadContent, song);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = await UploadUpdateAsync(service, scenario, session, songDevice);
+
+        // Assert
+        result.Record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        result.EffectiveSongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task UploadAsync_UpdateDuplicatingPendingCreateRemote_CreatesChecksumOnlyLink()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        scenario.AddRecord(session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: JsonSerializer.SerializeToElement(new { checksum = UploadChecksum, algorithm = "XxHash128", modifiedAt = DateTime.UtcNow.ToString("O") }));
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = await UploadUpdateAsync(service, scenario, session, songDevice);
+
+        // Assert
+        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        result.Record.SongId.ShouldBeNull();
+        result.EffectiveSongId.ShouldBeNull();
+        SyncActionDataSerializer.Deserialize<SongModifiedAtData>(result.Record.Data)!.Checksum.ShouldBe(UploadChecksum);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_DuplicatingPendingUpdateRemote_CreatesLinkToUpdatedSong(bool isUpdate)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var otherSong = scenario.CreateSong("Other");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        scenario.AddRecord(session.Id, "/music/other.mp3", SyncRecordAction.UpdateRemote, songId: otherSong.Id,
+            data: JsonSerializer.SerializeToElement(new { songId = otherSong.Id, checksum = UploadChecksum, algorithm = "XxHash128", modifiedAt = DateTime.UtcNow.ToString("O") }));
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = isUpdate
+            ? await UploadUpdateAsync(service, scenario, session, songDevice)
+            : await UploadNewAsync(service, scenario, session, "/music/copy.mp3");
+
+        // Assert
+        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        result.Record.SongId.ShouldBe(otherSong.Id);
+    }
+
+    #endregion
+
+    private static readonly byte[] UploadContent = [9, 8, 7, 6, 5];
+
+    private static readonly string UploadChecksum = ChecksumService.ComputeChecksumFromBytes(UploadContent, "XxHash128");
+
+    private void ArrangeLibraryChecksum(byte[] content, Song song)
+    {
+        var checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
+        _musicService.FindUserSongsByChecksum(
+            Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<List<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(call => call.ArgAt<List<string>>(2).Contains(checksum)
+                ? new Dictionary<string, Song> { { checksum, song } }
+                : new Dictionary<string, Song>());
+    }
+
+    private static Task<SyncUploadResult> UploadUpdateAsync(
+        SyncUploadService service, Scenario scenario, DeviceSyncSession session, SongDevice songDevice, bool isDryRun = false) =>
+        service.UploadAsync(
+            deviceId: songDevice.DeviceId,
+            sessionId: session.Id,
+            isDryRun: isDryRun,
+            path: songDevice.DevicePath,
+            fileStream: new MemoryStream(UploadContent),
+            fileName: Path.GetFileName(songDevice.DevicePath),
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: true,
+            songDeviceForImport: songDevice,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
+
+    private static Task<SyncUploadResult> UploadNewAsync(
+        SyncUploadService service, Scenario scenario, DeviceSyncSession session, string path) =>
+        service.UploadAsync(
+            deviceId: session.DeviceId,
+            sessionId: session.Id,
+            isDryRun: false,
+            path: path,
+            fileStream: new MemoryStream(UploadContent),
+            fileName: Path.GetFileName(path),
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: false,
+            songDeviceForImport: null,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
 }

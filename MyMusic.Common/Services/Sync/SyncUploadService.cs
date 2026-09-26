@@ -70,7 +70,7 @@ public class SyncUploadService(
 
             long? effectiveSongId = decision.ActionType switch
             {
-                SyncUploadActionType.LinkWithSongId => decision.SongId,
+                SyncUploadActionType.LinkWithSongId or SyncUploadActionType.LinkWithChecksumOnly => decision.SongId,
                 _ => duplicateSongId ?? songIdForRecord,
             };
 
@@ -117,7 +117,10 @@ public class SyncUploadService(
         DateTime modifiedAt, DateTime createdAt,
         SongDevice? songDeviceForImport)
     {
-        if (isUpdate)
+        // An updated file whose content now belongs to another song is linked to that song below.
+        // Importing it over its own song would make the commit merge the two songs, which no record
+        // would describe.
+        if (isUpdate && (!hasDuplicate || duplicateSongId == songDeviceForImport!.SongId))
         {
             return new SyncUploadDecision
             {
@@ -129,6 +132,10 @@ public class SyncUploadService(
             };
         }
 
+        var linkReason = isUpdate
+            ? "Linked to existing song (updated file duplicates it)"
+            : "Linked to existing song (duplicate checksum)";
+
         if (hasDuplicate && duplicateSongId.HasValue)
         {
             return new SyncUploadDecision
@@ -137,7 +144,7 @@ public class SyncUploadService(
                 SongId = duplicateSongId.Value,
                 Checksum = checksum,
                 ChecksumAlgorithm = algorithm,
-                Reason = "Linked to existing song (duplicate checksum)",
+                Reason = linkReason,
             };
         }
 
@@ -148,7 +155,7 @@ public class SyncUploadService(
                 ActionType = SyncUploadActionType.LinkWithChecksumOnly,
                 Checksum = checksum,
                 ChecksumAlgorithm = algorithm,
-                Reason = "Linked to existing song (duplicate checksum)",
+                Reason = linkReason,
             };
         }
 
@@ -206,9 +213,12 @@ public class SyncUploadService(
         long deviceId, long sessionId, string checksum, string checksumAlgorithm,
         long ownerId, CancellationToken cancellationToken)
     {
+        // Pending UpdateRemote records count too: the commit gives their song this content
         var sessionRecords = await db.DeviceSyncSessionRecords
             .Where(r => r.SessionId == sessionId
-                      && (r.Action == SyncRecordAction.CreateRemote || r.Action == SyncRecordAction.Link))
+                      && (r.Action == SyncRecordAction.CreateRemote
+                          || r.Action == SyncRecordAction.UpdateRemote
+                          || r.Action == SyncRecordAction.Link))
             .ToListAsync(cancellationToken);
 
         long? matchedSongId = null;

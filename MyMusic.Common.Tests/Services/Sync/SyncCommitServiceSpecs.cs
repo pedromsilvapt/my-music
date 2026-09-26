@@ -405,6 +405,53 @@ public class SyncCommitServiceSpecs
     }
 
     [Fact]
+    public async Task Link_AtPathOfAnotherSong_RepointsSongDeviceToLinkedSong()
+    {
+        // Arrange
+        var ctx = SetupWithSongAndRealMusicService();
+        var linkedSong = ctx.Scenario.CreateSong("Linked", album: ctx.Song!.Album);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", syncAction: SongSyncAction.Download);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link,
+            data: CreateLocalUpdateData(linkedSong.Id, DefaultModifiedAt), songId: linkedSong.Id, acknowledged: true);
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var repointed = GetSongDevice(ctx.Db, sd.Id);
+        repointed.SongId.ShouldBe(linkedSong.Id);
+        repointed.LastSyncedModifiedAt.ShouldBe(DefaultModifiedAt);
+        repointed.SyncAction.ShouldBeNull();
+        ctx.Db.Songs.Any(s => s.Id == ctx.Song.Id).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Link_ToSongWhoseUpdateFailed_RecordsError()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/test.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote,
+            data: CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128"),
+            songId: ctx.Song.Id, acknowledged: true);
+        var linkRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/copy.mp3", SyncRecordAction.Link,
+            data: CreateSyncData(ctx.Song.Id, DefaultModifiedAt, checksum: "abc", algorithm: "XxHash128"),
+            songId: ctx.Song.Id, acknowledged: true);
+        ArrangeImportFailure("Disk full");
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var linkError = ctx.Db.DeviceSyncSessionRecords
+            .Single(r => r.Action == SyncRecordAction.Error && r.FilePath == "/music/copy.mp3");
+        GetFailedRecordId(linkError).ShouldBe(linkRecord.Id);
+        await AssertAddSongsToDeviceNotCalled();
+    }
+
+    [Fact]
     public async Task Link_DryRun_SkipsMutation()
     {
         var ctx = SetupWithSong(dryRun: true);

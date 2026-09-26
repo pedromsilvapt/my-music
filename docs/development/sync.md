@@ -86,6 +86,8 @@ The same audio file can appear at multiple device paths (duplicates in the user'
 
 When a file is uploaded, the server calculates its checksum and checks whether a song with that checksum already exists — first among records created earlier in the same session, then across the user's entire library. If a match is found, the server creates a `Link` record (associating the device path with the existing song) instead of a `CreateRemote` record (importing a new song). This keeps the library free of duplicates without requiring the user to clean up their local collection.
 
+The same applies to a re-uploaded (updated) file. If its new content matches a song other than the one the device path is linked to, the server creates a `Link` to that song instead of an `UpdateRemote`. At commit, the device path's association moves to the matching song, and the song it was linked to before is left unchanged. Session records that count as matches include pending `UpdateRemote` records, since the commit gives their song that content. The commit never merges songs on its own: that would change the library in a way no record describes.
+
 ## Two-Phase Commit
 
 Sync is split into two distinct phases: **record** and **commit**. During the record phase, the system determines what needs to happen and writes a list of action records. During the commit phase, those actions are executed.

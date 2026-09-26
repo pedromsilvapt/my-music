@@ -160,6 +160,7 @@ public class SyncCommitService(
                 var outcome = await ImportSongFromFile(db, tempFilePath, songId.Value, userId, originalFilePath: originalFilePath, cancellationToken: cancellationToken);
                 if (outcome.ErrorMessage != null)
                 {
+                    imports.MarkFailed(checksum);
                     await RecordError(db, sessionId, record, outcome.ErrorMessage, cancellationToken);
                     return;
                 }
@@ -177,11 +178,7 @@ public class SyncCommitService(
                 var outcome = await ImportSongFromFile(db, tempFilePath, null, userId, createdAt, modifiedAt, originalFilePath, cancellationToken);
                 if (outcome.ErrorMessage != null)
                 {
-                    if (checksum != null)
-                    {
-                        imports.FailedChecksums.Add(checksum);
-                    }
-
+                    imports.MarkFailed(checksum);
                     await RecordError(db, sessionId, record, outcome.ErrorMessage, cancellationToken);
                     return;
                 }
@@ -248,6 +245,7 @@ public class SyncCommitService(
                 var outcome = await ImportSongFromFile(db, tempFilePath, songId.Value, userId, originalFilePath: originalFilePath, cancellationToken: cancellationToken);
                 if (outcome.ErrorMessage != null)
                 {
+                    imports.MarkFailed(checksum);
                     await RecordError(db, sessionId, record, outcome.ErrorMessage, cancellationToken);
                     return;
                 }
@@ -262,11 +260,7 @@ public class SyncCommitService(
                 var outcome = await ImportSongFromFile(db, tempFilePath, null, userId, createdAt, modifiedAt, originalFilePath, cancellationToken);
                 if (outcome.ErrorMessage != null)
                 {
-                    if (checksum != null)
-                    {
-                        imports.FailedChecksums.Add(checksum);
-                    }
-
+                    imports.MarkFailed(checksum);
                     await RecordError(db, sessionId, record, outcome.ErrorMessage, cancellationToken);
                     return;
                 }
@@ -354,16 +348,17 @@ public class SyncCommitService(
         var checksum = data?.Checksum;
         var modifiedAt = data?.ModifiedAt;
 
-        if ((!songId.HasValue || songId.Value <= 0) && checksum != null && imports.CreatedSongIds.TryGetValue(checksum, out var checksumSongId))
-        {
-            songId = checksumSongId;
-        }
-
-        if ((!songId.HasValue || songId.Value <= 0) && checksum != null && imports.FailedChecksums.Contains(checksum))
+        // The song this Link targets gets its content from an import in this commit that failed
+        if (checksum != null && imports.FailedChecksums.Contains(checksum))
         {
             await RecordError(db, sessionId, record,
                 "Song to link was not imported: the import of the file with the same content failed", cancellationToken);
             return;
+        }
+
+        if ((!songId.HasValue || songId.Value <= 0) && checksum != null && imports.CreatedSongIds.TryGetValue(checksum, out var checksumSongId))
+        {
+            songId = checksumSongId;
         }
 
         if (!songId.HasValue || songId.Value <= 0)
@@ -371,6 +366,16 @@ public class SyncCommitService(
 
         var songDevice = await musicService.AddSongsToDevice(db, deviceId, songId.Value, record.FilePath,
             (modifiedAt ?? DateTime.UtcNow).ToUniversalTime(), cancellationToken);
+
+        // A device file updated to another song's content is linked to that song: the device's
+        // association at this path moves to it, and the previous song is left as it was
+        if (songDevice != null && songDevice.SongId != songId)
+        {
+            songDevice.SongId = songId;
+            songDevice.LastSyncedModifiedAt = (modifiedAt ?? DateTime.UtcNow).ToUniversalTime();
+            songDevice.SyncAction = null;
+            songDevice.SyncActionReason = null;
+        }
 
         var song = await db.Songs.FindAsync([songId.Value], cancellationToken);
         logger.LogInformation("ProcessLinkAsync: path={Path}, songId={SongId}, song.FileModifiedAtTicks={SongFileModifiedAtTicks}, songDeviceIsNull={SongDeviceIsNull}, lastSyncedIsNull={LastSyncedIsNull}",
@@ -680,6 +685,14 @@ public class SyncCommitService(
     {
         public Dictionary<string, long> CreatedSongIds { get; } = [];
         public HashSet<string> FailedChecksums { get; } = [];
+
+        public void MarkFailed(string? checksum)
+        {
+            if (checksum != null)
+            {
+                FailedChecksums.Add(checksum);
+            }
+        }
     }
 
     private static SyncCommitResult BuildExistingResult(
