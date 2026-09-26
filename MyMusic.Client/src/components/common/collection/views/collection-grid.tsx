@@ -139,7 +139,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
         if (scrollRequestId != null && scrollToIndex != null && scrollToIndex >= 0) {
             if (!isIndexFullyInViewport(virtualizer, scrollToIndex)) {
                 requestAnimationFrame(() => {
-                    virtualizer.scrollToIndex(scrollToIndex!, {align: 'center'});
+                    virtualizer.scrollToIndex(scrollToIndex!, {align: 'center', behavior: 'smooth'});
                 });
             }
         }
