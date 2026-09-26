@@ -22,7 +22,8 @@
         "ascending": "Ascending",
         "descending": "Descending",
         "selectAll": "Select all",
-        "customize": "Customize"
+        "customize": "Customize",
+        "goTo": "Go to item"
     },
     "selectionBar": {
         "selected_one": "{{count}} selected",
@@ -32,5 +33,10 @@
         "dragging": "Dragging",
         "draggingCount_one": "Dragging {{count}} item",
         "draggingCount_other": "Dragging {{count}} items"
+    },
+    "goTo": {
+        "title": "Go to item",
+        "placeholder": "Type to search...",
+        "empty": "No items found"
     }
 }

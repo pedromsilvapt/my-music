@@ -22,7 +22,8 @@
         "ascending": "Crescente",
         "descending": "Decrescente",
         "selectAll": "Selecionar tudo",
-        "customize": "Personalizar"
+        "customize": "Personalizar",
+        "goTo": "Ir para item"
     },
     "selectionBar": {
         "selected_one": "{{count}} selecionado",
@@ -32,5 +33,10 @@
         "dragging": "A arrastar",
         "draggingCount_one": "A arrastar {{count}} item",
         "draggingCount_other": "A arrastar {{count}} itens"
+    },
+    "goTo": {
+        "title": "Ir para item",
+        "placeholder": "Escreva para pesquisar...",
+        "empty": "Nenhum item encontrado"
     }
 }

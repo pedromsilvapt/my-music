@@ -1,0 +1,12 @@
+/* Options are virtualized: absolutely positioned and moved into place with a transform */
+.option {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+}
+
+/* Hovering selects the option (see goto-modal.tsx), so the selected style is the only highlight */
+.option:not([data-combobox-selected]):hover {
+    background-color: transparent;
+}

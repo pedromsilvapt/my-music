@@ -13,6 +13,19 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         return await rows.CountAsync();
     }
 
+    /// <summary>
+    /// Opens the "Go to item" modal from the collection toolbar.
+    /// </summary>
+    public async Task<GoToModalComponent> OpenGoToAsync()
+    {
+        await Root.GetByTestId("collection-goto").ClickAsync();
+
+        // The modal is rendered in a portal, outside the collection root
+        var modal = new GoToModalComponent(Root.Page.GetByRole(AriaRole.Dialog, new() { Name = "Go to item" }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
+
     public async Task WaitForVisibleAsync()
     {
         await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible });

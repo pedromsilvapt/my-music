@@ -49,7 +49,7 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
     /// <summary>
     /// Returns the row of the song with the given title.
     /// </summary>
-    private ILocator GetRowByTitle(string title) =>
+    public ILocator GetRowByTitle(string title) =>
         Root.Locator("tr[data-index]").Filter(new()
         {
             Has = Root.Page.Locator("td[data-testid^='collection-cell-title-']", new() { HasTextString = title }),

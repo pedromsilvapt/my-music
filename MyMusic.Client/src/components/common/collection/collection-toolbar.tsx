@@ -14,6 +14,7 @@ import {useDisclosure, useUncontrolled} from "@mantine/hooks";
 import {
     IconArrowDown,
     IconArrowUp,
+    IconCurrentLocation,
     IconGripVertical,
     IconLayoutGridFilled,
     IconListDetails,
@@ -27,7 +28,8 @@ import {useTranslation} from "react-i18next";
 import {ZINDEX_MODAL} from "../../../consts.ts";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
 import {CollectionFilterBar, type CollectionFilterBarRef} from "./collection-filter-bar.tsx";
-import type {CollectionFilterMode, CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
+import type {CollectionFilterMode, CollectionSchema, CollectionSchemaColumn, CollectionSortField} from "./collection-schema.tsx";
+import GoToModal from "./goto-modal.tsx";
 import type {SelectionStore} from "./selection-store.ts";
 import {useSelectionCount} from "./selection-store.ts";
 import styles from './collection-toolbar.module.css';
@@ -60,12 +62,16 @@ export interface CollectionToolbarProps<M> {
     onSelectAll?: () => void;
     onClearSelection?: () => void;
 
+    items?: M[];
+    schema?: CollectionSchema<M>;
+    onGoTo?: (item: M) => void;
+
     renderLeftSection?: () => React.ReactNode;
     renderMiddleSection?: () => React.ReactNode;
     renderRightSection?: () => React.ReactNode;
 }
 
-export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
+export default function CollectionToolbar<M extends { id: string | number }>(props: CollectionToolbarProps<M>) {
     const {t} = useTranslation(["collection", "common"]);
     const [search, setSearch] = useUncontrolled({
         value: props.search,
@@ -79,6 +85,7 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
     });
 
     const [popoverOpened, {open: openPopover, close: closePopover, toggle: togglePopover}] = useDisclosure(false);
+    const [goToOpened, {open: openGoTo, close: closeGoTo}] = useDisclosure(false);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -231,6 +238,27 @@ export default function CollectionToolbar<M>(props: CollectionToolbarProps<M>) {
     const rightSection = props.renderRightSection
         ? props.renderRightSection()
         : <Group justify="flex-end">
+            {props.onGoTo && props.items && props.schema && (
+                <>
+                    <ActionIcon
+                        variant="default"
+                        size="lg"
+                        aria-label={t("collection:toolbar.goTo")}
+                        title={t("collection:toolbar.goTo")}
+                        data-testid="collection-goto"
+                        onClick={openGoTo}
+                    >
+                        <IconCurrentLocation/>
+                    </ActionIcon>
+                    <GoToModal
+                        opened={goToOpened}
+                        onClose={closeGoTo}
+                        items={props.items}
+                        schema={props.schema}
+                        onSelect={props.onGoTo}
+                    />
+                </>
+            )}
             {showSelectAll && (
                 <ActionIcon
                     variant="default"

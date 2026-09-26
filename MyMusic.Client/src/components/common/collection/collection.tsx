@@ -313,10 +313,29 @@ export default function Collection<T extends { id: string | number }>(props: Col
         onContextMenuTrigger(event);
     }, [onContextMenuTrigger]);
 
+    // GoTo requests are merged with the parent-driven scroll request: whichever was issued last wins.
+    // Both counters only ever increase, so their sum changes on every request from either side.
+    const [goToKey, setGoToKey] = useState<React.Key | null>(null);
+    const [goToCount, setGoToCount] = useState(0);
+
+    useEffect(() => {
+        setGoToKey(null);
+    }, [props.scrollRequestId]);
+
+    const handleGoTo = useCallback((item: T) => {
+        setGoToKey(props.schema.key(item));
+        setGoToCount(count => count + 1);
+    }, [props.schema]);
+
+    const scrollToKey = goToKey ?? props.scrollToSongId;
+    const scrollRequestId = props.scrollRequestId == null && goToCount === 0
+        ? undefined
+        : (props.scrollRequestId ?? 0) + goToCount;
+
     const scrollToIndex = useMemo(() => {
-        if (props.scrollToSongId == null) return undefined;
-        return filteredAndSortedItems.findIndex(item => props.schema.key(item) === props.scrollToSongId);
-    }, [filteredAndSortedItems, props.scrollToSongId, props.schema]);
+        if (scrollToKey == null) return undefined;
+        return filteredAndSortedItems.findIndex(item => props.schema.key(item) === scrollToKey);
+    }, [filteredAndSortedItems, scrollToKey, props.schema]);
 
     let viewNode: React.ReactNode;
 
@@ -334,7 +353,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
             scrollToIndex={scrollToIndex}
-            scrollRequestId={props.scrollRequestId}
+            scrollRequestId={scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
             autoHeight={autoHeight}
@@ -351,7 +370,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
             scrollToIndex={scrollToIndex}
-            scrollRequestId={props.scrollRequestId}
+            scrollRequestId={scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
             autoHeight={autoHeight}
@@ -368,7 +387,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
             initialScrollPosition={initialScrollPositionRef.current ?? undefined}
             onScrollPositionChange={handleScrollPositionChange}
             scrollToIndex={scrollToIndex}
-            scrollRequestId={props.scrollRequestId}
+            scrollRequestId={scrollRequestId}
             height={viewHeight}
             onContextMenuTrigger={handleContextMenuTrigger}
             autoHeight={autoHeight}
@@ -416,6 +435,9 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 totalItems: filteredAndSortedItems.length,
                 onSelectAll: selectable ? handleSelectAll : undefined,
                 onClearSelection: selectable ? handleClearSelection : undefined,
+                items: filteredAndSortedItems,
+                schema: props.schema,
+                onGoTo: handleGoTo,
             })}
         </Box>
 
