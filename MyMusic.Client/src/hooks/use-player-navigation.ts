@@ -9,6 +9,11 @@ export interface GoForwardResult {
     allRemainingSkipped: boolean;
 }
 
+export interface GoForwardOptions {
+    /** Whether the next song starts playing once loaded (defaults to true). */
+    autoplay?: boolean;
+}
+
 export function usePlayerNavigation() {
     const {queue, currentSongId, queueId} = useQueue();
     const {clearSkipNextPlayback} = useQueueMutations();
@@ -19,10 +24,10 @@ export function usePlayerNavigation() {
     const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
     const hasPrevious = currentIndex > 0;
 
-    const navigateToSong = useCallback((song: GetPlaylistSongItem | undefined) => {
+    const navigateToSong = useCallback((song: GetPlaylistSongItem | undefined, autoplay = true) => {
         if (!song) return;
 
-        setLoadingSong(song, true);
+        setLoadingSong(song, autoplay);
         setCurrentSongRef.current.mutate({data: {currentSongId: song.id}});
 
         if (song.skipNextPlayback && queueId != null) {
@@ -30,7 +35,7 @@ export function usePlayerNavigation() {
         }
     }, [setLoadingSong, queueId, clearSkipNextPlayback]);
 
-    const goForward = useCallback((): GoForwardResult | null => {
+    const goForward = useCallback((options?: GoForwardOptions): GoForwardResult | null => {
         if (!hasNext) return null;
 
         const skippedSongIds: number[] = [];
@@ -49,7 +54,7 @@ export function usePlayerNavigation() {
         const allRemainingSkipped = !nextSong;
 
         if (nextSong) {
-            navigateToSong(nextSong);
+            navigateToSong(nextSong, options?.autoplay ?? true);
         }
 
         if (skippedSongIds.length > 0 && queueId != null) {

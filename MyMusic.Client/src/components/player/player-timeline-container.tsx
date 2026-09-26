@@ -159,7 +159,8 @@ export default function PlayerTimelineContainer() {
 
     const handleFinish = () => {
         const currentSong = queue.find(s => s.id === currentSongId);
-        if (currentSong?.stopAfterPlayback) {
+        const stopAfterPlayback = currentSong?.stopAfterPlayback ?? false;
+        if (currentSong && stopAfterPlayback) {
             setIsPlaying(false);
             notifications.show({
                 title: t("player:notifications.stoppedAfterSongTitle"),
@@ -187,10 +188,17 @@ export default function PlayerTimelineContainer() {
                     }
                 );
             }
-            return;
         }
 
-        const result = goForward();
+        // When stopping after this song, still advance to the next one but leave it paused
+        const result = goForward({autoplay: !stopAfterPlayback});
+
+        if (stopAfterPlayback) {
+            if (!result || result.allRemainingSkipped) {
+                wavesurferRef.current?.stop();
+            }
+            return;
+        }
 
         if (result?.allRemainingSkipped) {
             wavesurferRef.current?.stop();
