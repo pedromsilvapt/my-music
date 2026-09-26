@@ -740,6 +740,44 @@ namespace MyMusic.Common.Migrations
                     b.ToTable("playlists", (string)null);
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.PlaylistSharing", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("ModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modified_at");
+
+                    b.Property<long>("PlaylistId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("playlist_id");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_playlist_sharings");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_playlist_sharings_user_id");
+
+                    b.HasIndex("PlaylistId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_playlist_sharings_playlist_id_user_id");
+
+                    b.ToTable("playlist_sharings", (string)null);
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.PlaylistSong", b =>
                 {
                     b.Property<long>("Id")
@@ -1248,44 +1286,6 @@ namespace MyMusic.Common.Migrations
                     b.ToTable("song_history_queues", (string)null);
                 });
 
-            modelBuilder.Entity("MyMusic.Common.Entities.SongSharing", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<DateTime?>("ModifiedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("modified_at");
-
-                    b.Property<long>("SongId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("song_id");
-
-                    b.Property<long>("UserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_song_sharings");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_song_sharings_user_id");
-
-                    b.HasIndex("SongId", "UserId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_song_sharings_song_id_user_id");
-
-                    b.ToTable("song_sharings", (string)null);
-                });
-
             modelBuilder.Entity("MyMusic.Common.Entities.SongSource", b =>
                 {
                     b.Property<long>("Id")
@@ -1781,6 +1781,27 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("MyMusic.Common.Entities.PlaylistSharing", b =>
+                {
+                    b.HasOne("MyMusic.Common.Entities.Playlist", "Playlist")
+                        .WithMany("PlaylistSharings")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_playlist_sharings_playlists_playlist_id");
+
+                    b.HasOne("MyMusic.Common.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_playlist_sharings_users_user_id");
+
+                    b.Navigation("Playlist");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MyMusic.Common.Entities.PlaylistSong", b =>
                 {
                     b.HasOne("MyMusic.Common.Entities.Playlist", "Playlist")
@@ -1931,27 +1952,6 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("MyMusic.Common.Entities.SongSharing", b =>
-                {
-                    b.HasOne("MyMusic.Common.Entities.Song", "Song")
-                        .WithMany("SongSharings")
-                        .HasForeignKey("SongId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_song_sharings_songs_song_id");
-
-                    b.HasOne("MyMusic.Common.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_song_sharings_users_user_id");
-
-                    b.Navigation("Song");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("MyMusic.Common.Entities.SongSource", b =>
                 {
                     b.HasOne("MyMusic.Common.Entities.Song", "Song")
@@ -2037,6 +2037,8 @@ namespace MyMusic.Common.Migrations
 
             modelBuilder.Entity("MyMusic.Common.Entities.Playlist", b =>
                 {
+                    b.Navigation("PlaylistSharings");
+
                     b.Navigation("PlaylistSongs");
                 });
 
@@ -2049,8 +2051,6 @@ namespace MyMusic.Common.Migrations
                     b.Navigation("Genres");
 
                     b.Navigation("PlaylistSongs");
-
-                    b.Navigation("SongSharings");
 
                     b.Navigation("Sources");
                 });

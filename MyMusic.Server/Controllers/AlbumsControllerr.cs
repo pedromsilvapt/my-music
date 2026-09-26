@@ -30,7 +30,7 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
                 ? context.Albums.Where(a => a.OwnerId == currentUser.Id)
                 : context.Albums.Where(a =>
                     a.OwnerId == ownerId.Value &&
-                    a.Songs.Any(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id))));
+                    a.Songs.Any(s => s.IsSharedWith(currentUser.Id))));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -102,11 +102,11 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         var album = await context.Albums
             .Include(a => a.Artist)
             .IncludeSongMetadata("Songs", includeAlbum: false)
-            .Include("Songs.SongSharings")
+            .Include("Songs.PlaylistSongs.Playlist.PlaylistSharings")
             .FirstOrDefaultAsync(a =>
                 a.Id == id &&
                 (a.OwnerId == currentUser.Id ||
-                 a.Songs.Any(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id))),
+                 a.Songs.Any(s => s.IsSharedWith(currentUser.Id))),
                 cancellationToken);
 
         if (album == null)
@@ -122,7 +122,7 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         if (album.OwnerId != currentUser.Id)
         {
             album.Songs = album.Songs
-                .Where(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id))
+                .Where(s => s.IsSharedWith(currentUser.Id))
                 .ToList();
         }
 
@@ -201,7 +201,7 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
             ? context.Albums.Where(a => a.OwnerId == currentUser.Id)
             : context.Albums.Where(a =>
                 a.OwnerId == ownerId.Value &&
-                a.Songs.Any(s => s.SongSharings.Any(ss => ss.UserId == currentUser.Id)));
+                a.Songs.Any(s => s.IsSharedWith(currentUser.Id)));
 
         var query = field switch
         {

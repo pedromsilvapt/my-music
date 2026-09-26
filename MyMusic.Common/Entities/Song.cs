@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using EntityFrameworkCore.Projectables;
 
 namespace MyMusic.Common.Entities;
@@ -78,8 +79,6 @@ public class Song
 
     public List<PlaylistSong> PlaylistSongs { get; set; } = [];
 
-    public required List<SongSharing> SongSharings { get; set; } = [];
-
     [Projectable] public int DurationSeconds => (int)Duration.TotalSeconds;
 
     [Projectable]
@@ -94,7 +93,24 @@ public class Song
 
     [Projectable] public int GenreCount => Genres.Count;
 
-    [Projectable] public bool IsShared => SongSharings.Count > 0;
+    /// <summary>
+    /// A song is shared with <paramref name="userId"/> when it belongs to at least one playlist
+    /// shared with that user. Only playlists owned by the song's owner count, so nobody can
+    /// re-share songs they merely have access to.
+    /// </summary>
+    [Projectable]
+    public bool IsSharedWith(long userId) =>
+        PlaylistSongs.Any(ps => ps.Playlist.OwnerId == OwnerId &&
+                                ps.Playlist.PlaylistSharings.Any(sh => sh.UserId == userId));
+
+    /// <summary>
+    /// Shares that grant access to this song: those of playlists owned by the song's owner
+    /// (same rule as <see cref="IsSharedWith"/>).
+    /// </summary>
+    [Projectable, NotMapped]
+    public IEnumerable<PlaylistSharing> Sharings =>
+        PlaylistSongs.Where(ps => ps.Playlist.OwnerId == OwnerId)
+            .SelectMany(ps => ps.Playlist.PlaylistSharings);
 
     [Projectable] public string SearchableText => (Label ?? "") + " " + (Album.Name ?? "");
 }

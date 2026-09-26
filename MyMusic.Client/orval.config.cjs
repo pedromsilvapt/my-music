@@ -98,16 +98,8 @@ module.exports = {
                             invalidates: ['getSoundalikeDuplicates'],
                         },
                         {
-                            onMutations: ['createSongShare'],
-                            invalidates: ['listSongShares', 'listSharers'],
-                        },
-                        {
-                            onMutations: ['deleteSongShare'],
-                            invalidates: ['listSongShares', 'listSharers'],
-                        },
-                        {
-                            onMutations: ['manageSongShares'],
-                            invalidates: ['listSharers', 'listSongShares', 'listSongSharesBatch'],
+                            onMutations: ['managePlaylistShares'],
+                            invalidates: ['listSharers', 'listPlaylistSharesBatch'],
                         },
                     ],
                 }

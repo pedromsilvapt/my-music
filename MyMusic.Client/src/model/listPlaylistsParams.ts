@@ -9,4 +9,5 @@ export type ListPlaylistsParams = {
 includeSystem?: boolean;
 search?: string;
 filter?: string;
+includeShared?: boolean;
 };

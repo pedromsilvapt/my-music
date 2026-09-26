@@ -26,7 +26,7 @@ public class GenresController(ILogger<GenresController> logger, ICurrentUser cur
                 ? context.Genres.Where(g => g.OwnerId == currentUser.Id)
                 : context.Genres.Where(g =>
                     g.OwnerId == ownerId.Value &&
-                    g.Songs.Any(sg => sg.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))))
+                    g.Songs.Any(sg => sg.Song.IsSharedWith(currentUser.Id))))
             .Include(g => g.Songs);
 
         var genres = await query.ToListAsync(cancellationToken);

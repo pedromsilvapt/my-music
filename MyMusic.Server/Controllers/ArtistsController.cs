@@ -31,7 +31,7 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
                 ? context.Artists.Where(a => a.OwnerId == currentUser.Id)
                 : context.Artists.Where(a =>
                     a.OwnerId == ownerId.Value &&
-                    a.Songs.Any(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))));
+                    a.Songs.Any(sa => sa.Song.IsSharedWith(currentUser.Id))));
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -95,11 +95,11 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         var artist = await context.Artists
             .Include(a => a.Albums)
             .IncludeSongMetadata("Songs.Song")
-            .Include("Songs.Song.SongSharings")
+            .Include("Songs.Song.PlaylistSongs.Playlist.PlaylistSharings")
             .FirstOrDefaultAsync(a =>
                 a.Id == id &&
                 (a.OwnerId == currentUser.Id ||
-                 a.Songs.Any(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))),
+                 a.Songs.Any(sa => sa.Song.IsSharedWith(currentUser.Id))),
                 cancellationToken);
 
         if (artist == null)
@@ -115,7 +115,7 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         if (artist.OwnerId != currentUser.Id)
         {
             artist.Songs = artist.Songs
-                .Where(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id))
+                .Where(sa => sa.Song.IsSharedWith(currentUser.Id))
                 .ToList();
             var accessibleAlbumIds = artist.Songs.Select(sa => sa.Song.AlbumId).ToHashSet();
             artist.Albums = artist.Albums.Where(a => accessibleAlbumIds.Contains(a.Id)).ToList();
@@ -154,7 +154,7 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
             ? context.Artists.Where(a => a.OwnerId == currentUser.Id)
             : context.Artists.Where(a =>
                 a.OwnerId == ownerId.Value &&
-                a.Songs.Any(sa => sa.Song.SongSharings.Any(ss => ss.UserId == currentUser.Id)));
+                a.Songs.Any(sa => sa.Song.IsSharedWith(currentUser.Id)));
 
         var query = field switch
         {

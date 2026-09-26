@@ -124,14 +124,8 @@ public class SharedSongImportServiceSpecs
         var ownerSong = scenario.ImportOwnedSongForUser(
             sourcePath, title, album, artists, genres, scenario.Owner.Id);
 
-        // Share with recipient
-        scenario.DbContext.SongSharings.Add(new SongSharing
-        {
-            SongId = ownerSong.Id,
-            UserId = scenario.Recipient.Id,
-            CreatedAt = DateTime.UtcNow,
-        });
-        scenario.DbContext.SaveChanges();
+        // Share with recipient through a shared playlist
+        SharingTestHelpers.ShareSongs(scenario.DbContext, scenario.Recipient, ownerSong);
 
         return (scenario, ownerSong);
     }

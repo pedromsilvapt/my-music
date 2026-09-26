@@ -13,7 +13,6 @@ import {
     IconMusic,
     IconPlayerPlayFilled,
     IconPlaylistAdd,
-    IconShare,
     IconTag,
     IconTrash,
     IconUser
@@ -29,7 +28,6 @@ import {modals} from '@mantine/modals';
 import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
-import {useManageSharingContext} from "../../contexts/manage-sharing-context.tsx";
 import {useQueueMutations} from "../../contexts/player-context.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -52,7 +50,6 @@ export default function SongDetailPage() {
     const toggleFavorite = useToggleFavorite();
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
-    const {open: openManageSharing} = useManageSharingContext();
     const deleteSongs = useDeleteSongs();
     const historyQuery = useGetSongHistory(Number(songId));
     const historyItems = (historyQuery.data?.data.history ?? [])
@@ -221,15 +218,6 @@ export default function SongDetailPage() {
                         >
                             {t("songs:schema.manageDevices")}
                         </Button>
-                        {!song.isShared && (
-                            <Button
-                                leftSection={<IconShare/>}
-                                variant="default"
-                                onClick={() => openManageSharing([song.id])}
-                            >
-                                {t("songs:schema.manageSharing")}
-                            </Button>
-                        )}
                         <Button
                             leftSection={<IconDownload/>}
                             variant="default"

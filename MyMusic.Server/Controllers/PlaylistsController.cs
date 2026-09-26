@@ -21,11 +21,15 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         CancellationToken cancellationToken,
         [FromQuery] bool includeSystem = false,
         [FromQuery] string? search = null,
-        [FromQuery] string? filter = null)
+        [FromQuery] string? filter = null,
+        [FromQuery] bool includeShared = false)
     {
-        // Owner-only by design — sharing applies to song metadata, not personal collections.
-        var query = context.Playlists
-            .Where(p => p.OwnerId == currentUser.Id);
+        // Own playlists, plus (when requested) playlists other users shared with me. Shared
+        // playlists are read-only: every mutating endpoint below stays owner-only.
+        var query = includeShared
+            ? context.Playlists.Where(p =>
+                p.OwnerId == currentUser.Id || p.PlaylistSharings.Any(sh => sh.UserId == currentUser.Id))
+            : context.Playlists.Where(p => p.OwnerId == currentUser.Id);
 
         if (!includeSystem)
         {
@@ -44,13 +48,16 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         }
 
         var playlists = await query
-            .Include(p => p.PlaylistSongs)
+            .Include(p => p.Owner)
+            .Include(p => p.PlaylistSharings)
+            .Include(p => p.PlaylistSongs).ThenInclude(ps => ps.Song)
             .OrderBy(p => p.Name)
+            .AsSplitQuery()
             .ToListAsync(cancellationToken);
 
         return new ListPlaylistsResponse
         {
-            Playlists = playlists.Select(ListPlaylistItem.FromEntity).ToList(),
+            Playlists = playlists.Select(p => ListPlaylistItem.FromEntity(p, currentUser.Id)).ToList(),
         };
     }
 
@@ -79,9 +86,41 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         };
     }
 
+    /// <summary>
+    /// Gets a playlist owned by, or shared with, the current user. Recipients only see the songs
+    /// owned by the playlist owner (the ones actually shared).
+    /// </summary>
     [HttpGet("{id:long}", Name = "GetPlaylist")]
-    public async Task<GetPlaylistResponse> Get(
+    public async Task<ActionResult<GetPlaylistResponse>> Get(
         [FromRoute] long id,
+        MusicDbContext context,
+        CancellationToken cancellationToken)
+    {
+        var playlist = await context.Playlists
+            .Where(p => p.Id == id &&
+                        (p.OwnerId == currentUser.Id || p.PlaylistSharings.Any(sh => sh.UserId == currentUser.Id)))
+            .Include(p => p.Owner)
+            .Include(p => p.PlaylistSharings)
+            .IncludeSongMetadata("PlaylistSongs.Song")
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (playlist == null)
+        {
+            return NotFound();
+        }
+
+        return new GetPlaylistResponse
+        {
+            Playlist = GetPlaylistItem.FromEntity(playlist, currentUser.Id),
+        };
+    }
+
+    /// <summary>
+    /// Builds the <see cref="GetPlaylistResponse"/> returned by owner-only mutating endpoints.
+    /// </summary>
+    private async Task<GetPlaylistResponse> GetOwned(
+        long id,
         MusicDbContext context,
         CancellationToken cancellationToken)
     {
@@ -94,7 +133,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
 
         return new GetPlaylistResponse
         {
-            Playlist = GetPlaylistItem.FromEntity(playlist),
+            Playlist = GetPlaylistItem.FromEntity(playlist, currentUser.Id),
         };
     }
 
@@ -193,7 +232,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
 
-        return await Get(id, context, cancellationToken);
+        return await GetOwned(id, context, cancellationToken);
     }
 
     [HttpDelete("{id:long}/songs/{songId:long}", Name = "RemoveSongFromPlaylist")]
@@ -226,7 +265,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
 
-        return await Get(id, context, cancellationToken);
+        return await GetOwned(id, context, cancellationToken);
     }
 
     [HttpPut("{id:long}/songs/{songId:long}/stop-after-playback", Name = "SetStopAfterPlayback")]
@@ -254,7 +293,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         playlistSong.Playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
 
-        return await Get(id, context, cancellationToken);
+        return await GetOwned(id, context, cancellationToken);
     }
 
     [HttpPut("songs/stop-after-playback/batch", Name = "BatchSetStopAfterPlayback")]
@@ -288,7 +327,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         playlist.ModifiedAt = DateTime.UtcNow;
         await context.SaveChangesAsync(cancellationToken);
 
-        return await Get(request.PlaylistId, context, cancellationToken);
+        return await GetOwned(request.PlaylistId, context, cancellationToken);
     }
 
     [HttpPut("{id:long}/songs/{songId:long}/skip-next-playback", Name = "SetSkipNextPlayback")]
@@ -312,7 +351,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
             return Forbid();
         }
 
-        return await Get(id, context, cancellationToken);
+        return await GetOwned(id, context, cancellationToken);
     }
 
     [HttpPut("songs/skip-next-playback/batch", Name = "BatchSetSkipNextPlayback")]
@@ -338,7 +377,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
             return BadRequest(ex.Message);
         }
 
-        return await Get(request.PlaylistId, context, cancellationToken);
+        return await GetOwned(request.PlaylistId, context, cancellationToken);
     }
 
     [HttpPost("manage-songs", Name = "ManagePlaylistSongs")]
@@ -437,7 +476,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
 
         return new GetPlaylistResponse
         {
-            Playlist = GetPlaylistItem.FromEntity(playlist!),
+            Playlist = GetPlaylistItem.FromEntity(playlist!, currentUser.Id),
         };
     }
 
@@ -503,7 +542,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
 
         return new GetPlaylistResponse
         {
-            Playlist = GetPlaylistItem.FromEntity(playlist!),
+            Playlist = GetPlaylistItem.FromEntity(playlist!, currentUser.Id),
         };
     }
 
@@ -883,7 +922,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
 
         return new GetPlaylistResponse
         {
-            Playlist = GetPlaylistItem.FromEntity(playlist!),
+            Playlist = GetPlaylistItem.FromEntity(playlist!, currentUser.Id),
         };
     }
 
@@ -983,7 +1022,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         var loadedPlaylist = await LoadPlaylistWithSongs(context, playlist.Id, cancellationToken);
         return new CreateQueueResponse
         {
-            Queue = GetPlaylistItem.FromEntity(loadedPlaylist!),
+            Queue = GetPlaylistItem.FromEntity(loadedPlaylist!, currentUser.Id),
         };
     }
 
@@ -1184,6 +1223,8 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     {
         return await context.Playlists
             .Where(p => p.Id == id && p.OwnerId == currentUser.Id)
+            .Include(p => p.Owner)
+            .Include(p => p.PlaylistSharings)
             .IncludeSongMetadata("PlaylistSongs.Song")
             .AsSplitQuery()
             .FirstOrDefaultAsync(cancellationToken);

@@ -38,9 +38,9 @@ public class SharedSongImportService(
             throw new InvalidOperationException($"Song not found with id {songId}");
         }
 
-        // Verify the song is actually shared with the current user. The sharer is derivable
-        // from Song.OwnerId, so a SongSharing row keyed by (SongId, UserId) is the only proof.
-        var isShared = await db.SongSharings.AnyAsync(ss => ss.SongId == songId && ss.UserId == currentUserId, ct);
+        // Verify the song is actually shared with the current user, i.e. it belongs to at least
+        // one playlist its owner has shared with them.
+        var isShared = await db.Songs.AnyAsync(s => s.Id == songId && s.IsSharedWith(currentUserId), ct);
         if (!isShared)
         {
             throw new UnauthorizedAccessException($"Song {songId} is not shared with user {currentUserId}");

@@ -3,12 +3,12 @@ using MyMusic.Common.Models;
 namespace MyMusic.Common.Services;
 
 /// <summary>
-/// Imports a song that has been shared with the current user (a <see cref="Entities.SongSharing"/>
-/// row exists for <c>(SongId, UserId == currentUser)</c>) into the recipient's own library,
+/// Imports a song that has been shared with the current user (it belongs to a playlist its owner
+/// shared with them, see <see cref="Entities.Song.IsSharedWith"/>) into the recipient's own library,
 /// reusing the existing <see cref="IMusicService.ImportRepositorySongs"/> pipeline.
 ///
 /// The recipient ends up with both the shared (read-only) view and an owned copy they control.
-/// The <see cref="Entities.SongSharing"/> row is intentionally NOT removed by this operation
+/// The <see cref="Entities.PlaylistSharing"/> row is intentionally NOT touched by this operation
 /// (the client decides which view to show). No <see cref="Entities.SongDevice"/> rows are
 /// created — this mirrors the normal <c>SongsController.Upload</c> behavior.
 /// </summary>

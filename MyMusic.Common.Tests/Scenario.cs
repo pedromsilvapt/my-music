@@ -172,7 +172,6 @@ public class Scenario
             Genres = [],
             Devices = [],
             Sources = [],
-            SongSharings = [],
         };
         DbContext.Songs.Add(song);
         DbContext.SaveChanges();

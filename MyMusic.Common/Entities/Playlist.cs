@@ -23,9 +23,13 @@ public class Playlist
 
     public required List<PlaylistSong> PlaylistSongs { get; set; }
 
+    public List<PlaylistSharing> PlaylistSharings { get; set; } = [];
+
     [Projectable] public int SongCount => PlaylistSongs.Count;
 
     [Projectable] public int TotalDurationSeconds => PlaylistSongs.Sum(ps => (int)ps.Song.Duration.TotalSeconds);
 
     [Projectable] public string SearchableText => Name ?? "";
+
+    [Projectable] public bool IsShared => PlaylistSharings.Count > 0;
 }

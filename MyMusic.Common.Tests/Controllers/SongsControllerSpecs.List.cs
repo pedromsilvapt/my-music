@@ -45,18 +45,8 @@ public class SongsControllerSpecs
             new MetadataDiffBuilder(Substitute.For<IApiPathResolver>()));
     }
 
-    private static SongSharing Share(Song song, User recipient, MusicDbContext db)
-    {
-        var sharing = new SongSharing
-        {
-            SongId = song.Id,
-            UserId = recipient.Id,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.SongSharings.Add(sharing);
-        db.SaveChanges();
-        return sharing;
-    }
+    private static PlaylistSharing Share(Song song, User recipient, MusicDbContext db) =>
+        SharingTestHelpers.ShareSongs(db, recipient, song);
 
     [Fact]
     public async Task List_NoOwnerId_ReturnsOwnSongs()
@@ -176,5 +166,31 @@ public class SongsControllerSpecs
         // Assert — owned songs are never flagged as shared
         var item = response.Songs.Single();
         item.IsShared.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task List_FilterBySharingName_IgnoresPlaylistsNotOwnedBySongOwner()
+    {
+        // Arrange — I share "Shared Song" with Carol through my own playlist; Bob adds
+        // "Reshared Song" to his own playlist and shares it with Carol, which grants no access
+        var scenario = new Scenario();
+        var bob = scenario.CreateUser("Bob", "bob");
+        var carol = scenario.CreateUser("Carol", "carol");
+        var sharedSong = scenario.CreateSong("Shared Song");
+        var resharedSong = scenario.CreateSong("Reshared Song");
+        Share(sharedSong, carol, scenario.DbContext);
+
+        var bobPlaylist = scenario.CreatePlaylist("Bob's Playlist", ownerId: bob.Id);
+        scenario.AddSongToPlaylist(bobPlaylist, resharedSong, 1000.0);
+        SharingTestHelpers.SharePlaylist(scenario.DbContext, bobPlaylist, carol);
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None,
+            filter: @"sharing.name = ""Carol""");
+
+        // Assert — only the song Carol can actually access is reported as shared with her
+        response.Songs.Select(s => s.Title).ShouldBe(["Shared Song"]);
     }
 }

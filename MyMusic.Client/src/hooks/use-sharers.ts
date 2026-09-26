@@ -1,4 +1,4 @@
-import {useListSharers} from "../client/song-sharing";
+import {useListSharers} from "../client/playlist-sharing";
 
 export function useSharers() {
     const query = useListSharers({
@@ -10,6 +10,7 @@ export function useSharers() {
     return {
         sharers: query.data?.sharers ?? [],
         isLoading: query.isLoading,
+        isFetching: query.isFetching,
         isError: query.isError,
     };
 }

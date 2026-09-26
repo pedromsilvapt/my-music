@@ -3,38 +3,36 @@ import {notifications} from "@mantine/notifications";
 import {useState} from "react";
 import {useTranslation} from "react-i18next";
 import {IconChevronDown, IconChevronUp, IconShare} from "@tabler/icons-react";
-import {useListSongSharesBatch} from "../../client/song-sharing.ts";
-import {useListSongs} from "../../client/songs.ts";
-import {useManageSongSharesWithSongsInvalidation} from "../../hooks/use-manage-song-shares.ts";
+import {useListPlaylistSharesBatch} from "../../client/playlist-sharing.ts";
+import {useListPlaylists} from "../../client/playlists.ts";
+import {useManagePlaylistSharesWithInvalidation} from "../../hooks/use-manage-playlist-shares.ts";
 import {useGetCurrentUser, useListUsers} from "../../client/users.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {ListSongItem, ListUserItem} from "../../model";
-import ManageSongItem from "../common/manage-song-item.tsx";
+import type {ListPlaylistItem, ListUserItem} from "../../model";
+import ManagePlaylistItem from "../common/manage-playlist-item.tsx";
 
 type ShareSelection = "none" | "add" | "remove";
 
 interface ManageSharingDialogProps {
     opened: boolean;
     onClose: () => void;
-    songIds: number[];
+    playlistIds: number[];
     onSuccess?: () => void;
 }
 
 export default function ManageSharingDialog({
                                                 opened,
                                                 onClose,
-                                                songIds,
+                                                playlistIds,
                                                 onSuccess
                                                }: ManageSharingDialogProps) {
     const {t} = useTranslation(["sharing", "common"]);
-    const songsQuery = useListSongs(
-        songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
-        {query: {enabled: opened && songIds.length > 0}}
-    );
-    const songsResponse = useQueryData(songsQuery, t("sharing:manageDialog.fetchSongsFailed")) ?? {data: {songs: []}};
-    const songs = songsResponse?.data?.songs ?? [];
-    const ownedSongs = songs.filter(s => !s.isShared);
+    // Only owned (non-system) playlists are listed without includeShared, so anything else is ignored
+    const playlistsQuery = useListPlaylists(undefined, {query: {enabled: opened && playlistIds.length > 0}});
+    const playlistsResponse = useQueryData(playlistsQuery, t("sharing:manageDialog.fetchPlaylistsFailed")) ?? {data: {playlists: []}};
+    const playlistIdSet = new Set(playlistIds);
+    const ownedPlaylists = (playlistsResponse?.data?.playlists ?? []).filter(p => playlistIdSet.has(p.id));
 
     const usersQuery = useListUsers({query: {enabled: opened, refetchOnMount: 'always'}});
     const usersResponse = useQueryData(usersQuery, t("sharing:manageDialog.fetchUsersFailed")) ?? {data: {users: []}};
@@ -46,9 +44,9 @@ export default function ManageSharingDialog({
 
     const recipients = users.filter(u => u.id !== currentUserId);
 
-    const sharesQuery = useListSongSharesBatch(
-        ownedSongs.length > 0 ? {songIds: ownedSongs.map(s => s.id).join(',')} : undefined,
-        {query: {enabled: opened && ownedSongs.length > 0}}
+    const sharesQuery = useListPlaylistSharesBatch(
+        ownedPlaylists.length > 0 ? {playlistIds: ownedPlaylists.map(p => p.id).join(',')} : undefined,
+        {query: {enabled: opened && ownedPlaylists.length > 0}}
     );
     const sharesResponse = useQueryData(sharesQuery, t("sharing:manageDialog.fetchSharesFailed")) ?? {data: {shares: []}};
     const existingShares = sharesResponse?.data?.shares ?? [];
@@ -57,7 +55,7 @@ export default function ManageSharingDialog({
     const [userSearch, setUserSearch] = useState("");
     const [expandedUsers, setExpandedUsers] = useState<Set<number>>(new Set());
 
-    const manageShares = useManageSongSharesWithSongsInvalidation({
+    const manageShares = useManagePlaylistSharesWithInvalidation({
         mutation: {
             onSuccess: () => {
                 setSelections(new Map());
@@ -106,7 +104,7 @@ export default function ManageSharingDialog({
         if (shares.length > 0) {
             manageShares.mutate({
                 data: {
-                    songIds: ownedSongs.map(s => s.id),
+                    playlistIds: ownedPlaylists.map(p => p.id),
                     shares,
                 }
             });
@@ -141,17 +139,14 @@ export default function ManageSharingDialog({
             || u.name.toLowerCase().includes(userSearch.toLowerCase())
         );
 
-    const sharesByUserSongId = new Map<number, Set<number>>();
-    const ownedSongIdSet = new Set(ownedSongs.map(s => s.id));
+    const sharesByUserPlaylistId = new Map<number, Set<number>>();
     for (const share of existingShares) {
-        if (ownedSongIdSet.has(share.songId)) {
-            let set = sharesByUserSongId.get(share.userId);
-            if (!set) {
-                set = new Set();
-                sharesByUserSongId.set(share.userId, set);
-            }
-            set.add(share.songId);
+        let set = sharesByUserPlaylistId.get(share.userId);
+        if (!set) {
+            set = new Set();
+            sharesByUserPlaylistId.set(share.userId, set);
         }
+        set.add(share.playlistId);
     }
 
     return (
@@ -161,9 +156,9 @@ export default function ManageSharingDialog({
                    data-loading={sharesQuery.isFetching ? "true" : "false"}>
                 <Group justify="space-between" align="center">
                     <Text size="sm" c="dimmed">
-                        {ownedSongs.length === 0
-                            ? t("sharing:manageDialog.noOwnedSongs")
-                            : t("sharing:manageDialog.managing", {count: ownedSongs.length})}
+                        {ownedPlaylists.length === 0
+                            ? t("sharing:manageDialog.noOwnedPlaylists")
+                            : t("sharing:manageDialog.managing", {count: ownedPlaylists.length})}
                     </Text>
                     <TextInput
                         placeholder={t("sharing:manageDialog.filterPlaceholder")}
@@ -174,8 +169,8 @@ export default function ManageSharingDialog({
                     />
                 </Group>
 
-                {ownedSongs.length === 0 ? (
-                    <Text c="dimmed" ta="center" py="xl">{t("sharing:manageDialog.noOwnedSongs")}</Text>
+                {ownedPlaylists.length === 0 ? (
+                    <Text c="dimmed" ta="center" py="xl">{t("sharing:manageDialog.noOwnedPlaylists")}</Text>
                 ) : (
                     <ScrollArea h={400}>
                         <Stack gap="sm">
@@ -183,8 +178,8 @@ export default function ManageSharingDialog({
                                 <ShareRow
                                     key={user.id}
                                     user={user}
-                                    sharedSongIds={sharesByUserSongId.get(user.id) ?? new Set()}
-                                    ownedSongs={ownedSongs}
+                                    sharedPlaylistIds={sharesByUserPlaylistId.get(user.id) ?? new Set()}
+                                    ownedPlaylists={ownedPlaylists}
                                     expanded={expandedUsers.has(user.id)}
                                     onToggleExpand={() => handleToggleExpand(user.id)}
                                     value={selections.get(user.id) ?? "none"}
@@ -205,7 +200,7 @@ export default function ManageSharingDialog({
                     <Button
                         onClick={handleApply}
                         loading={manageShares.isPending}
-                        disabled={ownedSongs.length === 0}
+                        disabled={ownedPlaylists.length === 0}
                         leftSection={<IconShare size={16}/>}
                     >
                         {t("common:actions.apply")}
@@ -218,17 +213,17 @@ export default function ManageSharingDialog({
 
 interface ShareRowProps {
     user: ListUserItem;
-    sharedSongIds: Set<number>;
-    ownedSongs: ListSongItem[];
+    sharedPlaylistIds: Set<number>;
+    ownedPlaylists: ListPlaylistItem[];
     expanded: boolean;
     onToggleExpand: () => void;
     value: ShareSelection;
     onChange: (value: ShareSelection) => void;
 }
 
-function ShareRow({user, sharedSongIds, ownedSongs, expanded, onToggleExpand, value, onChange}: ShareRowProps) {
+function ShareRow({user, sharedPlaylistIds, ownedPlaylists, expanded, onToggleExpand, value, onChange}: ShareRowProps) {
     const {t} = useTranslation(["sharing", "common"]);
-    const matchCount = ownedSongs.filter(s => sharedSongIds.has(s.id)).length;
+    const matchCount = ownedPlaylists.filter(p => sharedPlaylistIds.has(p.id)).length;
 
     return (
         <Box data-testid="share-row" data-share-user-id={user.id} data-share-username={user.username}>
@@ -251,7 +246,7 @@ function ShareRow({user, sharedSongIds, ownedSongs, expanded, onToggleExpand, va
                             expanded ? <IconChevronUp size={12}/> : <IconChevronDown size={12}/>
                         }
                     >
-                        {matchCount}/{ownedSongs.length}
+                        {matchCount}/{ownedPlaylists.length}
                     </Badge>
                     <SegmentedControl
                         value={value}
@@ -267,16 +262,13 @@ function ShareRow({user, sharedSongIds, ownedSongs, expanded, onToggleExpand, va
             </Group>
             <Collapse in={expanded}>
                 <Stack gap="xs" pl="sm" pt="xs">
-                    {ownedSongs.map(song => {
-                        const isShared = sharedSongIds.has(song.id);
-                        return (
-                            <ManageSongItem
-                                key={song.id}
-                                song={song}
-                                isIncluded={isShared}
-                            />
-                        );
-                    })}
+                    {ownedPlaylists.map(playlist => (
+                        <ManagePlaylistItem
+                            key={playlist.id}
+                            playlist={playlist}
+                            isIncluded={sharedPlaylistIds.has(playlist.id)}
+                        />
+                    ))}
                 </Stack>
             </Collapse>
         </Box>

@@ -504,9 +504,9 @@ public class SongsController(
                 .Where(p => p.OwnerId == currentUser.Id)
                 .Select(p => p.Name)
                 .Distinct(),
-            "sharing.name" => context.SongSharings
-                .Where(ss => ss.Song.OwnerId == currentUser.Id)
-                .Select(ss => ss.User.Name)
+            "sharing.name" => context.PlaylistSharings
+                .Where(ps => ps.Playlist.OwnerId == currentUser.Id)
+                .Select(ps => ps.User.Name)
                 .Distinct(),
             _ => Enumerable.Empty<string>().AsQueryable(),
         };
@@ -853,9 +853,9 @@ public class SongsController(
         new()
         {
             Name = "sharing.name",
-            EntityPath = "SongSharings.User.Name",
+            EntityPath = "Sharings.User.Name",
             Type = "string",
-            Description = "Recipient the song is shared with (by username)",
+            Description = "Recipient the song is shared with through a shared playlist (by name)",
             IsCollection = true,
             SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
             SupportsDynamicValues = true,

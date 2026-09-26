@@ -20,7 +20,8 @@
         "searchPlaceholder": "Pesquisar listas..."
     },
     "detailPage": {
-        "fetchFailed": "Falha ao obter a lista"
+        "fetchFailed": "Falha ao obter a lista",
+        "share": "Partilhar"
     },
     "schema": {
         "manageGroup": "Gerir",
@@ -29,6 +30,12 @@
             "songs": "Músicas",
             "created": "Criada",
             "modified": "Modificada"
-        }
+        },
+        "share": "Partilhar"
+    },
+    "share": {
+        "sharedWith_one": "Partilhada com {{count}} utilizador",
+        "sharedWith_other": "Partilhada com {{count}} utilizadores",
+        "sharedBy": "Partilhada por {{name}}"
     }
 }

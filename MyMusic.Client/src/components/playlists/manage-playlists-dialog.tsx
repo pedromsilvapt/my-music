@@ -9,6 +9,7 @@ import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListPlaylistItem, ListSongItem, PlaylistAction, PlaylistSongAction} from "../../model";
 import ManageSongItem from "../common/manage-song-item.tsx";
+import PlaylistShareIndicator from "./playlist-share-indicator.tsx";
 
 type PlaylistSelection = "none" | "add" | "remove";
 
@@ -275,7 +276,10 @@ function PlaylistRow({playlist, managedSongs, value, onChange}: PlaylistRowProps
     return (
         <Box data-testid="playlist-row" data-playlist-id={playlist.id} data-playlist-name={playlist.name}>
             <Group justify="space-between" wrap="nowrap">
-                <Text fw={500} truncate style={{flex: 1, minWidth: 0}}>{playlist.name}</Text>
+                <Group gap={6} wrap="nowrap" style={{flex: 1, minWidth: 0}}>
+                    <Text fw={500} truncate>{playlist.name}</Text>
+                    <PlaylistShareIndicator playlist={playlist}/>
+                </Group>
                 <Group gap="xs" wrap="nowrap">
                     <Badge
                         size="sm"

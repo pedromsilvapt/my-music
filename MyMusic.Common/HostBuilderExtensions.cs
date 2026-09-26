@@ -8,6 +8,7 @@ using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
 using MyMusic.Common.Services.Devices;
+using MyMusic.Common.Services.Playlists;
 using MyMusic.Common.Services.PlaylistSongs;
 using MyMusic.Common.Services.SongHistory;
 using MyMusic.Common.Services.Songs;
@@ -66,7 +67,9 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IArtworkDeleteService, ArtworkDeleteService>();
 
         // Share services
-        builder.Services.AddScoped<ISongShareService, SongShareService>();
+        builder.Services.AddScoped<IPlaylistShareListService, PlaylistShareListService>();
+        builder.Services.AddScoped<IPlaylistShareManageService, PlaylistShareManageService>();
+        builder.Services.AddScoped<ISharerListService, SharerListService>();
         builder.Services.AddScoped<ISharedSongImportService, SharedSongImportService>();
         builder.Services.AddSingleton<ISongFileValidateService, SongFileValidateService>();
 

@@ -9,6 +9,12 @@ public class ManagePlaylistsDialogComponent(ILocator locator) : BaseComponent(lo
         await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible });
     }
 
+    public ILocator PlaylistRow(string playlistName) =>
+        Root.Locator($"[data-testid='playlist-row'][data-playlist-name='{playlistName}']");
+
+    public PlaylistShareIndicatorComponent ShareIndicator(string playlistName) =>
+        new(PlaylistRow(playlistName).GetByTestId("playlist-share-indicator"));
+
     public async Task SelectPlaylistAsync(string playlistName, string action = "add")
     {
         // var playlistRow = Root.GetByTestId("playlist-row").Filter(new()
@@ -16,7 +22,7 @@ public class ManagePlaylistsDialogComponent(ILocator locator) : BaseComponent(lo
         //     HasText = playlistName
         // }).First;
 
-        var playlistRow = Root.Locator($"[data-testid='playlist-row'][data-playlist-name='{playlistName}']");
+        var playlistRow = PlaylistRow(playlistName);
 
         await playlistRow.WaitForAsync(new() { State = WaitForSelectorState.Visible });
 

@@ -21,18 +21,8 @@ public class ArtistsControllerGetSpecs
             currentUser);
     }
 
-    private static SongSharing Share(Song song, User recipient, MusicDbContext db)
-    {
-        var sharing = new SongSharing
-        {
-            SongId = song.Id,
-            UserId = recipient.Id,
-            CreatedAt = DateTime.UtcNow,
-        };
-        db.SongSharings.Add(sharing);
-        db.SaveChanges();
-        return sharing;
-    }
+    private static PlaylistSharing Share(Song song, User recipient, MusicDbContext db) =>
+        SharingTestHelpers.ShareSongs(db, recipient, song);
 
     [Fact]
     public async Task Get_OwnedArtist_Returns200()

@@ -444,7 +444,6 @@ public class FuzzySearchSpecs
             Genres = [],
             Devices = [],
             Sources = [],
-            SongSharings = [],
         };
     }
 

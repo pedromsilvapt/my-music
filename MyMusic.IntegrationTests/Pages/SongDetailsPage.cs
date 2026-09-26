@@ -219,13 +219,6 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         return new ManagePlaylistsDialogComponent(dialog);
     }
 
-    public async Task<ManageSharingDialogComponent> OpenManageSharingDialogAsync()
-    {
-        await Root.GetByRole(AriaRole.Button, new() { Name = "Manage Sharing" }).ClickAsync();
-        var dialog = Page.GetByRole(AriaRole.Dialog);
-        await dialog.WaitForAsync();
-        return new ManageSharingDialogComponent(dialog);
-    }
 
     public async Task DownloadAsync()
     {

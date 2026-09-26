@@ -18,4 +18,10 @@ export interface GetPlaylistItem {
      */
   currentSongId?: number | null;
   songs: GetPlaylistSongItem[];
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  ownerId: number;
+  ownerName: string;
+  isSharedWithMe: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  sharedWithCount: number;
 }

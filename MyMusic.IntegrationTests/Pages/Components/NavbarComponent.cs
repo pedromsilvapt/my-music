@@ -19,33 +19,39 @@ public class NavbarComponent(ILocator root) : BaseComponent(root)
     public ILocator SharedSongsLink(long sharerId) => Root.GetByTestId($"nav-songs-shared-{sharerId}");
 
     /// <summary>
+    /// Waits for the navbar's sharers query to resolve, so the Songs sub-menus reflect the current shares.
+    /// </summary>
+    public async Task WaitForLoadedAsync()
+    {
+        await Root.WaitForAsync();
+        await Assertions.Expect(Root).ToHaveAttributeAsync("data-loading", "false");
+    }
+
+    /// <summary>
     /// Whether the Songs nav item has any sub-menus (sharer links + "Mine").
     /// The sub-menus render only when at least one user has shared with the current user.
     /// </summary>
     public async Task<bool> HasSongsSubMenusAsync()
-        => await MineSongsLink.CountAsync() > 0;
+    {
+        await WaitForLoadedAsync();
+        return await MineSongsLink.CountAsync() > 0;
+    }
 
     /// <summary>
     /// Whether a sharer sub-menu link for the given sharer is present under the Songs nav item.
-    /// Waits for the sharers query to resolve and the sub-menu to render.
     /// </summary>
     public async Task<bool> HasSharedSongsLinkAsync(long sharerId)
     {
-        try
-        {
-            await SharedSongsLink(sharerId).WaitForAsync(new() { State = WaitForSelectorState.Attached, Timeout = 5000 });
-            return true;
-        }
-        catch (PlaywrightException)
-        {
-            return false;
-        }
+        await WaitForLoadedAsync();
+        return await SharedSongsLink(sharerId).CountAsync() > 0;
     }
 
     public async Task<SongsPage> GoToSongsAsync()
     {
         // When the sharer sub-menu is present, nav-songs toggles expansion instead of navigating.
         // Use the explicit "Mine" sub-link when it exists; otherwise navigate directly.
+        // Wait for the sharers to load first, so the sub-menu reflects the current shares.
+        await WaitForLoadedAsync();
         if (await MineSongsLink.CountAsync() > 0)
             await ClickSongsSubNavAsync(MineSongsLink);
         else
@@ -58,6 +64,7 @@ public class NavbarComponent(ILocator root) : BaseComponent(root)
 
     public async Task<SongsPage> GoToSharedSongsAsync(long sharerId)
     {
+        await WaitForLoadedAsync();
         await ClickSongsSubNavAsync(SharedSongsLink(sharerId));
         var page = new SongsPage(Root.Page, shared: true);
         await page.Collection.WaitForLoadedAsync();

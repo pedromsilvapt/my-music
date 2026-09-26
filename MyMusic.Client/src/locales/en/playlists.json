@@ -20,7 +20,8 @@
         "searchPlaceholder": "Search playlists..."
     },
     "detailPage": {
-        "fetchFailed": "Failed to fetch playlist"
+        "fetchFailed": "Failed to fetch playlist",
+        "share": "Share"
     },
     "schema": {
         "manageGroup": "Manage",
@@ -29,6 +30,12 @@
             "songs": "Songs",
             "created": "Created",
             "modified": "Modified"
-        }
+        },
+        "share": "Share"
+    },
+    "share": {
+        "sharedWith_one": "Shared with {{count}} user",
+        "sharedWith_other": "Shared with {{count}} users",
+        "sharedBy": "Shared by {{name}}"
     }
 }

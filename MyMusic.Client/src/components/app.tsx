@@ -34,7 +34,7 @@ function App() {
     usePlayerQueueInitializer();
     const footerVisible = useIsPlayerActive();
     const {user} = useUserPreferences();
-    const {sharers} = useSharers();
+    const {sharers, isFetching: sharersFetching} = useSharers();
 
     return (
         <AppShell
@@ -60,7 +60,7 @@ function App() {
                     <PurchasesQueueIndicator/>
                 </Group>
             </AppShell.Header>
-            <AppShell.Navbar data-testid="navbar">
+            <AppShell.Navbar data-testid="navbar" data-loading={sharersFetching ? "true" : "false"}>
                 <ScrollArea h="100%" p="md">
                     <NavLink
                         data-testid="nav-player"

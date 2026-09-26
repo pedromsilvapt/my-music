@@ -10,11 +10,6 @@ namespace MyMusic.IntegrationTests.Pages.Components;
 public class SongsActionsMenuComponent(ILocator root) : BaseComponent(root)
 {
     /// <summary>
-    /// Matches the "Share Song" / "Share N Songs" menu item (singular or plural, optional count).
-    /// </summary>
-    public static Regex ShareSongs { get; } = new(@"^Share( \d+)? Songs?$");
-
-    /// <summary>
     /// Matches the "Import" menu item.
     /// </summary>
     public static Regex Import { get; } = new("Import");
@@ -41,12 +36,6 @@ public class SongsActionsMenuComponent(ILocator root) : BaseComponent(root)
     /// </summary>
     public async Task ClickItemAsync(Regex name) =>
         await GetItem(name).ClickAsync();
-
-    /// <summary>
-    /// Clicks the "Share Song" / "Share N Songs" menu item.
-    /// </summary>
-    public Task ShareAsync() =>
-        ClickItemAsync(ShareSongs);
 
     /// <summary>
     /// Clicks the "Import" menu item.

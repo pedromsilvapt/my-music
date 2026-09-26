@@ -17,4 +17,10 @@ export interface ListPlaylistItem {
   createdAt: string;
   /** @nullable */
   modifiedAt?: string | null;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  ownerId: number;
+  ownerName: string;
+  isSharedWithMe: boolean;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  sharedWithCount: number;
 }

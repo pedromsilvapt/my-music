@@ -15,7 +15,7 @@ public class DynamicFilterBuilderSpecs
         ["genre.name"] = "Genres.Genre.Name",
         ["device.name"] = "Devices.Device.Name",
         ["playlist.name"] = "PlaylistSongs.Playlist.Name",
-        ["sharing.name"] = "SongSharings.User.Name",
+        ["sharing.name"] = "PlaylistSongs.Playlist.PlaylistSharings.User.Name",
     };
 
     private static (MusicDbContext DbContext, User Owner, List<Song> Songs, List<Artist> Artists, List<Genre> Genres,
@@ -139,7 +139,6 @@ public class DynamicFilterBuilderSpecs
             Genres = genres.Select(g => new SongGenre { Genre = g, GenreId = g.Id }).ToList(),
             Devices = [],
             Sources = [],
-            SongSharings = [],
         };
     }
 
@@ -149,7 +148,7 @@ public class DynamicFilterBuilderSpecs
             .Include(s => s.Album)
             .Include(s => s.Artists).ThenInclude(sa => sa.Artist)
             .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
-            .Include(s => s.SongSharings).ThenInclude(ss => ss.User)
+            .Include(s => s.PlaylistSongs).ThenInclude(ps => ps.Playlist).ThenInclude(p => p.PlaylistSharings).ThenInclude(sh => sh.User)
             .AsSplitQuery();
 
         if (!string.IsNullOrWhiteSpace(filter))
@@ -1417,14 +1416,27 @@ public class DynamicFilterBuilderSpecs
 
     private static void AddShare(Song song, User recipient, MusicDbContext context)
     {
-        song.SongSharings.Add(new SongSharing
+        // Songs are shared implicitly: put the song in a playlist owned by its owner and share it
+        var playlist = new Playlist
         {
-            Song = song,
-            SongId = song.Id,
+            Name = $"Shared with {recipient.Name}",
+            Owner = song.Owner,
+            OwnerId = song.OwnerId,
+            CreatedAt = DateTime.UtcNow,
+            ModifiedAt = DateTime.UtcNow,
+            PlaylistSongs = [],
+        };
+        var playlistSong = new PlaylistSong { Playlist = playlist, Song = song, SongId = song.Id, Order = 1000 };
+        playlist.PlaylistSongs.Add(playlistSong);
+        song.PlaylistSongs.Add(playlistSong);
+        playlist.PlaylistSharings.Add(new PlaylistSharing
+        {
+            Playlist = playlist,
             User = recipient,
             UserId = recipient.Id,
             CreatedAt = DateTime.UtcNow,
         });
+        context.Playlists.Add(playlist);
         context.SaveChanges();
     }
 

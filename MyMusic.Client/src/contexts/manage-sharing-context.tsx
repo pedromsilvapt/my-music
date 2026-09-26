@@ -3,7 +3,7 @@ import {createContext, useCallback, useContext, useState} from "react";
 import ManageSharingDialog from "../components/sharing/manage-sharing-dialog.tsx";
 
 interface ManageSharingContextValue {
-    open: (songIds: number[]) => void;
+    open: (playlistIds: number[]) => void;
     registerRefetch: (key: string, fn: () => void) => void;
     unregisterRefetch: (key: string) => void;
 }
@@ -24,11 +24,11 @@ interface ManageSharingProviderProps {
 
 export default function ManageSharingProvider({children}: ManageSharingProviderProps) {
     const [opened, setOpened] = useState(false);
-    const [songIds, setSongIds] = useState<number[]>([]);
+    const [playlistIds, setPlaylistIds] = useState<number[]>([]);
     const [refetchFns, setRefetchFns] = useState<Map<string, () => void>>(new Map());
 
-    const open = useCallback((newSongIds: number[]) => {
-        setSongIds(newSongIds);
+    const open = useCallback((newPlaylistIds: number[]) => {
+        setPlaylistIds(newPlaylistIds);
         setOpened(true);
     }, []);
 
@@ -50,7 +50,7 @@ export default function ManageSharingProvider({children}: ManageSharingProviderP
 
     const handleClose = () => {
         setOpened(false);
-        setSongIds([]);
+        setPlaylistIds([]);
     };
 
     const handleSuccess = () => {
@@ -64,7 +64,7 @@ export default function ManageSharingProvider({children}: ManageSharingProviderP
             <ManageSharingDialog
                 opened={opened}
                 onClose={handleClose}
-                songIds={songIds}
+                playlistIds={playlistIds}
                 onSuccess={handleSuccess}
             />
         </ManageSharingContext.Provider>

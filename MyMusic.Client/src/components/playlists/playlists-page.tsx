@@ -24,11 +24,11 @@ export default function PlaylistsPage() {
     const playlistsQuery = useQuery({
         queryKey: ["playlists", appliedSearch, appliedFilter],
         queryFn: async () => {
-            const params = new URLSearchParams();
+            const params = new URLSearchParams({includeShared: "true"});
             if (appliedSearch) params.set("search", appliedSearch);
             if (appliedFilter) params.set("filter", appliedFilter);
 
-            const url = `/api/playlists${params.toString() ? `?${params.toString()}` : ""}`;
+            const url = `/api/playlists?${params.toString()}`;
             const response = await fetch(url);
 
             if (!response.ok) {

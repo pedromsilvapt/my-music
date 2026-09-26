@@ -1,5 +1,5 @@
 import {useQueryClient} from '@tanstack/react-query';
-import {useImportSharedSong} from '../client/song-sharing';
+import {useImportSharedSong} from '../client/playlist-sharing';
 import {getListSongsQueryKey} from '../client/songs';
 
 type ImportSharedSongOptions = NonNullable<Parameters<typeof useImportSharedSong>[0]>;
