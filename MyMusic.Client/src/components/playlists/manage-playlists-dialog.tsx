@@ -10,6 +10,7 @@ import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListPlaylistItem, ListSongItem, PlaylistAction, PlaylistSongAction} from "../../model";
 import ManageSongItem from "../common/manage-song-item.tsx";
 import PlaylistShareIndicator from "./playlist-share-indicator.tsx";
+import {randomUuid} from "../../utils/random-uuid.ts";
 
 type PlaylistSelection = "none" | "add" | "remove";
 
@@ -86,7 +87,7 @@ export default function ManagePlaylistsDialog({
         if (!trimmed) return;
 
         setNewPlaylists(prev => [...prev, {
-            id: crypto.randomUUID(),
+            id: randomUuid(),
             name: trimmed,
             selection: "add" as PlaylistSelection,
         }]);

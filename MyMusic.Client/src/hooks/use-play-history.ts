@@ -2,6 +2,7 @@ import {useEffect, useMemo, useRef, useState} from 'react';
 import {useShallow} from 'zustand/react/shallow';
 import {useRecordPlayHistory} from '../client/play-history';
 import {usePlaybackStore} from '../stores/playback-store';
+import {randomUuid} from '../utils/random-uuid';
 
 const SEEK_THRESHOLD_SECONDS = 1;
 const PLAY_THRESHOLD_PERCENT = 0.8;
@@ -48,7 +49,7 @@ export function usePlayHistoryTracker() {
 
     const clientId = useMemo(() => {
         if (songId && playbackKey > 0) {
-            return crypto.randomUUID();
+            return randomUuid();
         }
         return null;
     }, [playbackKey, songId]);
