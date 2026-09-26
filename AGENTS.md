@@ -61,12 +61,14 @@ Use containerized tests **only** for debugging CI-specific failures. For local d
 # Build the test image
 earth +docker-integration-tests
 
-# Run tests with all dependencies (postgres, server, client, caddy)
-docker compose -f compose.integration.yaml up --exit-code-from integration-tests
+# Run tests with all dependencies (postgres, server, client, caddy, otelite)
+docker compose -f compose.integration.yaml --profile otelite up --exit-code-from integration-tests
 
 # Cleanup containers and volumes
-docker compose -f compose.integration.yaml down --volumes
+docker compose -f compose.integration.yaml --profile otelite down --volumes
 ```
+
+Otelite is opt-in via the `otelite` profile. Query it with `docker exec my-music-integration-tests-otelite-1 sqlite3 /data/otel.db "..."`. To send telemetry to an Otelite on the host instead, omit the profile and set `OTELITE_ENDPOINT=http://host.docker.internal:4318`. When a run fails, the test container prints a summary of failed test names at the end.
 
 The compose file spins up a complete test environment (PostgreSQL, Server API, Client SPA, Caddy reverse proxy).
 

@@ -22,13 +22,16 @@ services:
       ConnectionStrings__Postgres: "Host=db;Port=5432;Username=postgres;Password=postgres;Database=my-music"
       OpenTelemetry__Enabled: "true"
       OpenTelemetry__Protocol: "http/protobuf"
-      OpenTelemetry__Endpoint: "http://otelite:4318"
+      OpenTelemetry__Endpoint: "${OTELITE_ENDPOINT:-http://otelite:4318}"
       Logging__LogLevel__MyMusic: "Debug"
     depends_on:
       db:
         condition: service_healthy
+      otelite:
+        condition: service_started
+        required: false
     extra_hosts:
-      otelite: host-gateway
+      - "host.docker.internal:host-gateway"
 
   client:
     image: gitea.home/silvas/my-music-ui:${VERSION:-dev}
@@ -52,14 +55,24 @@ services:
     environment:
       OpenTelemetry__Enabled: "true"
       OpenTelemetry__Protocol: "http/protobuf"
-      OpenTelemetry__Endpoint: "http://otelite:4318"
+      OpenTelemetry__Endpoint: "${OTELITE_ENDPOINT:-http://otelite:4318}"
     depends_on:
       db:
         condition: service_healthy
       caddy:
         condition: service_healthy
+      otelite:
+        condition: service_started
+        required: false
     extra_hosts:
-      otelite: host-gateway
+      - "host.docker.internal:host-gateway"
+
+  # Opt-in telemetry collector: enable with `--profile otelite`
+  otelite:
+    image: ghcr.io/pedromsilvapt/otelite:latest
+    profiles: [otelite]
+    volumes:
+      - otelite-data:/data
 
 volumes:
   postgres-data: {}

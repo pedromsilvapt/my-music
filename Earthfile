@@ -150,8 +150,11 @@ docker-integration-tests:
 
     COPY MyMusic.IntegrationTests/integration.runsettings /app/bin/integration.runsettings
 
+    COPY MyMusic.IntegrationTests/run-tests.sh /app/bin/run-tests.sh
+    RUN chmod +x /app/bin/run-tests.sh
+
     WORKDIR /app/bin
-    ENTRYPOINT ["dotnet", "vstest", "--Settings:/app/bin/integration.runsettings", "MyMusic.IntegrationTests.dll"]
+    ENTRYPOINT ["/app/bin/run-tests.sh"]
 
     SAVE IMAGE --push --insecure $REGISTRY/$IMAGE:$TAG
 
