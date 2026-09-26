@@ -54,12 +54,12 @@ function getQueueCache (queryClient: QueryClient): QueueCache {
 }
 
 export function useQueue () {
-    const { data, isLoading } = useGetQueue({});
+    const { data, isLoading, isFetching } = useGetQueue({});
     const queue = data?.data?.playlist?.songs ?? [];
     const currentSongId = data?.data?.playlist?.currentSongId;
     const queueId = data?.data?.playlist?.id;
 
-    return { queue, currentSongId, isLoading, queueId };
+    return { queue, currentSongId, isLoading, isFetching, queueId };
 }
 
 export function useQueueMutations () {
