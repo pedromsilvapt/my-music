@@ -41,6 +41,25 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(1);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_UnimportableFileReportsError(bool dryRun)
+    {
+        // Create a valid local song, and a file with a music extension whose metadata cannot be read
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[5]);
+        await App.CreateUnreadableSongAsync("Corrupt/corrupt.mp3");
+
+        // The unreadable file should be reported as an error at upload time in both modes,
+        // instead of only failing the real commit; the valid song should still be created
+        var result = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        result.ShouldBe(successful: false, createRemote: 1, error: 1);
+
+        // The commit should go through: a real run imports the valid song, a dry run imports nothing
+        var songs = await new HomePage(Page).Navbar.GoToSongsAsync();
+        (await songs.Collection.GetRowCountAsync()).ShouldBe(dryRun ? 0 : 1);
+    }
+
     [Fact(Skip = "This test is wrong. Since EditSongFlow sets SyncAction=Download, it should still be set after a dry-run. We need to find a way to unset that flag before the dry-run, so we can make this validation.")]
     public async Task Sync_DryRun_ShouldNotPersistSyncActionWhenServerSongEdited()
     {

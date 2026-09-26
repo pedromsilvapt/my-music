@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
 using NSubstitute;
@@ -21,10 +22,15 @@ public class DevicesControllerUploadSpecs
         var config = Substitute.For<Microsoft.Extensions.Configuration.IConfiguration>();
         config["MyMusic:MusicRepositoryPath"].Returns("/data");
 
+        var songFileValidate = Substitute.For<ISongFileValidateService>();
+        songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((string?)null);
+
         var syncUploadService = new SyncUploadService(
             scenario.DbContext,
             scenario.FileSystem,
             scenario.CreateMusicService(),
+            songFileValidate,
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
             Substitute.For<ILogger<SyncUploadService>>());
 

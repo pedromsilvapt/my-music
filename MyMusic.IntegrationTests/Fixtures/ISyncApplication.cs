@@ -14,6 +14,7 @@ public interface ISyncApplication : IAsyncDisposable
     // Fixture helpers
     Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null);
     Task<List<string>> CreateSongsAsync(params (SampleSong Song, string Path)[] songs);
+    Task<string> CreateUnreadableSongAsync(string relativePath);
     bool FileExists(string relativePath);
     string GetSongPath(string relativePath);
     Task SetNamingTemplateAsync(string namingTemplate);

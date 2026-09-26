@@ -2,6 +2,7 @@ using System.IO.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.Songs;
 
 namespace MyMusic.Common.Services.Sync;
 
@@ -9,6 +10,7 @@ public class SyncUploadService(
     MusicDbContext db,
     IFileSystem fileSystem,
     IMusicService musicService,
+    ISongFileValidateService songFileValidate,
     ISyncActionsServerFactory syncActionsServerFactory,
     ILogger<SyncUploadService> logger) : ISyncUploadService
 {
@@ -45,10 +47,22 @@ public class SyncUploadService(
                 path, songIdForRecord, checksum, checksumAlgorithmName,
                 modifiedAt, createdAt, songDeviceForImport);
 
-            var syncActions = syncActionsServerFactory.Create(db, sessionId, deviceId, isDryRun);
-            var record = await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, cancellationToken);
+            // Files that will be imported at commit are validated now, in both modes, so an
+            // unimportable file becomes an Error record here instead of failing only a real commit
+            var importError = decision.ActionType is SyncUploadActionType.CreateRemote or SyncUploadActionType.UpdateRemote
+                ? await songFileValidate.ValidateAsync(staging.StagedFilePath, cancellationToken)
+                : null;
 
-            if (!isDryRun && (decision.ActionType == SyncUploadActionType.LinkWithSongId
+            var syncActions = syncActionsServerFactory.Create(db, sessionId, deviceId, isDryRun);
+            var record = importError != null
+                ? await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken)
+                : await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, cancellationToken);
+
+            // In a real run the staged file must outlive this request: the commit imports it from the
+            // record's TempFilePath. Links and errors are never imported at commit, so their file can go
+            // now. Dry runs don't need this: their whole staging directory is deleted in the finally below.
+            if (!isDryRun && (importError != null
+                           || decision.ActionType == SyncUploadActionType.LinkWithSongId
                            || decision.ActionType == SyncUploadActionType.LinkWithChecksumOnly))
             {
                 TryDeleteStagedFile(staging.StagedFilePath!);

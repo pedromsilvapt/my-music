@@ -3,6 +3,7 @@ using System.IO.Abstractions.TestingHelpers;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Services.Sync;
 using NSubstitute;
 using Shouldly;
@@ -13,10 +14,14 @@ public class SyncUploadServiceSpecs
 {
     private readonly IMusicService _musicService = Substitute.For<IMusicService>();
     private readonly ISyncActionsServerFactory _syncActionsServerFactory = new SyncActionsServerFactory();
+    private readonly ISongFileValidateService _songFileValidate = Substitute.For<ISongFileValidateService>();
     private readonly ILogger<SyncUploadService> _logger = Substitute.For<ILogger<SyncUploadService>>();
 
     public SyncUploadServiceSpecs()
     {
+        _songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns((string?)null);
+
         _musicService.FindUserSongsByChecksum(
             Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<List<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new Dictionary<string, Song>());
@@ -28,6 +33,7 @@ public class SyncUploadServiceSpecs
             db,
             fileSystem ?? new MockFileSystem(),
             _musicService,
+            _songFileValidate,
             _syncActionsServerFactory,
             _logger);
     }
@@ -306,5 +312,150 @@ public class SyncUploadServiceSpecs
 
         result.Record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
         result.EffectiveSongId.ShouldBe(songDevice.SongId);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_UnimportableNewFile_CreatesErrorRecordInsteadOfCreateRemote(bool isDryRun)
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, isDryRun: isDryRun, repositoryPath: "/data");
+
+        _songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("Cannot read song metadata: corrupt");
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: isDryRun,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: false,
+            songDeviceForImport: null,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
+
+        result.Record.Action.ShouldBe(SyncRecordAction.Error);
+        result.Record.FilePath.ShouldBe("/music/song.mp3");
+        result.Record.Reason.ShouldBe("Cannot read song metadata: corrupt");
+        result.EffectiveSongId.ShouldBeNull();
+
+        var records = scenario.DbContext.DeviceSyncSessionRecords.Where(r => r.SessionId == session.Id).ToList();
+        records.Select(r => r.Action).ShouldBe([SyncRecordAction.Error]);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_UnimportableUpdatedFile_CreatesErrorRecordInsteadOfUpdateRemote(bool isDryRun)
+    {
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, isDryRun: isDryRun, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        _songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("Cannot read song metadata: corrupt");
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: isDryRun,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: true,
+            songDeviceForImport: songDevice,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
+
+        result.Record.Action.ShouldBe(SyncRecordAction.Error);
+        result.Record.SongId.ShouldBe(song.Id);
+        result.EffectiveSongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task UploadAsync_UnimportableFile_Live_DeletesStagedFile()
+    {
+        var scenario = new Scenario();
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+
+        _songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("Cannot read song metadata: corrupt");
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: false,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: false,
+            songDeviceForImport: null,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
+
+        mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task UploadAsync_DuplicateChecksum_LinksWithoutValidatingFile()
+    {
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+
+        var content = new byte[] { 1, 2, 3, 4, 5 };
+        var checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
+
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+
+        _musicService.FindUserSongsByChecksum(
+            Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<List<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Song> { { checksum, song } });
+        _songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns("Cannot read song metadata: corrupt");
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: false,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream(content),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: false,
+            songDeviceForImport: null,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
+
+        // A link never imports the file, so its contents don't need to be readable
+        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        await _songFileValidate.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 }

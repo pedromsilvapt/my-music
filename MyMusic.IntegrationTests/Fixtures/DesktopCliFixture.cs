@@ -147,6 +147,15 @@ public class DesktopCliFixture : IAsyncDisposable
         return relativePath;
     }
 
+    public async Task<string> CreateUnreadableSongAsync(string relativePath)
+    {
+        var filePath = Path.Combine(RepositoryPath, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+
+        await File.WriteAllBytesAsync(filePath, TestFiles.CreateUnreadableMusicFile());
+        return relativePath;
+    }
+
     public async Task<List<string>> CreateSongsAsync(params (SampleSong Song, string Path)[] songs)
     {
         var paths = new List<string>();

@@ -24,6 +24,13 @@ public static class TestFiles
         return ms.ToArray();
     }
 
+    /// <summary>
+    /// Returns the contents of a file with a music extension whose metadata cannot be read,
+    /// so the server cannot import it.
+    /// </summary>
+    public static byte[] CreateUnreadableMusicFile() =>
+        System.Text.Encoding.UTF8.GetBytes("This is not an audio file");
+
     public static byte[] CreateTestMusicFile(SampleSong song, int? contentVariant = null)
     {
         var baseBytes = GetBaseTestMusicFile();

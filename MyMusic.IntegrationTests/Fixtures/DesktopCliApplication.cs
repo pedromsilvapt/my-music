@@ -59,6 +59,9 @@ public class DesktopCliApplication : ISyncApplication
     public Task<List<string>> CreateSongsAsync(params (SampleSong Song, string Path)[] songs)
         => _fixture.CreateSongsAsync(songs);
 
+    public Task<string> CreateUnreadableSongAsync(string relativePath)
+        => _fixture.CreateUnreadableSongAsync(relativePath);
+
     public bool FileExists(string relativePath)
         => _fixture.FileExists(relativePath);
 

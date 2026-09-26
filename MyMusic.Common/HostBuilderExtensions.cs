@@ -65,6 +65,7 @@ public static class HostBuilderExtensions
         // Share services
         builder.Services.AddScoped<ISongShareService, SongShareService>();
         builder.Services.AddScoped<ISharedSongImportService, SharedSongImportService>();
+        builder.Services.AddSingleton<ISongFileValidateService, SongFileValidateService>();
 
         // Device services
         builder.Services.AddScoped<IDeviceLookupService, DeviceLookupService>();
