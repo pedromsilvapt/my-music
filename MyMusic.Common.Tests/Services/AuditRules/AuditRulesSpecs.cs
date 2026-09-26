@@ -915,8 +915,6 @@ public class AuditRulesSpecs
         var artist2 = new Artist
         {
             Name = "Artist 2",
-            SongsCount = 0,
-            AlbumsCount = 0,
             CreatedAt = DateTime.UtcNow,
             Owner = owner2,
         };
@@ -927,7 +925,6 @@ public class AuditRulesSpecs
         {
             Name = "Album 2",
             Artist = artist2,
-            SongsCount = 0,
             CreatedAt = DateTime.UtcNow,
             Owner = owner2,
         };

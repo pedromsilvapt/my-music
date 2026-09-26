@@ -56,8 +56,6 @@ public class SyncControllerResolveConflictsSpecs
             Name = $"Artist-{Guid.NewGuid():N}",
             OwnerId = ownerId,
             Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 0,
-            AlbumsCount = 0,
             CreatedAt = DateTime.UtcNow,
         };
         db.Add(artist);
@@ -69,7 +67,6 @@ public class SyncControllerResolveConflictsSpecs
             ArtistId = artist.Id,
             OwnerId = ownerId,
             Owner = db.Users.First(u => u.Id == ownerId),
-            SongsCount = 1,
             CreatedAt = DateTime.UtcNow,
         };
         db.Add(album);

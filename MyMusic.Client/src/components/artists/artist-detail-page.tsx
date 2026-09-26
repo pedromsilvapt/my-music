@@ -60,8 +60,8 @@ export default function ArtistDetailPage() {
                 <Stack gap="xs">
                     <Text size="xl" fw={700}>{artist.name}</Text>
                     <Group gap="md">
-                        <Text size="sm" c="dimmed">{t("artists:detail.albumsCount", {count: artist.albumsCount})}</Text>
-                        <Text size="sm" c="dimmed">{t("artists:detail.songsCount", {count: artist.songsCount})}</Text>
+                        <Text size="sm" c="dimmed" data-testid="artist-albums-count" data-count={artist.albumsCount}>{t("artists:detail.albumsCount", {count: artist.albumsCount})}</Text>
+                        <Text size="sm" c="dimmed" data-testid="artist-songs-count" data-count={artist.songsCount}>{t("artists:detail.songsCount", {count: artist.songsCount})}</Text>
                     </Group>
                 </Stack>
             </Flex>

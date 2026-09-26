@@ -454,13 +454,6 @@ public class MusicService(
                     {
                         songAlbum = song.Album;
                     }
-                    // We are updating an existing song, and the Album has changed
-                    else if (song?.Album is not null)
-                    {
-                        song.Album.SongsCount -= 1;
-
-                        db.Update(song.Album);
-                    }
 
                     // If we are updating an existing song, but the album/album artist changed, or
                     // if we are creating a new song
@@ -469,13 +462,6 @@ public class MusicService(
                         // Try and find an existing album for this Artist with the given name
                         songAlbum = await repo.GetArtistAlbum(effectiveAlbumArtistName, effectiveAlbumName,
                             cancellationToken);
-
-                        if (songAlbum is not null)
-                        {
-                            songAlbum.SongsCount += 1;
-
-                            db.Update(songAlbum);
-                        }
                     }
 
                     // If no Album with this name belonging to this Artist exists on the database yet
@@ -488,21 +474,15 @@ public class MusicService(
                         {
                             songAlbumArtist = new Artist
                             {
-                                Name = effectiveAlbumArtistName, OwnerId = userId, AlbumsCount = 1, SongsCount = 0,
-                                CreatedAt = DateTime.UtcNow,
+                                Name = effectiveAlbumArtistName, OwnerId = userId, CreatedAt = DateTime.UtcNow,
                             };
 
                             await db.AddAsync(songAlbumArtist, cancellationToken);
                         }
-                        else
-                        {
-                            songAlbumArtist.AlbumsCount += 1;
-                            db.Update(songAlbumArtist);
-                        }
 
                         songAlbum = new Album
                         {
-                            Name = effectiveAlbumName, Artist = songAlbumArtist, OwnerId = userId, SongsCount = 1,
+                            Name = effectiveAlbumName, Artist = songAlbumArtist, OwnerId = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
                         await db.AddAsync(songAlbum, cancellationToken);
@@ -525,19 +505,13 @@ public class MusicService(
                             {
                                 songArtist = new Artist
                                 {
-                                    Name = artist.Name, Owner = user, AlbumsCount = 0, SongsCount = 0,
-                                    CreatedAt = DateTime.UtcNow,
+                                    Name = artist.Name, Owner = user, CreatedAt = DateTime.UtcNow,
                                 };
 
                                 await db.AddAsync(songArtist, cancellationToken);
                             }
 
                             var existingSongArtist = song?.Artists?.FirstOrDefault(sa => sa.ArtistId == songArtist.Id);
-
-                            if (existingSongArtist is null)
-                            {
-                                songArtist.SongsCount += 1;
-                            }
 
                             // Add the song artist that already belonged to the song (if any) or create a new one
                             songArtists.Add(
@@ -558,19 +532,13 @@ public class MusicService(
                         {
                             albumArtist = new Artist
                             {
-                                Name = effectiveAlbumArtistName, Owner = user, AlbumsCount = 0, SongsCount = 0,
-                                CreatedAt = DateTime.UtcNow,
+                                Name = effectiveAlbumArtistName, Owner = user, CreatedAt = DateTime.UtcNow,
                             };
 
                             await db.AddAsync(albumArtist, cancellationToken);
                         }
 
                         var existingAlbumSongArtist = song?.Artists?.FirstOrDefault(sa => sa.ArtistId == albumArtist.Id);
-
-                        if (existingAlbumSongArtist is null)
-                        {
-                            albumArtist.SongsCount += 1;
-                        }
 
                         songArtists.Add(
                             existingAlbumSongArtist
@@ -673,12 +641,6 @@ public class MusicService(
 
                     if (artistsDiff.Removed.Count != 0)
                     {
-                        foreach (var artist in artistsDiff.Removed)
-                        {
-                            artist.Artist.SongsCount -= 1;
-                        }
-
-                        db.UpdateRange(artistsDiff.Removed.Select(a => a.Artist));
                         db.RemoveRange(artistsDiff.Removed);
                     }
 

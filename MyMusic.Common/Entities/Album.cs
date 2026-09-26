@@ -27,7 +27,8 @@ public class Album
 
     public List<Song> Songs { get; set; } = [];
 
-    public required int SongsCount { get; set; }
+    /// <summary>Maintained by database triggers; read-only from EF's perspective.</summary>
+    public int SongsCount { get; set; }
 
     public required DateTime CreatedAt { get; set; }
 

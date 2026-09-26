@@ -57,9 +57,6 @@ public class SoundalikeMergeService(ILogger<SoundalikeMergeService> logger) : IS
                     };
                     primary.Artists.Add(newSongArtist);
                     existingArtistIds.Add(artist.ArtistId);
-                    
-                    artist.Artist.SongsCount += 1;
-                    db.Update(artist.Artist);
                 }
             }
         }

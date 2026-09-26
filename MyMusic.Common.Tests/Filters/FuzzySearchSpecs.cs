@@ -386,18 +386,18 @@ public class FuzzySearchSpecs
 
         var artists = new List<Artist>
         {
-            new() { Name = "AC-DC", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow },
-            new() { Name = "Test Artist", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow },
-            new() { Name = "Artist", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow },
+            new() { Name = "AC-DC", Owner = owner, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Test Artist", Owner = owner, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Artist", Owner = owner, CreatedAt = DateTime.UtcNow },
         };
         context.Artists.AddRange(artists);
         context.SaveChanges();
 
         var albums = new List<Album>
         {
-            new() { Name = "Album One", Year = 2020, Artist = artists[0], Owner = owner, SongsCount = 0, CreatedAt = DateTime.UtcNow },
-            new() { Name = "Album Two", Year = 2021, Artist = artists[1], Owner = owner, SongsCount = 0, CreatedAt = DateTime.UtcNow },
-            new() { Name = "Album Three", Year = 2022, Artist = artists[2], Owner = owner, SongsCount = 0, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Album One", Year = 2020, Artist = artists[0], Owner = owner, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Album Two", Year = 2021, Artist = artists[1], Owner = owner, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Album Three", Year = 2022, Artist = artists[2], Owner = owner, CreatedAt = DateTime.UtcNow },
         };
         context.Albums.AddRange(albums);
         context.SaveChanges();

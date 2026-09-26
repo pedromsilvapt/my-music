@@ -265,8 +265,6 @@ public class SongUpdateServiceSpecs
             Name = "New Artist",
             OwnerId = scenario.AdminUser.Id,
             Owner = scenario.AdminUser,
-            SongsCount = 0,
-            AlbumsCount = 0,
             CreatedAt = DateTime.UtcNow
         };
         scenario.DbContext.Add(newArtist);

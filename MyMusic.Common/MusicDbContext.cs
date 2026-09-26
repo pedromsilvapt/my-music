@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services.SongHistory.Models;
@@ -247,6 +249,26 @@ public class MusicDbContext : DbContext
             entity.HasIndex(e => e.SongId);
             entity.HasIndex(e => new { e.SongId, e.TransactionId });
         });
+
+        // Denormalized counts are maintained by PostgreSQL triggers (see the
+        // AddDenormalizedCountTriggers migration); EF must never write them.
+        modelBuilder.Entity<Album>(entity =>
+        {
+            ConfigureTriggerMaintainedCount(entity.Property(e => e.SongsCount));
+        });
+
+        modelBuilder.Entity<Artist>(entity =>
+        {
+            ConfigureTriggerMaintainedCount(entity.Property(e => e.SongsCount));
+            ConfigureTriggerMaintainedCount(entity.Property(e => e.AlbumsCount));
+        });
+    }
+
+    private static void ConfigureTriggerMaintainedCount(PropertyBuilder<int> property)
+    {
+        property.HasDefaultValue(0).ValueGeneratedOnAddOrUpdate();
+        property.Metadata.SetBeforeSaveBehavior(PropertySaveBehavior.Ignore);
+        property.Metadata.SetAfterSaveBehavior(PropertySaveBehavior.Ignore);
     }
 
     private static SongSnapshot DeserializeSongSnapshot(string v)

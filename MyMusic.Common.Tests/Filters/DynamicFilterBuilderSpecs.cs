@@ -29,16 +29,16 @@ public class DynamicFilterBuilderSpecs
 
         var artists = new List<Artist>
         {
-            new() { Name = "Pink Floyd", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow },
-            new() { Name = "The Beatles", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow },
-            new() { Name = "Queen", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Pink Floyd", Owner = owner, CreatedAt = DateTime.UtcNow },
+            new() { Name = "The Beatles", Owner = owner, CreatedAt = DateTime.UtcNow },
+            new() { Name = "Queen", Owner = owner, CreatedAt = DateTime.UtcNow },
             new()
             {
-                Name = "David Gilmour", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow,
+                Name = "David Gilmour", Owner = owner, CreatedAt = DateTime.UtcNow,
             },
             new()
             {
-                Name = "Unknown Artist", Owner = owner, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow,
+                Name = "Unknown Artist", Owner = owner, CreatedAt = DateTime.UtcNow,
             },
         };
         context.Artists.AddRange(artists);
@@ -59,27 +59,27 @@ public class DynamicFilterBuilderSpecs
         {
             new()
             {
-                Name = "The Dark Side of the Moon", Year = 1973, Artist = artists[0], Owner = owner, SongsCount = 0,
+                Name = "The Dark Side of the Moon", Year = 1973, Artist = artists[0], Owner = owner,
                 CreatedAt = DateTime.UtcNow,
             },
             new()
             {
-                Name = "Abbey Road", Year = 1969, Artist = artists[1], Owner = owner, SongsCount = 0,
+                Name = "Abbey Road", Year = 1969, Artist = artists[1], Owner = owner,
                 CreatedAt = DateTime.UtcNow,
             },
             new()
             {
-                Name = "A Night at the Opera", Year = 1975, Artist = artists[2], Owner = owner, SongsCount = 0,
+                Name = "A Night at the Opera", Year = 1975, Artist = artists[2], Owner = owner,
                 CreatedAt = DateTime.UtcNow,
             },
             new()
             {
-                Name = "Wish You Were Here", Year = 1975, Artist = artists[0], Owner = owner, SongsCount = 0,
+                Name = "Wish You Were Here", Year = 1975, Artist = artists[0], Owner = owner,
                 CreatedAt = DateTime.UtcNow,
             },
             new()
             {
-                Name = "Unknown Album", Year = 2020, Artist = artists[4], Owner = owner, SongsCount = 0,
+                Name = "Unknown Album", Year = 2020, Artist = artists[4], Owner = owner,
                 CreatedAt = DateTime.UtcNow,
             },
         };

@@ -66,8 +66,6 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
             Name = request.Name,
             Owner = user,
             OwnerId = currentUser.Id,
-            SongsCount = 0,
-            AlbumsCount = 0,
             CreatedAt = DateTime.UtcNow,
         };
 

@@ -7,6 +7,10 @@ public class ArtistDetailsPage(IPage page) : BasePage(page, "artist-detail")
 {
     private ILocator Collections => Root.GetByTestId("collection");
 
+    public ILocator SongsCount => Root.GetByTestId("artist-songs-count");
+
+    public ILocator AlbumsCount => Root.GetByTestId("artist-albums-count");
+
     /// <summary>
     /// The Songs collection on the artist detail page. The Albums collection (if present) renders
     /// as a grid without song title cells, so the Songs collection is the one containing song rows.

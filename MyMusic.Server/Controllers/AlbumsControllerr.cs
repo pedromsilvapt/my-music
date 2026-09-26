@@ -73,7 +73,6 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
             Owner = user,
             OwnerId = currentUser.Id,
             Year = request.Year,
-            SongsCount = 0,
             CreatedAt = DateTime.UtcNow,
         };
 

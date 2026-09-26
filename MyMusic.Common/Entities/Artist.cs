@@ -25,9 +25,11 @@ public class Artist
 
     public long OwnerId { get; set; }
 
-    public required int SongsCount { get; set; }
+    /// <summary>Maintained by database triggers; read-only from EF's perspective.</summary>
+    public int SongsCount { get; set; }
 
-    public required int AlbumsCount { get; set; }
+    /// <summary>Maintained by database triggers; read-only from EF's perspective.</summary>
+    public int AlbumsCount { get; set; }
 
     public required DateTime CreatedAt { get; set; }
 

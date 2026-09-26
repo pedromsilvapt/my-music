@@ -256,9 +256,9 @@ public class AuditsControllerFilterSpecs
     {
         // Arrange
         var (controller, db, user) = CreateControllerWithDb();
-        var artist = new Artist { Name = "Test Artist", Owner = user, OwnerId = user.Id, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow };
+        var artist = new Artist { Name = "Test Artist", Owner = user, OwnerId = user.Id, CreatedAt = DateTime.UtcNow };
         db.Artists.Add(artist);
-        var album = new Album { Name = "Test Album", Artist = artist, ArtistId = artist.Id, Owner = user, OwnerId = user.Id, SongsCount = 0, CreatedAt = DateTime.UtcNow };
+        var album = new Album { Name = "Test Album", Artist = artist, ArtistId = artist.Id, Owner = user, OwnerId = user.Id, CreatedAt = DateTime.UtcNow };
         db.Albums.Add(album);
         db.Songs.Add(new Song
         {
@@ -289,9 +289,9 @@ public class AuditsControllerFilterSpecs
     {
         // Arrange
         var (controller, db, user) = CreateControllerWithDb();
-        var artist = new Artist { Name = "Test Artist", Owner = user, OwnerId = user.Id, SongsCount = 0, AlbumsCount = 0, CreatedAt = DateTime.UtcNow };
+        var artist = new Artist { Name = "Test Artist", Owner = user, OwnerId = user.Id, CreatedAt = DateTime.UtcNow };
         db.Artists.Add(artist);
-        var album = new Album { Name = "Test Album", Artist = artist, ArtistId = artist.Id, Owner = user, OwnerId = user.Id, SongsCount = 0, CreatedAt = DateTime.UtcNow };
+        var album = new Album { Name = "Test Album", Artist = artist, ArtistId = artist.Id, Owner = user, OwnerId = user.Id, CreatedAt = DateTime.UtcNow };
         db.Albums.Add(album);
         db.Songs.Add(new Song
         {

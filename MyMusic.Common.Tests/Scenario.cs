@@ -54,8 +54,6 @@ public class Scenario
             Name = name,
             OwnerId = ownerId.Value,
             Owner = owner,
-            SongsCount = 0,
-            AlbumsCount = 0,
             CreatedAt = DateTime.UtcNow,
         };
         DbContext.Add(artist);
@@ -74,7 +72,6 @@ public class Scenario
             Artist = artist,
             OwnerId = ownerId.Value,
             Owner = owner,
-            SongsCount = 0,
             CreatedAt = DateTime.UtcNow,
         };
         DbContext.Add(album);

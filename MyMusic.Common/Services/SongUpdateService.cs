@@ -354,7 +354,6 @@ public class SongUpdateService(
                     ArtistId = albumArtist!.Id,
                     OwnerId = song.OwnerId,
                     Owner = song.Owner,
-                    SongsCount = 0,
                     CreatedAt = DateTime.UtcNow,
                 };
                 await db.AddAsync(album, cancellationToken);
@@ -419,11 +418,6 @@ public class SongUpdateService(
             Artist = a,
             ArtistId = a.Id,
         }).ToList();
-
-        foreach (var artist in artists)
-        {
-            artist.SongsCount = await db.SongArtists.CountAsync(sa => sa.ArtistId == artist.Id, cancellationToken) + 1;
-        }
     }
 
     private async Task UpdateGenresAsync(MusicDbContext db, Song song, List<GenreRef> genreRefs,
@@ -476,8 +470,6 @@ public class SongUpdateService(
         {
             Name = name,
             OwnerId = ownerId,
-            SongsCount = 0,
-            AlbumsCount = 0,
             CreatedAt = DateTime.UtcNow,
         };
         await db.AddAsync(artist, cancellationToken);
