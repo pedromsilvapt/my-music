@@ -52,6 +52,13 @@ public class SyncCommitService(
         var device = await db.Devices.FirstAsync(d => d.Id == deviceId, cancellationToken);
         var userId = device.OwnerId;
 
+        // Orphans are detected before any record is processed. Record processing mutates SongDevices,
+        // and some steps (song imports) save those changes mid-commit, so a query made afterwards
+        // would see a different database state than a dry run does (e.g. a just-renamed SongDevice
+        // would look orphaned). Detecting up front keeps the record list identical in both modes.
+        var direction = session?.Direction ?? SyncDirection.Both;
+        var orphanDetection = await DetectOrphansAsync(db, deviceId, records, direction, cancellationToken);
+
         var createdSongIdsByChecksum = new Dictionary<string, long>();
 
         foreach (var record in records)
@@ -59,8 +66,7 @@ public class SyncCommitService(
             await ProcessRecordAsync(db, sessionId, deviceId, record, isDryRun, userId, createdSongIdsByChecksum, cancellationToken);
         }
 
-        var direction = session?.Direction ?? SyncDirection.Both;
-        await DetectAndHandleOrphansAsync(db, sessionId, deviceId, records, isDryRun, direction, cancellationToken);
+        HandleOrphans(db, sessionId, orphanDetection, isDryRun);
 
         await db.SaveChangesAsync(cancellationToken);
 
@@ -401,9 +407,18 @@ public class SyncCommitService(
         }
     }
 
-    private async Task DetectAndHandleOrphansAsync(
-        MusicDbContext db, long sessionId, long deviceId,
-        List<DeviceSyncSessionRecord> records, bool isDryRun, SyncDirection direction,
+    /// <summary>
+    /// SongDevices that orphan detection found before record processing: the orphans to unlink, and
+    /// (for <see cref="SyncDirection.Up"/>) the SongDevices whose pending server actions are cleared.
+    /// </summary>
+    private sealed record OrphanDetectionResult(List<SongDevice> Orphans, List<SongDevice> PendingActionsToClear)
+    {
+        public static readonly OrphanDetectionResult None = new([], []);
+    }
+
+    private async Task<OrphanDetectionResult> DetectOrphansAsync(
+        MusicDbContext db, long deviceId,
+        List<DeviceSyncSessionRecord> records, SyncDirection direction,
         CancellationToken cancellationToken)
     {
         // Exclude Unlink: created by orphan detection itself, PendingActions (server-side), or CheckSync (Remove);
@@ -415,49 +430,51 @@ public class SyncCommitService(
             .Select(GetClientPath)
             .ToHashSet();
 
-        List<SongDevice> orphanedSongDevices;
-
         if (direction == SyncDirection.Both)
         {
-            orphanedSongDevices = await db.SongDevices
+            var orphans = await db.SongDevices
                 .Where(sd => sd.DeviceId == deviceId
                              && sd.SyncAction == null
                              && !validFilePaths.Contains(sd.DevicePath))
                 .Include(sd => sd.Song)
                 .ToListAsync(cancellationToken);
+
+            return new OrphanDetectionResult(orphans, []);
         }
-        else if (direction == SyncDirection.Up)
+
+        if (direction == SyncDirection.Up)
         {
-            orphanedSongDevices = await db.SongDevices
+            var orphans = await db.SongDevices
                 .Where(sd => sd.DeviceId == deviceId
                              && !validFilePaths.Contains(sd.DevicePath))
                 .Include(sd => sd.Song)
                 .ToListAsync(cancellationToken);
 
-            if (!isDryRun)
-            {
-                var songsToClear = await db.SongDevices
-                    .Where(sd => sd.DeviceId == deviceId
-                                 && validFilePaths.Contains(sd.DevicePath)
-                                 && sd.SyncAction != null)
-                    .ToListAsync(cancellationToken);
+            var pendingActionsToClear = await db.SongDevices
+                .Where(sd => sd.DeviceId == deviceId
+                             && validFilePaths.Contains(sd.DevicePath)
+                             && sd.SyncAction != null)
+                .ToListAsync(cancellationToken);
 
-                foreach (var sd in songsToClear)
-                {
-                    sd.SyncAction = null;
-                    sd.SyncActionReason = null;
-                }
+            return new OrphanDetectionResult(orphans, pendingActionsToClear);
+        }
+
+        return OrphanDetectionResult.None;
+    }
+
+    private static void HandleOrphans(
+        MusicDbContext db, long sessionId, OrphanDetectionResult detection, bool isDryRun)
+    {
+        if (!isDryRun)
+        {
+            foreach (var sd in detection.PendingActionsToClear)
+            {
+                sd.SyncAction = null;
+                sd.SyncActionReason = null;
             }
         }
-        else
-        {
-            return;
-        }
 
-        if (orphanedSongDevices.Count == 0)
-            return;
-
-        foreach (var sd in orphanedSongDevices)
+        foreach (var sd in detection.Orphans)
         {
             var unlinkData = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = sd.SongId });
             var unlinkRecord = new DeviceSyncSessionRecord
@@ -472,7 +489,9 @@ public class SyncCommitService(
             };
             db.DeviceSyncSessionRecords.Add(unlinkRecord);
 
-            if (!isDryRun)
+            // Record processing may already have removed this SongDevice (and a mid-commit save
+            // may have detached it); removing it again would fail the final save.
+            if (!isDryRun && db.Entry(sd).State is not (EntityState.Deleted or EntityState.Detached))
             {
                 db.SongDevices.Remove(sd);
             }

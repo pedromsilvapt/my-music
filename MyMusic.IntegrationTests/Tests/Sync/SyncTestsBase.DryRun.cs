@@ -198,4 +198,34 @@ public abstract partial class SyncTestsBase
         var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
         dryResult.ShouldBe(link: 1, skipped: 2);
     }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_RenameAndUploadInSameSync_ShouldNotUnlinkRenamedSong(bool dryRun)
+    {
+        // Seed a song on the server assigned to this device, and sync it down
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[5] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Change the title on the server, which changes the file's path under the naming template
+        await new EditSongFlow("Sand", new(Title: "Title A")).ExecuteAsync(Page);
+
+        // Create a new local song, so the same sync also imports a song on the server
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[1]);
+
+        // Sync: the edited song should be updated and renamed, and the new song uploaded.
+        // The renamed song must not be unlinked, and dry-run and real run should report the same.
+        var result2 = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        result2.ShouldBe(updateLocal: 1, rename: 1, createRemote: 1, unlink: 0);
+
+        // The real run should keep the renamed song on the device
+        if (!dryRun)
+        {
+            await new ShouldSongExistInDeviceFlow("Title A", App.DeviceName, shouldExist: true)
+                .ExecuteAsync(Page);
+        }
+    }
 }

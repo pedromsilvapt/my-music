@@ -877,6 +877,47 @@ public class SyncCommitServiceSpecs
         updated.SyncActionReason.ShouldBeNull();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task OrphanDetection_RenameFollowedByImport_ProducesSameRecordsInBothModes(bool dryRun)
+    {
+        // Song A is pending an update that also moves it to a new path. A new local song B is
+        // imported later in the same commit, and the importer saves the change tracker mid-commit.
+        var ctx = SetupWithSong(dryRun: dryRun, direction: SyncDirection.Both);
+        var songB = ctx.Scenario.CreateSong("Song B", album: ctx.Song!.Album);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Download);
+        var tempFilePath = "/data/.temp/sync-1/b.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        _musicService.ImportRepositorySongs(Arg.Any<MusicDbContext>(), Arg.Any<MusicImportJob>(), Arg.Any<long>(),
+                Arg.Any<IEnumerable<SongImportMetadata>>(), Arg.Any<IList<long>?>(),
+                Arg.Any<DuplicateSongsHandlingStrategy>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<MusicDbContext>().SaveChangesAsync(ci.Arg<CancellationToken>()));
+
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/old.mp3", SyncRecordAction.UpdateLocal,
+            data: CreateLocalUpdateData(ctx.Song.Id, DefaultModifiedAt), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename,
+            data: CreateRenameData("/music/old.mp3", "/music/new.mp3"), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/b.mp3", SyncRecordAction.CreateRemote,
+            data: CreateSyncData(songB.Id, DefaultModifiedAt, tempFilePath), songId: songB.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, dryRun, cancellationToken: default);
+
+        // The renamed SongDevice must not be treated as an orphan: no Unlink record in either mode
+        ctx.Db.DeviceSyncSessionRecords
+            .OrderBy(r => r.Id)
+            .Select(r => new { r.Action, r.FilePath })
+            .ToList()
+            .ShouldBe([
+                new { Action = SyncRecordAction.UpdateLocal, FilePath = "/music/old.mp3" },
+                new { Action = SyncRecordAction.Rename, FilePath = "/music/new.mp3" },
+                new { Action = SyncRecordAction.CreateRemote, FilePath = "/music/b.mp3" },
+            ]);
+
+        // The real run moves the SongDevice to the new path; the dry run leaves it untouched
+        GetSongDevice(ctx.Db, sd.Id).DevicePath.ShouldBe(dryRun ? "/music/old.mp3" : "/music/new.mp3");
+    }
+
     #endregion
 
     #region DeleteLocal / Unlink FindSongDeviceByIds Fallback
