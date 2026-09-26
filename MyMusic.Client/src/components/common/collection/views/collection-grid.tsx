@@ -21,6 +21,7 @@ import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
 import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
+import {isIndexFullyInViewport} from "./virtualizer-utils.ts";
 import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
@@ -136,10 +137,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
 
     useEffect(() => {
         if (scrollRequestId != null && scrollToIndex != null && scrollToIndex >= 0) {
-            const virtualItems = virtualizer.getVirtualItems();
-            const isVisible = virtualItems.some(item => item.index === scrollToIndex);
-            
-            if (!isVisible) {
+            if (!isIndexFullyInViewport(virtualizer, scrollToIndex)) {
                 requestAnimationFrame(() => {
                     virtualizer.scrollToIndex(scrollToIndex!, {align: 'center'});
                 });
