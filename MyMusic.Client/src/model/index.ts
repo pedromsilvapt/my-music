@@ -261,6 +261,7 @@ export * from './songHistoryDiffFieldOfstring';
 export * from './songHistoryDiffMetadata';
 export * from './songHistoryDiffResponse';
 export * from './songHistoryDiffSource';
+export * from './songHistoryEventResponse';
 export * from './songMetadataAlbum';
 export * from './songMetadataArtist';
 export * from './songMetadataDiff';

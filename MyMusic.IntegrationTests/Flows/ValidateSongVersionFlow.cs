@@ -7,8 +7,6 @@ namespace MyMusic.IntegrationTests.Flows;
 /// <paramref name="versionsCount"/> versions, validates it, and closes the modal.
 /// </summary>
 public class ValidateSongVersionFlow(
-    IAPIRequestContext api,
-    long songId,
     string songTitle,
     int versionsCount,
     ValidateCurrentSongVersionOptions expected,
@@ -16,7 +14,7 @@ public class ValidateSongVersionFlow(
 {
     public async Task ExecuteAsync(IPage page)
     {
-        var modal = await new OpenSongVersionFlow(api, songId, songTitle, versionsCount, index).ExecuteAsync(page);
+        var modal = await new OpenSongVersionFlow(songTitle, versionsCount, index).ExecuteAsync(page);
 
         await new ValidateCurrentSongVersionFlow(expected).ExecuteAsync(page);
 

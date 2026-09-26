@@ -294,14 +294,10 @@ public class SongsFixture
     }
 
     /// <summary>
-    /// Waits until the song has at least <paramref name="count"/> history versions.
-    /// <para>
-    /// Exception to the "wait for UI state" rule: versions are recorded by an asynchronous background worker
-    /// and never pushed to the client, so the only way to observe them in the UI would be reloading the page
-    /// repeatedly. Polling the (much cheaper) history API is used instead, before navigating to the page.
-    /// </para>
+    /// Waits until the background worker has recorded at least <paramref name="count"/> history versions,
+    /// so seeded songs start with their versions already in place.
     /// </summary>
-    public static async Task WaitForVersionsCountAsync(IAPIRequestContext api, long songId, int count)
+    private static async Task WaitForVersionsCountAsync(IAPIRequestContext api, long songId, int count)
     {
         var pipeline = new ResiliencePipelineBuilder<int>()
             .AddRetry(new()

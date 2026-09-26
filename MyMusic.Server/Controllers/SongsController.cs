@@ -12,6 +12,7 @@ using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Server.DTO.Filters;
 using MyMusic.Server.DTO.Songs;
 using MyMusic.Common.Sources;
@@ -83,7 +84,11 @@ public class SongsController(
     }
 
     [HttpGet("{id:long}", Name = "GetLocalSong")]
-    public async Task<GetSongResponse> Get(long id, MusicDbContext context, CancellationToken cancellationToken)
+    public async Task<GetSongResponse> Get(
+        long id,
+        MusicDbContext context,
+        [FromServices] ISongHistoryPendingService songHistoryPendingService,
+        CancellationToken cancellationToken)
     {
         var song = await context.Songs
             .Where(s => s.Id == id)
@@ -96,9 +101,13 @@ public class SongsController(
             throw new Exception($"Song not found with id {id}");
         }
 
+        // History is only exposed to the owner, so shared songs never report pending history
+        var hasPendingHistory = song.OwnerId == currentUser.Id
+            && await songHistoryPendingService.HasPendingAsync(song.Id, cancellationToken);
+
         return new GetSongResponse
         {
-            Song = GetSongResponseSong.FromEntity(song, currentUser.Id),
+            Song = GetSongResponseSong.FromEntity(song, currentUser.Id, hasPendingHistory),
         };
     }
 

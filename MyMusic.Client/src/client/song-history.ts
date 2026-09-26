@@ -22,7 +22,8 @@ import type {
 
 import type {
   GetSongHistoryResponse,
-  SongHistoryDiffResponse
+  SongHistoryDiffResponse,
+  SongHistoryEventResponse
 } from '../model';
 
 import {
@@ -328,6 +329,127 @@ export const invalidateGetSongHistoryDiff = async (
 
 
 
+export type streamSongHistoryEventsResponse200 = {
+  data: SongHistoryEventResponse
+  status: 200
+}
+
+export type streamSongHistoryEventsResponseSuccess = (streamSongHistoryEventsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type streamSongHistoryEventsResponse = (streamSongHistoryEventsResponseSuccess)
+
+export const getStreamSongHistoryEventsUrl = (songId: number,) => {
+
+
+
+
+  return `/api/songs/${songId}/history/events`
+}
+
+export const streamSongHistoryEvents = async (songId: number, options?: RequestInit): Promise<streamSongHistoryEventsResponse> => {
+
+  const res = await fetch(getStreamSongHistoryEventsUrl(songId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: streamSongHistoryEventsResponse['data'] = body !== null ? body : ''
+  return { data, status: res.status, headers: res.headers } as streamSongHistoryEventsResponse
+}
+
+
+
+
+
+export const getStreamSongHistoryEventsQueryKey = (songId: number,) => {
+    return [
+    'api','songs',songId,'history','events'
+    ] as const;
+    }
+
+
+export const getStreamSongHistoryEventsQueryOptions = <TData = Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError = unknown>(songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError, TData>>, fetch?: RequestInit}
+) => {
+
+const {query: queryOptions, fetch: fetchOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getStreamSongHistoryEventsQueryKey(songId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof streamSongHistoryEvents>>> = ({ signal }) => streamSongHistoryEvents(songId, { signal, ...fetchOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: songId !== null && songId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type StreamSongHistoryEventsQueryResult = NonNullable<Awaited<ReturnType<typeof streamSongHistoryEvents>>>
+export type StreamSongHistoryEventsQueryError = unknown
+
+
+export function useStreamSongHistoryEvents<TData = Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError = unknown>(
+ songId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamSongHistoryEvents>>,
+          TError,
+          Awaited<ReturnType<typeof streamSongHistoryEvents>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamSongHistoryEvents<TData = Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError = unknown>(
+ songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamSongHistoryEvents>>,
+          TError,
+          Awaited<ReturnType<typeof streamSongHistoryEvents>>
+        > , 'initialData'
+      >, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useStreamSongHistoryEvents<TData = Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError = unknown>(
+ songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useStreamSongHistoryEvents<TData = Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError = unknown>(
+ songId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof streamSongHistoryEvents>>, TError, TData>>, fetch?: RequestInit}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getStreamSongHistoryEventsQueryOptions(songId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+export const invalidateStreamSongHistoryEvents = async (
+ queryClient: QueryClient, songId: number, options?: InvalidateOptions
+  ): Promise<QueryClient> => {
+
+  await queryClient.invalidateQueries({ queryKey: getStreamSongHistoryEventsQueryKey(songId) }, options);
+
+  return queryClient;
+}
+
+
+
+
 
 
 export const getGetSongHistoryResponseMock = (overrideResponse: Partial<Extract<GetSongHistoryResponse, object>> = {}): GetSongHistoryResponse => (faker.helpers.arrayElement([{history: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songId: faker.number.int(), songRevision: faker.number.int(), diff: {}, createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})), ...overrideResponse}, {history: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songId: faker.number.int(), songRevision: faker.number.int(), diff: {}, createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})), ...overrideResponse}, {history: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songId: faker.number.int(), songRevision: faker.number.int(), diff: {}, createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z'})), ...overrideResponse}]))
@@ -358,6 +480,8 @@ export const getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistor
 
 export const getGetSongHistoryDiffResponseMock = (overrideResponse: Partial<Extract<SongHistoryDiffResponse, object>> = {}): SongHistoryDiffResponse => (faker.helpers.arrayElement([{metadata: {title: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), label: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), albumId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), year: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), explicit: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfbooleanMock()},]), undefined]), size: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), duration: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), ownerId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfdecimalMock()},]), undefined]), isFavorite: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfbooleanMock()},]), undefined]), playCount: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), checksum: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), checksumAlgorithm: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), createdAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), modifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), album: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfSongHistoryDiffAlbumMock()},]), undefined]), albumArtist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), artists: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffArtistMock()},]), undefined]), genres: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfstringMock()},]), undefined]), sources: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffSourceMock()},]), undefined]), devices: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffDeviceMock()},]), undefined])}, oldVersionDate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), newVersionDate: faker.date.past().toISOString().slice(0, 19) + 'Z', oldRevision: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), newRevision: faker.number.int(), ...overrideResponse}, {metadata: {title: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), label: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), albumId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), year: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), explicit: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfbooleanMock()},]), undefined]), size: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), duration: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), ownerId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfdecimalMock()},]), undefined]), isFavorite: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfbooleanMock()},]), undefined]), playCount: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), checksum: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), checksumAlgorithm: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), createdAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), modifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), album: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfSongHistoryDiffAlbumMock()},]), undefined]), albumArtist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), artists: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffArtistMock()},]), undefined]), genres: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfstringMock()},]), undefined]), sources: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffSourceMock()},]), undefined]), devices: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffDeviceMock()},]), undefined])}, oldVersionDate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), newVersionDate: faker.date.past().toISOString().slice(0, 19) + 'Z', oldRevision: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), newRevision: faker.number.int(), ...overrideResponse}, {metadata: {title: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), label: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), albumId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), year: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), explicit: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfbooleanMock()},]), undefined]), size: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), duration: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), ownerId: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOflongMock()},]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfdecimalMock()},]), undefined]), isFavorite: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfbooleanMock()},]), undefined]), playCount: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfintMock()},]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), checksum: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), checksumAlgorithm: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), createdAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), modifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfDateTimeMock()},]), undefined]), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), album: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfSongHistoryDiffAlbumMock()},]), undefined]), albumArtist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfstringMock()},]), undefined]), artists: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffArtistMock()},]), undefined]), genres: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfstringMock()},]), undefined]), sources: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffSourceMock()},]), undefined]), devices: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetSongHistoryDiffResponseSongHistoryDiffFieldOfListOfSongHistoryDiffDeviceMock()},]), undefined])}, oldVersionDate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), newVersionDate: faker.date.past().toISOString().slice(0, 19) + 'Z', oldRevision: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), newRevision: faker.number.int(), ...overrideResponse}]))
 
+export const getStreamSongHistoryEventsResponseMock = (overrideResponse: Partial<Extract<SongHistoryEventResponse, object>> = {}): SongHistoryEventResponse => ({songId: faker.number.int(), ...overrideResponse})
+
 
 export const getGetSongHistoryMockHandler = (overrideResponse?: GetSongHistoryResponse | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<GetSongHistoryResponse> | GetSongHistoryResponse), options?: RequestHandlerOptions) => {
   return http.get('*/songs/:songId/history', async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
@@ -382,7 +506,21 @@ export const getGetSongHistoryDiffMockHandler = (overrideResponse?: SongHistoryD
       })
   }, options)
 }
+
+export const getStreamSongHistoryEventsMockHandler = (overrideResponse?: SongHistoryEventResponse | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<SongHistoryEventResponse> | SongHistoryEventResponse), options?: RequestHandlerOptions) => {
+  return http.get('*/songs/:songId/history/events', async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+
+  const resolvedBody = overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getStreamSongHistoryEventsResponseMock();
+    const textBody = typeof resolvedBody === 'string' ? resolvedBody : JSON.stringify(resolvedBody ?? null);
+    return HttpResponse.text(textBody,
+      { status: 200
+      })
+  }, options)
+}
 export const getSongHistoryMock = () => [
   getGetSongHistoryMockHandler(),
-  getGetSongHistoryDiffMockHandler()
+  getGetSongHistoryDiffMockHandler(),
+  getStreamSongHistoryEventsMockHandler()
 ]

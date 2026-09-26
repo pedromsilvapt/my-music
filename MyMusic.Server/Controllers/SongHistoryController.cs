@@ -1,3 +1,5 @@
+using System.Net.ServerSentEvents;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
 
 using MyMusic.Common.Services;
@@ -14,7 +16,8 @@ namespace MyMusic.Server.Controllers;
 [Route("songs/{songId:long}/history")]
 public class SongHistoryController(
     ISongHistoryQueryService songHistoryQueryService,
-    ISongHistoryVersionDiffService songHistoryVersionDiffService) : ControllerBase
+    ISongHistoryVersionDiffService songHistoryVersionDiffService,
+    ISongHistoryEventStreamService songHistoryEventStreamService) : ControllerBase
 {
     [HttpGet(Name = "GetSongHistory")]
     public async Task<GetSongHistoryResponse> GetHistory(
@@ -50,5 +53,28 @@ public class SongHistoryController(
         }
 
         return Ok(SongHistoryDiffResponse.FromResult(result));
+    }
+
+    /// <summary>
+    /// Server-Sent Events stream notifying when the song's queued history changes are processed.
+    /// Emits a <c>processed</c> event each time new history rows are written, and a final
+    /// <c>complete</c> event before the server closes the stream once no history is pending.
+    /// Songs that don't exist or aren't owned by the current user complete immediately.
+    /// </summary>
+    [HttpGet("events", Name = "StreamSongHistoryEvents")]
+    [ProducesResponseType(typeof(SongHistoryEventResponse), StatusCodes.Status200OK, "text/event-stream")]
+    public IResult StreamEvents(long songId, CancellationToken cancellationToken) =>
+        TypedResults.ServerSentEvents(ToSseItems(songId, cancellationToken));
+
+    private async IAsyncEnumerable<SseItem<SongHistoryEventResponse>> ToSseItems(
+        long songId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var evt in songHistoryEventStreamService.StreamAsync(songId, cancellationToken))
+        {
+            yield return new SseItem<SongHistoryEventResponse>(
+                SongHistoryEventResponse.FromEvent(evt),
+                SongHistoryEventResponse.EventTypeOf(evt));
+        }
     }
 }

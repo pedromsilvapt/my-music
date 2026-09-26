@@ -1,4 +1,4 @@
-import {ActionIcon, Alert, Anchor, Box, Button, Flex, Group, Stack, Text, Tooltip} from "@mantine/core";
+import {ActionIcon, Alert, Anchor, Box, Button, Flex, Group, Loader, Stack, Text, Tooltip} from "@mantine/core";
 import {
     IconArrowBack,
     IconArrowForward,
@@ -33,6 +33,7 @@ import {useManageSharingContext} from "../../contexts/manage-sharing-context.tsx
 import {useQueueMutations} from "../../contexts/player-context.tsx";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
+import {useSongHistoryEvents} from "../../hooks/use-song-history-events.ts";
 import {formatFileSize} from "../../utils/format-file-size.ts";
 import {formatRelativeDate} from "../../utils/format-relative-date.ts";
 import Artwork from "../common/artwork.tsx";
@@ -60,6 +61,7 @@ export default function SongDetailPage() {
     const firstRevisionId = historyItems.length > 0
         ? historyItems[historyItems.length - 1].id
         : null;
+    const {isPending: historyPending} = useSongHistoryEvents(Number(songId), song?.hasPendingHistory ?? false);
 
     const handleDelete = useCallback(() => {
         if (!song) return;
@@ -131,6 +133,12 @@ export default function SongDetailPage() {
                                 historyItems={historyItems}
                                 firstRevisionId={firstRevisionId}
                             />
+                        )}
+                        {historyPending && (
+                            <Tooltip label={t("songs:detailPage.versionsPending")}>
+                                <Loader size="xs" type="dots" data-testid="song-versions-pending"
+                                        aria-label={t("songs:detailPage.versionsPending")}/>
+                            </Tooltip>
                         )}
                         {song.isExplicit &&
                             <ExplicitLabel visible={true}><Text size="sm">{t("songs:detailPage.explicit")}</Text></ExplicitLabel>}

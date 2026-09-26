@@ -4,6 +4,8 @@ using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Songs;
+using MyMusic.Common.Tests.Services.Songs;
 using MyMusic.Common.Sources;
 using MyMusic.Server;
 using MyMusic.Server.Controllers;
@@ -69,7 +71,7 @@ public class SongsControllerGetSpecs
         var controller = CreateController(scenario);
 
         // Act
-        var response = await controller.Get(song.Id, scenario.DbContext, CancellationToken.None);
+        var response = await controller.Get(song.Id, scenario.DbContext, new SongHistoryPendingService(scenario.DbContext), CancellationToken.None);
 
         // Assert — owned song resolves normally
         response.Song.Id.ShouldBe(song.Id);
@@ -89,11 +91,64 @@ public class SongsControllerGetSpecs
         var controller = CreateController(scenario);
 
         // Act
-        var response = await controller.Get(song.Id, scenario.DbContext, CancellationToken.None);
+        var response = await controller.Get(song.Id, scenario.DbContext, new SongHistoryPendingService(scenario.DbContext), CancellationToken.None);
 
         // Assert — recipient can read the shared song (WhereAccessibleBy gate)
         response.Song.Id.ShouldBe(song.Id);
         response.Song.Title.ShouldBe("Shared Song");
+    }
+
+    [Fact]
+    public async Task Get_OwnedSongWithQueuedHistory_ReportsPendingHistory()
+    {
+        // Arrange — an edit to my song is still waiting for the history worker
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("My Song");
+        SongHistoryPendingServiceSpecs.AddQueueEntry(scenario, song.Id);
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.Get(song.Id, scenario.DbContext, new SongHistoryPendingService(scenario.DbContext), CancellationToken.None);
+
+        // Assert
+        response.Song.HasPendingHistory.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Get_OwnedSongWithoutQueuedHistory_ReportsNoPendingHistory()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("My Song");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.Get(song.Id, scenario.DbContext, new SongHistoryPendingService(scenario.DbContext), CancellationToken.None);
+
+        // Assert
+        response.Song.HasPendingHistory.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Get_SharedSongWithQueuedHistory_ReportsNoPendingHistory()
+    {
+        // Arrange — history is owner-only, so a recipient never sees pending history
+        var scenario = new Scenario();
+        var me = scenario.AdminUser;
+        var other = scenario.CreateUser("Other", "other");
+        var song = scenario.CreateSong("Shared Song", ownerId: other.Id);
+        Share(song, me, scenario.DbContext);
+        SongHistoryPendingServiceSpecs.AddQueueEntry(scenario, song.Id);
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.Get(song.Id, scenario.DbContext, new SongHistoryPendingService(scenario.DbContext), CancellationToken.None);
+
+        // Assert
+        response.Song.HasPendingHistory.ShouldBeFalse();
     }
 
     [Fact]
@@ -108,6 +163,6 @@ public class SongsControllerGetSpecs
 
         // Act & Assert — access gate rejects the recipient; controller throws (404 in pipeline)
         await Should.ThrowAsync<Exception>(() =>
-            controller.Get(song.Id, scenario.DbContext, CancellationToken.None));
+            controller.Get(song.Id, scenario.DbContext, new SongHistoryPendingService(scenario.DbContext), CancellationToken.None));
     }
 }

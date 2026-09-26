@@ -21,7 +21,8 @@ public class SongHistoryWorkerSpecs
     private static (SongHistoryWorker worker, Scenario scenario, ISongHistoryThumbnailService thumbnail, ISongHistorySnapshotService snapshot) CreateWorker(
         ISongHistoryThumbnailService? thumbnail = null,
         ISongHistorySnapshotService? snapshot = null,
-        Config? config = null)
+        Config? config = null,
+        ISongHistoryNotifier? notifier = null)
     {
         var scenario = new Scenario();
         var thumbnailService = thumbnail ?? new SongHistoryThumbnailService(
@@ -37,6 +38,7 @@ public class SongHistoryWorkerSpecs
         var worker = new SongHistoryWorker(
             Substitute.For<IServiceScopeFactory>(),
             Options.Create(cfg),
+            notifier ?? Substitute.For<ISongHistoryNotifier>(),
             Substitute.For<ILogger<SongHistoryWorker>>());
         return (worker, scenario, thumbnailService, snapshotService);
     }
@@ -311,6 +313,28 @@ public class SongHistoryWorkerSpecs
         histories[2].Diff.Title.ShouldBeNull();
 
         scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessQueue_NotifiesProcessedAndFailedSongs()
+    {
+        var notifier = Substitute.For<ISongHistoryNotifier>();
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker(notifier: notifier);
+
+        InsertQueueEntry(scenario, songId: 30, revision: 1, BuildSnapshot(title: "Broken", songId: 30));
+        snapshot.GetCurrentSnapshotAsync(30, true, Arg.Any<CancellationToken>())
+            .Returns((Func<CallInfo, SongSnapshot>)(_ => throw new InvalidOperationException("boom")));
+
+        InsertQueueEntry(scenario, songId: 31, revision: 1, BuildSnapshot(title: "Old", songId: 31));
+        snapshot.GetCurrentSnapshotAsync(31, true, Arg.Any<CancellationToken>())
+            .Returns(BuildSnapshot(title: "New", songId: 31));
+
+        await worker.ProcessQueueAsync(scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        notifier.Received(1).Publish(30, SongHistoryNotificationKind.Failed);
+        notifier.Received(1).Publish(31, SongHistoryNotificationKind.Processed);
+        notifier.DidNotReceive().Publish(30, SongHistoryNotificationKind.Processed);
+        notifier.DidNotReceive().Publish(31, SongHistoryNotificationKind.Failed);
     }
 
     [Fact]

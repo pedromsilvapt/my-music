@@ -1,6 +1,7 @@
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Fixtures;
 using MyMusic.IntegrationTests.Flows;
+using MyMusic.IntegrationTests.Pages;
 
 namespace MyMusic.IntegrationTests.Tests.SongHistory;
 
@@ -28,10 +29,24 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new EditSongFlow(song.Title, new(Title: "The Alibi (Edited)")).ExecuteAsync(Page);
 
         // Assert: the newest version shows the title changing from the old value to the new one
-        await new ValidateSongVersionFlow(RequestContext, song.Id, "The Alibi (Edited)", versionsCount: 2, new(
+        await new ValidateSongVersionFlow("The Alibi (Edited)", versionsCount: 2, new(
             Old: new() { Title = "The Alibi" },
             New: new() { Title = "The Alibi (Edited)" }))
             .ExecuteAsync(Page);
+    }
+
+    [Fact]
+    public async Task EditTitle_ShouldUpdateVersionsMenuWithoutReload()
+    {
+        // Setup: seed a song whose initial (upload) version has already been recorded
+        var song = await _songs.SeedAsync(RequestContext, UserId, SongsFixture.DefaultSongs[1] with { VersionsCount = 1 });
+
+        // Action: rename the song through the edit modal — the new version is queued for background processing
+        await new EditSongFlow(song.Title, new(Title: "The Alibi (Edited)")).ExecuteAsync(Page);
+
+        // Assert: staying on the same page, the versions menu should pick up the second version once it is
+        // processed, and the pending indicator should go away
+        await new SongDetailsPage(Page).WaitForVersionsCountAsync(2);
     }
 
     [Fact]
@@ -44,7 +59,7 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new EditSongFlow(song.Title, new(Artists: ["Dylan", "Freya Ridings"])).ExecuteAsync(Page);
 
         // Assert: the newest version shows the artists list gaining the new artist
-        await new ValidateSongVersionFlow(RequestContext, song.Id, song.Title, versionsCount: 2, new(
+        await new ValidateSongVersionFlow(song.Title, versionsCount: 2, new(
             Old: new() { Artists = [new() { Name = "Dylan" }] },
             New: new() { Artists = [new() { Name = "Dylan" }, new() { Name = "Freya Ridings" }] }))
             .ExecuteAsync(Page);
@@ -57,7 +72,7 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         var song = await _songs.SeedAsync(RequestContext, UserId, SongsFixture.DefaultSongs[1] with { VersionsCount = 3 });
 
         // Action: open the newest version from the versions menu
-        var modal = await new OpenSongVersionFlow(RequestContext, song.Id, song.Title, versionsCount: 3).ExecuteAsync(Page);
+        var modal = await new OpenSongVersionFlow(song.Title, versionsCount: 3).ExecuteAsync(Page);
 
         // Assert: revision 3 is shown, comparing against the previous one; only older revisions are reachable
         await new ValidateCurrentSongVersionFlow(new(

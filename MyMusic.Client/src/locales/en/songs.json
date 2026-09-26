@@ -11,6 +11,7 @@
         "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
         "editTitle": "Edit Song",
         "versions": "({{count}} versions)",
+        "versionsPending": "Processing new versions…",
         "versionDiffTitle": "Version History",
         "versionItem": "Revision {{revision}} - {{relativeDate}}",
         "versionItemShort": "{{revision}} - {{relativeDate}}",

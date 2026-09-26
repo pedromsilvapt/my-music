@@ -190,6 +190,23 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
     }
 
     /// <summary>
+    /// Indicator shown next to the versions menu while queued history changes are still being processed.
+    /// </summary>
+    public ILocator VersionsPendingIndicator => Root.GetByTestId("song-versions-pending");
+
+    /// <summary>
+    /// Waits, without reloading, until the versions menu lists <paramref name="count"/> versions and no
+    /// history is pending anymore. Versions are recorded by a background worker and pushed to the page
+    /// over Server-Sent Events.
+    /// </summary>
+    public async Task WaitForVersionsCountAsync(int count)
+    {
+        await Assertions.Expect(Root.GetByTestId("song-versions-trigger"))
+            .ToHaveTextAsync($"({count} versions)", new() { Timeout = 45000 });
+        await Assertions.Expect(VersionsPendingIndicator).ToBeHiddenAsync(new() { Timeout = 45000 });
+    }
+
+    /// <summary>
     /// The currently open version modal (see <see cref="OpenVersionAsync"/>).
     /// </summary>
     public SongVersionModalComponent VersionModal => new(Page.GetByRole(AriaRole.Dialog));

@@ -60,4 +60,5 @@ export interface GetSongResponseSong {
   track?: number | null;
   isShared: boolean;
   modifiedAt: string;
+  hasPendingHistory: boolean;
 }

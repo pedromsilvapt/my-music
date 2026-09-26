@@ -35,11 +35,17 @@ public record GetSongResponseSong
     public required DateTime ModifiedAt { get; init; }
 
     /// <summary>
+    /// True when the song still has history changes queued for processing. Clients can
+    /// subscribe to <c>GET /songs/{id}/history/events</c> to be notified when they are processed.
+    /// </summary>
+    public required bool HasPendingHistory { get; set; }
+
+    /// <summary>
     /// Maps a <see cref="Entities.Song"/> to a <see cref="GetSongResponseSong"/>, computing
     /// <see cref="IsShared"/> against <paramref name="currentUserId"/> (true when the song is
     /// owned by another user, i.e. surfaced via sharing).
     /// </summary>
-    public static GetSongResponseSong FromEntity(Entities.Song song, long currentUserId) =>
+    public static GetSongResponseSong FromEntity(Entities.Song song, long currentUserId, bool hasPendingHistory) =>
         new()
         {
             Id = song.Id,
@@ -66,6 +72,7 @@ public record GetSongResponseSong
             Track = song.Track,
             IsShared = song.OwnerId != currentUserId,
             ModifiedAt = song.ModifiedAt,
+            HasPendingHistory = hasPendingHistory,
         };
 }
 

@@ -33,6 +33,7 @@ namespace MyMusic.Common.Services.SongHistory;
 public class SongHistoryWorker(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<Config> config,
+    ISongHistoryNotifier notifier,
     ILogger<SongHistoryWorker> logger) : BackgroundService
 {
     /// <summary>
@@ -170,6 +171,7 @@ public class SongHistoryWorker(
                     songEntries,
                     cancellationToken);
                 processed++;
+                notifier.Publish(songGroup.Key, SongHistoryNotificationKind.Processed);
             }
             catch (OperationCanceledException)
             {
@@ -199,6 +201,7 @@ public class SongHistoryWorker(
                 }
 
                 await context.SaveChangesAsync(cancellationToken);
+                notifier.Publish(songGroup.Key, SongHistoryNotificationKind.Failed);
             }
         }
 

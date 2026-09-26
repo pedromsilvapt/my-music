@@ -11,6 +11,7 @@
         "deleteConfirm": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser desfeita.",
         "editTitle": "Editar Música",
         "versions": "({{count}} versões)",
+        "versionsPending": "A processar novas versões…",
         "versionDiffTitle": "Histórico de Versões",
         "versionItem": "Revisão {{revision}} - {{relativeDate}}",
         "versionItemShort": "{{revision}} - {{relativeDate}}",
