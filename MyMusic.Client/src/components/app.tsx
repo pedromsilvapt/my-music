@@ -28,7 +28,7 @@ import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
 
 function App() {
     const {t} = useTranslation("common");
-    const [mobileOpened, {toggle: toggleMobile}] = useDisclosure();
+    const [mobileOpened, {toggle: toggleMobile, close: closeMobile}] = useDisclosure();
     const [desktopOpened, {toggle: toggleDesktop}] = useDisclosure(true);
 
     usePlayerQueueInitializer();
@@ -64,6 +64,7 @@ function App() {
                 <ScrollArea h="100%" p="md">
                     <NavLink
                         data-testid="nav-player"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/player"} {...props} />}
                         href="/player"
                         key="player"
@@ -75,6 +76,7 @@ function App() {
 
                     <NavLink
                         data-testid="nav-home"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/"} {...props} />}
                         key="home"
                         leftSection={<IconHome stroke={2}/>}
@@ -82,6 +84,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-songs"
+                        onClick={sharers.length > 0 ? undefined : closeMobile}
                         renderRoot={(props) => <Link to={"/songs"} {...props} />}
                         href="/songs"
                         leftSection={<IconMusic stroke={2}/>}
@@ -90,6 +93,7 @@ function App() {
                             <>
                                 <NavLink
                                     data-testid="nav-songs-mine"
+                                    onClick={closeMobile}
                                     renderRoot={(props) => <Link to={"/songs"} activeOptions={{exact: true}} {...props} />}
                                     label={t("nav.songsMine")}
                                     leftSection={<IconUser size={16}/>}
@@ -99,6 +103,7 @@ function App() {
                                     <NavLink
                                         key={sharer.id}
                                         data-testid={`nav-songs-shared-${sharer.id}`}
+                                        onClick={closeMobile}
                                         renderRoot={(props) => <Link to={"/songs/shared/$ownerId"} params={{ownerId: String(sharer.id)}} {...props} />}
                                         label={sharer.name}
                                         leftSection={<IconShare size={16}/>}
@@ -110,6 +115,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-albums"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/albums"} {...props} />}
                         key="albums"
                         leftSection={<IconDisc stroke={2}/>}
@@ -117,6 +123,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-artists"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/artists"} {...props} />}
                         key="artists"
                         leftSection={<IconUsers stroke={2}/>}
@@ -124,6 +131,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-playlists"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/playlists"} {...props} />}
                         key="playlists"
                         leftSection={<IconPlaylist stroke={2}/>}
@@ -131,6 +139,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-devices"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/devices"} {...props} />}
                         key="devices"
                         leftSection={<IconDevices stroke={2}/>}
@@ -138,6 +147,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-history"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/history"} {...props} />}
                         key="history"
                         leftSection={<IconHistory stroke={2}/>}
@@ -145,6 +155,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-audits"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/audits"} {...props} />}
                         key="audits"
                         leftSection={<IconClipboardCheck stroke={2}/>}
@@ -152,6 +163,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-purchases"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/purchases"} {...props} />}
                         key="purchases"
                         leftSection={<IconShoppingCart stroke={2}/>}
@@ -159,6 +171,7 @@ function App() {
                     />
                     <NavLink
                         data-testid="nav-settings"
+                        onClick={closeMobile}
                         renderRoot={(props) => <Link to={"/settings"} {...props} />}
                         key="settings"
                         leftSection={<IconSettings stroke={2}/>}
