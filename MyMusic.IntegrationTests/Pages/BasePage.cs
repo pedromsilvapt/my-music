@@ -10,4 +10,5 @@ public abstract class BasePage(IPage page, string? testId = null)
 
     public TopbarComponent Topbar => new(Page.GetByTestId("topbar"));
     public NavbarComponent Navbar => new(Page.GetByTestId("navbar"));
+    public FooterPlayerComponent FooterPlayer => new(Page.GetByTestId("footer-player"));
 }

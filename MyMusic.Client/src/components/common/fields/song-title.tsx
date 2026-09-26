@@ -34,7 +34,7 @@ export default function SongTitle(props: SongTitleProps) {
     return <ExplicitLabel visible={props.isExplicit ?? false}>
         {props.stopAfterPlayback && (
             <Tooltip label={t("common:songTitle.stopAfterPlayback")} openDelay={500}>
-                <IconPlayerStop size={16} style={{marginRight: 4}} color="var(--mantine-color-red-5)"/>
+                <IconPlayerStop size={16} style={{marginRight: 4}} color="var(--mantine-color-red-5)" data-testid="stop-after-playback-indicator"/>
             </Tooltip>
         )}
         {props.skipNextPlayback && (

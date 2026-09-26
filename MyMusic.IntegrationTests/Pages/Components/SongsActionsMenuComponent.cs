@@ -20,6 +20,22 @@ public class SongsActionsMenuComponent(ILocator root) : BaseComponent(root)
     public static Regex DeleteSongs { get; } = new(@"^Delete \d+ Songs$");
 
     /// <summary>
+    /// Matches the "Stop After This Song" menu item.
+    /// </summary>
+    public static Regex StopAfterThisSong { get; } = new("^Stop After This Song$");
+
+    /// <summary>
+    /// Matches the "Go to Details" menu item.
+    /// </summary>
+    public static Regex GoToDetails { get; } = new("^Go to Details$");
+
+    /// <summary>
+    /// Matches the queue menu items that only apply to songs listed in a queue
+    /// (play, play next/last, skip, shuffle and remove from queue).
+    /// </summary>
+    public static Regex QueueOnlyActions { get; } = new("^(Play|Play Next|Play Last|Skip This Song|Shuffle|Remove from Queue)$");
+
+    /// <summary>
     /// Returns the menu item locator matching the given name pattern.
     /// </summary>
     public ILocator GetItem(Regex name) =>

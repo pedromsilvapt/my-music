@@ -128,6 +128,7 @@
         "editSingle": "Edit Song",
         "editPlural": "Edit {{count}} Songs",
         "editTitle": "Edit Song",
+        "goToDetails": "Go to Details",
         "manageGroup": "Manage",
         "queueGroup": "Queue",
         "unfavorite": "Unfavorite",

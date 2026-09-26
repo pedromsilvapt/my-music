@@ -1,14 +1,18 @@
 import {Box, Group, Text, UnstyledButton} from '@mantine/core';
-import {Link} from '@tanstack/react-router';
+import {Link, useNavigate} from '@tanstack/react-router';
+import {useTranslation} from 'react-i18next';
 import Artwork from "../common/artwork.tsx";
-import {IconMusic} from "@tabler/icons-react";
+import {IconInfoCircle, IconMusic} from "@tabler/icons-react";
 import ExplicitLabel from "../common/explicit-label.tsx";
 import {useQueuesMutations, useQueueList} from "../../hooks/use-queues";
+import {useQueue} from "../../contexts/player-context";
 import {usePlaybackActions} from "../../stores/playback-store";
 import styles from './player-info.module.css';
 import type {GetPlaylistSongItem, ListSongItem} from '../../model';
 import {useSongsSchema} from '../songs/useSongsSchema';
 import CollectionActions from '../common/collection/collection-actions';
+import type {CollectionSchemaAction} from '../common/collection/collection-schema.tsx';
+import {getFooterSongActions} from './player-info-actions';
 
 export interface PlayerInfoProps {
     song: GetPlaylistSongItem;
@@ -16,6 +20,8 @@ export interface PlayerInfoProps {
 }
 
 export default function PlayerInfo(props: PlayerInfoProps) {
+    const {t} = useTranslation(["songs"]);
+    const navigate = useNavigate();
     const {requestScrollToCurrent} = usePlaybackActions((s) => ({
         requestScrollToCurrent: s.requestScrollToCurrent,
     }));
@@ -29,18 +35,20 @@ export default function PlayerInfo(props: PlayerInfoProps) {
         requestScrollToCurrent();
     };
 
-    const schema = useSongsSchema(false);
-    const allActions = schema.actions?.([props.song as ListSongItem]) ?? [];
-    const actions = allActions.filter(action => {
-        if ('group' in action && action.group === 'Queue') return false;
-        if ('name' in action && ['play', 'play-next', 'play-last', 'shuffle', 'remove-from-queue'].includes(action.name)) return false;
-        return true;
-    }).map(action => {
-        if ('name' in action && (action.name === 'favorite' || action.name === 'manage-playlists')) {
-            return { ...action, primary: true };
-        }
-        return action;
-    });
+    // The playback store holds a snapshot of the song; the queue has its up-to-date playback flags
+    const {queue, queueId} = useQueue();
+    const song = (queue.find(s => s.id === props.song.id) ?? props.song) as ListSongItem;
+
+    const schema = useSongsSchema(true, {queueId});
+    const goToDetails: CollectionSchemaAction<ListSongItem> = {
+        name: 'go-to-details',
+        renderIcon: () => <IconInfoCircle/>,
+        renderLabel: () => t("songs:schema.goToDetails"),
+        onClick: (songs: ListSongItem[]) => {
+            navigate({to: '/songs/$songId', params: {songId: String(songs[0]!.id)}});
+        },
+    };
+    const actions = getFooterSongActions([goToDetails, ...(schema.actions?.([song]) ?? [])]);
 
     return <>
         <Group>
@@ -59,7 +67,7 @@ export default function PlayerInfo(props: PlayerInfoProps) {
                     </Group>
                 </UnstyledButton>
             </Link>
-            <CollectionActions selection={[props.song as ListSongItem]} actions={actions} size="lg" />
+            <CollectionActions selection={[song]} actions={actions} size="lg" />
         </Group>
     </>;
 }

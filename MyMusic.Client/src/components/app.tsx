@@ -185,7 +185,7 @@ function App() {
 
                 {/*<TanStackRouterDevtools/>*/}
             </AppShell.Main>
-            {footerVisible && <AppShell.Footer>
+            {footerVisible && <AppShell.Footer data-testid="footer-player">
                 <Player/>
             </AppShell.Footer>}
         </AppShell>

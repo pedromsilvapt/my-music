@@ -46,6 +46,29 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
         return matches;
     }
 
+    /// <summary>
+    /// Returns the row of the song with the given title.
+    /// </summary>
+    private ILocator GetRowByTitle(string title) =>
+        Root.Locator("tr[data-index]").Filter(new()
+        {
+            Has = Root.Page.Locator("td[data-testid^='collection-cell-title-']", new() { HasTextString = title }),
+        }).First;
+
+    /// <summary>
+    /// Starts playing the song with the given title by clicking its artwork.
+    /// </summary>
+    public async Task PlaySongByTitleAsync(string title)
+    {
+        await GetRowByTitle(title).Locator("td[data-testid^='collection-cell-artwork-']").ClickAsync();
+    }
+
+    /// <summary>
+    /// Returns the indicator shown next to a song's title when playback stops after it.
+    /// </summary>
+    public ILocator GetStopAfterPlaybackIndicator(string title) =>
+        GetRowByTitle(title).GetByTestId("stop-after-playback-indicator");
+
     public async Task<SongDetailsPage> GoToSongDetailsAsync(int rowIndex)
     {
         var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");
