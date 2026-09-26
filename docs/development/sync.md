@@ -16,7 +16,7 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
  - The server should create all the `DeviceSyncSessionRecord` before the commit phase: only in the commit phase are those actions really performed (songs created, files uploaded, downloaded, renamed, etc...)
     - The list of `DeviceSyncSessionRecord` is the source of truth for what operations to perform
  - During song upload, we save the uploaded song files inside a temp folder in the music repository directory. And during commit, we move those files to the correct repository.
-    - Except in dry-run, where we do not store the files because they will not be needed.
+    - Files that will not be imported at commit (dry-run uploads, `Link` and `Error` records) are deleted at the end of the upload request. The session's temp folder, with any leftovers, is deleted when the session ends.
  - During sync process, when the server needs to find a song by checksum or by device path, we should not only look in the Songs database table, but also in the `DeviceSyncSessionRecord` for records created during this sync session that match those data properties.
 
 ---
@@ -147,7 +147,7 @@ The list of `DeviceSyncSessionRecord` entries must be **identical** regardless o
 
 ### What Dry-Run Skips
 
-- **No songs are imported** into the library. Uploaded files are stored temporarily only long enough to calculate a checksum, then discarded.
+- **No songs are imported** into the library. Uploaded files are stored temporarily only for the length of the upload request (to calculate a checksum and check the metadata), then discarded.
 - **No `SongDevice` associations are modified or deleted.** The library state remains untouched.
 - **No local files are changed.** The device does not download, delete, or rename any files.
 - **No `Device.LastSyncAt` timestamp is updated.** A dry-run session is invisible to the next real sync.

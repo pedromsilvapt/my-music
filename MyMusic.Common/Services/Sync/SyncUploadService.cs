@@ -30,12 +30,13 @@ public class SyncUploadService(
         CancellationToken cancellationToken = default)
     {
         var staging = await StageFileAsync(sessionId, fileStream, fileName, isDryRun, repositoryPath, cancellationToken);
+        var keepStagedFile = false;
 
         try
         {
             var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
             var checksumAlgorithmName = checksumAlgorithm.GetType().Name;
-            var checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, staging.StagedFilePath!);
+            var checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, staging.StagedFilePath);
 
             long? songIdForRecord = isUpdate ? songDeviceForImport!.SongId!.Value : null;
 
@@ -58,17 +59,14 @@ public class SyncUploadService(
                 ? await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken)
                 : await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, cancellationToken);
 
-            // In a real run the staged file must outlive this request: the commit imports it from the
-            // record's TempFilePath. Links and errors are never imported at commit, so their file can go
-            // now. Dry runs don't need this: their whole staging directory is deleted in the finally below.
-            if (!isDryRun && (importError != null
-                           || decision.ActionType == SyncUploadActionType.LinkWithSongId
-                           || decision.ActionType == SyncUploadActionType.LinkWithChecksumOnly))
-            {
-                TryDeleteStagedFile(staging.StagedFilePath!);
-            }
-
             await db.SaveChangesAsync(cancellationToken);
+
+            // In a real run, a file that will be imported must outlive this request: the commit imports it
+            // from the record's TempFilePath. Every other staged file (dry runs, links, errors) is never
+            // read again, so it is deleted when the request ends. The session directory itself, with any
+            // leftovers, is deleted when the session ends (see StagingDirectoryCleanupService).
+            keepStagedFile = !isDryRun && importError == null
+                && decision.ActionType is SyncUploadActionType.CreateRemote or SyncUploadActionType.UpdateRemote;
 
             long? effectiveSongId = decision.ActionType switch
             {
@@ -84,43 +82,31 @@ public class SyncUploadService(
         }
         finally
         {
-            if (staging.IsDryRun && staging.StagingDirectory != null)
+            if (!keepStagedFile)
             {
-                TryDeleteStagingDirectory(staging.StagingDirectory);
+                TryDeleteStagedFile(staging.StagedFilePath);
             }
         }
     }
 
-    private record StagingResult(string StagedFilePath, string? StagingDirectory, bool IsDryRun);
+    private record StagingResult(string StagedFilePath, bool IsDryRun);
 
+    /// <summary>
+    /// Stages the uploaded file in the session's staging directory, <c>.temp/sync-{sessionId}</c> inside
+    /// the repository. Dry runs use the same directory, so a single cleanup covers both modes.
+    /// </summary>
     private async Task<StagingResult> StageFileAsync(
         long sessionId, Stream fileStream, string fileName,
         bool isDryRun, string repositoryPath, CancellationToken cancellationToken)
     {
-        if (isDryRun)
+        var stagingDirectory = fileSystem.Path.Combine(repositoryPath, ".temp", $"sync-{sessionId}");
+        fileSystem.Directory.CreateDirectory(stagingDirectory);
+        var stagedFilePath = fileSystem.Path.Combine(stagingDirectory, $"{Guid.NewGuid()}-{fileName}");
+        await using (var stream = fileSystem.FileStream.New(stagedFilePath, FileMode.Create))
         {
-            var systemTempPath = fileSystem.Path.Combine(
-                fileSystem.Path.GetTempPath(), $"mymusic_staging_dryrun_{Guid.NewGuid()}");
-            fileSystem.Directory.CreateDirectory(systemTempPath);
-            var tempFilePath = fileSystem.Path.Combine(systemTempPath, fileName);
-            await using (var stream = fileSystem.FileStream.New(tempFilePath, FileMode.Create))
-            {
-                await fileStream.CopyToAsync(stream, cancellationToken);
-            }
-            return new StagingResult(tempFilePath, systemTempPath, IsDryRun: true);
+            await fileStream.CopyToAsync(stream, cancellationToken);
         }
-        else
-        {
-            var tempPath = fileSystem.Path.Combine(repositoryPath, ".temp", $"sync-{sessionId}");
-            fileSystem.Directory.CreateDirectory(tempPath);
-            var stagingFileName = $"{Guid.NewGuid()}-{fileName}";
-            var stagingFilePath = fileSystem.Path.Combine(tempPath, stagingFileName);
-            await using (var stream = fileSystem.FileStream.New(stagingFilePath, FileMode.Create))
-            {
-                await fileStream.CopyToAsync(stream, cancellationToken);
-            }
-            return new StagingResult(stagingFilePath, tempPath, IsDryRun: false);
-        }
+        return new StagingResult(stagedFilePath, isDryRun);
     }
 
     private SyncUploadDecision DetermineUploadAction(
@@ -294,19 +280,6 @@ public class SyncUploadService(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to delete staged file {FilePath}", filePath);
-        }
-    }
-
-    private void TryDeleteStagingDirectory(string directoryPath)
-    {
-        try
-        {
-            if (fileSystem.Directory.Exists(directoryPath))
-                fileSystem.Directory.Delete(directoryPath, true);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to delete staging directory {DirectoryPath}", directoryPath);
         }
     }
 }

@@ -180,7 +180,7 @@ public class SyncUploadServiceSpecs
     }
 
     [Fact]
-    public async Task UploadAsync_DryRun_DoesNotCreateStagingDirectoryInRepo()
+    public async Task UploadAsync_DryRun_LeavesNoStagedFileInSessionDirectory()
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
@@ -205,11 +205,12 @@ public class SyncUploadServiceSpecs
             ownerId: scenario.AdminUser.Id,
             cancellationToken: CancellationToken.None);
 
-        mockFs.Directory.Exists("/data/.temp").ShouldBeFalse();
+        // Dry runs stage into the same session directory, but never keep the file past the request
+        mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").ShouldBeEmpty();
     }
 
     [Fact]
-    public async Task UploadAsync_Live_CreatesStagingDirectory()
+    public async Task UploadAsync_Live_CreateRemote_KeepsStagedFileForCommit()
     {
         var scenario = new Scenario();
         var mockFs = (MockFileSystem)scenario.FileSystem;
@@ -219,7 +220,7 @@ public class SyncUploadServiceSpecs
         var service = CreateService(scenario.DbContext, scenario.FileSystem);
         var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 });
 
-        await service.UploadAsync(
+        var result = await service.UploadAsync(
             deviceId: device.Id,
             sessionId: session.Id,
             isDryRun: false,
@@ -234,7 +235,46 @@ public class SyncUploadServiceSpecs
             ownerId: scenario.AdminUser.Id,
             cancellationToken: CancellationToken.None);
 
-        mockFs.Directory.Exists($"/data/.temp/sync-{session.Id}").ShouldBeTrue();
+        result.Record.Action.ShouldBe(SyncRecordAction.CreateRemote);
+        mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").Length.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task UploadAsync_Live_Link_DeletesStagedFile()
+    {
+        var scenario = new Scenario();
+        var mockFs = (MockFileSystem)scenario.FileSystem;
+        var song = scenario.CreateSong("Song");
+
+        var content = new byte[] { 1, 2, 3, 4, 5 };
+        var checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
+
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+
+        _musicService.FindUserSongsByChecksum(
+            Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<List<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, Song> { { checksum, song } });
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: false,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream(content),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: false,
+            songDeviceForImport: null,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            cancellationToken: CancellationToken.None);
+
+        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").ShouldBeEmpty();
     }
 
     [Fact]
