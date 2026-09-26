@@ -5,8 +5,12 @@ WORKDIR /app/MyMusic
 
 ARG --global projects = "MyMusic.Common MyMusic.OpenTelemetry MyMusic.Server"
 
+packages-props:
+    COPY Directory.Packages.props ./
+    SAVE ARTIFACT Directory.Packages.props
+
 install:
-    COPY MyMusic.sln ./
+    COPY MyMusic.sln Directory.Packages.props ./
 
     FOR proj IN $projects
         RUN mkdir -p ./$proj/
@@ -35,6 +39,8 @@ integration-tests:
     FROM mcr.microsoft.com/dotnet/sdk:10.0
 
     WORKDIR /app/MyMusic
+
+    COPY Directory.Packages.props ./
 
     FOR proj IN "MyMusic.Common" "MyMusic.OpenTelemetry" "MyMusic.OpenTelemetry.XUnit" "MyMusic.IntegrationTests"
         RUN mkdir -p ./$proj/
@@ -91,6 +97,8 @@ unit-tests:
     FROM mcr.microsoft.com/dotnet/sdk:10.0
 
     WORKDIR /app/MyMusic
+
+    COPY Directory.Packages.props ./
 
     FOR proj IN "MyMusic.Common" "MyMusic.OpenTelemetry" "MyMusic.OpenTelemetry.XUnit" "MyMusic.Server" "MyMusic.CLI" "MyMusic.Common.Tests" "MyMusic.CLI.Tests"
         RUN mkdir -p ./$proj/

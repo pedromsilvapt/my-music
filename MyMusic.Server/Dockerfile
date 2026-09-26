@@ -7,6 +7,7 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+COPY ["Directory.Packages.props", "./"]
 COPY ["MyMusic.Server/MyMusic.Server.csproj", "MyMusic.Server/"]
 RUN dotnet restore "MyMusic.Server/MyMusic.Server.csproj"
 COPY . .

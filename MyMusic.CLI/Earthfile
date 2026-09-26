@@ -7,6 +7,8 @@ ARG --global projects = "MyMusic.CLI"
 ARG --global VERSION = "0.0.0"
 
 install:
+    COPY ../+packages-props/Directory.Packages.props ./
+
     FOR proj IN $projects
         RUN mkdir -p ./$proj/
 

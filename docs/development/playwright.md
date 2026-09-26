@@ -91,14 +91,14 @@ The Playwright version used by the integration test Docker image must stay in sy
    RUN pnpm install -g playwright@^1.59 && \
    ```
 
-2. **Integration Tests Project** (`MyMusic.IntegrationTests/MyMusic.IntegrationTests.csproj` line 13):
+2. **Central package versions** (`Directory.Packages.props`):
    ```xml
-   <PackageReference Include="Microsoft.Playwright.Xunit.v3" Version="1.59.0" />
+   <PackageVersion Include="Microsoft.Playwright.Xunit.v3" Version="1.59.0" />
    ```
 
 ### Rule
 
-When updating the Playwright .NET package in `MyMusic.IntegrationTests.csproj`, **always** update the `pnpm install` version in the `Earthfile` to match. Mismatched versions can cause browser binary incompatibilities and test failures in the Docker environment.
+When updating the Playwright .NET package in `Directory.Packages.props`, **always** update the `pnpm install` version in the `Earthfile` to match. Mismatched versions can cause browser binary incompatibilities and test failures in the Docker environment.
 
 ---
 

@@ -342,6 +342,8 @@ public class MyTests : IntegrationTestBase
 
 ## Dependencies
 
+NuGet versions are managed centrally in the root `Directory.Packages.props`. To add or bump a package, set its `<PackageVersion>` there and reference it from the `.csproj` without a `Version` attribute.
+
 Key packages used:
 
 - `Microsoft.EntityFrameworkCore` + `Npgsql.EntityFrameworkCore.PostgreSQL`

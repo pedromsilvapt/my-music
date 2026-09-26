@@ -340,6 +340,7 @@ public record ListSongsResponse
 -->
 
 - **.NET 10.0** with `ImplicitUsings` and `Nullable` enabled in all projects
+- **Central Package Management**: NuGet versions live only in the root `Directory.Packages.props` (`<PackageVersion>`); `<PackageReference>` in `.csproj` files must not have a `Version` attribute
 - Use **file-scoped namespaces**: `namespace MyMusic.Common.Services;`
 - Use **primary constructors** for controller/service classes
 - Use **XML documentation comments** (`/// <summary>`) for public APIs
