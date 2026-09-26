@@ -491,6 +491,7 @@ export const ReportSyncErrorRequestSchema = z.object({
     filePath: z.string(),
     errorMessage: z.string(),
     songId: z.number().nullable().optional(),
+    recordId: z.number().nullable().optional(),
 });
 
 export type ReportSyncErrorRequest = z.infer<typeof ReportSyncErrorRequestSchema>;

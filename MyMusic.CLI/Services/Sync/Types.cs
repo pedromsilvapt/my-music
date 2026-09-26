@@ -362,6 +362,11 @@ public record ReportSyncErrorCliRequest
     public required string FilePath { get; init; }
     public required string ErrorMessage { get; init; }
     public long? SongId { get; init; }
+
+    /// <summary>
+    /// The client-action record that failed. The server acknowledges it and does not apply it at commit.
+    /// </summary>
+    public long? RecordId { get; init; }
 }
 
 public record ScanResult

@@ -258,7 +258,7 @@ public class SyncResolveConflictsService(
         {
             logger.LogError(ex, "Invalid base64 content for {Path}", path);
 
-            var errorRecord = await syncActions.ActionError(path, "Invalid file content format", songId, "Invalid file content format", cancellationToken);
+            var errorRecord = await syncActions.ActionError(path, "Invalid file content format", songId, "Invalid file content format", cancellationToken: cancellationToken);
             return (null, errorRecord);
         }
     }

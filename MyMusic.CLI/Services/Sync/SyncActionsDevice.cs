@@ -112,7 +112,7 @@ public class SyncActionsDevice(
         if (fileExists)
         {
             logger.LogError("File already exists during create: {Path}", relativePath);
-            return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: "File already exists", Reason: "Unexpected local file during create");
+            return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, "File already exists", "Unexpected local file during create", ct);
         }
 
         return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: false, ct);
@@ -136,7 +136,7 @@ public class SyncActionsDevice(
         if (!fileExists)
         {
             logger.LogError("File not found during update: {Path}", relativePath);
-            return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: "File not found", Reason: "Missing local file during update");
+            return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, "File not found", "Missing local file during update", ct);
         }
 
         return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: true, ct);
@@ -198,7 +198,7 @@ public class SyncActionsDevice(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to {Action} file: {Path}", isUpdate ? "update" : "download", relativePath);
-            return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: ex.Message, Reason: $"{baseReason} failed", SongId: songId);
+            return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, ex.Message, $"{baseReason} failed", ct);
         }
         finally
         {
@@ -261,7 +261,7 @@ public class SyncActionsDevice(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to delete file: {Path}", relativePath);
-            return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: ex.Message, Reason: $"{baseReason} failed", SongId: songId);
+            return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, ex.Message, $"{baseReason} failed", ct);
         }
     }
 
@@ -322,8 +322,42 @@ public class SyncActionsDevice(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to rename file: {PreviousPath} -> {Path}", previousRelativePath, relativePath);
-            return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: ex.Message, Reason: $"Rename from '{previousRelativePath}' failed");
+            return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId: null, ex.Message, $"Rename from '{previousRelativePath}' failed", ct);
         }
+    }
+
+    /// <summary>
+    /// Reports a client action that could not be performed as an <c>Error</c> linked to its record.
+    /// The server acknowledges the record, so the commit is not blocked, and does not apply it, so
+    /// the server state keeps reflecting what is actually on the device.
+    /// </summary>
+    private async Task<ActionResult> ReportFailureAsync(
+        long deviceId,
+        long sessionId,
+        long recordId,
+        string relativePath,
+        long? songId,
+        string errorMessage,
+        string reason,
+        CancellationToken ct)
+    {
+        SyncActionCounts? counts = null;
+        try
+        {
+            counts = await apiClient.ReportSyncErrorAsync(deviceId, sessionId, new ReportSyncErrorCliRequest
+            {
+                FilePath = relativePath,
+                ErrorMessage = errorMessage,
+                SongId = songId,
+                RecordId = recordId
+            }, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to report the error of record {RecordId}: {Path}", recordId, relativePath);
+        }
+
+        return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: errorMessage, Reason: reason, SongId: songId, RecordId: recordId, Counts: counts);
     }
 
     /// <summary>

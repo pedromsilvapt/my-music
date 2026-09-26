@@ -143,4 +143,76 @@ public class SyncReportErrorServiceSpecs
         // Assert
         await syncActions.Received(1).ActionError("/a.mp3", "boom", null, reason: "boom", cancellationToken: CancellationToken.None);
     }
+
+    [Fact]
+    public async Task ReportErrorAsync_WithRecordId_AcknowledgesFailedRecordAndLinksError()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var failed = scenario.AddRecord(session.Id, "/a.mp3", SyncRecordAction.DeleteLocal, songId: song.Id);
+        var service = CreateService(scenario, new SyncActionsServerFactory());
+
+        // Act
+        var result = await service.ReportErrorAsync(device.Id, session.Id, scenario.AdminUser.Id,
+            new SyncReportErrorInput { FilePath = "/a.mp3", ErrorMessage = "boom", SongId = song.Id, RecordId = failed.Id },
+            CancellationToken.None);
+
+        // Assert
+        result.Found.ShouldBeTrue();
+        (await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking().FirstAsync(r => r.Id == failed.Id))
+            .Acknowledged.ShouldBeTrue();
+        SyncActionDataSerializer.Deserialize<ErrorData>(result.Record!.Data)!.FailedRecordId.ShouldBe(failed.Id);
+    }
+
+    [Fact]
+    public async Task ReportErrorAsync_RecordIdFromAnotherSession_ReturnsRecordNotFoundFailure()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var otherSession = scenario.CreateSession(device, status: SyncSessionStatus.Completed);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var foreign = scenario.AddRecord(otherSession.Id, "/a.mp3", SyncRecordAction.DeleteLocal);
+        var service = CreateService(scenario, new SyncActionsServerFactory());
+
+        // Act
+        var result = await service.ReportErrorAsync(device.Id, session.Id, scenario.AdminUser.Id,
+            new SyncReportErrorInput { FilePath = "/a.mp3", ErrorMessage = "boom", RecordId = foreign.Id },
+            CancellationToken.None);
+
+        // Assert
+        result.Found.ShouldBeFalse();
+        result.Failure.ShouldBe(SyncReportErrorFailure.RecordNotFound);
+        scenario.DbContext.DeviceSyncSessionRecords.Count(r => r.SessionId == session.Id).ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData(SyncRecordAction.CreateRemote)]
+    [InlineData(SyncRecordAction.UpdateRemote)]
+    [InlineData(SyncRecordAction.Link)]
+    [InlineData(SyncRecordAction.Skipped)]
+    public async Task ReportErrorAsync_RecordIdOfServerAction_ReturnsRecordNotClientActionFailure(SyncRecordAction action)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var serverRecord = scenario.AddRecord(session.Id, "/a.mp3", action);
+        var service = CreateService(scenario, new SyncActionsServerFactory());
+
+        // Act
+        var result = await service.ReportErrorAsync(device.Id, session.Id, scenario.AdminUser.Id,
+            new SyncReportErrorInput { FilePath = "/a.mp3", ErrorMessage = "boom", RecordId = serverRecord.Id },
+            CancellationToken.None);
+
+        // Assert
+        result.Found.ShouldBeFalse();
+        result.Failure.ShouldBe(SyncReportErrorFailure.RecordNotClientAction);
+        (await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking().FirstAsync(r => r.Id == serverRecord.Id))
+            .Acknowledged.ShouldBeFalse();
+        scenario.DbContext.DeviceSyncSessionRecords.Count(r => r.SessionId == session.Id).ShouldBe(1);
+    }
 }

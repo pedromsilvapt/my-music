@@ -34,7 +34,7 @@ public class SyncCommitService(
         // Validated in dry-run too: clients acknowledge client-action records in both modes, so a
         // dry-run commit must fail under exactly the same conditions as a real one.
         var unacknowledgedClientActions = records
-            .Where(r => !r.Acknowledged && IsClientActionType(r.Action))
+            .Where(r => !r.Acknowledged && r.Action.IsClientAction())
             .ToList();
 
         if (unacknowledgedClientActions.Count > 0)
@@ -61,8 +61,18 @@ public class SyncCommitService(
 
         var createdSongIdsByChecksum = new Dictionary<string, long>();
 
+        // Records whose action failed were not performed, so their bookkeeping is not applied either
+        var failedRecordIds = records
+            .Where(r => r.Action == SyncRecordAction.Error)
+            .Select(r => SyncActionDataSerializer.Deserialize<ErrorData>(r.Data)?.FailedRecordId)
+            .OfType<long>()
+            .ToHashSet();
+
         foreach (var record in records)
         {
+            if (failedRecordIds.Contains(record.Id))
+                continue;
+
             await ProcessRecordAsync(db, sessionId, deviceId, record, isDryRun, userId, createdSongIdsByChecksum, cancellationToken);
         }
 
@@ -609,15 +619,11 @@ public class SyncCommitService(
         };
     }
 
-    private static bool IsClientActionType(SyncRecordAction action) =>
-        action is SyncRecordAction.CreateLocal or SyncRecordAction.UpdateLocal
-            or SyncRecordAction.Unlink or SyncRecordAction.Rename or SyncRecordAction.DeleteLocal;
-
     private static void AcknowledgeServerActionRecords(List<DeviceSyncSessionRecord> records)
     {
         foreach (var record in records)
         {
-            if (!record.Acknowledged && !IsClientActionType(record.Action))
+            if (!record.Acknowledged && !record.Action.IsClientAction())
             {
                 record.Acknowledged = true;
             }
@@ -638,7 +644,7 @@ public class SyncCommitService(
         {
             record.Acknowledged = true;
 
-            if (modifiedAt.HasValue && IsClientActionType(record.Action))
+            if (modifiedAt.HasValue && record.Action.IsClientAction())
             {
                 var data = SyncActionDataSerializer.Deserialize<SongModifiedAtData>(record.Data);
                 if (data != null)

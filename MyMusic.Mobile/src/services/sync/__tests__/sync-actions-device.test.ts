@@ -828,3 +828,54 @@ describe('actionConflict', () => {
         expect(toUpdatePaths.has('song.mp3')).toBe(false);
     });
 });
+describe('failed client actions', () => {
+    const ctx = () => createContext({sessionId: 7});
+
+    function expectFailureReported(apiClient: ISyncApiClient, recordId: number, filePath: string, songId: number | null | undefined) {
+        expect(apiClient.reportSyncError).toHaveBeenCalledTimes(1);
+        expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 7, expect.objectContaining({recordId, filePath, songId}));
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    }
+
+    it('reports a failed download as an error for its record', async () => {
+        const apiClient = createMockApiClient({
+            downloadSong: jest.fn().mockRejectedValue(new Error('network down')),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+
+        const result = await actionCreateLocal(apiClient, createMockFileOps(), createMockUserPrompt(), ctx(), 3, 'song.mp3', '/music', 42);
+
+        expect(result?.action).toBe('Error');
+        expectFailureReported(apiClient, 42, 'song.mp3', 3);
+    });
+
+    it('reports a failed delete as an error for its record', async () => {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            deleteFile: jest.fn().mockRejectedValue(new Error('locked')),
+        });
+
+        const result = await actionDeleteLocal(apiClient, fileOps, createMockUserPrompt(), ctx(), 'song.mp3', '/music', 3, 42);
+
+        expect(result?.action).toBe('Error');
+        expectFailureReported(apiClient, 42, 'song.mp3', 3);
+    });
+
+    it('reports a failed rename as an error for its record', async () => {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            moveFile: jest.fn().mockRejectedValue(new Error('locked')),
+        });
+
+        const result = await actionRename(apiClient, fileOps, ctx(), 'new.mp3', 'old.mp3', '/music', 42);
+
+        expect(result.action).toBe('Error');
+        expectFailureReported(apiClient, 42, 'new.mp3', undefined);
+    });
+});

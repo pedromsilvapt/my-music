@@ -164,9 +164,9 @@ public class SyncActionsServer(
 
     public async Task<DeviceSyncSessionRecord> ActionError(
         string filePath, string errorMessage, long? songId = null,
-        string? reason = null, CancellationToken cancellationToken = default)
+        string? reason = null, long? failedRecordId = null, CancellationToken cancellationToken = default)
     {
-        var data = SyncActionDataSerializer.Serialize(new ErrorData { ErrorMessage = errorMessage });
+        var data = SyncActionDataSerializer.Serialize(new ErrorData { ErrorMessage = errorMessage, FailedRecordId = failedRecordId });
         var record = CreateRecord(filePath, SyncRecordAction.Error, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }

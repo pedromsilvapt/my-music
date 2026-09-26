@@ -342,6 +342,35 @@ public class SyncCommitServiceSpecs
 
     #endregion
 
+    #region Reported client failures
+
+    [Theory]
+    [InlineData(SyncRecordAction.CreateLocal)]
+    [InlineData(SyncRecordAction.UpdateLocal)]
+    [InlineData(SyncRecordAction.DeleteLocal)]
+    [InlineData(SyncRecordAction.Rename)]
+    public async Task ClientActionWithReportedFailure_IsNotApplied(SyncRecordAction action)
+    {
+        var ctx = SetupWithSong();
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Download);
+        var data = action == SyncRecordAction.Rename
+            ? CreateRenameData("/music/old.mp3", "/music/new.mp3")
+            : CreateLocalUpdateData(ctx.Song!.Id, DefaultModifiedAt);
+        var failed = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/old.mp3", action, data: data, songId: ctx.Song!.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/old.mp3", SyncRecordAction.Error,
+            data: JsonSerializer.SerializeToElement(new { errorMessage = "boom", failedRecordId = failed.Id }),
+            songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var unchanged = GetSongDevice(ctx.Db, sd.Id);
+        unchanged.DevicePath.ShouldBe("/music/old.mp3");
+        unchanged.SyncAction.ShouldBe(SongSyncAction.Download);
+        unchanged.LastSyncedModifiedAt.ShouldBeNull();
+    }
+
+    #endregion
+
     #region Link
 
     [Fact]

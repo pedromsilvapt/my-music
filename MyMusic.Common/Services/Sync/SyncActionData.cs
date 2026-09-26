@@ -126,6 +126,13 @@ public record ErrorData
 {
     [JsonPropertyName("errorMessage")]
     public required string ErrorMessage { get; init; }
+
+    /// <summary>
+    /// Id of the record whose action could not be performed, when the error is about one. The commit
+    /// does not apply that record.
+    /// </summary>
+    [JsonPropertyName("failedRecordId")]
+    public long? FailedRecordId { get; init; }
 }
 
 public record SyncCheckCreateUpdateData

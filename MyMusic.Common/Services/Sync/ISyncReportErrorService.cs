@@ -14,6 +14,13 @@ public record SyncReportErrorInput
     public required string ErrorMessage { get; init; }
 
     public long? SongId { get; init; }
+
+    /// <summary>
+    /// The client-action record the client failed to perform, if any. It is acknowledged, so the
+    /// commit can proceed, and linked to the <c>Error</c> record, so the commit does not apply it.
+    /// Only client-action records can be reported: server actions are never performed by the client.
+    /// </summary>
+    public long? RecordId { get; init; }
 }
 
 /// <summary>
@@ -40,6 +47,10 @@ public record SyncReportErrorResult
         SessionId = sessionId,
     };
 
+    public static SyncReportErrorResult RecordNotFound => new() { Found = false, Failure = SyncReportErrorFailure.RecordNotFound };
+
+    public static SyncReportErrorResult RecordNotClientAction => new() { Found = false, Failure = SyncReportErrorFailure.RecordNotClientAction };
+
     public static SyncReportErrorResult Succeeded(DeviceSyncSessionRecord record) => new()
     {
         Found = true,
@@ -51,6 +62,8 @@ public enum SyncReportErrorFailure
 {
     DeviceNotFound,
     SessionNotFound,
+    RecordNotFound,
+    RecordNotClientAction,
 }
 
 /// <summary>

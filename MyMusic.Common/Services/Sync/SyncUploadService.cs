@@ -56,7 +56,7 @@ public class SyncUploadService(
 
             var syncActions = syncActionsServerFactory.Create(db, sessionId, deviceId, isDryRun);
             var record = importError != null
-                ? await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken)
+                ? await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken: cancellationToken)
                 : await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, cancellationToken);
 
             await db.SaveChangesAsync(cancellationToken);

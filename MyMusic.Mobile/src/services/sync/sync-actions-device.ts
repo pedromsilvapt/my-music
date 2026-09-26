@@ -202,14 +202,7 @@ export async function actionCreateLocal(
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        return {
-            action: 'Error',
-            filePath: path,
-            source: 'Server',
-            reason: `${baseReason} failed`,
-            errorMessage,
-            songId: songId ?? undefined,
-        };
+        return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, errorMessage, `${baseReason} failed`);
     }
 }
 
@@ -289,14 +282,7 @@ export async function actionDeleteLocal(
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        return {
-            action: 'Error',
-            filePath: path,
-            source: 'Server',
-            reason: `${baseReason} failed`,
-            errorMessage,
-            songId,
-        };
+        return reportFailure(apiClient, ctx, recordId, path, songId, errorMessage, `${baseReason} failed`);
     }
 }
 
@@ -375,14 +361,47 @@ export async function actionRename(
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        return {
-            action: 'Error',
-            filePath: relativePath,
-            source: 'Server',
-            reason: `Rename from '${previousRelativePath}' failed`,
-            errorMessage,
-        };
+        return reportFailure(apiClient, ctx, recordId, relativePath, undefined, errorMessage, `Rename from '${previousRelativePath}' failed`);
     }
+}
+
+/**
+ * Reports a client action that could not be performed as an `Error` linked to its record.
+ * The server acknowledges the record, so the commit is not blocked, and does not apply it, so
+ * the server state keeps reflecting what is actually on the device.
+ */
+async function reportFailure(
+    apiClient: ISyncApiClient,
+    ctx: SyncContext,
+    recordId: number | undefined,
+    filePath: string,
+    songId: number | undefined,
+    errorMessage: string,
+    reason: string
+): Promise<ActionResult> {
+    let counts: SyncActionCounts | undefined;
+    try {
+        const response = await apiClient.reportSyncError(ctx.deviceId, ctx.sessionId!, {
+            filePath,
+            errorMessage,
+            songId,
+            recordId,
+        });
+        counts = response.counts;
+    } catch (e) {
+        console.error(`Failed to report the error of record ${recordId}: ${filePath}`, e);
+    }
+
+    return {
+        action: 'Error',
+        filePath,
+        source: 'Server',
+        reason,
+        errorMessage,
+        songId,
+        recordId,
+        counts,
+    };
 }
 
 export async function actionConflict(

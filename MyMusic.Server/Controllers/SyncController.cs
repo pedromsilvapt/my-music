@@ -242,13 +242,17 @@ public class SyncController(
                 FilePath = request.FilePath,
                 ErrorMessage = request.ErrorMessage,
                 SongId = request.SongId,
+                RecordId = request.RecordId,
             },
             cancellationToken);
         if (!result.Found)
         {
-            return result.Failure == SyncReportErrorFailure.SessionNotFound
-                ? NotFound($"Sync session not found with id {sessionId}")
-                : NotFound();
+            return result.Failure switch
+            {
+                SyncReportErrorFailure.SessionNotFound => NotFound($"Sync session not found with id {sessionId}"),
+                SyncReportErrorFailure.RecordNotClientAction => BadRequest($"Record {request.RecordId} is not a client action"),
+                _ => NotFound(),
+            };
         }
 
         return new ReportSyncErrorResponse

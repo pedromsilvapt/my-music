@@ -502,5 +502,83 @@ public class SyncActionsDeviceTests
         result.Counts.UpdateTimestampCount.ShouldBe(conflictCount);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ActionCreateLocalAsync_FileAlreadyExists_ReportsErrorForRecord(bool dryRun)
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        await device.ActionCreateLocalAsync(1, 7, "/music", 3, "test.mp3", dryRun, autoConfirm: true, recordId: 42);
+
+        await AssertFailureReported(recordId: 42, path: "test.mp3", songId: 3);
+    }
+
+    [Fact]
+    public async Task ActionUpdateLocalAsync_FileDoesNotExist_ReportsErrorForRecord()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(false);
+
+        await device.ActionUpdateLocalAsync(1, 7, "/music", 3, "test.mp3", dryRun: false, autoConfirm: true, recordId: 42);
+
+        await AssertFailureReported(recordId: 42, path: "test.mp3", songId: 3);
+    }
+
+    [Fact]
+    public async Task ActionCreateLocalAsync_DownloadFails_ReportsErrorForRecord()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(false);
+        _apiClient.DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns<Task<Stream>>(_ => throw new HttpRequestException("network down"));
+
+        var result = await device.ActionCreateLocalAsync(1, 7, "/music", 3, "test.mp3", dryRun: false, autoConfirm: true, recordId: 42);
+
+        result!.Action.ShouldBe("Error");
+        await AssertFailureReported(recordId: 42, path: "test.mp3", songId: 3);
+    }
+
+    [Fact]
+    public async Task ActionDeleteLocalAsync_DeleteFails_ReportsErrorForRecord()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        _fileOps.DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new IOException("locked"));
+
+        var result = await device.ActionDeleteLocalAsync(1, 7, "/music", 3, "test.mp3", dryRun: false, autoConfirm: true, recordId: 42);
+
+        result!.Action.ShouldBe("Error");
+        await AssertFailureReported(recordId: 42, path: "test.mp3", songId: 3);
+    }
+
+    [Fact]
+    public async Task ActionRenameAsync_MoveFails_ReportsErrorForRecord()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        _fileOps.MoveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns<Task>(_ => throw new IOException("locked"));
+
+        var result = await device.ActionRenameAsync(1, 7, "/music", "new.mp3", "old.mp3", dryRun: false, recordId: 42);
+
+        result!.Action.ShouldBe("Error");
+        await AssertFailureReported(recordId: 42, path: "new.mp3", songId: null);
+    }
+
+    /// <summary>
+    /// A failed client action is reported as an Error linked to its record (which the server
+    /// acknowledges), instead of being acknowledged as if it had succeeded.
+    /// </summary>
+    private async Task AssertFailureReported(long recordId, string path, long? songId)
+    {
+        await _apiClient.Received(1).ReportSyncErrorAsync(1, 7,
+            Arg.Is<ReportSyncErrorCliRequest>(r => r.RecordId == recordId && r.FilePath == path && r.SongId == songId),
+            Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>());
+    }
+
     private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);
 }

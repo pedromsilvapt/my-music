@@ -242,7 +242,7 @@ export interface ISyncApiClient {
 
     downloadSong: (songId: number) => Promise<Blob>;
 
-    reportSyncError: (deviceId: number, sessionId: number, request: { filePath: string; errorMessage: string; songId?: number | null }) => Promise<{ counts: SyncActionCounts }>;
+    reportSyncError: (deviceId: number, sessionId: number, request: { filePath: string; errorMessage: string; songId?: number | null; recordId?: number | null }) => Promise<{ counts: SyncActionCounts }>;
 }
 
 export interface ISyncConfig {

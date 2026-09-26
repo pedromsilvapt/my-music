@@ -398,7 +398,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         {
             FilePath = request.FilePath,
             ErrorMessage = request.ErrorMessage,
-            SongId = request.SongId
+            SongId = request.SongId,
+            RecordId = request.RecordId
         }, ct);
 
         return SyncActionCounts.FromApi(response.Counts);
