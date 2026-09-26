@@ -69,6 +69,34 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
     public ILocator GetStopAfterPlaybackIndicator(string title) =>
         GetRowByTitle(title).GetByTestId("stop-after-playback-indicator");
 
+    /// <summary>
+    /// Returns the indicator shown next to a song's title when its next playback is skipped.
+    /// </summary>
+    public ILocator GetSkipNextPlaybackIndicator(string title) =>
+        GetRowByTitle(title).GetByTestId("skip-next-playback-indicator");
+
+    /// <summary>
+    /// Right-clicks the row of the song with the given title and returns its context menu.
+    /// </summary>
+    public async Task<SongsActionsMenuComponent> OpenRowActionsMenuAsync(string title)
+    {
+        await GetRowByTitle(title).ClickAsync(new() { Button = MouseButton.Right });
+
+        // The context menu dropdown is rendered in a portal
+        var menuDropdown = Root.Page.Locator(".mantine-Menu-dropdown").Last;
+        await menuDropdown.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        return new SongsActionsMenuComponent(menuDropdown);
+    }
+
+    /// <summary>
+    /// Toggles the "Skip This Song" flag of the song with the given title through its context menu.
+    /// </summary>
+    public async Task ToggleSkipThisSongAsync(string title)
+    {
+        var menu = await OpenRowActionsMenuAsync(title);
+        await menu.ClickItemAsync(SongsActionsMenuComponent.SkipThisSong);
+    }
+
     public async Task<SongDetailsPage> GoToSongDetailsAsync(int rowIndex)
     {
         var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");

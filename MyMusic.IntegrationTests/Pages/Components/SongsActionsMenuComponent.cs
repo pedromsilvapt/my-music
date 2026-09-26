@@ -25,6 +25,11 @@ public class SongsActionsMenuComponent(ILocator root) : BaseComponent(root)
     public static Regex StopAfterThisSong { get; } = new("^Stop After This Song$");
 
     /// <summary>
+    /// Matches the "Skip This Song" menu item.
+    /// </summary>
+    public static Regex SkipThisSong { get; } = new("^Skip This Song$");
+
+    /// <summary>
     /// Matches the "Go to Details" menu item.
     /// </summary>
     public static Regex GoToDetails { get; } = new("^Go to Details$");

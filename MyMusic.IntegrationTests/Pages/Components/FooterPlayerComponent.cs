@@ -8,6 +8,9 @@ namespace MyMusic.IntegrationTests.Pages.Components;
 /// </summary>
 public class FooterPlayerComponent(ILocator root) : BaseComponent(root)
 {
+    private ILocator PlayButton => Root.GetByRole(AriaRole.Button, new() { Name = "Play Current Track" });
+    private ILocator PauseButton => Root.GetByRole(AriaRole.Button, new() { Name = "Pause Current Track" });
+
     /// <summary>
     /// Waits until the footer player shows the song with the given title.
     /// </summary>
@@ -17,21 +20,45 @@ public class FooterPlayerComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
+    /// Asserts that the footer player does not show the song with the given title.
+    /// </summary>
+    public async Task ShouldNotShowSongAsync(string title)
+    {
+        await Assertions.Expect(Root).Not.ToContainTextAsync(title);
+    }
+
+    /// <summary>
     /// Pauses the current song if it is playing. The headless browser may not start playback at all,
     /// in which case the song is already paused.
     /// </summary>
     public async Task EnsurePausedAsync()
     {
-        var pauseButton = Root.GetByRole(AriaRole.Button, new() { Name = "Pause Current Track" });
-        var playButton = Root.GetByRole(AriaRole.Button, new() { Name = "Play Current Track" });
-
-        await pauseButton.Or(playButton).WaitForAsync();
-        if (await pauseButton.IsVisibleAsync())
+        await PauseButton.Or(PlayButton).WaitForAsync();
+        if (await PauseButton.IsVisibleAsync())
         {
-            await pauseButton.ClickAsync();
+            await PauseButton.ClickAsync();
         }
 
-        await playButton.WaitForAsync();
+        await PlayButton.WaitForAsync();
+    }
+
+    /// <summary>
+    /// Starts playing the current song and waits until playback is running.
+    /// </summary>
+    public async Task PlayAsync()
+    {
+        await PlayButton.ClickAsync();
+        await PauseButton.WaitForAsync();
+    }
+
+    /// <summary>
+    /// Waits until playback of the current song ends, i.e. the player goes back to the paused state,
+    /// and the network settles, so any song the player moves on to has already been loaded.
+    /// </summary>
+    public async Task WaitForPlaybackToEndAsync(int timeout = 30000)
+    {
+        await PlayButton.WaitForAsync(new() { Timeout = timeout });
+        await Root.Page.WaitForLoadStateAsync(LoadState.NetworkIdle);
     }
 
     /// <summary>

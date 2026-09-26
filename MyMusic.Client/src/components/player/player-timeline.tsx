@@ -1,6 +1,6 @@
 import {Box, Flex, Text, useMantineTheme} from '@mantine/core';
 import WavesurferPlayer from "@wavesurfer/react";
-import {useCallback, useMemo} from "react";
+import {useCallback, useMemo, useRef} from "react";
 import WaveSurfer from "wavesurfer.js";
 import {useWavesurferRef} from "./wavesurfer-context";
 
@@ -25,6 +25,21 @@ export default function PlayerTimeline(props: PlayerTimelineProps) {
         onLoad(ws.getDuration());
         setIsPlaying(false);
     }, [wavesurferRef, onLoad, setIsPlaying]);
+
+    // wavesurfer.js emits "finish" twice when a track ends (from its playback state and from the media
+    // "ended" event); only report the first one per playback, so the queue doesn't advance twice
+    const finishedRef = useRef(false);
+
+    const handlePlay = useCallback(() => {
+        finishedRef.current = false;
+        setIsPlaying(true);
+    }, [setIsPlaying]);
+
+    const handleFinish = useCallback(() => {
+        if (finishedRef.current) return;
+        finishedRef.current = true;
+        onFinish();
+    }, [onFinish]);
 
     const onTimeUpdate = useCallback((_: WaveSurfer, newTime: number) => {
         setTime(newTime);
@@ -72,9 +87,9 @@ export default function PlayerTimeline(props: PlayerTimelineProps) {
                 url={song}
                 onReady={onReady}
                 onTimeupdate={onTimeUpdate}
-                onPlay={() => setIsPlaying(true)}
+                onPlay={handlePlay}
                 onPause={() => setIsPlaying(false)}
-                onFinish={() => onFinish()}
+                onFinish={handleFinish}
                 onError={handleError}
             />
         </Box>

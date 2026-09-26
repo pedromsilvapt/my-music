@@ -39,7 +39,7 @@ export default function SongTitle(props: SongTitleProps) {
         )}
         {props.skipNextPlayback && (
             <Tooltip label={t("common:songTitle.skipNextPlayback")} openDelay={500}>
-                <IconPlayerSkipForward size={16} style={{marginRight: 4}} color="var(--mantine-color-yellow-5)"/>
+                <IconPlayerSkipForward size={16} style={{marginRight: 4}} color="var(--mantine-color-yellow-5)" data-testid="skip-next-playback-indicator"/>
             </Tooltip>
         )}
         {(props.isPlaying || props.currentSongIndicator === 'playing') &&
