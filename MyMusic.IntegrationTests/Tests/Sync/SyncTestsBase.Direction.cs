@@ -56,9 +56,13 @@ public abstract partial class SyncTestsBase
         var result2 = await App.SyncAsync(new SyncOptions { Direction = SyncDirection.Up, DryRun = dryRun });
         result2.ShouldBe(skipped: 1, deleteLocal: 0);
 
-        // The local file should be kept, and the song should still be on the device
+        // The local file should be kept in both modes
         App.FileExists("Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3").ShouldBeTrue();
-        await new ShouldSongExistInDeviceFlow("Wicker Woman", App.DeviceName, shouldExist: true)
+
+        // A real `up` sync clears the pending removal; a dry run leaves it untouched
+        await (dryRun
+                ? new ShouldSongExistInDeviceFlow("Wicker Woman", App.DeviceName, shouldExist: false, syncAction: "Remove")
+                : new ShouldSongExistInDeviceFlow("Wicker Woman", App.DeviceName, shouldExist: true, shouldHaveNoSyncAction: true))
             .ExecuteAsync(Page);
     }
 
