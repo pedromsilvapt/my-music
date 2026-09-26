@@ -98,7 +98,7 @@ Sync is split into two distinct phases: **record** and **commit**. During the re
 
 ### The Record List Is the Contract
 
-The list of `DeviceSyncSessionRecord` entries is the single source of truth for what a sync session will do. Every action — import, download, delete, link, rename, skip — is represented as a record. The commit phase is purely mechanical: it reads the records and performs the corresponding operations. Nothing happens during commit that wasn't already decided during the record phase (except for orphan detection, which adds `Unlink` records for files that disappeared from the device, and error reporting, which may add `Error` records when staged files or other resources are unexpectedly unavailable).
+The list of `DeviceSyncSessionRecord` entries is the single source of truth for what a sync session will do. Every action — import, download, delete, link, rename, skip — is represented as a record. The commit phase is purely mechanical: it reads the records and performs the corresponding operations. Nothing happens during commit that wasn't already decided during the record phase (except for orphan detection, which adds `Unlink` records for files that disappeared from the device, and error reporting, which may add `Error` records when staged files or other resources are unexpectedly unavailable, or when importing an uploaded file fails). A commit-time `Error` record names the record it failed in `Data.FailedRecordId`, and that record's bookkeeping is skipped: a failed `CreateRemote` links nothing to the device, and a failed `UpdateRemote` does not mark the device's change as synced, so the next sync retries it.
 
 ### Unified Record Responses
 

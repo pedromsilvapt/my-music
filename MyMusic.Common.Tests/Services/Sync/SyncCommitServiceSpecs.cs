@@ -129,6 +129,25 @@ public class SyncCommitServiceSpecs
         return JsonSerializer.SerializeToElement(dict);
     }
 
+    private static JsonElement CreateNewSongData(DateTime modifiedAt, string tempFilePath, string checksum) =>
+        JsonSerializer.SerializeToElement(new { checksum, algorithm = "XxHash128", modifiedAt = modifiedAt.ToString("O"), tempFilePath });
+
+    private static long? GetFailedRecordId(DeviceSyncSessionRecord errorRecord) =>
+        SyncActionDataSerializer.Deserialize<ErrorData>(errorRecord.Data)!.FailedRecordId;
+
+    /// <summary>
+    /// Makes every import fail the way <see cref="MusicService.ImportRepositorySongs"/> reports a
+    /// per-song failure: it records the exception on the job instead of throwing.
+    /// </summary>
+    private void ArrangeImportFailure(string errorMessage) =>
+        _musicService
+            .When(m => m.ImportRepositorySongs(
+                Arg.Any<MusicDbContext>(), Arg.Any<MusicImportJob>(), Arg.Any<long>(),
+                Arg.Any<IEnumerable<SongImportMetadata>>(), Arg.Any<IList<long>?>(),
+                Arg.Any<DuplicateSongsHandlingStrategy>(), Arg.Any<CancellationToken>()))
+            .Do(call => call.Arg<MusicImportJob>().AddException(
+                new Exception("Failed to import song", new Exception(errorMessage))));
+
     private static JsonElement CreateLocalUpdateData(long songId, DateTime modifiedAt) =>
         JsonSerializer.SerializeToElement(new { songId, modifiedAt = modifiedAt.ToString("O") });
 
@@ -701,7 +720,7 @@ public class SyncCommitServiceSpecs
         var ctx = SetupWithSong();
         var tempFilePath = "/data/.temp/sync-1/missing.mp3";
         var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
+        var createRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         var otherSong = ctx.Scenario.CreateSong("OtherSong", album: ctx.Song.Album);
         AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/other.mp3", otherSong.Id);
@@ -713,6 +732,7 @@ public class SyncCommitServiceSpecs
         result.ActionCounts[SyncRecordAction.Error].ShouldBeGreaterThanOrEqualTo(1);
         var errorRecord = ctx.Db.DeviceSyncSessionRecords.First(r => r.Action == SyncRecordAction.Error);
         errorRecord.Reason.ShouldStartWith("Staged file not found");
+        GetFailedRecordId(errorRecord).ShouldBe(createRecord.Id);
         var otherSd = ctx.Db.SongDevices.FirstOrDefault(sd => sd.DevicePath == "/music/other.mp3");
         otherSd.ShouldNotBeNull();
         // Skipped is a no-op; LastSyncedModifiedAt must remain untouched.
@@ -726,7 +746,7 @@ public class SyncCommitServiceSpecs
         var tempFilePath = "/data/.temp/sync-1/missing.mp3";
         var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
         var data = CreateSyncData(ctx.Song.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
-        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
+        var updateRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
 
         var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
@@ -734,6 +754,142 @@ public class SyncCommitServiceSpecs
         FindSongDevice(ctx.Db, sd.Id).ShouldNotBeNull();
         var errorRecord = ctx.Db.DeviceSyncSessionRecords.First(r => r.Action == SyncRecordAction.Error);
         errorRecord.Reason.ShouldStartWith("Staged file not found");
+        GetFailedRecordId(errorRecord).ShouldBe(updateRecord.Id);
+    }
+
+    #endregion
+
+    #region Import Failures
+
+    [Fact]
+    public async Task CreateRemote_NewSongImportFails_RecordsErrorAndDoesNotAddSongToDevice()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        var createRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+        ArrangeImportFailure("Title too long");
+
+        // Act
+        var result = await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        result.ActionCounts[SyncRecordAction.Error].ShouldBe(1);
+        var errorRecord = ctx.Db.DeviceSyncSessionRecords.Single(r => r.Action == SyncRecordAction.Error);
+        errorRecord.FilePath.ShouldBe("/music/new.mp3");
+        errorRecord.Reason!.ShouldContain("Title too long");
+        GetFailedRecordId(errorRecord).ShouldBe(createRecord.Id);
+        await AssertAddSongsToDeviceNotCalled();
+    }
+
+    [Fact]
+    public async Task CreateRemote_NewSongImportSkippedWithoutMapping_RecordsError()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        var createRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var errorRecord = ctx.Db.DeviceSyncSessionRecords.Single(r => r.Action == SyncRecordAction.Error);
+        GetFailedRecordId(errorRecord).ShouldBe(createRecord.Id);
+        await AssertAddSongsToDeviceNotCalled();
+    }
+
+    [Fact]
+    public async Task CreateRemote_ExistingSongImportFails_RecordsErrorAndDoesNotAddSongToDevice()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/test.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
+        var createRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
+        ArrangeImportFailure("Disk full");
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var errorRecord = ctx.Db.DeviceSyncSessionRecords.Single(r => r.Action == SyncRecordAction.Error);
+        GetFailedRecordId(errorRecord).ShouldBe(createRecord.Id);
+        await AssertAddSongsToDeviceNotCalled();
+    }
+
+    [Fact]
+    public async Task UpdateRemote_ImportFails_RecordsErrorAndKeepsLastSyncedModifiedAt()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/test.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        var data = CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, tempFilePath, checksum: "abc", algorithm: "XxHash128");
+        var updateRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateRemote, data: data, songId: ctx.Song.Id, acknowledged: true);
+        ArrangeImportFailure("Disk full");
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var errorRecord = ctx.Db.DeviceSyncSessionRecords.Single(r => r.Action == SyncRecordAction.Error);
+        errorRecord.Reason!.ShouldContain("Disk full");
+        GetFailedRecordId(errorRecord).ShouldBe(updateRecord.Id);
+        GetSongDevice(ctx.Db, sd.Id).LastSyncedModifiedAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task ImportFailure_DoesNotStopLaterRecords()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3", syncAction: SongSyncAction.Download);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal,
+            data: CreateLocalUpdateData(ctx.Song!.Id, DefaultModifiedAt), songId: ctx.Song.Id, acknowledged: true);
+        ArrangeImportFailure("Title too long");
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var downloaded = GetSongDevice(ctx.Db, sd.Id);
+        downloaded.SyncAction.ShouldBeNull();
+        downloaded.LastSyncedModifiedAt.ShouldBe(DefaultModifiedAt);
+    }
+
+    [Fact]
+    public async Task Link_ToSongOfFailedCreateRemote_RecordsError()
+    {
+        // Arrange
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+        var linkRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/copy.mp3", SyncRecordAction.Link,
+            data: JsonSerializer.SerializeToElement(new { checksum = "abc", modifiedAt = DefaultModifiedAt.ToString("O") }),
+            acknowledged: true);
+        ArrangeImportFailure("Title too long");
+
+        // Act
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // Assert
+        var linkError = ctx.Db.DeviceSyncSessionRecords
+            .Single(r => r.Action == SyncRecordAction.Error && r.FilePath == "/music/copy.mp3");
+        GetFailedRecordId(linkError).ShouldBe(linkRecord.Id);
+        await AssertAddSongsToDeviceNotCalled();
     }
 
     #endregion
