@@ -10,6 +10,12 @@
         background-color: var(--mantine-color-blue-light);
     }
 
+    /* Keeps its size so long titles truncate instead of pushing the actions out of the card */
+
+    .itemActions {
+        flex-shrink: 0;
+    }
+
     /* Is invisible when not hovered, or when the selection is not empty */
 
     .itemActions *, &:hover .itemActions.hidden * {

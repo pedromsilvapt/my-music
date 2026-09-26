@@ -493,24 +493,24 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
             >
                 <Stack gap="sm">
                     {schema.renderListArtwork(item, width - 20, items)}
-                    <Group>
-                        <Box flex={1}>
+                    <Group wrap="nowrap" gap="xs">
+                        <Box flex={1} miw={0}>
                             <Text size="sm" lineClamp={1}>{schema.renderListTitle(item, 1)}</Text>
                             <Text size="xs" c="dimmed" lineClamp={1}>
                                 {schema.renderListSubTitle(item, 1)}
                             </Text>
                         </Box>
+                        <RowActionsContainer
+                            item={item}
+                            actions={itemActions}
+                            opened={isDropdownOpen}
+                            setOpened={setIsDropdownOpen}
+                            containerClassName={styles.itemActions}
+                            openedClassName={styles.opened}
+                            hiddenClassName={styles.hidden}
+                        />
                     </Group>
                 </Stack>
-                <RowActionsContainer 
-                    item={item} 
-                    actions={itemActions} 
-                    opened={isDropdownOpen} 
-                    setOpened={setIsDropdownOpen}
-                    containerClassName={styles.itemActions}
-                    openedClassName={styles.opened}
-                    hiddenClassName={styles.hidden}
-                />
             </Box>
         </>
     );
