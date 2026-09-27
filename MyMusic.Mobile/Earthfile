@@ -105,4 +105,7 @@ test-cli:
     COPY test-cli ./test-cli
     COPY src ./src
 
+    # Bundle the CLI ahead of time so each test invocation skips tsx's on-the-fly transpilation
+    RUN node_modules/.bin/esbuild test-cli/sync-cli.ts --bundle --platform=node --format=cjs --outfile=test-cli/sync-cli.cjs
+
     SAVE ARTIFACT /app/mobile-cli mobile-cli

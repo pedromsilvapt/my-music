@@ -207,15 +207,10 @@ public class MobileCliApplication : ISyncApplication
 
         var traceparent = Activity.Current?.Id;
 
-        // Find tsx relative to the CLI path
-        var cliDir = Path.GetDirectoryName(cliPath) ?? "";
-        var tsxBin = Path.Combine(cliDir, "..", "node_modules", ".bin", "tsx");
-        var tsxBinResolved = Path.GetFullPath(tsxBin);
-
         var startInfo = new ProcessStartInfo
         {
             FileName = "node",
-            Arguments = $"\"{tsxBinResolved}\" {cliPath} {argsString}",
+            Arguments = $"{GetNodeEntryArguments(cliPath)} {argsString}",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -304,6 +299,23 @@ public class MobileCliApplication : ISyncApplication
         });
 
         await File.WriteAllTextAsync(_configPath, json);
+    }
+
+    /// <summary>
+    /// Pre-bundled CLIs (<c>.cjs</c>/<c>.js</c>) run directly on node; TypeScript sources go through tsx,
+    /// which is found relative to the CLI path.
+    /// </summary>
+    private static string GetNodeEntryArguments(string cliPath)
+    {
+        if (cliPath.EndsWith(".cjs") || cliPath.EndsWith(".js"))
+        {
+            return $"\"{cliPath}\"";
+        }
+
+        var cliDir = Path.GetDirectoryName(cliPath) ?? "";
+        var tsxBin = Path.GetFullPath(Path.Combine(cliDir, "..", "node_modules", ".bin", "tsx"));
+
+        return $"\"{tsxBin}\" {cliPath}";
     }
 
     private static string FindCliPath()
