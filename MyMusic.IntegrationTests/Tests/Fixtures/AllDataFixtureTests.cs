@@ -6,6 +6,8 @@ namespace MyMusic.IntegrationTests.Tests.Fixtures;
 
 public class AllDataFixtureTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
+    protected override bool NavigateOnInitialize => false;
+
     [Fact]
     public async Task SeedAsync_CreatesAllEntities()
     {

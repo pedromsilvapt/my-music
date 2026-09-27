@@ -7,6 +7,8 @@ namespace MyMusic.IntegrationTests.Tests.Fixtures;
 
 public class GenresFixtureTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
+    protected override bool NavigateOnInitialize => false;
+
     [Fact]
     public async Task SeedAsync_CreatesGenres()
     {

@@ -48,6 +48,12 @@ public abstract class IntegrationTestBase : PageTest
     protected virtual int UserCount => 1;
 
     /// <summary>
+    /// Whether to open the client at <see cref="BaseUrl"/> during initialization. Override with
+    /// <c>false</c> in tests that only use the API, to skip loading the SPA.
+    /// </summary>
+    protected virtual bool NavigateOnInitialize => true;
+
+    /// <summary>
     /// All test users created during initialization. Index 0 is the primary user.
     /// </summary>
     protected IReadOnlyList<TestUser> Users => _users;
@@ -113,7 +119,11 @@ public abstract class IntegrationTestBase : PageTest
         await InitializeRequestContextAsync();
         await CreateTestUsers();
         await ConfigureBrowserContextAsync();
-        await Page.GotoAsync(BaseUrl);
+
+        if (NavigateOnInitialize)
+        {
+            await Page.GotoAsync(BaseUrl);
+        }
     }
 
     private void InitializeTelemetry()
