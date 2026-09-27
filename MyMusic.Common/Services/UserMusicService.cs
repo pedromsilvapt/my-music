@@ -46,6 +46,11 @@ public class UserMusicService(MusicDbContext db, long userId)
     /// <summary>
     /// Return all artists found on the database with the given name
     /// </summary>
+    /// <remarks>
+    /// Artist names are not unique: different real-world artists can share the same name, so
+    /// multiple artists being returned is expected. During import, any of them is considered
+    /// the most likely match (see the album/artist matching heuristic in <see cref="MusicService"/>).
+    /// </remarks>
     /// <param name="name"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
@@ -55,8 +60,14 @@ public class UserMusicService(MusicDbContext db, long userId)
     }
 
     /// <summary>
-    /// Return all albums found on the database with the given album name
+    /// Return the first album found on the database with the given album name that belongs to
+    /// any artist with the given artist name
     /// </summary>
+    /// <remarks>
+    /// Since artist names are not unique, this searches across every artist with the given name.
+    /// An album with the same name, by an artist with the same name, is the strongest match signal
+    /// available from file tags, so it is considered the most likely match during import.
+    /// </remarks>
     /// <param name="artistName"></param>
     /// <param name="albumName"></param>
     /// <param name="cancellationToken"></param>

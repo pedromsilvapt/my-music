@@ -448,6 +448,20 @@ public class MusicService(
 
                     #region Album
 
+                    // Album and artist matching is a deliberate best-effort heuristic based on names only.
+                    // Two different real-world artists can share the same name, so artist names cannot be
+                    // unique (and there is no unique index on them). Given only the file tags, the best we
+                    // can do is:
+                    //   1. If the user already has an album with this name, by an artist with this name,
+                    //      that album is most likely the correct match.
+                    //   2. Otherwise, if the user already has an artist with this name, that artist is most
+                    //      likely the correct match, and a new album is created under it.
+                    //   3. Otherwise, a new artist (and album) is created.
+                    // Other scenarios (e.g. a genuinely different artist that happens to share a name with an
+                    // existing one) are rare. They will usually only affect the first imported song of that
+                    // artist/album, and are expected to be corrected manually by the user (by design).
+                    // Once corrected, future imports for that album/artist will match the corrected entities.
+
                     // We are updating an existing song, and the Album remains the same
                     if (song?.Album?.Name == effectiveAlbumName &&
                         song?.Album?.Artist?.Name == effectiveAlbumArtistName)
@@ -459,7 +473,8 @@ public class MusicService(
                     // if we are creating a new song
                     if (songAlbum is null)
                     {
-                        // Try and find an existing album for this Artist with the given name
+                        // Rule 1: an existing album with the same name, by an artist with the same name,
+                        // is most likely the same album (see the heuristic described above)
                         songAlbum = await repo.GetArtistAlbum(effectiveAlbumArtistName, effectiveAlbumName,
                             cancellationToken);
                     }
@@ -467,6 +482,9 @@ public class MusicService(
                     // If no Album with this name belonging to this Artist exists on the database yet
                     if (songAlbum is null)
                     {
+                        // Rule 2: an existing artist with the same name is most likely the same artist.
+                        // If several exist, we cannot tell them apart, so any of them is an equally good guess.
+                        // Rule 3: otherwise, this is a new artist
                         var songAlbumArtist = (await repo.GetArtists(effectiveAlbumArtistName, cancellationToken))
                             .FirstOrDefault();
 
@@ -499,6 +517,8 @@ public class MusicService(
                     {
                         foreach (var artist in metadata.Artists.Distinct())
                         {
+                            // Same heuristic as for the album artist (see the Album region above): an existing
+                            // artist with the same name is most likely the same artist, otherwise create a new one
                             var songArtist = (await repo.GetArtists(artist.Name, cancellationToken)).FirstOrDefault();
 
                             if (songArtist is null)
@@ -525,6 +545,7 @@ public class MusicService(
                     // Always ensure the album artist is in the song's artist list
                     if (!songArtists.Any(sa => sa.Artist.Name == effectiveAlbumArtistName))
                     {
+                        // Same name-based artist matching as above (see the Album region)
                         var albumArtist = (await repo.GetArtists(effectiveAlbumArtistName, cancellationToken))
                             .FirstOrDefault();
 
