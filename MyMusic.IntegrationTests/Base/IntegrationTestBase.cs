@@ -30,6 +30,12 @@ public abstract class IntegrationTestBase : PageTest
     private readonly List<TestUser> _users = [];
     private string _currentUserName = $"Test-{Guid.NewGuid()}";
 
+    /// <summary>
+    /// Browser requests intercepted to inject a per-request <c>traceparent</c>. Must stay a glob
+    /// (not a predicate) so the Playwright driver matches it without calling back into .NET.
+    /// </summary>
+    private const string ApiRoutePattern = "**/api/**";
+
     public static readonly string BaseUrl =
         Environment.GetEnvironmentVariable("BASE_URL") is { } envUrl && !string.IsNullOrEmpty(envUrl)
             ? envUrl
@@ -137,26 +143,15 @@ public abstract class IntegrationTestBase : PageTest
 
     private async Task ConfigureBrowserContextAsync()
     {
-        await Context.SetExtraHTTPHeadersAsync(new Dictionary<string, string>
-        {
-            ["X-MyMusic-UserName"] = _currentUserName,
-        });
+        await ApplyBrowserHeadersAsync();
 
-        await Context.RouteAsync("**/*", async route =>
+        // Intercept only API requests, so their server spans nest under a per-request client span.
+        // The glob is matched by the Playwright driver, so static assets never round-trip to this process.
+        await Context.RouteAsync(ApiRoutePattern, async route =>
         {
             var request = route.Request;
-            var requestId = request.GetHashCode().ToString();
-            var method = request.Method;
-            var url = request.Url;
-            var resourceType = request.ResourceType;
-            var isNavigationRequest = request.IsNavigationRequest;
 
-            var span = _telemetry.StartParallelRequestSpan(
-                requestId,
-                method,
-                url,
-                resourceType,
-                isNavigationRequest);
+            var span = StartRequestSpan(request);
 
             var headers = request.Headers.ToDictionary(k => k.Key, k => k.Value);
             headers["X-MyMusic-UserName"] = _currentUserName;
@@ -168,6 +163,15 @@ public abstract class IntegrationTestBase : PageTest
 
             await route.ContinueAsync(new RouteContinueOptions { Headers = headers });
         });
+
+        // Record the remaining (static asset) requests passively
+        Context.Request += (_, request) =>
+        {
+            if (!IsApiRequest(request))
+            {
+                StartRequestSpan(request);
+            }
+        };
 
         Context.Response += (_, response) =>
         {
@@ -188,6 +192,26 @@ public abstract class IntegrationTestBase : PageTest
             _telemetry.StopParallelRequestSpan(requestId, statusCode: 0);
         };
     }
+
+    private Activity? StartRequestSpan(IRequest request)
+        => _telemetry.StartParallelRequestSpan(
+            request.GetHashCode().ToString(),
+            request.Method,
+            request.Url,
+            request.ResourceType,
+            request.IsNavigationRequest);
+
+    private static bool IsApiRequest(IRequest request)
+        => new Uri(request.Url).AbsolutePath.StartsWith("/api/");
+
+    /// <summary>
+    /// Sets the current user header on every browser request.
+    /// </summary>
+    private Task ApplyBrowserHeadersAsync()
+        => Context.SetExtraHTTPHeadersAsync(new Dictionary<string, string>
+        {
+            ["X-MyMusic-UserName"] = _currentUserName,
+        });
 
     /// <summary>
     /// Creates <see cref="UserCount"/> test users, populating <see cref="Users"/>
@@ -253,10 +277,7 @@ public abstract class IntegrationTestBase : PageTest
         await RequestContext.DisposeAsync();
         await InitializeRequestContextAsync();
 
-        await Context.SetExtraHTTPHeadersAsync(new Dictionary<string, string>
-        {
-            ["X-MyMusic-UserName"] = _currentUserName,
-        });
+        await ApplyBrowserHeadersAsync();
 
         if (reloadPage)
         {
