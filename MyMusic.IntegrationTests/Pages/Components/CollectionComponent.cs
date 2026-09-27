@@ -26,6 +26,53 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         return modal;
     }
 
+    /// <summary>
+    /// Rows (or grid/list items) currently flashing after the collection scrolled to them.
+    /// </summary>
+    public ILocator HighlightedRows => Root.Locator("[data-highlighted='true']");
+
+    /// <summary>
+    /// Jumps to an item through the "Go to item" modal, either clicking its option or pressing Enter
+    /// on the (auto-selected) first match.
+    /// </summary>
+    public async Task GoToAsync(string text, bool useKeyboard = false)
+    {
+        var goTo = await OpenGoToAsync();
+        await goTo.SearchAsync(text);
+        if (useKeyboard)
+            await goTo.SubmitWithEnterAsync();
+        else
+            await goTo.SelectAsync(text);
+    }
+
+    /// <summary>
+    /// Adds a sort field through the toolbar's "Customize" popover. Unlike the column headers, this
+    /// doesn't scroll the collection, since the toolbar stays in view.
+    /// </summary>
+    public async Task SortByAsync(string fieldName, bool descending = false)
+    {
+        var page = Root.Page;
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Customize" }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "Add sort field" }).ClickAsync();
+        await page.GetByRole(AriaRole.Menuitem, new() { Name = fieldName, Exact = true }).ClickAsync();
+
+        // New sort fields start ascending; the direction button flips them
+        if (descending)
+            await page.GetByTitle("Ascending", new() { Exact = true }).ClickAsync();
+
+        await page.Keyboard.PressAsync("Escape");
+    }
+
+    /// <summary>
+    /// Asserts that the collection doesn't scroll <paramref name="item"/> into view on its own,
+    /// giving any (unwanted) smooth scroll enough time to start and finish.
+    /// </summary>
+    public async Task ShouldNotScrollToAsync(ILocator item)
+    {
+        await Root.Page.WaitForTimeoutAsync(1500);
+        await Assertions.Expect(item).Not.ToBeInViewportAsync(new() { Timeout = 0 });
+    }
+
     public async Task WaitForVisibleAsync()
     {
         await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible });

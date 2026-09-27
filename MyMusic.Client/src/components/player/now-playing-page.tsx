@@ -10,6 +10,7 @@ import {useSongsSchema} from "../songs/useSongsSchema";
 import {QueueSwitcher} from "../queue/queue-switcher";
 import {PlayingDot} from "../queue/playing-dot";
 import {useDisclosure} from "@mantine/hooks";
+import {useMemo} from "react";
 
 export default function NowPlayingPage() {
     const {t} = useTranslation(["player", "queue", "common"]);
@@ -20,6 +21,11 @@ export default function NowPlayingPage() {
     const {queues, visibleQueueId, currentQueueId} = useQueueList();
 
     const songsSchema = useSongsSchema(true, {visibleQueueId, currentQueueId, visibleQueueCurrentSongId, queueId});
+
+    // A track change is a new request too (new key), so the list keeps following the current song
+    const scrollRequest = useMemo(() => visibleQueueCurrentSongId != null
+        ? {key: visibleQueueCurrentSongId, id: scrollToCurrentRequestId}
+        : undefined, [visibleQueueCurrentSongId, scrollToCurrentRequestId]);
 
     const [popoverOpened, {open: openPopover, close: closePopover, toggle: togglePopover}] = useDisclosure(false);
 
@@ -89,8 +95,7 @@ export default function NowPlayingPage() {
                     sortable={true}
                     onReorder={handleReorder}
                     onReorderBatch={handleReorderBatch}
-                    scrollToSongId={visibleQueueCurrentSongId ?? undefined}
-                    scrollRequestId={scrollToCurrentRequestId}
+                    scrollRequest={scrollRequest}
                 />
             </div>
         </Stack>

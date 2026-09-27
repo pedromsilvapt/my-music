@@ -21,7 +21,8 @@ import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
 import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
-import {isIndexFullyInViewport} from "./virtualizer-utils.ts";
+import type {ScrollTarget} from "../scroll-request.ts";
+import {useScrollToTarget} from "./use-scroll-to-target.ts";
 import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
@@ -40,8 +41,9 @@ export interface CollectionGridProps<M> {
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
-    scrollToIndex?: number;
-    scrollRequestId?: number;
+    scrollTarget?: ScrollTarget;
+    onScrolled: (id: number) => void;
+    highlightKey: React.Key | null;
     height: number | undefined;
     autoHeight?: boolean;
     onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
@@ -79,7 +81,7 @@ interface CollectionGridPropsInternal<M> extends CollectionGridProps<M> {
 }
 
 function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, scrollToIndex, scrollRequestId, sortable, height, onReorderBatch, onReorder, autoHeight} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, scrollTarget, onScrolled, highlightKey, sortable, height, onReorderBatch, onReorder, autoHeight} = props;
     const {lanes, parentRef, elemSize, gap} = props;
     const {t} = useTranslation(["collection", "common"]);
     const [activeId, setActiveId] = useState<string | number | null>(null);
@@ -135,15 +137,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
         }
     }, [initialScrollPosition,         propItems.length, virtualizer, parentRef]);
 
-    useEffect(() => {
-        if (scrollRequestId != null && scrollToIndex != null && scrollToIndex >= 0) {
-            if (!isIndexFullyInViewport(virtualizer, scrollToIndex)) {
-                requestAnimationFrame(() => {
-                    virtualizer.scrollToIndex(scrollToIndex!, {align: 'center', behavior: 'smooth'});
-                });
-            }
-        }
-    }, [scrollRequestId, scrollToIndex, virtualizer]);
+    useScrollToTarget(virtualizer, parentRef, scrollTarget, onScrolled);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
@@ -232,8 +226,7 @@ function CollectionGridInternal<M>(props: CollectionGridPropsInternal<M>) {
             sortable={sortable}
             isDragOverlay={isDragOverlay}
             isDraggingActive={isDragging}
-            scrollToIndex={scrollToIndex}
-            scrollRequestId={scrollRequestId}
+            highlighted={itemId === highlightKey}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
@@ -320,8 +313,7 @@ export interface CollectionGridItemProps<M> {
     sortable?: boolean;
     isDragOverlay?: boolean;
     isDraggingActive?: boolean;
-    scrollToIndex?: number;
-    scrollRequestId?: number;
+    highlighted: boolean;
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
@@ -341,8 +333,7 @@ function areGridItemPropsEqual<M>(
         prevProps.sortable === nextProps.sortable &&
         prevProps.isDragOverlay === nextProps.isDragOverlay &&
         prevProps.isDraggingActive === nextProps.isDraggingActive &&
-        prevProps.scrollToIndex === nextProps.scrollToIndex &&
-        prevProps.scrollRequestId === nextProps.scrollRequestId &&
+        prevProps.highlighted === nextProps.highlighted &&
         prevProps.onToggle === nextProps.onToggle &&
         prevProps.onContextMenuTrigger === nextProps.onContextMenuTrigger
     );
@@ -361,8 +352,7 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
         sortable,
         isDragOverlay,
         isDraggingActive,
-        scrollToIndex,
-        scrollRequestId,
+        highlighted,
         onContextMenuTrigger,
         width,
     } = props;
@@ -371,18 +361,6 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
     const isContextMenuHovered = selectionStore(state => state.contextMenuHoverKey) === itemId;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const prevScrollRequestIdRef = useRef<number | undefined>(undefined);
-    const [isHighlighted, setIsHighlighted] = useState(false);
-
-    useEffect(() => {
-        if (scrollRequestId !== undefined && scrollRequestId !== prevScrollRequestIdRef.current) {
-            if (virtualItem.index === scrollToIndex) {
-                prevScrollRequestIdRef.current = scrollRequestId;
-                setIsHighlighted(true);
-                setTimeout(() => setIsHighlighted(false), 1500);
-            }
-        }
-    }, [scrollRequestId, scrollToIndex, virtualItem.index]);
 
     const isCollapsed = isDraggingActive && isSelected && !isDragOverlay;
 
@@ -469,6 +447,7 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
             <Box
                 ref={itemRef}
                 data-index={virtualItem.index}
+                data-highlighted={highlighted || undefined}
                 data-sortable-item={sortable || undefined}
                 style={sortable ? style : undefined}
                 onMouseDown={handleMouseDown}
@@ -484,7 +463,7 @@ function CollectionGridItemInner<M>(props: CollectionGridItemProps<M>) {
                     styles.item,
                     (isSelected || isContextMenuHovered) && styles.selected,
                     isDragOverlay && styles.selected,
-                    isHighlighted && styles.highlighted,
+                    highlighted && styles.highlighted,
                 )}
                 w={width}
                 h={width + 54}

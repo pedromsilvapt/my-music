@@ -17,12 +17,7 @@ public class GoToSongFlow(string songTitle, bool useKeyboard = false) : IFlow<So
         var collection = songsPage.Collection;
         await collection.WaitForLoadedAsync();
 
-        var goTo = await collection.OpenGoToAsync();
-        await goTo.SearchAsync(songTitle);
-        if (useKeyboard)
-            await goTo.SubmitWithEnterAsync();
-        else
-            await goTo.SelectAsync(songTitle);
+        await collection.GoToAsync(songTitle, useKeyboard);
 
         return collection;
     }

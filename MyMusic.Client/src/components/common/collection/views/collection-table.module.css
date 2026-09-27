@@ -16,6 +16,7 @@
     }
 }
 
+/* Keep the duration in sync with COLLECTION_HIGHLIGHT_MS */
 .highlighted {
     animation: pulse-twice 1.5s ease-out;
 }

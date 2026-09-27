@@ -35,3 +35,6 @@ export const ZINDEX_LIGHTBOX = 1002;
 export const SONG_EDITOR_MODAL_SIZE = "lg";
 
 export const SONG_VERSION_MODAL_SIZE = "xl";
+
+/** How long a collection item stays highlighted after scrolling to it; matches the `.highlighted` animations */
+export const COLLECTION_HIGHLIGHT_MS = 1500;

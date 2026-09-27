@@ -10,6 +10,7 @@ public class FooterPlayerComponent(ILocator root) : BaseComponent(root)
 {
     private ILocator PlayButton => Root.GetByRole(AriaRole.Button, new() { Name = "Play Current Track" });
     private ILocator PauseButton => Root.GetByRole(AriaRole.Button, new() { Name = "Pause Current Track" });
+    private ILocator NextButton => Root.GetByRole(AriaRole.Button, new() { Name = "Play Next Track in Queue" });
 
     /// <summary>
     /// Waits until the footer player shows the song with the given title.
@@ -49,6 +50,17 @@ public class FooterPlayerComponent(ILocator root) : BaseComponent(root)
     {
         await PlayButton.ClickAsync();
         await PauseButton.WaitForAsync();
+    }
+
+    /// <summary>
+    /// Skips to the next song in the queue and waits until the player shows it, paused, so it stays
+    /// the current song while the test runs.
+    /// </summary>
+    public async Task NextAsync(string nextTitle)
+    {
+        await NextButton.ClickAsync();
+        await WaitForSongAsync(nextTitle);
+        await EnsurePausedAsync();
     }
 
     /// <summary>

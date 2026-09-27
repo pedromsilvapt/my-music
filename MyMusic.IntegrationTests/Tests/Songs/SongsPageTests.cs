@@ -46,6 +46,39 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
     }
 
     [Fact]
+    public async Task GoTo_ShouldHighlightTargetThenClear()
+    {
+        await _songs.SeedAsync(RequestContext, UserId);
+
+        // Jump to a song far down the list through the "Go to item" modal
+        var collection = await new GoToSongFlow(FarDownSongTitle).ExecuteAsync(Page);
+
+        // Once scrolled into view, the song should flash, and the flash should end shortly after
+        var row = collection.GetRowByTitle(FarDownSongTitle);
+        await Assertions.Expect(row).ToBeInViewportAsync();
+        await Assertions.Expect(row).ToHaveAttributeAsync("data-highlighted", "true");
+        await Assertions.Expect(row).Not.ToHaveAttributeAsync("data-highlighted", "true");
+    }
+
+    [Fact]
+    public async Task GoTo_ChangingSortShouldNotScrollBack()
+    {
+        await _songs.SeedAsync(RequestContext, UserId);
+
+        // Jump to a song far down the list and wait for its flash to end
+        var collection = await new GoToSongFlow(FarDownSongTitle).ExecuteAsync(Page);
+        await Assertions.Expect(collection.GetRowByTitle(FarDownSongTitle)).ToHaveAttributeAsync("data-highlighted", "true");
+        await Assertions.Expect(collection.HighlightedRows).ToHaveCountAsync(0);
+
+        // Sorting by title descending moves the song near the top of the list, out of view
+        await collection.SortByAsync("Title", descending: true);
+
+        // The finished jump should not follow the song: the list shouldn't scroll to it or flash it again
+        await collection.ShouldNotScrollToAsync(collection.GetRowByTitle(FarDownSongTitle));
+        await Assertions.Expect(collection.HighlightedRows).ToHaveCountAsync(0);
+    }
+
+    [Fact]
     public async Task GoTo_ShouldShowEmptyStateAndResetOnClose()
     {
         await _songs.SeedAsync(RequestContext, UserId);

@@ -23,7 +23,8 @@ import type {ScrollPosition} from "../../../../contexts/collection-context.tsx";
 import {useLongPress} from "../../../../hooks/use-long-press.ts";
 import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/event-utils.ts";
 import {cls} from "../../../../utils/react-utils.tsx";
-import {isIndexFullyInViewport} from "./virtualizer-utils.ts";
+import type {ScrollTarget} from "../scroll-request.ts";
+import {useScrollToTarget} from "./use-scroll-to-target.ts";
 import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
@@ -49,15 +50,16 @@ export interface CollectionTableProps<M> {
     onReorderBatch?: (reorders: { fromIndex: number; toIndex: number }[]) => void;
     initialScrollPosition?: ScrollPosition;
     onScrollPositionChange?: (position: ScrollPosition) => void;
-    scrollToIndex?: number;
-    scrollRequestId?: number;
+    scrollTarget?: ScrollTarget;
+    onScrolled: (id: number) => void;
+    highlightKey: React.Key | null;
     height: number | undefined;
     autoHeight?: boolean;
     onContextMenuTrigger?: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
-    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollToIndex, scrollRequestId, onSort, sort: propSort, autoHeight} = props;
+    const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollTarget, onScrolled, highlightKey, onSort, sort: propSort, autoHeight} = props;
     const {t} = useTranslation(["collection", "common"]);
     const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
@@ -136,15 +138,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         }
     }, [initialScrollPosition, propItems.length, virtualizer]);
 
-    useEffect(() => {
-        if (scrollRequestId != null && scrollToIndex != null && scrollToIndex >= 0) {
-            if (!isIndexFullyInViewport(virtualizer, scrollToIndex)) {
-                requestAnimationFrame(() => {
-                    virtualizer.scrollToIndex(scrollToIndex!, {align: 'center', behavior: 'smooth'});
-                });
-            }
-        }
-    }, [scrollRequestId, scrollToIndex, virtualizer]);
+    useScrollToTarget(virtualizer, parentRef, scrollTarget, onScrolled);
 
     useEffect(() => {
         const scrollElement = parentRef.current;
@@ -236,8 +230,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
             sortable={sortable}
             isDragOverlay={isDragOverlay}
             isDraggingActive={isDragging}
-            scrollToIndex={scrollToIndex}
-            scrollRequestId={scrollRequestId}
+            highlighted={itemId === highlightKey}
             onContextMenuTrigger={handleContextMenuTrigger}
         />;
     });
@@ -366,8 +359,7 @@ interface CollectionTableRowProps<M> {
     sortable?: boolean;
     isDragOverlay?: boolean;
     isDraggingActive?: boolean;
-    scrollToIndex?: number;
-    scrollRequestId?: number;
+    highlighted: boolean;
     onContextMenuTrigger: (event: React.MouseEvent | React.TouchEvent, rowActions: CollectionSchemaAction<M>[], rowSelection: M[]) => void;
 }
 
@@ -387,8 +379,7 @@ function areTableRowPropsEqual<M>(
         prevProps.sortable === nextProps.sortable &&
         prevProps.isDragOverlay === nextProps.isDragOverlay &&
         prevProps.isDraggingActive === nextProps.isDraggingActive &&
-        prevProps.scrollToIndex === nextProps.scrollToIndex &&
-        prevProps.scrollRequestId === nextProps.scrollRequestId &&
+        prevProps.highlighted === nextProps.highlighted &&
         prevProps.onToggle === nextProps.onToggle &&
         prevProps.onContextMenuTrigger === nextProps.onContextMenuTrigger
     );
@@ -408,8 +399,7 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
         sortable,
         isDragOverlay,
         isDraggingActive,
-        scrollToIndex,
-        scrollRequestId,
+        highlighted,
         onContextMenuTrigger,
     } = props;
 
@@ -417,18 +407,6 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
     const isContextMenuHovered = selectionStore(state => state.contextMenuHoverKey) === itemId;
 
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-    const prevScrollRequestIdRef = useRef<number | undefined>(undefined);
-    const [isHighlighted, setIsHighlighted] = useState(false);
-
-    useEffect(() => {
-        if (scrollRequestId !== undefined && scrollRequestId !== prevScrollRequestIdRef.current) {
-            if (virtualRow.index === scrollToIndex) {
-                prevScrollRequestIdRef.current = scrollRequestId;
-                setIsHighlighted(true);
-                setTimeout(() => setIsHighlighted(false), 1500);
-            }
-        }
-    }, [scrollRequestId, scrollToIndex, virtualRow.index]);
 
     const isCollapsed = isDraggingActive && isSelected && !isDragOverlay;
 
@@ -516,6 +494,7 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
                 ref={rowRef}
                 style={sortable ? style : undefined}
                 data-index={virtualRow.index}
+                data-highlighted={highlighted || undefined}
                 data-sortable-item={sortable || undefined}
                 onMouseDown={handleMouseDown}
                 onMouseUp={handleMouseUp}
@@ -530,7 +509,7 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
                     styles.row,
                     (isSelected || isContextMenuHovered) && styles.selected,
                     isDragOverlay && styles.selected,
-                    isHighlighted && styles.highlighted,
+                    highlighted && styles.highlighted,
                 )}
             >
                 {columns.map(col =>
