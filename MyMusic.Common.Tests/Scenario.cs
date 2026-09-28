@@ -10,16 +10,19 @@ using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
+using MyMusic.Common.Tests.Utilities;
 using NSubstitute;
 
 namespace MyMusic.Common.Tests;
 
 public class Scenario
 {
-    public Scenario()
+    public Scenario(params IInterceptor[] interceptors)
     {
         FileSystem = CreateFileSystem();
-        DbContext = CreateDbContext();
+        var options = CreateDbContextOptions(interceptors);
+        DbContextFactory = new TestDbContextFactory(options);
+        DbContext = CreateDbContext(options);
         AdminUser = CreateUser("Administrator", "admin");
     }
 
@@ -27,7 +30,13 @@ public class Scenario
 
     public MusicDbContext DbContext { get; set; }
 
+    /// <summary>Creates further contexts on the same database as <see cref="DbContext"/>.</summary>
+    public IDbContextFactory<MusicDbContext> DbContextFactory { get; }
+
     public User AdminUser { get; set; }
+
+    /// <summary>Stands in for PostgreSQL advisory locks in every <see cref="MusicService"/> this scenario creates.</summary>
+    public InProcessAdvisoryLockService AdvisoryLocks { get; } = new();
 
     #region Seeding Data
 
@@ -322,17 +331,27 @@ public class Scenario
 
     #region Static Methods
 
-    public static MusicDbContext CreateDbContext()
+    public static MusicDbContext CreateDbContext(params IInterceptor[] interceptors) =>
+        CreateDbContext(CreateDbContextOptions(interceptors));
+
+    /// <summary>Options for a new in-memory database, which lives as long as the options are referenced.</summary>
+    public static DbContextOptions<MusicDbContext> CreateDbContextOptions(params IInterceptor[] interceptors)
     {
         var keepAliveConnection = new SqliteConnection("DataSource=:memory:");
         keepAliveConnection.Open();
 
-        var options = new DbContextOptionsBuilder<MusicDbContext>()
+        return new DbContextOptionsBuilder<MusicDbContext>()
             .UseSqlite(keepAliveConnection)
+            .AddInterceptors(interceptors)
             .UseProjectables()
             .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning))
             .LogTo(Console.WriteLine)
             .Options;
+    }
+
+    /// <summary>Creates a context on the database of <paramref name="options"/>, creating its schema.</summary>
+    public static MusicDbContext CreateDbContext(DbContextOptions<MusicDbContext> options)
+    {
         var context = new MusicDbContext(options);
         context.Database.EnsureCreated();
         context.SaveChanges();
@@ -355,11 +374,17 @@ public class Scenario
 
     public static IFileSystem CreateFileSystem() => new MockFileSystem();
 
-    public MusicService CreateMusicService() =>
-        new(FileSystem, Options.Create(new Config
+    public MusicService CreateMusicService(ISongMergeService? songMergeService = null)
+    {
+        var config = Options.Create(new Config
         {
             MusicRepositoryPath = "/data",
-        }), Substitute.For<ISongMergeService>(), Substitute.For<ILogger<MusicService>>());
+        });
+
+        return new MusicService(FileSystem, config, DbContextFactory,
+            songMergeService ?? Substitute.For<ISongMergeService>(), AdvisoryLocks, new UserImportThrottle(config),
+            Substitute.For<ILogger<MusicService>>());
+    }
 
     public SeedService CreateSeedService(string? seedPath = null) =>
         new(FileSystem, DbContext, Options.Create(new Config 

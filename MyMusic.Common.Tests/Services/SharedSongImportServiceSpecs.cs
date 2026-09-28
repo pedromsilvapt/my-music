@@ -50,14 +50,20 @@ public class SharedSongImportServiceSpecs
             Directory.CreateDirectory(SourceDir);
 
             FileSystem = new FileSystem();
-            DbContext = Scenario.CreateDbContext();
+            var dbOptions = Scenario.CreateDbContextOptions();
+            DbContext = Scenario.CreateDbContext(dbOptions);
             Owner = CreateUser(ownerUsername);
             Recipient = CreateUser(recipientUsername);
 
+            var config = Options.Create(new Config { MusicRepositoryPath = RepoPath });
+
             MusicService = new MusicService(
                 FileSystem,
-                Options.Create(new Config { MusicRepositoryPath = RepoPath }),
+                config,
+                new TestDbContextFactory(dbOptions),
                 Substitute.For<ISongMergeService>(),
+                new InProcessAdvisoryLockService(),
+                new UserImportThrottle(config),
                 Substitute.For<ILogger<MusicService>>());
 
             ImportService = new SharedSongImportService(
@@ -235,11 +241,13 @@ public class SharedSongImportServiceSpecs
 
         var recipientArtist = recipientSong.Artists.Single().Artist;
         recipientArtist.OwnerId.ShouldBe(scenario.Recipient.Id);
-        recipientArtist.Id.ShouldNotBe(ownerSong.Artists.First().ArtistId);
+        recipientArtist.Id.ShouldNotBe(
+            scenario.DbContext.SongArtists.Where(sa => sa.SongId == ownerSong.Id).Select(sa => sa.ArtistId).First());
 
         var recipientGenre = recipientSong.Genres.Single().Genre;
         recipientGenre.OwnerId.ShouldBe(scenario.Recipient.Id);
-        recipientGenre.Id.ShouldNotBe(ownerSong.Genres.First().GenreId);
+        recipientGenre.Id.ShouldNotBe(
+            scenario.DbContext.SongGenres.Where(sg => sg.SongId == ownerSong.Id).Select(sg => sg.GenreId).First());
     }
 
     [Fact]

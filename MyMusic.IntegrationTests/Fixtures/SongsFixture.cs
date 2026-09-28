@@ -164,10 +164,13 @@ public class SongsFixture
     public async Task<List<SongData>> SeedAsync(IAPIRequestContext api, long userId, SampleSong[]? songs = null, ILogger? logger = null)
     {
         var sampleSongs = songs ?? DefaultSongs;
-        var data = new List<SongData>();
+        var seeded = new SongData[sampleSongs.Length];
 
-        foreach (var song in sampleSongs)
+        // Uploaded several at a time, like concurrent clients: songs of the same album must still share one album
+        await Parallel.ForEachAsync(Enumerable.Range(0, sampleSongs.Length),
+            new ParallelOptions { MaxDegreeOfParallelism = 4 }, async (index, _) =>
         {
+            var song = sampleSongs[index];
             var mp3Content = TestFiles.CreateTestMusicFile(song);
             var safeFileName = string.Join("_", song.Title.Split(Path.GetInvalidFileNameChars()));
             var fileName = $"{safeFileName}.mp3";
@@ -247,8 +250,11 @@ public class SongsFixture
                 }
             }
 
-            data.Add(new SongData(songId, song.Title, song.Year, devicePaths.Count > 0 ? devicePaths : null));
-        }
+            seeded[index] = new SongData(songId, song.Title, song.Year, devicePaths.Count > 0 ? devicePaths : null);
+        });
+
+        // Same order as the sample songs, regardless of which upload finished first
+        var data = seeded.ToList();
 
         if (logger != null)
         {

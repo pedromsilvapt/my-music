@@ -60,7 +60,8 @@ public class SyncSessionFilterValuesServiceSpecs
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
         scenario.CreateSong("Galaxy", ownerId: scenario.AdminUser.Id);
-        scenario.CreateSong("Galaxy", ownerId: scenario.AdminUser.Id); // duplicate title
+        scenario.CreateSong("Galaxy", ownerId: scenario.AdminUser.Id,
+            repositoryPath: "/music/Galaxy (2).mp3"); // duplicate title
         scenario.CreateSong("iPad", ownerId: scenario.AdminUser.Id);
         scenario.CreateSong("Theirs", ownerId: otherUser.Id);
 

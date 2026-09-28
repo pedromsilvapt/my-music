@@ -340,6 +340,17 @@ public class MyTests : IntegrationTestBase
 - Follow existing migration pattern in `MyMusic.Common/Migrations/`
 - **SongDevice Records:** When deleting songs that have been synced to devices, always mark SongDevice records for removal (set SongId = null, SyncAction = Remove) instead of deleting them. This allows the sync system to track and remove files from devices during the next sync operation. See AuditsController.ResolveSoundalikes for example.
 
+### Concurrent Song Imports
+
+`MusicService.ImportRepositorySongs` is called concurrently by uploads, sync commits, purchases and shared-song imports, and each song is imported in its own transaction. Find-or-create logic is kept safe like this:
+
+- **Genres**: lock-free. `UserMusicService.UpsertGenre` uses `INSERT ... ON CONFLICT DO NOTHING` on the unique `(owner_id, name)` index. Upsert them in a stable (sorted) order.
+- **Artists and albums**: their names cannot be unique, so no constraint can protect them. The import takes **advisory locks** (`IAdvisoryLockService`, `pg_advisory_xact_lock`) on the song's artist names, album, checksum, repository path and (when updating) song id, before touching the database. Songs that share none of these keys import in parallel.
+- **Per-user cap**: `IUserImportThrottle` limits concurrent song imports per user (`MyMusic:MaxConcurrentImportsPerUser`, default 16). This bounds DB connections and I/O; correctness does not depend on it.
+- **Retries**: a song failing with a deadlock, serialization failure or unique violation (e.g. against writers that don't take the locks, such as song edits) is rolled back and retried up to 3 times. The rolled-back attempt's tracked entities and written file are discarded.
+
+New code that finds-or-creates artists or albums should take the same `AdvisoryLockKey`s. Unit tests run on SQLite, which has no advisory locks, so they use `InProcessAdvisoryLockService` (in `MyMusic.Common.Tests/Utilities`) instead.
+
 ## Dependencies
 
 NuGet versions are managed centrally in the root `Directory.Packages.props`. To add or bump a package, set its `<PackageVersion>` there and reference it from the `.csproj` without a `Version` attribute.

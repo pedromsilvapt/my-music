@@ -13,7 +13,7 @@ public class FilePathResolverSpecs
         var basePath = "/data/admin/Artist/Album/SongTitle.mp3";
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe(basePath);
     }
@@ -26,7 +26,7 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, basePath);
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe("/data/admin/Artist/Album/SongTitle (2).mp3");
     }
@@ -40,7 +40,7 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, "/data/admin/Artist/Album/SongTitle (2).mp3");
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe("/data/admin/Artist/Album/SongTitle (3).mp3");
     }
@@ -53,7 +53,7 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, basePath);
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe("/data/admin/Artist/Album/SongTitle (2).flac");
     }
@@ -66,7 +66,7 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, basePath);
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe("/data/admin/Artist/Album/SongTitle (2).mp3");
     }
@@ -79,7 +79,7 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, scenario.AdminUser.Id, basePath);
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe("/data/admin/Artist/Album/SongTitle (2)");
     }
@@ -120,7 +120,7 @@ public class FilePathResolverSpecs
         CreateSongWithRepositoryPath(scenario, otherUser.Id, basePath);
 
         var result = await FilePathResolver.ResolveConflictAsync(
-            basePath, scenario.AdminUser.Id, scenario.DbContext);
+            basePath, scenario.AdminUser.Id, null, scenario.DbContext);
 
         result.ShouldBe(basePath);
     }

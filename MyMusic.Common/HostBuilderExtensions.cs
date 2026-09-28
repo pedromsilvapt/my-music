@@ -51,6 +51,8 @@ public static class HostBuilderExtensions
 
         // Music services
         builder.Services.AddScoped<IMusicService, MusicService>();
+        builder.Services.AddSingleton<IAdvisoryLockService, PostgresAdvisoryLockService>();
+        builder.Services.AddSingleton<IUserImportThrottle, UserImportThrottle>();
         builder.Services.AddScoped<ISongMergeService, SongMergeService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
@@ -141,7 +143,9 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ICountRecalculationService, CountRecalculationService>();
 
         // DbContext and configuration
-        builder.Services.AddDbContext<MusicDbContext>((sp, options) =>
+        // Also registers MusicDbContext itself as scoped. The factory lets work that must be isolated from the
+        // request's context (e.g. each song of an import) use contexts of its own.
+        builder.Services.AddDbContextFactory<MusicDbContext>((sp, options) =>
         {
             var connectionString = builder.Configuration.GetConnectionString("Postgres");
 

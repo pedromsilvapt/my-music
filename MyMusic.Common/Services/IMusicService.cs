@@ -60,9 +60,10 @@ public interface IMusicService
         List<string> checksums, string checksumAlgorithm, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 
+    ///     Imports every song file found in <paramref name="rootSourceFolder"/>. See the other overload for how songs
+    ///     are saved.
     /// </summary>
-    /// <param name="db"></param>
+    /// <param name="db">Only read from, to validate the user and devices.</param>
     /// <param name="job"></param>
     /// <param name="userId"></param>
     /// <param name="rootSourceFolder"></param>
@@ -77,9 +78,11 @@ public interface IMusicService
         SearchOption searchOption = SearchOption.AllDirectories, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// 
+    ///     Imports the given song files. Each song is saved in a context and transaction of its own, so a failed song
+    ///     leaves nothing behind. As a consequence, nothing is saved through <paramref name="db"/> (its pending
+    ///     changes stay pending), and the songs recorded on <paramref name="job"/> are not tracked by it.
     /// </summary>
-    /// <param name="db"></param>
+    /// <param name="db">Only read from, to validate the user and devices.</param>
     /// <param name="job"></param>
     /// <param name="userId"></param>
     /// <param name="importSongsMetadataList"></param>

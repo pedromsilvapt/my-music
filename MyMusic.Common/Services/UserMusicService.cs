@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using MyMusic.Common.Entities;
 
 namespace MyMusic.Common.Services;
@@ -41,6 +42,30 @@ public class UserMusicService(MusicDbContext db, long userId)
     public async Task<Genre?> GetGenre(string name, CancellationToken cancellationToken = default)
     {
         return await Db.Genres.FirstOrDefaultAsync(a => a.Owner.Id == UserId && a.Name == name, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns the genre with the given name, creating it first if it does not exist yet. Relies on the unique
+    /// (owner, name) index instead of locks, so concurrent imports of the same new genre never fail: a concurrent
+    /// insert makes this one wait for that transaction to finish, and then do nothing.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<Genre> UpsertGenre(string name, CancellationToken cancellationToken = default)
+    {
+        // Table and column names come from the EF model (never from user input), so this works with any naming convention
+        var entityType = Db.Model.FindEntityType(typeof(Genre))!;
+        var table = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
+        var ownerIdColumn = entityType.FindProperty(nameof(Genre.OwnerId))!.GetColumnName(table)!;
+        var nameColumn = entityType.FindProperty(nameof(Genre.Name))!.GetColumnName(table)!;
+
+        var sql = $"INSERT INTO \"{table.Name}\" (\"{ownerIdColumn}\", \"{nameColumn}\") VALUES ({{0}}, {{1}}) " +
+                  $"ON CONFLICT (\"{ownerIdColumn}\", \"{nameColumn}\") DO NOTHING";
+
+        await Db.Database.ExecuteSqlRawAsync(sql, [UserId, name], cancellationToken);
+
+        return await Db.Genres.FirstAsync(g => g.OwnerId == UserId && g.Name == name, cancellationToken);
     }
 
     /// <summary>

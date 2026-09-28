@@ -2,6 +2,11 @@ namespace MyMusic.Common.Services;
 
 public interface ISongMergeService
 {
+    /// <summary>
+    ///     Merges <paramref name="mergeFromSongId"/> into <paramref name="keepSongId"/> and deletes it. Failures are
+    ///     returned as a failed result, except when <paramref name="db"/> already has a transaction: then they are
+    ///     thrown, for the transaction's owner to handle.
+    /// </summary>
     Task<SongMergeResult> MergeSongsAsync(
         MusicDbContext db,
         long keepSongId,

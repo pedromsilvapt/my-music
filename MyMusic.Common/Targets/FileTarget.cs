@@ -32,6 +32,9 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
         await using (var fs = FileSystem.FileStream.New(FilePath!, FileMode.OpenOrCreate, FileAccess.Write))
         {
             await data.CopyToAsync(fs, cancellationToken);
+
+            // OpenOrCreate keeps the old length: drop any leftover tail of a longer file previously at this path
+            fs.SetLength(fs.Position);
         }
 
         if (metadata != null)
@@ -121,6 +124,24 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
 
     public async Task Relocate(NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null, CancellationToken cancellationToken = default)
     {
+        var newFilePath = await GetRelocatedPath(naming, resolveConflict, cancellationToken);
+
+        if (newFilePath != FilePath)
+        {
+            FileSystem.Directory.CreateDirectory(FileSystem.Path.GetDirectoryName(newFilePath)!);
+
+            FileSystem.File.Move(FilePath!, newFilePath);
+
+            FilePath = newFilePath;
+        }
+    }
+
+    /// <summary>
+    ///     Returns the path <see cref="Relocate"/> would move the file to (or its current path, if it would stay),
+    ///     without moving it.
+    /// </summary>
+    public async Task<string> GetRelocatedPath(NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null, CancellationToken cancellationToken = default)
+    {
         if (FilePath is null)
         {
             throw new Exception("Cannot relocate file if the original FilePath is null.");
@@ -152,14 +173,7 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
             newFilePath = await resolveConflict(newFilePath);
         }
 
-        if (newFilePath != FilePath)
-        {
-            FileSystem.Directory.CreateDirectory(FileSystem.Path.GetDirectoryName(newFilePath)!);
-
-            FileSystem.File.Move(FilePath, newFilePath);
-
-            FilePath = newFilePath;
-        }
+        return newFilePath;
     }
 
     public async Task EnsureFilePath(SongMetadata? metadata, NamingMetadata? naming = null, Func<string, Task<string>>? resolveConflict = null)
@@ -176,13 +190,27 @@ public class FileTarget(INamingStrategy namingStrategy, IFileSystem fileSystem) 
                 throw new Exception("Cannot save new file without FilePath because no folder was provided.");
             }
 
-            FilePath = FileSystem.Path.Combine(Folder, NamingStrategy.Generate(metadata, naming));
+            FilePath = GenerateFilePath(metadata, naming);
         }
 
         if (resolveConflict is not null)
         {
             FilePath = await resolveConflict(FilePath!);
         }
+    }
+
+    /// <summary>
+    ///     Returns the path the naming strategy generates for this song inside <see cref="Folder"/>, before any
+    ///     conflict resolution.
+    /// </summary>
+    protected string GenerateFilePath(SongMetadata metadata, NamingMetadata? naming = null)
+    {
+        if (Folder is null)
+        {
+            throw new Exception("Cannot generate a file path because no folder was provided.");
+        }
+
+        return FileSystem.Path.Combine(Folder, NamingStrategy.Generate(metadata, naming));
     }
 }
 

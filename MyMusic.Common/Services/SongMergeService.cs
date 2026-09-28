@@ -71,7 +71,9 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
 
             return SongMergeResult.Succeeded();
         }
-        catch (Exception ex)
+        // Inside the caller's transaction, the caller decides what a failure means (e.g. an import retries a
+        // concurrency conflict), and must roll back its transaction with the merge's work in it
+        catch (Exception ex) when (transaction != null)
         {
             logger.LogError(ex, "Failed to merge song {MergeFromSongId} into {KeepSongId}", mergeFromSongId, keepSongId);
             return SongMergeResult.Failed($"Merge failed: {ex.Message}");

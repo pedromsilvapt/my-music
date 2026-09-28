@@ -20,4 +20,9 @@ public class Config
     public int SongHistoryWorkerIntervalSeconds { get; set; } = 10;
 
     public int SongHistoryWorkerBatchSize { get; set; } = 50;
+
+    /// <summary>
+    ///     How many songs a single user can import at the same time, across all requests (uploads, sync, purchases...).
+    /// </summary>
+    public int MaxConcurrentImportsPerUser { get; set; } = 16;
 }

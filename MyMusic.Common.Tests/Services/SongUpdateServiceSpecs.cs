@@ -350,6 +350,46 @@ public class SongUpdateServiceSpecs
         songAfterSecond.FileModifiedAt.ShouldBe(fileModifiedAtAfterFirst);
     }
 
+    [Fact]
+    public async Task UpdateSong_TitleChange_MovesTheFileWithItsPath()
+    {
+        // Setup: a song whose title change generates another repository path
+        var scenario = new Scenario();
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, "/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo,
+            repositoryPath: "/data/My Song.mp3");
+
+        var result = await service.UpdateSong(scenario.DbContext, song.Id,
+            new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") });
+
+        // The file should now live at the song's new path, and nowhere else
+        result.RepositoryPath.ShouldNotBe("/data/My Song.mp3");
+        scenario.FileSystem.File.Exists(result.RepositoryPath).ShouldBeTrue();
+        scenario.FileSystem.File.Exists("/data/My Song.mp3").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateSong_CommitFails_LeavesTheFileAtItsSavedPath()
+    {
+        // Setup: a song whose title change generates another repository path, and a commit that will fail
+        var interceptor = new FailingCommitInterceptor();
+        var scenario = new Scenario(interceptor);
+        var service = CreateService(scenario.FileSystem);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, "/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo,
+            repositoryPath: "/data/My Song.mp3");
+        interceptor.Armed = true;
+
+        await Should.ThrowAsync<InvalidOperationException>(() => service.UpdateSong(scenario.DbContext, song.Id,
+            new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") }));
+
+        // The song keeps its old path in the database, so its file should still be there
+        scenario.FileSystem.File.Exists("/data/My Song.mp3").ShouldBeTrue();
+        scenario.FileSystem.Directory.GetFiles("/data", "*.mp3", SearchOption.AllDirectories)
+            .ShouldBe(["/data/My Song.mp3"]);
+    }
+
     // ---------------------------------------------------------------------
     // UpdateSong wraps all DB operations in a single transaction so that all
     // PostgreSQL triggers share the same txid_current() — enabling the

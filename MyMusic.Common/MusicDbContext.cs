@@ -250,6 +250,13 @@ public class MusicDbContext : DbContext
             entity.HasIndex(e => new { e.SongId, e.TransactionId });
         });
 
+        modelBuilder.Entity<Song>(entity =>
+        {
+            // A file belongs to exactly one song. Claiming a path by saving it here, before the file is written,
+            // makes concurrent writers of the same path fail instead of overwriting each other's file.
+            entity.HasIndex(e => new { e.OwnerId, e.RepositoryPath }).IsUnique();
+        });
+
         // Denormalized counts are maintained by PostgreSQL triggers (see the
         // AddDenormalizedCountTriggers migration); EF must never write them.
         modelBuilder.Entity<Album>(entity =>

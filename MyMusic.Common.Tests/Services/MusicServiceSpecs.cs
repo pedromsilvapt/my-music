@@ -199,14 +199,15 @@ public class MusicServiceSpecs
         originalFileModifiedAt.ShouldNotBeNull();
 
         // Second import: re-import the SAME file (same checksum) via the metadata overload with
-        // an explicit SongId pointing at the existing song. The re-import branch must detect the
-        // unchanged checksum and leave FileModifiedAt alone, while still bumping ModifiedAt.
+        // an explicit SongId pointing at the existing song. Overwrite, since Skip would skip the
+        // unchanged song altogether. The re-import branch must detect the unchanged checksum and
+        // leave FileModifiedAt alone, while still bumping ModifiedAt.
         var sourcePath = "/music/Song.mp3";
         var reimportModifiedAt = originalFileModifiedAt!.Value.AddHours(1);
         var metadata = new SongImportMetadata(sourcePath, DateTime.UtcNow, reimportModifiedAt, song.Id);
         var job2 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
         await musicService.ImportRepositorySongs(scenario.DbContext, job2, scenario.AdminUser.Id, [metadata],
-            duplicatesStrategy: DuplicateSongsHandlingStrategy.Skip);
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Overwrite);
         job2.Exceptions.ShouldBeEmpty();
 
         var updatedSong = LoadSongs(scenario.DbContext).Single();
@@ -255,12 +256,49 @@ public class MusicServiceSpecs
         updatedSong.Checksum.ShouldNotBe(originalChecksum);
     }
 
+    [Fact]
+    public async Task ImportMusic_ReImportExistingSong_KeepsItsRepositoryPath()
+    {
+        // Re-importing new content for an existing song must write it where the song already lives, instead of
+        // treating the song's own path as taken by another song
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album", ["My Artist"], ["Rock"]);
+        var job1 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job1, scenario.AdminUser.Id, "/music");
+        job1.Exceptions.ShouldBeEmpty();
+
+        var song = LoadSongs(scenario.DbContext).Single();
+        var originalPath = song.RepositoryPath;
+
+        // Re-import different content for the same song
+        MockMusicFile.CreateWithDifferentContent(scenario.FileSystem, "/music/Song.mp3", "Song", "My Album",
+            ["My Artist"], ["Rock"]);
+        var metadata = new SongImportMetadata("/music/Song.mp3", DateTime.UtcNow, DateTime.UtcNow, song.Id);
+        var job2 = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+        await musicService.ImportRepositorySongs(scenario.DbContext, job2, scenario.AdminUser.Id, [metadata]);
+        job2.Exceptions.ShouldBeEmpty();
+
+        // The song should keep its path, and no " (2)" copy should be left in the repository
+        await using var db = scenario.DbContextFactory.CreateDbContext();
+        db.Songs.Select(s => s.RepositoryPath).ToList().ShouldBe([originalPath]);
+        scenario.FileSystem.Directory.GetFiles("/data", "*", SearchOption.AllDirectories).ShouldBe([originalPath]);
+    }
+
+    /// <summary>
+    ///     Loads the songs as saved in the database: imports save through contexts of their own, so what the scenario's
+    ///     context already tracks may be stale.
+    /// </summary>
     private static List<Song> LoadSongs(MusicDbContext context)
     {
         return context.Songs
+            .AsNoTracking()
             .OrderBy(s => s.Title)
             .Include(s => s.Artists)
+            .ThenInclude(sa => sa.Artist)
             .Include(s => s.Genres)
+            .ThenInclude(sg => sg.Genre)
             .Include(s => s.Cover)
             .Include(s => s.Album)
             .ThenInclude(a => a!.Artist)

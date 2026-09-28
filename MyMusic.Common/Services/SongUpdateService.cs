@@ -1,5 +1,6 @@
 using System.IO.Abstractions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
@@ -51,7 +52,7 @@ public class SongUpdateService(
         song = await LoadSongAsync(db, songId, cancellationToken);
 
         var previousChecksum = song.Checksum;
-        await UpdateFileAndChecksumAsync(db, song, cancellationToken);
+        var fileMove = await UpdateFileAndChecksumAsync(db, song, cancellationToken);
 
         logger.LogInformation("Song {SongId} update: previousChecksum={PreviousChecksum}, newChecksum={NewChecksum}",
             songId, previousChecksum, song.Checksum);
@@ -75,7 +76,7 @@ public class SongUpdateService(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Saved changes for song {SongId}", songId);
 
-        await transaction.CommitAsync(cancellationToken);
+        await CommitMovingFileAsync(transaction, fileMove, cancellationToken);
 
         return MapToResult(song);
     }
@@ -107,7 +108,7 @@ public class SongUpdateService(
             await db.SaveChangesAsync(cancellationToken);
 
             var previousChecksum = song.Checksum;
-            await UpdateFileAndChecksumAsync(db, song, cancellationToken);
+            var fileMove = await UpdateFileAndChecksumAsync(db, song, cancellationToken);
 
             if (song.Checksum != previousChecksum)
             {
@@ -120,7 +121,7 @@ public class SongUpdateService(
 
             await db.SaveChangesAsync(cancellationToken);
 
-            await transaction.CommitAsync(cancellationToken);
+            await CommitMovingFileAsync(transaction, fileMove, cancellationToken);
 
             return new BatchUpdateResult
             {
@@ -512,7 +513,13 @@ public class SongUpdateService(
         }
     }
 
-    private async Task UpdateFileAndChecksumAsync(MusicDbContext db, Song song, CancellationToken cancellationToken)
+    /// <summary>
+    ///     Writes the song's metadata into its file, and points the song to the path that metadata now generates. The
+    ///     file itself is only moved there by <see cref="CommitMovingFileAsync"/>, once that path is saved.
+    /// </summary>
+    /// <returns>The move the file still needs, if its path changed.</returns>
+    private async Task<FileMove?> UpdateFileAndChecksumAsync(MusicDbContext db, Song song,
+        CancellationToken cancellationToken)
     {
         var metadata = EntityConverter.ToSong(song);
 
@@ -525,18 +532,44 @@ public class SongUpdateService(
         await fileTarget.SaveMetadata(metadata, cancellationToken);
 
         var naming = NamingMetadata.FromPath(song.RepositoryPath);
-        await fileTarget.Relocate(naming, async newPath =>
-            await FilePathResolver.ResolveConflictAsync(
-                newPath, song.OwnerId, song.Id, db, cancellationToken),
+        var newPath = await fileTarget.GetRelocatedPath(naming, async path =>
+                await FilePathResolver.ResolveConflictAsync(path, song.OwnerId, song.Id, db, cancellationToken),
             cancellationToken);
 
-        song.RepositoryPath = fileTarget.FilePath!;
-
-        song.Label = SongLabelBuilder.Build(song);
-
+        // The file is still at its current path
         var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
         song.Checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, song.RepositoryPath);
         song.ChecksumAlgorithm = checksumAlgorithm.GetType().Name;
+
+        var fileMove = newPath != song.RepositoryPath ? new FileMove(song.RepositoryPath, newPath) : null;
+
+        song.RepositoryPath = newPath;
+
+        song.Label = SongLabelBuilder.Build(song);
+
+        return fileMove;
+    }
+
+    /// <summary>
+    ///     Moves the song's file to the path already saved in <paramref name="transaction"/>, then commits it. The file
+    ///     only moves once the (owner, path) unique index lets the song claim its new path, and moves back if the
+    ///     commit fails, so it always stays where the database says it is.
+    /// </summary>
+    private async Task CommitMovingFileAsync(IDbContextTransaction transaction, FileMove? fileMove,
+        CancellationToken cancellationToken)
+    {
+        fileMove?.Apply(fileSystem);
+
+        try
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            fileMove?.Undo(fileSystem);
+
+            throw;
+        }
     }
 
     private static SongUpdateResult MapToResult(Song song)
