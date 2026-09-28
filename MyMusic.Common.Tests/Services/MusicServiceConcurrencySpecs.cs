@@ -108,13 +108,18 @@ public class MusicServiceConcurrencySpecs
 
         // Both songs should lock the shared album and artist, but not the shared genre (upserted lock-free),
         // and each should lock its own checksum (paths are protected by their unique index instead)
-        var acquisitions = scenario.AdvisoryLocks.Acquisitions.ToList();
+        var fileLocks = AdvisoryLockKey.Create(AdvisoryLockScope.File, 0, "").ClassId;
+        var acquisitions = scenario.AdvisoryLocks.Acquisitions.Where(keys => keys[0].ClassId != fileLocks).ToList();
         acquisitions.Count.ShouldBe(2);
         acquisitions[0].Intersect(acquisitions[1]).ShouldBe([
             AdvisoryLockKey.Create(AdvisoryLockScope.Artist, scenario.AdminUser.Id, "My Artist"),
             AdvisoryLockKey.Create(AdvisoryLockScope.Album, scenario.AdminUser.Id, "My Artist", "My Album"),
         ], ignoreOrder: true);
         acquisitions[0].Count.ShouldBe(3);
+
+        // Each song should then only lock its own file, while writing it
+        scenario.AdvisoryLocks.Acquisitions.Where(keys => keys[0].ClassId == fileLocks)
+            .Select(keys => keys.Single()).Distinct().Count().ShouldBe(2);
     }
 
     [Fact]
@@ -300,6 +305,40 @@ public class MusicServiceConcurrencySpecs
         RepositoryFiles(scenario).ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData("Song")] // Same path: the file is rewritten in place
+    [InlineData("Other Song")] // Another path: the file moves
+    public async Task ImportMusic_ReImportCommitFails_KeepsTheOriginalFile(string newTitle)
+    {
+        // Setup: an imported song
+        var interceptor = new FailingCommitInterceptor();
+        var scenario = new Scenario(interceptor);
+        var musicService = scenario.CreateMusicService();
+
+        MockMusicFile.Create(scenario.FileSystem, SongPath, "Song", "My Album", ["My Artist"], ["Rock"]);
+        await musicService.ImportRepositorySongs(scenario.DbContext, CreateJob(), scenario.AdminUser.Id, "/music",
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        var songId = scenario.DbContext.Songs.Single().Id;
+        var originalContent = scenario.FileSystem.File.ReadAllBytes(RepositoryPath);
+
+        // Its source changes content (and maybe title, and so its path), and the re-import then fails to commit
+        MockMusicFile.CreateWithDifferentContent(scenario.FileSystem, SongPath, newTitle, "My Album", ["My Artist"],
+            ["Rock"]);
+        interceptor.Armed = true;
+
+        var job = CreateJob();
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id,
+            [new SongImportMetadata(SongPath, DateTime.UtcNow, DateTime.UtcNow, songId)],
+            duplicatesStrategy: DuplicateSongsHandlingStrategy.Overwrite,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // The song keeps its old path and checksum in the database, so its file should be back as it was
+        job.Exceptions.Count.ShouldBe(1);
+        RepositoryFiles(scenario).ShouldBe([RepositoryPath]);
+        scenario.FileSystem.File.ReadAllBytes(RepositoryPath).ShouldBe(originalContent);
+    }
+
     [Fact]
     public async Task ImportMusic_RetryAfterAnEarlierSongOfTheSameArtist_CreatesTheAlbumOnce()
     {
@@ -411,9 +450,12 @@ public class MusicServiceConcurrencySpecs
         return (algorithm.GetType().Name, ChecksumService.CalculateChecksum(scenario.FileSystem, algorithm, filePath));
     }
 
+    /// <summary>The files of the repository, outside of its <c>.temp</c> folder.</summary>
     private static List<string> RepositoryFiles(Scenario scenario) =>
         scenario.FileSystem.Directory.Exists("/data")
-            ? scenario.FileSystem.Directory.GetFiles("/data", "*", SearchOption.AllDirectories).ToList()
+            ? scenario.FileSystem.Directory.GetFiles("/data", "*", SearchOption.AllDirectories)
+                .Where(path => !path.StartsWith("/data/.temp/"))
+                .ToList()
             : [];
 
     private static PostgresException Deadlock() =>

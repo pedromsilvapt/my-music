@@ -53,6 +53,9 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IMusicService, MusicService>();
         builder.Services.AddSingleton<IAdvisoryLockService, PostgresAdvisoryLockService>();
         builder.Services.AddSingleton<IUserImportThrottle, UserImportThrottle>();
+        builder.Services.AddSingleton<FileTransactionService>();
+        builder.Services.AddSingleton<IFileTransactionService>(sp => sp.GetRequiredService<FileTransactionService>());
+        builder.Services.AddSingleton<FileTransactionInterceptor>();
         builder.Services.AddScoped<ISongMergeService, SongMergeService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
@@ -152,7 +155,8 @@ public static class HostBuilderExtensions
             // TODO Add configuration
             options.UseNpgsql(connectionString)
                 .UseSnakeCaseNamingConvention()
-                .UseProjectables();
+                .UseProjectables()
+                .AddInterceptors(sp.GetRequiredService<FileTransactionInterceptor>());
         });
 
         builder.Services.Configure<Config>(builder.Configuration.GetSection("MyMusic"));

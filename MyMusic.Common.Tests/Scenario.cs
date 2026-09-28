@@ -20,7 +20,9 @@ public class Scenario
     public Scenario(params IInterceptor[] interceptors)
     {
         FileSystem = CreateFileSystem();
-        var options = CreateDbContextOptions(interceptors);
+        FileTransactions = new FileTransactionService(FileSystem, Options.Create(new Config { MusicRepositoryPath = "/data" }),
+            AdvisoryLocks, Substitute.For<ILogger<FileTransactionService>>());
+        var options = CreateDbContextOptions([new FileTransactionInterceptor(FileTransactions), ..interceptors]);
         DbContextFactory = new TestDbContextFactory(options);
         DbContext = CreateDbContext(options);
         AdminUser = CreateUser("Administrator", "admin");
@@ -37,6 +39,9 @@ public class Scenario
 
     /// <summary>Stands in for PostgreSQL advisory locks in every <see cref="MusicService"/> this scenario creates.</summary>
     public InProcessAdvisoryLockService AdvisoryLocks { get; } = new();
+
+    /// <summary>Bound to the transactions of <see cref="DbContext"/> and the contexts of <see cref="DbContextFactory"/>.</summary>
+    public FileTransactionService FileTransactions { get; }
 
     #region Seeding Data
 
@@ -383,6 +388,7 @@ public class Scenario
 
         return new MusicService(FileSystem, config, DbContextFactory,
             songMergeService ?? Substitute.For<ISongMergeService>(), AdvisoryLocks, new UserImportThrottle(config),
+            FileTransactions,
             Substitute.For<ILogger<MusicService>>());
     }
 

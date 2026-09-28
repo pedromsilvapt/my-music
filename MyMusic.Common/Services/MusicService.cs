@@ -21,6 +21,7 @@ public class MusicService(
     ISongMergeService songMergeService,
     IAdvisoryLockService advisoryLockService,
     IUserImportThrottle importThrottle,
+    IFileTransactionService fileTransactions,
     ILogger<MusicService> logger)
     : IMusicService
 {
@@ -454,6 +455,9 @@ public class MusicService(
             await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
             await using var dbTrans = await db.Database.BeginTransactionAsync(cancellationToken);
 
+            // Rolled back along with the transaction, which undoes the file changes of a failed attempt
+            await using var files = fileTransactions.Begin(db);
+
             try
             {
                 logger.LogDebug("  >> Acquiring {LockCount} import locks", prepared.LockKeys.Count);
@@ -463,8 +467,8 @@ public class MusicService(
 
                 logger.LogDebug("  >> Import locks acquired");
 
-                await PersistSong(db, job, user, importSongMetadata, prepared, duplicatesStrategy, dbTrans, attempt,
-                    cancellationToken);
+                await PersistSong(db, job, user, importSongMetadata, prepared, duplicatesStrategy, dbTrans, files,
+                    attempt, cancellationToken);
 
                 return true;
             }
@@ -505,8 +509,8 @@ public class MusicService(
 
     private async Task PersistSong(MusicDbContext db, MusicImportJob job, User user,
         SongImportMetadata importSongMetadata, PreparedSongImport prepared,
-        DuplicateSongsHandlingStrategy duplicatesStrategy, IDbContextTransaction dbTrans, SongImportAttempt attempt,
-        CancellationToken cancellationToken)
+        DuplicateSongsHandlingStrategy duplicatesStrategy, IDbContextTransaction dbTrans, IFileTransaction files,
+        SongImportAttempt attempt, CancellationToken cancellationToken)
     {
         var userId = user.Id;
         var repo = new UserMusicService(db, userId);
@@ -898,16 +902,12 @@ public class MusicService(
         if (previousRepositoryPath is not null && previousRepositoryPath != targetFile.FilePath &&
             fileSystem.File.Exists(previousRepositoryPath))
         {
-            // The song moves to another path. Its old path is still claimed by it until the commit, so no other
-            // song can be using that file yet
-            attempt.MovedFile = new FileMove(previousRepositoryPath, targetFile.FilePath!);
-            attempt.MovedFile.Apply(fileSystem);
+            // The song moves to another path. Its old file is set aside, to be restored if the attempt fails
+            await files.DeleteAsync(previousRepositoryPath, cancellationToken);
         }
-        else if (!fileSystem.File.Exists(targetFile.FilePath!))
-        {
-            // Only a file this attempt creates may be deleted if the attempt fails
-            attempt.CreatedFilePath = targetFile.FilePath;
-        }
+
+        // The new file is written from scratch, while any file already at its path is set aside
+        await files.PrepareOverwriteAsync(targetFile.FilePath!, cancellationToken);
 
         await using (var sourceStream = sourceFile.Read())
         {
@@ -929,8 +929,8 @@ public class MusicService(
         new(fileSystem) { Folder = fileSystem.Path.Join(config.Value.MusicRepositoryPath, user.Username) };
 
     /// <summary>
-    ///     Undoes a failed attempt: rolls back its transaction, and deletes the file it created or moves back the file
-    ///     it moved. What the attempt's context still tracks is discarded along with the context.
+    ///     Undoes a failed attempt: rolls back its transaction, and with it the attempt's file changes. What the
+    ///     attempt's context still tracks is discarded along with the context.
     /// </summary>
     private async Task RollbackAttempt(IDbContextTransaction dbTrans, SongImportAttempt attempt,
         CancellationToken cancellationToken)
@@ -940,27 +940,7 @@ public class MusicService(
             return;
         }
 
-        try
-        {
-            await dbTrans.RollbackAsync(cancellationToken);
-        }
-        finally
-        {
-            try
-            {
-                if (attempt.CreatedFilePath is not null && fileSystem.File.Exists(attempt.CreatedFilePath))
-                {
-                    fileSystem.File.Delete(attempt.CreatedFilePath);
-                }
-
-                attempt.MovedFile?.Undo(fileSystem);
-            }
-            catch (IOException ex)
-            {
-                logger.LogWarning(ex, "Failed to undo the file changes of a failed import ({CreatedFile}, {MovedFile})",
-                    attempt.CreatedFilePath, attempt.MovedFile);
-            }
-        }
+        await dbTrans.RollbackAsync(cancellationToken);
     }
 
     private void RecordImportFailure(MusicImportJob job, SongImportMetadata importSongMetadata,
@@ -1010,12 +990,6 @@ public class MusicService(
 
     private sealed class SongImportAttempt
     {
-        /// <summary>A file this attempt created in the repository, which must be deleted if it fails.</summary>
-        public string? CreatedFilePath { get; set; }
-
-        /// <summary>An existing song's file this attempt moved, which must be moved back if it fails.</summary>
-        public FileMove? MovedFile { get; set; }
-
         public bool Committed { get; set; }
     }
 

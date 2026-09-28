@@ -283,7 +283,7 @@ public class MusicServiceSpecs
         // The song should keep its path, and no " (2)" copy should be left in the repository
         await using var db = scenario.DbContextFactory.CreateDbContext();
         db.Songs.Select(s => s.RepositoryPath).ToList().ShouldBe([originalPath]);
-        scenario.FileSystem.Directory.GetFiles("/data", "*", SearchOption.AllDirectories).ShouldBe([originalPath]);
+        scenario.FileSystem.Directory.GetFiles("/data", "*.mp3", SearchOption.AllDirectories).ShouldBe([originalPath]);
     }
 
     /// <summary>

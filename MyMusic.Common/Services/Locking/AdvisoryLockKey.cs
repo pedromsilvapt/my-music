@@ -20,6 +20,9 @@ public enum AdvisoryLockScope
 
     /// <summary>An album, identified by its album artist name and album name.</summary>
     Album = 4,
+
+    /// <summary>A file in the music repository, identified by its full path.</summary>
+    File = 5,
 }
 
 /// <summary>

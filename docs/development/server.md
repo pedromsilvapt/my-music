@@ -347,9 +347,24 @@ public class MyTests : IntegrationTestBase
 - **Genres**: lock-free. `UserMusicService.UpsertGenre` uses `INSERT ... ON CONFLICT DO NOTHING` on the unique `(owner_id, name)` index. Upsert them in a stable (sorted) order.
 - **Artists and albums**: their names cannot be unique, so no constraint can protect them. The import takes **advisory locks** (`IAdvisoryLockService`, `pg_advisory_xact_lock`) on the song's artist names, album, checksum, repository path and (when updating) song id, before touching the database. Songs that share none of these keys import in parallel.
 - **Per-user cap**: `IUserImportThrottle` limits concurrent song imports per user (`MyMusic:MaxConcurrentImportsPerUser`, default 16). This bounds DB connections and I/O; correctness does not depend on it.
-- **Retries**: a song failing with a deadlock, serialization failure or unique violation (e.g. against writers that don't take the locks, such as song edits) is rolled back and retried up to 3 times. The rolled-back attempt's tracked entities and written file are discarded.
+- **Retries**: a song failing with a deadlock, serialization failure or unique violation (e.g. against writers that don't take the locks, such as song edits) is rolled back and retried up to 3 times. The rolled-back attempt's tracked entities are discarded, and its file changes undone (see [Transactional file operations](#transactional-file-operations)).
 
 New code that finds-or-creates artists or albums should take the same `AdvisoryLockKey`s. Unit tests run on SQLite, which has no advisory locks, so they use `InProcessAdvisoryLockService` (in `MyMusic.Common.Tests/Utilities`) instead.
+
+### Transactional file operations
+
+Song imports and song edits change files in the music repository inside a database transaction. `IFileTransactionService.Begin(db)` binds an `IFileTransaction` to the context's current transaction, so the file changes are undone when that transaction is rolled back, fails to commit, or is disposed without committing (via `FileTransactionInterceptor`, which must be registered on the context). A commit keeps the changes. Declare it with `await using` right after the database transaction.
+
+| Operation | Use it to | Undone by |
+|---|---|---|
+| `PrepareOverwriteAsync(path)` | write a file from scratch; an existing file is moved aside | deleting the new file, moving the original back |
+| `PrepareEditAsync(path)` | edit a file in place (e.g. TagLib); a copy is kept | moving the copy back over it |
+| `MoveAsync(from, to)` | move a file; never overwrites | moving it back |
+| `DeleteAsync(path)` | delete a file, by moving it aside | moving it back |
+
+- Backups live in `<MusicRepositoryPath>/.temp/tx-{guid}/` (same volume, so setting a file aside is a rename), with a `backups.txt` listing their original paths. `.temp` gets a `.musicignore`.
+- Each operation takes an advisory lock on the paths it touches (`AdvisoryLockScope.File`), held until the transaction ends.
+- If an undo step fails, or the process dies mid-transaction, the `tx-*` folder is kept for manual recovery; nothing deletes it automatically.
 
 ## Dependencies
 

@@ -50,20 +50,23 @@ public class SharedSongImportServiceSpecs
             Directory.CreateDirectory(SourceDir);
 
             FileSystem = new FileSystem();
-            var dbOptions = Scenario.CreateDbContextOptions();
+            var config = Options.Create(new Config { MusicRepositoryPath = RepoPath });
+            var advisoryLocks = new InProcessAdvisoryLockService();
+            var fileTransactions = new FileTransactionService(FileSystem, config, advisoryLocks,
+                Substitute.For<ILogger<FileTransactionService>>());
+            var dbOptions = Scenario.CreateDbContextOptions(new FileTransactionInterceptor(fileTransactions));
             DbContext = Scenario.CreateDbContext(dbOptions);
             Owner = CreateUser(ownerUsername);
             Recipient = CreateUser(recipientUsername);
-
-            var config = Options.Create(new Config { MusicRepositoryPath = RepoPath });
 
             MusicService = new MusicService(
                 FileSystem,
                 config,
                 new TestDbContextFactory(dbOptions),
                 Substitute.For<ISongMergeService>(),
-                new InProcessAdvisoryLockService(),
+                advisoryLocks,
                 new UserImportThrottle(config),
+                fileTransactions,
                 Substitute.For<ILogger<MusicService>>());
 
             ImportService = new SharedSongImportService(

@@ -23,6 +23,7 @@ public interface ISongUpdateService
 public class SongUpdateService(
     IFileSystem fileSystem,
     IOptions<Config> config,
+    IFileTransactionService fileTransactions,
     ILogger<SongUpdateService> logger) : ISongUpdateService
 {
 
@@ -30,6 +31,7 @@ public class SongUpdateService(
         CancellationToken cancellationToken = default)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var files = fileTransactions.Begin(db);
 
         var song = await LoadSongAsync(db, songId, cancellationToken);
 
@@ -52,7 +54,7 @@ public class SongUpdateService(
         song = await LoadSongAsync(db, songId, cancellationToken);
 
         var previousChecksum = song.Checksum;
-        var fileMove = await UpdateFileAndChecksumAsync(db, song, cancellationToken);
+        var previousPath = await UpdateFileAndChecksumAsync(db, files, song, cancellationToken);
 
         logger.LogInformation("Song {SongId} update: previousChecksum={PreviousChecksum}, newChecksum={NewChecksum}",
             songId, previousChecksum, song.Checksum);
@@ -76,7 +78,7 @@ public class SongUpdateService(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Saved changes for song {SongId}", songId);
 
-        await CommitMovingFileAsync(transaction, fileMove, cancellationToken);
+        await CommitMovingFileAsync(transaction, files, previousPath, song.RepositoryPath, cancellationToken);
 
         return MapToResult(song);
     }
@@ -97,6 +99,7 @@ public class SongUpdateService(
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var files = fileTransactions.Begin(db);
         try
         {
             var oldChecksum = song.Checksum;
@@ -108,7 +111,7 @@ public class SongUpdateService(
             await db.SaveChangesAsync(cancellationToken);
 
             var previousChecksum = song.Checksum;
-            var fileMove = await UpdateFileAndChecksumAsync(db, song, cancellationToken);
+            var previousPath = await UpdateFileAndChecksumAsync(db, files, song, cancellationToken);
 
             if (song.Checksum != previousChecksum)
             {
@@ -121,7 +124,7 @@ public class SongUpdateService(
 
             await db.SaveChangesAsync(cancellationToken);
 
-            await CommitMovingFileAsync(transaction, fileMove, cancellationToken);
+            await CommitMovingFileAsync(transaction, files, previousPath, song.RepositoryPath, cancellationToken);
 
             return new BatchUpdateResult
             {
@@ -517,8 +520,8 @@ public class SongUpdateService(
     ///     Writes the song's metadata into its file, and points the song to the path that metadata now generates. The
     ///     file itself is only moved there by <see cref="CommitMovingFileAsync"/>, once that path is saved.
     /// </summary>
-    /// <returns>The move the file still needs, if its path changed.</returns>
-    private async Task<FileMove?> UpdateFileAndChecksumAsync(MusicDbContext db, Song song,
+    /// <returns>The path the file still has to be moved from, if its path changed.</returns>
+    private async Task<string?> UpdateFileAndChecksumAsync(MusicDbContext db, IFileTransaction files, Song song,
         CancellationToken cancellationToken)
     {
         var metadata = EntityConverter.ToSong(song);
@@ -529,6 +532,8 @@ public class SongUpdateService(
             Folder = fileSystem.Path.Join(config.Value.MusicRepositoryPath, song.Owner.Username),
         };
 
+        // The file is edited in place, and restored if the transaction fails
+        await files.PrepareEditAsync(song.RepositoryPath, cancellationToken);
         await fileTarget.SaveMetadata(metadata, cancellationToken);
 
         var naming = NamingMetadata.FromPath(song.RepositoryPath);
@@ -541,13 +546,13 @@ public class SongUpdateService(
         song.Checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, song.RepositoryPath);
         song.ChecksumAlgorithm = checksumAlgorithm.GetType().Name;
 
-        var fileMove = newPath != song.RepositoryPath ? new FileMove(song.RepositoryPath, newPath) : null;
+        var previousPath = newPath != song.RepositoryPath ? song.RepositoryPath : null;
 
         song.RepositoryPath = newPath;
 
         song.Label = SongLabelBuilder.Build(song);
 
-        return fileMove;
+        return previousPath;
     }
 
     /// <summary>
@@ -555,21 +560,15 @@ public class SongUpdateService(
     ///     only moves once the (owner, path) unique index lets the song claim its new path, and moves back if the
     ///     commit fails, so it always stays where the database says it is.
     /// </summary>
-    private async Task CommitMovingFileAsync(IDbContextTransaction transaction, FileMove? fileMove,
-        CancellationToken cancellationToken)
+    private static async Task CommitMovingFileAsync(IDbContextTransaction transaction, IFileTransaction files,
+        string? previousPath, string newPath, CancellationToken cancellationToken)
     {
-        fileMove?.Apply(fileSystem);
-
-        try
+        if (previousPath is not null)
         {
-            await transaction.CommitAsync(cancellationToken);
+            await files.MoveAsync(previousPath, newPath, cancellationToken);
         }
-        catch
-        {
-            fileMove?.Undo(fileSystem);
 
-            throw;
-        }
+        await transaction.CommitAsync(cancellationToken);
     }
 
     private static SongUpdateResult MapToResult(Song song)

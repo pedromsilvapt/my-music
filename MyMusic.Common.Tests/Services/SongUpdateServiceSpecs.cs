@@ -13,11 +13,12 @@ namespace MyMusic.Common.Tests.Services;
 
 public class SongUpdateServiceSpecs
 {
-    private SongUpdateService CreateService(IFileSystem fileSystem)
+    private SongUpdateService CreateService(Scenario scenario)
     {
         return new SongUpdateService(
-            fileSystem,
+            scenario.FileSystem,
             Options.Create(new Config { MusicRepositoryPath = "/data" }),
+            scenario.FileTransactions,
             Substitute.For<ILogger<SongUpdateService>>());
     }
 
@@ -36,7 +37,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -57,7 +58,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device1 = scenario.CreateDevice("Phone");
@@ -83,7 +84,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
 
@@ -101,7 +102,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -123,7 +124,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -145,7 +146,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -167,7 +168,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -189,7 +190,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -225,7 +226,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device1 = scenario.CreateDevice("Phone");
@@ -254,7 +255,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -297,7 +298,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var originalFileModifiedAt = DateTime.UtcNow.AddDays(-10);
         var song = scenario.CreateSong("My Song",
@@ -322,7 +323,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var originalFileModifiedAt = DateTime.UtcNow.AddDays(-10);
         var song = scenario.CreateSong("My Song",
@@ -355,7 +356,7 @@ public class SongUpdateServiceSpecs
     {
         // Setup: a song whose title change generates another repository path
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, "/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo,
             repositoryPath: "/data/My Song.mp3");
@@ -375,19 +376,42 @@ public class SongUpdateServiceSpecs
         // Setup: a song whose title change generates another repository path, and a commit that will fail
         var interceptor = new FailingCommitInterceptor();
         var scenario = new Scenario(interceptor);
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, "/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo,
             repositoryPath: "/data/My Song.mp3");
+        var originalContent = scenario.FileSystem.File.ReadAllBytes("/data/My Song.mp3");
         interceptor.Armed = true;
 
         await Should.ThrowAsync<InvalidOperationException>(() => service.UpdateSong(scenario.DbContext, song.Id,
             new SongUpdateModel { Title = new ValueUpdate<string>("Updated Title") }));
 
-        // The song keeps its old path in the database, so its file should still be there
-        scenario.FileSystem.File.Exists("/data/My Song.mp3").ShouldBeTrue();
+        // The song keeps its old path and tags in the database, so its file should be there, unchanged
         scenario.FileSystem.Directory.GetFiles("/data", "*.mp3", SearchOption.AllDirectories)
             .ShouldBe(["/data/My Song.mp3"]);
+        scenario.FileSystem.File.ReadAllBytes("/data/My Song.mp3").ShouldBe(originalContent);
+    }
+
+    [Fact]
+    public async Task UpdateSong_CommitFails_KeepsTheOriginalFileContent()
+    {
+        // Setup: a song whose year is written into its file, and a commit that will fail
+        var interceptor = new FailingCommitInterceptor();
+        var scenario = new Scenario(interceptor);
+        var service = CreateService(scenario);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, "/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo,
+            repositoryPath: "/data/My Song.mp3");
+        var originalContent = scenario.FileSystem.File.ReadAllBytes("/data/My Song.mp3");
+        interceptor.Armed = true;
+
+        await Should.ThrowAsync<InvalidOperationException>(() => service.UpdateSong(scenario.DbContext, song.Id,
+            new SongUpdateModel { Year = new StructValueUpdate<int>(1999) }));
+
+        // The song keeps its old checksum in the database, so its file should keep its old tags
+        scenario.FileSystem.Directory.GetFiles("/data", "*.mp3", SearchOption.AllDirectories)
+            .ShouldBe(["/data/My Song.mp3"]);
+        scenario.FileSystem.File.ReadAllBytes("/data/My Song.mp3").ShouldBe(originalContent);
     }
 
     // ---------------------------------------------------------------------
@@ -400,7 +424,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
@@ -423,7 +447,7 @@ public class SongUpdateServiceSpecs
     {
         // Arrange
         var scenario = new Scenario();
-        var service = CreateService(scenario.FileSystem);
+        var service = CreateService(scenario);
         var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
         var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
         var device = scenario.CreateDevice("Phone");
