@@ -230,25 +230,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
 
         return new CheckSyncResult
         {
-            Records = response.Records.Select(a => new SyncRecordItem
-            {
-                Id = a.Id,
-                FilePath = a.FilePath,
-                Action = a.Action,
-                SongId = a.SongId,
-                Data = a.Data,
-                ResolvesConflictRecordId = a.ResolvesConflictRecordId,
-                SongInfo = a.SongInfo is not null ? new SyncRecordSongInfo
-                {
-                    Id = a.SongInfo.Id,
-                    Title = a.SongInfo.Title,
-                    ArtistNames = a.SongInfo.ArtistNames,
-                    CoverId = a.SongInfo.CoverId,
-                } : null,
-                Reason = a.Reason,
-                Acknowledged = a.Acknowledged,
-                ProcessedAt = a.ProcessedAt,
-            }).ToList(),
+            Records = response.Records.Select(ToRecordItem).ToList(),
             Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }
@@ -261,9 +243,30 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         {
             Success = true,
             SongId = response.SongId,
+            Records = response.Records.Select(ToRecordItem).ToList(),
             Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }
+
+    private static SyncRecordItem ToRecordItem(SyncRecordResponseItem a) => new()
+    {
+        Id = a.Id,
+        FilePath = a.FilePath,
+        Action = a.Action,
+        SongId = a.SongId,
+        Data = a.Data,
+        ResolvesConflictRecordId = a.ResolvesConflictRecordId,
+        SongInfo = a.SongInfo is not null ? new SyncRecordSongInfo
+        {
+            Id = a.SongInfo.Id,
+            Title = a.SongInfo.Title,
+            ArtistNames = a.SongInfo.ArtistNames,
+            CoverId = a.SongInfo.CoverId,
+        } : null,
+        Reason = a.Reason,
+        Acknowledged = a.Acknowledged,
+        ProcessedAt = a.ProcessedAt,
+    };
 
     public async Task<CompleteSyncResult> CompleteSyncAsync(long deviceId, long sessionId, CancellationToken ct = default)
     {
@@ -311,25 +314,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         var response = await client.CreatePendingActionsAsync(deviceId, sessionId, ct);
         return new CreatePendingActionsResult
         {
-            Records = response.Records.Select(a => new SyncRecordItem
-            {
-                Id = a.Id,
-                FilePath = a.FilePath,
-                Action = a.Action,
-                SongId = a.SongId,
-                Data = a.Data,
-                ResolvesConflictRecordId = a.ResolvesConflictRecordId,
-                SongInfo = a.SongInfo is not null ? new SyncRecordSongInfo
-                {
-                    Id = a.SongInfo.Id,
-                    Title = a.SongInfo.Title,
-                    ArtistNames = a.SongInfo.ArtistNames,
-                    CoverId = a.SongInfo.CoverId,
-                } : null,
-                Reason = a.Reason,
-                Acknowledged = a.Acknowledged,
-                ProcessedAt = a.ProcessedAt,
-            }).ToList()
+            Records = response.Records.Select(ToRecordItem).ToList()
         };
     }
 

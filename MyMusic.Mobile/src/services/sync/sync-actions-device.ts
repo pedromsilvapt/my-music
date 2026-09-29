@@ -60,6 +60,7 @@ export async function actionCreateRemote(
             reason,
             songId: uploadResult.songId ?? undefined,
             counts: uploadResult.counts,
+            records: uploadResult.records,
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
@@ -115,6 +116,7 @@ export async function actionUpdateRemote(
             reason,
             songId: uploadResult.songId ?? undefined,
             counts: uploadResult.counts,
+            records: uploadResult.records,
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);

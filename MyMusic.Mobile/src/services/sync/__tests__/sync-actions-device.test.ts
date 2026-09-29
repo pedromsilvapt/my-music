@@ -13,7 +13,7 @@ function createMockApiClient(overrides: Partial<ISyncApiClient> = {}): ISyncApiC
     return {
         startSync: jest.fn(),
         checkSync: jest.fn(),
-        uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {...ZERO_COUNTS}}),
+        uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {...ZERO_COUNTS}}),
         completeSync: jest.fn(),
         createPendingActions: jest.fn(),
         acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS}}),
@@ -83,7 +83,7 @@ const file = {
 describe('actionCreateRemote', () => {
     test('success returns CreateRemote action', async () => {
         const apiClient = createMockApiClient({
-            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {...ZERO_COUNTS, createRemoteCount: 1}}),
+            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {...ZERO_COUNTS, createRemoteCount: 1}}),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext();
@@ -135,7 +135,7 @@ describe('actionCreateRemote', () => {
 
     test('dry-run records CreateRemote with counts from upload', async () => {
         const apiClient = createMockApiClient({
-            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {...ZERO_COUNTS, createRemoteCount: 1}}),
+            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {...ZERO_COUNTS, createRemoteCount: 1}}),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext({
@@ -157,7 +157,7 @@ describe('actionCreateRemote', () => {
 describe('actionUpdateRemote', () => {
     test('success returns UpdateRemote action', async () => {
         const apiClient = createMockApiClient({
-            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {...ZERO_COUNTS, updateRemoteCount: 1}}),
+            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {...ZERO_COUNTS, updateRemoteCount: 1}}),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext();
@@ -200,7 +200,7 @@ describe('actionUpdateRemote', () => {
 
     test('dry-run records UpdateRemote with counts from upload', async () => {
         const apiClient = createMockApiClient({
-            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {...ZERO_COUNTS, updateRemoteCount: 1}}),
+            uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {...ZERO_COUNTS, updateRemoteCount: 1}}),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext({

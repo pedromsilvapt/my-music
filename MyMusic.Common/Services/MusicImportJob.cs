@@ -91,3 +91,18 @@ public class DuplicateChecksumSkipReason(
     public override object[] MessageArgs =>
         [fullLabel, checksum, checksumAlgorithmName, existingLabel, existingId, SourceFilePath];
 }
+
+public class PreviousVersionChecksumSkipReason(
+    string sourceFilePath,
+    string fullLabel,
+    string checksum,
+    string checksumAlgorithmName,
+    string existingLabel,
+    long existingId) : ImportSkipReason(sourceFilePath)
+{
+    public override string Message =>
+        "Cannot import song, it is a previous version of an existing song: {ImportedSong} with checksum {Checksum} {ChecksumAlgo} matches an older file of song {ExistingSong} {ExistingSongId}: {File}";
+
+    public override object[] MessageArgs =>
+        [fullLabel, checksum, checksumAlgorithmName, existingLabel, existingId, SourceFilePath];
+}

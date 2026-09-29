@@ -94,7 +94,7 @@ export class NodeApiClient implements ISyncApiClient {
         path: string,
         modifiedAt: string,
         createdAt: string
-    ): Promise<{ success: boolean; songId: number | null; recordId: number | null; action: string | null; data: any; counts: SyncActionCounts }> {
+    ): Promise<{ success: boolean; songId: number | null; records: SyncRecordItem[]; counts: SyncActionCounts }> {
         const fs = require('fs');
         const buffer = fs.readFileSync(file.uri);
         const blob = new Blob([buffer]);
@@ -119,7 +119,8 @@ export class NodeApiClient implements ISyncApiClient {
             throw new Error(`API error ${response.status} on upload: ${text}`);
         }
 
-        return response.json();
+        const result = await response.json() as any;
+        return { ...result, records: this._parseRecords(result.records ?? []) };
     }
 
     async commitSync(

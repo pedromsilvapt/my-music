@@ -252,6 +252,10 @@ public record UploadFileResult
 {
     public bool Success { get; init; }
     public long? SongId { get; init; }
+
+    /// <summary>Every record the server created for the uploaded file, in order.</summary>
+    public List<SyncRecordItem> Records { get; init; } = [];
+
     public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 

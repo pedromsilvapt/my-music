@@ -218,6 +218,40 @@ public class PhasesTests
     }
 
     [Fact]
+    public async Task UploadPhase_QueuesUpdateLocalReturnedByUpload()
+    {
+        // The server asks for the changed local file, which turns out to be a previous version of its song:
+        // the upload answers with an UpdateLocal, so the device downloads the current version this session
+        _config.GetChunkSize().Returns(10);
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult
+            {
+                Records = [CreateRecord("song.mp3", SyncRecordAction.UpdateRemote)],
+                Counts = new SyncActionCounts { UpdateRemoteCount = 1 }
+            });
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(true);
+        mockFile.OpenRead(Arg.Any<string>()).Returns(_ =>
+            Substitute.For<System.IO.Abstractions.FileSystemStream>(new MemoryStream(), "song.mp3", false));
+        _fileSystem.File.Returns(mockFile);
+        var updateLocalRecord = CreateRecord("song.mp3", SyncRecordAction.UpdateLocal);
+        _apiClient.UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new UploadFileResult
+            {
+                Success = true,
+                Records = [updateLocalRecord],
+                Counts = new SyncActionCounts { UpdateLocalCount = 1 }
+            });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
+
+        ctx.PendingServerRecords.ShouldContain(updateLocalRecord);
+    }
+
+    [Fact]
     public async Task UploadPhase_ReportedProgressNeverDecreasesWithinChunk()
     {
         // Setup: 4 files, chunk size 2 -> 2 chunks. First chunk: 1 CreateRemote, 1 Skipped.

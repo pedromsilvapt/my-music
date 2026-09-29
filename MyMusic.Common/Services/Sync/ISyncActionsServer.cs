@@ -9,7 +9,7 @@ public interface ISyncActionsServer
     Task<DeviceSyncSessionRecord> ActionCreateLocal(string filePath, long? songId = null, DateTime? modifiedAt = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionUpdateLocal(string filePath, long? songId = null, DateTime? modifiedAt = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionDeleteLocal(string filePath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);
-    Task<DeviceSyncSessionRecord> ActionLink(string filePath, long songId, DateTime? modifiedAt = null, string? checksum = null, string? algorithm = null, string? reason = null, CancellationToken cancellationToken = default);
+    Task<DeviceSyncSessionRecord> ActionLink(string filePath, long songId, DateTime? modifiedAt = null, string? checksum = null, string? algorithm = null, string? reason = null, bool isPreviousVersion = false, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionLink(string filePath, string checksum, string algorithm, DateTime modifiedAt, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionUnlink(string filePath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionRename(string filePath, string previousPath, string newPath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);

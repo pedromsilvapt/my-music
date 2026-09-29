@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MyMusic.Common.Entities;
 
 namespace MyMusic.Common.Services;
 
@@ -57,6 +58,7 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             await MergeExcludedDuplicatePairsAsync(db, keepSongId, mergeFromSongId, cancellationToken);
             await MergeSongArtistsAsync(db, keepSongId, mergeFromSongId, cancellationToken);
             await MergeSongGenresAsync(db, keepSongId, mergeFromSongId, cancellationToken);
+            await MergeSongChecksumsAsync(db, keepSong, mergeFromSong, cancellationToken);
 
             db.Songs.Remove(mergeFromSong);
 
@@ -144,6 +146,54 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
                 playlistSong.SongId = keepSongId;
                 db.PlaylistSongs.Update(playlistSong);
             }
+        }
+    }
+
+    /// <summary>
+    /// Gives the kept song the merged song's current and previous checksums as previous checksums, so files holding
+    /// any version of either song are still recognised. The kept song's current checksum is never added to its own
+    /// history. Must run before the merged song is removed, which cascades to its history.
+    /// </summary>
+    private async Task MergeSongChecksumsAsync(MusicDbContext db, Song keepSong, Song mergeFromSong, CancellationToken cancellationToken)
+    {
+        var mergeFromChecksums = await db.SongChecksums
+            .AsNoTracking()
+            .Where(sc => sc.SongId == mergeFromSong.Id)
+            .Select(sc => new { sc.ChecksumAlgorithm, sc.Checksum, sc.CreatedAt })
+            .ToListAsync(cancellationToken);
+
+        // The merged song's current checksum becomes a previous version of the kept song, replaced now
+        mergeFromChecksums.Add(new
+        {
+            mergeFromSong.ChecksumAlgorithm,
+            mergeFromSong.Checksum,
+            CreatedAt = DateTime.UtcNow,
+        });
+
+        var keepChecksums = (await db.SongChecksums
+                .Where(sc => sc.SongId == keepSong.Id)
+                .Select(sc => new { sc.ChecksumAlgorithm, sc.Checksum })
+                .ToListAsync(cancellationToken))
+            .Select(sc => (sc.ChecksumAlgorithm, sc.Checksum))
+            .ToHashSet();
+        keepChecksums.Add((keepSong.ChecksumAlgorithm, keepSong.Checksum));
+
+        var toAdd = mergeFromChecksums
+            .Where(sc => keepChecksums.Add((sc.ChecksumAlgorithm, sc.Checksum)))
+            .ToList();
+
+        logger.LogDebug("  >> MergeSongChecksums: {FromCount} from source, {KeepCount} in target, {TransferCount} to transfer",
+            mergeFromChecksums.Count, keepChecksums.Count, toAdd.Count);
+
+        foreach (var checksum in toAdd)
+        {
+            db.SongChecksums.Add(new SongChecksum
+            {
+                SongId = keepSong.Id,
+                ChecksumAlgorithm = checksum.ChecksumAlgorithm,
+                Checksum = checksum.Checksum,
+                CreatedAt = checksum.CreatedAt,
+            });
         }
     }
 

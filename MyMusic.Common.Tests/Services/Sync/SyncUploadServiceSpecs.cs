@@ -64,9 +64,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.CreateRemote);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.CreateRemote);
         result.EffectiveSongId.ShouldBeNull();
     }
 
@@ -96,9 +98,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: songDevice,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
         result.EffectiveSongId.ShouldBe(song.Id);
     }
 
@@ -142,9 +146,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
         result.EffectiveSongId.ShouldBe(song.Id);
     }
 
@@ -171,11 +177,13 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.CreateRemote);
-        result.Record.Data.ShouldNotBeNull();
-        var data = result.Record.Data.Value;
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.CreateRemote);
+        record.Data.ShouldNotBeNull();
+        var data = record.Data.Value;
         data.TryGetProperty("tempFilePath", out var tempProp).ShouldBeTrue();
         tempProp.ValueKind.ShouldBe(System.Text.Json.JsonValueKind.Null);
     }
@@ -204,6 +212,7 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
         // Dry runs stage into the same session directory, but never keep the file past the request
@@ -234,9 +243,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.CreateRemote);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.CreateRemote);
         mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").Length.ShouldBe(1);
     }
 
@@ -249,6 +260,8 @@ public class SyncUploadServiceSpecs
 
         var content = new byte[] { 1, 2, 3, 4, 5 };
         var checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
+        song.Checksum = checksum;
+        scenario.DbContext.SaveChanges();
 
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, repositoryPath: "/data");
@@ -272,9 +285,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
         mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").ShouldBeEmpty();
     }
 
@@ -318,9 +333,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
         result.EffectiveSongId.ShouldBe(song.Id);
     }
 
@@ -349,9 +366,11 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: songDevice,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
         result.EffectiveSongId.ShouldBe(songDevice.SongId);
     }
 
@@ -382,11 +401,13 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.Error);
-        result.Record.FilePath.ShouldBe("/music/song.mp3");
-        result.Record.Reason.ShouldBe("Cannot read song metadata: corrupt");
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.FilePath.ShouldBe("/music/song.mp3");
+        record.Reason.ShouldBe("Cannot read song metadata: corrupt");
         result.EffectiveSongId.ShouldBeNull();
 
         var records = scenario.DbContext.DeviceSyncSessionRecords.Where(r => r.SessionId == session.Id).ToList();
@@ -422,10 +443,12 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: songDevice,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
-        result.Record.Action.ShouldBe(SyncRecordAction.Error);
-        result.Record.SongId.ShouldBe(song.Id);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.SongId.ShouldBe(song.Id);
         result.EffectiveSongId.ShouldBe(song.Id);
     }
 
@@ -455,6 +478,7 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
         mockFs.Directory.GetFiles($"/data/.temp/sync-{session.Id}").ShouldBeEmpty();
@@ -468,6 +492,8 @@ public class SyncUploadServiceSpecs
 
         var content = new byte[] { 1, 2, 3, 4, 5 };
         var checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
+        song.Checksum = checksum;
+        scenario.DbContext.SaveChanges();
 
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, repositoryPath: "/data");
@@ -493,10 +519,12 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
             cancellationToken: CancellationToken.None);
 
         // A link never imports the file, so its contents don't need to be readable
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
         await _songFileValidate.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
@@ -514,15 +542,16 @@ public class SyncUploadServiceSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, isDryRun: isDryRun, repositoryPath: "/data");
         var songDevice = scenario.CreateSongDevice(device, updatedSong, "/music/song.mp3");
-        ArrangeLibraryChecksum(UploadContent, duplicateSong);
+        ArrangeLibraryChecksum(UploadContent, duplicateSong, scenario);
         var service = CreateService(scenario.DbContext, scenario.FileSystem);
 
         // Act
         var result = await UploadUpdateAsync(service, scenario, session, songDevice, isDryRun);
 
         // Assert
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
-        result.Record.SongId.ShouldBe(duplicateSong.Id);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
+        record.SongId.ShouldBe(duplicateSong.Id);
         result.EffectiveSongId.ShouldBe(duplicateSong.Id);
         await _songFileValidate.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
@@ -536,14 +565,15 @@ public class SyncUploadServiceSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, repositoryPath: "/data");
         var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
-        ArrangeLibraryChecksum(UploadContent, song);
+        ArrangeLibraryChecksum(UploadContent, song, scenario);
         var service = CreateService(scenario.DbContext, scenario.FileSystem);
 
         // Act
         var result = await UploadUpdateAsync(service, scenario, session, songDevice);
 
         // Assert
-        result.Record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
         result.EffectiveSongId.ShouldBe(song.Id);
     }
 
@@ -564,10 +594,11 @@ public class SyncUploadServiceSpecs
         var result = await UploadUpdateAsync(service, scenario, session, songDevice);
 
         // Assert
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
-        result.Record.SongId.ShouldBeNull();
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
+        record.SongId.ShouldBeNull();
         result.EffectiveSongId.ShouldBeNull();
-        SyncActionDataSerializer.Deserialize<SongModifiedAtData>(result.Record.Data)!.Checksum.ShouldBe(UploadChecksum);
+        SyncActionDataSerializer.Deserialize<SongModifiedAtData>(record.Data)!.Checksum.ShouldBe(UploadChecksum);
     }
 
     [Theory]
@@ -592,8 +623,132 @@ public class SyncUploadServiceSpecs
             : await UploadNewAsync(service, scenario, session, "/music/copy.mp3");
 
         // Assert
-        result.Record.Action.ShouldBe(SyncRecordAction.Link);
-        result.Record.SongId.ShouldBe(otherSong.Id);
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Link);
+        record.SongId.ShouldBe(otherSong.Id);
+    }
+
+    #endregion
+
+    #region File matching a previous version of a song
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_UpdateMatchingPreviousVersionOfOwnSong_CreatesUpdateLocalRecord(bool isDryRun)
+    {
+        // Arrange: the uploaded content is an older version of the song the file is linked to
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, isDryRun: isDryRun, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        ArrangePreviousVersionChecksum(UploadContent, song);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = await UploadUpdateAsync(service, scenario, session, songDevice, isDryRun);
+
+        // Assert: the server version wins, so the device downloads it; nothing is imported
+        result.Records.Select(r => (r.Action, r.SongId, r.FilePath))
+            .ShouldBe([(SyncRecordAction.UpdateLocal, song.Id, "/music/song.mp3")]);
+        result.EffectiveSongId.ShouldBe(song.Id);
+        await _songFileValidate.DidNotReceive().ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_NewFileMatchingPreviousVersion_CreatesLinkAndUpdateLocalRecords(bool isDryRun)
+    {
+        // Arrange: a file the device never synced holds an older version of a library song
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, isDryRun: isDryRun, repositoryPath: "/data");
+        ArrangePreviousVersionChecksum(UploadContent, song);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = await UploadNewAsync(service, scenario, session, "/music/copy.mp3");
+
+        // Assert: the file is linked to the song, then replaced by its current version
+        result.Records.Select(r => (r.Action, r.SongId, r.FilePath)).ShouldBe([
+            (SyncRecordAction.Link, song.Id, "/music/copy.mp3"),
+            (SyncRecordAction.UpdateLocal, song.Id, "/music/copy.mp3"),
+        ]);
+        SyncActionDataSerializer.Deserialize<SongModifiedAtData>(result.Records[0].Data)!.IsPreviousVersion.ShouldBe(true);
+        result.EffectiveSongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task UploadAsync_UpdateMatchingPreviousVersionOfAnotherSong_CreatesLinkAndUpdateLocalRecords()
+    {
+        // Arrange: the updated file now holds an older version of a different song
+        var scenario = new Scenario();
+        var linkedSong = scenario.CreateSong("Linked");
+        var otherSong = scenario.CreateSong("Other");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, linkedSong, "/music/song.mp3");
+        ArrangePreviousVersionChecksum(UploadContent, otherSong);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = await UploadUpdateAsync(service, scenario, session, songDevice);
+
+        // Assert: the path moves to the other song, and the device downloads its current version
+        result.Records.Select(r => (r.Action, r.SongId)).ShouldBe([
+            (SyncRecordAction.Link, otherSong.Id),
+            (SyncRecordAction.UpdateLocal, otherSong.Id),
+        ]);
+        SyncActionDataSerializer.Deserialize<SongModifiedAtData>(result.Records[0].Data)!.IsPreviousVersion.ShouldBe(true);
+        result.EffectiveSongId.ShouldBe(otherSong.Id);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UploadAsync_PreviousVersion_DirectionUp_SkipsInsteadOfUpdateLocal(bool isUpdate)
+    {
+        // Arrange: pushing only, so the device must not be changed
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data", direction: SyncDirection.Up);
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        ArrangePreviousVersionChecksum(UploadContent, song);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        var result = isUpdate
+            ? await UploadUpdateAsync(service, scenario, session, songDevice)
+            : await UploadNewAsync(service, scenario, session, "/music/copy.mp3");
+
+        // Assert: the download is recorded as Skipped (a new file is still linked to the song)
+        var expected = isUpdate
+            ? new[] { SyncRecordAction.Skipped }
+            : [SyncRecordAction.Link, SyncRecordAction.Skipped];
+        result.Records.Select(r => r.Action).ShouldBe(expected);
+    }
+
+    [Fact]
+    public async Task UploadAsync_PreviousVersion_Live_DeletesStagedFile()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Song");
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        ArrangePreviousVersionChecksum(UploadContent, song);
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        // Act
+        await UploadUpdateAsync(service, scenario, session, songDevice);
+
+        // Assert: the file is never imported, so it is not kept for the commit
+        scenario.FileSystem.Directory.GetFiles($"/data/.temp/sync-{session.Id}").ShouldBeEmpty();
     }
 
     #endregion
@@ -602,7 +757,19 @@ public class SyncUploadServiceSpecs
 
     private static readonly string UploadChecksum = ChecksumService.ComputeChecksumFromBytes(UploadContent, "XxHash128");
 
-    private void ArrangeLibraryChecksum(byte[] content, Song song)
+    /// <summary>Makes <paramref name="content"/> the current file of <paramref name="song"/> in the library lookup.</summary>
+    private void ArrangeLibraryChecksum(byte[] content, Song song, Scenario scenario)
+    {
+        song.Checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
+        scenario.DbContext.SaveChanges();
+        ArrangePreviousVersionChecksum(content, song);
+    }
+
+    /// <summary>
+    /// Makes the library lookup return <paramref name="song"/> for <paramref name="content"/>, without it being the
+    /// song's current checksum: the content is a previous version of the song's file.
+    /// </summary>
+    private void ArrangePreviousVersionChecksum(byte[] content, Song song)
     {
         var checksum = ChecksumService.ComputeChecksumFromBytes(content, "XxHash128");
         _musicService.FindUserSongsByChecksum(
@@ -614,6 +781,10 @@ public class SyncUploadServiceSpecs
 
     private static Task<SyncUploadResult> UploadUpdateAsync(
         SyncUploadService service, Scenario scenario, DeviceSyncSession session, SongDevice songDevice, bool isDryRun = false) =>
+        UploadUpdateAsync(service, scenario, session, songDevice, isDryRun, session.Direction);
+
+    private static Task<SyncUploadResult> UploadUpdateAsync(
+        SyncUploadService service, Scenario scenario, DeviceSyncSession session, SongDevice songDevice, bool isDryRun, SyncDirection direction) =>
         service.UploadAsync(
             deviceId: songDevice.DeviceId,
             sessionId: session.Id,
@@ -627,14 +798,19 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: songDevice,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: direction,
             cancellationToken: CancellationToken.None);
 
     private static Task<SyncUploadResult> UploadNewAsync(
         SyncUploadService service, Scenario scenario, DeviceSyncSession session, string path) =>
+        UploadNewAsync(service, scenario, session, path, session.IsDryRun, session.Direction);
+
+    private static Task<SyncUploadResult> UploadNewAsync(
+        SyncUploadService service, Scenario scenario, DeviceSyncSession session, string path, bool isDryRun, SyncDirection direction) =>
         service.UploadAsync(
             deviceId: session.DeviceId,
             sessionId: session.Id,
-            isDryRun: false,
+            isDryRun: isDryRun,
             path: path,
             fileStream: new MemoryStream(UploadContent),
             fileName: Path.GetFileName(path),
@@ -644,5 +820,6 @@ public class SyncUploadServiceSpecs
             songDeviceForImport: null,
             repositoryPath: "/data",
             ownerId: scenario.AdminUser.Id,
+            direction: direction,
             cancellationToken: CancellationToken.None);
 }

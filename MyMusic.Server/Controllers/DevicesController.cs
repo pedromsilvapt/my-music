@@ -164,16 +164,15 @@ public class DevicesController(
             songDeviceForImport: songDeviceForImport,
             repositoryPath: repositoryPath,
             ownerId: currentUser.Id,
+            direction: activeSession.Direction,
             cancellationToken: cancellationToken);
 
         return new SyncUploadResponse
         {
             Success = true,
             SongId = result.EffectiveSongId,
-            RecordId = result.Record.Id,
-            Action = result.Record.Action.ToString(),
-            Data = result.Record.Data,
-            Counts = SyncActionCounts.FromAction(result.Record.Action),
+            Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+            Counts = SyncActionCounts.FromRecords(result.Records),
         };
     }
 

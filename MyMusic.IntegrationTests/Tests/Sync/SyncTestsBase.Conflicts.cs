@@ -61,4 +61,98 @@ public abstract partial class SyncTestsBase
         var result2 = await App.SyncAsync(new SyncOptions());
         result2.ShouldBe(conflict: 1);
     }
+
+    // Scenario: A local copy of an older version of a song is not a real conflict
+    //   Given a song on the server was downloaded to the device
+    //   When the song is edited on the server
+    //   And the local file is touched without changing its content
+    //   Then the sync recognises the local file as a previous version of the song
+    //   And downloads the server's version instead of reporting a conflict
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldDownloadServerVersionWhenLocalIsPreviousVersion()
+    {
+        // Seed song on server associated with this device, and download it
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Edit the song on the server, so the device's file becomes a previous version of it
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+
+        // Touch the local file: both sides look modified since the last sync, but the local
+        // content is still exactly the version the server had before
+        var originalPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        App.TouchLocalFile(originalPath);
+
+        // Sync should resolve the conflict in favour of the server: download and rename the file
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(updateLocal: 1, rename: 1);
+
+        // The device now holds the server's version at its new path
+        var newPath = "Freya Ridings/Wicker Woman/Server Title - Freya Ridings.mp3";
+        App.FileShouldExist(newPath);
+        App.FileShouldNotExist(originalPath);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(newPath), title: "Server Title");
+    }
+
+    // Scenario: A new local file holding an older version of a server song is linked and updated
+    //   Given a song exists on the server
+    //   And the song was edited on the server
+    //   When a local file holding the song's original content is synced
+    //   Then the file is linked to the song instead of being imported
+    //   And the server's version is downloaded over it in the same sync
+    [Fact]
+    public async Task Sync_ShouldLinkAndDownloadWhenNewLocalFileIsPreviousVersion()
+    {
+        // Seed the song on the server, then edit it so its original content becomes a previous version
+        await ServerSongs.SeedAsync(RequestContext, UserId, [SongsFixture.DefaultSongs[2]]);
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+
+        // Create a local file with the song's original content
+        var localPath = await App.CreateSongAsync(SongsFixture.DefaultSongs[2]);
+
+        // Sync should link the file to the song and download the server's version over it
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(link: 1, updateLocal: 1);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(localPath), title: "Server Title");
+
+        // A second sync should find the device up to date
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(skipped: 1);
+    }
+
+    // Scenario: A local file reverted to an older version of its song gets the server's version back
+    //   Given a song was uploaded from the device
+    //   And the song was edited on the server and downloaded to the device
+    //   When the local file is changed back to the song's original content
+    //   Then the sync does not upload the old content
+    //   And downloads the server's version in the same sync
+    [Fact]
+    public async Task Sync_ShouldDownloadServerVersionWhenLocalChangeIsPreviousVersion()
+    {
+        // Upload the song from the device
+        var originalPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[2], originalPath);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1);
+
+        // Edit the song on the server and download the new version (renamed by the naming template)
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(updateLocal: 1, rename: 1);
+
+        // Change the local file back to the song's original content
+        var newPath = "Freya Ridings/Wicker Woman/Server Title - Freya Ridings.mp3";
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[2], newPath);
+
+        // Sync should keep the server's version: it is downloaded over the reverted file
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(updateLocal: 1);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(newPath), title: "Server Title");
+
+        // A second sync should find the device up to date
+        var result4 = await App.SyncAsync(new SyncOptions());
+        result4.ShouldBe(skipped: 1);
+    }
 }

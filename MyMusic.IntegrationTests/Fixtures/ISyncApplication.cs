@@ -19,6 +19,9 @@ public interface ISyncApplication : IAsyncDisposable
     string GetSongPath(string relativePath);
     Task SetNamingTemplateAsync(string namingTemplate);
     Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options);
+
+    /// <summary>Bumps a local file's modification time without changing its content.</summary>
+    void TouchLocalFile(string relativePath);
     List<string> GetAllFiles();
     void FileShouldExist(string relativePath, string? message = null);
     void FilesShouldExist(IEnumerable<string> relativePaths, string? message = null);

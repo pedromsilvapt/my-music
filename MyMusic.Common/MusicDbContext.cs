@@ -42,6 +42,8 @@ public class MusicDbContext : DbContext
 
     public DbSet<SongGenre> SongGenres { get; set; } = null!;
 
+    public DbSet<SongChecksum> SongChecksums { get; set; } = null!;
+
     public DbSet<SongSource> SongSources { get; set; } = null!;
 
     public DbSet<Source> Sources { get; set; } = null!;
@@ -255,6 +257,20 @@ public class MusicDbContext : DbContext
             // A file belongs to exactly one song. Claiming a path by saving it here, before the file is written,
             // makes concurrent writers of the same path fail instead of overwriting each other's file.
             entity.HasIndex(e => new { e.OwnerId, e.RepositoryPath }).IsUnique();
+        });
+
+        // Rows are inserted by a PostgreSQL trigger whenever a song's checksum changes (see the
+        // AddSongChecksumHistory migration); EF only writes them when merging songs.
+        modelBuilder.Entity<SongChecksum>(entity =>
+        {
+            entity.HasKey(e => new { e.SongId, e.ChecksumAlgorithm, e.Checksum });
+
+            entity.HasOne(e => e.Song)
+                .WithMany(s => s.ChecksumHistory)
+                .HasForeignKey(e => e.SongId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => new { e.ChecksumAlgorithm, e.Checksum });
         });
 
         // Denormalized counts are maintained by PostgreSQL triggers (see the

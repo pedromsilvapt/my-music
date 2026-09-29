@@ -184,6 +184,8 @@ public class Phases(
                     ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
 
+                AddUploadClientActions(ctx, result);
+
                 ctx.UploadedPaths.Add(createRecord.FilePath);
                 uploadedCount++;
                 progress?.Report(SyncProgress.FromResult(
@@ -217,6 +219,8 @@ public class Phases(
                     ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
 
+                AddUploadClientActions(ctx, result);
+
                 ctx.UploadedPaths.Add(updateRecord.FilePath);
                 uploadedCount++;
                 progress?.Report(SyncProgress.FromResult(
@@ -227,6 +231,22 @@ public class Phases(
             processedCount += chunk.Length;
             progress?.Report(SyncProgress.FromResult(
                 ctx.Result, "upload", files.Count, processedCount));
+        }
+    }
+
+    /// <summary>
+    /// Queues the device actions the server recorded for an uploaded file (an <c>UpdateLocal</c> when the
+    /// file is a previous version of a song), so the server actions phase performs them in this session.
+    /// </summary>
+    private static void AddUploadClientActions(SyncContext ctx, SyncActionsDevice.ActionResult result)
+    {
+        foreach (var record in result.Records ?? [])
+        {
+            if (record.Action == SyncRecordAction.UpdateLocal ||
+                record.Action == SyncRecordAction.Rename)
+            {
+                ctx.PendingServerRecords.Add(record);
+            }
         }
     }
 

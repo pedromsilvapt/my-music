@@ -208,6 +208,24 @@ public class Scenario
         return song;
     }
 
+    /// <summary>
+    /// Records previous checksums of the song's file, as the database trigger does in production (SQLite has no trigger).
+    /// </summary>
+    public void AddChecksumHistory(Song song, params string[] checksums)
+    {
+        foreach (var checksum in checksums)
+        {
+            DbContext.SongChecksums.Add(new SongChecksum
+            {
+                SongId = song.Id,
+                Checksum = checksum,
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+        DbContext.SaveChanges();
+    }
+
     #endregion Seeding Data
 
     #region Sync Data

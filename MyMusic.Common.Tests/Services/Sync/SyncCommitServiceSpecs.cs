@@ -115,7 +115,7 @@ public class SyncCommitServiceSpecs
         await _musicService.DidNotReceive().AddSongsToDevice(Arg.Any<MusicDbContext>(), Arg.Any<long>(), Arg.Any<Song>(), Arg.Any<CancellationToken>());
     }
 
-    private static JsonElement CreateSyncData(long songId, DateTime modifiedAt, string? tempFilePath = null, string? checksum = null, string? algorithm = null, string? originalFilePath = null)
+    private static JsonElement CreateSyncData(long songId, DateTime modifiedAt, string? tempFilePath = null, string? checksum = null, string? algorithm = null, string? originalFilePath = null, bool? isPreviousVersion = null)
     {
         var dict = new Dictionary<string, object?>
         {
@@ -126,6 +126,7 @@ public class SyncCommitServiceSpecs
         if (checksum is not null) dict["checksum"] = checksum;
         if (algorithm is not null) dict["algorithm"] = algorithm;
         if (originalFilePath is not null) dict["originalFilePath"] = originalFilePath;
+        if (isPreviousVersion is not null) dict["isPreviousVersion"] = isPreviousVersion;
         return JsonSerializer.SerializeToElement(dict);
     }
 
@@ -488,6 +489,53 @@ public class SyncCommitServiceSpecs
         var updatedSong = ctx.Db.Songs.First(s => s.Id == ctx.Song.Id);
         updatedSong.FileModifiedAt.ShouldBe(deviceLastSynced, "FileModifiedAt should be rolled back to the device's last-synced time");
         updatedSong.ModifiedAt.ShouldBe(originalModifiedAt, "ModifiedAt must NOT be rolled back (only FileModifiedAt is sync-relevant)");
+    }
+
+    [Fact]
+    public async Task LinkThenUpdateLocal_OfPreviousVersion_KeepsFileModifiedAtAndSyncsDownloadedFile()
+    {
+        // The device's file matches an older version of the song: the upload recorded a Link (flagged as a
+        // previous version) followed by an UpdateLocal, which the device acknowledged after downloading the
+        // song's current file
+        var ctx = SetupWithSongAndRealMusicService();
+        var fileModifiedAt = new DateTime(2025, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        var deviceModifiedAt = new DateTime(2025, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+        var downloadedAt = new DateTime(2025, 6, 11, 12, 0, 0, DateTimeKind.Utc);
+        ctx.Song!.FileModifiedAt = fileModifiedAt;
+        ctx.Db.SaveChanges();
+
+        var linkData = CreateSyncData(ctx.Song.Id, deviceModifiedAt, checksum: "old-checksum", algorithm: "XxHash128", isPreviousVersion: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: linkData, songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal, data: CreateSyncData(ctx.Song.Id, downloadedAt), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // The song keeps its newer content (no FileModifiedAt rollback), and the device is synced with
+        // the file it downloaded
+        ctx.Db.Songs.First(s => s.Id == ctx.Song.Id).FileModifiedAt.ShouldBe(fileModifiedAt);
+        var songDevice = ctx.Db.SongDevices.Single(sd => sd.DeviceId == ctx.Device.Id && sd.DevicePath == "/music/song.mp3");
+        songDevice.SongId.ShouldBe(ctx.Song.Id);
+        songDevice.LastSyncedModifiedAt.ShouldBe(downloadedAt);
+    }
+
+    [Fact]
+    public async Task LinkThenUpdateLocal_OfAnotherSongsPreviousVersion_MovesPathAndSyncsDownloadedFile()
+    {
+        // The device's file, linked to one song, now holds an older version of another song
+        var ctx = SetupWithSongAndRealMusicService();
+        var otherSong = ctx.Scenario.CreateSong("Other");
+        var downloadedAt = new DateTime(2025, 6, 11, 12, 0, 0, DateTimeKind.Utc);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/song.mp3");
+
+        var linkData = CreateSyncData(otherSong.Id, DefaultModifiedAt.AddDays(1), checksum: "old-checksum", algorithm: "XxHash128", isPreviousVersion: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Link, data: linkData, songId: otherSong.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal, data: CreateSyncData(otherSong.Id, downloadedAt), songId: otherSong.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var songDevice = GetSongDevice(ctx.Db, sd.Id);
+        songDevice.SongId.ShouldBe(otherSong.Id);
+        songDevice.LastSyncedModifiedAt.ShouldBe(downloadedAt);
     }
 
     [Fact]

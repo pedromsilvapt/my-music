@@ -377,7 +377,17 @@ public class SyncCommitService(
             songDevice.SyncActionReason = null;
         }
 
+        // The device's file is an older version of the song: the song keeps its newer content (no
+        // FileModifiedAt rollback), and the UpdateLocal recorded after this Link downloads it to the device
+        if (data?.IsPreviousVersion == true)
+        {
+            logger.LogInformation("ProcessLinkAsync: path={Path} holds a previous version of song {SongId}, keeping its FileModifiedAt",
+                record.FilePath, songId);
+            return;
+        }
+
         var song = await db.Songs.FindAsync([songId.Value], cancellationToken);
+
         logger.LogInformation("ProcessLinkAsync: path={Path}, songId={SongId}, song.FileModifiedAtTicks={SongFileModifiedAtTicks}, songDeviceIsNull={SongDeviceIsNull}, lastSyncedIsNull={LastSyncedIsNull}",
             record.FilePath, songId, song?.FileModifiedAt?.Ticks, songDevice == null, songDevice?.LastSyncedModifiedAt == null);
 
@@ -590,6 +600,13 @@ public class SyncCommitService(
         MusicDbContext db, long deviceId, DeviceSyncSessionRecord record, long? dataSongId,
         CancellationToken cancellationToken)
     {
+        // A SongDevice added or moved earlier in this commit (e.g. by a Link followed by an UpdateLocal)
+        // is not saved yet, so queries cannot see it
+        var tracked = db.SongDevices.Local.FirstOrDefault(sd => sd.DeviceId == deviceId && sd.DevicePath == record.FilePath
+                                                                && db.Entry(sd).State is EntityState.Added or EntityState.Modified);
+        if (tracked != null)
+            return tracked;
+
         var songId = dataSongId ?? record.SongId;
         if (songId.HasValue && songId.Value > 0)
         {

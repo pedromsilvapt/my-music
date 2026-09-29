@@ -127,6 +127,11 @@ public class MobileCliApplication : ISyncApplication
         response.Ok.ShouldBeTrue();
     }
 
+    public void TouchLocalFile(string relativePath)
+    {
+        File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
+    }
+
     public async Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options)
     {
         var filePath = GetSongPath(fileName);

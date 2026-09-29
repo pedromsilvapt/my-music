@@ -8,6 +8,12 @@ public enum SyncUploadActionType
     UpdateRemote,
     LinkWithSongId,
     LinkWithChecksumOnly,
+
+    /// <summary>The updated file is a previous version of its own song: the device downloads the current one.</summary>
+    UpdateLocal,
+
+    /// <summary>The file is a previous version of another song: it is linked to it, and the device downloads its current file.</summary>
+    LinkWithSongIdAndUpdateLocal,
 }
 
 public record SyncUploadDecision
@@ -21,6 +27,8 @@ public record SyncUploadDecision
 
 public record SyncUploadResult
 {
-    public required DeviceSyncSessionRecord Record { get; init; }
+    /// <summary>The records created for the uploaded file, in order.</summary>
+    public required List<DeviceSyncSessionRecord> Records { get; init; }
+
     public long? EffectiveSongId { get; init; }
 }

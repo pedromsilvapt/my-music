@@ -74,6 +74,9 @@ public class DesktopCliApplication : ISyncApplication
     public Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options)
         => _fixture.UpdateLocalFileMetadataAsync(fileName, options);
 
+    public void TouchLocalFile(string relativePath)
+        => File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
+
     public List<string> GetAllFiles()
         => _fixture.GetAllFiles();
 

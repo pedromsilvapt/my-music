@@ -16,8 +16,57 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
  - The server should create all the `DeviceSyncSessionRecord` before the commit phase: only in the commit phase are those actions really performed (songs created, files uploaded, downloaded, renamed, etc...)
     - The list of `DeviceSyncSessionRecord` is the source of truth for what operations to perform
  - During song upload, we save the uploaded song files inside a temp folder in the music repository directory. And during commit, we move those files to the correct repository.
-    - Files that will not be imported at commit (dry-run uploads, `Link` and `Error` records) are deleted at the end of the upload request. The session's temp folder, with any leftovers, is deleted when the session ends.
+    - Files that will not be imported at commit (dry-run uploads, and uploads recorded as `Link`, `UpdateLocal`, `Skipped` or `Error`) are deleted at the end of the upload request.
+    - The upload response returns every record created for the file. When the file matches a previous Checksum of a Song, those include the `UpdateLocal` the device performs in the same session (see the rules below). The session's temp folder, with any leftovers, is deleted when the session ends.
  - During sync process, when the server needs to find a song by checksum or by device path, we should not only look in the Songs database table, but also in the `DeviceSyncSessionRecord` for records created during this sync session that match those data properties.
+  - For the sync process, some important rules:
+   - A file locally without any SongDevice matches:
+      - If it matches the current Checksum of a Song, should result in a Link action
+      - If it matches the previous Checksum of a Song, should result in a Link + UpdateLocal
+      - If it matches another local file already being uploaded in this session, should result in a Link to that file's song
+      - If it matches nothing, should result in a CreateRemote
+      - If it can't be imported (invalid/unreadable file), should result in an Error
+   - A file locally with a SongDevice match:
+      - File changes are based on the file's `ModifiedAt`, the SongDevice's `LastSyncModifiedAt` values, and the Song's `FileModifiedAt`
+      - If neither side changed since the last sync, should result in a Skipped
+      - If only the local file changed:
+         - If its new checksum matches no other Song (current or previous), should result in an UpdateRemote of its current Song
+         - If its new content matches the current Checksum of current Song, should result in a Skipped
+         - If its new content matches the previous Checksum of its own Song, should result in an UpdateLocal
+         - If its new content matches the current Checksum of another Song, should result in a Unlink old Song + Link to that new Song
+         - If its new content matches the previous Checksum of another Song, should result in an Unlink old Song + Link to that new Song + UpdateLocal
+      - If only the server file changed:
+         - If the local file already has the server's current content, should result in an UpdateTimestamp
+         - Otherwise, should result in an UpdateLocal (+ Rename only if the naming template now produces a different path)
+      - If both sides changed:
+         - If the contents are equal, should result in an UpdateTimestamp
+         - If the local file matches a previous Checksum of the Song, should result in an UpdateLocal (the server version wins)
+         - Otherwise, should result in a Conflict; the local file is kept and not downloaded
+      - If it was never synced before (the server assigned a song to the device, it hasn't been downloaded yet, and a local file already exists at exactly the path it would be downloaded to):
+         - If the server changed it after it was assigned to the device, it is treated as "both sides changed"
+         - Otherwise, should result in an UpdateRemote
+      - If the Song was removed from the device or deleted on the server, should result in a DeleteLocal
+      - If sync is forced, should result in an UpdateRemote
+   - A SongDevice without a local file:
+      - If the Song was assigned to the device and never downloaded, should result in a CreateLocal
+      - If the Song was removed from the device, should result in a DeleteLocal
+      - If the file was deleted locally, should result in an Unlink (the Song stays on the server)
+   - Metadata-only edits (such as increasing `Song.PlayCount`) on the server never cause a download (because they do not change the physical file); only changes to the file content do
+   - Downloaded and renamed files follow the device's naming template; a name collision gets a ` (2)`, ` (3)`, … suffix
+   - Content present in the server library only once: duplicate local files (same Checksum) link to one Song and are never imported twice
+   - Direction `up`:
+      - Anything that would change the device (UpdateLocal, CreateLocal, DeleteLocal, Rename) should result in a Skipped instead
+      - Songs deleted on the server keep their local file (Skipped)
+      - Pending removals are ignored, and the file is compared normally
+      - Files deleted locally should result in an Unlink, even if they had a pending server action
+   - Direction `down`:
+      - Nothing is uploaded
+      - Files deleted locally are not unlinked
+      - All server actions (CreateLocal, UpdateLocal, DeleteLocal, Rename) are applied on the device
+   - Failures:
+      - If an upload fails to import at commit, should result in an Error; the local change stays pending and is retried on the next sync
+      - Links to content whose import failed should result in an Error too
+      - Files that fail to scan on the device should result in an Error
 
 ---
 

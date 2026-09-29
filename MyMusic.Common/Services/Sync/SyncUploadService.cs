@@ -27,6 +27,7 @@ public class SyncUploadService(
         SongDevice? songDeviceForImport,
         string repositoryPath,
         long ownerId,
+        SyncDirection direction,
         CancellationToken cancellationToken = default)
     {
         var staging = await StageFileAsync(sessionId, fileStream, fileName, isDryRun, repositoryPath, cancellationToken);
@@ -40,11 +41,11 @@ public class SyncUploadService(
 
             long? songIdForRecord = isUpdate ? songDeviceForImport!.SongId!.Value : null;
 
-            var (duplicateSongId, hasDuplicate) = await FindDuplicateForUploadAsync(
+            var (duplicateSongId, hasDuplicate, isPreviousVersion) = await FindDuplicateForUploadAsync(
                 deviceId, sessionId, checksum, checksumAlgorithmName, ownerId, cancellationToken);
 
             var decision = DetermineUploadAction(
-                isUpdate, hasDuplicate, duplicateSongId,
+                isUpdate, hasDuplicate, duplicateSongId, isPreviousVersion,
                 path, songIdForRecord, checksum, checksumAlgorithmName,
                 modifiedAt, createdAt, songDeviceForImport);
 
@@ -55,9 +56,9 @@ public class SyncUploadService(
                 : null;
 
             var syncActions = syncActionsServerFactory.Create(db, sessionId, deviceId, isDryRun);
-            var record = importError != null
-                ? await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken: cancellationToken)
-                : await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, cancellationToken);
+            var records = importError != null
+                ? [await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken: cancellationToken)]
+                : await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, direction, cancellationToken);
 
             await db.SaveChangesAsync(cancellationToken);
 
@@ -70,13 +71,14 @@ public class SyncUploadService(
 
             long? effectiveSongId = decision.ActionType switch
             {
-                SyncUploadActionType.LinkWithSongId or SyncUploadActionType.LinkWithChecksumOnly => decision.SongId,
+                SyncUploadActionType.LinkWithSongId or SyncUploadActionType.LinkWithChecksumOnly
+                    or SyncUploadActionType.LinkWithSongIdAndUpdateLocal => decision.SongId,
                 _ => duplicateSongId ?? songIdForRecord,
             };
 
             return new SyncUploadResult
             {
-                Record = record,
+                Records = records,
                 EffectiveSongId = effectiveSongId,
             };
         }
@@ -111,12 +113,32 @@ public class SyncUploadService(
 
     private SyncUploadDecision DetermineUploadAction(
         bool isUpdate,
-        bool hasDuplicate, long? duplicateSongId,
+        bool hasDuplicate, long? duplicateSongId, bool isPreviousVersion,
         string path, long? songIdForRecord,
         string checksum, string algorithm,
         DateTime modifiedAt, DateTime createdAt,
         SongDevice? songDeviceForImport)
     {
+        // A file holding a previous version of a song is never imported: the server's current version
+        // wins, so the device downloads it (the file is first linked to that song, unless it already is)
+        if (hasDuplicate && isPreviousVersion && duplicateSongId.HasValue)
+        {
+            var isOwnSong = isUpdate && duplicateSongId == songDeviceForImport!.SongId;
+
+            return new SyncUploadDecision
+            {
+                ActionType = isOwnSong
+                    ? SyncUploadActionType.UpdateLocal
+                    : SyncUploadActionType.LinkWithSongIdAndUpdateLocal,
+                SongId = duplicateSongId.Value,
+                Checksum = checksum,
+                ChecksumAlgorithm = algorithm,
+                Reason = isOwnSong ? "File matches a previous version of its song, server version wins"
+                    : isUpdate ? "Linked to a different song (file matches a previous version of it)"
+                    : "Linked to existing song (file matches a previous version of it)",
+            };
+        }
+
         // An updated file whose content now belongs to another song is linked to that song below.
         // Importing it over its own song would make the commit merge the two songs, which no record
         // would describe.
@@ -169,47 +191,106 @@ public class SyncUploadService(
         };
     }
 
-    private async Task<DeviceSyncSessionRecord> ExecuteDecisionAsync(
+    private async Task<List<DeviceSyncSessionRecord>> ExecuteDecisionAsync(
         SyncUploadDecision decision,
         ISyncActionsServer syncActions,
         string path,
         StagingResult staging,
         DateTime modifiedAt,
         DateTime createdAt,
+        SyncDirection direction,
         CancellationToken cancellationToken)
     {
         string? tempFilePath = staging.IsDryRun ? null : staging.StagedFilePath;
 
-        return decision.ActionType switch
+        switch (decision.ActionType)
         {
-            SyncUploadActionType.UpdateRemote =>
-                await syncActions.ActionUpdateRemote(
-                    path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!,
-                    modifiedAt, tempFilePath, createdAt, path,
-                    decision.Reason, cancellationToken),
+            case SyncUploadActionType.UpdateRemote:
+                return
+                [
+                    await syncActions.ActionUpdateRemote(
+                        path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!,
+                        modifiedAt, tempFilePath, createdAt, path,
+                        decision.Reason, cancellationToken),
+                ];
 
-            SyncUploadActionType.LinkWithSongId =>
-                await syncActions.ActionLink(
+            case SyncUploadActionType.LinkWithSongId:
+                return
+                [
+                    await syncActions.ActionLink(
+                        path, decision.SongId!.Value, modifiedAt,
+                        decision.Checksum, decision.ChecksumAlgorithm,
+                        decision.Reason, cancellationToken: cancellationToken),
+                ];
+
+            case SyncUploadActionType.LinkWithChecksumOnly:
+                return
+                [
+                    await syncActions.ActionLink(
+                        path, decision.Checksum!, decision.ChecksumAlgorithm!, modifiedAt,
+                        decision.Reason, cancellationToken),
+                ];
+
+            case SyncUploadActionType.CreateRemote:
+                return
+                [
+                    await syncActions.ActionCreateRemote(
+                        path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!,
+                        modifiedAt, tempFilePath, createdAt, path,
+                        decision.Reason, cancellationToken),
+                ];
+
+            case SyncUploadActionType.UpdateLocal:
+                return [await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken)];
+
+            case SyncUploadActionType.LinkWithSongIdAndUpdateLocal:
+            {
+                var linkRecord = await syncActions.ActionLink(
                     path, decision.SongId!.Value, modifiedAt,
                     decision.Checksum, decision.ChecksumAlgorithm,
-                    decision.Reason, cancellationToken),
+                    decision.Reason, isPreviousVersion: true, cancellationToken);
+                var updateLocalRecord = await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken);
 
-            SyncUploadActionType.LinkWithChecksumOnly =>
-                await syncActions.ActionLink(
-                    path, decision.Checksum!, decision.ChecksumAlgorithm!, modifiedAt,
-                    decision.Reason, cancellationToken),
+                return [linkRecord, updateLocalRecord];
+            }
 
-            SyncUploadActionType.CreateRemote =>
-                await syncActions.ActionCreateRemote(
-                    path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!,
-                    modifiedAt, tempFilePath, createdAt, path,
-                    decision.Reason, cancellationToken),
-
-            _ => throw new InvalidOperationException($"Unknown upload action type: {decision.ActionType}")
-        };
+            default:
+                throw new InvalidOperationException($"Unknown upload action type: {decision.ActionType}");
+        }
     }
 
-    private async Task<(long? SongId, bool HasDuplicate)> FindDuplicateForUploadAsync(
+    /// <summary>
+    /// Records the download of the song's current file over a device file holding a previous version of it,
+    /// or a <c>Skipped</c> record in <c>up</c> direction, where the device is never changed.
+    /// </summary>
+    private async Task<DeviceSyncSessionRecord> ActionUpdateLocalOrSkippedAsync(
+        SyncUploadDecision decision,
+        ISyncActionsServer syncActions,
+        string path,
+        SyncDirection direction,
+        CancellationToken cancellationToken)
+    {
+        var songId = decision.SongId!.Value;
+
+        if (direction == SyncDirection.Up)
+        {
+            return await syncActions.ActionSkipped(path, songId,
+                "File matches a previous version of the song, not downloaded (direction up)", cancellationToken);
+        }
+
+        var song = await db.Songs.FirstAsync(s => s.Id == songId, cancellationToken);
+        var songFileModifiedAt = song.FileModifiedAt ?? song.ModifiedAt;
+
+        return await syncActions.ActionUpdateLocal(path, song.Id, songFileModifiedAt,
+            $"File matches a previous version of the song, server modified at {songFileModifiedAt:O} wins", cancellationToken);
+    }
+
+    /// <summary>
+    /// Finds the song whose content the uploaded file has: first among this session's records, then in the
+    /// user's library. <c>IsPreviousVersion</c> is set when the file matches only an older version of a
+    /// library song; session records always hold the content their song will have.
+    /// </summary>
+    private async Task<(long? SongId, bool HasDuplicate, bool IsPreviousVersion)> FindDuplicateForUploadAsync(
         long deviceId, long sessionId, string checksum, string checksumAlgorithm,
         long ownerId, CancellationToken cancellationToken)
     {
@@ -233,21 +314,21 @@ public class SyncUploadService(
             checksumFound = true;
             var songId = ExtractSongIdFromRecord(r);
             if (songId.HasValue && songId.Value > 0)
-                return (songId.Value, true);
+                return (songId.Value, true, false);
 
             matchedSongId ??= songId;
         }
 
         if (checksumFound)
-            return (matchedSongId, true);
+            return (matchedSongId, true, false);
 
         var existingSongs = await musicService.FindUserSongsByChecksum(
             db, ownerId, [checksum], checksumAlgorithm, cancellationToken);
 
         if (existingSongs.TryGetValue(checksum, out var existingSong))
-            return (existingSong.Id, true);
+            return (existingSong.Id, true, existingSong.Checksum != checksum);
 
-        return (null, false);
+        return (null, false, false);
     }
 
     private static string? ExtractChecksumFromRecord(DeviceSyncSessionRecord r)

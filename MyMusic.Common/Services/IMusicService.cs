@@ -48,7 +48,8 @@ public interface IMusicService
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns a dictionary with the list of songs matching the checksums provided in the list.
+    /// Returns a dictionary with the list of songs matching the checksums provided in the list, either by their
+    /// current file or by a previous version of it (see <see cref="UserMusicService.FindSongsByChecksums"/>).
     /// </summary>
     /// <param name="db"></param>
     /// <param name="userId"></param>

@@ -234,9 +234,9 @@ export type SyncCompleteResponse = z.infer<typeof SyncCompleteResponseSchema>;
 export const SyncUploadResponseSchema = z.object({
     success: z.boolean(),
     songId: z.number().nullable(),
-    recordId: z.number().nullable(),
-    action: SyncRecordActionSchema.nullable(),
-    data: z.union([CreateRemoteDataSchema, UpdateRemoteDataSchema, SongModifiedAtDataSchema, RenameDataSchema, ConflictDataSchema, UpdateTimestampDataSchema, ErrorDataSchema, z.null()]).nullable(),
+    // Every record the server created for the uploaded file, in order. Can include an UpdateLocal the
+    // device must perform, when the file is a previous version of a song
+    records: z.array(SyncRecordItemSchema).default([]),
     counts: SyncActionCountsSchema,
 });
 

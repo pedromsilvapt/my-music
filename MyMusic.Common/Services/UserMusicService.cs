@@ -11,7 +11,9 @@ public class UserMusicService(MusicDbContext db, long userId)
     public long UserId { get; } = userId;
 
     /// <summary>
-    /// Returns the song that matches the given checksum and checksum algorithm in the given repository
+    /// Returns the song whose file has the given checksum, either now or in a previous version (see
+    /// <see cref="FindSongsByChecksums"/>). When the returned song's <see cref="Song.Checksum"/> differs from
+    /// <paramref name="checksum"/>, the checksum belongs to an older version of its file.
     /// </summary>
     /// <param name="checksum"></param>
     /// <param name="checksumAlgorithm"></param>
@@ -19,7 +21,47 @@ public class UserMusicService(MusicDbContext db, long userId)
     /// <returns></returns>
     public async Task<Song?> GetSongByChecksum(string checksum, string checksumAlgorithm, CancellationToken cancellationToken = default)
     {
-        return await Db.Songs.FirstOrDefaultAsync(s => s.Owner.Id == UserId && s.Checksum == checksum && s.ChecksumAlgorithm == checksumAlgorithm, cancellationToken);
+        var songs = await FindSongsByChecksums([checksum], checksumAlgorithm, cancellationToken);
+
+        return songs.GetValueOrDefault(checksum);
+    }
+
+    /// <summary>
+    /// Returns, for each of the given checksums that matches, the song whose file has that checksum. Songs whose
+    /// current file matches take precedence; otherwise the song with the most recent previous version matching
+    /// the checksum is returned (see <see cref="SongChecksum"/>). Checksums matching no song are left out.
+    /// </summary>
+    /// <param name="checksums"></param>
+    /// <param name="checksumAlgorithm"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<Dictionary<string, Song>> FindSongsByChecksums(IReadOnlyCollection<string> checksums,
+        string checksumAlgorithm, CancellationToken cancellationToken = default)
+    {
+        var songs = (await Db.Songs
+                .Where(s => s.OwnerId == UserId && s.ChecksumAlgorithm == checksumAlgorithm && checksums.Contains(s.Checksum))
+                .ToListAsync(cancellationToken))
+            .GroupBy(s => s.Checksum)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var unmatched = checksums.Where(c => !songs.ContainsKey(c)).Distinct().ToList();
+        if (unmatched.Count == 0)
+        {
+            return songs;
+        }
+
+        var previousVersions = await Db.SongChecksums
+            .Where(sc => sc.Song.OwnerId == UserId && sc.ChecksumAlgorithm == checksumAlgorithm && unmatched.Contains(sc.Checksum))
+            .OrderByDescending(sc => sc.CreatedAt)
+            .Select(sc => new { sc.Checksum, sc.Song })
+            .ToListAsync(cancellationToken);
+
+        foreach (var previousVersion in previousVersions)
+        {
+            songs.TryAdd(previousVersion.Checksum, previousVersion.Song);
+        }
+
+        return songs;
     }
 
     /// <summary>

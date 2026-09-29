@@ -6,6 +6,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services.Devices;
+using MyMusic.Common.Services.Songs;
 
 namespace MyMusic.Common.Services.Sync;
 
@@ -44,27 +45,31 @@ public class SyncResolveConflictsService(
 
         var records = new List<DeviceSyncSessionRecord>();
 
+        if (input.Conflicts.Count == 0 && input.PotentialUpdates.Count == 0)
+        {
+            return new SyncResolveConflictsResult { Records = records };
+        }
+
+        // Both conflicts (stale local copies) and potential updates can produce UpdateLocal actions,
+        // whose target paths are computed with the device's naming template
+        var namingStrategy = new TemplateNamingStrategy(
+            device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
+
+        var usedPaths = new HashSet<string>(await db.SongDevices
+            .Where(sd => sd.DeviceId == deviceId)
+            .Select(sd => sd.DevicePath)
+            .ToHashSetAsync(cancellationToken));
+
         foreach (var conflict in input.Conflicts)
         {
-            await ProcessConflictAsync(deviceId, conflict, syncActions, records, cancellationToken);
+            await ProcessConflictAsync(deviceId, conflict, activeSession.Direction, namingStrategy, usedPaths, syncActions, records, cancellationToken);
         }
 
         // Process potential updates: server was modified after last sync, client file was unchanged.
         // Compare checksums to determine if a local update is actually needed.
-        if (input.PotentialUpdates.Count > 0)
+        foreach (var update in input.PotentialUpdates)
         {
-            var namingStrategy = new TemplateNamingStrategy(
-                device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
-
-            var usedPaths = new HashSet<string>(await db.SongDevices
-                .Where(sd => sd.DeviceId == deviceId)
-                .Select(sd => sd.DevicePath)
-                .ToHashSetAsync(cancellationToken));
-
-            foreach (var update in input.PotentialUpdates)
-            {
-                await ProcessPotentialUpdateAsync(deviceId, update, activeSession.Direction, namingStrategy, usedPaths, syncActions, records, cancellationToken);
-            }
+            await ProcessPotentialUpdateAsync(deviceId, update, activeSession.Direction, namingStrategy, usedPaths, syncActions, records, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -79,19 +84,24 @@ public class SyncResolveConflictsService(
     /// <summary>
     /// Handles a single conflict item: looks up the <see cref="SongDevice"/>, decodes the base64
     /// file content, and compares the local checksum against the server song checksum. Matching
-    /// checksums produce an <c>UpdateTimestamp</c> record; differing checksums produce a
+    /// checksums produce an <c>UpdateTimestamp</c> record. A local checksum matching an older version
+    /// of the song means the local file is a stale copy, so the server wins: an <c>UpdateLocal</c>
+    /// record (<c>Skipped</c> in <c>up</c> direction). Any other difference produces a
     /// <c>Conflict</c> record. A missing <see cref="SongDevice"/> or invalid base64 produces an
     /// <c>Error</c> record (or is skipped when the SongDevice is not found).
     /// </summary>
     private async Task ProcessConflictAsync(
         long deviceId,
         SyncResolveConflictItem conflict,
+        SyncDirection direction,
+        TemplateNamingStrategy namingStrategy,
+        HashSet<string> usedPaths,
         ISyncActionsServer syncActions,
         List<DeviceSyncSessionRecord> records,
         CancellationToken cancellationToken)
     {
         var songDevice = await db.SongDevices
-            .Include(sd => sd.Song)
+            .IncludeSongMetadata("Song")
             .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == conflict.SongId, cancellationToken);
 
         if (songDevice == null)
@@ -131,6 +141,26 @@ public class SyncResolveConflictsService(
 
             records.Add(tsRecord);
             return;
+        }
+        else if (await SongChecksumHistory.IsPreviousVersionAsync(db, songDevice.Song, localChecksum,
+                     songDevice.Song.ChecksumAlgorithm, cancellationToken))
+        {
+            var songFileModifiedAt = songDevice.Song.FileModifiedAt ?? songDevice.Song.ModifiedAt;
+
+            if (direction == SyncDirection.Up)
+            {
+                var reason = $"Local file is a previous version of the song, server modified at {songFileModifiedAt:O}, not downloaded (direction up)";
+                records.Add(await syncActions.ActionSkipped(conflict.Path, conflict.SongId, reason, cancellationToken));
+            }
+            else
+            {
+                var reason = $"Local file is a previous version of the song, server modified at {songFileModifiedAt:O} wins";
+                await AddUpdateLocalRecordsAsync(songDevice, conflict.SongId, reason, namingStrategy, usedPaths, syncActions, records, cancellationToken);
+            }
+
+            logger.LogInformation(
+                "Resolved conflict for {Path} - local checksum {LocalChecksum} is a previous version of song {SongId}, server wins",
+                conflict.Path, localChecksum, conflict.SongId);
         }
         else
         {
@@ -217,24 +247,42 @@ public class SyncResolveConflictsService(
         }
         else
         {
-            var pendingAction = pathResolver.ComputePendingActionPath(songDevice, namingStrategy, usedPaths);
-            usedPaths.Add(pendingAction.Path);
-
-            var updateFilePath = pendingAction.PreviousPath ?? pendingAction.Path;
             var songFileModifiedAt = songDevice.Song.FileModifiedAt ?? songDevice.Song.ModifiedAt;
             var reason = $"Server modified at {songFileModifiedAt:O} is newer than last synced at {update.LastSyncedAt:O}, checksums differ";
-            var updateRecord = await syncActions.ActionUpdateLocal(updateFilePath, update.SongId, songFileModifiedAt, reason, cancellationToken);
-            records.Add(updateRecord);
-
-            if (pendingAction.PreviousPath != null)
-            {
-                var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, update.SongId, "Path updated by naming template", cancellationToken);
-                records.Add(renameRecord);
-            }
+            await AddUpdateLocalRecordsAsync(songDevice, update.SongId, reason, namingStrategy, usedPaths, syncActions, records, cancellationToken);
 
             logger.LogInformation(
                 "Potential update for {Path} (SongId={SongId}) - checksums differ, creating UpdateLocal action",
                 update.Path, update.SongId);
+        }
+    }
+
+    /// <summary>
+    /// Adds an <c>UpdateLocal</c> record that downloads the song's current file to the device, followed
+    /// by a <c>Rename</c> record when the naming template changed the file's target path.
+    /// </summary>
+    private async Task AddUpdateLocalRecordsAsync(
+        SongDevice songDevice,
+        long songId,
+        string reason,
+        TemplateNamingStrategy namingStrategy,
+        HashSet<string> usedPaths,
+        ISyncActionsServer syncActions,
+        List<DeviceSyncSessionRecord> records,
+        CancellationToken cancellationToken)
+    {
+        var pendingAction = pathResolver.ComputePendingActionPath(songDevice, namingStrategy, usedPaths);
+        usedPaths.Add(pendingAction.Path);
+
+        var updateFilePath = pendingAction.PreviousPath ?? pendingAction.Path;
+        var songFileModifiedAt = songDevice.Song!.FileModifiedAt ?? songDevice.Song.ModifiedAt;
+        var updateRecord = await syncActions.ActionUpdateLocal(updateFilePath, songId, songFileModifiedAt, reason, cancellationToken);
+        records.Add(updateRecord);
+
+        if (pendingAction.PreviousPath != null)
+        {
+            var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, songId, "Path updated by naming template", cancellationToken);
+            records.Add(renameRecord);
         }
     }
 

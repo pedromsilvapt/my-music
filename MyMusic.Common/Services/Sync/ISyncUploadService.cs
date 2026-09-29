@@ -17,5 +17,6 @@ public interface ISyncUploadService
         SongDevice? songDeviceForImport,
         string repositoryPath,
         long ownerId,
+        SyncDirection direction,
         CancellationToken cancellationToken = default);
 }

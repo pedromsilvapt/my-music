@@ -30,7 +30,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
             skippedRecordIds: [],
             counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
         }),
-        uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, recordId: null, action: null, data: null, counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
+        uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0}}),
         commitSync: jest.fn().mockResolvedValue({
             createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
             createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,

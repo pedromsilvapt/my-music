@@ -76,10 +76,14 @@ public class SyncActionsServer(
 
     public async Task<DeviceSyncSessionRecord> ActionLink(
         string filePath, long songId, DateTime? modifiedAt = null,
-        string? checksum = null, string? algorithm = null, string? reason = null,
+        string? checksum = null, string? algorithm = null, string? reason = null, bool isPreviousVersion = false,
         CancellationToken cancellationToken = default)
     {
-        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId, ModifiedAt = modifiedAt, Checksum = checksum, Algorithm = algorithm });
+        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData
+        {
+            SongId = songId, ModifiedAt = modifiedAt, Checksum = checksum, Algorithm = algorithm,
+            IsPreviousVersion = isPreviousVersion ? true : null,
+        });
         var record = CreateRecord(filePath, SyncRecordAction.Link, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }

@@ -20,7 +20,8 @@ public class SyncActionsDevice(
         string? ErrorMessage = null,
         long? SongId = null,
         long? RecordId = null,
-        SyncActionCounts? Counts = null);
+        SyncActionCounts? Counts = null,
+        List<SyncRecordItem>? Records = null);
 
     public async Task<ActionResult> ActionCreateRemoteAsync(
         long deviceId,
@@ -49,7 +50,7 @@ public class SyncActionsDevice(
                 CreatedAt = fileInfo.CreatedAt.ToUniversalTime().ToString("O")
             }, ct);
 
-            return new ActionResult("Created", fileInfo.Path, Reason: fileInfo.Reason, SongId: uploadResult.SongId, Counts: uploadResult.Counts);
+            return new ActionResult("Created", fileInfo.Path, Reason: fileInfo.Reason, SongId: uploadResult.SongId, Counts: uploadResult.Counts, Records: uploadResult.Records);
         }
         catch (Exception ex)
         {
@@ -85,7 +86,7 @@ public class SyncActionsDevice(
                 CreatedAt = fileInfo.CreatedAt.ToUniversalTime().ToString("O")
             }, ct);
 
-            return new ActionResult("Updated", fileInfo.Path, Reason: fileInfo.Reason, SongId: uploadResult.SongId, Counts: uploadResult.Counts);
+            return new ActionResult("Updated", fileInfo.Path, Reason: fileInfo.Reason, SongId: uploadResult.SongId, Counts: uploadResult.Counts, Records: uploadResult.Records);
         }
         catch (Exception ex)
         {

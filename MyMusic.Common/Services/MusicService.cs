@@ -169,7 +169,8 @@ public class MusicService(
     #region Synchronization
 
     /// <summary>
-    ///     Returns a dictionary with the list of songs matching the checksums provided in the list.
+    ///     Returns a dictionary with the list of songs matching the checksums provided in the list, either by their
+    ///     current file or by a previous version of it (see <see cref="UserMusicService.FindSongsByChecksums"/>).
     /// </summary>
     /// <param name="db"></param>
     /// <param name="userId"></param>
@@ -181,11 +182,7 @@ public class MusicService(
         List<string> checksums, string checksumAlgorithm, CancellationToken cancellationToken = default)
     {
         // No lock needed: only committed songs are visible, and imports hold the song's checksum lock until they commit
-        var songs = await db.Songs.Where(song => song.OwnerId == userId &&
-                                                 song.ChecksumAlgorithm == checksumAlgorithm &&
-                                                 checksums.Contains(song.Checksum)).ToListAsync(cancellationToken);
-
-        return songs.ToDictionary(s => s.Checksum);
+        return await new UserMusicService(db, userId).FindSongsByChecksums(checksums, checksumAlgorithm, cancellationToken);
     }
 
     /// <summary>
@@ -534,7 +531,42 @@ public class MusicService(
             logger.LogDebug("  >> No existing song found with matching checksum");
         }
 
+        // The file is an older version of an existing song: the duplicates strategy decides whether it is skipped,
+        // overwrites the song's newer content, or becomes a song of its own
+        var isPreviousVersion = song is not null &&
+                                (song.Checksum != checksum || song.ChecksumAlgorithm != checksumAlgorithmName);
+
+        if (song is not null && isPreviousVersion)
+        {
+            switch (duplicatesStrategy)
+            {
+                case DuplicateSongsHandlingStrategy.Skip:
+                    logger.LogDebug("  >> SKIPPING: Checksum matches a previous version of SongId={SongId} (current checksum {CurrentChecksum})",
+                        song.Id, song.Checksum);
+                    job.AddSkipReason(new PreviousVersionChecksumSkipReason(importSongMetadata.SourceFilePath,
+                        metadata.FullLabel, checksum, checksumAlgorithmName, song.Label, song.Id));
+                    job.AddSongMapping(importSongMetadata, song);
+                    return;
+
+                case DuplicateSongsHandlingStrategy.SplitWhenSuperseded:
+                    // Imported as a song of its own (or into the song it was imported for), leaving the existing
+                    // song untouched; the checksum then leaves its history (see the AddSongChecksumHistory trigger)
+                    logger.LogDebug("  >> SPLITTING: Checksum matches a previous version of SongId={SongId}, importing it as a separate song",
+                        song.Id);
+                    song = null;
+                    break;
+
+                case DuplicateSongsHandlingStrategy.Overwrite:
+                    // Updated below with this file: its checksum becomes current again, and the replaced one
+                    // becomes a previous version (see the AddSongChecksumHistory trigger)
+                    logger.LogDebug("  >> OVERWRITING: Checksum matches a previous version of SongId={SongId}, restoring it",
+                        song.Id);
+                    break;
+            }
+        }
+
         if (song is not null &&
+            !isPreviousVersion &&
             importSongMetadata.SongId.HasValue &&
             importSongMetadata.SongId.Value != song.Id)
         {
@@ -565,8 +597,9 @@ public class MusicService(
         }
 
         if (song is not null &&
+            !isPreviousVersion &&
             fileSystem.File.Exists(song.RepositoryPath) &&
-            duplicatesStrategy == DuplicateSongsHandlingStrategy.Skip)
+            duplicatesStrategy is DuplicateSongsHandlingStrategy.Skip or DuplicateSongsHandlingStrategy.SplitWhenSuperseded)
         {
             logger.LogDebug("  >> SKIPPING: Duplicate checksum found. SongId={SongId}, RepositoryPath='{Path}', Strategy={Strategy}",
                 song.Id, song.RepositoryPath, duplicatesStrategy);
@@ -999,14 +1032,22 @@ public class MusicService(
 public enum DuplicateSongsHandlingStrategy
 {
     /// <summary>
-    ///     Do not import the song if a song with the same checksum already exists in the repository.
-    ///     If the file path collides with an existing song, a counter suffix is appended.
+    ///     Do not import the song if a song with the same checksum already exists in the repository, or if the
+    ///     file matches a previous version of a song. If the file path collides with an existing song, a counter
+    ///     suffix is appended.
     /// </summary>
     Skip,
 
     /// <summary>
-    ///     Replace the existing song if a song with the same checksum already exists in the repository.
+    ///     Replace the existing song if a song with the same checksum already exists in the repository. A file
+    ///     matching a previous version of a song replaces that song's file too, making that version current again.
     ///     If the file path collides with an existing song, a counter suffix is appended.
     /// </summary>
     Overwrite,
+
+    /// <summary>
+    ///     Like <see cref="Skip"/> when the file matches a song's current checksum. When it matches only a previous
+    ///     version of a song, it is imported as a separate song, and the existing song is left untouched.
+    /// </summary>
+    SplitWhenSuperseded,
 }

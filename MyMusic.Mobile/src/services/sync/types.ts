@@ -93,6 +93,8 @@ export interface ActionResult {
     songId?: number;
     recordId?: number;
     counts?: SyncActionCounts;
+    // Records the server created for an uploaded file
+    records?: SyncRecordItem[];
 }
 
 export interface ResolveConflictsResult {
@@ -165,7 +167,7 @@ export interface ISyncApiClient {
         path: string,
         modifiedAt: string,
         createdAt: string
-    ) => Promise<{ success: boolean; songId: number | null; recordId: number | null; action: string | null; data: SyncRecordItem['data']; counts: SyncActionCounts }>;
+    ) => Promise<{ success: boolean; songId: number | null; records: SyncRecordItem[]; counts: SyncActionCounts }>;
 
     commitSync: (
         deviceId: number,

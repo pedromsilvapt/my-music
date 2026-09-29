@@ -27,7 +27,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
     const mockApiClient: ISyncApiClient = {
         startSync: jest.fn().mockResolvedValue({ sessionId: 1 }),
         checkSync: jest.fn(),
-        uploadFile: jest.fn().mockResolvedValue({ success: true, songId: 1, recordId: null, action: null, data: null, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
+        uploadFile: jest.fn().mockResolvedValue({ success: true, songId: 1, records: [], counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
         commitSync: jest.fn().mockResolvedValue({
             createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
             createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0,
@@ -408,6 +408,42 @@ describe('uploadPhase - accumulated pending actions from checkSync', () => {
     });
 });
 
+describe('uploadPhase - device actions returned by an upload', () => {
+    const mockedActionUpdateRemote = actionUpdateRemote as jest.MockedFunction<typeof actionUpdateRemote>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('queues an UpdateLocal returned by the upload of a previous version of a song', async () => {
+        // The changed local file turns out to be a previous version of its song: the upload answers with
+        // an UpdateLocal, so the device downloads the current version in this session
+        const updateLocalRecord: SyncRecordItem = { id: 20, filePath: 'song.mp3', action: 'UpdateLocal', songId: 5, data: { songId: 5 }, reason: 'Server version wins', acknowledged: false, processedAt: '' };
+        mockedActionUpdateRemote.mockResolvedValue({
+            action: 'UpdateRemote',
+            filePath: 'song.mp3',
+            source: 'Device',
+            records: [updateLocalRecord],
+        });
+        const deps = createMockDeps({
+            apiClient: {
+                ...createMockDeps().apiClient,
+                checkSync: jest.fn().mockResolvedValue({
+                    records: [{ id: 1, filePath: 'song.mp3', action: 'UpdateRemote', songId: 5, data: null, reason: null, acknowledged: false, processedAt: '' }],
+                }),
+            },
+        });
+        const ctx = createContext();
+
+        await uploadPhase(deps, ctx, [
+            { relativePath: 'song.mp3', fullPath: '/music/song.mp3', modifiedAt: new Date(), createdAt: new Date(), size: 1000 },
+        ], jest.fn());
+
+        expect(ctx.pendingActions?.map(r => r.id)).toContain(20);
+        expect(ctx.pendingDownloadPaths.has('song.mp3')).toBe(true);
+    });
+});
+
 describe('uploadPhase - conflictedSongIds conditional tracking', () => {
     const mockedActionCreateRemote = actionCreateRemote as jest.MockedFunction<typeof actionCreateRemote>;
     const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
@@ -484,6 +520,29 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
         await uploadPhase(deps, ctx, files, onProgress);
 
         expect(ctx.conflictedSongIds.has(99)).toBe(false);
+    });
+
+    test('does NOT add songId to conflictedSongIds when the conflict resolves to an UpdateLocal', async () => {
+        // The local file is a previous version of the song: the server wins, so its UpdateLocal must be
+        // performed (and acknowledged) in this session instead of being skipped as conflicted
+        const updateLocalRecord: SyncRecordItem = { id: 20, filePath: 'conflict-song.mp3', action: 'UpdateLocal', songId: 99, data: { songId: 99 }, reason: 'Server version wins', acknowledged: false, processedAt: '' };
+        mockedActionConflict.mockResolvedValue({ records: [updateLocalRecord], counts: undefined });
+        const deps = createMockDeps({
+            apiClient: {
+                ...createMockDeps().apiClient,
+                checkSync: jest.fn().mockResolvedValue({
+                    records: [{ id: 1, filePath: 'conflict-song.mp3', action: 'Conflict', songId: 99, data: null, reason: null, acknowledged: false, processedAt: '' }],
+                }),
+            },
+        });
+        const ctx = createContext();
+
+        await uploadPhase(deps, ctx, [
+            { relativePath: 'conflict-song.mp3', fullPath: '/music/conflict-song.mp3', modifiedAt: new Date(), createdAt: new Date(), size: 1000 },
+        ], jest.fn());
+
+        expect(ctx.conflictedSongIds.has(99)).toBe(false);
+        expect(ctx.pendingActions?.map(r => r.id)).toContain(20);
     });
 });
 

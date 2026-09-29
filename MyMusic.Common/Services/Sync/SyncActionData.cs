@@ -70,6 +70,13 @@ public record SongModifiedAtData
 
     [JsonPropertyName("algorithm")]
     public string? Algorithm { get; init; }
+
+    /// <summary>
+    /// Set on a <c>Link</c> whose file holds a previous version of the song: the song keeps its newer content, and
+    /// the <c>UpdateLocal</c> recorded after the Link downloads it to the device.
+    /// </summary>
+    [JsonPropertyName("isPreviousVersion")]
+    public bool? IsPreviousVersion { get; init; }
 }
 
 public record RenameData

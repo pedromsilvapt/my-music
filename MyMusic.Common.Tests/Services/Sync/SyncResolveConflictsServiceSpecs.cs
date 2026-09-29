@@ -201,6 +201,80 @@ public class SyncResolveConflictsServiceSpecs
     }
 
     [Fact]
+    public async Task ResolveAsync_ConflictLocalIsPreviousVersion_ServerWinsWithUpdateLocalRecord()
+    {
+        // Arrange: the local file matches an older version of the song, so it is a stale copy
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.AddChecksumHistory(song, ComputeChecksum(clientContent));
+        var devicePath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, devicePath);
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = devicePath,
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        record.SongId.ShouldBe(song.Id);
+        record.FilePath.ShouldBe(devicePath);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_DirectionUp_ConflictLocalIsPreviousVersion_CreatesSkippedRecord()
+    {
+        // Arrange: a stale local copy, but in `up` the device never downloads
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress, direction: SyncDirection.Up);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.AddChecksumHistory(song, ComputeChecksum(clientContent));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Skipped);
+        record.SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
     public async Task ResolveAsync_ConflictInvalidBase64_CreatesErrorRecord()
     {
         // Arrange

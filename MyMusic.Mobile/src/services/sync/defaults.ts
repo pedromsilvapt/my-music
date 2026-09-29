@@ -52,9 +52,7 @@ export function createDefaultApiClient(): ISyncApiClient {
             return {
                 success: result.success,
                 songId: result.songId,
-                recordId: result.recordId,
-                action: result.action,
-                data: result.data as SyncRecordItem['data'],
+                records: result.records as SyncRecordItem[],
                 counts: result.counts,
             };
         },

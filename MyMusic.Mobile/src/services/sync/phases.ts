@@ -114,7 +114,7 @@ export async function resolveConflictsPhase (
     toUpdatePaths: Set<string>,
     onProgress: ProgressHandler
 ): Promise<void> {
-    await actionConflict(
+    const resolveResult = await actionConflict(
         deps.apiClient,
         deps.fileOps,
         deps.userPrompt,
@@ -127,11 +127,7 @@ export async function resolveConflictsPhase (
         }
     );
 
-    for (const conflict of conflictRecords) {
-        if (conflict.songId != null && !toUpdatePaths.has(conflict.filePath)) {
-            ctx.conflictedSongIds.add(conflict.songId);
-        }
-    }
+    trackConflictedSongIds(ctx, conflictRecords, resolveResult.records, toUpdatePaths);
 }
 
 export async function uploadPhase (
@@ -216,11 +212,7 @@ export async function uploadPhase (
             const superseded = new Set<SyncRecordItem>([...conflictRecords, ...updateLocalRecords]);
             ctx.pendingActions = (ctx.pendingActions ?? []).filter(r => !superseded.has(r));
 
-            for (const conflict of conflictRecords) {
-                if (conflict.songId != null && !toUpdatePaths.has(conflict.filePath)) {
-                    ctx.conflictedSongIds.add(conflict.songId);
-                }
-            }
+            trackConflictedSongIds(ctx, conflictRecords, resolveResult.records, toUpdatePaths);
         }
 
         await processChunkUploads(deps, ctx, chunk, toCreateRecords, toUpdateRecords, toUpdatePaths, onProgress);
@@ -421,6 +413,7 @@ async function processChunkUploads (
             if (result.counts) {
                 ctx.result = addDeltaToResult(ctx.result, result.counts);
             }
+            queueUploadClientActions(ctx, result);
         }
         ctx.uploadedPaths.add(createRecord.filePath);
 
@@ -454,6 +447,7 @@ async function processChunkUploads (
             if (result.counts) {
                 ctx.result = addDeltaToResult(ctx.result, result.counts);
             }
+            queueUploadClientActions(ctx, result);
         }
         ctx.uploadedPaths.add(updateRecord.filePath);
 
@@ -477,6 +471,40 @@ function extractPendingDownloadPaths (records: SyncRecordItem[]): Set<string> {
         }
     }
     return paths;
+}
+
+/**
+ * Queues the device actions the server recorded for an uploaded file (an UpdateLocal when the file is a
+ * previous version of a song), so the server actions phase performs them in this session.
+ */
+function queueUploadClientActions (ctx: SyncContext, result: ActionResult): void {
+    const clientActions = (result.records ?? []).filter(r => r.action === 'UpdateLocal' || r.action === 'Rename');
+    if (clientActions.length > 0) {
+        ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], clientActions);
+        ctx.pendingDownloadPaths = extractPendingDownloadPaths(ctx.pendingActions);
+    }
+}
+
+/**
+ * Marks the songs of unresolved conflicts, so the server actions phase does not download over them. A conflict
+ * is resolved when the local file will be uploaded, or when the server answered with an UpdateLocal (the local
+ * file is a previous version of the song), which must then be performed and acknowledged in this session.
+ */
+function trackConflictedSongIds (
+    ctx: SyncContext,
+    conflictRecords: SyncRecordItem[],
+    resolvedRecords: SyncRecordItem[],
+    toUpdatePaths: Set<string>
+): void {
+    const updateLocalSongIds = new Set(resolvedRecords
+        .filter(r => r.action === 'UpdateLocal' && r.songId != null)
+        .map(r => r.songId!));
+
+    for (const conflict of conflictRecords) {
+        if (conflict.songId != null && !toUpdatePaths.has(conflict.filePath) && !updateLocalSongIds.has(conflict.songId)) {
+            ctx.conflictedSongIds.add(conflict.songId);
+        }
+    }
 }
 
 function mergePendingActions (

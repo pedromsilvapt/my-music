@@ -79,6 +79,11 @@ public class Song
 
     public List<PlaylistSong> PlaylistSongs { get; set; } = [];
 
+    /// <summary>
+    /// Every previous checksum of this song's file; the current one is <see cref="Checksum"/> (maintained by a database trigger)
+    /// </summary>
+    public List<SongChecksum> ChecksumHistory { get; set; } = [];
+
     [Projectable] public int DurationSeconds => (int)Duration.TotalSeconds;
 
     [Projectable]

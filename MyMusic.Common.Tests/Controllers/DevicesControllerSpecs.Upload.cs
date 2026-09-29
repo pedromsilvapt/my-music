@@ -68,9 +68,11 @@ public class DevicesControllerUploadSpecs
         var response = await controller.UploadFile(device.Id, session.Id, formFile, "/music/song.mp3", modifiedAt, createdAt, CancellationToken.None);
 
         response.Value.Success.ShouldBeTrue();
-        response.Value.Action.ShouldBe(SyncRecordAction.CreateRemote.ToString());
         response.Value.SongId.ShouldBeNull();
-        response.Value.RecordId.ShouldNotBeNull();
+        var record = response.Value.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.CreateRemote);
+        record.Id.ShouldBeGreaterThan(0);
+        response.Value.Counts.CreateRemoteCount.ShouldBe(1);
     }
 
     [Fact]
@@ -91,8 +93,10 @@ public class DevicesControllerUploadSpecs
         var response = await controller.UploadFile(device.Id, session.Id, formFile, "/music/song.mp3", modifiedAt, createdAt, CancellationToken.None);
 
         response.Value.Success.ShouldBeTrue();
-        response.Value.Action.ShouldBe(SyncRecordAction.UpdateRemote.ToString());
         response.Value.SongId.ShouldBe(song.Id);
-        response.Value.RecordId.ShouldNotBeNull();
+        var record = response.Value.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        record.Id.ShouldBeGreaterThan(0);
+        response.Value.Counts.UpdateRemoteCount.ShouldBe(1);
     }
 }
