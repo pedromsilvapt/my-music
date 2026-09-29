@@ -1,5 +1,5 @@
 import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict} from '../sync-actions-device';
-import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncResult, ActionResult} from '../types';
+import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncResult, ActionResult, SyncRecordItem} from '../types';
 import {addDeltaToResult} from '../types';
 
 const ZERO_COUNTS = {
@@ -64,6 +64,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
             autoConfirm: false,
             treatConflictsAsErrors: false,
             scannerType: 'fileSystem',
+            direction: 'Both',
         },
         result,
         uploadedPaths: new Set(),
@@ -141,7 +142,7 @@ describe('actionCreateRemote', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
@@ -206,7 +207,7 @@ describe('actionUpdateRemote', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
@@ -227,10 +228,9 @@ describe('actionCreateLocal', () => {
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
         });
         const fileOps = createMockFileOps();
-        const userPrompt = createMockUserPrompt();
         const ctx = createContext();
 
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
         if (result && result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result).not.toBeNull();
@@ -240,6 +240,7 @@ describe('actionCreateLocal', () => {
         expect(ctx.result.createLocal).toBe(1);
         expect(fileOps.ensureDirectory).toHaveBeenCalled();
         expect(fileOps.writeFile).toHaveBeenCalledWith('/music/song.mp3.tmp', blob);
+        expect(fileOps.deleteFile).not.toHaveBeenCalledWith('/music/song.mp3');
         expect(fileOps.moveFile).toHaveBeenCalledWith('/music/song.mp3.tmp', '/music/song.mp3');
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {
             recordIds: [1],
@@ -247,66 +248,24 @@ describe('actionCreateLocal', () => {
         });
     });
 
-    test('replaces existing file with user confirmation', async () => {
-        const blob = new Blob(['audio data']);
+    test.each([false, true])('reports an error when the file already exists (dryRun=%s)', async (dryRun) => {
+        // An unexpected local file is never overwritten by a create
         const apiClient = createMockApiClient({
-            downloadSong: jest.fn().mockResolvedValue(blob),
-            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
         });
-        const fileOps = createMockFileOps({
-            fileExists: jest.fn().mockReturnValue(true),
-        });
-        const userPrompt = createMockUserPrompt();
-        const ctx = createContext();
-
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
-
-        expect(result).not.toBeNull();
-        expect(result!.action).toBe('CreateLocal');
-        expect(fileOps.deleteFile).toHaveBeenCalledWith('/music/song.mp3');
-        expect(fileOps.writeFile).toHaveBeenCalledWith('/music/song.mp3.tmp', blob);
-        expect(fileOps.moveFile).toHaveBeenCalledWith('/music/song.mp3.tmp', '/music/song.mp3');
-        expect(userPrompt.confirmDeletion).toHaveBeenCalledWith('song.mp3');
-    });
-
-    test('user cancellation returns null', async () => {
-        const fileOps = createMockFileOps({
-            fileExists: jest.fn().mockReturnValue(true),
-        });
-        const userPrompt = createMockUserPrompt({
-            confirmDeletion: jest.fn().mockResolvedValue(false),
-        });
-        const apiClient = createMockApiClient();
-        const ctx = createContext();
-
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
-
-        expect(result).toBeNull();
-        expect(apiClient.downloadSong).not.toHaveBeenCalled();
-    });
-
-    test('autoConfirm skips prompt', async () => {
-        const blob = new Blob(['audio data']);
-        const apiClient = createMockApiClient({
-            downloadSong: jest.fn().mockResolvedValue(blob),
-            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
-        });
-        const fileOps = createMockFileOps({
-            fileExists: jest.fn().mockReturnValue(true),
-        });
-        const userPrompt = createMockUserPrompt();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext({
-            options: {
-                force: false, dryRun: false, autoConfirm: true,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
-            },
+            options: { force: false, dryRun, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both' },
         });
 
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
 
-        expect(result).not.toBeNull();
-        expect(result!.action).toBe('CreateLocal');
-        expect(userPrompt.confirmDeletion).not.toHaveBeenCalled();
+        expect(result!.action).toBe('Error');
+        expect(result!.errorMessage).toBe('File already exists');
+        expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 1, expect.objectContaining({recordId: 1, filePath: 'song.mp3', songId: 42, errorMessage: 'File already exists'}));
+        expect(apiClient.downloadSong).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+        expect(fileOps.deleteFile).not.toHaveBeenCalled();
     });
 
     test('failure case returns Error action without incrementing ctx.result', async () => {
@@ -314,10 +273,9 @@ describe('actionCreateLocal', () => {
             downloadSong: jest.fn().mockRejectedValue(new Error('Server error')),
         });
         const fileOps = createMockFileOps();
-        const userPrompt = createMockUserPrompt();
         const ctx = createContext();
 
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
 
         expect(result).not.toBeNull();
         expect(result!.action).toBe('Error');
@@ -331,21 +289,21 @@ describe('actionCreateLocal', () => {
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
         });
         const fileOps = createMockFileOps();
-        const userPrompt = createMockUserPrompt();
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
         if (result && result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result!.action).toBe('CreateLocal');
         expect(ctx.result.createLocal).toBe(1);
         expect(apiClient.downloadSong).not.toHaveBeenCalled();
         expect(fileOps.writeFile).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: undefined});
     });
 
     test('with reason parameter passes reason to result', async () => {
@@ -355,10 +313,9 @@ describe('actionCreateLocal', () => {
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
         });
         const fileOps = createMockFileOps();
-        const userPrompt = createMockUserPrompt();
         const ctx = createContext();
 
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'new-song.mp3', '/music', 1, "Server-initiated download; renamed from 'old-song.mp3'");
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'new-song.mp3', '/music', 1, "Server-initiated download; renamed from 'old-song.mp3'");
 
         expect(result).not.toBeNull();
         expect(result!.action).toBe('CreateLocal');
@@ -377,10 +334,9 @@ describe('actionCreateLocal', () => {
             downloadSong: jest.fn().mockResolvedValue(blob),
         });
         const fileOps = createMockFileOps();
-        const userPrompt = createMockUserPrompt();
         const ctx = createContext();
 
-        const result = await actionCreateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 42);
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 42);
 
         expect(result).not.toBeNull();
         expect(result!.recordId).toBe(42);
@@ -388,20 +344,84 @@ describe('actionCreateLocal', () => {
 });
 
 describe('actionUpdateLocal', () => {
-    test('delegates to actionCreateLocal', async () => {
+    // The temp file exists only between the write and the move
+    function fileOpsWithLocalFile(overrides: Partial<IFileOps> = {}) {
+        return createMockFileOps({
+            fileExists: jest.fn((path: string) => !path.endsWith('.tmp')),
+            ...overrides,
+        });
+    }
+
+    test('replaces the existing file without a prompt and acknowledges', async () => {
         const blob = new Blob(['audio data']);
         const apiClient = createMockApiClient({
             downloadSong: jest.fn().mockResolvedValue(blob),
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, updateLocalCount: 1}}),
         });
-        const fileOps = createMockFileOps();
-        const userPrompt = createMockUserPrompt();
+        const fileOps = fileOpsWithLocalFile();
         const ctx = createContext();
 
-        const result = await actionUpdateLocal(apiClient, fileOps, userPrompt, ctx, 42, 'song.mp3', '/music', 1);
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
+        if (result && result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
-        expect(result).not.toBeNull();
-        expect(result!.action).toBe('CreateLocal');
-        expect(apiClient.downloadSong).toHaveBeenCalled();
+        expect(result!.action).toBe('UpdateLocal');
+        expect(result!.source).toBe('Server');
+        expect(result!.reason).toBe('Server-initiated update');
+        expect(ctx.result.updateLocal).toBe(1);
+        expect(fileOps.writeFile).toHaveBeenCalledWith('/music/song.mp3.tmp', blob);
+        expect(fileOps.deleteFile).toHaveBeenCalledWith('/music/song.mp3');
+        expect(fileOps.moveFile).toHaveBeenCalledWith('/music/song.mp3.tmp', '/music/song.mp3');
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: expect.any(String)});
+    });
+
+    test('reports an error when the file does not exist', async () => {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(false) });
+        const ctx = createContext();
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
+
+        expect(result!.action).toBe('Error');
+        expect(result!.errorMessage).toBe('File not found');
+        expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 1, expect.objectContaining({recordId: 1, filePath: 'song.mp3', songId: 42, errorMessage: 'File not found'}));
+        expect(apiClient.downloadSong).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    });
+
+    test('dry-run acknowledges without downloading or touching the file', async () => {
+        const apiClient = createMockApiClient({
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, updateLocalCount: 1}}),
+        });
+        const fileOps = fileOpsWithLocalFile();
+        const ctx = createContext({
+            options: { force: false, dryRun: true, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both' },
+        });
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
+
+        expect(result!.action).toBe('UpdateLocal');
+        expect(apiClient.downloadSong).not.toHaveBeenCalled();
+        expect(fileOps.deleteFile).not.toHaveBeenCalled();
+        expect(fileOps.moveFile).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: undefined});
+    });
+
+    test('a failed download reports an error and keeps the existing file', async () => {
+        const apiClient = createMockApiClient({
+            downloadSong: jest.fn().mockRejectedValue(new Error('network down')),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = fileOpsWithLocalFile();
+        const ctx = createContext();
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
+
+        expect(result!.action).toBe('Error');
+        expect(result!.reason).toBe('Server-initiated update failed');
+        expect(fileOps.deleteFile).not.toHaveBeenCalledWith('/music/song.mp3');
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
     });
 });
 
@@ -458,7 +478,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: false, autoConfirm: true,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
@@ -496,7 +516,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
@@ -519,7 +539,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: true,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
@@ -541,7 +561,7 @@ describe('actionDeleteLocal', () => {
             fileExists: jest.fn().mockReturnValue(true),
         });
         const userPrompt = createMockUserPrompt();
-        const ctx = createContext({options: {force: false, dryRun: false, autoConfirm: true, treatConflictsAsErrors: false, scannerType: 'fileSystem'}});
+        const ctx = createContext({options: {force: false, dryRun: false, autoConfirm: true, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both'}});
 
         const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
 
@@ -619,7 +639,7 @@ describe('actionRename', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
 
@@ -676,20 +696,8 @@ describe('actionRename', () => {
 });
 
 describe('actionConflict', () => {
-    const chunk = [
-        {relativePath: 'song.mp3', fullPath: '/music/song.mp3', modifiedAt: new Date(), createdAt: new Date(), size: 1000},
-    ];
-
-    const potentialConflicts = [
-        {
-            path: 'song.mp3',
-            localModifiedAt: new Date('2024-06-01'),
-            serverModifiedAt: new Date('2024-06-02'),
-            lastSyncedAt: null,
-            songId: 42,
-            serverChecksum: 'abc123',
-            serverChecksumAlgorithm: 'md5',
-        },
+    const conflictRecords: SyncRecordItem[] = [
+        { id: 7, filePath: 'song.mp3', action: 'Conflict', songId: 42, data: { localModifiedAt: '2024-06-01T00:00:00Z', serverModifiedAt: '2024-06-02T00:00:00Z' }, reason: null, acknowledged: false, processedAt: '' },
     ];
 
     test('auto-resolved conflicts add to toUpdate set', async () => {
@@ -701,12 +709,12 @@ describe('actionConflict', () => {
                 counts: {...ZERO_COUNTS},
             }),
         });
-        const fileOps = createMockFileOps();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext();
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
         expect(toUpdatePaths.has('song.mp3')).toBe(true);
         expect(result.records).toHaveLength(1);
@@ -722,17 +730,17 @@ describe('actionConflict', () => {
                 counts: {...ZERO_COUNTS},
             }),
         });
-        const fileOps = createMockFileOps();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext({
             options: {
                 force: false, dryRun: false, autoConfirm: false,
-                treatConflictsAsErrors: true, scannerType: 'fileSystem',
+                treatConflictsAsErrors: true, scannerType: 'fileSystem', direction: 'Both',
             },
         });
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
         expect(ctx.result.conflict).toBe(1);
         expect(ctx.result.error).toBe(1);
@@ -748,17 +756,17 @@ describe('actionConflict', () => {
             counts: {...ZERO_COUNTS, updateTimestampCount: 1},
         });
         const apiClient = createMockApiClient({ resolveConflicts });
-        const fileOps = createMockFileOps();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
             },
         });
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
         expect(resolveConflicts).toHaveBeenCalledWith(1, 1, expect.objectContaining({
             conflicts: expect.arrayContaining([expect.objectContaining({ songId: 42 })]),
@@ -771,12 +779,12 @@ describe('actionConflict', () => {
 
     test('no conflicts returns empty result', async () => {
         const apiClient = createMockApiClient();
-        const fileOps = createMockFileOps();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext();
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, [], [], [], toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, [], [], toUpdatePaths, onProgress);
 
         expect(result.records).toHaveLength(0);
         expect(apiClient.resolveConflicts).not.toHaveBeenCalled();
@@ -791,7 +799,7 @@ describe('actionConflict', () => {
                 counts: {...ZERO_COUNTS},
             }),
         });
-        const fileOps = createMockFileOps();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
             promptConflictResolution: jest.fn().mockResolvedValue('upload'),
         });
@@ -799,7 +807,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
         expect(toUpdatePaths.has('song.mp3')).toBe(true);
         expect(userPrompt.promptConflictResolution).toHaveBeenCalledWith('song.mp3');
@@ -814,7 +822,7 @@ describe('actionConflict', () => {
                 counts: {...ZERO_COUNTS},
             }),
         });
-        const fileOps = createMockFileOps();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
             promptConflictResolution: jest.fn().mockResolvedValue('skip'),
         });
@@ -822,7 +830,7 @@ describe('actionConflict', () => {
         const toUpdatePaths = new Set<string>();
         const onProgress = jest.fn();
 
-        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, potentialConflicts, [], chunk, toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
         expect(ctx.result.error).toBe(1);
         expect(toUpdatePaths.has('song.mp3')).toBe(false);
@@ -843,7 +851,7 @@ describe('failed client actions', () => {
             reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
         });
 
-        const result = await actionCreateLocal(apiClient, createMockFileOps(), createMockUserPrompt(), ctx(), 3, 'song.mp3', '/music', 42);
+        const result = await actionCreateLocal(apiClient, createMockFileOps(), ctx(), 3, 'song.mp3', '/music', 42);
 
         expect(result?.action).toBe('Error');
         expectFailureReported(apiClient, 42, 'song.mp3', 3);

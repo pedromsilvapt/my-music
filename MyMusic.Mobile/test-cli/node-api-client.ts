@@ -2,7 +2,7 @@ import type {
     ISyncApiClient,
     SyncRecordItem,
     SyncActionCounts,
-    SyncConflict,
+    SyncDirection,
 } from '../src/services/sync/types';
 import {SyncRecordItemSchema} from '../src/api/types';
 
@@ -63,7 +63,7 @@ export class NodeApiClient implements ISyncApiClient {
 
     async startSync(
         deviceId: number,
-        request: { dryRun?: boolean; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
     ): Promise<{ sessionId: number }> {
         return this._post(`/devices/${deviceId}/sync/start`, request);
     }
@@ -79,7 +79,7 @@ export class NodeApiClient implements ISyncApiClient {
         records: SyncRecordItem[];
         counts: SyncActionCounts;
     }> {
-        const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/check`, request);
+        const response = await this._post<{ records?: unknown[]; counts?: SyncActionCounts }>(`/devices/${deviceId}/sync/${sessionId}/check`, request);
         const records = this._parseRecords(response.records ?? []);
         return {
             records,
@@ -200,11 +200,11 @@ export class NodeApiClient implements ISyncApiClient {
             }>;
         }
     ): Promise<{
-        records: Array<{ id: number; filePath: string; action: string; songId: number | null; data?: any; resolvesConflictRecordId?: number | null; reason?: string; acknowledged: boolean; processedAt: string }>;
+        records: SyncRecordItem[];
         counts: SyncActionCounts;
     }> {
-        const response = await this._post(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, request);
-        return this._parseDates(response, ['records']);
+        const response = await this._post<{ records?: unknown[]; counts: SyncActionCounts }>(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, request);
+        return { records: this._parseRecords(response.records ?? []), counts: response.counts };
     }
 
     async downloadSong(songId: number): Promise<Blob> {
@@ -224,34 +224,8 @@ export class NodeApiClient implements ISyncApiClient {
     async reportSyncError(
         deviceId: number,
         sessionId: number,
-        request: { filePath: string; errorMessage: string; songId?: number | null }
+        request: { filePath: string; errorMessage: string; songId?: number | null; recordId?: number | null }
     ): Promise<{ counts: SyncActionCounts }> {
         return this._post(`/devices/${deviceId}/sync/${sessionId}/error`, request);
-    }
-
-    private _parseDates(response: any, fields: string[]): any {
-        for (const field of fields) {
-            if (Array.isArray(response[field])) {
-                response[field] = response[field].map((item: any) => {
-                    if (item.modifiedAt && typeof item.modifiedAt === 'string') {
-                        item.modifiedAt = new Date(item.modifiedAt);
-                    }
-                    if (item.createdAt && typeof item.createdAt === 'string') {
-                        item.createdAt = new Date(item.createdAt);
-                    }
-                    if (item.localModifiedAt && typeof item.localModifiedAt === 'string') {
-                        item.localModifiedAt = new Date(item.localModifiedAt);
-                    }
-                    if (item.serverModifiedAt && typeof item.serverModifiedAt === 'string') {
-                        item.serverModifiedAt = new Date(item.serverModifiedAt);
-                    }
-                    if (item.lastSyncedAt && typeof item.lastSyncedAt === 'string') {
-                        item.lastSyncedAt = new Date(item.lastSyncedAt);
-                    }
-                    return item;
-                });
-            }
-        }
-        return response;
     }
 }

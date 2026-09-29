@@ -74,6 +74,9 @@ public class DesktopCliApplication : ISyncApplication
     public Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options)
         => _fixture.UpdateLocalFileMetadataAsync(fileName, options);
 
+    public Task SetChunkSizeAsync(int chunkSize)
+        => _fixture.SetChunkSizeAsync(chunkSize);
+
     public void TouchLocalFile(string relativePath)
         => File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
 

@@ -20,6 +20,7 @@ export type SyncFileInfoItem = z.infer<typeof SyncFileInfoItemSchema>;
 
 export const SyncStartRequestSchema = z.object({
     dryRun: z.boolean().optional(),
+    direction: z.enum(['Both', 'Up', 'Down']).optional(),
     repositoryPath: z.string().optional(),
     scanErrors: z.array(z.object({
         path: z.string(),

@@ -3,7 +3,7 @@ import { SyncActionCounts, addDeltaToResult } from './types';
 import type { RenameData } from '../../api/types';
 import { SyncCancelledError } from './errors';
 import { safeToIsoString, chunkArray, formatFilePath } from './utils';
-import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename } from './sync-actions-device';
+import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename } from './sync-actions-device';
 
 const EMPTY_COUNTS: SyncActionCounts = {
     createRemoteCount: 0,
@@ -98,6 +98,7 @@ export async function startSessionPhase (
 ): Promise<void> {
     const startResponse = await deps.apiClient.startSync(ctx.deviceId, {
         dryRun: ctx.options.dryRun,
+        direction: ctx.options.direction,
         repositoryPath: ctx.repositoryPath,
         scanErrors: scanErrors.map(e => ({ path: e.path, error: e.error })),
     });
@@ -136,6 +137,11 @@ export async function uploadPhase (
     files: SyncFileInfo[],
     onProgress: ProgressHandler
 ): Promise<void> {
+    if (ctx.options.direction === 'Down') {
+        console.log('Skipping upload phase (direction: down)');
+        return;
+    }
+
     if (files.length === 0) {
         return;
     }
@@ -224,6 +230,11 @@ export async function serverActionsPhase (
     ctx: SyncContext,
     onProgress: ProgressHandler
 ): Promise<ActionResult[]> {
+    if (ctx.options.direction === 'Up') {
+        console.log('Skipping server actions phase (direction: up)');
+        return [];
+    }
+
     if (deps.state.isCancelled) {
         throw new SyncCancelledError();
     }
@@ -247,15 +258,15 @@ export async function serverActionsPhase (
             continue;
         }
 
-        if ((record.action === 'CreateLocal' || record.action === 'UpdateLocal')) {
+        if (record.action === 'CreateLocal' || record.action === 'UpdateLocal') {
             if (record.songId != null && ctx.conflictedSongIds.has(record.songId)) {
                 continue;
             }
 
-            const result = await actionCreateLocal(
+            const downloadAction = record.action === 'CreateLocal' ? actionCreateLocal : actionUpdateLocal;
+            const result = await downloadAction(
                 deps.apiClient,
                 deps.fileOps,
-                deps.userPrompt,
                 ctx,
                 record.songId,
                 record.filePath,
@@ -263,11 +274,9 @@ export async function serverActionsPhase (
                 record.id,
                 record.reason ?? undefined
             );
-            if (result) {
-                serverResults.push(result);
-                if (result.counts) {
-                    ctx.result = addDeltaToResult(ctx.result, result.counts);
-                }
+            serverResults.push(result);
+            if (result.counts) {
+                ctx.result = addDeltaToResult(ctx.result, result.counts);
             }
         } else if (record.action === 'DeleteLocal') {
             const result = await actionDeleteLocal(
@@ -486,9 +495,10 @@ function queueUploadClientActions (ctx: SyncContext, result: ActionResult): void
 }
 
 /**
- * Marks the songs of unresolved conflicts, so the server actions phase does not download over them. A conflict
- * is resolved when the local file will be uploaded, or when the server answered with an UpdateLocal (the local
- * file is a previous version of the song), which must then be performed and acknowledged in this session.
+ * Marks the songs of conflicts, so the server actions phase does not download over their local files. The set
+ * only grows during a session: a song is unmarked only when the resolve result settles it (UpdateTimestamp,
+ * UpdateLocal or Skipped). If the resolve request fails, its songs stay marked. A conflict whose local file will
+ * be uploaded is not marked.
  */
 function trackConflictedSongIds (
     ctx: SyncContext,
@@ -496,13 +506,15 @@ function trackConflictedSongIds (
     resolvedRecords: SyncRecordItem[],
     toUpdatePaths: Set<string>
 ): void {
-    const updateLocalSongIds = new Set(resolvedRecords
-        .filter(r => r.action === 'UpdateLocal' && r.songId != null)
-        .map(r => r.songId!));
+    for (const record of [...conflictRecords, ...resolvedRecords]) {
+        if (record.songId != null && (record.action === 'Conflict' || record.action === 'Error') && !toUpdatePaths.has(record.filePath)) {
+            ctx.conflictedSongIds.add(record.songId);
+        }
+    }
 
-    for (const conflict of conflictRecords) {
-        if (conflict.songId != null && !toUpdatePaths.has(conflict.filePath) && !updateLocalSongIds.has(conflict.songId)) {
-            ctx.conflictedSongIds.add(conflict.songId);
+    for (const record of resolvedRecords) {
+        if (record.songId != null && (record.action === 'UpdateTimestamp' || record.action === 'UpdateLocal' || record.action === 'Skipped')) {
+            ctx.conflictedSongIds.delete(record.songId);
         }
     }
 }

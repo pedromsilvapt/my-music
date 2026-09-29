@@ -20,6 +20,9 @@ public interface ISyncApplication : IAsyncDisposable
     Task SetNamingTemplateAsync(string namingTemplate);
     Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options);
 
+    /// <summary>Sets how many files the client sends to the server per check request.</summary>
+    Task SetChunkSizeAsync(int chunkSize);
+
     /// <summary>Bumps a local file's modification time without changing its content.</summary>
     void TouchLocalFile(string relativePath);
     List<string> GetAllFiles();

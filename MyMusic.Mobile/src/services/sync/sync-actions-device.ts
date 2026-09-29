@@ -133,68 +133,84 @@ export async function actionUpdateRemote(
 export async function actionCreateLocal(
     apiClient: ISyncApiClient,
     fileOps: IFileOps,
-    userPrompt: IUserPrompt,
     ctx: SyncContext,
     songId: number | null,
     path: string,
     decodedRepoPath: string,
     recordId: number,
     reason?: string
-): Promise<ActionResult | null> {
+): Promise<ActionResult> {
     const fullPath = `${decodedRepoPath}/${path}`;
-    const fileExists = fileOps.fileExists(fullPath);
 
-    if (!ctx.options.dryRun && fileExists && !ctx.options.autoConfirm) {
-        const confirmed = await userPrompt.confirmDeletion(path);
-        if (!confirmed) {
-            return null;
-        }
+    if (fileOps.fileExists(fullPath)) {
+        console.error('File already exists during create:', path);
+        return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, 'File already exists', 'Unexpected local file during create');
     }
 
-    const baseReason = reason ?? 'Server-initiated download';
+    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, false);
+}
 
-    if (ctx.options.dryRun) {
-        const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, {
-            recordIds: [recordId],
-        });
-        return {
-            action: 'CreateLocal',
-            filePath: path,
-            source: 'Server',
-            reason: baseReason,
-            songId: songId ?? undefined,
-            recordId,
-            counts: ackResult.counts,
-        };
+export async function actionUpdateLocal(
+    apiClient: ISyncApiClient,
+    fileOps: IFileOps,
+    ctx: SyncContext,
+    songId: number | null,
+    path: string,
+    decodedRepoPath: string,
+    recordId: number,
+    reason?: string
+): Promise<ActionResult> {
+    const fullPath = `${decodedRepoPath}/${path}`;
+
+    if (!fileOps.fileExists(fullPath)) {
+        console.error('File not found during update:', path);
+        return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, 'File not found', 'Missing local file during update');
     }
+
+    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, true);
+}
+
+async function downloadAndAck(
+    apiClient: ISyncApiClient,
+    fileOps: IFileOps,
+    ctx: SyncContext,
+    songId: number | null,
+    path: string,
+    decodedRepoPath: string,
+    recordId: number,
+    reason: string | undefined,
+    isUpdate: boolean
+): Promise<ActionResult> {
+    const action = isUpdate ? 'UpdateLocal' : 'CreateLocal';
+    const baseReason = reason ?? (isUpdate ? 'Server-initiated update' : 'Server-initiated download');
+    const fullPath = `${decodedRepoPath}/${path}`;
+    const tempPath = `${fullPath}.tmp`;
 
     try {
-        await fileOps.ensureDirectory(fullPath);
+        // Dry-run skips the download/move, so there is no real file modification time to report.
+        let modifiedAt: Date | null = null;
+        if (!ctx.options.dryRun) {
+            await fileOps.ensureDirectory(fullPath);
 
-        const tempPath = `${fullPath}.tmp`;
-        try {
             const blob = await apiClient.downloadSong(songId!);
             await fileOps.writeFile(tempPath, blob);
 
-            if (fileExists) {
+            if (isUpdate) {
                 await fileOps.deleteFile(fullPath);
             }
 
             await fileOps.moveFile(tempPath, fullPath);
-        } finally {
-            if (fileOps.fileExists(tempPath)) {
-                await fileOps.deleteFile(tempPath);
-            }
+
+            modifiedAt = fileOps.getModificationTime(fullPath);
         }
 
-        const modifiedAt = fileOps.getModificationTime(fullPath);
         const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, {
             recordIds: [recordId],
             modifiedAt: modifiedAt ? safeToIsoString(modifiedAt) : undefined,
         });
 
         return {
-            action: 'CreateLocal',
+            action,
             filePath: path,
             source: 'Server',
             reason: baseReason,
@@ -205,21 +221,11 @@ export async function actionCreateLocal(
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
         return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, errorMessage, `${baseReason} failed`);
+    } finally {
+        if (fileOps.fileExists(tempPath)) {
+            await fileOps.deleteFile(tempPath);
+        }
     }
-}
-
-export async function actionUpdateLocal(
-    apiClient: ISyncApiClient,
-    fileOps: IFileOps,
-    userPrompt: IUserPrompt,
-    ctx: SyncContext,
-    songId: number | null,
-    path: string,
-    decodedRepoPath: string,
-    recordId: number,
-    reason?: string
-): Promise<ActionResult | null> {
-    return actionCreateLocal(apiClient, fileOps, userPrompt, ctx, songId, path, decodedRepoPath, recordId, reason);
 }
 
 export async function actionDeleteLocal(

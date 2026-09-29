@@ -10,6 +10,8 @@ import type {SyncRecordAction, SyncRecordItem} from '../../api/types';
 
 export type {SyncRecordAction, SyncRecordItem};
 
+export type SyncDirection = 'Both' | 'Up' | 'Down';
+
 export interface SyncContext {
     deviceId: number;
     repositoryPath: string;
@@ -21,6 +23,7 @@ export interface SyncContext {
         autoConfirm: boolean;
         treatConflictsAsErrors: boolean;
         scannerType: ScannerType;
+        direction: SyncDirection;
     };
     result: SyncResult;
     uploadedPaths: Set<string>;
@@ -140,7 +143,7 @@ export interface ScanError {
 export interface ISyncApiClient {
     startSync: (
         deviceId: number,
-        request: { dryRun?: boolean; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
     ) => Promise<{ sessionId: number }>;
 
     checkSync: (
@@ -266,6 +269,7 @@ export interface ISyncState {
         autoConfirm: boolean;
         treatConflictsAsErrors: boolean;
         scannerType: ScannerType;
+        direction: SyncDirection;
     };
 }
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Playwright;
 using MyMusic.Common.Targets;
 using MyMusic.IntegrationTests.Base;
@@ -61,6 +62,13 @@ public class DesktopCliFixture : IAsyncDisposable
         DeviceId = deviceData!.Value.GetProperty("device").GetProperty("id").GetInt64();
 
         await WriteConfigAsync(serverUrl, userId, userName);
+    }
+
+    public async Task SetChunkSizeAsync(int chunkSize)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(ConfigPath))!;
+        config["myMusic"]!["sync"]!["chunkSize"] = chunkSize;
+        await File.WriteAllTextAsync(ConfigPath, config.ToJsonString());
     }
 
     public async Task SetNamingTemplateAsync(string namingTemplate)

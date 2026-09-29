@@ -346,6 +346,128 @@ public class PhasesTests
         ctx.Result.Error.ShouldBe(2);
     }
 
+    [Fact]
+    public async Task UploadPhase_ConflictFromEarlierChunk_StaysMarkedAfterLaterChunkIsResolved()
+    {
+        // Chunk 1 holds a real conflict; chunk 2 holds a file the server changed, which resolves to an UpdateLocal
+        _config.GetChunkSize().Returns(1);
+        SetupLocalFilesExist();
+        var conflict = CreateRecord("conflict.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
+        var potentialUpdate = CreateRecord("changed.mp3", SyncRecordAction.UpdateLocal) with { SongId = 2 };
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [conflict], Counts = SyncActionCounts.Empty }, new CheckSyncResult { Records = [potentialUpdate], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(
+                new ResolveConflictsResult { Records = [CreateRecord("conflict.mp3", SyncRecordAction.Conflict) with { SongId = 1 }] },
+                new ResolveConflictsResult { Records = [CreateRecord("changed.mp3", SyncRecordAction.UpdateLocal) with { SongId = 2 }] });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("conflict.mp3"), CreateScannedFile("changed.mp3")], null);
+
+        // The conflict found in chunk 1 should still protect its song; the resolved update should not
+        ctx.ConflictedSongIds.ShouldBe([1L]);
+    }
+
+    [Fact]
+    public async Task UploadPhase_ConflictResolvedToUpdateLocal_IsNotMarkedAndIsQueued()
+    {
+        // The local file is a previous version of the song, so the server version wins
+        _config.GetChunkSize().Returns(10);
+        SetupLocalFilesExist();
+        var conflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
+        var updateLocal = CreateRecord("song.mp3", SyncRecordAction.UpdateLocal) with { SongId = 1 };
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [conflict], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [updateLocal] });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
+
+        // The song should be downloaded in the server actions phase
+        ctx.ConflictedSongIds.ShouldBeEmpty();
+        ctx.PendingServerRecords.ShouldContain(updateLocal);
+        ctx.PendingServerRecords.ShouldNotContain(conflict);
+    }
+
+    [Theory]
+    [InlineData(SyncRecordAction.UpdateTimestamp)]
+    [InlineData(SyncRecordAction.Skipped)]
+    public async Task UploadPhase_ConflictSettledWithoutDownload_IsNotMarked(SyncRecordAction resolvedAction)
+    {
+        // The contents turn out to be equal (or the server skips the file), so there is nothing to protect
+        _config.GetChunkSize().Returns(10);
+        SetupLocalFilesExist();
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 }], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [CreateRecord("song.mp3", resolvedAction) with { SongId = 1 }] });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
+
+        ctx.ConflictedSongIds.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task UploadPhase_ResolveRequestFails_ConflictStaysMarked()
+    {
+        // The server could not compare the contents, so the conflict was never settled
+        _config.GetChunkSize().Returns(10);
+        SetupLocalFilesExist();
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 }], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns<ResolveConflictsResult>(_ => throw new HttpRequestException("server unavailable"));
+
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
+
+        // The local file should stay protected from downloads
+        ctx.ConflictedSongIds.ShouldBe([1L]);
+    }
+
+    [Theory]
+    [InlineData(SyncRecordAction.CreateLocal)]
+    [InlineData(SyncRecordAction.UpdateLocal)]
+    public async Task ServerActionsPhase_SkipsDownloadForConflictedSong(SyncRecordAction action)
+    {
+        // The server asks for a download of a song whose local file has an unresolved conflict
+        var download = CreateRecord("song.mp3", action) with { SongId = 1 };
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(new CreatePendingActionsResult { Records = [download] });
+        _fileOps.FileExists(Arg.Any<string>()).Returns(action == SyncRecordAction.UpdateLocal);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+        ctx.ConflictedSongIds.Add(1);
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // The local file should not be overwritten
+        await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
+    /// Makes every local file exist and readable, as the conflict resolution reads them.
+    /// </summary>
+    private void SetupLocalFilesExist()
+    {
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(true);
+        _fileSystem.File.Returns(mockFile);
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("AAAA");
+    }
+
     private Phases CreatePhases()
     {
         return new Phases(_apiClient, _syncActions, _config, _scanner, _logger);

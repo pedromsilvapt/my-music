@@ -69,7 +69,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         get isCancelled() { return false; },
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem',
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
         },
     };
 
@@ -126,7 +126,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
         sessionId: 1,
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem',
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
         },
         result,
         uploadedPaths: new Set(),

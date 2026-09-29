@@ -263,16 +263,7 @@ public class Phases(
 
             ctx.Result = ctx.Result.AddDelta(result.Counts);
 
-            var unresolvedSongIds = result.Records
-                .Where(r => (r.Action == SyncRecordAction.Conflict || r.Action == SyncRecordAction.Error) && r.SongId.HasValue)
-                .Select(r => r.SongId!.Value)
-                .ToHashSet();
-
-            ctx.ConflictedSongIds.Clear();
-            foreach (var songId in unresolvedSongIds)
-            {
-                ctx.ConflictedSongIds.Add(songId);
-            }
+            TrackConflictedSongIds(ctx, conflictRecords, result.Records);
 
             foreach (var record in result.Records)
             {
@@ -281,6 +272,34 @@ public class Phases(
                 {
                     ctx.PendingServerRecords.Add(record);
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Marks the songs of conflicts, so the server actions phase does not download over their local files.
+    /// The set only grows during a session: a song is unmarked only when the resolve result settles it
+    /// (<c>UpdateTimestamp</c>, <c>UpdateLocal</c> or <c>Skipped</c>). If the resolve request fails, its
+    /// songs stay marked.
+    /// </summary>
+    private static void TrackConflictedSongIds(
+        SyncContext ctx,
+        List<SyncRecordItem> conflictRecords,
+        List<SyncRecordItem> resolvedRecords)
+    {
+        foreach (var record in conflictRecords.Concat(resolvedRecords))
+        {
+            if (record.SongId.HasValue && record.Action is SyncRecordAction.Conflict or SyncRecordAction.Error)
+            {
+                ctx.ConflictedSongIds.Add(record.SongId.Value);
+            }
+        }
+
+        foreach (var record in resolvedRecords)
+        {
+            if (record.SongId.HasValue && record.Action is SyncRecordAction.UpdateTimestamp or SyncRecordAction.UpdateLocal or SyncRecordAction.Skipped)
+            {
+                ctx.ConflictedSongIds.Remove(record.SongId.Value);
             }
         }
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import type { SyncDeps, SyncResult, IKeepAwake, IUserPrompt, ConflictResolution } from '../src/services/sync/types';
+import type { SyncDeps, SyncResult, IKeepAwake, IUserPrompt, ConflictResolution, SyncDirection } from '../src/services/sync/types';
 import { createSyncContext } from '../src/services/sync/context';
 import { orchestrateSync } from '../src/services/sync/orchestrator';
 import { NodeSyncConfig } from './node-config';
@@ -23,7 +23,7 @@ interface CliArgs {
     force: boolean;
     dryRun: boolean;
     autoConfirm: boolean;
-    direction: string | null;
+    direction: SyncDirection;
     verbose: boolean;
 }
 
@@ -34,7 +34,7 @@ function parseArgs(argv: string[]): CliArgs {
         force: false,
         dryRun: false,
         autoConfirm: false,
-        direction: null,
+        direction: 'Both',
         verbose: false,
     };
 
@@ -54,7 +54,7 @@ function parseArgs(argv: string[]): CliArgs {
                 break;
             case '--direction':
             case '-d':
-                result.direction = args[++i] ?? null;
+                result.direction = parseDirection(args[++i]);
                 break;
             case '--verbose':
                 result.verbose = true;
@@ -63,6 +63,19 @@ function parseArgs(argv: string[]): CliArgs {
     }
 
     return result;
+}
+
+function parseDirection(value: string | undefined): SyncDirection {
+    switch (value?.toLowerCase()) {
+        case 'up':
+            return 'Up';
+        case 'down':
+            return 'Down';
+        case 'both':
+            return 'Both';
+        default:
+            throw new Error(`Invalid direction: ${value}. Expected up, down or both`);
+    }
 }
 
 function printResults(result: SyncResult): void {
@@ -89,7 +102,7 @@ async function main(): Promise<number> {
 
     if (args.command !== 'sync') {
         console.error(`Unknown command: ${args.command}`);
-        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--yes] [--direction up|down]');
+        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--yes] [--direction up|down|both]');
         return 1;
     }
 
@@ -117,6 +130,7 @@ async function main(): Promise<number> {
             autoConfirm: args.autoConfirm,
             treatConflictsAsErrors: false,
             scannerType: 'fileSystem' as const,
+            direction: args.direction,
         },
     };
 

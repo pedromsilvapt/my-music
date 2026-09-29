@@ -62,6 +62,45 @@ public abstract partial class SyncTestsBase
         result2.ShouldBe(conflict: 1);
     }
 
+    // Scenario: A conflict found in an earlier chunk is kept while later chunks download server changes
+    //   Given two songs on the server were downloaded to the device
+    //   When one song is edited differently on the server and on the device
+    //   And the other song is edited only on the server
+    //   And the device checks its files one per request
+    //   Then the conflicting local file is kept
+    //   And the other song's server version is downloaded in the same sync
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldKeepConflictAcrossChunks()
+    {
+        // Seed two songs on the server associated with this device, and download them
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+        [
+            SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] },
+            SongsFixture.DefaultSongs[5] with { DeviceIds = [App.DeviceId] },
+        ]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 2);
+
+        // Edit the first song differently on each side, so it becomes a real conflict
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+        var conflictPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        await App.UpdateLocalFileMetadataAsync(conflictPath, new(Title: "Local Title"));
+
+        // Edit the second song only on the server, so the device should download it
+        await new EditSongFlow("Sand", new(Title: "Updated Sand")).ExecuteAsync(Page);
+
+        // Sync one file per check request: the conflict and the update are resolved in separate chunks
+        await App.SetChunkSizeAsync(1);
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(conflict: 1, updateLocal: 1, rename: 1);
+
+        // The conflicting local file should be untouched, and the other song should hold the server's version
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(conflictPath), title: "Local Title");
+        var updatedPath = "Dove Cameron/Sand/Updated Sand - Dove Cameron.mp3";
+        App.FileShouldExist(updatedPath);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(updatedPath), title: "Updated Sand");
+    }
+
     // Scenario: A local copy of an older version of a song is not a real conflict
     //   Given a song on the server was downloaded to the device
     //   When the song is edited on the server

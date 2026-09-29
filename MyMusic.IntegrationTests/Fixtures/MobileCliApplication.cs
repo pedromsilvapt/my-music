@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 using MyMusic.Common.Targets;
 using MyMusic.IntegrationTests.Base;
@@ -127,6 +129,13 @@ public class MobileCliApplication : ISyncApplication
         response.Ok.ShouldBeTrue();
     }
 
+    public async Task SetChunkSizeAsync(int chunkSize)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(_configPath))!;
+        config["chunkSize"] = chunkSize;
+        await File.WriteAllTextAsync(_configPath, config.ToJsonString());
+    }
+
     public void TouchLocalFile(string relativePath)
     {
         File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
@@ -242,6 +251,7 @@ public class MobileCliApplication : ISyncApplication
         {
             if (e.Data != null)
             {
+                _telemetry.TestsLogger.LogDebug("Mobile CLI: " + e.Data);
                 stdout.AppendLine(e.Data);
             }
         };
@@ -250,6 +260,7 @@ public class MobileCliApplication : ISyncApplication
         {
             if (e.Data != null)
             {
+                _telemetry.TestsLogger.LogWarning("Mobile CLI: " + e.Data);
                 stderr.AppendLine(e.Data);
             }
         };
@@ -263,6 +274,13 @@ public class MobileCliApplication : ISyncApplication
         span?.SetTag("exit_code", process.ExitCode);
         span?.Stop();
 
+        if (process.ExitCode != 0)
+        {
+            _telemetry.TestsLogger.LogError(
+                "{Cli} exited with code {ExitCode}\n--- stdout ---\n{Stdout}\n--- stderr ---\n{Stderr}",
+                "Mobile CLI", process.ExitCode, stdout.ToString(), stderr.ToString());
+        }
+
         var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
 
         var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
@@ -271,7 +289,7 @@ public class MobileCliApplication : ISyncApplication
         return result with { ApiRecordCounts = apiRecordCounts };
     }
 
-    public bool SupportsSyncDirection() => false;
+    public bool SupportsSyncDirection() => true;
 
     public async ValueTask DisposeAsync()
     {
