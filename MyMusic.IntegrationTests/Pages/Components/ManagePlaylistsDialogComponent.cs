@@ -4,9 +4,15 @@ namespace MyMusic.IntegrationTests.Pages.Components;
 
 public class ManagePlaylistsDialogComponent(ILocator locator) : BaseComponent(locator)
 {
+    private ILocator Content => Root.GetByTestId("manage-playlists-dialog");
+
+    /// <summary>
+    /// Waits for the dialog to open and for its playlists (and the managed songs) to finish loading.
+    /// </summary>
     public async Task WaitForLoadedAsync()
     {
         await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+        await Assertions.Expect(Content).ToHaveAttributeAsync("data-loading", "false");
     }
 
     public ILocator PlaylistRow(string playlistName) =>

@@ -147,7 +147,8 @@ export default function ManagePlaylistsDialog({
 
     return (
         <Modal opened={opened} onClose={handleCancel} size="lg" title={t("playlists:manageDialog.title")} centered zIndex={ZINDEX_MODAL}>
-            <Stack>
+            <Stack data-testid="manage-playlists-dialog"
+                   data-loading={playlistsQuery.isFetching || songsQuery.isFetching ? "true" : "false"}>
                 <Text size="sm" c="dimmed">
                     {t("playlists:manageDialog.managing", {count: songIds.length})}
                 </Text>
