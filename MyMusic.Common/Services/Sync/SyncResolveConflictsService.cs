@@ -82,7 +82,7 @@ public class SyncResolveConflictsService(
     }
 
     /// <summary>
-    /// Handles a single conflict item: looks up the <see cref="SongDevice"/>, decodes the base64
+    /// Handles a single conflict item: looks up the <see cref="SongDevice"/> at the item's path, decodes the base64
     /// file content, and compares the local checksum against the server song checksum. Matching
     /// checksums produce an <c>UpdateTimestamp</c> record. A local checksum matching an older version
     /// of the song means the local file is a stale copy, so the server wins: an <c>UpdateLocal</c>
@@ -102,11 +102,11 @@ public class SyncResolveConflictsService(
     {
         var songDevice = await db.SongDevices
             .IncludeSongMetadata("Song")
-            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == conflict.SongId, cancellationToken);
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == conflict.SongId && sd.DevicePath == conflict.Path, cancellationToken);
 
         if (songDevice == null)
         {
-            logger.LogWarning("SongDevice not found for device {DeviceId} and song {SongId}", deviceId, conflict.SongId);
+            logger.LogWarning("SongDevice not found for device {DeviceId}, song {SongId} and path {Path}", deviceId, conflict.SongId, conflict.Path);
             return;
         }
 
@@ -176,7 +176,7 @@ public class SyncResolveConflictsService(
     }
 
     /// <summary>
-    /// Handles a single potential-update item: looks up the <see cref="SongDevice"/> (with full
+    /// Handles a single potential-update item: looks up the <see cref="SongDevice"/> at the item's path (with full
     /// song metadata), decodes the base64 file content, and compares the local checksum against
     /// the server song checksum. Matching checksums produce an <c>UpdateTimestamp</c> record;
     /// differing checksums produce an <c>UpdateLocal</c> record (optionally followed by a
@@ -197,11 +197,11 @@ public class SyncResolveConflictsService(
     {
         var songDevice = await db.SongDevices
             .IncludeSongMetadata("Song")
-            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == update.SongId, cancellationToken);
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == update.SongId && sd.DevicePath == update.Path, cancellationToken);
 
         if (songDevice == null)
         {
-            logger.LogWarning("SongDevice not found for device {DeviceId} and song {SongId} during potential update resolution", deviceId, update.SongId);
+            logger.LogWarning("SongDevice not found for device {DeviceId}, song {SongId} and path {Path} during potential update resolution", deviceId, update.SongId, update.Path);
             return;
         }
 

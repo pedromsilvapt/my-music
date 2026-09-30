@@ -422,6 +422,80 @@ public class SyncResolveConflictsServiceSpecs
     }
 
     [Fact]
+    public async Task ResolveAsync_SongLinkedAtTwoPaths_PotentialUpdateTargetsItsOwnPath()
+    {
+        // Arrange: the song is linked at two device paths; only the second one is checked
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.CreateSongDevice(device, song, "Copy A.mp3");
+        scenario.CreateSongDevice(device, song, "Copy B.mp3");
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "Copy B.mp3",
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert: the download and the rename act on the checked path, never on the other copy
+        result.ShouldNotBeNull();
+        result.Records.Single(r => r.Action == SyncRecordAction.UpdateLocal).FilePath.ShouldBe("Copy B.mp3");
+        var rename = result.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        SyncActionDataSerializer.Deserialize<RenameData>(rename.Data)!.PreviousPath.ShouldBe("Copy B.mp3");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_SongLinkedAtTwoPaths_ConflictWithPreviousVersionTargetsItsOwnPath()
+    {
+        // Arrange: the song is linked at two device paths; the second one holds a previous version
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.AddChecksumHistory(song, ComputeChecksum(clientContent));
+        scenario.CreateSongDevice(device, song, "Copy A.mp3");
+        scenario.CreateSongDevice(device, song, "Copy B.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "Copy B.mp3",
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert: the download and the rename act on the checked path, never on the other copy
+        result.ShouldNotBeNull();
+        result.Records.Single(r => r.Action == SyncRecordAction.UpdateLocal).FilePath.ShouldBe("Copy B.mp3");
+        var rename = result.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        SyncActionDataSerializer.Deserialize<RenameData>(rename.Data)!.PreviousPath.ShouldBe("Copy B.mp3");
+    }
+
+    [Fact]
     public async Task ResolveAsync_PotentialUpdateChecksumsDiffer_PathChanged_AlsoCreatesRenameRecord()
     {
         // Arrange
