@@ -58,6 +58,7 @@ export default function NowPlayingPage() {
                     <Popover.Target>
                         <Group
                             gap={4}
+                            data-testid="queue-switcher-toggle"
                             style={{cursor: queues.length > 1 ? 'pointer' : 'default'}}
                             onClick={() => queues.length > 1 && togglePopover()}
                         >

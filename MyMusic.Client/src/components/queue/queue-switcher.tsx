@@ -41,7 +41,7 @@ export function QueueSwitcher({queues, visibleQueueId, currentQueueId, onViewQue
     };
 
     return (
-        <Stack gap="xs">
+        <Stack gap="xs" data-testid="queue-switcher">
             {queues.length === 0 ? (
                 <Text size="sm" c="dimmed" ta="center" py="md">
                     {t("queue:switcher.empty")}

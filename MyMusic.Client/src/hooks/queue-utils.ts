@@ -1,4 +1,4 @@
-import type { GetPlaylistSongItem, ListSongItem } from '../model';
+import type { GetPlaylistResponse, GetPlaylistSongItem, ListSongItem } from '../model';
 import { isPlaylistSong } from '../utils/type-guards';
 
 export type PlayableItem = GetPlaylistSongItem | ListSongItem;
@@ -86,4 +86,17 @@ export function reorderSongs (
     const [movedSong] = result.splice(fromIndex, 1);
     result.splice(toIndex, 0, movedSong);
     return compactOrders(result);
+}
+/**
+ * Returns a copy of a playlist query response with its current song replaced.
+ * Used to seed the playing queue cache with a queue's already loaded data when switching to it.
+ */
+export function withCurrentSong<T extends { data: GetPlaylistResponse }> (response: T, currentSongId: number): T {
+    return {
+        ...response,
+        data: {
+            ...response.data,
+            playlist: { ...response.data.playlist, currentSongId },
+        },
+    };
 }

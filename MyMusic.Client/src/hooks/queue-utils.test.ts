@@ -7,8 +7,10 @@ import {
     isPlaylistSong,
     playLastSongs,
     playNextSongs,
+    withCurrentSong,
 } from './queue-utils';
 import type { GetPlaylistSongItem, ListSongItem } from '../model';
+import { PlaylistType } from '../model';
 
 function makePlaylistSong (id: number, order: number, stopAfterPlayback = false): GetPlaylistSongItem {
     return {
@@ -345,5 +347,41 @@ describe('isPlaylistSong', () => {
 
         expect(isPlaylistSong(listSong)).toBe(false);
         expect('stopAfterPlayback' in listSong).toBe(false);
+    });
+});
+
+describe('withCurrentSong', () => {
+    const response = {
+        data: {
+            playlist: {
+                id: 7,
+                name: 'Queue B',
+                type: PlaylistType.Queue,
+                currentSongId: 1,
+                songs: [makePlaylistSong(1, 1), makePlaylistSong(2, 2)],
+                ownerId: 1,
+                ownerName: 'owner',
+                isSharedWithMe: false,
+                sharedWithCount: 0,
+            },
+        },
+        status: 200 as const,
+        headers: new Headers(),
+    };
+
+    it('replaces the current song and keeps the rest of the queue', () => {
+        const result = withCurrentSong(response, 2);
+
+        expect(result.data.playlist.currentSongId).toBe(2);
+        expect(result.data.playlist.id).toBe(7);
+        expect(result.data.playlist.songs).toBe(response.data.playlist.songs);
+        expect(result.status).toBe(200);
+        expect(result.headers).toBe(response.headers);
+    });
+
+    it('does not mutate the original response', () => {
+        withCurrentSong(response, 2);
+
+        expect(response.data.playlist.currentSongId).toBe(1);
     });
 });

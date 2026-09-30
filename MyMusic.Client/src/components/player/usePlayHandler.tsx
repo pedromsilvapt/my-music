@@ -7,7 +7,15 @@ import {generateQueueName, type QueueContext} from '../../utils/queue-name-gener
 import {usePlaybackActions} from '../../stores/playback-store';
 import {useQueueManagerStore} from '../../stores/queue-manager-store';
 import {useQueryClient} from '@tanstack/react-query';
-import {getGetQueueQueryKey, useSetQueueCurrentSongById} from '../../client/playlists';
+import {
+    getGetPlaylistQueryKey,
+    getGetQueueQueryKey,
+    useSetQueueCurrentSongById,
+    type getPlaylistResponse,
+    type getQueueResponse,
+} from '../../client/playlists';
+import {withCurrentSong} from '../../hooks/queue-utils';
+import type {GetPlaylistSongItem} from '../../model';
 
 export type PlayHandler = (
     rows: PlayableItem[],
@@ -60,13 +68,48 @@ export function usePlayHandler(
         if (queueId === null) return;
 
         const clickedIndex = queueItems.findIndex(s => s.id === clickedSong.id);
-        const songWithOrder: import('../../model').GetPlaylistSongItem = {
+        const songWithOrder: GetPlaylistSongItem = {
             ...clickedSong,
             order: clickedIndex + 1,
             addedAtPlaylist: new Date().toISOString(),
-        } as import('../../model').GetPlaylistSongItem;
+        } as GetPlaylistSongItem;
         setLoadingSong(songWithOrder, true);
     }, [createQueue, incrementPlaybackKey, setLoadingSong]);
+
+    // Switch to the different queue and play the song in a single atomic request
+    const switchQueueAndPlay = useCallback((
+        queueId: number,
+        clickedSong: GetPlaylistSongItem
+    ) => {
+        const queueKey = getGetQueueQueryKey();
+        const previousQueueData = queryClient.getQueryData<getQueueResponse>(queueKey);
+        const previousCurrentQueueId = currentQueueId;
+        const visibleQueueData = queryClient.getQueryData<getPlaylistResponse>(getGetPlaylistQueryKey(queueId));
+
+        // Once it becomes the current queue, the list reads from the playing queue cache, which still
+        // holds the old queue until the request completes. Seed it with the already loaded queue so
+        // the list doesn't jump back to the old queue in the meantime.
+        void queryClient.cancelQueries({queryKey: queueKey});
+        if (visibleQueueData) {
+            queryClient.setQueryData(queueKey, withCurrentSong(visibleQueueData, clickedSong.id));
+        }
+
+        setCurrentQueueId(queueId);
+        setLoadingSong(clickedSong, true);
+        setQueueCurrentSongByIdRef.current.mutate({
+            id: queueId,
+            data: {currentSongId: clickedSong.id}
+        }, {
+            onSuccess: (response) => {
+                queryClient.setQueryData(queueKey, response);
+                queryClient.invalidateQueries({queryKey: queueKey});
+            },
+            onError: () => {
+                queryClient.setQueryData(queueKey, previousQueueData);
+                setCurrentQueueId(previousCurrentQueueId);
+            },
+        });
+    }, [queryClient, currentQueueId, setCurrentQueueId, setLoadingSong]);
 
     return useCallback((
         rows: PlayableItem[],
@@ -77,20 +120,10 @@ export function usePlayHandler(
         ev.stopPropagation();
 
         if (nowPlaying && rows.length === 1 && 'order' in rows[0]) {
-            const clickedSong = rows[0] as import('../../model').GetPlaylistSongItem;
+            const clickedSong = rows[0] as GetPlaylistSongItem;
 
             if (visibleQueueId && visibleQueueId !== currentQueueId) {
-                // Switch to the different queue and play the song in a single atomic request
-                setCurrentQueueId(visibleQueueId);
-                setLoadingSong(clickedSong, true);
-                setQueueCurrentSongByIdRef.current.mutate({
-                    id: visibleQueueId,
-                    data: { currentSongId: clickedSong.id }
-                }, {
-                    onSuccess: () => {
-                        queryClient.invalidateQueries({ queryKey: getGetQueueQueryKey() });
-                    }
-                });
+                switchQueueAndPlay(visibleQueueId, clickedSong);
             } else {
                 // Already viewing the current queue - use normal navigation
                 // order is 1-indexed, goTo expects 0-indexed array position
@@ -103,5 +136,5 @@ export function usePlayHandler(
         } else {
             playAndCreateQueue(rows, context, allItems);
         }
-    }, [nowPlaying, visibleQueueId, currentQueueId, setCurrentQueueId, queryClient, setLoadingSong, goTo, playAndCreateQueue, playNext, playLast]);
+    }, [nowPlaying, visibleQueueId, currentQueueId, switchQueueAndPlay, goTo, playAndCreateQueue, playNext, playLast]);
 }
