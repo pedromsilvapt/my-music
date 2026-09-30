@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import type { SyncDeps, SyncResult, IKeepAwake, IUserPrompt, ConflictResolution, SyncDirection } from '../src/services/sync/types';
-import { createSyncContext } from '../src/services/sync/context';
-import { orchestrateSync } from '../src/services/sync/orchestrator';
+import { createEmptyResult } from '../src/services/sync/context';
+import { orchestrateSync, getPartialSyncResult } from '../src/services/sync/orchestrator';
 import { NodeSyncConfig } from './node-config';
 import { NodeApiClient } from './node-api-client';
 import { nodeScanner } from './node-scanner';
@@ -113,12 +113,6 @@ async function main(): Promise<number> {
     }
 
     const config = new NodeSyncConfig(configPath);
-    const deviceId = config.getDeviceId();
-    if (!deviceId) {
-        console.error('Error: deviceId not configured');
-        return 1;
-    }
-
     const apiClient = new NodeApiClient(config.getServerUrl(), config.getUserId(), config.getUserName());
     const fileOps = new NodeFileOps();
 
@@ -144,21 +138,19 @@ async function main(): Promise<number> {
         userPrompt: autoConfirmPrompt,
     };
 
-    const ctx = createSyncContext(config, state);
-
     if (args.verbose) {
         console.log('MyMusic Mobile Sync');
         if (args.dryRun) {
             console.log('Dry run mode - no changes will be made');
         }
-        console.log(`Device: ${deviceId}`);
+        console.log(`Device: ${config.getDeviceId()}`);
         console.log(`Repository: ${config.getRepositoryPath()}`);
         console.log(`Server: ${config.getServerUrl()}`);
         console.log('');
     }
 
     try {
-        const result = await orchestrateSync(deps, ctx, (_progress) => {
+        const result = await orchestrateSync(deps, (_progress) => {
             // Progress handler is no-op for CLI mode; tests don't need progress UI
         });
 
@@ -171,7 +163,7 @@ async function main(): Promise<number> {
         return 0;
     } catch (error) {
         console.error('Sync failed:', error instanceof Error ? error.message : String(error));
-        printResults(ctx.result);
+        printResults(getPartialSyncResult(error) ?? {...createEmptyResult(), error: 1});
         return 1;
     }
 }

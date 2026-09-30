@@ -1,4 +1,4 @@
-import { File } from 'expo-file-system';
+import { Directory, File } from 'expo-file-system';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Alert } from 'react-native';
 import {
@@ -110,8 +110,7 @@ export function createDefaultFileOps(): IFileOps {
             return new File(toFileUri(path)).exists;
         },
         directoryExists: (path: string) => {
-            const dir = new File(toFileUri(path));
-            return dir.exists && dir.isDirectory;
+            return new Directory(toFileUri(path)).exists;
         },
         ensureDirectory: async (path: string) => {
             const file = new File(toFileUri(path));

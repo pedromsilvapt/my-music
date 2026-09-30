@@ -1,15 +1,8 @@
-import type {SyncContext, ISyncConfig, ISyncState, SyncResult} from './types';
+import type {SyncContext, ISyncState, SyncResult} from './types';
 import {decodeToFsPath} from '../pathUtils';
 
-export function createSyncContext(
-    config: ISyncConfig,
-    state: ISyncState
-): SyncContext {
-    const deviceId = config.getDeviceId()!;
-    const repositoryPath = config.getRepositoryPath();
-    const decodedRepoPath = decodeToFsPath(repositoryPath);
-
-    const result: SyncResult = {
+export function createEmptyResult(): SyncResult {
+    return {
         createRemote: 0,
         updateRemote: 0,
         createLocal: 0,
@@ -23,13 +16,19 @@ export function createSyncContext(
         updateTimestamp: 0,
         error: 0,
     };
+}
 
+export function createSyncContext(
+    deviceId: number,
+    repositoryPath: string,
+    state: ISyncState
+): SyncContext {
     return {
         deviceId,
         repositoryPath,
-        decodedRepoPath,
+        decodedRepoPath: decodeToFsPath(repositoryPath),
         options: state.options,
-        result,
+        result: createEmptyResult(),
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
     };

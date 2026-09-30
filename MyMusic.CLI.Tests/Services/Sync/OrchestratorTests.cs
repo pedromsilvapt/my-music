@@ -149,6 +149,90 @@ public class OrchestratorTests
     }
 
     [Fact]
+    public async Task MissingDeviceId_ReturnsErrorWithoutSyncing()
+    {
+        // Arrange
+        _config.GetDeviceIdAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<long?>(null));
+        var orchestrator = CreateOrchestrator(CreatePhases());
+
+        // Act
+        var result = await orchestrator.OrchestrateSyncAsync(new SyncOptions(), null);
+
+        // Assert
+        result.Error.ShouldBe(1);
+        _config.DidNotReceive().GetRepositoryPath();
+        await _keepAwake.DidNotReceive().ActivateAsync(Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task MissingRepositoryPath_ReturnsErrorWithoutSyncing()
+    {
+        // Arrange
+        _config.GetRepositoryPath().Returns("");
+        var orchestrator = CreateOrchestrator(CreatePhases());
+
+        // Act
+        var result = await orchestrator.OrchestrateSyncAsync(new SyncOptions(), null);
+
+        // Assert
+        result.Error.ShouldBe(1);
+        _fileOps.DidNotReceive().DirectoryExists(Arg.Any<string>());
+        await _apiClient.DidNotReceive().StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task MissingRepositoryDirectory_ReturnsErrorWithoutSyncing()
+    {
+        // Arrange
+        _fileOps.DirectoryExists("/music").Returns(false);
+        var orchestrator = CreateOrchestrator(CreatePhases());
+
+        // Act
+        var result = await orchestrator.OrchestrateSyncAsync(new SyncOptions(), null);
+
+        // Assert
+        result.Error.ShouldBe(1);
+        await _apiClient.DidNotReceive().StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Cancelled_CountsOneErrorAndKeepsSessionId()
+    {
+        // Arrange
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns<Task<CreatePendingActionsResult>>(_ => throw new OperationCanceledException());
+        var orchestrator = CreateOrchestrator(CreatePhases());
+
+        // Act
+        var result = await orchestrator.OrchestrateSyncAsync(new SyncOptions(), null);
+
+        // Assert
+        result.Cancelled.ShouldBeTrue();
+        result.Error.ShouldBe(1);
+        result.SessionId.ShouldBe(1);
+        _keepAwake.Received(1).Deactivate();
+    }
+
+    [Fact]
+    public async Task UnexpectedError_ReturnsResultWithErrorAndSessionId()
+    {
+        // Arrange
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns<Task<CreatePendingActionsResult>>(_ => throw new InvalidOperationException("boom"));
+        var orchestrator = CreateOrchestrator(CreatePhases());
+
+        // Act
+        var result = await orchestrator.OrchestrateSyncAsync(new SyncOptions(), null);
+
+        // Assert
+        result.Cancelled.ShouldBeFalse();
+        result.Error.ShouldBe(1);
+        result.SessionId.ShouldBe(1);
+        _keepAwake.Received(1).Deactivate();
+    }
+
+    [Fact]
     public void SyncResult_HasCancelledProperty()
     {
         // Arrange

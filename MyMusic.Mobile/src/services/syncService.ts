@@ -11,7 +11,6 @@ import {
     createDefaultState,
     createDefaultUserPrompt,
 } from './sync/defaults';
-import {createSyncContext} from './sync/context';
 import {orchestrateSync} from './sync/orchestrator';
 import {type SyncProgress, useSyncStore} from '../stores/syncStore';
 import {getDeviceId, getRepositoryPath} from './configService';
@@ -60,9 +59,7 @@ export async function runSync(
         userPrompt: createDefaultUserPrompt(),
     };
 
-    const ctx = createSyncContext(deps.config, deps.state);
-
-    return orchestrateSync(deps, ctx, onProgress);
+    return orchestrateSync(deps, onProgress);
 }
 
 export async function fetchSyncHistory(deviceId: number, count: number = 10) {

@@ -1,5 +1,5 @@
-import {orchestrateSync} from '../orchestrator';
-import type {SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt} from '../types';
+import {orchestrateSync, getPartialSyncResult} from '../orchestrator';
+import type {SyncDeps, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt} from '../types';
 
 jest.mock('../errors', () => ({
     SyncCancelledError: class SyncCancelledError extends Error {
@@ -80,7 +80,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
 
     const mockFileOps: IFileOps = {
         fileExists: jest.fn().mockReturnValue(false),
-        directoryExists: jest.fn().mockReturnValue(false),
+        directoryExists: jest.fn().mockReturnValue(true),
         ensureDirectory: jest.fn().mockResolvedValue(undefined),
         writeFile: jest.fn().mockResolvedValue(undefined),
         deleteFile: jest.fn().mockResolvedValue(undefined),
@@ -112,36 +112,12 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
     } as SyncDeps;
 }
 
-function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
-    const result: SyncResult = {
-        createRemote: 0, updateRemote: 0, createLocal: 0,
-        updateLocal: 0, deleteLocal: 0, link: 0,
-        unlink: 0, rename: 0, skipped: 0,
-        conflict: 0, updateTimestamp: 0, error: 0,
-    };
-    return {
-        deviceId: 1,
-        repositoryPath: '/music',
-        decodedRepoPath: '/music',
-        sessionId: 1,
-        options: {
-            force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
-        },
-        result,
-        uploadedPaths: new Set(),
-        conflictedPaths: new Set(),
-        ...overrides,
-    };
-}
-
 describe('orchestrateSync', () => {
     test('full sync executes all phases in order', async () => {
         const deps = createMockDeps();
-        const ctx = createContext();
         const onProgress = jest.fn();
 
-        const result = await orchestrateSync(deps, ctx, onProgress);
+        const result = await orchestrateSync(deps, onProgress);
 
         expect(deps.keepAwake.activate).toHaveBeenCalled();
         expect(deps.scanner).toHaveBeenCalled();
@@ -150,7 +126,8 @@ describe('orchestrateSync', () => {
         expect(deps.apiClient.completeSync).toHaveBeenCalled();
         expect(deps.config.setLastSyncAt).toHaveBeenCalled();
         expect(deps.config.setLastScanTotal).toHaveBeenCalled();
-        expect(result).toBe(ctx.result);
+        expect(result.error).toBe(0);
+        expect(result.sessionId).toBe(1);
     });
 
     test('cancellation returns partial result with cancelled=true', async () => {
@@ -160,13 +137,26 @@ describe('orchestrateSync', () => {
                 throw new SyncCancelledError();
             }),
         });
-        const ctx = createContext();
         const onProgress = jest.fn();
 
-        const result = await orchestrateSync(deps, ctx, onProgress);
+        const result = await orchestrateSync(deps, onProgress);
 
         expect(result.cancelled).toBe(true);
         expect(deps.keepAwake.deactivate).toHaveBeenCalled();
+    });
+
+    test('cancellation counts one error and keeps the session id', async () => {
+        const {SyncCancelledError} = require('../errors');
+        const deps = createMockDeps();
+        (deps.apiClient.createPendingActions as jest.Mock).mockImplementation(() => {
+            throw new SyncCancelledError();
+        });
+
+        const result = await orchestrateSync(deps, jest.fn());
+
+        expect(result.cancelled).toBe(true);
+        expect(result.error).toBe(1);
+        expect(result.sessionId).toBe(1);
     });
 
     test('error propagation after cleanup', async () => {
@@ -176,20 +166,76 @@ describe('orchestrateSync', () => {
                 startSync: jest.fn().mockRejectedValue(new Error('Server unreachable')),
             },
         });
-        const ctx = createContext();
         const onProgress = jest.fn();
 
-        await expect(orchestrateSync(deps, ctx, onProgress)).rejects.toThrow('Server unreachable');
-        expect(ctx.result.error).toBe(1);
+        const error = await orchestrateSync(deps, onProgress).catch((e) => e);
+
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('Server unreachable');
+        expect(getPartialSyncResult(error)?.error).toBe(1);
         expect(deps.keepAwake.deactivate).toHaveBeenCalled();
+    });
+
+    test('unexpected error after session start rethrows with the session id set', async () => {
+        const deps = createMockDeps();
+        (deps.apiClient.createPendingActions as jest.Mock).mockRejectedValue(new Error('boom'));
+
+        const error = await orchestrateSync(deps, jest.fn()).catch((e) => e);
+
+        expect(error.message).toBe('boom');
+        expect(getPartialSyncResult(error)).toMatchObject({error: 1, sessionId: 1});
+    });
+
+    test('missing device id returns an error result without syncing', async () => {
+        const deps = createMockDeps();
+        (deps.config.getDeviceId as jest.Mock).mockReturnValue(null);
+
+        const result = await orchestrateSync(deps, jest.fn());
+
+        expect(result.error).toBe(1);
+        expect(deps.scanner).not.toHaveBeenCalled();
+        expect(deps.apiClient.startSync).not.toHaveBeenCalled();
+        expect(deps.keepAwake.activate).not.toHaveBeenCalled();
+    });
+
+    test('missing repository path returns an error result without syncing', async () => {
+        const deps = createMockDeps();
+        (deps.config.getRepositoryPath as jest.Mock).mockReturnValue('');
+
+        const result = await orchestrateSync(deps, jest.fn());
+
+        expect(result.error).toBe(1);
+        expect(deps.fileOps.directoryExists).not.toHaveBeenCalled();
+        expect(deps.scanner).not.toHaveBeenCalled();
+    });
+
+    test('missing repository directory returns an error result without syncing', async () => {
+        const deps = createMockDeps();
+        (deps.fileOps.directoryExists as jest.Mock).mockReturnValue(false);
+
+        const result = await orchestrateSync(deps, jest.fn());
+
+        expect(result.error).toBe(1);
+        expect(deps.fileOps.directoryExists).toHaveBeenCalledWith('/music');
+        expect(deps.scanner).not.toHaveBeenCalled();
+    });
+
+    test('device id is checked before the repository path', async () => {
+        const deps = createMockDeps();
+        (deps.config.getDeviceId as jest.Mock).mockReturnValue(null);
+        (deps.config.getRepositoryPath as jest.Mock).mockReturnValue('');
+
+        const result = await orchestrateSync(deps, jest.fn());
+
+        expect(result.error).toBe(1);
+        expect(deps.config.getRepositoryPath).not.toHaveBeenCalled();
     });
 
     test('keepAwake.deactivate always called on success', async () => {
         const deps = createMockDeps();
-        const ctx = createContext();
         const onProgress = jest.fn();
 
-        await orchestrateSync(deps, ctx, onProgress);
+        await orchestrateSync(deps, onProgress);
 
         expect(deps.keepAwake.deactivate).toHaveBeenCalledTimes(1);
     });
@@ -201,11 +247,10 @@ describe('orchestrateSync', () => {
                 startSync: jest.fn().mockRejectedValue(new Error('fail')),
             },
         });
-        const ctx = createContext();
         const onProgress = jest.fn();
 
         try {
-            await orchestrateSync(deps, ctx, onProgress);
+            await orchestrateSync(deps, onProgress);
         } catch {}
 
         expect(deps.keepAwake.deactivate).toHaveBeenCalledTimes(1);
@@ -218,10 +263,9 @@ describe('orchestrateSync', () => {
                 throw new SyncCancelledError();
             }),
         });
-        const ctx = createContext();
         const onProgress = jest.fn();
 
-        await orchestrateSync(deps, ctx, onProgress);
+        await orchestrateSync(deps, onProgress);
 
         expect(deps.keepAwake.deactivate).toHaveBeenCalledTimes(1);
     });
