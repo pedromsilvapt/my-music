@@ -916,3 +916,193 @@ describe('failed client actions', () => {
         expectFailureReported(apiClient, 42, 'new.mp3', undefined);
     });
 });
+
+describe('actionConflict - resolve requests', () => {
+    const MAX_RESOLVE_REQUEST_SIZE = 20_000_000;
+
+    function conflict(id: number, filePath: string, songId: number | null, data: unknown = { localModifiedAt: '2024-06-01T00:00:00Z', serverModifiedAt: '2024-06-02T00:00:00Z' }): SyncRecordItem {
+        return { id, filePath, action: 'Conflict', songId, data, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem;
+    }
+
+    function potentialUpdate(id: number, filePath: string, songId: number | null, data: unknown = { localModifiedAt: '2024-06-01T00:00:00Z', serverModifiedAt: '2024-06-02T00:00:00Z', lastSyncedAt: '2024-05-01T00:00:00Z' }): SyncRecordItem {
+        return { id, filePath, action: 'UpdateLocal', songId, data, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem;
+    }
+
+    type ResolveRequest = {
+        conflicts: Array<{ path: string; songId: number; fileContentBase64: string; localModifiedAt: string }>;
+        potentialUpdates: Array<{ path: string; songId: number; fileContentBase64: string; localModifiedAt: string; lastSyncedAt: string }>;
+    };
+
+    // Answers every item of a request with an UpdateTimestamp record
+    function answerEachItem(request: ResolveRequest) {
+        const items = [...request.conflicts, ...request.potentialUpdates];
+        return {
+            records: items.map((item, i) => ({ id: 100 + i, filePath: item.path, action: 'UpdateTimestamp', songId: item.songId, data: null, reason: null, acknowledged: false, processedAt: '' })),
+            counts: {...ZERO_COUNTS, updateTimestampCount: items.length},
+        };
+    }
+
+    function requestSize(request: ResolveRequest): number {
+        return [...request.conflicts, ...request.potentialUpdates].reduce((sum, item) => sum + item.fileContentBase64.length, 0);
+    }
+
+    test('splits requests at the size limit and aggregates records and counts', async () => {
+        const bigBase64 = 'A'.repeat(7_000_000);
+        const requests: ResolveRequest[] = [];
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockImplementation(async (_d: number, _s: number, request: ResolveRequest) => {
+                requests.push(request);
+                return answerEachItem(request);
+            }),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            readFileBase64: jest.fn().mockResolvedValue(bigBase64),
+        });
+        const conflicts = [0, 1, 2, 3].map(i => conflict(i + 1, `conflict${i}.mp3`, i + 1));
+
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(), conflicts, [], new Set(), jest.fn());
+
+        expect(requests.length).toBeGreaterThan(1);
+        for (const request of requests) {
+            expect(requestSize(request)).toBeLessThanOrEqual(MAX_RESOLVE_REQUEST_SIZE);
+        }
+        expect(requests.flatMap(r => r.conflicts.map(c => c.path))).toEqual(['conflict0.mp3', 'conflict1.mp3', 'conflict2.mp3', 'conflict3.mp3']);
+        expect(result.records).toHaveLength(4);
+        expect(result.counts?.updateTimestampCount).toBe(4);
+    });
+
+    test('alternates conflicts and potential updates across requests', async () => {
+        const sizes: Record<string, number> = {
+            '/music/c0.mp3': 15_000_000,
+            '/music/c1.mp3': 15_000_000,
+            '/music/p0.mp3': 1_000_000,
+            '/music/p1.mp3': 1_000_000,
+        };
+        const requests: ResolveRequest[] = [];
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockImplementation(async (_d: number, _s: number, request: ResolveRequest) => {
+                requests.push(request);
+                return answerEachItem(request);
+            }),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            readFileBase64: jest.fn().mockImplementation(async (path: string) => 'A'.repeat(sizes[path])),
+        });
+
+        await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+            [conflict(1, 'c0.mp3', 1), conflict(2, 'c1.mp3', 2)],
+            [potentialUpdate(3, 'p0.mp3', 3), potentialUpdate(4, 'p1.mp3', 4)],
+            new Set(), jest.fn());
+
+        // A long conflict list must not push every potential update to the last request
+        expect(requests).toHaveLength(2);
+        expect(requests[0].conflicts.map(c => c.path)).toEqual(['c0.mp3']);
+        expect(requests[0].potentialUpdates.map(p => p.path)).toEqual(['p0.mp3']);
+        expect(requests[1].conflicts.map(c => c.path)).toEqual(['c1.mp3']);
+        expect(requests[1].potentialUpdates.map(p => p.path)).toEqual(['p1.mp3']);
+    });
+
+    test('a failed later request keeps the records and counts of earlier requests', async () => {
+        const bigBase64 = 'A'.repeat(15_000_000);
+        const resolveConflicts = jest.fn()
+            .mockImplementationOnce(async (_d: number, _s: number, request: ResolveRequest) => answerEachItem(request))
+            .mockRejectedValueOnce(new Error('Request failed'));
+        const apiClient = createMockApiClient({ resolveConflicts });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            readFileBase64: jest.fn().mockResolvedValue(bigBase64),
+        });
+
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+            [conflict(1, 'c0.mp3', 1), conflict(2, 'c1.mp3', 2)], [], new Set(), jest.fn());
+
+        expect(resolveConflicts).toHaveBeenCalledTimes(2);
+        expect(result.records.map(r => r.filePath)).toEqual(['c0.mp3']);
+        expect(result.counts?.updateTimestampCount).toBe(1);
+    });
+
+    test('conflicts and potential updates with no songId are skipped', async () => {
+        const resolveConflicts = jest.fn().mockImplementation(async (_d: number, _s: number, request: ResolveRequest) => answerEachItem(request));
+        const apiClient = createMockApiClient({ resolveConflicts });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+
+        await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+            [conflict(1, 'no-song.mp3', null), conflict(2, 'song.mp3', 42)],
+            [potentialUpdate(3, 'no-song-update.mp3', null)],
+            new Set(), jest.fn());
+
+        expect(resolveConflicts).toHaveBeenCalledTimes(1);
+        const request = resolveConflicts.mock.calls[0][2] as ResolveRequest;
+        expect(request.conflicts.map(c => c.path)).toEqual(['song.mp3']);
+        expect(request.potentialUpdates).toEqual([]);
+    });
+
+    test('only items with no songId sends no request', async () => {
+        const apiClient = createMockApiClient();
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+
+        const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+            [conflict(1, 'no-song.mp3', null)], [], new Set(), jest.fn());
+
+        expect(apiClient.resolveConflicts).not.toHaveBeenCalled();
+        expect(result.records).toEqual([]);
+    });
+
+    test('timestamps are read from the record data', async () => {
+        const resolveConflicts = jest.fn().mockImplementation(async (_d: number, _s: number, request: ResolveRequest) => answerEachItem(request));
+        const apiClient = createMockApiClient({ resolveConflicts });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+
+        await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+            [conflict(1, 'c.mp3', 1, { localModifiedAt: '2024-06-01T10:00:00Z', serverModifiedAt: '2024-06-02T00:00:00Z' })],
+            [potentialUpdate(2, 'p.mp3', 2, { localModifiedAt: '2024-07-01T10:00:00Z', serverModifiedAt: '2024-07-02T00:00:00Z', lastSyncedAt: '2024-05-01T10:00:00Z' })],
+            new Set(), jest.fn());
+
+        const request = resolveConflicts.mock.calls[0][2] as ResolveRequest;
+        expect(request.conflicts[0].localModifiedAt).toBe('2024-06-01T10:00:00.000Z');
+        expect(request.potentialUpdates[0].localModifiedAt).toBe('2024-07-01T10:00:00.000Z');
+        expect(request.potentialUpdates[0].lastSyncedAt).toBe('2024-05-01T10:00:00.000Z');
+    });
+
+    test('missing timestamps in the record data fall back to now', async () => {
+        const now = new Date('2025-01-01T00:00:00Z');
+        jest.useFakeTimers({ now });
+        try {
+            const resolveConflicts = jest.fn().mockImplementation(async (_d: number, _s: number, request: ResolveRequest) => answerEachItem(request));
+            const apiClient = createMockApiClient({ resolveConflicts });
+            const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+
+            await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+                [conflict(1, 'c.mp3', 1, null)],
+                [potentialUpdate(2, 'p.mp3', 2, null)],
+                new Set(), jest.fn());
+
+            const request = resolveConflicts.mock.calls[0][2] as ResolveRequest;
+            expect(request.conflicts[0].localModifiedAt).toBe(now.toISOString());
+            expect(request.potentialUpdates[0].localModifiedAt).toBe(now.toISOString());
+            expect(request.potentialUpdates[0].lastSyncedAt).toBe(now.toISOString());
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
+    test('a file that cannot be read is skipped and the rest are still sent', async () => {
+        const resolveConflicts = jest.fn().mockImplementation(async (_d: number, _s: number, request: ResolveRequest) => answerEachItem(request));
+        const apiClient = createMockApiClient({ resolveConflicts });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            readFileBase64: jest.fn().mockImplementation(async (path: string) => {
+                if (path === '/music/unreadable.mp3') throw new Error('Permission denied');
+                return 'base64content';
+            }),
+        });
+
+        await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(),
+            [conflict(1, 'unreadable.mp3', 1), conflict(2, 'song.mp3', 2)], [], new Set(), jest.fn());
+
+        const request = resolveConflicts.mock.calls[0][2] as ResolveRequest;
+        expect(request.conflicts.map(c => c.path)).toEqual(['song.mp3']);
+    });
+});

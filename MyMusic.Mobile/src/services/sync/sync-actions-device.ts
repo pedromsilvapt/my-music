@@ -1,5 +1,5 @@
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
-import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData} from '../../api/types';
+import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData, ConflictData, SongModifiedAtData} from '../../api/types';
 import {safeToIsoString} from './utils';
 
 export async function actionCreateRemote(
@@ -391,6 +391,21 @@ export async function reportFailure(
     };
 }
 
+/**
+ * Maximum base64 payload size (in characters, roughly bytes) sent per resolve-conflicts request.
+ * The server has a 100 MB request body limit; chunking keeps each request well under that ceiling
+ * while leaving headroom for the JSON envelope and metadata. Same limit as the CLI.
+ */
+export const MAX_RESOLVE_REQUEST_SIZE = 20_000_000;
+
+/** The kind of item sent for conflict resolution, used in log messages. */
+const ResolveItemKind = {
+    Conflict: 'Conflict',
+    PotentialUpdate: 'Potential update',
+} as const;
+
+type ResolveItemKind = typeof ResolveItemKind[keyof typeof ResolveItemKind];
+
 export async function actionConflict(
     apiClient: ISyncApiClient,
     fileOps: IFileOps,
@@ -412,23 +427,23 @@ export async function actionConflict(
     for (const conflict of conflictRecords) {
         const relativePath = conflict.filePath;
 
-        try {
-            const fullPath = ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${relativePath}` : relativePath;
-            if (!fileOps.fileExists(fullPath)) {
-                console.error('Conflict file not found locally:', relativePath);
-                continue;
-            }
-
-            const fileContentBase64 = await fileOps.readFileBase64(fullPath);
-            resolveItems.push({
-                path: relativePath,
-                songId: conflict.songId,
-                fileContentBase64,
-                localModifiedAt: safeToIsoString((conflict.data as any)?.localModifiedAt ? new Date((conflict.data as any).localModifiedAt) : new Date())!,
-            });
-        } catch (e) {
-            console.error('Failed to read file for conflict resolution:', relativePath, e);
+        if (conflict.songId == null) {
+            console.warn('Skipping conflict with no songId:', relativePath);
+            continue;
         }
+
+        const fileContentBase64 = await readLocalFileBase64(ResolveItemKind.Conflict, fileOps, ctx, relativePath);
+        if (fileContentBase64 === null) {
+            continue;
+        }
+
+        const conflictData = conflict.data as ConflictData | null | undefined;
+        resolveItems.push({
+            path: relativePath,
+            songId: conflict.songId,
+            fileContentBase64,
+            localModifiedAt: dataDateOrNow(conflictData?.localModifiedAt),
+        });
     }
 
     const potentialUpdateItems: SyncPotentialUpdateResolveItem[] = [];
@@ -436,71 +451,165 @@ export async function actionConflict(
     for (const update of updateLocalRecords) {
         const relativePath = update.filePath;
 
-        try {
-            const fullPath = ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${relativePath}` : relativePath;
-            if (!fileOps.fileExists(fullPath)) {
-                console.error('Potential update file not found locally:', relativePath);
-                continue;
-            }
-
-            const fileContentBase64 = await fileOps.readFileBase64(fullPath);
-            const updateData = update.data as any;
-            potentialUpdateItems.push({
-                path: relativePath,
-                songId: update.songId!,
-                fileContentBase64,
-                localModifiedAt: safeToIsoString(updateData?.localModifiedAt ? new Date(updateData.localModifiedAt) : new Date())!,
-                lastSyncedAt: safeToIsoString(updateData?.lastSyncedAt ? new Date(updateData.lastSyncedAt) : new Date())!,
-            });
-        } catch (e) {
-            console.error('Failed to read file for potential update resolution:', relativePath, e);
+        if (update.songId == null) {
+            console.warn('Skipping potential update with no songId:', relativePath);
+            continue;
         }
+
+        const fileContentBase64 = await readLocalFileBase64(ResolveItemKind.PotentialUpdate, fileOps, ctx, relativePath);
+        if (fileContentBase64 === null) {
+            continue;
+        }
+
+        const updateData = update.data as SongModifiedAtData | null | undefined;
+        potentialUpdateItems.push({
+            path: relativePath,
+            songId: update.songId,
+            fileContentBase64,
+            localModifiedAt: dataDateOrNow(updateData?.localModifiedAt),
+            lastSyncedAt: dataDateOrNow(updateData?.lastSyncedAt),
+        });
     }
 
     if (resolveItems.length === 0 && potentialUpdateItems.length === 0) {
         return { records: [], counts: undefined };
     }
 
+    const chunks = buildResolveChunks(resolveItems, potentialUpdateItems);
+    console.log(`Resolving ${resolveItems.length} conflicts and ${potentialUpdateItems.length} potential updates in ${chunks.length} chunk(s)`);
+
+    const allRecords: SyncRecordItem[] = [];
+    let aggregatedCounts: SyncActionCounts | undefined;
+
     try {
-        const resolveResponse = await apiClient.resolveConflicts(ctx.deviceId, ctx.sessionId!, {
-            conflicts: resolveItems,
-            potentialUpdates: potentialUpdateItems,
-        });
+        for (const chunk of chunks) {
+            const resolveResponse = await apiClient.resolveConflicts(ctx.deviceId, ctx.sessionId!, chunk);
 
-        for (const record of resolveResponse.records) {
-            switch (record.action) {
-                case 'UpdateTimestamp':
-                    console.log('Resolved conflict for', record.filePath, ':', record.reason);
-                    break;
-                case 'Conflict':
-                    if (ctx.options.treatConflictsAsErrors) {
-                        console.error('Conflict (as error):', record.filePath, record.reason);
-                        ctx.result.error++;
-                        ctx.result.conflict++;
-                    } else {
-                        const resolution = await userPrompt.promptConflictResolution(record.filePath);
-                        if (resolution === 'upload') {
-                            toUpdatePaths.add(record.filePath);
-                        } else {
+            for (const record of resolveResponse.records) {
+                switch (record.action) {
+                    case 'UpdateTimestamp':
+                        console.log('Resolved conflict for', record.filePath, ':', record.reason);
+                        break;
+                    case 'Conflict':
+                        if (ctx.options.treatConflictsAsErrors) {
+                            console.error('Conflict (as error):', record.filePath, record.reason);
                             ctx.result.error++;
+                            ctx.result.conflict++;
+                        } else {
+                            const resolution = await userPrompt.promptConflictResolution(record.filePath);
+                            if (resolution === 'upload') {
+                                toUpdatePaths.add(record.filePath);
+                            } else {
+                                ctx.result.error++;
+                            }
                         }
-                    }
-                    break;
-                case 'CreateRemote':
-                case 'UpdateRemote':
-                    toUpdatePaths.add(record.filePath);
-                    break;
-                case 'UpdateLocal':
-                case 'Rename':
-                case 'Error':
-                    console.log(`${record.action} action for ${record.filePath}: ${record.reason}`);
-                    break;
+                        break;
+                    case 'CreateRemote':
+                    case 'UpdateRemote':
+                        toUpdatePaths.add(record.filePath);
+                        break;
+                    case 'UpdateLocal':
+                    case 'Rename':
+                    case 'Error':
+                        console.log(`${record.action} action for ${record.filePath}: ${record.reason}`);
+                        break;
+                }
             }
-        }
 
-        return { records: resolveResponse.records, counts: resolveResponse.counts };
+            allRecords.push(...resolveResponse.records);
+            aggregatedCounts = addCounts(aggregatedCounts, resolveResponse.counts);
+        }
     } catch (e) {
         console.error('Failed to resolve conflicts:', e);
-        return { records: [], counts: undefined };
     }
+
+    return { records: allRecords, counts: aggregatedCounts };
+}
+
+/**
+ * Reads a local file for conflict resolution. Returns null, after logging, when the file is missing
+ * or cannot be read, so the other items are still resolved.
+ */
+async function readLocalFileBase64(kind: ResolveItemKind, fileOps: IFileOps, ctx: SyncContext, relativePath: string): Promise<string | null> {
+    try {
+        const fullPath = ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${relativePath}` : relativePath;
+        if (!fileOps.fileExists(fullPath)) {
+            console.error(`${kind} file not found locally:`, relativePath);
+            return null;
+        }
+
+        return await fileOps.readFileBase64(fullPath);
+    } catch (e) {
+        console.error(`Failed to read file for ${kind} resolution:`, relativePath, e);
+        return null;
+    }
+}
+
+function dataDateOrNow(value: string | null | undefined): string {
+    return safeToIsoString(value ? new Date(value) : new Date())!;
+}
+
+function addCounts(total: SyncActionCounts | undefined, delta: SyncActionCounts | undefined): SyncActionCounts | undefined {
+    if (!delta) {
+        return total;
+    }
+    if (!total) {
+        return { ...delta };
+    }
+    const sum = { ...total };
+    for (const key of Object.keys(sum) as (keyof SyncActionCounts)[]) {
+        sum[key] += delta[key] ?? 0;
+    }
+    return sum;
+}
+
+interface ResolveChunk {
+    conflicts: SyncConflictResolveItem[];
+    potentialUpdates: SyncPotentialUpdateResolveItem[];
+}
+
+/**
+ * Splits the combined conflict + potential-update items into request chunks whose total base64
+ * payload does not exceed {@link MAX_RESOLVE_REQUEST_SIZE}. Items are interleaved so neither list
+ * is starved when one is much larger than the other. Mirrors the CLI's BuildResolveChunks.
+ */
+function buildResolveChunks(
+    conflicts: SyncConflictResolveItem[],
+    potentialUpdates: SyncPotentialUpdateResolveItem[]
+): ResolveChunk[] {
+    const chunks: ResolveChunk[] = [];
+    let current: ResolveChunk = { conflicts: [], potentialUpdates: [] };
+    let currentSize = 0;
+
+    const startNewChunkIfFull = (itemSize: number) => {
+        if (currentSize > 0 && currentSize + itemSize > MAX_RESOLVE_REQUEST_SIZE) {
+            chunks.push(current);
+            current = { conflicts: [], potentialUpdates: [] };
+            currentSize = 0;
+        }
+    };
+
+    // Interleave by index so a long conflict list doesn't defer all potential updates
+    const maxIndex = Math.max(conflicts.length, potentialUpdates.length);
+    for (let i = 0; i < maxIndex; i++) {
+        if (i < conflicts.length) {
+            const item = conflicts[i];
+            startNewChunkIfFull(item.fileContentBase64.length);
+            current.conflicts.push(item);
+            currentSize += item.fileContentBase64.length;
+        }
+
+        if (i < potentialUpdates.length) {
+            const item = potentialUpdates[i];
+            startNewChunkIfFull(item.fileContentBase64.length);
+            current.potentialUpdates.push(item);
+            currentSize += item.fileContentBase64.length;
+        }
+    }
+
+    if (current.conflicts.length > 0 || current.potentialUpdates.length > 0) {
+        chunks.push(current);
+    }
+
+    return chunks;
 }

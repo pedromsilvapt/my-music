@@ -457,7 +457,7 @@ export type DeleteSessionResponse = z.infer<typeof DeleteSessionResponseSchema>;
 
 export const SyncConflictResolveItemSchema = z.object({
     path: z.string(),
-    songId: z.number().nullable(),
+    songId: z.number(),
     fileContentBase64: z.string(),
     localModifiedAt: z.string(),
 });

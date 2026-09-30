@@ -598,5 +598,43 @@ public class SyncActionsDeviceTests
         await _apiClient.DidNotReceive().AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ActionConflictAsync_UnreadableFile_SkipsItAndResolvesTheRest()
+    {
+        var device = CreateDevice();
+        var data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow, lastSyncedAt = DateTime.UtcNow });
+        var conflicts = new List<SyncRecordItem>
+        {
+            new() { Id = 1, FilePath = "unreadable.mp3", Action = SyncRecordAction.Conflict, SongId = 1, Data = data, Acknowledged = false, ProcessedAt = DateTime.UtcNow },
+            new() { Id = 2, FilePath = "song.mp3", Action = SyncRecordAction.Conflict, SongId = 2, Data = data, Acknowledged = false, ProcessedAt = DateTime.UtcNow },
+        };
+        var potentialUpdates = new List<SyncRecordItem>
+        {
+            new() { Id = 3, FilePath = "unreadable-update.mp3", Action = SyncRecordAction.UpdateLocal, SongId = 3, Data = data, Acknowledged = false, ProcessedAt = DateTime.UtcNow },
+        };
+
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(true);
+        _fileSystem.File.Returns(mockFile);
+
+        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("base64content");
+        _fileOps.ReadFileBase64Async(Arg.Is<string>(p => p.EndsWith("unreadable.mp3") || p.EndsWith("unreadable-update.mp3")), Arg.Any<CancellationToken>())
+            .Returns<Task<string>>(_ => throw new IOException("Permission denied"));
+
+        ResolveConflictsRequest? sentRequest = null;
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Do<ResolveConflictsRequest>(r => sentRequest = r), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ResolveConflictsResult
+            {
+                Records = [new SyncRecordItem { Id = 2, FilePath = "song.mp3", Action = SyncRecordAction.UpdateTimestamp, SongId = 2, Acknowledged = false, ProcessedAt = DateTime.UtcNow }],
+            }));
+
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, potentialUpdates);
+
+        sentRequest.ShouldNotBeNull();
+        sentRequest.Conflicts.Select(c => c.Path).ShouldBe(["song.mp3"]);
+        sentRequest.PotentialUpdates.ShouldBeEmpty();
+        result.Records.Single().FilePath.ShouldBe("song.mp3");
+    }
+
     private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);
 }

@@ -386,14 +386,12 @@ public class SyncActionsDevice(
                 continue;
             }
 
-            var fullPath = Path.Combine(repositoryPath, conflict.FilePath);
-            if (!fileSystem.File.Exists(fullPath))
+            var fileContentBase64 = await ReadLocalFileBase64Async(ResolveItemKind.Conflict, repositoryPath, conflict.FilePath, ct);
+            if (fileContentBase64 is null)
             {
-                logger.LogWarning("Conflict file not found locally: {Path}", conflict.FilePath);
                 continue;
             }
 
-            var fileContentBase64 = await fileOps.ReadFileBase64Async(fullPath, ct);
             var conflictData = SyncDataDeserialization.DeserializeConflictCheckData(conflict.Data);
             resolveItems.Add(new ConflictResolveItem
             {
@@ -413,14 +411,12 @@ public class SyncActionsDevice(
                 continue;
             }
 
-            var fullPath = Path.Combine(repositoryPath, update.FilePath);
-            if (!fileSystem.File.Exists(fullPath))
+            var fileContentBase64 = await ReadLocalFileBase64Async(ResolveItemKind.PotentialUpdate, repositoryPath, update.FilePath, ct);
+            if (fileContentBase64 is null)
             {
-                logger.LogWarning("Potential update file not found locally: {Path}", update.FilePath);
                 continue;
             }
 
-            var fileContentBase64 = await fileOps.ReadFileBase64Async(fullPath, ct);
             var updateData = SyncDataDeserialization.DeserializeUpdateLocalCheckData(update.Data);
             potentialUpdateItems.Add(new PotentialUpdateResolveItem
             {
@@ -485,6 +481,30 @@ public class SyncActionsDevice(
     }
 
     /// <summary>
+    /// Reads a local file for conflict resolution. Returns <c>null</c>, after logging, when the file is
+    /// missing or cannot be read, so the other items are still resolved.
+    /// </summary>
+    private async Task<string?> ReadLocalFileBase64Async(ResolveItemKind kind, string repositoryPath, string relativePath, CancellationToken ct)
+    {
+        var fullPath = Path.Combine(repositoryPath, relativePath);
+        if (!fileSystem.File.Exists(fullPath))
+        {
+            logger.LogWarning("{Kind} file not found locally: {Path}", kind, relativePath);
+            return null;
+        }
+
+        try
+        {
+            return await fileOps.ReadFileBase64Async(fullPath, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to read file for {Kind} resolution: {Path}", kind, relativePath);
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Splits the combined conflict + potential-update items into request chunks whose total
     /// base64 payload does not exceed <see cref="MaxBytesPerResolveChunk"/>. Items are
     /// interleaved so neither list is starved when one is much larger than the other.
@@ -536,6 +556,15 @@ public class SyncActionsDevice(
         }
 
         return chunks;
+    }
+
+    /// <summary>
+    /// The kind of item sent for conflict resolution, used in log messages.
+    /// </summary>
+    private enum ResolveItemKind
+    {
+        Conflict,
+        PotentialUpdate
     }
 
     private sealed class ResolveChunk

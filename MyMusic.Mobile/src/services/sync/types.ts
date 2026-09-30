@@ -227,7 +227,7 @@ export interface ISyncApiClient {
         request: {
             conflicts: Array<{
                 path: string;
-                songId: number | null;
+                songId: number;
                 fileContentBase64: string;
                 localModifiedAt: string;
             }>;
