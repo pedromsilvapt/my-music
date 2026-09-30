@@ -36,5 +36,8 @@ export const SONG_EDITOR_MODAL_SIZE = "lg";
 
 export const SONG_VERSION_MODAL_SIZE = "xl";
 
-/** How long a collection item stays highlighted after scrolling to it; matches the `.highlighted` animations */
-export const COLLECTION_HIGHLIGHT_MS = 1500;
+/**
+ * How long a collection item stays highlighted after scrolling to it. Must be at least as long as the
+ * `.highlighted` animations (1.5s); the extra time only keeps the highlight state around after the pulse ends.
+ */
+export const COLLECTION_HIGHLIGHT_MS = 3000;

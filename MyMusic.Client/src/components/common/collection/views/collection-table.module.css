@@ -16,7 +16,7 @@
     }
 }
 
-/* Keep the duration in sync with COLLECTION_HIGHLIGHT_MS */
+/* Keep the duration at most COLLECTION_HIGHLIGHT_MS, or the pulse is cut short */
 .highlighted {
     animation: pulse-twice 1.5s ease-out;
 }
