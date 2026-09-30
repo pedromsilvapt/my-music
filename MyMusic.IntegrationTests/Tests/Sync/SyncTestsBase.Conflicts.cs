@@ -101,6 +101,40 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(App.GetSongPath(updatedPath), title: "Updated Sand");
     }
 
+    // Scenario: A conflict at one path of a song does not hold back the song's other paths
+    //   Given two identical local files were synced and linked to one song
+    //   When one of the files is edited on the device
+    //   And the song is edited on the server
+    //   And the device checks its files one per request
+    //   Then the edited file is kept as a conflict
+    //   And the unchanged file receives the server's version in the same sync
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldUpdateOtherPathsOfConflictedSong()
+    {
+        // Upload two identical local files: they become one song, linked at both paths
+        var unchangedPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        var conflictPath = "Local Copies/Wicker Woman.mp3";
+        await App.CreateSongsAsync((SongsFixture.DefaultSongs[2], unchangedPath), (SongsFixture.DefaultSongs[2], conflictPath));
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1, link: 1);
+
+        // Edit one of the copies on the device, and the song on the server with a different title
+        await App.UpdateLocalFileMetadataAsync(conflictPath, new(Title: "Local Title"));
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+
+        // Sync one file per check request: the commit should succeed with the conflict kept
+        await App.SetChunkSizeAsync(1);
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(conflict: 1, updateLocal: 1, rename: 1);
+
+        // The edited copy should be untouched, and the other path should hold the server's version
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(conflictPath), title: "Local Title");
+        var updatedPath = "Freya Ridings/Wicker Woman/Server Title - Freya Ridings.mp3";
+        App.FileShouldExist(updatedPath);
+        App.FileShouldNotExist(unchangedPath);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(updatedPath), title: "Server Title");
+    }
+
     // Scenario: A local copy of an older version of a song is not a real conflict
     //   Given a song on the server was downloaded to the device
     //   When the song is edited on the server

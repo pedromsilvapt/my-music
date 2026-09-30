@@ -239,7 +239,8 @@ public class SyncActionsDevice(
             var confirmed = await userPrompt.ConfirmDeletionAsync(relativePath, ct);
             if (!confirmed)
             {
-                return null;
+                logger.LogInformation("Deletion declined by user: {Path}", relativePath);
+                return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, "Deletion declined by user", reason ?? "Server-initiated removal", ct);
             }
         }
 
@@ -332,7 +333,7 @@ public class SyncActionsDevice(
     /// The server acknowledges the record, so the commit is not blocked, and does not apply it, so
     /// the server state keeps reflecting what is actually on the device.
     /// </summary>
-    private async Task<ActionResult> ReportFailureAsync(
+    public async Task<ActionResult> ReportFailureAsync(
         long deviceId,
         long sessionId,
         long recordId,

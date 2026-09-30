@@ -68,8 +68,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
         },
         result,
         uploadedPaths: new Set(),
-        pendingDownloadPaths: new Set(),
-        conflictedSongIds: new Set(),
+        conflictedPaths: new Set(),
         ...overrides,
     };
 }
@@ -449,22 +448,47 @@ describe('actionDeleteLocal', () => {
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1]});
     });
 
-    test('with user cancellation does not delete', async () => {
-        const apiClient = createMockApiClient();
+    test('with user declining reports an error for its record and does not delete', async () => {
+        // The user keeps the file, so the record is reported as an Error and the next sync asks again
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(true),
         });
         const userPrompt = createMockUserPrompt({
             confirmDeletion: jest.fn().mockResolvedValue(false),
         });
-        const ctx = createContext();
+        const ctx = createContext({sessionId: 7});
+
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', 3, 42);
+
+        expect(result?.action).toBe('Error');
+        expect(result?.errorMessage).toBe('Deletion declined by user');
+        expect(result?.counts?.errorCount).toBe(1);
+        expect(fileOps.deleteFile).not.toHaveBeenCalled();
+        expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 7, expect.objectContaining({recordId: 42, filePath: 'song.mp3', songId: 3}));
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    });
+
+    test('dry-run does not prompt', async () => {
+        const apiClient = createMockApiClient();
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+        });
+        const userPrompt = createMockUserPrompt();
+        const ctx = createContext({
+            options: {
+                force: false, dryRun: true, autoConfirm: false,
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+            },
+        });
 
         const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 1);
 
-        expect(result).toBeNull();
-        expect(ctx.result.deleteLocal).toBe(0);
+        expect(result?.action).toBe('DeleteLocal');
+        expect(userPrompt.confirmDeletion).not.toHaveBeenCalled();
         expect(fileOps.deleteFile).not.toHaveBeenCalled();
-        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
     });
 
     test('with autoConfirm skips prompt', async () => {
@@ -492,7 +516,10 @@ describe('actionDeleteLocal', () => {
     });
 
     test('with missing file still acknowledges, returns null', async () => {
-        const apiClient = createMockApiClient();
+        // The file is already gone: the record is acknowledged, and its counts are not added (as the CLI does)
+        const apiClient = createMockApiClient({
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
+        });
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(false),
         });
@@ -775,6 +802,8 @@ describe('actionConflict', () => {
         expect(result.records[0].action).toBe('UpdateTimestamp');
         expect(result.counts).toEqual({...ZERO_COUNTS, updateTimestampCount: 1});
         expect(ctx.result.conflict).toBe(0);
+        // The counts are returned for the phase to add, not added here
+        expect(ctx.result.updateTimestamp).toBe(0);
     });
 
     test('no conflicts returns empty result', async () => {

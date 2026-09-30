@@ -277,17 +277,35 @@ public class SyncActionsDeviceTests
     }
 
     [Fact]
-    public async Task ActionDeleteLocalAsync_UserCancels_ReturnsNull()
+    public async Task ActionDeleteLocalAsync_UserDeclines_ReportsErrorForRecord()
     {
+        // The user keeps the file, so the record is reported as an Error and the next sync asks again
         var device = CreateDevice();
 
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _userPrompt.ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
 
-        var result = await device.ActionDeleteLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: false, recordId: 1);
+        var result = await device.ActionDeleteLocalAsync(1, 7, "/music", 3, "test.mp3", dryRun: false, autoConfirm: false, recordId: 42);
 
-        result.ShouldBeNull();
+        result!.Action.ShouldBe("Error");
+        result.ErrorMessage.ShouldBe("Deletion declined by user");
         await _fileOps.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await AssertFailureReported(recordId: 42, path: "test.mp3", songId: 3);
+    }
+
+    [Fact]
+    public async Task ActionDeleteLocalAsync_DryRun_DoesNotPrompt()
+    {
+        var device = CreateDevice();
+
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        var result = await device.ActionDeleteLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: true, autoConfirm: false, recordId: 1);
+
+        result!.Action.ShouldBe("DeleteLocal");
+        await _userPrompt.DidNotReceive().ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _fileOps.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1, Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(1)), Arg.Any<CancellationToken>());
     }
 
     [Fact]

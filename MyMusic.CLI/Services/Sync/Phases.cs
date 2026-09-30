@@ -263,7 +263,7 @@ public class Phases(
 
             ctx.Result = ctx.Result.AddDelta(result.Counts);
 
-            TrackConflictedSongIds(ctx, conflictRecords, result.Records);
+            TrackConflictedPaths(ctx, conflictRecords, result.Records);
 
             foreach (var record in result.Records)
             {
@@ -277,29 +277,29 @@ public class Phases(
     }
 
     /// <summary>
-    /// Marks the songs of conflicts, so the server actions phase does not download over their local files.
-    /// The set only grows during a session: a song is unmarked only when the resolve result settles it
-    /// (<c>UpdateTimestamp</c>, <c>UpdateLocal</c> or <c>Skipped</c>). If the resolve request fails, its
-    /// songs stay marked.
+    /// Marks the paths of conflicts, so the server actions phase does not download over (or rename) their
+    /// local files. Other paths of the same song sync normally. The set only grows during a session: a path
+    /// is unmarked only when the resolve result settles it (<c>UpdateTimestamp</c>, <c>UpdateLocal</c> or
+    /// <c>Skipped</c>). If the resolve request fails, its paths stay marked.
     /// </summary>
-    private static void TrackConflictedSongIds(
+    private static void TrackConflictedPaths(
         SyncContext ctx,
         List<SyncRecordItem> conflictRecords,
         List<SyncRecordItem> resolvedRecords)
     {
         foreach (var record in conflictRecords.Concat(resolvedRecords))
         {
-            if (record.SongId.HasValue && record.Action is SyncRecordAction.Conflict or SyncRecordAction.Error)
+            if (record.Action is SyncRecordAction.Conflict or SyncRecordAction.Error)
             {
-                ctx.ConflictedSongIds.Add(record.SongId.Value);
+                ctx.ConflictedPaths.Add(record.FilePath);
             }
         }
 
         foreach (var record in resolvedRecords)
         {
-            if (record.SongId.HasValue && record.Action is SyncRecordAction.UpdateTimestamp or SyncRecordAction.UpdateLocal or SyncRecordAction.Skipped)
+            if (record.Action is SyncRecordAction.UpdateTimestamp or SyncRecordAction.UpdateLocal or SyncRecordAction.Skipped)
             {
-                ctx.ConflictedSongIds.Remove(record.SongId.Value);
+                ctx.ConflictedPaths.Remove(record.FilePath);
             }
         }
     }
@@ -347,13 +347,20 @@ public class Phases(
                 continue;
             }
 
-            if ((record.Action == SyncRecordAction.CreateLocal || record.Action == SyncRecordAction.UpdateLocal) && record.SongId.HasValue && ctx.ConflictedSongIds.Contains(record.SongId.Value))
+            if (record.Action == SyncRecordAction.UpdateLocal && ctx.ConflictedPaths.Contains(record.FilePath))
             {
-                logger.LogInformation("Skipping download for song {SongId} - unresolved conflict", record.SongId);
-                continue;
-            }
+                logger.LogInformation("Skipping download for song {SongId} at {Path} - unresolved conflict", record.SongId, record.FilePath);
 
-            if (record.Action == SyncRecordAction.CreateLocal)
+                var result = await syncActions.ReportFailureAsync(
+                    ctx.DeviceId, ctx.SessionId, record.Id, record.FilePath, record.SongId,
+                    "Unresolved conflict", record.Reason ?? "Server-initiated update", ct);
+
+                if (result.Counts != null)
+                {
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
+                }
+            }
+            else if (record.Action == SyncRecordAction.CreateLocal)
             {
                 logger.LogInformation("Creating local song {SongId} at {Path}", record.SongId, record.FilePath);
 
@@ -406,16 +413,31 @@ public class Phases(
             else if (record.Action == SyncRecordAction.Rename)
             {
                 var renameData = DeserializeRenameData(record.Data);
-                if (renameData != null)
+                SyncActionsDevice.ActionResult? result;
+                if (renameData == null)
                 {
-                    var result = await syncActions.ActionRenameAsync(
+                    logger.LogWarning("Skipping rename of record {RecordId} to {Path} - missing rename data", record.Id, record.FilePath);
+                    result = await syncActions.ReportFailureAsync(
+                        ctx.DeviceId, ctx.SessionId, record.Id, record.FilePath, record.SongId,
+                        "Missing rename data", "Server-initiated rename", ct);
+                }
+                else if (ctx.ConflictedPaths.Contains(renameData.PreviousPath))
+                {
+                    logger.LogInformation("Skipping rename of {PreviousPath} to {Path} - unresolved conflict", renameData.PreviousPath, record.FilePath);
+                    result = await syncActions.ReportFailureAsync(
+                        ctx.DeviceId, ctx.SessionId, record.Id, record.FilePath, record.SongId,
+                        "Unresolved conflict", $"Rename from '{renameData.PreviousPath}'", ct);
+                }
+                else
+                {
+                    result = await syncActions.ActionRenameAsync(
                         ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.FilePath, renameData.PreviousPath,
                         ctx.Options.DryRun, record.Id, ct);
+                }
 
-                    if (result?.Counts != null)
-                    {
-                        ctx.Result = ctx.Result.AddDelta(result.Counts);
-                    }
+                if (result?.Counts != null)
+                {
+                    ctx.Result = ctx.Result.AddDelta(result.Counts);
                 }
             }
 

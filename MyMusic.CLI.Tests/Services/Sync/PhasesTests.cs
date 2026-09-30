@@ -366,8 +366,8 @@ public class PhasesTests
 
         await phases.UploadPhaseAsync(ctx, [CreateScannedFile("conflict.mp3"), CreateScannedFile("changed.mp3")], null);
 
-        // The conflict found in chunk 1 should still protect its song; the resolved update should not
-        ctx.ConflictedSongIds.ShouldBe([1L]);
+        // The conflict found in chunk 1 should still protect its file; the resolved update should not
+        ctx.ConflictedPaths.ShouldBe(["conflict.mp3"]);
     }
 
     [Fact]
@@ -389,7 +389,7 @@ public class PhasesTests
         await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
 
         // The song should be downloaded in the server actions phase
-        ctx.ConflictedSongIds.ShouldBeEmpty();
+        ctx.ConflictedPaths.ShouldBeEmpty();
         ctx.PendingServerRecords.ShouldContain(updateLocal);
         ctx.PendingServerRecords.ShouldNotContain(conflict);
     }
@@ -412,7 +412,7 @@ public class PhasesTests
 
         await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
 
-        ctx.ConflictedSongIds.ShouldBeEmpty();
+        ctx.ConflictedPaths.ShouldBeEmpty();
     }
 
     [Fact]
@@ -432,28 +432,159 @@ public class PhasesTests
         await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
 
         // The local file should stay protected from downloads
-        ctx.ConflictedSongIds.ShouldBe([1L]);
+        ctx.ConflictedPaths.ShouldBe(["song.mp3"]);
     }
 
-    [Theory]
-    [InlineData(SyncRecordAction.CreateLocal)]
-    [InlineData(SyncRecordAction.UpdateLocal)]
-    public async Task ServerActionsPhase_SkipsDownloadForConflictedSong(SyncRecordAction action)
+    [Fact]
+    public async Task ServerActionsPhase_DownloadOverConflictedPath_IsReportedNotPerformed()
     {
-        // The server asks for a download of a song whose local file has an unresolved conflict
-        var download = CreateRecord("song.mp3", action) with { SongId = 1 };
-        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
-            .Returns(new CreatePendingActionsResult { Records = [download] });
-        _fileOps.FileExists(Arg.Any<string>()).Returns(action == SyncRecordAction.UpdateLocal);
+        // The server asks to update a file whose local copy has an unresolved conflict
+        var download = CreateRecord("song.mp3", SyncRecordAction.UpdateLocal) with { SongId = 1 };
+        SetupPendingActions(download);
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
 
         var phases = CreatePhases();
         var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
-        ctx.ConflictedSongIds.Add(1);
+        ctx.ConflictedPaths.Add("song.mp3");
 
         await phases.ServerActionsPhaseAsync(ctx, null);
 
-        // The local file should not be overwritten
+        // The local file should not be overwritten, and the skipped record should be reported so the commit accepts it
         await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+        await AssertErrorReported(download, "Unresolved conflict");
+    }
+
+    [Fact]
+    public async Task ServerActionsPhase_DownloadForOtherPathOfConflictedSong_IsPerformed()
+    {
+        // The song is linked at two paths and only one of them conflicts
+        var otherPath = CreateRecord("copy.mp3", SyncRecordAction.UpdateLocal) with { SongId = 1 };
+        SetupPendingActions(otherPath);
+        SetupDownloadSucceeds();
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+        ctx.ConflictedPaths.Add("song.mp3");
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // The path without a conflict should still be updated
+        await _apiClient.Received(1).DownloadSongAsync(1, Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1,
+            Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(otherPath.Id)), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ServerActionsPhase_CreateLocalForConflictedSong_IsPerformed()
+    {
+        // A new path for a song with a conflict elsewhere: a create never writes over an existing file
+        var create = CreateRecord("new.mp3", SyncRecordAction.CreateLocal) with { SongId = 1 };
+        SetupPendingActions(create);
+        SetupDownloadSucceeds();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(false);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+        ctx.ConflictedPaths.Add("song.mp3");
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        await _apiClient.Received(1).DownloadSongAsync(1, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ServerActionsPhase_RenameOfConflictedPath_IsReportedNotPerformed()
+    {
+        // The server renames a file whose local copy has an unresolved conflict
+        var rename = CreateRecord("new/song.mp3", SyncRecordAction.Rename) with
+        {
+            SongId = 1,
+            Data = JsonSerializer.SerializeToElement(new { previousPath = "song.mp3", newPath = "new/song.mp3" })
+        };
+        SetupPendingActions(rename);
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+        ctx.ConflictedPaths.Add("song.mp3");
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // The conflicted file should stay where it is
+        await _fileOps.DidNotReceive().MoveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await AssertErrorReported(rename, "Unresolved conflict");
+    }
+
+    public static TheoryData<string?> MissingRenameData => new() { null, "{}", """{"newPath":"new/song.mp3"}""" };
+
+    [Theory]
+    [MemberData(nameof(MissingRenameData))]
+    public async Task ServerActionsPhase_RenameWithMissingData_IsReported(string? data)
+    {
+        // The server sent a Rename without the path to move the file from
+        var rename = CreateRecord("new/song.mp3", SyncRecordAction.Rename) with
+        {
+            Data = data == null ? null : JsonDocument.Parse(data).RootElement.Clone()
+        };
+        SetupPendingActions(rename);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // Nothing should be moved, and the record should be reported so the commit accepts it
+        await _fileOps.DidNotReceive().MoveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await AssertErrorReported(rename, "Missing rename data");
+    }
+
+    [Theory]
+    [InlineData(SyncRecordAction.Conflict)]
+    [InlineData(SyncRecordAction.Error)]
+    public async Task UploadPhase_UnsettledConflict_MarksItsPathOnly(SyncRecordAction resolvedAction)
+    {
+        // The song is linked at two paths; only one of them is checked as a conflict
+        _config.GetChunkSize().Returns(10);
+        SetupLocalFilesExist();
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 }], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [CreateRecord("song.mp3", resolvedAction) with { SongId = 1 }] });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext();
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3"), CreateScannedFile("copy.mp3")], null);
+
+        ctx.ConflictedPaths.ShouldBe(["song.mp3"]);
+    }
+
+    private void SetupPendingActions(params SyncRecordItem[] records)
+    {
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(new CreatePendingActionsResult { Records = [.. records] });
+    }
+
+    private void SetupDownloadSucceeds()
+    {
+        _fileOps.FileExists(Arg.Any<string>()).Returns(call => !((string)call[0]).EndsWith(".tmp"));
+        _apiClient.DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<Stream>(new MemoryStream([1, 2, 3])));
+        _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AcknowledgeActionResult { Success = true });
+    }
+
+    /// <summary>
+    /// A client action that was not performed is reported as an Error linked to its record, instead
+    /// of being left unacknowledged (which makes the server reject the commit).
+    /// </summary>
+    private async Task AssertErrorReported(SyncRecordItem record, string errorMessage)
+    {
+        await _apiClient.Received(1).ReportSyncErrorAsync(1, 1,
+            Arg.Is<ReportSyncErrorCliRequest>(r => r.RecordId == record.Id && r.FilePath == record.FilePath && r.ErrorMessage == errorMessage),
+            Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(),
+            Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(record.Id)), Arg.Any<CancellationToken>());
     }
 
     /// <summary>

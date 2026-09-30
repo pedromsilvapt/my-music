@@ -1,5 +1,5 @@
 import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase, startSessionPhase } from '../phases';
-import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename } from '../sync-actions-device';
+import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure } from '../sync-actions-device';
 import type { SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt, SyncRecordItem } from '../types';
 import type { RenameData } from '../../../api/types';
 
@@ -21,6 +21,7 @@ jest.mock('../sync-actions-device', () => ({
     actionUnlink: jest.fn(),
     actionConflict: jest.fn(),
     actionRename: jest.fn(),
+    reportFailure: jest.fn(),
 }));
 
 function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
@@ -124,8 +125,7 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
         },
         result,
         uploadedPaths: new Set(),
-        pendingDownloadPaths: new Set(),
-        conflictedSongIds: new Set(),
+        conflictedPaths: new Set(),
         ...overrides,
     };
 }
@@ -208,7 +208,7 @@ describe('resolveConflictsPhase', () => {
         );
     });
 
-    test('adds songId to conflictedSongIds when conflict path is NOT in toUpdatePaths', async () => {
+    test('marks the conflict path when it is NOT in toUpdatePaths', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
         mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
 
@@ -219,10 +219,10 @@ describe('resolveConflictsPhase', () => {
 
         await resolveConflictsPhase(deps, ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
-        expect(ctx.conflictedSongIds.has(42)).toBe(true);
+        expect([...ctx.conflictedPaths]).toEqual(['song.mp3']);
     });
 
-    test('does NOT add songId to conflictedSongIds when conflict path IS in toUpdatePaths', async () => {
+    test('does NOT mark the conflict path when it IS in toUpdatePaths', async () => {
         const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
         const toUpdatePaths = new Set<string>(['song.mp3']);
         mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
@@ -233,7 +233,43 @@ describe('resolveConflictsPhase', () => {
 
         await resolveConflictsPhase(deps, ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
-        expect(ctx.conflictedSongIds.has(42)).toBe(false);
+        expect(ctx.conflictedPaths.size).toBe(0);
+    });
+});
+
+describe('resolveConflictsPhase - results', () => {
+    const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
+    const record = (id: number, filePath: string, action: SyncRecordItem['action']): SyncRecordItem =>
+        ({ id, filePath, action, songId: 1, data: null, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('adds the resolve counts to the result once', async () => {
+        mockedActionConflict.mockResolvedValue({
+            records: [record(11, 'song.mp3', 'UpdateTimestamp')],
+            counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 1, errorCount: 0 },
+        });
+        const ctx = createContext();
+
+        await resolveConflictsPhase(createMockDeps(), ctx, [record(1, 'song.mp3', 'Conflict')], [], new Set(), jest.fn());
+
+        expect(ctx.result.updateTimestamp).toBe(1);
+    });
+
+    test('queues the device actions of the result and drops the records they supersede', async () => {
+        // The checked conflict and potential update are replaced by what the server decided for them
+        const conflict = record(1, 'song.mp3', 'Conflict');
+        const potentialUpdate = record(2, 'other.mp3', 'UpdateLocal');
+        const updateLocal = record(11, 'song.mp3', 'UpdateLocal');
+        const rename = record(12, 'new/song.mp3', 'Rename');
+        mockedActionConflict.mockResolvedValue({ records: [updateLocal, rename, record(13, 'other.mp3', 'UpdateTimestamp')], counts: undefined });
+        const ctx = createContext({ pendingActions: [conflict, potentialUpdate, record(3, 'download.mp3', 'CreateLocal')] });
+
+        await resolveConflictsPhase(createMockDeps(), ctx, [conflict], [potentialUpdate], new Set(), jest.fn());
+
+        expect(ctx.pendingActions?.map(r => r.id)).toEqual([3, 11, 12]);
     });
 });
 
@@ -394,6 +430,58 @@ describe('uploadPhase - uploadedPaths', () => {
     });
 });
 
+describe('uploadPhase - upload inputs', () => {
+    const mockedActionCreateRemote = actionCreateRemote as jest.MockedFunction<typeof actionCreateRemote>;
+    const mockedActionUpdateRemote = actionUpdateRemote as jest.MockedFunction<typeof actionUpdateRemote>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedActionCreateRemote.mockResolvedValue({ action: 'Error', filePath: 'new.mp3', source: 'Device', errorMessage: 'File not found' });
+        mockedActionUpdateRemote.mockResolvedValue({ action: 'UpdateRemote', filePath: 'changed.mp3', source: 'Device' });
+    });
+
+    test('uploads use the path and timestamps from the record data, like the CLI', async () => {
+        const deps = createMockDeps();
+        (deps.apiClient.checkSync as jest.Mock).mockResolvedValue({
+            records: [
+                { id: 1, filePath: 'new.mp3', action: 'CreateRemote', songId: null, data: { modifiedAt: '2024-02-01T00:00:00.000Z', createdAt: '2024-01-01T00:00:00.000Z' }, reason: 'New file', acknowledged: false, processedAt: '' },
+                { id: 2, filePath: 'changed.mp3', action: 'UpdateRemote', songId: 5, data: { modifiedAt: '2024-04-01T00:00:00.000Z', createdAt: '2024-03-01T00:00:00.000Z' }, reason: 'Changed', acknowledged: false, processedAt: '' },
+            ],
+        });
+        const ctx = createContext({ decodedRepoPath: '/storage/music' });
+        const scanned = (relativePath: string) => ({ relativePath, fullPath: `content://scanned/${relativePath}`, modifiedAt: new Date('2030-01-01'), createdAt: new Date('2030-01-01'), size: 1 });
+
+        await uploadPhase(deps, ctx, [scanned('new.mp3'), scanned('changed.mp3')], jest.fn());
+
+        expect(mockedActionCreateRemote).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, {
+            relativePath: 'new.mp3',
+            fullPath: '/storage/music/new.mp3',
+            modifiedAt: new Date('2024-02-01T00:00:00.000Z'),
+            createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        }, 'New file');
+        expect(mockedActionUpdateRemote).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, {
+            relativePath: 'changed.mp3',
+            fullPath: '/storage/music/changed.mp3',
+            modifiedAt: new Date('2024-04-01T00:00:00.000Z'),
+            createdAt: new Date('2024-03-01T00:00:00.000Z'),
+        }, 'Changed');
+    });
+
+    test('an upload is attempted even when the file is not part of the checked chunk', async () => {
+        // The server can name a path the chunk did not list; the upload action reports it if the file is missing
+        const deps = createMockDeps();
+        (deps.apiClient.checkSync as jest.Mock).mockResolvedValue({
+            records: [{ id: 1, filePath: 'new.mp3', action: 'CreateRemote', songId: null, data: null, reason: null, acknowledged: false, processedAt: '' }],
+        });
+        const ctx = createContext();
+
+        await uploadPhase(deps, ctx, [{ relativePath: 'other.mp3', fullPath: '/music/other.mp3', modifiedAt: new Date(), createdAt: new Date(), size: 1 }], jest.fn());
+
+        expect(mockedActionCreateRemote).toHaveBeenCalledTimes(1);
+        expect(ctx.uploadedPaths.has('new.mp3')).toBe(true);
+    });
+});
+
 describe('uploadPhase - accumulated pending actions from checkSync', () => {
     const mockedActionCreateRemote = actionCreateRemote as jest.MockedFunction<typeof actionCreateRemote>;
 
@@ -432,7 +520,6 @@ describe('uploadPhase - accumulated pending actions from checkSync', () => {
         expect(mockCreatePendingActions).not.toHaveBeenCalled();
         expect(ctx.pendingActions).toHaveLength(1);
         expect(ctx.pendingActions![0].id).toBe(10);
-        expect(ctx.pendingDownloadPaths.has('download-me.mp3')).toBe(true);
     });
 });
 
@@ -468,11 +555,10 @@ describe('uploadPhase - device actions returned by an upload', () => {
         ], jest.fn());
 
         expect(ctx.pendingActions?.map(r => r.id)).toContain(20);
-        expect(ctx.pendingDownloadPaths.has('song.mp3')).toBe(true);
     });
 });
 
-describe('uploadPhase - conflictedSongIds conditional tracking', () => {
+describe('uploadPhase - conflictedPaths conditional tracking', () => {
     const mockedActionCreateRemote = actionCreateRemote as jest.MockedFunction<typeof actionCreateRemote>;
     const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
 
@@ -486,7 +572,7 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
         mockedActionConflict.mockResolvedValue({ records: [], counts: undefined });
     });
 
-    test('adds songId to conflictedSongIds when conflict path is NOT in toUpdatePaths', async () => {
+    test('marks the conflict path when it is NOT in toUpdatePaths', async () => {
         const deps = createMockDeps({
             apiClient: {
                 ...createMockDeps().apiClient,
@@ -503,10 +589,10 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
 
         await uploadPhase(deps, ctx, files, onProgress);
 
-        expect(ctx.conflictedSongIds.has(99)).toBe(true);
+        expect(ctx.conflictedPaths.has('conflict-song.mp3')).toBe(true);
     });
 
-    test('does NOT add songId to conflictedSongIds when conflict path IS in toUpdatePaths', async () => {
+    test('does NOT mark the conflict path when it IS in toUpdatePaths', async () => {
         const deps = createMockDeps({
             apiClient: {
                 ...createMockDeps().apiClient,
@@ -526,10 +612,10 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
 
         await uploadPhase(deps, ctx, files, onProgress);
 
-        expect(ctx.conflictedSongIds.has(99)).toBe(false);
+        expect(ctx.conflictedPaths.has('conflict-song.mp3')).toBe(false);
     });
 
-    test('does NOT add songId to conflictedSongIds when the conflict resolves to an UpdateLocal', async () => {
+    test('does NOT mark the conflict path when the conflict resolves to an UpdateLocal', async () => {
         // The local file is a previous version of the song: the server wins, so its UpdateLocal must be
         // performed (and acknowledged) in this session instead of being skipped as conflicted
         const updateLocalRecord: SyncRecordItem = { id: 20, filePath: 'conflict-song.mp3', action: 'UpdateLocal', songId: 99, data: { songId: 99 }, reason: 'Server version wins', acknowledged: false, processedAt: '' };
@@ -548,7 +634,7 @@ describe('uploadPhase - conflictedSongIds conditional tracking', () => {
             { relativePath: 'conflict-song.mp3', fullPath: '/music/conflict-song.mp3', modifiedAt: new Date(), createdAt: new Date(), size: 1000 },
         ], jest.fn());
 
-        expect(ctx.conflictedSongIds.has(99)).toBe(false);
+        expect(ctx.conflictedPaths.has('conflict-song.mp3')).toBe(false);
         expect(ctx.pendingActions?.map(r => r.id)).toContain(20);
     });
 });
@@ -577,8 +663,8 @@ describe('uploadPhase - conflicted songs across chunks', () => {
 
         await uploadPhase(deps, ctx, [file('conflict.mp3'), file('changed.mp3')], jest.fn());
 
-        // The conflict found in chunk 1 should still protect its song; the resolved update should not
-        expect([...ctx.conflictedSongIds]).toEqual([1]);
+        // The conflict found in chunk 1 should still protect its file; the resolved update should not
+        expect([...ctx.conflictedPaths]).toEqual(['conflict.mp3']);
     });
 
     test.each(['UpdateTimestamp', 'Skipped'] as const)('a conflict resolved to %s is not marked', async (resolvedAction) => {
@@ -590,7 +676,7 @@ describe('uploadPhase - conflicted songs across chunks', () => {
 
         await uploadPhase(deps, ctx, [file('song.mp3')], jest.fn());
 
-        expect(ctx.conflictedSongIds.size).toBe(0);
+        expect(ctx.conflictedPaths.size).toBe(0);
     });
 
     test('a failed resolve request keeps the conflict marked', async () => {
@@ -603,7 +689,7 @@ describe('uploadPhase - conflicted songs across chunks', () => {
         await uploadPhase(deps, ctx, [file('song.mp3')], jest.fn());
 
         // The local file should stay protected from downloads
-        expect(ctx.conflictedSongIds.has(1)).toBe(true);
+        expect(ctx.conflictedPaths.has('song.mp3')).toBe(true);
     });
 
     test('a potential update the server could not resolve is marked', async () => {
@@ -615,30 +701,89 @@ describe('uploadPhase - conflicted songs across chunks', () => {
 
         await uploadPhase(deps, ctx, [file('song.mp3')], jest.fn());
 
-        expect(ctx.conflictedSongIds.has(1)).toBe(true);
+        expect(ctx.conflictedPaths.has('song.mp3')).toBe(true);
     });
 });
 
-describe('serverActionsPhase - conflicted songs', () => {
+describe('uploadPhase - conflicted path of a song linked at two paths', () => {
+    const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
+
+    test.each(['Conflict', 'Error'] as const)('a conflict resolved to %s marks its path only', async (resolvedAction) => {
+        mockedActionConflict.mockResolvedValue({
+            records: [{ id: 11, filePath: 'song.mp3', action: resolvedAction, songId: 1, data: null, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem],
+            counts: undefined,
+        });
+        const deps = createMockDeps();
+        (deps.apiClient.checkSync as jest.Mock).mockResolvedValue({
+            records: [{ id: 1, filePath: 'song.mp3', action: 'Conflict', songId: 1, data: null, reason: null, acknowledged: false, processedAt: '' }],
+        });
+        const ctx = createContext();
+        const file = (relativePath: string) => ({ relativePath, fullPath: `/music/${relativePath}`, modifiedAt: new Date(), createdAt: new Date(), size: 1000 });
+
+        await uploadPhase(deps, ctx, [file('song.mp3'), file('copy.mp3')], jest.fn());
+
+        expect([...ctx.conflictedPaths]).toEqual(['song.mp3']);
+    });
+});
+
+describe('serverActionsPhase - conflicted paths', () => {
     const mockedActionCreateLocal = actionCreateLocal as jest.MockedFunction<typeof actionCreateLocal>;
+    const mockedActionUpdateLocal = actionUpdateLocal as jest.MockedFunction<typeof actionUpdateLocal>;
+    const mockedActionRename = actionRename as jest.MockedFunction<typeof actionRename>;
+    const mockedReportFailure = reportFailure as jest.MockedFunction<typeof reportFailure>;
+    const record = (id: number, filePath: string, action: SyncRecordItem['action'], data: SyncRecordItem['data'] = null): SyncRecordItem =>
+        ({ id, filePath, action, songId: 1, data, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem);
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockedActionCreateLocal.mockResolvedValue({ action: 'CreateLocal', filePath: '', source: 'Server' });
+        mockedActionUpdateLocal.mockResolvedValue({ action: 'UpdateLocal', filePath: '', source: 'Server' });
+        mockedReportFailure.mockResolvedValue({ action: 'Error', filePath: '', source: 'Server', counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 } });
     });
 
-    test.each(['CreateLocal', 'UpdateLocal'] as const)('skips a %s for a conflicted song', async (action) => {
-        // The server asks for a download of a song whose local file has an unresolved conflict
+    test('a download over a conflicted path is reported, not performed', async () => {
+        // The server asks to update a file whose local copy has an unresolved conflict
         const deps = createMockDeps();
         const ctx = createContext({
-            conflictedSongIds: new Set([1]),
-            pendingActions: [{ id: 5, filePath: 'song.mp3', action, songId: 1, data: null, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem],
+            conflictedPaths: new Set(['song.mp3']),
+            pendingActions: [record(5, 'song.mp3', 'UpdateLocal')],
         });
 
         await serverActionsPhase(deps, ctx, jest.fn());
 
-        // The local file should not be overwritten
-        expect(mockedActionCreateLocal).not.toHaveBeenCalled();
-        expect(deps.apiClient.downloadSong).not.toHaveBeenCalled();
+        // The local file should not be overwritten, and the skipped record should be reported so the commit accepts it
+        expect(mockedActionUpdateLocal).not.toHaveBeenCalled();
+        expect(mockedReportFailure).toHaveBeenCalledWith(deps.apiClient, ctx, 5, 'song.mp3', 1, 'Unresolved conflict', 'Server-initiated update');
+        expect(ctx.result.error).toBe(1);
+    });
+
+    test('a download for another path of a conflicted song still runs', async () => {
+        // The song is linked at two paths and only one of them conflicts
+        const deps = createMockDeps();
+        const ctx = createContext({
+            conflictedPaths: new Set(['song.mp3']),
+            pendingActions: [record(5, 'copy.mp3', 'UpdateLocal'), record(6, 'new.mp3', 'CreateLocal')],
+        });
+
+        await serverActionsPhase(deps, ctx, jest.fn());
+
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'copy.mp3', '/music', 5, undefined);
+        expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 6, undefined);
+        expect(mockedReportFailure).not.toHaveBeenCalled();
+    });
+
+    test('a rename of a conflicted path is reported, not performed', async () => {
+        const deps = createMockDeps();
+        const ctx = createContext({
+            conflictedPaths: new Set(['song.mp3']),
+            pendingActions: [record(5, 'new/song.mp3', 'Rename', { previousPath: 'song.mp3', newPath: 'new/song.mp3' })],
+        });
+
+        await serverActionsPhase(deps, ctx, jest.fn());
+
+        // The conflicted file should stay where it is
+        expect(mockedActionRename).not.toHaveBeenCalled();
+        expect(mockedReportFailure).toHaveBeenCalledWith(deps.apiClient, ctx, 5, 'new/song.mp3', 1, 'Unresolved conflict', "Rename from 'song.mp3'");
     });
 });
 
@@ -849,7 +994,7 @@ describe('serverActionsPhase - Rename action', () => {
         );
     });
 
-    test('Rename action with no data is skipped', async () => {
+    test('Rename action with no data is reported as an error', async () => {
         const deps = createMockDeps();
         const ctx = createContext({
             pendingActions: [
@@ -869,10 +1014,12 @@ describe('serverActionsPhase - Rename action', () => {
 
         await serverActionsPhase(deps, ctx, onProgress);
 
+        // Nothing should be moved, and the record should be reported so the commit accepts it
         expect(mockedActionRename).not.toHaveBeenCalled();
+        expect(reportFailure).toHaveBeenCalledWith(deps.apiClient, ctx, 5, 'renamed-song.mp3', undefined, 'Missing rename data', 'Server-initiated rename');
     });
 
-    test('Rename action with data but no previousPath is skipped', async () => {
+    test('Rename action with data but no previousPath is reported as an error', async () => {
         const deps = createMockDeps();
         const ctx = createContext({
             pendingActions: [
@@ -892,7 +1039,9 @@ describe('serverActionsPhase - Rename action', () => {
 
         await serverActionsPhase(deps, ctx, onProgress);
 
+        // Nothing should be moved, and the record should be reported so the commit accepts it
         expect(mockedActionRename).not.toHaveBeenCalled();
+        expect(reportFailure).toHaveBeenCalledWith(deps.apiClient, ctx, 5, 'renamed-song.mp3', undefined, 'Missing rename data', 'Server-initiated rename');
     });
 
     test('Rename action adds result counts to context', async () => {

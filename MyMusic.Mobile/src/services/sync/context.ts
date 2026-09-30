@@ -31,7 +31,6 @@ export function createSyncContext(
         options: state.options,
         result,
         uploadedPaths: new Set(),
-        pendingDownloadPaths: new Set(),
-        conflictedSongIds: new Set(),
+        conflictedPaths: new Set(),
     };
 }

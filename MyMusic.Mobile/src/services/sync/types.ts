@@ -27,8 +27,7 @@ export interface SyncContext {
     };
     result: SyncResult;
     uploadedPaths: Set<string>;
-    pendingDownloadPaths: Set<string>;
-    conflictedSongIds: Set<number>;
+    conflictedPaths: Set<string>;
     pendingActions?: SyncRecordItem[];
 }
 

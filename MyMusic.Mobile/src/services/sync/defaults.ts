@@ -48,7 +48,8 @@ export function createDefaultApiClient(): ISyncApiClient {
             };
         },
         uploadFile: async (deviceId, sessionId, file, path, modifiedAt, createdAt) => {
-            const result = await uploadFile(deviceId, sessionId, file, path, modifiedAt, createdAt);
+            // The sync engine passes filesystem paths; React Native's FormData needs a URI
+            const result = await uploadFile(deviceId, sessionId, { ...file, uri: toFileUri(file.uri) }, path, modifiedAt, createdAt);
             return {
                 success: result.success,
                 songId: result.songId,

@@ -1,22 +1,6 @@
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
 import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData} from '../../api/types';
-import {addDeltaToResult} from './types';
 import {safeToIsoString} from './utils';
-
-const EMPTY_COUNTS: SyncActionCounts = {
-    createRemoteCount: 0,
-    updateRemoteCount: 0,
-    skippedCount: 0,
-    createLocalCount: 0,
-    updateLocalCount: 0,
-    deleteLocalCount: 0,
-    linkCount: 0,
-    unlinkCount: 0,
-    renameCount: 0,
-    conflictCount: 0,
-    updateTimestampCount: 0,
-    errorCount: 0,
-};
 
 export async function actionCreateRemote(
     apiClient: ISyncApiClient,
@@ -235,35 +219,30 @@ export async function actionDeleteLocal(
     ctx: SyncContext,
     path: string,
     decodedRepoPath: string,
-    songId?: number,
-    recordId?: number,
+    songId: number | undefined,
+    recordId: number,
     reason?: string
 ): Promise<ActionResult | null> {
     const fullPath = `${decodedRepoPath}/${path}`;
     const fileExists = fileOps.fileExists(fullPath);
 
     if (!fileExists) {
-        if (recordId) {
-            const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId] });
-            ctx.result = addDeltaToResult(ctx.result, ackResult.counts ?? EMPTY_COUNTS);
-        }
-        return null;
-    }
-
-    let shouldDelete = true;
-
-    if (!ctx.options.autoConfirm && !ctx.options.dryRun) {
-        shouldDelete = await userPrompt.confirmDeletion(path);
-    }
-
-    if (!shouldDelete) {
+        await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId] });
         return null;
     }
 
     const baseReason = reason ?? 'Server-initiated removal';
 
+    if (!ctx.options.autoConfirm && !ctx.options.dryRun) {
+        const confirmed = await userPrompt.confirmDeletion(path);
+        if (!confirmed) {
+            console.log('Deletion declined by user:', path);
+            return reportFailure(apiClient, ctx, recordId, path, songId, 'Deletion declined by user', baseReason);
+        }
+    }
+
     if (ctx.options.dryRun) {
-        const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId ?? 0] });
+        const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId] });
         return {
             action: 'DeleteLocal',
             filePath: path,
@@ -277,7 +256,7 @@ export async function actionDeleteLocal(
 
     try {
         await fileOps.deleteFile(fullPath);
-        const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId ?? 0] });
+        const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId] });
 
         return {
             action: 'DeleteLocal',
@@ -303,13 +282,13 @@ export async function actionUnlink(
     apiClient: ISyncApiClient,
     ctx: SyncContext,
     path: string,
-    songId?: number,
-    recordId?: number,
+    songId: number | undefined,
+    recordId: number,
     reason?: string
 ): Promise<ActionResult | null> {
     const baseReason = reason ?? 'Orphaned: path not present locally';
 
-    const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId ?? 0] });
+    const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, { recordIds: [recordId] });
 
     return {
         action: 'Unlink',
@@ -378,10 +357,10 @@ export async function actionRename(
  * The server acknowledges the record, so the commit is not blocked, and does not apply it, so
  * the server state keeps reflecting what is actually on the device.
  */
-async function reportFailure(
+export async function reportFailure(
     apiClient: ISyncApiClient,
     ctx: SyncContext,
-    recordId: number | undefined,
+    recordId: number,
     filePath: string,
     songId: number | undefined,
     errorMessage: string,
@@ -487,8 +466,6 @@ export async function actionConflict(
             conflicts: resolveItems,
             potentialUpdates: potentialUpdateItems,
         });
-
-        ctx.result = addDeltaToResult(ctx.result, resolveResponse.counts ?? EMPTY_COUNTS);
 
         for (const record of resolveResponse.records) {
             switch (record.action) {

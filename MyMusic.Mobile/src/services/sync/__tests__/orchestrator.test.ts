@@ -130,8 +130,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
         },
         result,
         uploadedPaths: new Set(),
-        pendingDownloadPaths: new Set(),
-        conflictedSongIds: new Set(),
+        conflictedPaths: new Set(),
         ...overrides,
     };
 }
