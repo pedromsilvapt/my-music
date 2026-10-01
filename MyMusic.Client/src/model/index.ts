@@ -145,6 +145,7 @@ export * from './getSongResponseSong';
 export * from './getSoundalikeDuplicatesResponse';
 export * from './getSourceItem';
 export * from './getSourceResponse';
+export * from './getSyncSessionResponse';
 export * from './getUserItem';
 export * from './getUserResponse';
 export * from './groupResolution';

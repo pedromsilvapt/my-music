@@ -20,6 +20,7 @@ public class DeviceSyncSessionsControllerListSessionsSpecs
         return new DeviceSyncSessionsController(
             currentUser,
             DeviceSyncSessionsControllerHelpers.CreateSyncSessionListService(scenario),
+            DeviceSyncSessionsControllerHelpers.CreateSyncSessionGetService(scenario),
             DeviceSyncSessionsControllerHelpers.CreateSyncSessionRecordsQueryService(scenario),
             DeviceSyncSessionsControllerHelpers.CreateSyncSessionFilterValuesService(scenario),
             DeviceSyncSessionsControllerHelpers.CreateSyncSessionDeleteService(scenario),

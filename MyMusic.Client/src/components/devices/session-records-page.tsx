@@ -3,10 +3,11 @@ import {useEffect, useState, useCallback, useMemo} from "react";
 import {useTranslation} from "react-i18next";
 import {Anchor, Breadcrumbs, Text} from "@mantine/core";
 import {useGetDevice} from "../../client/devices.ts";
-import {useGetDevicesDeviceIdSessionsSessionIdRecords} from "../../client/device-sync-sessions.ts";
+import {useGetDevicesDeviceIdSessionsSessionId, useGetDevicesDeviceIdSessionsSessionIdRecords} from "../../client/device-sync-sessions.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
 import {useSessionRecordsSchema} from "./useSessionRecordsSchema.tsx";
+import SessionActionPills from "./session-action-pills.tsx";
 import {useDebouncedValue} from "@mantine/hooks";
 import type {SyncRecordResponseItem} from "../../model";
 
@@ -25,6 +26,10 @@ export default function SessionRecordsPage() {
     const deviceResponse = useQueryData(deviceQuery, t("devices:recordsPage.fetchDeviceFailed"));
     const device = deviceResponse?.data?.device;
     const deviceName = device?.name ?? t("devices:recordsPage.deviceFallback", {id: deviceId});
+
+    const sessionQuery = useGetDevicesDeviceIdSessionsSessionId(deviceIdNum, sessionIdNum);
+    const sessionResponse = useQueryData(sessionQuery, t("devices:recordsPage.fetchSessionFailed"));
+    const session = sessionResponse?.data?.session;
     
     const [searchQuery, setSearchQuery] = useState("");
     const [filterQuery, setFilterQuery] = useState("");
@@ -95,6 +100,12 @@ export default function SessionRecordsPage() {
                     )
                 ))}
             </Breadcrumbs>
+
+            <SessionActionPills
+                session={session}
+                filter={filterQuery}
+                onFilterChange={setFilterQuery}
+            />
             
             <div style={{flex: 1}}>
                 <Collection

@@ -90,6 +90,7 @@ public static class HostBuilderExtensions
         // Sync session services
         builder.Services.AddScoped<ISyncSessionLookupService, SyncSessionLookupService>();
         builder.Services.AddScoped<ISyncSessionListService, SyncSessionListService>();
+        builder.Services.AddScoped<ISyncSessionGetService, SyncSessionGetService>();
         builder.Services.AddScoped<ISyncSessionRecordsQueryService, SyncSessionRecordsQueryService>();
         builder.Services.AddScoped<ISyncSessionFilterValuesService, SyncSessionFilterValuesService>();
         builder.Services.AddScoped<ISyncSessionDeleteService, SyncSessionDeleteService>();

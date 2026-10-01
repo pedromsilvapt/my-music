@@ -28,7 +28,9 @@
         "deviceFallback": "Device {{id}}",
         "session": "Session {{id}}",
         "records": "Records",
-        "searchPlaceholder": "Search file paths..."
+        "searchPlaceholder": "Search file paths...",
+        "fetchSessionFailed": "Failed to fetch session",
+        "actionPillsLabel": "Filter by action"
     },
     "schema": {
         "manageGroup": "Manage",

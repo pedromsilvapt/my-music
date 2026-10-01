@@ -20,6 +20,9 @@ internal static class DeviceSyncSessionsControllerHelpers
             scenario.DbContext,
             DevicesControllerHelpers.DeviceLookup);
 
+    public static ISyncSessionGetService CreateSyncSessionGetService(Scenario scenario) =>
+        new SyncSessionGetService(scenario.DbContext);
+
     public static ISyncSessionRecordsQueryService CreateSyncSessionRecordsQueryService(Scenario scenario) =>
         new SyncSessionRecordsQueryService(
             scenario.DbContext,

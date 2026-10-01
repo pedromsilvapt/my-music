@@ -28,7 +28,9 @@
         "deviceFallback": "Dispositivo {{id}}",
         "session": "Sessão {{id}}",
         "records": "Registos",
-        "searchPlaceholder": "Pesquisar caminhos de ficheiros..."
+        "searchPlaceholder": "Pesquisar caminhos de ficheiros...",
+        "fetchSessionFailed": "Falha ao obter a sessão",
+        "actionPillsLabel": "Filtrar por ação"
     },
     "schema": {
         "manageGroup": "Gerir",

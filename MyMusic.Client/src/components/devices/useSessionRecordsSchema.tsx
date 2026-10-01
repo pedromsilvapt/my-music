@@ -8,43 +8,13 @@ import type {FilterMetadataResponse} from "../filters/use-filter-metadata.ts";
 import SessionRecordSong from "../common/fields/session-record-song.tsx";
 import Artwork from "../common/artwork.tsx";
 import {IconFileMusic} from "@tabler/icons-react";
+import {getActionColor} from "./sync-record-action.ts";
 
 type RecordWithId = Omit<SyncRecordResponseItem, 'id'> & { id: string };
 
 function formatDateTime(date: string | Date): string {
     const d = new Date(date);
     return d.toLocaleString();
-}
-
-function getActionColor(action: string): string {
-    switch (action) {
-        case 'CreateRemote':
-            return 'green';
-        case 'UpdateRemote':
-            return 'blue';
-        case 'CreateLocal':
-            return 'teal';
-        case 'UpdateLocal':
-            return 'cyan';
-        case 'DeleteLocal':
-            return 'red';
-        case 'Link':
-            return 'lime';
-        case 'Unlink':
-            return 'orange';
-        case 'Rename':
-            return 'violet';
-        case 'Skipped':
-            return 'gray';
-        case 'Conflict':
-            return 'yellow';
-        case 'UpdateTimestamp':
-            return 'grape';
-        case 'Error':
-            return 'red';
-        default:
-            return 'gray';
-    }
 }
 
 function formatData(data: unknown): string {

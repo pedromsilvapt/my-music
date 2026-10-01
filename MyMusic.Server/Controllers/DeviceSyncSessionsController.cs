@@ -9,7 +9,7 @@ using MyMusic.Server.DTO.Sync;
 namespace MyMusic.Server.Controllers;
 
 /// <summary>
-/// Sync session lifecycle endpoints (list, records, filters, delete, prune). Lives under the
+/// Sync session lifecycle endpoints (list, get, records, filters, delete, prune). Lives under the
 /// <c>devices</c> route prefix so session endpoints keep their existing paths
 /// (<c>/devices/{deviceId}/sessions</c>, ...).
 /// </summary>
@@ -18,6 +18,7 @@ namespace MyMusic.Server.Controllers;
 public class DeviceSyncSessionsController(
     ICurrentUser currentUser,
     ISyncSessionListService sessionListService,
+    ISyncSessionGetService sessionGetService,
     ISyncSessionRecordsQueryService sessionRecordsQueryService,
     ISyncSessionFilterValuesService sessionFilterValuesService,
     ISyncSessionDeleteService sessionDeleteService,
@@ -35,6 +36,21 @@ public class DeviceSyncSessionsController(
         return new ListSyncSessionsResponse
         {
             Sessions = result.Sessions.Select(SyncSessionItem.FromEntity).ToList(),
+        };
+    }
+
+    [HttpGet("{sessionId:long}")]
+    public async Task<ActionResult<GetSyncSessionResponse>> GetSession(
+        long deviceId,
+        long sessionId,
+        CancellationToken cancellationToken = default)
+    {
+        var session = await sessionGetService.GetAsync(sessionId, deviceId, currentUser.Id, cancellationToken);
+        if (session == null) return NotFound();
+
+        return new GetSyncSessionResponse
+        {
+            Session = SyncSessionItem.FromEntity(session),
         };
     }
 
