@@ -63,6 +63,8 @@ app.Configure(config =>
         history.AddCommand<HistoryRemoveCommand>("rm");
         history.AddCommand<HistoryPruneCommand>("prune");
     });
+    config.SetApplicationName("my-music");
+    config.UseAssemblyInformationalVersion();
     config.PropagateExceptions();
 });
 
