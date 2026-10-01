@@ -116,7 +116,11 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
             {
                 name: 'action',
                 displayName: t("devices:schema.columns.action"),
-                render: row => <Badge color={getActionColor(row.action)}>{row.action}</Badge>,
+                render: row => (
+                    <Tooltip label={row.action} openDelay={500}>
+                        <Badge color={getActionColor(row.action)}>{row.action}</Badge>
+                    </Tooltip>
+                ),
                 width: 110,
             },
             {
@@ -175,7 +179,10 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
         renderListSubTitle: (row, lineClamp) => (
             <div>
                 <Text c="gray" size="sm" lineClamp={lineClamp}>
-                    {row.action}{row.resolvesConflictRecordId != null ? ` ${t("devices:schema.resolves", {id: row.resolvesConflictRecordId})}` : ''}
+                    <Tooltip label={row.action} openDelay={500}>
+                        <span>{row.action}</span>
+                    </Tooltip>
+                    {row.resolvesConflictRecordId != null ? ` ${t("devices:schema.resolves", {id: row.resolvesConflictRecordId})}` : ''}
                 </Text>
             </div>
         ),
