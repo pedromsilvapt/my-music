@@ -17,7 +17,7 @@ const DEFAULT_USER: GetUserItem = {
 
 export function useUserPreferences() {
     const {setColorScheme} = useMantineColorScheme();
-    const {data, isLoading} = useGetCurrentUser({
+    const {data, isLoading, isFetching} = useGetCurrentUser({
         query: {
             initialData: {data: {user: DEFAULT_USER}, status: 200, headers: new Headers()},
         },
@@ -74,6 +74,7 @@ export function useUserPreferences() {
     return {
         user,
         isLoading,
+        isFetching,
         colorScheme: user.colorScheme as "light" | "dark" | "auto",
         language: user.language,
         volume: user.volume,

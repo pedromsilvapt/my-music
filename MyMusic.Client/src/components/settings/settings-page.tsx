@@ -5,12 +5,12 @@ import {useUserPreferences} from "../../hooks/use-user-preferences";
 
 export default function SettingsPage() {
     const {t} = useTranslation(["settings", "common"]);
-    const {user, updateLanguage, isLoading, isUpdating} = useUserPreferences();
+    const {user, updateLanguage, isFetching, isUpdating} = useUserPreferences();
 
     const currentLanguage = isSupportedLanguage(user.language) ? user.language : "en";
 
     return (
-        <Container data-testid="settings" data-loading={isLoading ? "true" : "false"}>
+        <Container data-testid="settings" data-loading={isFetching ? "true" : "false"}>
             <Stack gap="md" mt="md">
                 <Box>
                     <Text fw={600} size="lg" mb="xs">{t("settings:language")}</Text>
