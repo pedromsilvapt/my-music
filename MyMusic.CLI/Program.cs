@@ -96,6 +96,8 @@ static LogLevel? ParseLogLevelOverride(string[] args)
     return null;
 }
 
+// "-v" doesn't clash with Spectre's "-v, --version": the version flag is only accepted on the root
+// command (`my-music -v`), while "-v, --verbose" is only accepted on sub-commands (`my-music history ls -v`).
 static bool IsVerbose(string[] args) =>
     args.Contains("--verbose") || args.Contains("-v");
 
@@ -112,13 +114,13 @@ static void ConfigureConfiguration(IServiceCollection services, string[] args)
 
     var configurationBuilder = new ConfigurationBuilder()
         .SetBasePath(Directory.GetCurrentDirectory())
-        .AddJsonFile("appsettings.json", true, true)
-        .AddJsonFile($"appsettings.{environment.ToLower()}.json", true, true)
-        .AddJsonFile(userConfigPath, true, true);
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+        .AddJsonFile($"appsettings.{environment.ToLower()}.json", optional: true, reloadOnChange: false)
+        .AddJsonFile(userConfigPath, optional: true, reloadOnChange: false);
 
     if (!string.IsNullOrEmpty(configPath))
     {
-        configurationBuilder.AddJsonFile(configPath, true, true);
+        configurationBuilder.AddJsonFile(configPath, optional: true, reloadOnChange: false);
     }
 
     configurationBuilder.AddEnvironmentVariables();
