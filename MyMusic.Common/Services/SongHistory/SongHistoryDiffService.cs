@@ -55,7 +55,10 @@ public class SongHistoryDiffService : ISongHistoryDiffService
         if (oldAlbum is null || newAlbum is null) return new FieldChange<SongSnapshotAlbum?> { Old = oldAlbum, New = newAlbum };
         if (oldAlbum.Id != newAlbum.Id || oldAlbum.Title != newAlbum.Title
             || oldAlbum.ArtistId != newAlbum.ArtistId || oldAlbum.ArtistName != newAlbum.ArtistName)
+        {
             return new FieldChange<SongSnapshotAlbum?> { Old = oldAlbum, New = newAlbum };
+        }
+
         return null;
     }
 
@@ -99,7 +102,10 @@ public class SongHistoryDiffService : ISongHistoryDiffService
             || oldCover.Width != newCover.Width
             || oldCover.Height != newCover.Height
             || oldCover.Data != newCover.Data)
+        {
             return new FieldChange<SongSnapshotCover?> { Old = oldCover, New = newCover };
+        }
+
         return null;
     }
 }

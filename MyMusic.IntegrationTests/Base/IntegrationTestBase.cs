@@ -285,8 +285,10 @@ public abstract class IntegrationTestBase : PageTest
     protected async Task SwitchUserAsync(int index, bool reloadPage = false)
     {
         if (index < 0 || index >= _users.Count)
+        {
             throw new ArgumentOutOfRangeException(nameof(index), index,
                 $"User index {index} is out of range. {_users.Count} user(s) were created.");
+        }
 
         CurrentUser = _users[index];
         _currentUserName = CurrentUser.UserName;

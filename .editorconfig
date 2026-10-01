@@ -1,0 +1,5 @@
+root = true
+
+[*.cs]
+csharp_prefer_braces = when_multiline:warning
+dotnet_diagnostic.IDE0011.severity = warning

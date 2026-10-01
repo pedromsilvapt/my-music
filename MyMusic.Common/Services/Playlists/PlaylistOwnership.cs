@@ -28,12 +28,16 @@ internal static class PlaylistOwnership
 
         var notOwned = playlists.FirstOrDefault(p => p.OwnerId != currentUserId);
         if (notOwned != null)
+        {
             throw new UnauthorizedAccessException(
                 $"User {currentUserId} does not own playlist {notOwned.Id}");
+        }
 
         var system = playlists.FirstOrDefault(p => p.Type != PlaylistType.Playlist);
         if (system != null)
+        {
             throw new InvalidOperationException(
                 $"Cannot share system playlist {system.Id} ({system.Type})");
+        }
     }
 }

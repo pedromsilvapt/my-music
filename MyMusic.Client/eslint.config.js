@@ -20,6 +20,7 @@ export default tseslint.config([
       globals: globals.browser,
     },
     rules: {
+      curly: ['error', 'multi-line'],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
