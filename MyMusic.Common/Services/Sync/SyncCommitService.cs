@@ -9,6 +9,7 @@ namespace MyMusic.Common.Services.Sync;
 public class SyncCommitService(
     IFileSystem fileSystem,
     IMusicService musicService,
+    ISyncSoundalikeMatcher soundalikeMatcher,
     ILoggerFactory loggerFactory,
     ILogger<SyncCommitService> logger) : ISyncCommitService
 {
@@ -59,7 +60,7 @@ public class SyncCommitService(
         var direction = session?.Direction ?? SyncDirection.Both;
         var orphanDetection = await DetectOrphansAsync(db, deviceId, records, direction, cancellationToken);
 
-        var imports = new CommitImports();
+        var imports = new CommitImports { Deduplicate = session?.Deduplicate == true };
 
         // Records whose action failed were not performed, so their bookkeeping is not applied either
         var failedRecordIds = records
@@ -165,6 +166,8 @@ public class SyncCommitService(
                     return;
                 }
 
+                await SaveFingerprintAsync(imports, songId.Value, cancellationToken);
+
                 songDevice = await musicService.AddSongsToDevice(db, deviceId, songId.Value, record.FilePath,
                     (modifiedAt ?? DateTime.UtcNow).ToUniversalTime(), cancellationToken);
             }
@@ -188,6 +191,8 @@ public class SyncCommitService(
                 {
                     imports.CreatedSongIds[checksum] = newSongId;
                 }
+
+                await SaveFingerprintAsync(imports, newSongId, cancellationToken);
 
                 songDevice = await musicService.AddSongsToDevice(db, deviceId, newSongId, record.FilePath,
                     (modifiedAt ?? DateTime.UtcNow).ToUniversalTime(), cancellationToken);
@@ -377,11 +382,11 @@ public class SyncCommitService(
             songDevice.SyncActionReason = null;
         }
 
-        // The device's file is an older version of the song: the song keeps its newer content (no
-        // FileModifiedAt rollback), and the UpdateLocal recorded after this Link downloads it to the device
-        if (data?.IsPreviousVersion == true)
+        // The device's file is an older version of the song, or a soundalike of it: the song keeps its content
+        // (no FileModifiedAt rollback), and the UpdateLocal recorded after this Link replaces the device file
+        if (data?.IsPreviousVersion == true || data?.IsSoundalike == true)
         {
-            logger.LogInformation("ProcessLinkAsync: path={Path} holds a previous version of song {SongId}, keeping its FileModifiedAt",
+            logger.LogInformation("ProcessLinkAsync: path={Path} holds a previous version or a soundalike of song {SongId}, keeping its FileModifiedAt",
                 record.FilePath, songId);
             return;
         }
@@ -686,6 +691,18 @@ public class SyncCommitService(
     }
 
     /// <summary>
+    /// Saves the fingerprint of a song imported from an upload, in sessions with soundalike deduplication.
+    /// This is the only point where an uploaded file's fingerprint is saved (never in a dry run).
+    /// </summary>
+    private async Task SaveFingerprintAsync(CommitImports imports, long songId, CancellationToken cancellationToken)
+    {
+        if (imports.Deduplicate)
+        {
+            await soundalikeMatcher.SaveSongFingerprintAsync(songId, cancellationToken);
+        }
+    }
+
+    /// <summary>
     /// Result of <see cref="ImportSongFromFile"/>: the imported song's id, or why the import failed.
     /// </summary>
     private sealed record ImportOutcome(long? SongId, string? ErrorMessage)
@@ -700,6 +717,9 @@ public class SyncCommitService(
     /// </summary>
     private sealed class CommitImports
     {
+        /// <summary>The session deduplicates soundalikes, so imported songs get their fingerprints saved.</summary>
+        public bool Deduplicate { get; init; }
+
         public Dictionary<string, long> CreatedSongIds { get; } = [];
         public HashSet<string> FailedChecksums { get; } = [];
 

@@ -24,6 +24,13 @@ public class DeviceSyncSession
 
     public string? RepositoryPath { get; set; }
 
+    /// <summary>
+    /// When set, files that would be created on the server (<c>CreateRemote</c>) are first matched by
+    /// acoustic fingerprint (soundalike) against the user's library and this session's other uploads.
+    /// See docs/development/sync.md, "Soundalike Deduplication".
+    /// </summary>
+    public bool Deduplicate { get; set; }
+
     public List<DeviceSyncSessionRecord> Records { get; set; } = [];
 }
 

@@ -100,6 +100,7 @@ export async function startSessionPhase (
         dryRun: ctx.options.dryRun,
         direction: ctx.options.direction,
         repositoryPath: ctx.repositoryPath,
+        deduplicate: ctx.options.deduplicate,
         scanErrors: scanErrors.map(e => ({ path: e.path, error: e.error })),
     });
     ctx.sessionId = startResponse.sessionId;
@@ -251,17 +252,28 @@ export async function serverActionsPhase (
                 ctx.result = addDeltaToResult(ctx.result, result.counts);
             }
         } else if (record.action === 'CreateLocal' || record.action === 'UpdateLocal') {
-            const downloadAction = record.action === 'CreateLocal' ? actionCreateLocal : actionUpdateLocal;
-            const result = await downloadAction(
-                deps.apiClient,
-                deps.fileOps,
-                ctx,
-                record.songId,
-                record.filePath,
-                ctx.decodedRepoPath,
-                record.id,
-                record.reason ?? undefined
-            );
+            const result = record.action === 'CreateLocal'
+                ? await actionCreateLocal(
+                    deps.apiClient,
+                    deps.fileOps,
+                    ctx,
+                    record.songId,
+                    record.filePath,
+                    ctx.decodedRepoPath,
+                    record.id,
+                    record.reason ?? undefined
+                )
+                : await actionUpdateLocal(
+                    deps.apiClient,
+                    deps.fileOps,
+                    ctx,
+                    record.songId,
+                    record.filePath,
+                    ctx.decodedRepoPath,
+                    record.id,
+                    record.reason ?? undefined,
+                    record.data?.localSourcePath ?? undefined
+                );
             serverResults.push(result);
             if (result.counts) {
                 ctx.result = addDeltaToResult(ctx.result, result.counts);

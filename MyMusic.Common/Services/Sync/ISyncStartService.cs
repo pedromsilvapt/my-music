@@ -15,6 +15,9 @@ public record SyncStartInput
 
     public string? RepositoryPath { get; init; }
 
+    /// <summary>Match new uploads against the library by acoustic fingerprint (soundalike).</summary>
+    public bool Deduplicate { get; init; }
+
     public List<SyncStartScanError>? ScanErrors { get; init; }
 }
 
@@ -27,6 +30,12 @@ public record SyncStartScanError
 
     public required string ErrorMessage { get; init; }
 }
+
+/// <summary>
+/// Thrown when a sync session cannot be started with the requested options. The controller maps it
+/// to <c>400 Bad Request</c>.
+/// </summary>
+public class SyncStartValidationException(string message) : Exception(message);
 
 /// <summary>
 /// Result of a sync session start operation. The controller maps this to

@@ -11,6 +11,7 @@ namespace MyMusic.Common.Services.Sync;
 public class SyncCancelService(
     MusicDbContext db,
     ISyncSessionLookupService sessionLookup,
+    SyncSoundalikeSessionCache soundalikeCache,
     IFileSystem fileSystem,
     ILogger<SyncCancelService> logger) : ISyncCancelService
 {
@@ -31,6 +32,8 @@ public class SyncCancelService(
 
         session.Status = SyncSessionStatus.Cancelled;
         session.CompletedAt = DateTime.UtcNow;
+
+        soundalikeCache.Remove(session.Id);
 
         var stagingDeleted = StagingDirectoryCleanupService.DeleteStagingDirectory(fileSystem, session.RepositoryPath, session.Id, logger);
 

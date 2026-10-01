@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
 using NSubstitute;
@@ -10,12 +11,61 @@ namespace MyMusic.Common.Tests.Services.Sync;
 
 public class SyncStartServiceSpecs
 {
-    private static SyncStartService CreateService(Scenario scenario, ISyncActionsServerFactory? factory = null) =>
-        new(
+    private static SyncStartService CreateService(Scenario scenario, ISyncActionsServerFactory? factory = null, bool fpcalcAvailable = true)
+    {
+        var fpcalc = Substitute.For<IFpcalcService>();
+        fpcalc.IsAvailable().Returns(fpcalcAvailable);
+        return new(
             scenario.DbContext,
             new DeviceLookupService(),
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
+            fpcalc,
             Substitute.For<ILogger<SyncStartService>>());
+    }
+
+    [Fact]
+    public async Task StartAsync_Deduplicate_StoresItOnTheSession()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.StartAsync(device.Id, scenario.AdminUser.Id, new SyncStartInput { Deduplicate = true }, CancellationToken.None);
+
+        // Assert
+        scenario.DbContext.DeviceSyncSessions.Single(s => s.Id == result!.SessionId).Deduplicate.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task StartAsync_DeduplicateWithoutFpcalc_FailsWithoutCreatingSession()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var service = CreateService(scenario, fpcalcAvailable: false);
+
+        // Act & Assert
+        await Should.ThrowAsync<SyncStartValidationException>(() =>
+            service.StartAsync(device.Id, scenario.AdminUser.Id, new SyncStartInput { Deduplicate = true }, CancellationToken.None));
+        scenario.DbContext.DeviceSyncSessions.Any().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task StartAsync_WithoutDeduplicate_DoesNotRequireFpcalc()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var service = CreateService(scenario, fpcalcAvailable: false);
+
+        // Act
+        var result = await service.StartAsync(device.Id, scenario.AdminUser.Id, new SyncStartInput(), CancellationToken.None);
+
+        // Assert
+        scenario.DbContext.DeviceSyncSessions.Single(s => s.Id == result!.SessionId).Deduplicate.ShouldBeFalse();
+    }
 
     [Fact]
     public async Task StartAsync_DeviceNotFound_ReturnsNull()

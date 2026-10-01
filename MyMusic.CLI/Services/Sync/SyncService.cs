@@ -6,14 +6,15 @@ using MyMusic.CLI.Services.Sync.Types;
 public class SyncService(IServiceProvider serviceProvider) : ISyncService
 {
     public async Task<SyncResult> SyncAsync(bool force, bool dryRun, bool autoConfirm,
-        SyncDirection direction, IProgress<SyncProgress>? progress = null, CancellationToken ct = default)
+        SyncDirection direction, bool deduplicate, IProgress<SyncProgress>? progress = null, CancellationToken ct = default)
     {
         var options = new SyncOptions
         {
             Force = force,
             DryRun = dryRun,
             AutoConfirm = autoConfirm,
-            Direction = direction
+            Direction = direction,
+            Deduplicate = deduplicate,
         };
 
         var orchestrator = serviceProvider.GetRequiredService<Orchestrator>();

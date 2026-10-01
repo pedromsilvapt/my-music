@@ -48,7 +48,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
                     });
 
                     syncResult = await syncService.SyncAsync(settings.Force, settings.DryRun,
-                        settings.AutoConfirm, settings.Direction, progress);
+                        settings.AutoConfirm, settings.Direction, settings.Deduplicate, progress);
                 });
 
             AnsiConsole.WriteLine();
@@ -185,6 +185,10 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         [CommandOption("-f|--force")] public bool Force { get; set; }
 
         [CommandOption("--dry-run")] public bool DryRun { get; set; }
+
+        [CommandOption("--deduplicate")]
+        [Description("Link new files that sound like a song already on the server (or like another new file) instead of uploading them")]
+        public bool Deduplicate { get; set; }
 
         [CommandOption("-y|--yes")] public bool AutoConfirm { get; set; }
 

@@ -31,6 +31,7 @@ function createMockFileOps(overrides: Partial<IFileOps> = {}): IFileOps {
         writeFile: jest.fn().mockResolvedValue(undefined),
         deleteFile: jest.fn().mockResolvedValue(undefined),
         moveFile: jest.fn().mockResolvedValue(undefined),
+        copyFile: jest.fn().mockResolvedValue(undefined),
         readFileBase64: jest.fn().mockResolvedValue('base64content'),
         getModificationTime: jest.fn().mockReturnValue(new Date('2024-01-01T00:00:00Z')),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
@@ -65,6 +66,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
             treatConflictsAsErrors: false,
             scannerType: 'fileSystem',
             direction: 'Both',
+            deduplicate: false,
         },
         result,
         uploadedPaths: new Set(),
@@ -141,7 +143,7 @@ describe('actionCreateRemote', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -206,7 +208,7 @@ describe('actionUpdateRemote', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -254,7 +256,7 @@ describe('actionCreateLocal', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext({
-            options: { force: false, dryRun, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both' },
+            options: { force: false, dryRun, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false },
         });
 
         const result = await actionCreateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
@@ -291,7 +293,7 @@ describe('actionCreateLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -395,7 +397,7 @@ describe('actionUpdateLocal', () => {
         });
         const fileOps = fileOpsWithLocalFile();
         const ctx = createContext({
-            options: { force: false, dryRun: true, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both' },
+            options: { force: false, dryRun: true, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false },
         });
 
         const result = await actionUpdateLocal(apiClient, fileOps, ctx, 42, 'song.mp3', '/music', 1);
@@ -421,6 +423,54 @@ describe('actionUpdateLocal', () => {
         expect(result!.reason).toBe('Server-initiated update failed');
         expect(fileOps.deleteFile).not.toHaveBeenCalledWith('/music/song.mp3');
         expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    });
+
+    test('with a local source, copies that file instead of downloading', async () => {
+        // A soundalike of a file uploaded in this session is replaced by that file
+        const apiClient = createMockApiClient({
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, updateLocalCount: 1}}),
+        });
+        const fileOps = fileOpsWithLocalFile();
+        const ctx = createContext();
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, null, 'copy.mp3', '/music', 1, undefined, 'first.mp3');
+
+        expect(result!.action).toBe('UpdateLocal');
+        expect(fileOps.copyFile).toHaveBeenCalledWith('/music/first.mp3', '/music/copy.mp3.tmp');
+        expect(fileOps.moveFile).toHaveBeenCalledWith('/music/copy.mp3.tmp', '/music/copy.mp3');
+        expect(apiClient.downloadSong).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: expect.any(String)});
+    });
+
+    test('with a missing local source, reports an error and keeps the file', async () => {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn((path: string) => path === '/music/copy.mp3') });
+        const ctx = createContext();
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, null, 'copy.mp3', '/music', 1, undefined, 'first.mp3');
+
+        expect(result!.action).toBe('Error');
+        expect(fileOps.copyFile).not.toHaveBeenCalled();
+        expect(fileOps.moveFile).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    });
+
+    test('with a local source in dry-run, acknowledges without copying', async () => {
+        const apiClient = createMockApiClient({
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, updateLocalCount: 1}}),
+        });
+        const fileOps = fileOpsWithLocalFile();
+        const ctx = createContext({
+            options: { force: false, dryRun: true, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false },
+        });
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, null, 'copy.mp3', '/music', 1, undefined, 'first.mp3');
+
+        expect(result!.action).toBe('UpdateLocal');
+        expect(fileOps.copyFile).not.toHaveBeenCalled();
+        expect(fileOps.moveFile).not.toHaveBeenCalled();
     });
 });
 
@@ -480,7 +530,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -502,7 +552,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: false, autoConfirm: true,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -543,7 +593,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -566,7 +616,7 @@ describe('actionDeleteLocal', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: true,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -588,7 +638,7 @@ describe('actionDeleteLocal', () => {
             fileExists: jest.fn().mockReturnValue(true),
         });
         const userPrompt = createMockUserPrompt();
-        const ctx = createContext({options: {force: false, dryRun: false, autoConfirm: true, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both'}});
+        const ctx = createContext({options: {force: false, dryRun: false, autoConfirm: true, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false}});
 
         const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'song.mp3', '/music', undefined, 99);
 
@@ -666,7 +716,7 @@ describe('actionRename', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
 
@@ -761,7 +811,7 @@ describe('actionConflict', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: false, autoConfirm: false,
-                treatConflictsAsErrors: true, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: true, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
         const toUpdatePaths = new Set<string>();
@@ -787,7 +837,7 @@ describe('actionConflict', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
         });
         const toUpdatePaths = new Set<string>();

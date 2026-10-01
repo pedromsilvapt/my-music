@@ -203,6 +203,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             DryRun = request.DryRun,
             Direction = request.Direction.ToString(),
             RepositoryPath = request.RepositoryPath,
+            Deduplicate = request.Deduplicate,
             ScanErrors = request.ScanErrors?.Select(e => new SyncScanErrorItem
             {
                 FilePath = e.Path,

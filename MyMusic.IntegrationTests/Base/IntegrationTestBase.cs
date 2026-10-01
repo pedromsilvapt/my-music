@@ -120,6 +120,13 @@ public abstract class IntegrationTestBase : PageTest
         await CreateTestUsers();
         await ConfigureBrowserContextAsync();
 
+        // TEMP: simulate a slow CI runner by throttling the page's CPU (Chromium only)
+        if (int.TryParse(Environment.GetEnvironmentVariable("CPU_THROTTLE_RATE"), out var cpuThrottleRate))
+        {
+            var cdp = await Page.Context.NewCDPSessionAsync(Page);
+            await cdp.SendAsync("Emulation.setCPUThrottlingRate", new Dictionary<string, object> { ["rate"] = cpuThrottleRate });
+        }
+
         if (NavigateOnInitialize)
         {
             await Page.GotoAsync(BaseUrl);

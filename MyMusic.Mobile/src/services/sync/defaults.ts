@@ -132,6 +132,11 @@ export function createDefaultFileOps(): IFileOps {
             const toFile = new File(toFileUri(toPath));
             fromFile.move(toFile);
         },
+        copyFile: async (fromPath: string, toPath: string) => {
+            const fromFile = new File(toFileUri(fromPath));
+            const toFile = new File(toFileUri(toPath));
+            fromFile.copy(toFile);
+        },
         readFileBase64: async (path: string) => {
             return new File(toFileUri(path)).base64();
         },

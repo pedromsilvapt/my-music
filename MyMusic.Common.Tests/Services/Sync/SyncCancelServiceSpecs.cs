@@ -14,6 +14,7 @@ public class SyncCancelServiceSpecs
         new(
             scenario.DbContext,
             new SyncSessionLookupService(),
+            new SyncSoundalikeSessionCache(),
             scenario.FileSystem,
             Substitute.For<ILogger<SyncCancelService>>());
 

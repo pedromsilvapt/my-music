@@ -15,6 +15,7 @@ public class SyncUploadServiceSpecs
 {
     private readonly IMusicService _musicService = Substitute.For<IMusicService>();
     private readonly ISyncActionsServerFactory _syncActionsServerFactory = new SyncActionsServerFactory();
+    private readonly ISyncSoundalikeMatcher _soundalikeMatcher = Substitute.For<ISyncSoundalikeMatcher>();
     private readonly ISongFileValidateService _songFileValidate = Substitute.For<ISongFileValidateService>();
     private readonly ILogger<SyncUploadService> _logger = Substitute.For<ILogger<SyncUploadService>>();
 
@@ -36,6 +37,7 @@ public class SyncUploadServiceSpecs
             _musicService,
             _songFileValidate,
             _syncActionsServerFactory,
+            _soundalikeMatcher,
             _logger);
     }
 

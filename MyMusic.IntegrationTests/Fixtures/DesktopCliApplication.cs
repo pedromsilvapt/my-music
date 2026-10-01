@@ -98,6 +98,7 @@ public class DesktopCliApplication : ISyncApplication
 
         if (options.Force) args.Add("--force");
         if (options.DryRun) args.Add("--dry-run");
+        if (options.Deduplicate) args.Add("--deduplicate");
         if (options.Direction is not null && options.Direction != SyncDirection.Both)
         {
             args.Add("--direction");

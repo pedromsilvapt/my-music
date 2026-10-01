@@ -14,6 +14,7 @@ public record SyncSessionItem
     public DateTime? CompletedAt { get; init; }
     public required SyncSessionStatus Status { get; init; }
     public required bool IsDryRun { get; init; }
+    public bool Deduplicate { get; init; }
     public required int CreateRemoteCount { get; init; }
     public required int UpdateRemoteCount { get; init; }
     public required int SkippedCount { get; init; }
@@ -37,6 +38,7 @@ public record SyncSessionItem
             CompletedAt = session.CompletedAt,
             Status = session.Status,
             IsDryRun = session.IsDryRun,
+            Deduplicate = session.Deduplicate,
             CreateRemoteCount = session.Records.Count(r => r.Action == SyncRecordAction.CreateRemote),
             UpdateRemoteCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateRemote),
             SkippedCount = session.Records.Count(r => r.Action == SyncRecordAction.Skipped),

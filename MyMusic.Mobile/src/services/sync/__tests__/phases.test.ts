@@ -64,7 +64,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         get isCancelled () { return false; },
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
         },
     };
 
@@ -75,6 +75,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         writeFile: jest.fn().mockResolvedValue(undefined),
         deleteFile: jest.fn().mockResolvedValue(undefined),
         moveFile: jest.fn().mockResolvedValue(undefined),
+        copyFile: jest.fn().mockResolvedValue(undefined),
         readFileBase64: jest.fn().mockResolvedValue('base64'),
         getModificationTime: jest.fn().mockReturnValue(new Date('2024-01-01')),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
@@ -121,7 +122,7 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
         sessionId: 1,
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
         },
         result,
         uploadedPaths: new Set(),
@@ -767,7 +768,7 @@ describe('serverActionsPhase - conflicted paths', () => {
 
         await serverActionsPhase(deps, ctx, jest.fn());
 
-        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'copy.mp3', '/music', 5, undefined);
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'copy.mp3', '/music', 5, undefined, undefined);
         expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 6, undefined);
         expect(mockedReportFailure).not.toHaveBeenCalled();
     });
@@ -811,7 +812,21 @@ describe('serverActionsPhase - downloads', () => {
         expect(mockedActionCreateLocal).toHaveBeenCalledTimes(1);
         expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 1, 'New on server');
         expect(mockedActionUpdateLocal).toHaveBeenCalledTimes(1);
-        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 2, 'changed.mp3', '/music', 2, 'Changed on server');
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 2, 'changed.mp3', '/music', 2, 'Changed on server', undefined);
+    });
+
+    test('passes the local source of an UpdateLocal to the update action', async () => {
+        // A soundalike of a file uploaded in this session is replaced by copying that file
+        const deps = createMockDeps();
+        const ctx = createContext({
+            pendingActions: [
+                { id: 3, filePath: 'copy.mp3', action: 'UpdateLocal', songId: null, data: { localSourcePath: 'first.mp3' }, reason: 'Soundalike', acknowledged: false, processedAt: '' } as SyncRecordItem,
+            ],
+        });
+
+        await serverActionsPhase(deps, ctx, jest.fn());
+
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, null, 'copy.mp3', '/music', 3, 'Soundalike', 'first.mp3');
     });
 });
 
@@ -933,7 +948,7 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
             },
             uploadedPaths: new Set<string>(['just-uploaded.mp3']),
             pendingActions: [

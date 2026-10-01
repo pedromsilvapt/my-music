@@ -32,6 +32,7 @@ public class DevicesControllerUploadSpecs
             scenario.CreateMusicService(),
             songFileValidate,
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<ISyncSoundalikeMatcher>(),
             Substitute.For<ILogger<SyncUploadService>>());
 
         return new DevicesController(

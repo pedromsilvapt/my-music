@@ -13,8 +13,8 @@ public class AcousticFingerprintService(
 {
     public bool IsAvailable() => fpcalc.IsAvailable();
 
-    private const double DefaultFingerprintLength = 15.0;
-    private const int DefaultFingerprintAlgorithm = 2;
+    public const double DefaultFingerprintLength = 15.0;
+    public const int DefaultFingerprintAlgorithm = 2;
     private const double DefaultLookupThreshold = 0.25;
     private const double DefaultMatchThreshold = 0.95;
 
@@ -56,7 +56,7 @@ public class AcousticFingerprintService(
             CreatedAt = DateTime.UtcNow
         };
 
-        fingerprint.Fingerprint = UintArrayToBytes(result.Fingerprint);
+        fingerprint.Fingerprint = FingerprintEncoding.ToBytes(result.Fingerprint);
         fingerprint.Duration = result.Duration;
         fingerprint.FingerprintLength = lengthSeconds;
         fingerprint.FingerprintAlgorithm = algorithm;
@@ -109,7 +109,7 @@ public class AcousticFingerprintService(
             var fp = await GetOrCreateFingerprintAsync(song, ct: ct);
             if (fp != null)
             {
-                fingerprints[song.Id] = BytesToUintArray(fp.Fingerprint);
+                fingerprints[song.Id] = FingerprintEncoding.FromBytes(fp.Fingerprint);
                 logger.LogDebug("Generated fingerprint for song {SongId}, length: {Length}", song.Id, fingerprints[song.Id].Length);
             }
             else
@@ -126,14 +126,19 @@ public class AcousticFingerprintService(
             return [];
         }
 
-        var lookup = BuildLookupTable(fingerprints);
+        var index = new FingerprintIndex<long>();
+        foreach (var (songId, fprint) in fingerprints)
+        {
+            index.Add(songId, fprint);
+        }
+
         var edges = new ConcurrentDictionary<long, List<long>>();
 
-        var thresh = (int)(fingerprints.Average(f => f.Value.Length) * lookupThreshold);
+        var thresh = (int)(index.AverageLength * lookupThreshold);
 
         foreach (var (songIdA, fprintA) in fingerprints)
         {
-            var candidates = FindCandidates(lookup, fprintA, thresh, songIdA);
+            var candidates = index.FindCandidates(fprintA, thresh, id => id == songIdA);
 
             foreach (var songIdB in candidates)
             {
@@ -237,162 +242,7 @@ public class AcousticFingerprintService(
     public (double Score, int OffsetA, int OffsetB) CompareFingerprints(
         uint[] a, 
         uint[] b, 
-        bool minLength)
-    {
-        if (a.Length == 0 || b.Length == 0)
-        {
-            return (0, 0, 0);
-        }
-
-        int CountBits(uint[] arr1, uint[] arr2, int start1, int start2, int length)
-        {
-            var count = 0;
-            for (var i = 0; i < length; i++)
-            {
-                if (start1 + i >= arr1.Length || start2 + i >= arr2.Length)
-                    break;
-                count += 32 - BitCount(arr1[start1 + i] ^ arr2[start2 + i]);
-            }
-            return count;
-        }
-
-        var maxLen = Math.Min(a.Length, b.Length);
-        var best = CountBits(a, b, 0, 0, maxLen);
-        var aOff = 0;
-        var bOff = 0;
-
-        for (var i = 1; i < a.Length; i++)
-        {
-            var len = Math.Min(a.Length - i, b.Length);
-            var cnt = CountBits(a, b, i, 0, len);
-            if (cnt > best)
-            {
-                best = cnt;
-                aOff = i;
-                bOff = 0;
-            }
-        }
-
-        for (var i = 1; i < b.Length; i++)
-        {
-            var len = Math.Min(a.Length, b.Length - i);
-            var cnt = CountBits(a, b, 0, i, len);
-            if (cnt > best)
-            {
-                best = cnt;
-                aOff = 0;
-                bOff = i;
-            }
-        }
-
-        var total = minLength 
-            ? Math.Min(a.Length, b.Length) 
-            : Math.Max(a.Length, b.Length);
-
-        return ((double)best / (32 * total), aOff, bOff);
-    }
-
-    private static int BitCount(uint x)
-    {
-        var count = 0;
-        while (x != 0)
-        {
-            count += (int)(x & 1);
-            x >>= 1;
-        }
-        return count;
-    }
-
-    private static byte[] UintArrayToBytes(uint[] arr)
-    {
-        var bytes = new byte[arr.Length * 4];
-        for (var i = 0; i < arr.Length; i++)
-        {
-            bytes[i * 4] = (byte)(arr[i] & 0xFF);
-            bytes[i * 4 + 1] = (byte)((arr[i] >> 8) & 0xFF);
-            bytes[i * 4 + 2] = (byte)((arr[i] >> 16) & 0xFF);
-            bytes[i * 4 + 3] = (byte)((arr[i] >> 24) & 0xFF);
-        }
-        return bytes;
-    }
-
-    private static uint[] BytesToUintArray(byte[] bytes)
-    {
-        var arr = new uint[bytes.Length / 4];
-        for (var i = 0; i < arr.Length; i++)
-        {
-            arr[i] = (uint)(bytes[i * 4] | (bytes[i * 4 + 1] << 8) | (bytes[i * 4 + 2] << 16) | (bytes[i * 4 + 3] << 24));
-        }
-        return arr;
-    }
-
-    private static Dictionary<ushort, Dictionary<long, short>> BuildLookupTable(Dictionary<long, uint[]> fingerprints)
-    {
-        var lookup = new Dictionary<ushort, Dictionary<long, short>>();
-
-        foreach (var (songId, fprint) in fingerprints)
-        {
-            foreach (var v in fprint)
-            {
-                var key = (ushort)(v >> 16);
-                if (!lookup.TryGetValue(key, out var counts))
-                {
-                    counts = new Dictionary<long, short>();
-                    lookup[key] = counts;
-                }
-
-                counts[songId] = (short)(counts.GetValueOrDefault(songId) + 1);
-            }
-        }
-
-        return lookup;
-    }
-
-    private static List<long> FindCandidates(
-        Dictionary<ushort, Dictionary<long, short>> lookup,
-        uint[] fprint,
-        int thresh,
-        long excludeSongId)
-    {
-        var hits = new Dictionary<long, Dictionary<ushort, short>>();
-
-        foreach (var v in fprint)
-        {
-            var key = (ushort)(v >> 16);
-            if (!lookup.TryGetValue(key, out var counts))
-                continue;
-
-            foreach (var (id, cnt) in counts)
-            {
-                if (id == excludeSongId)
-                    continue;
-
-                if (!hits.TryGetValue(id, out var seen))
-                {
-                    seen = new Dictionary<ushort, short>();
-                    hits[id] = seen;
-                }
-
-                var current = seen.GetValueOrDefault(key);
-                if (current < cnt)
-                {
-                    seen[key] = (short)(current + 1);
-                }
-            }
-        }
-
-        var result = new List<long>();
-        foreach (var (id, seen) in hits)
-        {
-            var total = seen.Values.Sum(v => (int)v);
-            if (total >= thresh)
-            {
-                result.Add(id);
-            }
-        }
-
-        return result;
-    }
+        bool minLength) => FingerprintIndex<long>.Compare(a, b, minLength);
 
     private static List<HashSet<long>> FindConnectedComponents(ConcurrentDictionary<long, List<long>> edges)
     {
@@ -457,7 +307,7 @@ public class AcousticFingerprintService(
                 var fp = await GetOrCreateFingerprintAsync(song, ct: ct);
                 if (fp != null)
                 {
-                    fingerprints[song.Id] = BytesToUintArray(fp.Fingerprint);
+                    fingerprints[song.Id] = FingerprintEncoding.FromBytes(fp.Fingerprint);
                 }
             }
 

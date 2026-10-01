@@ -77,6 +77,28 @@ public record SongModifiedAtData
     /// </summary>
     [JsonPropertyName("isPreviousVersion")]
     public bool? IsPreviousVersion { get; init; }
+
+    /// <summary>
+    /// Set on a <c>Link</c> recorded by soundalike deduplication: the file sounds like the song (or, without
+    /// <see cref="SongId"/>, like the file uploaded earlier in this session with <see cref="Checksum"/>) but
+    /// has different content. The song keeps its content, and the <c>UpdateLocal</c> recorded after the Link
+    /// replaces the device file.
+    /// </summary>
+    [JsonPropertyName("isSoundalike")]
+    public bool? IsSoundalike { get; init; }
+
+    /// <summary>
+    /// Checksum of the device file itself, when it differs from <see cref="Checksum"/> (soundalike links).
+    /// </summary>
+    [JsonPropertyName("localChecksum")]
+    public string? LocalChecksum { get; init; }
+
+    /// <summary>
+    /// Set on an <c>UpdateLocal</c> whose content comes from another file on the device instead of from the
+    /// server: the device copies the file at this path (relative to its repository) over the record's path.
+    /// </summary>
+    [JsonPropertyName("localSourcePath")]
+    public string? LocalSourcePath { get; init; }
 }
 
 public record RenameData

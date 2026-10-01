@@ -15,6 +15,7 @@ public class SyncSessionDeleteServiceSpecs
         new(
             scenario.DbContext,
             new SyncSessionLookupService(),
+            new SyncSoundalikeSessionCache(),
             scenario.FileSystem,
             Substitute.For<ILogger<SyncSessionDeleteService>>());
 

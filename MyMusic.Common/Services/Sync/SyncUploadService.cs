@@ -12,6 +12,7 @@ public class SyncUploadService(
     IMusicService musicService,
     ISongFileValidateService songFileValidate,
     ISyncActionsServerFactory syncActionsServerFactory,
+    ISyncSoundalikeMatcher soundalikeMatcher,
     ILogger<SyncUploadService> logger) : ISyncUploadService
 {
     public async Task<SyncUploadResult> UploadAsync(
@@ -28,6 +29,7 @@ public class SyncUploadService(
         string repositoryPath,
         long ownerId,
         SyncDirection direction,
+        bool deduplicate = false,
         CancellationToken cancellationToken = default)
     {
         var staging = await StageFileAsync(sessionId, fileStream, fileName, isDryRun, repositoryPath, cancellationToken);
@@ -55,6 +57,19 @@ public class SyncUploadService(
                 ? await songFileValidate.ValidateAsync(staging.StagedFilePath, cancellationToken)
                 : null;
 
+            // A file that would be created on the server may sound like a song it already has (or like a
+            // file uploaded earlier in this session): with deduplication, it is linked to that song instead.
+            // A file that sounds like nothing is remembered (in memory only) for this session's later uploads.
+            if (deduplicate && !isUpdate && importError == null && decision.ActionType == SyncUploadActionType.CreateRemote)
+            {
+                var match = await soundalikeMatcher.MatchOrRegisterAsync(
+                    sessionId, ownerId, staging.StagedFilePath, checksum, path, cancellationToken);
+                if (match != null)
+                {
+                    decision = await DetermineSoundalikeLinkAsync(match, checksum, checksumAlgorithmName, cancellationToken);
+                }
+            }
+
             var syncActions = syncActionsServerFactory.Create(db, sessionId, deviceId, isDryRun);
             var records = importError != null
                 ? [await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken: cancellationToken)]
@@ -72,7 +87,8 @@ public class SyncUploadService(
             long? effectiveSongId = decision.ActionType switch
             {
                 SyncUploadActionType.LinkWithSongId or SyncUploadActionType.LinkWithChecksumOnly
-                    or SyncUploadActionType.LinkWithSongIdAndUpdateLocal => decision.SongId,
+                    or SyncUploadActionType.LinkWithSongIdAndUpdateLocal
+                    or SyncUploadActionType.SoundalikeLink => decision.SongId,
                 _ => duplicateSongId ?? songIdForRecord,
             };
 
@@ -191,6 +207,42 @@ public class SyncUploadService(
         };
     }
 
+    /// <summary>
+    /// Links a new file to its soundalike. The Link's checksum is the content the linked song will have: the
+    /// library song's, or the checksum of the session upload whose song the commit creates.
+    /// </summary>
+    private async Task<SyncUploadDecision> DetermineSoundalikeLinkAsync(
+        SyncSoundalikeMatch match, string checksum, string algorithm, CancellationToken cancellationToken)
+    {
+        if (match.SongId is { } songId)
+        {
+            var song = await db.Songs
+                .Where(s => s.Id == songId)
+                .Select(s => new { s.Checksum, s.ChecksumAlgorithm })
+                .FirstAsync(cancellationToken);
+
+            return new SyncUploadDecision
+            {
+                ActionType = SyncUploadActionType.SoundalikeLink,
+                SongId = songId,
+                Checksum = song.Checksum,
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                LocalChecksum = checksum,
+                Reason = $"Linked to existing song (soundalike, score {match.Score:F2})",
+            };
+        }
+
+        return new SyncUploadDecision
+        {
+            ActionType = SyncUploadActionType.SoundalikeLink,
+            Checksum = match.UploadChecksum,
+            ChecksumAlgorithm = algorithm,
+            LocalChecksum = checksum,
+            LocalSourcePath = match.UploadPath,
+            Reason = $"Linked to the song of '{match.UploadPath}' uploaded in this session (soundalike, score {match.Score:F2})",
+        };
+    }
+
     private async Task<List<DeviceSyncSessionRecord>> ExecuteDecisionAsync(
         SyncUploadDecision decision,
         ISyncActionsServer syncActions,
@@ -254,14 +306,35 @@ public class SyncUploadService(
                 return [linkRecord, updateLocalRecord];
             }
 
+            case SyncUploadActionType.SoundalikeLink:
+            {
+                var linkRecord = await syncActions.ActionSoundalikeLink(
+                    path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!, decision.LocalChecksum!,
+                    modifiedAt, decision.Reason, cancellationToken);
+
+                // The song of a session upload only exists after the commit, so the device copies the
+                // uploaded file it sounds like, instead of downloading the song
+                var updateLocalRecord = decision.SongId.HasValue
+                    ? await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken)
+                    : direction == SyncDirection.Up
+                        ? await syncActions.ActionSkipped(path,
+                            reason: "File sounds like a file uploaded in this session, not replaced (direction up)",
+                            cancellationToken: cancellationToken)
+                        : await syncActions.ActionUpdateLocalFromLocalFile(path, decision.LocalSourcePath!,
+                            $"File sounds like '{decision.LocalSourcePath}' uploaded in this session, replaced by it",
+                            cancellationToken);
+
+                return [linkRecord, updateLocalRecord];
+            }
+
             default:
                 throw new InvalidOperationException($"Unknown upload action type: {decision.ActionType}");
         }
     }
 
     /// <summary>
-    /// Records the download of the song's current file over a device file holding a previous version of it,
-    /// or a <c>Skipped</c> record in <c>up</c> direction, where the device is never changed.
+    /// Records the download of the song's current file over a device file holding a previous version of it (or
+    /// a soundalike of it), or a <c>Skipped</c> record in <c>up</c> direction, where the device is never changed.
     /// </summary>
     private async Task<DeviceSyncSessionRecord> ActionUpdateLocalOrSkippedAsync(
         SyncUploadDecision decision,
@@ -272,17 +345,25 @@ public class SyncUploadService(
     {
         var songId = decision.SongId!.Value;
 
+        var isSoundalike = decision.ActionType == SyncUploadActionType.SoundalikeLink;
+
         if (direction == SyncDirection.Up)
         {
             return await syncActions.ActionSkipped(path, songId,
-                "File matches a previous version of the song, not downloaded (direction up)", cancellationToken);
+                isSoundalike
+                    ? "File sounds like the song, not downloaded (direction up)"
+                    : "File matches a previous version of the song, not downloaded (direction up)",
+                cancellationToken);
         }
 
         var song = await db.Songs.FirstAsync(s => s.Id == songId, cancellationToken);
         var songFileModifiedAt = song.FileModifiedAt ?? song.ModifiedAt;
 
         return await syncActions.ActionUpdateLocal(path, song.Id, songFileModifiedAt,
-            $"File matches a previous version of the song, server modified at {songFileModifiedAt:O} wins", cancellationToken);
+            isSoundalike
+                ? $"File sounds like the song, replaced by the server file (modified at {songFileModifiedAt:O})"
+                : $"File matches a previous version of the song, server modified at {songFileModifiedAt:O} wins",
+            cancellationToken);
     }
 
     /// <summary>

@@ -11,6 +11,7 @@ namespace MyMusic.Common.Services.Sync;
 public class SyncCompleteService(
     MusicDbContext db,
     ISyncSessionLookupService sessionLookup,
+    SyncSoundalikeSessionCache soundalikeCache,
     ILogger<SyncCompleteService> logger) : ISyncCompleteService
 {
     /// <inheritdoc />
@@ -35,6 +36,8 @@ public class SyncCompleteService(
 
         session.CompletedAt = DateTime.UtcNow;
         session.Status = SyncSessionStatus.Completed;
+
+        soundalikeCache.Remove(session.Id);
 
         if (!session.IsDryRun)
         {

@@ -207,6 +207,7 @@ public class MobileCliApplication : ISyncApplication
         var args = new List<string> { "sync" };
         if (options.Force) args.Add("--force");
         if (options.DryRun) args.Add("--dry-run");
+        if (options.Deduplicate) args.Add("--deduplicate");
         if (options.AutoConfirm) args.Add("--yes");
         if (options.Direction is not null)
         {

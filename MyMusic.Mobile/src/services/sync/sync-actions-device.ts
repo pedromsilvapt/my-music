@@ -142,7 +142,8 @@ export async function actionUpdateLocal(
     path: string,
     decodedRepoPath: string,
     recordId: number,
-    reason?: string
+    reason?: string,
+    localSourcePath?: string
 ): Promise<ActionResult> {
     const fullPath = `${decodedRepoPath}/${path}`;
 
@@ -151,7 +152,12 @@ export async function actionUpdateLocal(
         return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, 'File not found', 'Missing local file during update');
     }
 
-    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, true);
+    if (localSourcePath && !fileOps.fileExists(`${decodedRepoPath}/${localSourcePath}`)) {
+        console.error(`Source file ${localSourcePath} not found during update of ${path}`);
+        return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, `Source file not found: ${localSourcePath}`, 'Missing local source file during update');
+    }
+
+    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, true, localSourcePath);
 }
 
 async function downloadAndAck(
@@ -163,7 +169,8 @@ async function downloadAndAck(
     decodedRepoPath: string,
     recordId: number,
     reason: string | undefined,
-    isUpdate: boolean
+    isUpdate: boolean,
+    localSourcePath?: string
 ): Promise<ActionResult> {
     const action = isUpdate ? 'UpdateLocal' : 'CreateLocal';
     const baseReason = reason ?? (isUpdate ? 'Server-initiated update' : 'Server-initiated download');
@@ -176,8 +183,14 @@ async function downloadAndAck(
         if (!ctx.options.dryRun) {
             await fileOps.ensureDirectory(fullPath);
 
-            const blob = await apiClient.downloadSong(songId!);
-            await fileOps.writeFile(tempPath, blob);
+            // A soundalike of a file uploaded in this session gets that file's content, which is only
+            // on the device until the commit creates its song
+            if (localSourcePath) {
+                await fileOps.copyFile(`${decodedRepoPath}/${localSourcePath}`, tempPath);
+            } else {
+                const blob = await apiClient.downloadSong(songId!);
+                await fileOps.writeFile(tempPath, blob);
+            }
 
             if (isUpdate) {
                 await fileOps.deleteFile(fullPath);

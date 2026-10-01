@@ -103,6 +103,28 @@ public class SyncActionsServer(
         return await SaveRecord(record, cancellationToken);
     }
 
+    public async Task<DeviceSyncSessionRecord> ActionSoundalikeLink(
+        string filePath, long? songId, string checksum, string algorithm, string localChecksum, DateTime modifiedAt,
+        string? reason = null, CancellationToken cancellationToken = default)
+    {
+        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData
+        {
+            SongId = songId, ModifiedAt = modifiedAt, Checksum = checksum, Algorithm = algorithm,
+            IsSoundalike = true, LocalChecksum = localChecksum,
+        });
+        var record = CreateRecord(filePath, SyncRecordAction.Link, data, songId, reason: reason);
+        return await SaveRecord(record, cancellationToken);
+    }
+
+    public async Task<DeviceSyncSessionRecord> ActionUpdateLocalFromLocalFile(
+        string filePath, string localSourcePath, string? reason = null,
+        CancellationToken cancellationToken = default)
+    {
+        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { LocalSourcePath = localSourcePath });
+        var record = CreateRecord(filePath, SyncRecordAction.UpdateLocal, data, reason: reason);
+        return await SaveRecord(record, cancellationToken);
+    }
+
     public async Task<DeviceSyncSessionRecord> ActionUnlink(
         string filePath, long? songId = null, string? reason = null,
         CancellationToken cancellationToken = default)

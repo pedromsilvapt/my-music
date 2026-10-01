@@ -246,6 +246,53 @@ public class SyncActionsDeviceTests
     }
 
     [Fact]
+    public async Task ActionUpdateLocalAsync_WithLocalSource_CopiesTheLocalFileInsteadOfDownloading()
+    {
+        // A soundalike of a file uploaded in this session is replaced by that file
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(call => (string)call[0] is "/music/copy.mp3" or "/music/first.mp3");
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        var sourceStream = new MemoryStream(Encoding.UTF8.GetBytes("first"));
+        mockFile.OpenRead("/music/first.mp3").Returns(Substitute.For<System.IO.Abstractions.FileSystemStream>(sourceStream, "/music/first.mp3", false));
+        _fileSystem.File.Returns(mockFile);
+        _fileOps.GetModificationTimeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(DateTime.UtcNow);
+
+        var result = await device.ActionUpdateLocalAsync(1, 1, "/music", null, "copy.mp3", dryRun: false, autoConfirm: true, recordId: 1, localSourcePath: "first.mp3");
+
+        // The source file's content is written over the soundalike, and nothing is downloaded
+        result!.Action.ShouldBe("UpdateLocal");
+        await _fileOps.Received(1).WriteFileAsync("/music/copy.mp3.tmp", Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+        await _fileOps.Received(1).MoveFileAsync("/music/copy.mp3.tmp", "/music/copy.mp3", Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionUpdateLocalAsync_WithMissingLocalSource_ReportsError()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(call => (string)call[0] == "/music/copy.mp3");
+
+        var result = await device.ActionUpdateLocalAsync(1, 7, "/music", null, "copy.mp3", dryRun: false, autoConfirm: true, recordId: 42, localSourcePath: "first.mp3");
+
+        result!.Action.ShouldBe("Error");
+        await _fileOps.DidNotReceive().MoveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await AssertFailureReported(recordId: 42, path: "copy.mp3", songId: null);
+    }
+
+    [Fact]
+    public async Task ActionUpdateLocalAsync_WithLocalSource_DryRun_DoesNotCopy()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        var result = await device.ActionUpdateLocalAsync(1, 1, "/music", null, "copy.mp3", dryRun: true, autoConfirm: true, recordId: 1, localSourcePath: "first.mp3");
+
+        result!.Action.ShouldBe("UpdateLocal");
+        await _fileOps.DidNotReceive().WriteFileAsync(Arg.Any<string>(), Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+        await _fileOps.DidNotReceive().MoveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task ActionUpdateLocalAsync_FileDoesNotExist_ReturnsError()
     {
         var device = CreateDevice();

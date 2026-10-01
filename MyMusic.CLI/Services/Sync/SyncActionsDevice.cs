@@ -129,6 +129,7 @@ public class SyncActionsDevice(
         bool autoConfirm,
         long recordId,
         string? reason = null,
+        string? localSourcePath = null,
         CancellationToken ct = default)
     {
         var fullPath = Path.Combine(repositoryPath, relativePath);
@@ -140,7 +141,13 @@ public class SyncActionsDevice(
             return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, "File not found", "Missing local file during update", ct);
         }
 
-        return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: true, ct);
+        if (localSourcePath != null && !fileOps.FileExists(Path.Combine(repositoryPath, localSourcePath)))
+        {
+            logger.LogError("Source file {SourcePath} not found during update of {Path}", localSourcePath, relativePath);
+            return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, $"Source file not found: {localSourcePath}", "Missing local source file during update", ct);
+        }
+
+        return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: true, ct, localSourcePath);
     }
 
     private async Task<ActionResult?> DownloadAndAckAsync(
@@ -153,7 +160,8 @@ public class SyncActionsDevice(
         long recordId,
         string? reason,
         bool isUpdate,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? localSourcePath = null)
     {
         var actionName = isUpdate ? "UpdateLocal" : "CreateLocal";
         var baseReason = reason ?? (isUpdate ? "Server-initiated update" : "Server-initiated download");
@@ -168,7 +176,11 @@ public class SyncActionsDevice(
             {
                 await fileOps.EnsureDirectoryAsync(fullPath, ct);
 
-                await using var stream = await apiClient.DownloadSongAsync(songId!.Value, ct);
+                // A soundalike of a file uploaded in this session gets that file's content, which is only
+                // on the device until the commit creates its song
+                await using var stream = localSourcePath != null
+                    ? fileSystem.File.OpenRead(Path.Combine(repositoryPath, localSourcePath))
+                    : await apiClient.DownloadSongAsync(songId!.Value, ct);
                 await fileOps.WriteFileAsync(tempPath, stream, ct);
 
                 if (isUpdate)

@@ -11,6 +11,16 @@ public interface ISyncActionsServer
     Task<DeviceSyncSessionRecord> ActionDeleteLocal(string filePath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionLink(string filePath, long songId, DateTime? modifiedAt = null, string? checksum = null, string? algorithm = null, string? reason = null, bool isPreviousVersion = false, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionLink(string filePath, string checksum, string algorithm, DateTime modifiedAt, string? reason = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Records a soundalike <c>Link</c>: to library song <paramref name="songId"/>, or, when it is null, to the
+    /// song the file uploaded earlier in this session with <paramref name="checksum"/> becomes at commit.
+    /// </summary>
+    Task<DeviceSyncSessionRecord> ActionSoundalikeLink(string filePath, long? songId, string checksum, string algorithm, string localChecksum, DateTime modifiedAt, string? reason = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Records an <c>UpdateLocal</c> the device performs by copying its own file at <paramref name="localSourcePath"/>
+    /// over <paramref name="filePath"/>, instead of downloading it from the server.
+    /// </summary>
+    Task<DeviceSyncSessionRecord> ActionUpdateLocalFromLocalFile(string filePath, string localSourcePath, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionUnlink(string filePath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionRename(string filePath, string previousPath, string newPath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionSkipped(string filePath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);

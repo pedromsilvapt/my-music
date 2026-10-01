@@ -44,6 +44,7 @@ public record SyncOptions
     public bool DryRun { get; init; }
     public bool AutoConfirm { get; init; }
     public SyncDirection Direction { get; init; } = SyncDirection.Both;
+    public bool Deduplicate { get; init; }
 }
 
 public record SyncResult
@@ -219,6 +220,7 @@ public record StartSyncRequest
     public bool DryRun { get; init; }
     public SyncDirection Direction { get; init; } = SyncDirection.Both;
     public string? RepositoryPath { get; init; }
+    public bool Deduplicate { get; init; }
     public List<ScanError>? ScanErrors { get; init; }
 }
 

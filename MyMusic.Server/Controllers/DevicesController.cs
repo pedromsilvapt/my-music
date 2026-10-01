@@ -165,6 +165,7 @@ public class DevicesController(
             repositoryPath: repositoryPath,
             ownerId: currentUser.Id,
             direction: activeSession.Direction,
+            deduplicate: activeSession.Deduplicate,
             cancellationToken: cancellationToken);
 
         return new SyncUploadResponse

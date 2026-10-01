@@ -35,6 +35,7 @@ internal static class DeviceSyncSessionsControllerHelpers
         new SyncSessionDeleteService(
             scenario.DbContext,
             DevicesControllerHelpers.SessionLookup,
+            new SyncSoundalikeSessionCache(),
             fileSystem ?? scenario.FileSystem,
             Substitute.For<ILogger<SyncSessionDeleteService>>());
 

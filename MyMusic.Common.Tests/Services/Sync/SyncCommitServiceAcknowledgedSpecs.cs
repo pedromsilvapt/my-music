@@ -12,6 +12,7 @@ namespace MyMusic.Common.Tests.Services.Sync;
 public class SyncCommitServiceAcknowledgedSpecs
 {
     private readonly IMusicService _musicService = Substitute.For<IMusicService>();
+    private readonly ISyncSoundalikeMatcher _soundalikeMatcher = Substitute.For<ISyncSoundalikeMatcher>();
     private readonly ILogger<SyncCommitService> _logger = Substitute.For<ILogger<SyncCommitService>>();
     private readonly ILoggerFactory _loggerFactory = Substitute.For<ILoggerFactory>();
 
@@ -29,7 +30,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal);
 
@@ -47,7 +48,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Unlink);
 
@@ -65,7 +66,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal, acknowledged: true);
 
@@ -82,7 +83,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
         scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.Conflict);
@@ -100,7 +101,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Skipped);
 
@@ -124,7 +125,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device, isDryRun: isDryRun);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal);
         scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal);
@@ -143,7 +144,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         var user = scenario.AdminUser;
         var device = scenario.CreateDevice("Phone");
         var session = scenario.CreateSession(device, isDryRun: true);
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal, acknowledged: true);
         scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal, acknowledged: true);

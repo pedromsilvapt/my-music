@@ -18,5 +18,6 @@ public interface ISyncUploadService
         string repositoryPath,
         long ownerId,
         SyncDirection direction,
+        bool deduplicate = false,
         CancellationToken cancellationToken = default);
 }

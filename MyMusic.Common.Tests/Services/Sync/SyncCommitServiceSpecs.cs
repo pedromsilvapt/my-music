@@ -14,6 +14,7 @@ namespace MyMusic.Common.Tests.Services.Sync;
 public class SyncCommitServiceSpecs
 {
     private readonly IMusicService _musicService = Substitute.For<IMusicService>();
+    private readonly ISyncSoundalikeMatcher _soundalikeMatcher = Substitute.For<ISyncSoundalikeMatcher>();
     private readonly ILogger<SyncCommitService> _logger = Substitute.For<ILogger<SyncCommitService>>();
     private readonly ILoggerFactory _loggerFactory = Substitute.For<ILoggerFactory>();
 
@@ -43,7 +44,7 @@ public class SyncCommitServiceSpecs
         var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
         var session = scenario.CreateSession(device, isDryRun: dryRun, direction: direction);
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
         return new SyncTestContext(scenario, db, device, session, user, null, service, mockFs);
     }
 
@@ -58,7 +59,7 @@ public class SyncCommitServiceSpecs
         var device = scenario.CreateDevice("Phone", namingTemplate: "/music/{Artist}/{Album}/{Title}");
         var session = scenario.CreateSession(device, isDryRun: dryRun, direction: direction);
         var mockFs = (MockFileSystem)scenario.FileSystem;
-        var service = new SyncCommitService(scenario.FileSystem, _musicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, _musicService, _soundalikeMatcher, _loggerFactory, _logger);
         return new SyncTestContext(scenario, db, device, session, user, song, service, mockFs);
     }
 
@@ -80,7 +81,7 @@ public class SyncCommitServiceSpecs
         var session = scenario.CreateSession(device, isDryRun: dryRun, direction: direction);
         var mockFs = (MockFileSystem)scenario.FileSystem;
         var realMusicService = scenario.CreateMusicService();
-        var service = new SyncCommitService(scenario.FileSystem, realMusicService, _loggerFactory, _logger);
+        var service = new SyncCommitService(scenario.FileSystem, realMusicService, _soundalikeMatcher, _loggerFactory, _logger);
         return new SyncTestContext(scenario, db, device, session, user, song, service, mockFs);
     }
 
@@ -985,6 +986,162 @@ public class SyncCommitServiceSpecs
             .Single(r => r.Action == SyncRecordAction.Error && r.FilePath == "/music/copy.mp3");
         GetFailedRecordId(linkError).ShouldBe(linkRecord.Id);
         await AssertAddSongsToDeviceNotCalled();
+    }
+
+    #endregion
+
+    #region Soundalike Deduplication
+
+    /// <summary>
+    /// Makes every import of a new song succeed, importing it as <paramref name="importedSong"/>.
+    /// </summary>
+    private void ArrangeImportOf(Song importedSong) =>
+        _musicService
+            .When(m => m.ImportRepositorySongs(
+                Arg.Any<MusicDbContext>(), Arg.Any<MusicImportJob>(), Arg.Any<long>(),
+                Arg.Any<IEnumerable<SongImportMetadata>>(), Arg.Any<IList<long>?>(),
+                Arg.Any<DuplicateSongsHandlingStrategy>(), Arg.Any<CancellationToken>()))
+            .Do(call => call.Arg<MusicImportJob>().AddSongMapping(
+                call.Arg<IEnumerable<SongImportMetadata>>().Single(), importedSong));
+
+    private static JsonElement CreateSoundalikeLinkData(long? songId, string checksum, string localChecksum, DateTime modifiedAt) =>
+        JsonSerializer.SerializeToElement(new
+        {
+            songId, checksum, algorithm = "XxHash128", localChecksum, isSoundalike = true,
+            modifiedAt = modifiedAt.ToString("O"),
+        });
+
+    private void EnableDeduplicate(SyncTestContext ctx)
+    {
+        ctx.Session.Deduplicate = true;
+        ctx.Db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task SoundalikeLinkThenUpdateLocal_OfLibrarySong_KeepsFileModifiedAtAndSyncsDownloadedFile()
+    {
+        // The device's new file sounds like a library song: the upload recorded a soundalike Link followed by
+        // an UpdateLocal, which the device acknowledged after downloading the song's file
+        var ctx = SetupWithSongAndRealMusicService();
+        var fileModifiedAt = new DateTime(2025, 6, 10, 12, 0, 0, DateTimeKind.Utc);
+        var deviceModifiedAt = new DateTime(2025, 6, 5, 12, 0, 0, DateTimeKind.Utc);
+        var downloadedAt = new DateTime(2025, 6, 11, 12, 0, 0, DateTimeKind.Utc);
+        ctx.Song!.FileModifiedAt = fileModifiedAt;
+        ctx.Db.SaveChanges();
+
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/soundalike.mp3", SyncRecordAction.Link,
+            data: CreateSoundalikeLinkData(ctx.Song.Id, "song-checksum", "local-checksum", deviceModifiedAt), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/soundalike.mp3", SyncRecordAction.UpdateLocal,
+            data: CreateSyncData(ctx.Song.Id, downloadedAt), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // The song keeps its content (no FileModifiedAt rollback), and the device is synced with the
+        // file it downloaded
+        ctx.Db.Songs.First(s => s.Id == ctx.Song.Id).FileModifiedAt.ShouldBe(fileModifiedAt);
+        var songDevice = ctx.Db.SongDevices.Single(sd => sd.DeviceId == ctx.Device.Id && sd.DevicePath == "/music/soundalike.mp3");
+        songDevice.SongId.ShouldBe(ctx.Song.Id);
+        songDevice.LastSyncedModifiedAt.ShouldBe(downloadedAt);
+    }
+
+    [Fact]
+    public async Task SoundalikeLink_OfSessionUpload_LinksToTheImportedSong()
+    {
+        // The device's file sounds like another file uploaded in the same session: its Link targets the
+        // song the commit imports from that upload, through the upload's checksum
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "upload-checksum"), acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/soundalike.mp3", SyncRecordAction.Link,
+            data: CreateSoundalikeLinkData(null, "upload-checksum", "local-checksum", DefaultModifiedAt), acknowledged: true);
+        ArrangeImportOf(ctx.Song!);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        await AssertAddSongsToDeviceCalled(1, ctx.Device.Id, ctx.Song!.Id, "/music/new.mp3", DefaultModifiedAt);
+        await AssertAddSongsToDeviceCalled(1, ctx.Device.Id, ctx.Song.Id, "/music/soundalike.mp3", DefaultModifiedAt);
+    }
+
+    [Fact]
+    public async Task SoundalikeLink_OfFailedSessionUpload_RecordsError()
+    {
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "upload-checksum"), acknowledged: true);
+        var linkRecord = ctx.Scenario.AddRecord(ctx.Session.Id, "/music/soundalike.mp3", SyncRecordAction.Link,
+            data: CreateSoundalikeLinkData(null, "upload-checksum", "local-checksum", DefaultModifiedAt), acknowledged: true);
+        ArrangeImportFailure("Title too long");
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var linkError = ctx.Db.DeviceSyncSessionRecords
+            .Single(r => r.Action == SyncRecordAction.Error && r.FilePath == "/music/soundalike.mp3");
+        GetFailedRecordId(linkError).ShouldBe(linkRecord.Id);
+    }
+
+    [Fact]
+    public async Task CreateRemote_InDeduplicatingSession_SavesFingerprintOfImportedSong()
+    {
+        var ctx = SetupWithSong();
+        EnableDeduplicate(ctx);
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+        ArrangeImportOf(ctx.Song!);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        await _soundalikeMatcher.Received(1).SaveSongFingerprintAsync(ctx.Song!.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateRemote_WithoutDeduplicate_DoesNotSaveFingerprint()
+    {
+        var ctx = SetupWithSong();
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+        ArrangeImportOf(ctx.Song!);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        await _soundalikeMatcher.DidNotReceive().SaveSongFingerprintAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateRemote_DryRunInDeduplicatingSession_DoesNotSaveFingerprint()
+    {
+        var ctx = SetupWithSong(dryRun: true);
+        EnableDeduplicate(ctx);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: JsonSerializer.SerializeToElement(new { checksum = "abc", algorithm = "XxHash128", modifiedAt = DefaultModifiedAt.ToString("O") }),
+            acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, true, cancellationToken: default);
+
+        await _soundalikeMatcher.DidNotReceive().SaveSongFingerprintAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task CreateRemote_FailedImportInDeduplicatingSession_DoesNotSaveFingerprint()
+    {
+        var ctx = SetupWithSong();
+        EnableDeduplicate(ctx);
+        var tempFilePath = "/data/.temp/sync-1/new.mp3";
+        ctx.MockFs.AddFile(tempFilePath, new MockFileData("fake mp3"));
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateRemote,
+            data: CreateNewSongData(DefaultModifiedAt, tempFilePath, checksum: "abc"), acknowledged: true);
+        ArrangeImportFailure("Title too long");
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        await _soundalikeMatcher.DidNotReceive().SaveSongFingerprintAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
     }
 
     #endregion

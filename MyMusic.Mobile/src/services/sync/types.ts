@@ -24,6 +24,7 @@ export interface SyncContext {
         treatConflictsAsErrors: boolean;
         scannerType: ScannerType;
         direction: SyncDirection;
+        deduplicate: boolean;
     };
     result: SyncResult;
     uploadedPaths: Set<string>;
@@ -142,7 +143,7 @@ export interface ScanError {
 export interface ISyncApiClient {
     startSync: (
         deviceId: number,
-        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; scanErrors?: Array<{ path: string; error: string }> }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; scanErrors?: Array<{ path: string; error: string }> }
     ) => Promise<{ sessionId: number }>;
 
     checkSync: (
@@ -269,6 +270,7 @@ export interface ISyncState {
         treatConflictsAsErrors: boolean;
         scannerType: ScannerType;
         direction: SyncDirection;
+        deduplicate: boolean;
     };
 }
 
@@ -296,6 +298,7 @@ export interface IFileOps {
     writeFile: (path: string, data: Blob) => Promise<void>;
     deleteFile: (path: string) => Promise<void>;
     moveFile: (fromPath: string, toPath: string) => Promise<void>;
+    copyFile: (fromPath: string, toPath: string) => Promise<void>;
     readFileBase64: (path: string) => Promise<string>;
     getModificationTime: (path: string) => Date | null;
     deleteEmptyDirectories: (filePath: string, basePath: string) => Promise<void>;

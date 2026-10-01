@@ -13,6 +13,7 @@ public class SyncStartService(
     MusicDbContext db,
     IDeviceLookupService deviceLookup,
     ISyncActionsServerFactory syncActionsServerFactory,
+    IFpcalcService fpcalc,
     ILogger<SyncStartService> logger) : ISyncStartService
 {
     /// <inheritdoc />
@@ -25,6 +26,12 @@ public class SyncStartService(
         var device = await deviceLookup.FindDeviceAsync(db, deviceId, ownerId, cancellationToken);
         if (device == null) return null;
 
+        if (input.Deduplicate && !fpcalc.IsAvailable())
+        {
+            throw new SyncStartValidationException(
+                "Deduplication is not available: fpcalc (Chromaprint) is not installed on the server");
+        }
+
         var session = new DeviceSyncSession
         {
             DeviceId = deviceId,
@@ -33,6 +40,7 @@ public class SyncStartService(
             IsDryRun = input.DryRun,
             Direction = input.Direction,
             RepositoryPath = input.RepositoryPath,
+            Deduplicate = input.Deduplicate,
         };
 
         db.DeviceSyncSessions.Add(session);
@@ -48,8 +56,8 @@ public class SyncStartService(
         }
 
         logger.LogInformation(
-            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, Direction: {Direction}, RepositoryPath: {RepositoryPath})",
-            session.Id, deviceId, session.IsDryRun, session.Direction, session.RepositoryPath);
+            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, Direction: {Direction}, Deduplicate: {Deduplicate}, RepositoryPath: {RepositoryPath})",
+            session.Id, deviceId, session.IsDryRun, session.Direction, session.Deduplicate, session.RepositoryPath);
 
         return new SyncStartResult { SessionId = session.Id };
     }

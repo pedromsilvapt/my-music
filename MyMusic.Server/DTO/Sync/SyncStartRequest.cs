@@ -12,6 +12,13 @@ public record SyncStartRequest
     /// </summary>
     public SyncDirection? Direction { get; init; }
     public string? RepositoryPath { get; init; }
+
+    /// <summary>
+    /// Match files that would be created on the server against the library (and the session's other
+    /// uploads) by acoustic fingerprint, linking soundalikes instead of importing them.
+    /// </summary>
+    public bool Deduplicate { get; init; }
+
     public List<SyncScanErrorItem>? ScanErrors { get; init; }
 }
 

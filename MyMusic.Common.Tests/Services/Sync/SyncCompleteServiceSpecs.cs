@@ -13,6 +13,7 @@ public class SyncCompleteServiceSpecs
         new(
             scenario.DbContext,
             new SyncSessionLookupService(),
+            new SyncSoundalikeSessionCache(),
             Substitute.For<ILogger<SyncCompleteService>>());
 
     [Fact]

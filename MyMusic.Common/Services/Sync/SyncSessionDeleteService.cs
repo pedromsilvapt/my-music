@@ -12,6 +12,7 @@ namespace MyMusic.Common.Services.Sync;
 public class SyncSessionDeleteService(
     MusicDbContext db,
     ISyncSessionLookupService sessionLookup,
+    SyncSoundalikeSessionCache soundalikeCache,
     IFileSystem fileSystem,
     ILogger<SyncSessionDeleteService> logger) : ISyncSessionDeleteService
 {
@@ -38,6 +39,7 @@ public class SyncSessionDeleteService(
         }
 
         StagingDirectoryCleanupService.DeleteStagingDirectory(fileSystem, session.RepositoryPath, session.Id, logger);
+        soundalikeCache.Remove(session.Id);
 
         var recordsDeleted = await db.DeviceSyncSessionRecords
             .Where(r => r.SessionId == sessionId)

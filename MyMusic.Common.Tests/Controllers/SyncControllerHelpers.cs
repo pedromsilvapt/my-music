@@ -22,18 +22,21 @@ internal static class SyncControllerHelpers
             scenario.DbContext,
             DevicesControllerHelpers.DeviceLookup,
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
+            Substitute.For<IFpcalcService>(),
             Substitute.For<ILogger<SyncStartService>>());
 
     public static ISyncCompleteService CreateSyncCompleteService(Scenario scenario) =>
         new SyncCompleteService(
             scenario.DbContext,
             DevicesControllerHelpers.SessionLookup,
+            new SyncSoundalikeSessionCache(),
             Substitute.For<ILogger<SyncCompleteService>>());
 
     public static ISyncCancelService CreateSyncCancelService(Scenario scenario) =>
         new SyncCancelService(
             scenario.DbContext,
             DevicesControllerHelpers.SessionLookup,
+            new SyncSoundalikeSessionCache(),
             scenario.FileSystem,
             Substitute.For<ILogger<SyncCancelService>>());
 

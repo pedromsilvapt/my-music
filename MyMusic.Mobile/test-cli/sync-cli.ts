@@ -24,6 +24,7 @@ interface CliArgs {
     dryRun: boolean;
     autoConfirm: boolean;
     direction: SyncDirection;
+    deduplicate: boolean;
     verbose: boolean;
 }
 
@@ -35,6 +36,7 @@ function parseArgs(argv: string[]): CliArgs {
         dryRun: false,
         autoConfirm: false,
         direction: 'Both',
+        deduplicate: false,
         verbose: false,
     };
 
@@ -47,6 +49,9 @@ function parseArgs(argv: string[]): CliArgs {
                 break;
             case '--dry-run':
                 result.dryRun = true;
+                break;
+            case '--deduplicate':
+                result.deduplicate = true;
                 break;
             case '--yes':
             case '-y':
@@ -102,7 +107,7 @@ async function main(): Promise<number> {
 
     if (args.command !== 'sync') {
         console.error(`Unknown command: ${args.command}`);
-        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--yes] [--direction up|down|both]');
+        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--deduplicate] [--yes] [--direction up|down|both]');
         return 1;
     }
 
@@ -125,6 +130,7 @@ async function main(): Promise<number> {
             treatConflictsAsErrors: false,
             scannerType: 'fileSystem' as const,
             direction: args.direction,
+            deduplicate: args.deduplicate,
         },
     };
 

@@ -57,10 +57,11 @@ public class Phases(
             DryRun = ctx.Options.DryRun,
             Direction = ctx.Options.Direction,
             RepositoryPath = ctx.RepositoryPath,
+            Deduplicate = ctx.Options.Deduplicate,
             ScanErrors = scanErrors
         }, ct);
         ctx.SessionId = startResponse.SessionId;
-        logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun}, Direction: {Direction})", ctx.SessionId, ctx.Options.DryRun, ctx.Options.Direction);
+        logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun}, Direction: {Direction}, Deduplicate: {Deduplicate})", ctx.SessionId, ctx.Options.DryRun, ctx.Options.Direction, ctx.Options.Deduplicate);
     }
 
     public async Task UploadPhaseAsync(
@@ -381,7 +382,7 @@ public class Phases(
                 var result = await syncActions.ActionUpdateLocalAsync(
                     ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
                     ctx.Options.DryRun, ctx.Options.AutoConfirm,
-                    record.Id, record.Reason, ct);
+                    record.Id, record.Reason, GetLocalSourcePath(record.Data), ct);
 
                 if (result?.Counts != null)
                 {
@@ -540,6 +541,17 @@ public class Phases(
     {
         PropertyNameCaseInsensitive = true,
     };
+
+    /// <summary>
+    /// The device path an <c>UpdateLocal</c> copies its content from, instead of downloading it (soundalikes of
+    /// files uploaded in the same session).
+    /// </summary>
+    private static string? GetLocalSourcePath(JsonElement? data) =>
+        data is { ValueKind: JsonValueKind.Object } element
+        && element.TryGetProperty("localSourcePath", out var value)
+        && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 
     private static RenameData? DeserializeRenameData(JsonElement? data)
     {

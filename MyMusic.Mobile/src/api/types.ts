@@ -22,6 +22,7 @@ export const SyncStartRequestSchema = z.object({
     dryRun: z.boolean().optional(),
     direction: z.enum(['Both', 'Up', 'Down']).optional(),
     repositoryPath: z.string().optional(),
+    deduplicate: z.boolean().optional(),
     scanErrors: z.array(z.object({
         path: z.string(),
         error: z.string(),
@@ -94,6 +95,9 @@ export const SongModifiedAtDataSchema = z.object({
     lastSyncedAt: z.string().nullable().optional(),
     serverChecksum: z.string().nullable().optional(),
     serverChecksumAlgorithm: z.string().nullable().optional(),
+    isSoundalike: z.boolean().nullable().optional(),
+    localChecksum: z.string().nullable().optional(),
+    localSourcePath: z.string().nullable().optional(),
 });
 
 export const CreateRemoteDataSchema = z.object({

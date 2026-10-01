@@ -55,6 +55,14 @@ export class NodeFileOps implements IFileOps {
         fs.renameSync(fromPath, toPath);
     }
 
+    async copyFile(fromPath: string, toPath: string): Promise<void> {
+        const dir = path.dirname(toPath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.copyFileSync(fromPath, toPath);
+    }
+
     async deleteEmptyDirectories(filePath: string, basePath: string): Promise<void> {
         let currentDir = path.dirname(filePath);
         while (currentDir.length > basePath.length && fs.existsSync(currentDir)) {

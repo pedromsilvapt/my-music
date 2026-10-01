@@ -69,7 +69,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         get isCancelled() { return false; },
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both',
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
         },
     };
 
@@ -85,6 +85,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         writeFile: jest.fn().mockResolvedValue(undefined),
         deleteFile: jest.fn().mockResolvedValue(undefined),
         moveFile: jest.fn().mockResolvedValue(undefined),
+        copyFile: jest.fn().mockResolvedValue(undefined),
         readFileBase64: jest.fn().mockResolvedValue('base64'),
         getModificationTime: jest.fn().mockReturnValue(null),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),

@@ -25,6 +25,10 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
       - If it matches the previous Checksum of a Song, should result in a Link + UpdateLocal
       - If it matches another local file already being uploaded in this session, should result in a Link to that file's song
       - If it matches nothing, should result in a CreateRemote
+      - With deduplication (`--deduplicate`), a file that would result in a CreateRemote is first matched by sound (acoustic fingerprint):
+         - If it sounds like a Song, should result in a Link + UpdateLocal (the device gets the server's file)
+         - If it sounds like another local file already being uploaded in this session, should result in a Link to that file's song + UpdateLocal that copies that local file over it
+         - In direction `up`, the UpdateLocal is a Skipped instead
       - If it can't be imported (invalid/unreadable file), should result in an Error
    - A file locally with a SongDevice match:
       - File changes are based on the file's `ModifiedAt`, the SongDevice's `LastSyncModifiedAt` values, and the Song's `FileModifiedAt`
@@ -136,6 +140,15 @@ The same audio file can appear at multiple device paths (duplicates in the user'
 When a file is uploaded, the server calculates its checksum and checks whether a song with that checksum already exists — first among records created earlier in the same session, then across the user's entire library. If a match is found, the server creates a `Link` record (associating the device path with the existing song) instead of a `CreateRemote` record (importing a new song). This keeps the library free of duplicates without requiring the user to clean up their local collection.
 
 The same applies to a re-uploaded (updated) file. If its new content matches a song other than the one the device path is linked to, the server creates a `Link` to that song instead of an `UpdateRemote`. At commit, the device path's association moves to the matching song, and the song it was linked to before is left unchanged. Session records that count as matches include pending `UpdateRemote` records, since the commit gives their song that content. The commit never merges songs on its own: that would change the library in a way no record describes.
+
+### Soundalike Deduplication
+
+- When syncing with the Deduplicate option, any new files from local to remote, are compared with Soundlike against existing remote songs, and previous new uploads from the same session.
+   - If a match is found, instead of CreateRemote, we emit a Link + UpdateLocal
+      - If the match found was a new file from the same session, UpdateLocal will reference in the Data class the LocalSourcePath of the matched upload - the device copies its own matched file over this one instead of downloading.
+- For the calculation of fingerprints, we try to use existing fingerprints if they are in the database already (keyed on checksum). But if they are not yet calculated, for:
+   - **library songs** are saved on the DB as soon as they are computed, both (in dry run or not)
+   - **uploaded files** are kept in process memory. They are only saved in DB at the end, during commit phase, and only for non-dry run sessions.
 
 ## Two-Phase Commit
 

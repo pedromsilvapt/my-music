@@ -41,6 +41,7 @@ interface SyncState {
         treatConflictsAsErrors: boolean;
         scannerType: ScannerType;
         direction: SyncDirection;
+        deduplicate: boolean;
     };
 
     startSync: (options: Partial<SyncState['options']>) => void;
@@ -86,6 +87,7 @@ const initialState = {
         treatConflictsAsErrors: false,
         scannerType: 'fileSystem' as ScannerType,
         direction: 'Both' as SyncDirection,
+        deduplicate: false,
     },
 };
 

@@ -41,19 +41,29 @@ public class SyncController(
     public async Task<ActionResult<SyncStartResponse>> StartSync(long deviceId, [FromBody] SyncStartRequest? request,
         CancellationToken cancellationToken)
     {
-        var result = await syncStartService.StartAsync(
-            deviceId,
-            currentUser.Id,
-            new SyncStartInput
-            {
-                DryRun = request?.DryRun ?? false,
-                Direction = request?.Direction ?? SyncDirection.Both,
-                RepositoryPath = request?.RepositoryPath,
-                ScanErrors = request?.ScanErrors?
-                    .Select(e => new SyncStartScanError { FilePath = e.FilePath, ErrorMessage = e.ErrorMessage })
-                    .ToList(),
-            },
-            cancellationToken);
+        SyncStartResult? result;
+        try
+        {
+            result = await syncStartService.StartAsync(
+                deviceId,
+                currentUser.Id,
+                new SyncStartInput
+                {
+                    DryRun = request?.DryRun ?? false,
+                    Direction = request?.Direction ?? SyncDirection.Both,
+                    RepositoryPath = request?.RepositoryPath,
+                    Deduplicate = request?.Deduplicate ?? false,
+                    ScanErrors = request?.ScanErrors?
+                        .Select(e => new SyncStartScanError { FilePath = e.FilePath, ErrorMessage = e.ErrorMessage })
+                        .ToList(),
+                },
+                cancellationToken);
+        }
+        catch (SyncStartValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid sync options");
+        }
+
         if (result == null) return NotFound();
 
         return new SyncStartResponse { SessionId = result.SessionId };
