@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.BackgroundJobs;
 
 namespace MyMusic.Common.Services;
 
@@ -13,8 +14,21 @@ namespace MyMusic.Common.Services;
 public class MetadataFetchCleanupService(
     IServiceScopeFactory serviceScopeFactory,
     ILogger<MetadataFetchCleanupService> logger)
-    : BackgroundService
+    : BackgroundService, IQueuedBackgroundJob
 {
+    public string Key => "metadata-cleanup";
+
+    /// <summary>
+    /// The cleanup keeps no record of its runs.
+    /// </summary>
+    public Task<BackgroundJobCounters> GetCountersAsync(MusicDbContext db, long userId,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(BackgroundJobCounters.NotTracked);
+
+    public Task<BackgroundJobFailurePage> GetFailuresAsync(MusicDbContext db, long userId, int page, int pageSize,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(BackgroundJobFailurePage.Empty);
+
     // Run cleanup once per day
     private readonly TimeSpan _cleanupInterval = TimeSpan.FromDays(1);
 

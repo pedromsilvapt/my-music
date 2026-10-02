@@ -1,7 +1,8 @@
-import {Box, Container, Select, Stack, Text} from "@mantine/core";
+import {Box, Container, Divider, Select, Stack, Text} from "@mantine/core";
 import {useTranslation} from "react-i18next";
 import {LANGUAGE_OPTIONS, isSupportedLanguage} from "../../locales";
 import {useUserPreferences} from "../../hooks/use-user-preferences";
+import BackgroundJobs from "./background-jobs";
 
 export default function SettingsPage() {
     const {t} = useTranslation(["settings", "common"]);
@@ -28,6 +29,8 @@ export default function SettingsPage() {
                         w={260}
                     />
                 </Box>
+                <Divider/>
+                <BackgroundJobs/>
             </Stack>
         </Container>
     );

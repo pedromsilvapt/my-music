@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,15 +7,18 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
+using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Targets;
 using MyMusic.Common.Utilities;
 
 namespace MyMusic.Common.Services;
 
 public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
-    : BackgroundService
+    : BackgroundService, IQueuedBackgroundJob
 {
     public PurchasesScheduler Scheduler { get; } = new(serviceScopeFactory, 1);
+
+    public string Key => "purchases";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -23,6 +27,48 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
         await Scheduler.ResumeAsync();
 
         await Scheduler.WaitAsync();
+    }
+
+    public async Task<BackgroundJobCounters> GetCountersAsync(MusicDbContext db, long userId,
+        CancellationToken cancellationToken)
+    {
+        var countsByStatus = await db.PurchasedSongs
+            .Where(p => p.UserId == userId)
+            .GroupBy(p => p.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Status, g => g.Count, cancellationToken);
+
+        return new BackgroundJobCounters(
+            countsByStatus.GetValueOrDefault(PurchasedSongStatus.Queued),
+            countsByStatus.GetValueOrDefault(PurchasedSongStatus.Completed),
+            countsByStatus.GetValueOrDefault(PurchasedSongStatus.Failed));
+    }
+
+    public Task<BackgroundJobFailurePage> GetFailuresAsync(MusicDbContext db, long userId, int page, int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var failed = db.PurchasedSongs
+            .Include(p => p.Source)
+            .Where(p => p.UserId == userId && p.Status == PurchasedSongStatus.Failed)
+            .OrderByDescending(p => p.CreatedAt)
+            .ThenByDescending(p => p.Id)
+            .AsNoTracking();
+
+        return BackgroundJobFailurePage.FromQueryAsync(failed, page, pageSize, p => new BackgroundJobFailure(
+            p.Id.ToString(CultureInfo.InvariantCulture),
+            $"{p.Title} ({p.SubTitle})",
+            p.ErrorMessage,
+            p.CreatedAt,
+            [
+                new("PurchaseId", p.Id.ToString(CultureInfo.InvariantCulture)),
+                new("Title", p.Title),
+                new("SubTitle", p.SubTitle),
+                new("Source", p.Source.Name),
+                new("SourceId", p.SourceId.ToString(CultureInfo.InvariantCulture)),
+                new("ExternalId", p.ExternalId),
+                new("Progress", p.Progress.ToString(CultureInfo.InvariantCulture)),
+                new("CreatedAt", p.CreatedAt.ToString("O", CultureInfo.InvariantCulture)),
+            ]), cancellationToken);
     }
 
     public class PurchasesScheduler(

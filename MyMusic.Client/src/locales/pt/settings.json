@@ -2,5 +2,50 @@
     "language": "Idioma",
     "languageHelp": "Escolha o idioma usado na aplicação.",
     "languageEnglish": "English",
-    "languagePortuguese": "Português"
+    "languagePortuguese": "Português",
+    "backgroundJobs": {
+        "title": "Tarefas em segundo plano",
+        "help": "Trabalho que o servidor processa em segundo plano por si. Clique num número de falhas para ver o que correu mal.",
+        "refresh": "Atualizar",
+        "job": "Tarefa",
+        "queued": "Em fila",
+        "processed": "Processadas",
+        "failed": "Falhadas",
+        "notTracked": "Esta tarefa não regista esta contagem, por isso é sempre apresentada como 0.",
+        "failuresTitle": "Tarefas falhadas: {{job}}",
+        "noFailures": "Nenhuma falha registada.",
+        "noMessage": "Não foi registada nenhuma mensagem de erro.",
+        "copy": "Copiar detalhes",
+        "copied": "Copiado",
+        "jobs": {
+            "purchases": {
+                "name": "Compras",
+                "description": "Transfere e importa as músicas compradas."
+            },
+            "metadata-fetch": {
+                "name": "Obtenção de metadados",
+                "description": "Procura metadados das músicas nas fontes configuradas."
+            },
+            "song-history": {
+                "name": "Histórico de músicas",
+                "description": "Regista as alterações feitas às suas músicas. As entradas falhadas deixam de ser repetidas."
+            },
+            "wishlist": {
+                "name": "Verificação da lista de desejos",
+                "description": "Verifica periodicamente se as pesquisas da lista de desejos têm novos resultados."
+            },
+            "bitrate-backfill": {
+                "name": "Preenchimento de bitrate",
+                "description": "Lê o bitrate das músicas que ainda não o têm."
+            },
+            "metadata-cleanup": {
+                "name": "Limpeza de metadados",
+                "description": "Expira e remove metadados obtidos antigos."
+            },
+            "staging-cleanup": {
+                "name": "Limpeza da sincronização",
+                "description": "Remove ficheiros temporários deixados por sincronizações de dispositivos concluídas."
+            }
+        }
+    }
 }

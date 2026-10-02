@@ -1,8 +1,10 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Utilities;
 using System.Text.Json;
 
@@ -13,9 +15,11 @@ namespace MyMusic.Common.Services;
 /// Mirrors the PurchasesQueue pattern for consistency.
 /// </summary>
 public class MetadataFetchQueue(IServiceScopeFactory serviceScopeFactory)
-    : BackgroundService
+    : BackgroundService, IQueuedBackgroundJob
 {
     public MetadataFetchScheduler Scheduler { get; } = new(serviceScopeFactory, 3);
+
+    public string Key => "metadata-fetch";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -24,6 +28,47 @@ public class MetadataFetchQueue(IServiceScopeFactory serviceScopeFactory)
         await Scheduler.ResumeAsync();
 
         await Scheduler.WaitAsync();
+    }
+
+    public async Task<BackgroundJobCounters> GetCountersAsync(MusicDbContext db, long userId,
+        CancellationToken cancellationToken)
+    {
+        var countsByStatus = await db.MetadataFetchTasks
+            .Where(t => t.Song.OwnerId == userId)
+            .GroupBy(t => t.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Status, g => g.Count, cancellationToken);
+
+        return new BackgroundJobCounters(
+            countsByStatus.GetValueOrDefault(MetadataFetchStatus.Queued),
+            countsByStatus.GetValueOrDefault(MetadataFetchStatus.Completed),
+            countsByStatus.GetValueOrDefault(MetadataFetchStatus.Failed));
+    }
+
+    public Task<BackgroundJobFailurePage> GetFailuresAsync(MusicDbContext db, long userId, int page, int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var failed = db.MetadataFetchTasks
+            .Include(t => t.Song)
+            .Where(t => t.Song.OwnerId == userId && t.Status == MetadataFetchStatus.Failed)
+            .OrderByDescending(t => t.CompletedAt ?? t.CreatedAt)
+            .ThenByDescending(t => t.Id)
+            .AsNoTracking();
+
+        return BackgroundJobFailurePage.FromQueryAsync(failed, page, pageSize, t => new BackgroundJobFailure(
+            t.Id.ToString(CultureInfo.InvariantCulture),
+            t.Song.Title,
+            t.ErrorMessage,
+            t.CompletedAt ?? t.CreatedAt,
+            [
+                new("TaskId", t.Id.ToString(CultureInfo.InvariantCulture)),
+                new("SongId", t.SongId.ToString(CultureInfo.InvariantCulture)),
+                new("SongTitle", t.Song.Title),
+                new("FailureReason", t.FailureReason.ToString()),
+                new("CreatedAt", t.CreatedAt.ToString("O", CultureInfo.InvariantCulture)),
+                new("StartedAt", t.StartedAt?.ToString("O", CultureInfo.InvariantCulture)),
+                new("CompletedAt", t.CompletedAt?.ToString("O", CultureInfo.InvariantCulture)),
+            ]), cancellationToken);
     }
 
     /// <summary>

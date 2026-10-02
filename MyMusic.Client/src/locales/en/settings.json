@@ -2,5 +2,50 @@
     "language": "Language",
     "languageHelp": "Choose the language used throughout the application.",
     "languageEnglish": "English",
-    "languagePortuguese": "Português"
+    "languagePortuguese": "Português",
+    "backgroundJobs": {
+        "title": "Background Jobs",
+        "help": "Work the server processes in the background for you. Click a failed count to see what went wrong.",
+        "refresh": "Refresh",
+        "job": "Job",
+        "queued": "Queued",
+        "processed": "Processed",
+        "failed": "Failed",
+        "notTracked": "This job doesn't keep track of this count, so it is always shown as 0.",
+        "failuresTitle": "Failed jobs: {{job}}",
+        "noFailures": "No failures recorded.",
+        "noMessage": "No error message was recorded.",
+        "copy": "Copy details",
+        "copied": "Copied",
+        "jobs": {
+            "purchases": {
+                "name": "Purchases",
+                "description": "Downloads and imports purchased songs."
+            },
+            "metadata-fetch": {
+                "name": "Metadata fetch",
+                "description": "Looks up song metadata from the configured sources."
+            },
+            "song-history": {
+                "name": "Song history",
+                "description": "Records the changes made to your songs. Failed entries are no longer retried."
+            },
+            "wishlist": {
+                "name": "Wishlist check",
+                "description": "Periodically checks your wishlist searches for new results."
+            },
+            "bitrate-backfill": {
+                "name": "Bitrate backfill",
+                "description": "Reads the bitrate of songs that are missing it."
+            },
+            "metadata-cleanup": {
+                "name": "Metadata cleanup",
+                "description": "Expires and removes old fetched metadata."
+            },
+            "staging-cleanup": {
+                "name": "Sync staging cleanup",
+                "description": "Removes leftover temporary files from finished device syncs."
+            }
+        }
+    }
 }

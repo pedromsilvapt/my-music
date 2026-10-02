@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Targets;
 
 namespace MyMusic.Common.Services;
@@ -17,9 +18,27 @@ public class BitrateBackfillService(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<Config> config,
     IFileSystem fileSystem,
-    ILogger<BitrateBackfillService> logger) : BackgroundService
+    ILogger<BitrateBackfillService> logger) : BackgroundService, IQueuedBackgroundJob
 {
     private const int BatchSize = 100;
+
+    public string Key => "bitrate-backfill";
+
+    /// <summary>
+    /// Songs still missing a bitrate are queued. Songs whose bitrate could not be read stay without one and are
+    /// indistinguishable from the queued ones, so neither processed nor failed songs are tracked.
+    /// </summary>
+    public async Task<BackgroundJobCounters> GetCountersAsync(MusicDbContext db, long userId,
+        CancellationToken cancellationToken)
+    {
+        var queued = await db.Songs.CountAsync(s => s.OwnerId == userId && s.Bitrate == null, cancellationToken);
+
+        return new BackgroundJobCounters(queued, null, null);
+    }
+
+    public Task<BackgroundJobFailurePage> GetFailuresAsync(MusicDbContext db, long userId, int page, int pageSize,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(BackgroundJobFailurePage.Empty);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

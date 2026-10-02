@@ -1,10 +1,12 @@
 using System.Diagnostics;
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Services.SongHistory.Models;
 using SongHistoryEntity = MyMusic.Common.Entities.SongHistory;
 
@@ -38,12 +40,14 @@ public class SongHistoryWorker(
     IServiceScopeFactory serviceScopeFactory,
     IOptions<Config> config,
     ISongHistoryNotifier notifier,
-    ILogger<SongHistoryWorker> logger) : BackgroundService
+    ILogger<SongHistoryWorker> logger) : BackgroundService, IQueuedBackgroundJob
 {
     /// <summary>
     /// Maximum number of processing attempts before a queue entry is dead-lettered.
     /// </summary>
     public const int MaxErrorCount = 3;
+
+    public string Key => "song-history";
 
     private static readonly ActivitySource ActivitySource = new("MyMusic.SongHistoryWorker");
 
@@ -127,6 +131,64 @@ public class SongHistoryWorker(
 
         logger.LogInformation("Song history worker stopped");
     }
+
+    /// <summary>
+    /// Queued entries are those still pending a retry; failed ones are dead-lettered. Processed entries are removed
+    /// from the queue, so they are not counted.
+    /// </summary>
+    public async Task<BackgroundJobCounters> GetCountersAsync(MusicDbContext db, long userId,
+        CancellationToken cancellationToken)
+    {
+        var pending = OwnedPendingEntries(db, userId);
+
+        var queued = await pending.CountAsync(q => q.ErrorCount < MaxErrorCount, cancellationToken);
+        var failed = await pending.CountAsync(q => q.ErrorCount >= MaxErrorCount, cancellationToken);
+
+        return new BackgroundJobCounters(queued, null, failed);
+    }
+
+    public Task<BackgroundJobFailurePage> GetFailuresAsync(MusicDbContext db, long userId, int page, int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var deadLettered = OwnedPendingEntries(db, userId)
+            .Where(q => q.ErrorCount >= MaxErrorCount)
+            .OrderByDescending(q => q.CreatedAt)
+            .ThenByDescending(q => q.Id)
+            .Select(q => new
+            {
+                q.Id,
+                q.SongId,
+                SongTitle = db.Songs.Where(s => s.Id == q.SongId).Select(s => s.Title).First(),
+                q.SongRevision,
+                q.TransactionId,
+                q.ErrorCount,
+                q.CreatedAt,
+                q.LastError,
+            });
+
+        return BackgroundJobFailurePage.FromQueryAsync(deadLettered, page, pageSize, q => new BackgroundJobFailure(
+            q.Id.ToString(CultureInfo.InvariantCulture),
+            $"{q.SongTitle} (revision {q.SongRevision})",
+            q.LastError,
+            q.CreatedAt,
+            [
+                new("QueueEntryId", q.Id.ToString(CultureInfo.InvariantCulture)),
+                new("SongId", q.SongId.ToString(CultureInfo.InvariantCulture)),
+                new("SongTitle", q.SongTitle),
+                new("SongRevision", q.SongRevision.ToString(CultureInfo.InvariantCulture)),
+                new("TransactionId", q.TransactionId?.ToString(CultureInfo.InvariantCulture)),
+                new("ErrorCount", q.ErrorCount.ToString(CultureInfo.InvariantCulture)),
+                new("CreatedAt", q.CreatedAt.ToString("O", CultureInfo.InvariantCulture)),
+            ]), cancellationToken);
+    }
+
+    /// <summary>
+    /// Unprocessed queue entries of the user's songs. Queue entries have no FK to their song, so entries of songs that
+    /// no longer exist are left out.
+    /// </summary>
+    private static IQueryable<SongHistoryQueue> OwnedPendingEntries(MusicDbContext db, long userId) =>
+        db.SongHistoryQueues
+            .Where(q => q.ProcessedAt == null && db.Songs.Any(s => s.Id == q.SongId && s.OwnerId == userId));
 
     private async Task BackfillBaselinesAsync(
         ISongHistoryBaselineBackfillService backfillService,

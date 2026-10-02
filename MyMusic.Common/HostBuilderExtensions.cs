@@ -7,6 +7,7 @@ using MyMusic.Common.AudioIntegrity;
 using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
+using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Playlists;
 using MyMusic.Common.Services.PlaylistSongs;
@@ -25,12 +26,16 @@ public static class HostBuilderExtensions
         builder.Services.AddDistributedMemoryCache();
         builder.Services.AddHttpClient();
 
-        // Background services
-        builder.Services.AddHostedService<MetadataFetchCleanupService>();
-        builder.Services.AddHostedService<BitrateBackfillService>();
-        builder.Services.AddHostedService<WishlistBackgroundService>();
-        builder.Services.AddHostedService<StagingDirectoryCleanupService>();
-        builder.Services.AddHostedService<SongHistoryWorker>();
+        // Background services, listed to the user in this order
+        builder.Services.AddBackgroundJob<PurchasesQueue>();
+        builder.Services.AddBackgroundJob<MetadataFetchQueue>();
+        builder.Services.AddHostedBackgroundJob<SongHistoryWorker>();
+        builder.Services.AddHostedBackgroundJob<WishlistBackgroundService>();
+        builder.Services.AddHostedBackgroundJob<BitrateBackfillService>();
+        builder.Services.AddHostedBackgroundJob<MetadataFetchCleanupService>();
+        builder.Services.AddHostedBackgroundJob<StagingDirectoryCleanupService>();
+        builder.Services.AddScoped<IBackgroundJobListService, BackgroundJobListService>();
+        builder.Services.AddScoped<IBackgroundJobFailureListService, BackgroundJobFailureListService>();
 
         // Song history services
         builder.Services.AddScoped<ISongHistoryDiffService, SongHistoryDiffService>();
@@ -45,8 +50,6 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<ISongHistoryNotifier, SongHistoryNotifier>();
 
         // Queues and executors
-        builder.Services.AddSingleton<PurchasesQueue>();
-        builder.Services.AddSingleton<MetadataFetchQueue>();
         builder.Services.AddTransient<PurchasesQueue.PurchasesExecutor>();
         builder.Services.AddTransient<MetadataFetchQueue.MetadataFetchExecutor>();
         builder.Services.AddTransient<MusicImportJob>();
