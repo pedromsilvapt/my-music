@@ -162,6 +162,98 @@ public class SyncSoundalikeMatcherSpecs
         (await MatchOrRegisterAsync("second-checksum", "/music/second.mp3")).ShouldBeNull();
     }
 
+    private Task<SyncLibraryPreparation> PrepareLibraryAsync(int maxSongs) =>
+        _matcher.PrepareLibraryAsync(SessionId, _scenario.AdminUser.Id, maxSongs, CancellationToken.None);
+
+    private List<Song> CreateUnfingerprintedSongs(int count) =>
+        Enumerable.Range(1, count).Select(i =>
+        {
+            var song = _scenario.CreateSong($"Song {i}");
+            ArrangeFingerprint(song.RepositoryPath, FingerprintSamples.Random(i));
+            return song;
+        }).ToList();
+
+    private Task DidNotFingerprintAsync(Song song) =>
+        _fpcalc.DidNotReceive().FingerprintAsync(song.RepositoryPath, Arg.Any<double>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
+
+    [Fact]
+    public async Task PrepareLibrary_FingerprintsInBatches_ReportsProgressUntilDone()
+    {
+        // Five library songs without stored fingerprints, prepared two at a time
+        CreateUnfingerprintedSongs(5);
+
+        // Each call fingerprints (and saves) one more batch, until every song is done
+        (await PrepareLibraryAsync(2)).ShouldBe(new SyncLibraryPreparation(5, 2, false));
+        (await PrepareLibraryAsync(2)).ShouldBe(new SyncLibraryPreparation(5, 4, false));
+        (await PrepareLibraryAsync(2)).ShouldBe(new SyncLibraryPreparation(5, 5, true));
+        _scenario.DbContext.SongAcousticFingerprints.Count().ShouldBe(5);
+
+        // Calls after it is done do nothing more
+        (await PrepareLibraryAsync(2)).ShouldBe(new SyncLibraryPreparation(5, 5, true));
+        _cache.Get(SessionId).Library!.Count.ShouldBe(5);
+    }
+
+    [Fact]
+    public async Task PrepareLibrary_StoredFingerprints_AreNotCountedOrRecomputed()
+    {
+        // A song with a stored fingerprint, and one without
+        var stored = _scenario.CreateSong("Stored");
+        _scenario.DbContext.SongAcousticFingerprints.Add(new SongAcousticFingerprint
+        {
+            Checksum = stored.Checksum,
+            ChecksumAlgorithm = stored.ChecksumAlgorithm,
+            OwnerId = stored.OwnerId,
+            Fingerprint = FingerprintEncoding.ToBytes(FingerprintSamples.Random(10)),
+            FingerprintLength = AcousticFingerprintService.DefaultFingerprintLength,
+            FingerprintAlgorithm = AcousticFingerprintService.DefaultFingerprintAlgorithm,
+        });
+        await _scenario.DbContext.SaveChangesAsync();
+        CreateUnfingerprintedSongs(1);
+
+        // Only the song without a fingerprint is counted and fingerprinted
+        (await PrepareLibraryAsync(10)).ShouldBe(new SyncLibraryPreparation(1, 1, true));
+        await DidNotFingerprintAsync(stored);
+        _cache.Get(SessionId).Library!.Count.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task PrepareLibrary_EmptyLibrary_IsDoneImmediately()
+    {
+        (await PrepareLibraryAsync(10)).ShouldBe(new SyncLibraryPreparation(0, 0, true));
+    }
+
+    [Fact]
+    public async Task MatchOrRegister_AfterPrepare_DoesNotFingerprintLibraryAgain()
+    {
+        // A prepared library
+        var song = CreateUnfingerprintedSongs(1).Single();
+        await PrepareLibraryAsync(10);
+        _fpcalc.ClearReceivedCalls();
+
+        // An upload that sounds like the song matches it, without fingerprinting the song again
+        ArrangeFingerprint(UploadPath, FingerprintSamples.SoundalikeOf(FingerprintSamples.Random(1)));
+        var match = await MatchOrRegisterAsync();
+
+        match!.SongId.ShouldBe(song.Id);
+        await DidNotFingerprintAsync(song);
+    }
+
+    [Fact]
+    public async Task MatchOrRegister_PartiallyPrepared_FingerprintsTheRest()
+    {
+        // Only the first of three songs was prepared
+        var songs = CreateUnfingerprintedSongs(3);
+        await PrepareLibraryAsync(1);
+
+        // An upload that sounds like the last song still matches it
+        ArrangeFingerprint(UploadPath, FingerprintSamples.SoundalikeOf(FingerprintSamples.Random(3)));
+        var match = await MatchOrRegisterAsync();
+
+        match!.SongId.ShouldBe(songs[2].Id);
+        _cache.Get(SessionId).PendingLibrarySongIds.ShouldBeEmpty();
+        _scenario.DbContext.SongAcousticFingerprints.Count().ShouldBe(3);
+    }
+
     [Fact]
     public async Task SaveSongFingerprint_SavesTheSongsFingerprint()
     {

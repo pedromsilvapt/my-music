@@ -54,6 +54,12 @@ public interface IMyMusicClient
         [Body] SyncStartRequest request,
         CancellationToken ct = default);
 
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/deduplicate/prepare")]
+    Task<SyncDeduplicatePrepareResponse> PrepareDeduplicateAsync(
+        long deviceId,
+        long sessionId,
+        CancellationToken ct = default);
+
     [Post("/api/devices/{deviceId}/sync/{sessionId}/commit")]
     Task<SyncCommitResponse> CommitSyncAsync(
         long deviceId,

@@ -1,4 +1,4 @@
-import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase, startSessionPhase } from '../phases';
+import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase, startSessionPhase, prepareDeduplicatePhase } from '../phases';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure } from '../sync-actions-device';
 import type { SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt, SyncRecordItem } from '../types';
 import type { RenameData } from '../../../api/types';
@@ -27,6 +27,7 @@ jest.mock('../sync-actions-device', () => ({
 function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
     const mockApiClient: ISyncApiClient = {
         startSync: jest.fn().mockResolvedValue({ sessionId: 1 }),
+        prepareDeduplicate: jest.fn().mockResolvedValue({ total: 0, processed: 0, done: true }),
         checkSync: jest.fn(),
         uploadFile: jest.fn().mockResolvedValue({ success: true, songId: 1, records: [], counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
         commitSync: jest.fn().mockResolvedValue({
@@ -352,6 +353,38 @@ describe('completePhase', () => {
     });
 });
 
+describe('prepareDeduplicatePhase', () => {
+    test.each([
+        { deduplicate: false, direction: 'Both' as const },
+        { deduplicate: true, direction: 'Down' as const },
+    ])('is skipped without upload deduplication (deduplicate: $deduplicate, direction: $direction)', async ({ deduplicate, direction }) => {
+        const deps = createMockDeps();
+        const ctx = createContext({ options: { ...createContext().options, deduplicate, direction } });
+
+        await prepareDeduplicatePhase(deps, ctx, jest.fn());
+
+        expect(deps.apiClient.prepareDeduplicate).not.toHaveBeenCalled();
+    });
+
+    test.each(['Both' as const, 'Up' as const])('prepares until done, reporting progress (direction: %s)', async (direction) => {
+        const deps = createMockDeps();
+        (deps.apiClient.prepareDeduplicate as jest.Mock)
+            .mockResolvedValueOnce({ total: 45, processed: 20, done: false })
+            .mockResolvedValueOnce({ total: 45, processed: 40, done: false })
+            .mockResolvedValueOnce({ total: 45, processed: 45, done: true });
+        const ctx = createContext({ options: { ...createContext().options, deduplicate: true, direction } });
+        const onProgress = jest.fn();
+
+        await prepareDeduplicatePhase(deps, ctx, onProgress);
+
+        expect(deps.apiClient.prepareDeduplicate).toHaveBeenCalledTimes(3);
+        expect(deps.apiClient.prepareDeduplicate).toHaveBeenCalledWith(1, 1);
+        const reports = onProgress.mock.calls.map(([p]) => p);
+        expect(reports.every(p => p.phase === 'fingerprinting')).toBe(true);
+        expect(reports.filter(p => p.totalFiles > 0).map(p => p.processedFiles)).toEqual([20, 40, 45]);
+    });
+});
+
 describe('uploadPhase - empty file list short-circuit', () => {
     test('early returns without calling checkSync when files list is empty', async () => {
         const deps = createMockDeps();
@@ -362,6 +395,20 @@ describe('uploadPhase - empty file list short-circuit', () => {
 
         expect(deps.apiClient.checkSync).not.toHaveBeenCalled();
         expect(deps.apiClient.uploadFile).not.toHaveBeenCalled();
+    });
+});
+
+describe('uploadPhase - start progress', () => {
+    test('starts by reporting 0 of every file, resetting the progress of the previous phase', async () => {
+        const deps = createMockDeps();
+        (deps.apiClient.checkSync as jest.Mock).mockResolvedValue({ records: [] });
+        const ctx = createContext();
+        const onProgress = jest.fn();
+        const files = ['a.mp3', 'b.mp3'].map(relativePath => ({ relativePath, modifiedAt: new Date(), createdAt: new Date() }));
+
+        await uploadPhase(deps, ctx, files as never, onProgress);
+
+        expect(onProgress).toHaveBeenNthCalledWith(1, { phase: 'upload', totalFiles: 2, processedFiles: 0, currentFile: '' });
     });
 });
 

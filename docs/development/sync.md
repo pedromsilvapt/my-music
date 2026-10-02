@@ -149,6 +149,8 @@ The same applies to a re-uploaded (updated) file. If its new content matches a s
 - For the calculation of fingerprints, we try to use existing fingerprints if they are in the database already (keyed on checksum). But if they are not yet calculated, for:
    - **library songs** are saved on the DB as soon as they are computed, both (in dry run or not)
    - **uploaded files** are kept in process memory. They are only saved in DB at the end, during commit phase, and only for non-dry run sessions.
+- Fingerprinting library songs without a stored fingerprint can take long on a big library, so clients run a **prepare deduplicate** phase after starting the session and before uploading (skipped in `down`): they call `POST /devices/{deviceId}/sync/{sessionId}/deduplicate/prepare` until it returns `done`. Each call fingerprints one batch of songs and returns `total` / `processed`, which the clients show as a progress bar.
+   - The preparation is optional: the first upload's soundalike lookup fingerprints whatever library songs are still missing.
 
 ## Two-Phase Commit
 

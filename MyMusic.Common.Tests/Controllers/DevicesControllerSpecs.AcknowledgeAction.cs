@@ -33,6 +33,7 @@ public class DevicesControllerAcknowledgeActionSpecs
             Substitute.For<ISyncResolveConflictsService>(),
             Substitute.For<ISyncReportErrorService>(),
             SyncControllerHelpers.CreateSyncAcknowledgeService(scenario, syncCommitService),
+            Substitute.For<ISyncDeduplicatePrepareService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 

@@ -104,7 +104,12 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
     private static string BuildStatus(SyncProgress p, TimeSpan elapsed)
     {
         var eta = CalculateEta(elapsed, p.ProcessedFiles, p.TotalFiles);
-        var phaseLabel = p.Phase == "server" ? "Server actions" : "Uploading";
+        var phaseLabel = p.Phase switch
+        {
+            "server" => "Server actions",
+            "fingerprinting" => "Fingerprinting server songs",
+            _ => "Uploading",
+        };
 
         var status = $"{phaseLabel}: {p.ProcessedFiles}/{p.TotalFiles} | " +
                      $"{ColorizeCounter(p.Result.CreateRemote, "green", "↑")} " +

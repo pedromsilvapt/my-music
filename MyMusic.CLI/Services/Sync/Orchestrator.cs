@@ -52,6 +52,8 @@ public class Orchestrator(
 
             await phases.StartSessionAsync(ctx, scanResult.Errors, ct);
 
+            await phases.PrepareDeduplicatePhaseAsync(ctx, progress, ct);
+
             await phases.UploadPhaseAsync(ctx, scanResult.Files, progress, ct);
 
             await phases.ServerActionsPhaseAsync(ctx, progress, ct);

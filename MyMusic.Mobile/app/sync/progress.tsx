@@ -153,6 +153,8 @@ export default function SyncProgressScreen() {
         switch (progress.phase) {
             case 'scanning':
                 return 'Scanning files...';
+            case 'fingerprinting':
+                return 'Fingerprinting server songs...';
             case 'upload':
                 return 'Uploading files...';
             case 'resolving':

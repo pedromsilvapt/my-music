@@ -11,6 +11,12 @@ namespace MyMusic.Common.Services.Sync;
 public record SyncSoundalikeMatch(long? SongId, string? UploadChecksum, string? UploadPath, double Score);
 
 /// <summary>
+/// Progress of fingerprinting a session's library: <see cref="Processed"/> of the <see cref="Total"/> songs
+/// that had no stored fingerprint. <see cref="Done"/> once every library fingerprint is loaded.
+/// </summary>
+public record SyncLibraryPreparation(int Total, int Processed, bool Done);
+
+/// <summary>
 /// Matches files uploaded in a sync session with <c>Deduplicate</c> against the user's library and the
 /// session's earlier uploads, by acoustic fingerprint. See docs/development/sync.md, "Soundalike Deduplication".
 /// </summary>
@@ -30,6 +36,15 @@ public interface ISyncSoundalikeMatcher
     /// </summary>
     Task<SyncSoundalikeMatch?> MatchOrRegisterAsync(long sessionId, long ownerId, string filePath,
         string checksum, string devicePath, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Loads the library fingerprints of the session ahead of its uploads, fingerprinting at most
+    /// <paramref name="maxSongs"/> library songs without a stored fingerprint per call, so the client can show
+    /// progress. Called repeatedly until <see cref="SyncLibraryPreparation.Done"/>. Optional: the first lookup
+    /// of <see cref="MatchOrRegisterAsync"/> fingerprints whatever is still missing.
+    /// </summary>
+    Task<SyncLibraryPreparation> PrepareLibraryAsync(long sessionId, long ownerId, int maxSongs,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Fingerprints a song the commit created from an upload, and saves it, so later sessions match it
@@ -77,9 +92,9 @@ public class SyncSoundalikeMatcher(
                 return new SyncSoundalikeMatch(null, uploadChecksum, entry.UploadPaths[uploadChecksum], score);
             }
 
-            entry.Library ??= await LoadLibraryAsync(ownerId, cancellationToken);
+            var library = await LoadLibraryAsync(entry, ownerId, int.MaxValue, cancellationToken);
 
-            var libraryMatch = entry.Library.FindBestMatch(fingerprint, lookupThreshold, matchThreshold);
+            var libraryMatch = library.FindBestMatch(fingerprint, lookupThreshold, matchThreshold);
             if (libraryMatch != null)
             {
                 var (songId, score) = libraryMatch.Value;
@@ -94,6 +109,25 @@ public class SyncSoundalikeMatcher(
             }
 
             return null;
+        }
+        finally
+        {
+            entry.Lock.Release();
+        }
+    }
+
+    public async Task<SyncLibraryPreparation> PrepareLibraryAsync(long sessionId, long ownerId, int maxSongs,
+        CancellationToken cancellationToken)
+    {
+        var entry = cache.Get(sessionId);
+        await entry.Lock.WaitAsync(cancellationToken);
+        try
+        {
+            await LoadLibraryAsync(entry, ownerId, maxSongs, cancellationToken);
+
+            var total = entry.LibrarySongsToFingerprint;
+            var pending = entry.PendingLibrarySongIds.Count;
+            return new SyncLibraryPreparation(total, total - pending, pending == 0);
         }
         finally
         {
@@ -124,10 +158,48 @@ public class SyncSoundalikeMatcher(
     public void EndSession(long sessionId) => cache.Remove(sessionId);
 
     /// <summary>
-    /// Loads the fingerprints of every song of the owner: the stored ones in a single query, and the missing
-    /// ones by fingerprinting the song files (which stores them).
+    /// Loads the session's library fingerprints, then fingerprints at most <paramref name="maxSongs"/> of the
+    /// library songs still missing one. The caller must hold the entry's lock.
     /// </summary>
-    private async Task<FingerprintIndex<long>> LoadLibraryAsync(long ownerId, CancellationToken cancellationToken)
+    private async Task<FingerprintIndex<long>> LoadLibraryAsync(SyncSoundalikeSessionEntry entry, long ownerId,
+        int maxSongs, CancellationToken cancellationToken)
+    {
+        if (entry.Library == null)
+        {
+            entry.Library = await LoadStoredLibraryAsync(entry, ownerId, cancellationToken);
+        }
+
+        var hadPending = entry.PendingLibrarySongIds.Count > 0;
+        for (var i = 0; i < maxSongs && entry.PendingLibrarySongIds.TryPeek(out var songId); i++)
+        {
+            var song = await db.Songs.AsNoTracking().FirstOrDefaultAsync(s => s.Id == songId, cancellationToken);
+            var fingerprint = song == null
+                ? null
+                : await fingerprintService.GetOrCreateFingerprintAsync(song, ct: cancellationToken);
+            if (fingerprint != null)
+            {
+                entry.Library.Add(songId, FingerprintEncoding.FromBytes(fingerprint.Fingerprint));
+            }
+
+            // Dequeued only once processed, so a cancelled request leaves the song for the next one
+            entry.PendingLibrarySongIds.Dequeue();
+        }
+
+        if (hadPending && entry.PendingLibrarySongIds.Count == 0)
+        {
+            logger.LogInformation("Loaded {Count} library fingerprints of user {OwnerId} for soundalike deduplication",
+                entry.Library.Count, ownerId);
+        }
+
+        return entry.Library;
+    }
+
+    /// <summary>
+    /// Loads the stored fingerprints of every song of the owner in a single query, and queues the songs missing
+    /// one in <see cref="SyncSoundalikeSessionEntry.PendingLibrarySongIds"/>.
+    /// </summary>
+    private async Task<FingerprintIndex<long>> LoadStoredLibraryAsync(SyncSoundalikeSessionEntry entry, long ownerId,
+        CancellationToken cancellationToken)
     {
         var songs = await db.Songs
             .Where(s => s.OwnerId == ownerId)
@@ -144,7 +216,6 @@ public class SyncSoundalikeMatcher(
             .ToDictionary(g => g.Key, g => g.First().Fingerprint);
 
         var index = new FingerprintIndex<long>();
-        var missingSongIds = new List<long>();
 
         foreach (var song in songs)
         {
@@ -154,28 +225,22 @@ public class SyncSoundalikeMatcher(
             }
             else
             {
-                missingSongIds.Add(song.Id);
+                entry.PendingLibrarySongIds.Enqueue(song.Id);
             }
         }
 
-        if (missingSongIds.Count > 0)
+        entry.LibrarySongsToFingerprint = entry.PendingLibrarySongIds.Count;
+
+        if (entry.LibrarySongsToFingerprint > 0)
         {
             logger.LogInformation("Fingerprinting {Count} songs of user {OwnerId} for soundalike deduplication",
-                missingSongIds.Count, ownerId);
+                entry.LibrarySongsToFingerprint, ownerId);
         }
-
-        foreach (var songId in missingSongIds)
+        else
         {
-            var song = await db.Songs.AsNoTracking().FirstAsync(s => s.Id == songId, cancellationToken);
-            var fingerprint = await fingerprintService.GetOrCreateFingerprintAsync(song, ct: cancellationToken);
-            if (fingerprint != null)
-            {
-                index.Add(song.Id, FingerprintEncoding.FromBytes(fingerprint.Fingerprint));
-            }
+            logger.LogInformation("Loaded {Count} library fingerprints of user {OwnerId} for soundalike deduplication",
+                index.Count, ownerId);
         }
-
-        logger.LogInformation("Loaded {Count} of {Total} library fingerprints of user {OwnerId} for soundalike deduplication",
-            index.Count, songs.Count, ownerId);
 
         return index;
     }

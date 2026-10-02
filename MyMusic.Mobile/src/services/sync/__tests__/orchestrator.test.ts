@@ -22,6 +22,7 @@ jest.mock('../sync-actions-device', () => ({
 function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
     const mockApiClient: ISyncApiClient = {
         startSync: jest.fn().mockResolvedValue({sessionId: 1}),
+        prepareDeduplicate: jest.fn().mockResolvedValue({total: 0, processed: 0, done: true}),
         checkSync: jest.fn().mockResolvedValue({
             toCreate: [],
             toUpdate: [],
@@ -129,6 +130,17 @@ describe('orchestrateSync', () => {
         expect(deps.config.setLastScanTotal).toHaveBeenCalled();
         expect(result.error).toBe(0);
         expect(result.sessionId).toBe(1);
+    });
+
+    test('deduplicate prepares the server library after the session starts and before the server actions', async () => {
+        const deps = createMockDeps();
+        deps.state.options.deduplicate = true;
+
+        await orchestrateSync(deps, jest.fn());
+
+        const order = (fn: unknown) => (fn as jest.Mock).mock.invocationCallOrder[0];
+        expect(order(deps.apiClient.prepareDeduplicate)).toBeGreaterThan(order(deps.apiClient.startSync));
+        expect(order(deps.apiClient.prepareDeduplicate)).toBeLessThan(order(deps.apiClient.createPendingActions));
     });
 
     test('cancellation returns partial result with cancelled=true', async () => {

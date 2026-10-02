@@ -68,6 +68,13 @@ export class NodeApiClient implements ISyncApiClient {
         return this._post(`/devices/${deviceId}/sync/start`, request);
     }
 
+    async prepareDeduplicate(
+        deviceId: number,
+        sessionId: number
+    ): Promise<{ total: number; processed: number; done: boolean }> {
+        return this._post(`/devices/${deviceId}/sync/${sessionId}/deduplicate/prepare`, {});
+    }
+
     async checkSync(
         deviceId: number,
         sessionId: number,

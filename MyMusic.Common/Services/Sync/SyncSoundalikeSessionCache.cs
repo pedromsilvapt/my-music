@@ -63,8 +63,17 @@ public class SyncSoundalikeSessionEntry
 
     public DateTimeOffset LastAccessedAt { get; set; }
 
-    /// <summary>Fingerprints of the user's songs by song id, loaded on the session's first lookup.</summary>
+    /// <summary>
+    /// Fingerprints of the user's songs by song id, created with the stored fingerprints on the session's first
+    /// preparation or lookup. Complete only once <see cref="PendingLibrarySongIds"/> is empty.
+    /// </summary>
     public FingerprintIndex<long>? Library { get; set; }
+
+    /// <summary>Library songs without a stored fingerprint, still to be fingerprinted into <see cref="Library"/>.</summary>
+    public Queue<long> PendingLibrarySongIds { get; } = new();
+
+    /// <summary>How many library songs had no stored fingerprint when <see cref="Library"/> was loaded.</summary>
+    public int LibrarySongsToFingerprint { get; set; }
 
     /// <summary>Fingerprints of this session's new uploads, by the checksum of the uploaded file.</summary>
     public FingerprintIndex<string> Uploads { get; } = new();

@@ -34,6 +34,7 @@ public class SyncControllerResolveConflictsSpecs
             SyncControllerHelpers.CreateSyncResolveConflictsService(scenario, factory),
             Substitute.For<ISyncReportErrorService>(),
             Substitute.For<ISyncAcknowledgeService>(),
+            Substitute.For<ISyncDeduplicatePrepareService>(),
             DevicesControllerHelpers.SessionLookup);
     }
 

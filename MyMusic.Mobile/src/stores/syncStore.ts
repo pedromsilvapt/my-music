@@ -2,7 +2,7 @@ import {create} from 'zustand';
 import type {ScannerType} from '../services/scannerRegistry';
 import type {SyncDirection} from '../services/sync/types';
 
-export type SyncPhase = 'idle' | 'scanning' | 'upload' | 'resolving' | 'server' | 'committing' | 'completing' | 'completed' | 'error';
+export type SyncPhase = 'idle' | 'scanning' | 'fingerprinting' | 'upload' | 'resolving' | 'server' | 'committing' | 'completing' | 'completed' | 'error';
 
 export interface SyncProgress {
     phase: SyncPhase;

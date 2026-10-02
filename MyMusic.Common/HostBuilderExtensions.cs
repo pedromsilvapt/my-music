@@ -120,6 +120,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISyncAcknowledgeService, SyncAcknowledgeService>();
         builder.Services.AddSingleton<SyncSoundalikeSessionCache>();
         builder.Services.AddScoped<ISyncSoundalikeMatcher, SyncSoundalikeMatcher>();
+        builder.Services.AddScoped<ISyncDeduplicatePrepareService, SyncDeduplicatePrepareService>();
 
         // Image and metadata services
         builder.Services.AddScoped<IImageCacheService, ImageCacheService>();

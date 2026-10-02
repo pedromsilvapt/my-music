@@ -146,6 +146,11 @@ export interface ISyncApiClient {
         request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; scanErrors?: Array<{ path: string; error: string }> }
     ) => Promise<{ sessionId: number }>;
 
+    prepareDeduplicate: (
+        deviceId: number,
+        sessionId: number
+    ) => Promise<{ total: number; processed: number; done: boolean }>;
+
     checkSync: (
         deviceId: number,
         sessionId: number,

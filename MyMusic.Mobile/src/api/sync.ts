@@ -14,6 +14,7 @@ import {
     SyncCheckResponseSchema,
     SyncCommitResponseSchema,
     SyncCompleteResponseSchema,
+    SyncDeduplicatePrepareResponseSchema,
     SyncResolveConflictsResponseSchema,
     SyncStartResponseSchema,
     SyncUploadResponseSchema,
@@ -44,6 +45,13 @@ export async function startSync(deviceId: number, request: SyncStartRequest) {
         method: 'POST',
         body: request,
         schema: SyncStartResponseSchema,
+    });
+}
+
+export async function prepareDeduplicate(deviceId: number, sessionId: number) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/deduplicate/prepare`, {
+        method: 'POST',
+        schema: SyncDeduplicatePrepareResponseSchema,
     });
 }
 

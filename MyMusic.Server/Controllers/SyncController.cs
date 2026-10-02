@@ -35,6 +35,7 @@ public class SyncController(
     ISyncResolveConflictsService syncResolveConflictsService,
     ISyncReportErrorService syncReportErrorService,
     ISyncAcknowledgeService syncAcknowledgeService,
+    ISyncDeduplicatePrepareService syncDeduplicatePrepareService,
     ISyncSessionLookupService sessionLookup) : ControllerBase
 {
     [HttpPost("{deviceId:long}/sync/start")]
@@ -168,6 +169,34 @@ public class SyncController(
                 Path = s.Path,
                 Action = s.Action,
             }).ToList(),
+        };
+    }
+
+    /// <summary>
+    /// Fingerprints the next batch of library songs for a session with deduplication, before its uploads.
+    /// Called repeatedly until <see cref="SyncDeduplicatePrepareResponse.Done"/>.
+    /// </summary>
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/deduplicate/prepare")]
+    public async Task<ActionResult<SyncDeduplicatePrepareResponse>> PrepareDeduplicate(long deviceId, long sessionId,
+        CancellationToken cancellationToken)
+    {
+        SyncLibraryPreparation? result;
+        try
+        {
+            result = await syncDeduplicatePrepareService.PrepareAsync(deviceId, sessionId, currentUser.Id, cancellationToken);
+        }
+        catch (SyncDeduplicatePrepareValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Invalid sync session");
+        }
+
+        if (result == null) return NotFound();
+
+        return new SyncDeduplicatePrepareResponse
+        {
+            Total = result.Total,
+            Processed = result.Processed,
+            Done = result.Done,
         };
     }
 

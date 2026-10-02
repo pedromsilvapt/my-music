@@ -12,6 +12,7 @@ const ZERO_COUNTS = {
 function createMockApiClient(overrides: Partial<ISyncApiClient> = {}): ISyncApiClient {
     return {
         startSync: jest.fn(),
+        prepareDeduplicate: jest.fn(),
         checkSync: jest.fn(),
         uploadFile: jest.fn().mockResolvedValue({success: true, songId: 1, records: [], counts: {...ZERO_COUNTS}}),
         completeSync: jest.fn(),

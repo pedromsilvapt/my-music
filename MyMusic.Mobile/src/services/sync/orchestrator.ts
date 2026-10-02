@@ -2,7 +2,7 @@ import type {SyncDeps, SyncResult, ProgressHandler} from './types';
 import {SyncCancelledError} from './errors';
 import {decodeToFsPath} from '../pathUtils';
 import {createEmptyResult, createSyncContext} from './context';
-import {scanPhase, startSessionPhase, uploadPhase, serverActionsPhase, commitPhase, completePhase} from './phases';
+import {scanPhase, startSessionPhase, prepareDeduplicatePhase, uploadPhase, serverActionsPhase, commitPhase, completePhase} from './phases';
 
 // Partial results of syncs that failed with an unexpected error, keyed by the rethrown error
 const partialResults = new WeakMap<object, SyncResult>();
@@ -46,6 +46,8 @@ export async function orchestrateSync(
         const scanResult = await scanPhase(deps, ctx, onProgress, previousScanTotal);
 
         await startSessionPhase(deps, ctx, scanResult.errors, onProgress);
+
+        await prepareDeduplicatePhase(deps, ctx, onProgress);
 
         await uploadPhase(deps, ctx, scanResult.files, onProgress);
 

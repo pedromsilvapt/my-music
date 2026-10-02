@@ -300,6 +300,7 @@ export * from './syncCheckResponse';
 export * from './syncCommitResponse';
 export * from './syncCompleteResponse';
 export * from './syncConflictResolveItem';
+export * from './syncDeduplicatePrepareResponse';
 export * from './syncDirection';
 export * from './syncFileInfoItem';
 export * from './syncPotentialUpdateResolveItem';

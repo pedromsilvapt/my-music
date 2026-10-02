@@ -229,6 +229,13 @@ public record StartSyncResult
     public long SessionId { get; init; }
 }
 
+public record PrepareDeduplicateResult
+{
+    public int Total { get; init; }
+    public int Processed { get; init; }
+    public bool Done { get; init; }
+}
+
 public record CheckSyncRequest
 {
     public required List<SyncFileInfo> Files { get; init; }

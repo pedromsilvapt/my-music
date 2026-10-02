@@ -5,6 +5,7 @@ using MyMusic.CLI.Services.Sync.Types;
 public interface ISyncApiClient
 {
     Task<StartSyncResult> StartSyncAsync(long deviceId, StartSyncRequest request, CancellationToken ct = default);
+    Task<PrepareDeduplicateResult> PrepareDeduplicateAsync(long deviceId, long sessionId, CancellationToken ct = default);
     Task<CheckSyncResult> CheckSyncAsync(long deviceId, long sessionId, CheckSyncRequest request, CancellationToken ct = default);
     Task<UploadFileResult> UploadFileAsync(long deviceId, long sessionId, UploadFileRequest request, CancellationToken ct = default);
     Task<CompleteSyncResult> CompleteSyncAsync(long deviceId, long sessionId, CancellationToken ct = default);

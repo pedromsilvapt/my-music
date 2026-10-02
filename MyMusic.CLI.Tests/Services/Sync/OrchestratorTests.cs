@@ -102,6 +102,40 @@ public class OrchestratorTests
     }
 
     [Fact]
+    public async Task Deduplicate_PreparesTheServerLibraryAfterStartAndBeforeUploads()
+    {
+        // Arrange
+        var orchestrator = CreateOrchestrator(CreatePhases());
+        _apiClient.PrepareDeduplicateAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(new PrepareDeduplicateResult { Done = true });
+        _scanner.ScanAsync(
+                Arg.Any<string>(),
+                Arg.Any<string[]>(),
+                Arg.Any<string[]>(),
+                Arg.Any<Action<int, string>?>(),
+                Arg.Any<Action<string, string>?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(new ScanResult
+            {
+                Files = [new ScannedFile { RelativePath = "a.mp3", FullPath = "/music/a.mp3", ModifiedAt = DateTime.UtcNow, CreatedAt = DateTime.UtcNow }],
+                Errors = []
+            });
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [], Counts = new SyncActionCounts() });
+
+        // Act
+        await orchestrator.OrchestrateSyncAsync(new SyncOptions { Deduplicate = true }, null);
+
+        // Assert
+        Received.InOrder(() =>
+        {
+            _apiClient.StartSyncAsync(1, Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>());
+            _apiClient.PrepareDeduplicateAsync(1, 1, Arg.Any<CancellationToken>());
+            _apiClient.CheckSyncAsync(1, 1, Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
     public async Task SyncDirectionUp_SkipsServerActionsPhase()
     {
         // Arrange

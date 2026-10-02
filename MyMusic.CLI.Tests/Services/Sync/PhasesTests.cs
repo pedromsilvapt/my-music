@@ -110,6 +110,42 @@ public class PhasesTests
         await _apiClient.Received(1).StartSyncAsync(1, Arg.Is<StartSyncRequest>(r => r.Direction == direction), Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(false, SyncDirection.Both)]
+    [InlineData(true, SyncDirection.Down)]
+    public async Task PrepareDeduplicatePhase_WithoutUploadDeduplication_IsSkipped(bool deduplicate, SyncDirection direction)
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Deduplicate = deduplicate, Direction = direction });
+
+        await phases.PrepareDeduplicatePhaseAsync(ctx, null);
+
+        await _apiClient.DidNotReceive().PrepareDeduplicateAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(SyncDirection.Both)]
+    [InlineData(SyncDirection.Up)]
+    public async Task PrepareDeduplicatePhase_PreparesUntilDone_ReportingProgress(SyncDirection direction)
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Deduplicate = true, Direction = direction });
+        var progress = new CapturingProgress();
+
+        _apiClient.PrepareDeduplicateAsync(1, 1, Arg.Any<CancellationToken>())
+            .Returns(
+                new PrepareDeduplicateResult { Total = 45, Processed = 20 },
+                new PrepareDeduplicateResult { Total = 45, Processed = 40 },
+                new PrepareDeduplicateResult { Total = 45, Processed = 45, Done = true });
+
+        await phases.PrepareDeduplicatePhaseAsync(ctx, progress);
+
+        await _apiClient.Received(3).PrepareDeduplicateAsync(1, 1, Arg.Any<CancellationToken>());
+        progress.Reports.ShouldAllBe(p => p.Phase == "fingerprinting");
+        progress.Reports.Where(p => p.TotalFiles > 0).Select(p => p.ProcessedFiles).ShouldBe([20, 40, 45]);
+        progress.Reports.ShouldAllBe(p => p.TotalFiles == 0 || p.TotalFiles == 45);
+    }
+
     [Fact]
     public async Task CommitPhase_CallsCommitEndpoint()
     {
@@ -160,7 +196,7 @@ public class PhasesTests
 
         // Each chunk produces exactly one end-of-chunk report with the accumulated processedCount.
         // Chunk 1 -> processedCount=2, Chunk 2 -> processedCount=4, Chunk 3 -> processedCount=5
-        var chunkReports = progress.Reports.Where(r => r.Phase == "upload").ToList();
+        var chunkReports = ChunkReports(progress, files.Count);
         chunkReports.Count.ShouldBe(3);
         chunkReports[0].ProcessedFiles.ShouldBe(2);
         chunkReports[1].ProcessedFiles.ShouldBe(4);
@@ -205,7 +241,7 @@ public class PhasesTests
 
         await phases.UploadPhaseAsync(ctx, files, progress);
 
-        var chunkReports = progress.Reports.Where(r => r.Phase == "upload").ToList();
+        var chunkReports = ChunkReports(progress, files.Count);
         // Per-file reports for song1 (1) and song2 (2), then end-of-chunk top-up to 3.
         chunkReports.Count.ShouldBe(3);
         chunkReports[0].ProcessedFiles.ShouldBe(1);
@@ -297,7 +333,7 @@ public class PhasesTests
 
         await phases.UploadPhaseAsync(ctx, files, progress);
 
-        var chunkReports = progress.Reports.Where(r => r.Phase == "upload").ToList();
+        var chunkReports = ChunkReports(progress, files.Count);
         // Chunk 1: per-file (1), end-of-chunk (2).
         // Chunk 2: per-file (3), per-file (4), end-of-chunk (4).
         var processedValues = chunkReports.Select(r => r.ProcessedFiles).ToList();
@@ -333,7 +369,7 @@ public class PhasesTests
 
         await phases.UploadPhaseAsync(ctx, files, progress);
 
-        var chunkReports = progress.Reports.Where(r => r.Phase == "upload").ToList();
+        var chunkReports = ChunkReports(progress, files.Count);
         // Chunk 1 failed -> processedCount=2 with error message.
         // Chunk 2 succeeded -> processedCount=3 (end-of-chunk report).
         chunkReports.Count.ShouldBe(2);
@@ -597,6 +633,17 @@ public class PhasesTests
         _fileSystem.File.Returns(mockFile);
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
         _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("AAAA");
+    }
+
+    /// <summary>
+    /// The upload reports after the one starting the phase, which resets the progress to 0 of every file.
+    /// </summary>
+    private static List<SyncProgress> ChunkReports(CapturingProgress progress, int totalFiles)
+    {
+        var uploadReports = progress.Reports.Where(r => r.Phase == "upload").ToList();
+        uploadReports[0].ProcessedFiles.ShouldBe(0);
+        uploadReports[0].TotalFiles.ShouldBe(totalFiles);
+        return uploadReports.Skip(1).ToList();
     }
 
     private Phases CreatePhases()

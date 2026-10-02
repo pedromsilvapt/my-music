@@ -10,6 +10,7 @@ import {
     createPendingActions,
     reportSyncError,
     resolveConflicts,
+    prepareDeduplicate,
     startSync,
     uploadFile,
 } from '../../api/sync';
@@ -40,6 +41,7 @@ import type {
 export function createDefaultApiClient(): ISyncApiClient {
     return {
         startSync,
+        prepareDeduplicate,
         checkSync: async (deviceId, sessionId, request) => {
             const result = await checkSync(deviceId, sessionId, request);
             return {

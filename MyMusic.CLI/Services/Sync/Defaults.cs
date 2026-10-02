@@ -213,6 +213,17 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         return new StartSyncResult { SessionId = response.SessionId };
     }
 
+    public async Task<PrepareDeduplicateResult> PrepareDeduplicateAsync(long deviceId, long sessionId, CancellationToken ct = default)
+    {
+        var response = await client.PrepareDeduplicateAsync(deviceId, sessionId, ct);
+        return new PrepareDeduplicateResult
+        {
+            Total = response.Total,
+            Processed = response.Processed,
+            Done = response.Done
+        };
+    }
+
     public async Task<CheckSyncResult> CheckSyncAsync(long deviceId, long sessionId, CheckSyncRequest request, CancellationToken ct = default)
     {
         var syncFiles = request.Files.Select(f => new SyncFileInfoItem

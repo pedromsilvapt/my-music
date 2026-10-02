@@ -64,6 +64,36 @@ public class Phases(
         logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun}, Direction: {Direction}, Deduplicate: {Deduplicate})", ctx.SessionId, ctx.Options.DryRun, ctx.Options.Direction, ctx.Options.Deduplicate);
     }
 
+    /// <summary>
+    /// With deduplication, has the server fingerprint its library before the uploads, one batch per request,
+    /// so its progress is shown instead of stalling the first upload. Only uploads are deduplicated, so it is
+    /// skipped in <c>down</c>.
+    /// </summary>
+    public async Task PrepareDeduplicatePhaseAsync(
+        SyncContext ctx,
+        IProgress<SyncProgress>? progress,
+        CancellationToken ct = default)
+    {
+        if (!ctx.Options.Deduplicate || ctx.Options.Direction == SyncDirection.Down)
+        {
+            return;
+        }
+
+        logger.LogInformation("Fingerprinting server songs for deduplication");
+        progress?.Report(SyncProgress.ForPhase("fingerprinting", "Fingerprinting server songs..."));
+
+        PrepareDeduplicateResult result;
+        do
+        {
+            ct.ThrowIfCancellationRequested();
+
+            result = await apiClient.PrepareDeduplicateAsync(ctx.DeviceId, ctx.SessionId, ct);
+            progress?.Report(SyncProgress.FromResult(ctx.Result, "fingerprinting", result.Total, result.Processed));
+        } while (!result.Done);
+
+        logger.LogInformation("Fingerprinted {Count} server songs for deduplication", result.Total);
+    }
+
     public async Task UploadPhaseAsync(
         SyncContext ctx,
         List<ScannedFile> files,
@@ -80,6 +110,9 @@ public class Phases(
         {
             return;
         }
+
+        // Resets the progress left by the previous phase (fingerprinting) before the first check returns
+        progress?.Report(SyncProgress.FromResult(ctx.Result, "upload", files.Count, 0));
 
         var chunkSize = config.GetChunkSize();
         var chunks = files.Chunk(chunkSize).ToList();

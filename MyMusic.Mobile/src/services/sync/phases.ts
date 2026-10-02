@@ -108,6 +108,36 @@ export async function startSessionPhase (
     onProgress({ phase: 'server' });
 }
 
+/**
+ * With deduplication, has the server fingerprint its library before the uploads, one batch per request,
+ * so its progress is shown instead of stalling the first upload. Only uploads are deduplicated, so it is
+ * skipped in `Down`.
+ */
+export async function prepareDeduplicatePhase (
+    deps: SyncDeps,
+    ctx: SyncContext,
+    onProgress: ProgressHandler
+): Promise<void> {
+    if (!ctx.options.deduplicate || ctx.options.direction === 'Down') {
+        return;
+    }
+
+    console.log('Fingerprinting server songs for deduplication');
+    onProgress({ phase: 'fingerprinting', totalFiles: 0, processedFiles: 0, currentFile: 'Fingerprinting server songs...' });
+
+    let result;
+    do {
+        if (deps.state.isCancelled) {
+            throw new SyncCancelledError();
+        }
+
+        result = await deps.apiClient.prepareDeduplicate(ctx.deviceId, ctx.sessionId!);
+        onProgress({ phase: 'fingerprinting', totalFiles: result.total, processedFiles: result.processed });
+    } while (!result.done);
+
+    console.log(`Fingerprinted ${result.total} server songs for deduplication`);
+}
+
 export async function resolveConflictsPhase (
     deps: SyncDeps,
     ctx: SyncContext,
@@ -158,6 +188,9 @@ export async function uploadPhase (
     if (files.length === 0) {
         return;
     }
+
+    // Resets the progress left by the previous phase (fingerprinting) before the first check returns
+    onProgress({ phase: 'upload', totalFiles: files.length, processedFiles: 0, currentFile: '' });
 
     const chunkSize = deps.config.getChunkSize();
     const chunks = chunkArray(files, chunkSize);

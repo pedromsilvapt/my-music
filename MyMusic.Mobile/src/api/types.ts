@@ -37,6 +37,14 @@ export const SyncStartResponseSchema = z.object({
 
 export type SyncStartResponse = z.infer<typeof SyncStartResponseSchema>;
 
+export const SyncDeduplicatePrepareResponseSchema = z.object({
+    total: z.number(),
+    processed: z.number(),
+    done: z.boolean(),
+});
+
+export type SyncDeduplicatePrepareResponse = z.infer<typeof SyncDeduplicatePrepareResponseSchema>;
+
 export const SyncFileInfoSchema = SyncFileInfoItemSchema;
 
 export const SyncCheckRequestSchema = z.object({
