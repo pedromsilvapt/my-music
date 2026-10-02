@@ -7,7 +7,7 @@ namespace MyMusic.IntegrationTests.Pages.Components;
 /// <summary>
 /// The read-only song version modal, opened from the song detail page's versions menu. Shows a revision
 /// header with previous/next navigation, and side-by-side JSON panels with the fields changed by that
-/// revision (old on the left, new on the right). The first revision has no old panel.
+/// revision (old on the left, new on the right). The song's created baseline revision has no old panel.
 /// </summary>
 public class SongVersionModalComponent(ILocator root) : BaseComponent(root)
 {
@@ -32,7 +32,7 @@ public class SongVersionModalComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
-    /// The values shown in the old panel, or null when viewing the first revision.
+    /// The values shown in the old panel, or null when viewing the created baseline revision.
     /// </summary>
     public async Task<SongVersionValues?> GetOldValuesAsync()
     {

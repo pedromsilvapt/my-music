@@ -299,9 +299,10 @@ public class SongHistoryWorkerSpecs
         var histories = scenario.DbContext.SongHistories.OrderBy(h => h.SongRevision).ToList();
         histories.Count.ShouldBe(3);
         histories[0].SongRevision.ShouldBe(1);
+        histories[0].Action.ShouldBe("created");
         histories[0].Diff.Action.ShouldBe("created");
         histories[0].Diff.Title.ShouldNotBeNull();
-        histories[0].Diff.Title.Old.ShouldBe("V1");
+        histories[0].Diff.Title.Old.ShouldBeNull();
         histories[0].Diff.Title.New.ShouldBe("V2");
         histories[1].SongRevision.ShouldBe(2);
         histories[1].Diff.Action.ShouldBe("updated");
@@ -490,5 +491,69 @@ public class SongHistoryWorkerSpecs
         history.Diff.Title.ShouldNotBeNull();
         history.Diff.Title!.Old.ShouldBe("Good Old");
         history.Diff.Title.New.ShouldBe("Good New");
+    }
+
+    [Fact]
+    public async Task ProcessQueue_CreatedTransaction_WritesBaselineWithEveryField()
+    {
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker();
+        const long txnId = 200;
+        var artists = new List<SongSnapshotArtist> { new() { Id = 3, Name = "Artist" } };
+        // The song row is inserted first, then its artists, all in the same transaction
+        InsertQueueEntry(scenario, songId: 60, revision: 1, BuildSnapshot(title: "New Song", songId: 60, action: "created"), txnId);
+        InsertQueueEntry(scenario, songId: 60, revision: 2, BuildSnapshot(title: "New Song", songId: 60, action: "updated"), txnId);
+        var liveState = BuildSnapshot(title: "New Song", songId: 60, action: "updated", artists: artists);
+        snapshot.GetCurrentSnapshotAsync(60, true, Arg.Any<CancellationToken>()).Returns(liveState);
+
+        var (processed, failed) = await worker.ProcessQueueAsync(
+            scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        processed.ShouldBe(1);
+        failed.ShouldBe(0);
+
+        var history = scenario.DbContext.SongHistories.Single();
+        history.SongRevision.ShouldBe(1);
+        history.Action.ShouldBe("created");
+        history.Diff.Action.ShouldBe("created");
+        history.Diff.Title.ShouldNotBeNull();
+        history.Diff.Title.Old.ShouldBeNull();
+        history.Diff.Title.New.ShouldBe("New Song");
+        // Fields holding default values are recorded too, so the baseline shows the full state
+        history.Diff.Explicit.ShouldNotBeNull();
+        history.Diff.Explicit.New.ShouldBeFalse();
+        history.Diff.Artists.ShouldNotBeNull();
+        history.Diff.Artists.Old.ShouldBeNull();
+        history.Diff.Artists.New.ShouldNotBeNull().Select(a => a.Name).ShouldBe(["Artist"]);
+
+        scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessQueue_CreatedThenEdited_BaselineLoadsCoverMissingFromSnapshot()
+    {
+        var (base64, mimeType) = MakeCoverImage(400, 400);
+        var cover = new SongSnapshotCover { Id = 7, MimeType = mimeType, Width = 400, Height = 400, Data = base64 };
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker();
+        InsertQueueEntry(scenario, songId: 70, revision: 1, BuildSnapshot(title: "V1", songId: 70, action: "created"), 1);
+        // The edit's pre-change snapshot references the cover without carrying it (cover_id did not change)
+        InsertQueueEntry(scenario, songId: 70, revision: 2,
+            BuildSnapshot(title: "V1", songId: 70, action: "updated") with { CoverId = 7 }, 2);
+        snapshot.GetCurrentSnapshotAsync(70, true, Arg.Any<CancellationToken>())
+            .Returns(BuildSnapshot(title: "V2", songId: 70, action: "updated", cover: cover));
+        snapshot.GetCoverAsync(7, Arg.Any<CancellationToken>()).Returns(cover);
+
+        await worker.ProcessQueueAsync(scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        var histories = scenario.DbContext.SongHistories.OrderBy(h => h.SongRevision).ToList();
+        histories.Count.ShouldBe(2);
+        histories[0].Action.ShouldBe("created");
+        histories[0].Diff.Title.ShouldNotBeNull().New.ShouldBe("V1");
+        var baselineCover = histories[0].Diff.Cover.ShouldNotBeNull().New.ShouldNotBeNull();
+        baselineCover.Id.ShouldBe(7);
+        // Stored as a thumbnail, like every cover in history
+        baselineCover.Data.ShouldNotBe(base64);
+        histories[1].Action.ShouldBe("updated");
+        histories[1].Diff.Title.ShouldNotBeNull().Old.ShouldBe("V1");
+        histories[1].Diff.Cover.ShouldBeNull();
     }
 }

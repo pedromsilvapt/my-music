@@ -9,10 +9,9 @@ import {SONG_VERSION_MODAL_SIZE} from "../../consts.ts";
 interface SongVersionsMenuProps {
     song: GetSongResponseSong;
     historyItems: GetSongHistoryItem[];
-    firstRevisionId: number | null;
 }
 
-export default function SongVersionsMenu({song, historyItems, firstRevisionId}: SongVersionsMenuProps) {
+export default function SongVersionsMenu({song, historyItems}: SongVersionsMenuProps) {
     const {t} = useTranslation(["songs", "common"]);
 
     const handleVersionClick = useCallback((index: number) => {
@@ -25,10 +24,9 @@ export default function SongVersionsMenu({song, historyItems, firstRevisionId}: 
                 historyItems,
                 currentSong: song,
                 initialIndex: index,
-                firstRevisionId,
             },
         });
-    }, [song, historyItems, firstRevisionId, t]);
+    }, [song, historyItems, t]);
 
     const versionsCount = historyItems.length;
 

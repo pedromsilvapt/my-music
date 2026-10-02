@@ -409,4 +409,28 @@ public class SongHistoryDiffServiceSpecs
         delta.Devices.ShouldNotBeNull();
         delta.Cover.ShouldNotBeNull();
     }
+
+    [Fact]
+    public void ComputeBaseline_RecordsEveryFieldWithoutPreviousValues()
+    {
+        var snapshot = BuildSnapshot(
+            title: "Song",
+            explicitFlag: false,
+            year: null,
+            artists: [new SongSnapshotArtist { Id = 1, Name = "Artist" }]);
+
+        var baseline = _service.ComputeBaseline(snapshot);
+
+        baseline.Action.ShouldBe("created");
+        baseline.Title.ShouldNotBeNull();
+        baseline.Title.Old.ShouldBeNull();
+        baseline.Title.New.ShouldBe("Song");
+        // Default and null values are part of the baseline as well
+        baseline.Explicit.ShouldNotBeNull().New.ShouldBeFalse();
+        baseline.Year.ShouldNotBeNull().New.ShouldBeNull();
+        baseline.Artists.ShouldNotBeNull().Old.ShouldBeNull();
+        baseline.Artists.New.ShouldNotBeNull().Select(a => a.Name).ShouldBe(["Artist"]);
+        // Play count is not part of the history
+        baseline.PlayCount.ShouldBeNull();
+    }
 }

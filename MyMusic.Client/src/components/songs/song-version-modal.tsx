@@ -17,7 +17,6 @@ export interface SongVersionModalInnerProps {
     historyItems: GetSongHistoryItem[];
     currentSong: GetSongResponseSong;
     initialIndex: number;
-    firstRevisionId: number | null;
 }
 
 const PRE_STYLE_OLD: React.CSSProperties = {
@@ -74,12 +73,13 @@ export default function SongVersionModal({
     innerProps,
 }: ContextModalProps<SongVersionModalInnerProps>) {
     const {t} = useTranslation(["songs", "player"]);
-    const {historyItems, currentSong, initialIndex, firstRevisionId} = innerProps;
+    const {historyItems, currentSong, initialIndex} = innerProps;
 
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const currentItem = historyItems[currentIndex];
 
-    const isFirstRevision = currentItem.id === firstRevisionId;
+    // The song's baseline revision has no previous values to show
+    const isCreated = currentItem.action === "created";
 
     const diffQuery = useGetSongHistoryDiff(
         currentSong.id,
@@ -88,8 +88,8 @@ export default function SongVersionModal({
 
     const newCoverId = useMemo(() => parseCoverId(currentItem.diff, "new"), [currentItem.diff]);
     const oldCoverId = useMemo(
-        () => !isFirstRevision ? parseCoverId(currentItem.diff, "old") : null,
-        [currentItem.diff, isFirstRevision],
+        () => !isCreated ? parseCoverId(currentItem.diff, "old") : null,
+        [currentItem.diff, isCreated],
     );
 
     const hasCoverChange = diffQuery.data?.data?.metadata?.cover != null;
@@ -136,7 +136,7 @@ export default function SongVersionModal({
 
             {hasCoverChange && (
                 <Group gap="lg" align="flex-start">
-                    {!isFirstRevision && (
+                    {!isCreated && (
                         <Box data-testid="song-version-old-cover">
                             <Text size="xs" c="dimmed" mb={4}>
                                 {t("songs:detailPage.versionOldLabel")}
@@ -164,7 +164,7 @@ export default function SongVersionModal({
             )}
 
             <Group gap="md" align="flex-start" grow>
-                {!isFirstRevision && (
+                {!isCreated && (
                     <Stack gap={0} style={{flex: 1}}>
                         <Text size="sm" fw={600} mb={4}>
                             {t("songs:detailPage.versionOldLabel")}

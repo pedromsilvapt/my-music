@@ -55,9 +55,6 @@ export default function SongDetailPage() {
     const historyItems = (historyQuery.data?.data.history ?? [])
         .slice()
         .sort((a, b) => b.songRevision - a.songRevision);
-    const firstRevisionId = historyItems.length > 0
-        ? historyItems[historyItems.length - 1].id
-        : null;
     const {isPending: historyPending} = useSongHistoryEvents(Number(songId), song?.hasPendingHistory ?? false);
 
     const handleDelete = useCallback(() => {
@@ -128,7 +125,6 @@ export default function SongDetailPage() {
                             <SongVersionsMenu
                                 song={song}
                                 historyItems={historyItems}
-                                firstRevisionId={firstRevisionId}
                             />
                         )}
                         {historyPending && (

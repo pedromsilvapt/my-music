@@ -278,7 +278,8 @@ public class SongsFixture
 
     /// <summary>
     /// Edits the song's lyrics until it has <paramref name="versionsCount"/> history versions (the upload
-    /// records the first one), then waits for the asynchronous history worker to record all of them.
+    /// records the first one, the created baseline), then waits for the asynchronous history worker to record
+    /// all of them.
     /// </summary>
     private static async Task SeedVersionsAsync(IAPIRequestContext api, long songId, int versionsCount)
     {

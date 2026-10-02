@@ -38,6 +38,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISongHistoryQueryService, SongHistoryQueryService>();
         builder.Services.AddScoped<ISongHistoryVersionDiffService, SongHistoryVersionDiffService>();
         builder.Services.AddScoped<ISongHistorySnapshotService, SongHistorySnapshotService>();
+        builder.Services.AddScoped<ISongHistoryBaselineBackfillService, SongHistoryBaselineBackfillService>();
         builder.Services.AddScoped<ISongHistoryPendingService, SongHistoryPendingService>();
         builder.Services.AddScoped<ISongHistoryEventStreamService, SongHistoryEventStreamService>();
         builder.Services.AddSingleton<ISongHistoryNotifier, SongHistoryNotifier>();

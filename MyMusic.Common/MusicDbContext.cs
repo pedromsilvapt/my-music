@@ -228,7 +228,15 @@ public class MusicDbContext : DbContext
                 v => DeserializeSongHistoryDelta(v));
             entity.Property(e => e.Diff).HasConversion(jsonConverter);
 
+            entity.Property(e => e.Action).HasDefaultValue(SongHistory.UpdatedAction);
+
             entity.HasIndex(e => new { e.SongId, e.SongRevision }).IsUnique();
+
+            // At most one baseline per song; also makes finding the songs still missing one cheap
+            entity.HasIndex(e => e.SongId)
+                .HasDatabaseName("ix_song_histories_song_id_created")
+                .HasFilter($"action = '{SongHistory.CreatedAction}'")
+                .IsUnique();
         });
 
         // SongHistoryQueue entity configuration

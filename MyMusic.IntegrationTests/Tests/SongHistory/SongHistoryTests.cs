@@ -36,6 +36,24 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
     }
 
     [Fact]
+    public async Task Upload_ShouldRecordFullStateAsCreatedBaseline()
+    {
+        // Setup: seed a freshly uploaded song, with no edits yet
+        var song = await _songs.SeedAsync(RequestContext, UserId, SongsFixture.DefaultSongs[1] with { VersionsCount = 1 });
+
+        // Action: open its only version from the versions menu
+        await new OpenSongVersionFlow(song.Title, versionsCount: 1).ExecuteAsync(Page);
+
+        // Assert: the upload is recorded as the created baseline, showing the song's full state (including the
+        // artists inserted along with it) and no previous values
+        await new ValidateCurrentSongVersionFlow(new(
+            Revision: 1,
+            HasOldPanel: false,
+            New: new() { Title = "The Alibi", Artists = [new() { Name = "Dylan" }] }))
+            .ExecuteAsync(Page);
+    }
+
+    [Fact]
     public async Task EditTitle_ShouldUpdateVersionsMenuWithoutReload()
     {
         // Setup: seed a song whose initial (upload) version has already been recorded
@@ -102,7 +120,8 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await modal.GoToPreviousAsync();
         await modal.GoToPreviousAsync();
 
-        // Assert: the first revision has nothing to compare against, and only newer revisions are reachable
+        // Assert: the first revision is the created baseline, with nothing to compare against, and only newer
+        // revisions are reachable
         await new ValidateCurrentSongVersionFlow(new(
             Revision: 1, HasOldPanel: false, CanGoToPrevious: false, CanGoToNext: true))
             .ExecuteAsync(Page);

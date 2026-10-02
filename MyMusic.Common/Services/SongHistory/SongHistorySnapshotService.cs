@@ -22,4 +22,25 @@ public class SongHistorySnapshotService(MusicDbContext db) : ISongHistorySnapsho
 
         return JsonSerializer.Deserialize<SongSnapshot>(json, SongHistoryJsonOptions.Options);
     }
+
+    public async Task<SongSnapshotCover?> GetCoverAsync(long coverId, CancellationToken ct)
+    {
+        var artwork = await db.Artworks
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => a.Id == coverId, ct);
+
+        if (artwork is null)
+        {
+            return null;
+        }
+
+        return new SongSnapshotCover
+        {
+            Id = artwork.Id,
+            MimeType = artwork.MimeType,
+            Width = artwork.Width,
+            Height = artwork.Height,
+            Data = Convert.ToBase64String(artwork.Data),
+        };
+    }
 }

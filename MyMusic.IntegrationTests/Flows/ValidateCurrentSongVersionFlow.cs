@@ -28,7 +28,7 @@ public class ValidateCurrentSongVersionFlow(ValidateCurrentSongVersionOptions ex
             (oldValues is not null).ShouldBe(expected.HasOldPanel.Value,
                 expected.HasOldPanel.Value
                     ? "A later revision should show the previous values"
-                    : "The first revision should not show an old panel");
+                    : "The created baseline revision should not show an old panel");
         }
 
         if (expected.Old is not null)
@@ -58,7 +58,7 @@ public class ValidateCurrentSongVersionFlow(ValidateCurrentSongVersionOptions ex
 }
 
 /// <param name="Revision">Revision number shown in the modal header.</param>
-/// <param name="HasOldPanel">Whether the old panel is shown (false only for the first revision).</param>
+/// <param name="HasOldPanel">Whether the old panel is shown (false only for the song's created baseline revision).</param>
 /// <param name="Old">Field values expected in the old panel (only non-null fields are checked).</param>
 /// <param name="New">Field values expected in the new panel (only non-null fields are checked).</param>
 /// <param name="CanGoToPrevious">Whether navigating to an older revision is enabled.</param>

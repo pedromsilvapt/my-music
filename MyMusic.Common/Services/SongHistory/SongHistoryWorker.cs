@@ -43,6 +43,12 @@ public class SongHistoryWorker(
 
     private static readonly ActivitySource ActivitySource = new("MyMusic.SongHistoryWorker");
 
+    /// <summary>
+    /// Set once no song is missing its <c>created</c> baseline. Songs created from then on get theirs through the
+    /// queue, so the backfill does not need to scan the songs again until the next restart.
+    /// </summary>
+    private bool _baselineBackfillComplete;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!config.Value.SongHistoryWorkerEnabled)
@@ -70,6 +76,13 @@ public class SongHistoryWorker(
                 var snapshotService = scope.ServiceProvider.GetRequiredService<ISongHistorySnapshotService>();
 
                 await ProcessQueueAsync(context, diffService, thumbnailService, snapshotService, stoppingToken);
+
+                if (!_baselineBackfillComplete)
+                {
+                    var backfillService = scope.ServiceProvider
+                        .GetRequiredService<ISongHistoryBaselineBackfillService>();
+                    await BackfillBaselinesAsync(backfillService, stoppingToken);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -91,6 +104,35 @@ public class SongHistoryWorker(
         }
 
         logger.LogInformation("Song history worker stopped");
+    }
+
+    private async Task BackfillBaselinesAsync(
+        ISongHistoryBaselineBackfillService backfillService,
+        CancellationToken cancellationToken)
+    {
+        var batchSize = config.Value.SongHistoryBaselineBatchSize;
+        if (batchSize <= 0)
+        {
+            batchSize = 50;
+        }
+
+        using var activity = ActivitySource.StartActivity("SongHistoryWorker.BackfillBaselines");
+
+        var (candidates, recorded) = await backfillService.BackfillBatchAsync(batchSize, cancellationToken);
+
+        activity?.SetTag("backfill.candidates", candidates);
+        activity?.SetTag("backfill.recorded", recorded);
+
+        if (candidates == 0)
+        {
+            _baselineBackfillComplete = true;
+            logger.LogInformation("Song history baseline backfill complete");
+        }
+        else
+        {
+            logger.LogInformation("Song history baseline backfill: recorded {Recorded} of {Candidates} songs",
+                recorded, candidates);
+        }
     }
 
     /// <summary>
@@ -254,6 +296,15 @@ public class SongHistoryWorker(
                 newerState = orderedGroups[i + 1].Representative.Data;
             }
 
+            if (groupSnapshot.Action == SongHistoryEntity.CreatedAction && newerState is not null)
+            {
+                // The transaction that created the song: its baseline is the song's full state right after it,
+                // with no previous values (the trigger's own snapshot is ignored)
+                var createdState = await WithCoverAsync(newerState, snapshotService, cancellationToken);
+                deltas[i] = diffService.ComputeBaseline(createdState);
+                continue;
+            }
+
             var delta = diffService.ComputeDiff(groupSnapshot, newerState);
             delta = delta with { Action = groupSnapshot.Action };
             deltas[i] = delta;
@@ -278,6 +329,7 @@ public class SongHistoryWorker(
                 SongRevision = maxHistoryRevision + 1 + i,
                 Diff = delta,
                 DiffFormat = "delta",
+                Action = delta.Action ?? SongHistoryEntity.UpdatedAction,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -287,6 +339,23 @@ public class SongHistoryWorker(
         context.SongHistoryQueues.RemoveRange(allQueueEntries);
 
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Queue snapshots only embed the cover object when <c>cover_id</c> changed, so a snapshot used as a baseline may
+    /// reference a cover without carrying it; loads it so the baseline records the cover too.
+    /// </summary>
+    private static async Task<SongSnapshot> WithCoverAsync(
+        SongSnapshot snapshot,
+        ISongHistorySnapshotService snapshotService,
+        CancellationToken cancellationToken)
+    {
+        if (snapshot.Cover is not null || snapshot.CoverId is not { } coverId)
+        {
+            return snapshot;
+        }
+
+        return snapshot with { Cover = await snapshotService.GetCoverAsync(coverId, cancellationToken) };
     }
 
     /// <summary>

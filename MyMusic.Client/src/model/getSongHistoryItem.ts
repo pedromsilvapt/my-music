@@ -13,6 +13,7 @@ export interface GetSongHistoryItem {
   songId: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   songRevision: number;
+  action: string;
   diff: JsonElement;
   createdAt: string;
 }

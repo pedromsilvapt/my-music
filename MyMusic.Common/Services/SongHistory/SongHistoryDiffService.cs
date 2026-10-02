@@ -43,6 +43,40 @@ public class SongHistoryDiffService : ISongHistoryDiffService
         };
     }
 
+    public SongHistoryDelta ComputeBaseline(SongSnapshot snapshot) => new()
+    {
+        Action = Entities.SongHistory.CreatedAction,
+        Title = Baseline(snapshot.Title),
+        Label = Baseline(snapshot.Label),
+        AlbumId = Baseline(snapshot.AlbumId),
+        CoverId = Baseline(snapshot.CoverId),
+        Year = Baseline(snapshot.Year),
+        Lyrics = Baseline(snapshot.Lyrics),
+        Explicit = Baseline(snapshot.Explicit),
+        Size = Baseline(snapshot.Size),
+        Track = Baseline(snapshot.Track),
+        Duration = Baseline(snapshot.Duration),
+        Bitrate = Baseline(snapshot.Bitrate),
+        OwnerId = Baseline(snapshot.OwnerId),
+        Rating = Baseline(snapshot.Rating),
+        IsFavorite = Baseline(snapshot.IsFavorite),
+        RepositoryPath = Baseline(snapshot.RepositoryPath),
+        Checksum = Baseline(snapshot.Checksum),
+        ChecksumAlgorithm = Baseline(snapshot.ChecksumAlgorithm),
+        AddedAt = Baseline(snapshot.AddedAt),
+        CreatedAt = Baseline(snapshot.CreatedAt),
+        ModifiedAt = Baseline(snapshot.ModifiedAt),
+        FileModifiedAt = Baseline(snapshot.FileModifiedAt),
+        Album = Baseline(snapshot.Album),
+        Artists = Baseline(snapshot.Artists),
+        Genres = Baseline(snapshot.Genres),
+        Sources = Baseline(snapshot.Sources),
+        Devices = Baseline(snapshot.Devices),
+        Cover = Baseline(snapshot.Cover),
+    };
+
+    private static FieldChange<T> Baseline<T>(T value) => new() { Old = default, New = value };
+
     private static FieldChange<T>? DiffScalar<T>(T oldVal, T newVal) =>
         EqualityComparer<T>.Default.Equals(oldVal, newVal)
             ? null

@@ -22,6 +22,11 @@ public class Config
     public int SongHistoryWorkerBatchSize { get; set; } = 50;
 
     /// <summary>
+    ///     How many songs without a <c>created</c> history baseline get one recorded per song history worker cycle.
+    /// </summary>
+    public int SongHistoryBaselineBatchSize { get; set; } = 50;
+
+    /// <summary>
     ///     How many songs a single user can import at the same time, across all requests (uploads, sync, purchases...).
     /// </summary>
     public int MaxConcurrentImportsPerUser { get; set; } = 16;
