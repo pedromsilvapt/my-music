@@ -131,6 +131,18 @@ public class SongHistoryDiffServiceSpecs
     }
 
     [Fact]
+    public void ComputeDiff_OnlyPlayCountChanged_ReturnsNoPlayCountChange()
+    {
+        var fixedTime = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var oldSnapshot = BuildSnapshot(playCount: 5, createdAt: fixedTime, modifiedAt: fixedTime);
+        var newSnapshot = BuildSnapshot(playCount: 6, createdAt: fixedTime, modifiedAt: fixedTime);
+
+        var delta = _service.ComputeDiff(oldSnapshot, newSnapshot);
+
+        delta.PlayCount.ShouldBeNull();
+    }
+
+    [Fact]
     public void ComputeDiff_MultipleScalarChanges_ReturnsOnlyChangedFields()
     {
         var oldSnapshot = BuildSnapshot(title: "Old", year: 2020, lyrics: "old");
@@ -382,7 +394,7 @@ public class SongHistoryDiffServiceSpecs
         delta.OwnerId.ShouldNotBeNull();
         delta.Rating.ShouldNotBeNull();
         delta.IsFavorite.ShouldNotBeNull();
-        delta.PlayCount.ShouldNotBeNull();
+        delta.PlayCount.ShouldBeNull();
         delta.RepositoryPath.ShouldNotBeNull();
         delta.Checksum.ShouldNotBeNull();
         delta.ChecksumAlgorithm.ShouldNotBeNull();

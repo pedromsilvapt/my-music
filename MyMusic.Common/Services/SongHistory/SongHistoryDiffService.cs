@@ -27,7 +27,6 @@ public class SongHistoryDiffService : ISongHistoryDiffService
             OwnerId = DiffScalar(oldSnapshot.OwnerId, newSnapshot.OwnerId),
             Rating = DiffScalar(oldSnapshot.Rating, newSnapshot.Rating),
             IsFavorite = DiffScalar(oldSnapshot.IsFavorite, newSnapshot.IsFavorite),
-            PlayCount = DiffScalar(oldSnapshot.PlayCount, newSnapshot.PlayCount),
             RepositoryPath = DiffScalar(oldSnapshot.RepositoryPath, newSnapshot.RepositoryPath),
             Checksum = DiffScalar(oldSnapshot.Checksum, newSnapshot.Checksum),
             ChecksumAlgorithm = DiffScalar(oldSnapshot.ChecksumAlgorithm, newSnapshot.ChecksumAlgorithm),

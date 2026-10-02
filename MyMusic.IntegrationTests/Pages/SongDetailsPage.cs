@@ -207,6 +207,17 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
     }
 
     /// <summary>
+    /// Waits until no history is pending anymore, then asserts the versions menu lists exactly
+    /// <paramref name="count"/> versions. Unlike <see cref="WaitForVersionsCountAsync"/>, a change still
+    /// queued when the page loads is given the chance to show up before the count is checked.
+    /// </summary>
+    public async Task ShouldHaveSettledVersionsCountAsync(int count)
+    {
+        await Assertions.Expect(VersionsPendingIndicator).ToBeHiddenAsync(new() { Timeout = 45000 });
+        await Assertions.Expect(Root.GetByTestId("song-versions-trigger")).ToHaveTextAsync($"({count} versions)");
+    }
+
+    /// <summary>
     /// The currently open version modal (see <see cref="OpenVersionAsync"/>).
     /// </summary>
     public SongVersionModalComponent VersionModal => new(Page.GetByRole(AriaRole.Dialog));

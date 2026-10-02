@@ -66,6 +66,25 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
     }
 
     [Fact]
+    public async Task PlaySong_ShouldNotRecordNewVersion()
+    {
+        // Setup: seed a song whose initial (upload) version has already been recorded
+        var song = await _songs.SeedAsync(RequestContext, UserId, SongsFixture.DefaultSongs[1] with { VersionsCount = 1 });
+
+        // Action: play the song through to the end — should count as a play, bumping its play count
+        var footerPlayer = await new PlaySongFlow(song.Title).ExecuteAsync(Page);
+        await footerPlayer.PlayAsync();
+        await footerPlayer.WaitForPlaybackToEndAsync();
+
+        // Assert: the play was recorded in the listening history
+        await new ShouldSongExistInPlayHistoryFlow(song.Title).ExecuteAsync(Page);
+
+        // Assert: a play count change is not an edit, so the song should still have only its initial version
+        var songDetails = await footerPlayer.GoToDetailsAsync();
+        await songDetails.ShouldHaveSettledVersionsCountAsync(1);
+    }
+
+    [Fact]
     public async Task VersionModal_ShouldNavigateBetweenRevisions()
     {
         // Setup: seed a song with three recorded versions
