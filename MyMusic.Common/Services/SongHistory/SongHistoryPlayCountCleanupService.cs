@@ -27,7 +27,7 @@ public class SongHistoryPlayCountCleanupService(
     {
         // New revisions never carry play_count, so only legacy ones match; songs whose play_count changes were mixed
         // with real ones keep matching, hence paging by song id instead of looping until nothing matches
-        var songIds = await RevisionsMentioningPlayCount()
+        var songIds = await RevisionsMentioningPlayCount(db)
             .Where(h => h.Action == SongHistoryEntity.UpdatedAction && h.SongId > afterSongId)
             .Select(h => h.SongId)
             .Distinct()
@@ -76,18 +76,56 @@ public class SongHistoryPlayCountCleanupService(
     /// <summary>
     /// The diff column holds serialized JSON behind a value converter, so the text match is done in SQL.
     /// </summary>
-    private IQueryable<SongHistoryEntity> RevisionsMentioningPlayCount()
+    internal static IQueryable<SongHistoryEntity> RevisionsMentioningPlayCount(MusicDbContext db)
+    {
+        var (tableName, diffColumn) = DiffColumn(db);
+
+        return db.SongHistories.FromSqlRaw($"SELECT * FROM {tableName} WHERE {diffColumn} LIKE {{0}}",
+            PlayCountPattern);
+    }
+
+    /// <summary>
+    /// The revisions <see cref="IsPlayCountOnly"/> holds for, matched in SQL so they can be counted without loading
+    /// their diffs: an <c>updated</c> revision whose diff has a <c>play_count</c> change and no other non-null field
+    /// besides <c>action</c>.
+    /// </summary>
+    internal static IQueryable<SongHistoryEntity> PlayCountOnlyRevisions(MusicDbContext db)
+    {
+        var (tableName, diffColumn) = DiffColumn(db);
+        var diff = $"{tableName}.{diffColumn}";
+
+        var isPlayCountOnly = db.Database.IsNpgsql()
+            ? $"""
+               jsonb_typeof({diff}::jsonb -> 'play_count') = 'object'
+               AND coalesce({diff}::jsonb ->> 'action', '{SongHistoryEntity.UpdatedAction}') = '{SongHistoryEntity.UpdatedAction}'
+               AND NOT EXISTS (SELECT 1 FROM jsonb_each({diff}::jsonb) AS field
+                               WHERE field.key NOT IN ('action', 'play_count') AND jsonb_typeof(field.value) <> 'null')
+               """
+            : $"""
+               json_type({diff}, '$.play_count') = 'object'
+               AND coalesce(json_extract({diff}, '$.action'), '{SongHistoryEntity.UpdatedAction}') = '{SongHistoryEntity.UpdatedAction}'
+               AND NOT EXISTS (SELECT 1 FROM json_each({diff}) AS field
+                               WHERE field.key NOT IN ('action', 'play_count') AND field.type <> 'null')
+               """;
+
+        // The CASE keeps the JSON parsing to the rows the text match already narrowed down
+        return db.SongHistories
+            .FromSqlRaw(
+                $"SELECT * FROM {tableName} WHERE CASE WHEN {diff} LIKE {{0}} THEN ({isPlayCountOnly}) ELSE FALSE END",
+                PlayCountPattern)
+            .Where(h => h.Action == SongHistoryEntity.UpdatedAction);
+    }
+
+    private const string PlayCountPattern = "%\"play_count\"%";
+
+    private static (string tableName, string diffColumn) DiffColumn(MusicDbContext db)
     {
         var entityType = db.Model.FindEntityType(typeof(SongHistoryEntity))!;
         var table = StoreObjectIdentifier.Table(entityType.GetTableName()!, entityType.GetSchema());
         var sql = db.GetService<ISqlGenerationHelper>();
 
-        var tableName = sql.DelimitIdentifier(table.Name, table.Schema);
-        var diffColumn = sql.DelimitIdentifier(
-            entityType.FindProperty(nameof(SongHistoryEntity.Diff))!.GetColumnName(table)!);
-
-        return db.SongHistories.FromSqlRaw($"SELECT * FROM {tableName} WHERE {diffColumn} LIKE {{0}}",
-            "%\"play_count\"%");
+        return (sql.DelimitIdentifier(table.Name, table.Schema),
+            sql.DelimitIdentifier(entityType.FindProperty(nameof(SongHistoryEntity.Diff))!.GetColumnName(table)!));
     }
 
     private async Task<int> CleanupSongAsync(long songId, CancellationToken cancellationToken)

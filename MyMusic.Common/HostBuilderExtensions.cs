@@ -30,6 +30,8 @@ public static class HostBuilderExtensions
         builder.Services.AddBackgroundJob<PurchasesQueue>();
         builder.Services.AddBackgroundJob<MetadataFetchQueue>();
         builder.Services.AddHostedBackgroundJob<SongHistoryWorker>();
+        builder.Services.AddBackgroundJob<SongHistoryBaselineBackfillJob>();
+        builder.Services.AddBackgroundJob<SongHistoryPlayCountCleanupJob>();
         builder.Services.AddHostedBackgroundJob<WishlistBackgroundService>();
         builder.Services.AddHostedBackgroundJob<BitrateBackfillService>();
         builder.Services.AddHostedBackgroundJob<MetadataFetchCleanupService>();

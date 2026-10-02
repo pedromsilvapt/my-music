@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MyMusic.Common.Entities;
 using MyMusic.Common.Services.SongHistory.Models;
 using SongHistoryEntity = MyMusic.Common.Entities.SongHistory;
 
@@ -23,11 +24,7 @@ public class SongHistoryBaselineBackfillService(
     public async Task<(int candidates, int recorded)> BackfillBatchAsync(int batchSize,
         CancellationToken cancellationToken)
     {
-        // Songs whose queue entries were dead-lettered cannot have their history trusted, so they are left alone
-        var songIds = await db.Songs
-            .Where(s => !db.SongHistories.Any(h => h.SongId == s.Id && h.Action == SongHistoryEntity.CreatedAction))
-            .Where(s => !db.SongHistoryQueues.Any(q => q.SongId == s.Id && q.ProcessedAt == null
-                                                       && q.ErrorCount >= SongHistoryWorker.MaxErrorCount))
+        var songIds = await SongsMissingBaseline(db)
             .OrderBy(s => s.Id)
             .Select(s => s.Id)
             .Take(batchSize)
@@ -61,6 +58,16 @@ public class SongHistoryBaselineBackfillService(
 
         return (songIds.Count, recorded);
     }
+
+    /// <summary>
+    /// Songs still missing their <c>created</c> baseline. Songs whose queue entries were dead-lettered cannot have
+    /// their history trusted, so they are left alone.
+    /// </summary>
+    internal static IQueryable<Song> SongsMissingBaseline(MusicDbContext db) =>
+        db.Songs
+            .Where(s => !db.SongHistories.Any(h => h.SongId == s.Id && h.Action == SongHistoryEntity.CreatedAction))
+            .Where(s => !db.SongHistoryQueues.Any(q => q.SongId == s.Id && q.ProcessedAt == null
+                                                       && q.ErrorCount >= SongHistoryWorker.MaxErrorCount));
 
     private async Task<bool> BackfillSongAsync(long songId, CancellationToken cancellationToken)
     {

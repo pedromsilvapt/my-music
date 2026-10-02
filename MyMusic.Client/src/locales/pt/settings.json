@@ -30,6 +30,14 @@
                 "name": "Histórico de músicas",
                 "description": "Regista as alterações feitas às suas músicas. As entradas falhadas deixam de ser repetidas."
             },
+            "song-history-baseline": {
+                "name": "Estado inicial do histórico",
+                "description": "Regista o estado original das músicas adicionadas antes de o histórico o guardar."
+            },
+            "song-history-play-count-cleanup": {
+                "name": "Limpeza de reproduções do histórico",
+                "description": "Remove entradas antigas do histórico que só registavam reproduções. Começa quando o estado inicial do histórico estiver completo."
+            },
             "wishlist": {
                 "name": "Verificação da lista de desejos",
                 "description": "Verifica periodicamente se as pesquisas da lista de desejos têm novos resultados."

@@ -30,6 +30,14 @@
                 "name": "Song history",
                 "description": "Records the changes made to your songs. Failed entries are no longer retried."
             },
+            "song-history-baseline": {
+                "name": "Song history baseline",
+                "description": "Records the original state of songs added before song history kept one."
+            },
+            "song-history-play-count-cleanup": {
+                "name": "Song history play count cleanup",
+                "description": "Removes old history entries that only recorded plays. Starts once the song history baseline is complete."
+            },
             "wishlist": {
                 "name": "Wishlist check",
                 "description": "Periodically checks your wishlist searches for new results."

@@ -33,7 +33,8 @@ namespace MyMusic.Common.Services.SongHistory;
 /// </para>
 /// <para>
 /// Each cycle then records the <c>created</c> baseline of songs still missing one and, once that is complete, removes
-/// the legacy revisions holding nothing but a play count change.
+/// the legacy revisions holding nothing but a play count change. Their progress is reported by
+/// <see cref="SongHistoryBaselineBackfillJob"/> and <see cref="SongHistoryPlayCountCleanupJob"/>.
 /// </para>
 /// </summary>
 public class SongHistoryWorker(

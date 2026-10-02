@@ -114,6 +114,29 @@ internal static class BackgroundJobTestData
         return entry;
     }
 
+    public static Entities.SongHistory CreateSongHistoryRevision(
+        this Scenario scenario,
+        long songId,
+        int revision,
+        SongHistoryDelta diff,
+        string action = Entities.SongHistory.UpdatedAction)
+    {
+        var history = new Entities.SongHistory
+        {
+            SongId = songId,
+            SongRevision = revision,
+            Diff = diff,
+            DiffFormat = "delta",
+            Action = action,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        scenario.DbContext.SongHistories.Add(history);
+        scenario.DbContext.SaveChanges();
+
+        return history;
+    }
+
     public static WishlistItem CreateWishlistItem(
         this Scenario scenario,
         Source source,
