@@ -50,15 +50,25 @@ public class SyncPendingActionsService(
             "CreatePendingActionsForDevice: DeviceId={DeviceId}, Template={NamingTemplate}, Default={DefaultNamingTemplate}",
             deviceId, namingTemplate ?? "(null)", config.Value.DefaultNamingTemplate);
 
+        // A SongDevice is skipped only when the session already has a record at its path. Records of the same
+        // song at other paths must not hide its pending action; a Link at another path turns a pending download
+        // into an Unlink below
         var songDevices = await db.SongDevices
             .IncludeSongMetadata("Song")
             .Where(sd => sd.DeviceId == deviceId
                 && sd.SyncAction != null
                 && sd.SyncAction != SongSyncAction.Upload
-                && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath)
-                && (sd.SongId == null
-                    || !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.SongId == sd.SongId)))
+                && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath))
             .ToListAsync(cancellationToken);
+
+        // Songs linked by checksum to a local file in this session: the device already holds their content
+        var linkedPaths = (await db.DeviceSyncSessionRecords
+                .Where(r => r.SessionId == sessionId && r.Action == SyncRecordAction.Link && r.SongId != null)
+                .OrderBy(r => r.Id)
+                .Select(r => new { SongId = r.SongId!.Value, r.FilePath })
+                .ToListAsync(cancellationToken))
+            .DistinctBy(r => r.SongId)
+            .ToDictionary(r => r.SongId, r => r.FilePath);
 
         var allExistingPaths = await db.SongDevices
             .Where(sd => sd.DeviceId == deviceId)
@@ -80,6 +90,14 @@ public class SyncPendingActionsService(
             }
             else if (sd.SyncAction == SongSyncAction.Download)
             {
+                if (sd.SongId is { } songId && linkedPaths.TryGetValue(songId, out var linkedPath) && linkedPath != sd.DevicePath)
+                {
+                    var unlinkRecord = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.Unlink, sd.DevicePath, sd.SongId,
+                        $"Replaced by linked file '{linkedPath}'");
+                    createdRecords.Add(unlinkRecord);
+                    continue;
+                }
+
                 var (path, previousPath) = pathResolver.ComputePendingActionPath(sd, namingStrategy, usedPaths);
                 usedPaths.Add(path);
 

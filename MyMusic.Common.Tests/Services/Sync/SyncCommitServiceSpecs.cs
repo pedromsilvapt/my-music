@@ -540,6 +540,74 @@ public class SyncCommitServiceSpecs
     }
 
     [Fact]
+    public async Task LinkThenCreateLocal_OfSameSongAtAnotherPath_SyncsBothSongDevices()
+    {
+        // A renamed local copy of the song is linked by checksum, while the song's pending download
+        // at its own path is acknowledged by the device in the same session
+        var ctx = SetupWithSongAndRealMusicService();
+        var downloadedAt = new DateTime(2025, 6, 11, 12, 0, 0, DateTimeKind.Utc);
+        var pending = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/song.mp3", syncAction: SongSyncAction.Download);
+
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song (Explicit).mp3", SyncRecordAction.Link,
+            data: CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, checksum: "abc", algorithm: "XxHash128"), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal,
+            data: CreateLocalUpdateData(ctx.Song.Id, downloadedAt), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // The download clears the pending SongDevice, and the linked copy gets its own SongDevice
+        var downloaded = GetSongDevice(ctx.Db, pending.Id);
+        downloaded.SyncAction.ShouldBeNull();
+        downloaded.LastSyncedModifiedAt.ShouldBe(downloadedAt);
+        var linked = ctx.Db.SongDevices.Single(sd => sd.DeviceId == ctx.Device.Id && sd.DevicePath == "/music/song (Explicit).mp3");
+        linked.SongId.ShouldBe(ctx.Song.Id);
+        linked.SyncAction.ShouldBeNull();
+        linked.LastSyncedModifiedAt.ShouldBe(DefaultModifiedAt);
+    }
+
+    [Fact]
+    public async Task LinkThenUnlink_OfPendingDownloadAtAnotherPath_MovesAssociationToLinkedFile()
+    {
+        // A renamed local copy of the song is linked by checksum, so the pending download at the
+        // template path is unlinked instead of downloaded again
+        var ctx = SetupWithSongAndRealMusicService();
+        var pending = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/song.mp3", syncAction: SongSyncAction.Download);
+
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song (Explicit).mp3", SyncRecordAction.Link,
+            data: CreateSyncData(ctx.Song!.Id, DefaultModifiedAt, checksum: "abc", algorithm: "XxHash128"), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.Unlink, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        // The pending SongDevice is removed and the linked copy is the song's only, synced, SongDevice
+        FindSongDevice(ctx.Db, pending.Id).ShouldBeNull();
+        var linked = ctx.Db.SongDevices.Single(sd => sd.DeviceId == ctx.Device.Id && sd.SongId == ctx.Song.Id);
+        linked.DevicePath.ShouldBe("/music/song (Explicit).mp3");
+        linked.SyncAction.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task CreateLocal_AtNewPath_PrefersPendingSongDeviceOfSameSong()
+    {
+        // The device holds a synced copy of the song and a pending download whose new path differs
+        // from its current DevicePath; the acknowledgement must clear the pending one
+        var ctx = SetupWithSong();
+        var downloadedAt = new DateTime(2025, 6, 11, 12, 0, 0, DateTimeKind.Utc);
+        var synced = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/copy.mp3", lastSyncedModifiedAt: DefaultModifiedAt);
+        var pending = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/old.mp3", syncAction: SongSyncAction.Download);
+        AddSkippedRecord(ctx.Scenario, ctx.Session.Id, "/music/copy.mp3", ctx.Song!.Id);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.CreateLocal,
+            data: CreateLocalUpdateData(ctx.Song!.Id, downloadedAt), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var updated = GetSongDevice(ctx.Db, pending.Id);
+        updated.SyncAction.ShouldBeNull();
+        updated.LastSyncedModifiedAt.ShouldBe(downloadedAt);
+        GetSongDevice(ctx.Db, synced.Id).LastSyncedModifiedAt.ShouldBe(DefaultModifiedAt);
+    }
+
+    [Fact]
     public async Task Link_FileModifiedAtOlderThanLastSynced_DoesNotRollBack()
     {
         // FileModifiedAt is older than the device's LastSyncedModifiedAt, meaning the
@@ -745,6 +813,22 @@ public class SyncCommitServiceSpecs
         await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
 
         GetSongDevice(ctx.Db, sd.Id).LastSyncedModifiedAt.ShouldBe(newTimestamp);
+    }
+
+    [Fact]
+    public async Task UpdateTimestamp_WithTwoSongDevicesOfSameSong_UpdatesTheOneAtRecordPath()
+    {
+        var ctx = SetupWithSong(direction: SyncDirection.Down);
+        var other = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/other.mp3", lastSyncedModifiedAt: DefaultModifiedAt);
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/song.mp3");
+        var newTimestamp = new DateTime(2025, 7, 1, 12, 0, 0, DateTimeKind.Utc);
+        var data = CreateUpdateTimestampData(ctx.Song!.Id, newTimestamp);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/song.mp3", SyncRecordAction.UpdateTimestamp, data: data, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        GetSongDevice(ctx.Db, sd.Id).LastSyncedModifiedAt.ShouldBe(newTimestamp);
+        GetSongDevice(ctx.Db, other.Id).LastSyncedModifiedAt.ShouldBe(DefaultModifiedAt);
     }
 
     [Fact]

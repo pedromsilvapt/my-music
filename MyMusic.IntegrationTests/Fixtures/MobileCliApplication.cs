@@ -141,6 +141,13 @@ public class MobileCliApplication : ISyncApplication
         File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
     }
 
+    public void MoveLocalFile(string fromRelativePath, string toRelativePath)
+    {
+        var toPath = GetSongPath(toRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
+        File.Move(GetSongPath(fromRelativePath), toPath);
+    }
+
     public async Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options)
     {
         var filePath = GetSongPath(fileName);

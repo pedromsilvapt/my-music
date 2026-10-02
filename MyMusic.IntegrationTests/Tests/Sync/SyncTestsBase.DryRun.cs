@@ -213,9 +213,44 @@ public abstract partial class SyncTestsBase
         await ServerSongs.SeedAsync(RequestContext, UserId,
             [SongsFixture.DefaultSongs[5] with { DeviceIds = [App.DeviceId] }]);
 
+        // The local file should be linked to the server song, and the song's pending download at its
+        // template path unlinked, since the device already holds its content.
         // The counters should be the same with or without dry run
         var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
-        dryResult.ShouldBe(link: 1, skipped: 2);
+        dryResult.ShouldBe(link: 1, unlink: 1, skipped: 2);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Sync_DryRun_RenamedLocalCopyOfPendingDownload_ShouldLinkAndUnlinkOldPath(bool dryRun)
+    {
+        // Seed a song on the server assigned to this device, and sync it down
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[5] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Rename the local file, so it no longer sits at the song's Device Path
+        var originalPath = "Dove Cameron/Sand/Sand - Dove Cameron.mp3";
+        var renamedPath = "Dove Cameron/Sand/Sand (Explicit) - Dove Cameron.mp3";
+        App.MoveLocalFile(originalPath, renamedPath);
+
+        // Edit the song on the server without changing its path, so it becomes pending download
+        await new EditSongFlow("Sand", new(Year: 2020)).ExecuteAsync(Page);
+
+        // Link and unlink signifies the file was manually moved, and the old file path no longer exists
+        // Update Local is because the new file was matched to an older checksum of the song, not to the latest
+        var result2 = await App.SyncAsync(new SyncOptions { DryRun = dryRun });
+        result2.ShouldBe(link: 1, updateLocal: 1, unlink: 1);
+
+        // The song should only exist at the renamed path
+        App.FileShouldNotExist(originalPath);
+        App.FileShouldExist(renamedPath);
+
+        // Expect the year to be updated locally in a real run, to saty the same in a dry run
+        var expectedYear = dryRun ? 2023 : 2020;
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(renamedPath), year: expectedYear);
     }
 
     [Theory]

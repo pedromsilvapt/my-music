@@ -194,6 +194,107 @@ public class SyncPendingActionsServiceSpecs
     }
 
     [Fact]
+    public async Task CreateAsync_DownloadNeverSynced_LinkedAtAnotherPath_CreatesUnlinkRecord()
+    {
+        // Arrange - a local copy of the song was linked by checksum at another path, so the pending
+        // download at the SongDevice's path is redundant
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Download);
+        scenario.AddRecord(session.Id, "Song (Explicit).mp3", SyncRecordAction.Link, songId: song.Id, acknowledged: true);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.Count.ShouldBe(1);
+        result.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        result.Records[0].FilePath.ShouldBe(expectedPath);
+        result.Records[0].SongId.ShouldBe(song.Id);
+        result.Records[0].Reason!.ShouldContain("Song (Explicit).mp3");
+    }
+
+    [Fact]
+    public async Task CreateAsync_DownloadPreviouslySynced_LinkedAtAnotherPath_CreatesUnlinkRecord()
+    {
+        // Arrange - the SongDevice was synced before, but its file was replaced by a linked copy at another path
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var songDevice = scenario.CreateSongDevice(device, song, "OldPath.mp3", syncAction: SongSyncAction.Download);
+        songDevice.LastSyncedModifiedAt = DateTime.UtcNow;
+        scenario.DbContext.SaveChanges();
+        scenario.AddRecord(session.Id, "Song (Explicit).mp3", SyncRecordAction.Link, songId: song.Id, acknowledged: true);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.Count.ShouldBe(1);
+        result.Records[0].Action.ShouldBe(SyncRecordAction.Unlink);
+        result.Records[0].FilePath.ShouldBe("OldPath.mp3");
+        result.Records[0].SongId.ShouldBe(song.Id);
+        result.Records[0].Reason!.ShouldContain("Song (Explicit).mp3");
+    }
+
+    [Theory]
+    [InlineData(SyncRecordAction.CreateRemote)]
+    [InlineData(SyncRecordAction.Skipped)]
+    [InlineData(SyncRecordAction.UpdateLocal)]
+    public async Task CreateAsync_RecordForSameSongAtAnotherPath_StillCreatesDownloadRecord(SyncRecordAction otherAction)
+    {
+        // Arrange - another local file with the same song (e.g. an older version replaced by an UpdateLocal)
+        // must not hide the pending download of the SongDevice at its own path
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Download);
+        scenario.AddRecord(session.Id, "Song (Explicit).mp3", otherAction, songId: song.Id, acknowledged: true);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.Count.ShouldBe(1);
+        result.Records[0].Action.ShouldBe(SyncRecordAction.CreateLocal);
+        result.Records[0].FilePath.ShouldBe(expectedPath);
+        result.Records[0].SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RecordAtSongDevicePath_CreatesNoRecords()
+    {
+        // Arrange - the check phase already handled the SongDevice's path
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, expectedPath, syncAction: SongSyncAction.Download);
+        scenario.AddRecord(session.Id, expectedPath, SyncRecordAction.Skipped, songId: song.Id, acknowledged: true);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task CreateAsync_UploadSyncAction_CreatesNoRecords()
     {
         // Arrange

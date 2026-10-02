@@ -473,7 +473,9 @@ public class SyncCommitService(
             return;
 
         var songDevice = await db.SongDevices
-            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == songId, cancellationToken);
+                             .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == songId && sd.DevicePath == record.FilePath, cancellationToken)
+                         ?? await db.SongDevices
+                             .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.SongId == songId, cancellationToken);
         if (songDevice != null)
         {
             songDevice.LastSyncedModifiedAt = newTimestamp.ToUniversalTime();
@@ -613,16 +615,27 @@ public class SyncCommitService(
             return tracked;
 
         var songId = dataSongId ?? record.SongId;
+
+        // A device can hold several SongDevices of the same song (e.g. a renamed copy linked by checksum),
+        // so the record's path wins over its song
+        var byPath = await db.SongDevices
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == record.FilePath, cancellationToken);
+        if (byPath != null && (byPath.SongId == songId || songId is null or <= 0))
+            return byPath;
+
         if (songId.HasValue && songId.Value > 0)
         {
+            // Server-to-device records may target a newly computed path: prefer the SongDevice with a pending action
             var sd = await db.SongDevices
-                .FirstOrDefaultAsync(sd2 => sd2.DeviceId == deviceId && sd2.SongId == songId, cancellationToken);
+                .Where(sd2 => sd2.DeviceId == deviceId && sd2.SongId == songId)
+                .OrderBy(sd2 => sd2.SyncAction == null)
+                .ThenBy(sd2 => sd2.Id)
+                .FirstOrDefaultAsync(cancellationToken);
             if (sd != null)
                 return sd;
         }
 
-        return await db.SongDevices
-            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == record.FilePath, cancellationToken);
+        return byPath;
     }
 
     /// <summary>

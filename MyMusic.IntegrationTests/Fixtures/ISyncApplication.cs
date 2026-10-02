@@ -25,6 +25,9 @@ public interface ISyncApplication : IAsyncDisposable
 
     /// <summary>Bumps a local file's modification time without changing its content.</summary>
     void TouchLocalFile(string relativePath);
+
+    /// <summary>Moves a local file to another path on the device, keeping its content.</summary>
+    void MoveLocalFile(string fromRelativePath, string toRelativePath);
     List<string> GetAllFiles();
     void FileShouldExist(string relativePath, string? message = null);
     void FilesShouldExist(IEnumerable<string> relativePaths, string? message = null);

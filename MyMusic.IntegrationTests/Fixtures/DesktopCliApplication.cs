@@ -80,6 +80,13 @@ public class DesktopCliApplication : ISyncApplication
     public void TouchLocalFile(string relativePath)
         => File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
 
+    public void MoveLocalFile(string fromRelativePath, string toRelativePath)
+    {
+        var toPath = GetSongPath(toRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
+        File.Move(GetSongPath(fromRelativePath), toPath);
+    }
+
     public List<string> GetAllFiles()
         => _fixture.GetAllFiles();
 
