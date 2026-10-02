@@ -27,6 +27,11 @@ public class Config
     public int SongHistoryBaselineBatchSize { get; set; } = 50;
 
     /// <summary>
+    ///     How many songs get their play count only history revisions removed per song history worker cycle.
+    /// </summary>
+    public int SongHistoryPlayCountCleanupBatchSize { get; set; } = 50;
+
+    /// <summary>
     ///     How many songs a single user can import at the same time, across all requests (uploads, sync, purchases...).
     /// </summary>
     public int MaxConcurrentImportsPerUser { get; set; } = 16;

@@ -29,6 +29,10 @@ namespace MyMusic.Common.Services.SongHistory;
 /// and never retried. The <c>songs</c> BEFORE DELETE trigger blocks deletion
 /// of a song that still has dead-lettered queue entries.
 /// </para>
+/// <para>
+/// Each cycle then records the <c>created</c> baseline of songs still missing one and, once that is complete, removes
+/// the legacy revisions holding nothing but a play count change.
+/// </para>
 /// </summary>
 public class SongHistoryWorker(
     IServiceScopeFactory serviceScopeFactory,
@@ -48,6 +52,16 @@ public class SongHistoryWorker(
     /// queue, so the backfill does not need to scan the songs again until the next restart.
     /// </summary>
     private bool _baselineBackfillComplete;
+
+    /// <summary>
+    /// Set once every song's history was cleared of its play count revisions; new ones are never recorded.
+    /// </summary>
+    private bool _playCountCleanupComplete;
+
+    /// <summary>
+    /// The id of the last song whose play count revisions were cleaned up.
+    /// </summary>
+    private long _playCountCleanupCursor;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -82,6 +96,14 @@ public class SongHistoryWorker(
                     var backfillService = scope.ServiceProvider
                         .GetRequiredService<ISongHistoryBaselineBackfillService>();
                     await BackfillBaselinesAsync(backfillService, stoppingToken);
+                }
+
+                // The baseline backfill reverts every revision, play count ones included, so they stay until it is done
+                if (_baselineBackfillComplete && !_playCountCleanupComplete)
+                {
+                    var cleanupService = scope.ServiceProvider
+                        .GetRequiredService<ISongHistoryPlayCountCleanupService>();
+                    await CleanupPlayCountRevisionsAsync(cleanupService, stoppingToken);
                 }
             }
             catch (OperationCanceledException)
@@ -132,6 +154,38 @@ public class SongHistoryWorker(
         {
             logger.LogInformation("Song history baseline backfill: recorded {Recorded} of {Candidates} songs",
                 recorded, candidates);
+        }
+    }
+
+    private async Task CleanupPlayCountRevisionsAsync(
+        ISongHistoryPlayCountCleanupService cleanupService,
+        CancellationToken cancellationToken)
+    {
+        var batchSize = config.Value.SongHistoryPlayCountCleanupBatchSize;
+        if (batchSize <= 0)
+        {
+            batchSize = 50;
+        }
+
+        using var activity = ActivitySource.StartActivity("SongHistoryWorker.CleanupPlayCountRevisions");
+
+        var (songs, removed, nextSongId) = await cleanupService.CleanupBatchAsync(_playCountCleanupCursor,
+            batchSize, cancellationToken);
+
+        activity?.SetTag("cleanup.songs", songs);
+        activity?.SetTag("cleanup.removed", removed);
+
+        if (nextSongId is { } songId)
+        {
+            _playCountCleanupCursor = songId;
+            logger.LogInformation(
+                "Song history play count cleanup: removed {Removed} revisions from {Songs} songs (up to song {SongId})",
+                removed, songs, songId);
+        }
+        else
+        {
+            _playCountCleanupComplete = true;
+            logger.LogInformation("Song history play count cleanup complete");
         }
     }
 
