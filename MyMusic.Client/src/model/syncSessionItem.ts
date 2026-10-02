@@ -14,6 +14,7 @@ export interface SyncSessionItem {
   completedAt?: string | null;
   status: SyncSessionStatus;
   isDryRun: boolean;
+  deduplicate?: boolean;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   createRemoteCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */

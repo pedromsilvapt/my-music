@@ -12,6 +12,7 @@ export interface SyncStartRequest {
   direction?: null | SyncDirection;
   /** @nullable */
   repositoryPath?: string | null;
+  deduplicate?: boolean;
   /** @nullable */
   scanErrors?: SyncScanErrorItem[] | null;
 }
