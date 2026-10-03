@@ -45,6 +45,38 @@ This allows CLI operations to be correlated with the parent trace in the observa
 
 If the OTLP endpoint is unavailable, the CLI continues operating normally without any telemetry export.
 
+## Native AOT
+
+The CLI ships as a Native AOT binary (~15x faster startup than the JIT build). `dotnet build`, `dotnet run` and the
+integration tests' default `bin/Debug/net10.0/my-music` stay JIT; only `dotnet publish` compiles to native code (needs
+`clang` and `zlib1g-dev`, both in the dev container).
+
+```bash
+# Native AOT (default)
+dotnet publish MyMusic.CLI -c Release -r linux-x64 -o /tmp/cli-aot
+
+# Run integration tests against a published binary
+CLI_PATH=/tmp/cli-aot/my-music dotnet test MyMusic.IntegrationTests --filter "FullyQualifiedName~DesktopSyncTests"
+```
+
+The Earthfile has two build targets: `+build-aot` (default) and `+build-jit` (self-contained single-file, for distros
+older than the build image's glibc 2.39). Choose which one to package with `--variant`:
+`earth ./MyMusic.CLI+package --variant=jit`.
+
+Rules to keep the AOT build working:
+
+- **JSON goes through source-generated contexts.** Reflection-based `System.Text.Json` is disabled
+  (`JsonSerializerIsReflectionEnabledByDefault=false`), even in JIT builds, so a missing type fails loudly.
+  - New request/response types of `IMyMusicClient` go in `Api/CliJsonContext.cs` (`CliJsonContextTests` fails otherwise).
+  - Types parsed from sync record `Data` go in `Services/Sync/SyncDataJsonContext.cs`.
+  - For ad-hoc JSON, use `JsonDocument` / `System.Text.Json.Nodes` instead of `JsonSerializer` with `object`/dictionaries.
+- **Trim/AOT analyzer warnings are errors** in `dotnet build` (`IL2026`, `IL2067`, `IL3050`). Don't suppress them without a
+  justification that explains why the code is safe.
+- **Spectre.Console.Cli is not AOT-annotated**; it discovers commands and settings via reflection, so the `my-music` and
+  `Spectre.Console.Cli` assemblies are rooted (`TrimmerRootAssembly`) in the csproj.
+- `dotnet publish` still reports `IL2104`/`IL3053` (and a few `IL2026`/`IL3000`) from inside Refit and Spectre. These
+  are expected. Any warning pointing at MyMusic.CLI code is not.
+
 ## Other Development Topics
 
 Development documentation for other MyMusic.CLI topics will be added here as the project evolves.

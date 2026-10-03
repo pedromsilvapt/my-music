@@ -588,24 +588,22 @@ public class SyncActionsDevice(
 
 public record ResolveConflictsActionResult(List<SyncRecordItem> Records, SyncActionCounts Counts);
 
-file record ConflictCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt);
-file record UpdateLocalCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, DateTime LastSyncedAt);
+internal record ConflictCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt);
+internal record UpdateLocalCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, DateTime LastSyncedAt);
 
-file static class SyncDataDeserialization
+internal static class SyncDataDeserialization
 {
-    private static readonly JsonSerializerOptions Options = new() { PropertyNameCaseInsensitive = true };
-
     internal static ConflictCheckData? DeserializeConflictCheckData(System.Text.Json.JsonElement? data)
     {
         if (!data.HasValue || data.Value.ValueKind == System.Text.Json.JsonValueKind.Null) return null;
-        try { return JsonSerializer.Deserialize<ConflictCheckData>(data.Value, Options); }
+        try { return data.Value.Deserialize(SyncDataJsonContext.Default.ConflictCheckData); }
         catch { return null; }
     }
 
     internal static UpdateLocalCheckData? DeserializeUpdateLocalCheckData(System.Text.Json.JsonElement? data)
     {
         if (!data.HasValue || data.Value.ValueKind == System.Text.Json.JsonValueKind.Null) return null;
-        try { return JsonSerializer.Deserialize<UpdateLocalCheckData>(data.Value, Options); }
+        try { return data.Value.Deserialize(SyncDataJsonContext.Default.UpdateLocalCheckData); }
         catch { return null; }
     }
 }

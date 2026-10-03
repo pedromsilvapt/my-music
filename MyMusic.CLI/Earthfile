@@ -17,10 +17,8 @@ install:
         RUN dotnet restore ./$proj/$proj.csproj
     END
 
-build:
+sources:
     FROM +install
-
-    ARG configuration='Release'
 
     FOR proj IN $projects
         RUN mkdir -p ./$proj/
@@ -28,10 +26,37 @@ build:
         COPY . ./$proj/
     END
 
+# Native AOT (default): ~15x faster startup and a third of the size. The binary links against this image's glibc
+# (Ubuntu 24.04, 2.39), so it won't run on older distros (e.g. Debian 12); use +build-jit for those
+build-aot:
+    FROM +sources
+
+    RUN apt-get update && apt-get install -y --no-install-recommends clang zlib1g-dev && \
+        rm -rf /var/lib/apt/lists/*
+
+    ARG configuration='Release'
+
+    RUN dotnet publish ./MyMusic.CLI \
+        --configuration $configuration \
+        -r linux-x64 \
+        -o publish
+
+    # Debug symbols are split into my-music.dbg (~35 MB); keep them out of the package
+    RUN rm -f publish/*.dbg
+
+    SAVE ARTIFACT publish publish
+
+# Self-contained JIT build (single-file + ReadyToRun): slower startup, but runs on any distro .NET supports
+build-jit:
+    FROM +sources
+
+    ARG configuration='Release'
+
     RUN dotnet publish ./MyMusic.CLI \
         --configuration $configuration \
         -r linux-x64 \
         --self-contained true \
+        -p:PublishAot=false \
         -p:PublishSingleFile=true \
         -p:EnableCompressionInSingleFile=true \
         -p:PublishReadyToRun=true \
@@ -41,6 +66,9 @@ build:
     SAVE ARTIFACT publish publish
 
 package:
+    # Which build to package: aot or jit
+    ARG variant='aot'
+
     RUN apt-get update && apt-get install -y ruby ruby-dev build-essential && \
         rm -rf /var/lib/apt/lists/*
 
@@ -49,7 +77,13 @@ package:
     RUN mkdir -p /app/.pkgroot/usr/local/bin /app/.pkgroot/usr/share/my-music
 
     # Copy the application files
-    COPY +build/publish /app/.pkgroot/usr/share/my-music
+    IF [ "$variant" = "jit" ]
+        COPY +build-jit/publish /app/.pkgroot/usr/share/my-music
+    ELSE IF [ "$variant" = "aot" ]
+        COPY +build-aot/publish /app/.pkgroot/usr/share/my-music
+    ELSE
+        RUN echo "Unknown variant '$variant' (expected aot or jit)" && false
+    END
     RUN chmod 755 /app/.pkgroot/usr/share/my-music/my-music
 
     # Create the binary link
@@ -71,7 +105,9 @@ package:
 package-test:
     FROM debian:13
 
-    COPY +package/* .
+    ARG variant='aot'
+
+    COPY (+package/* --variant=$variant) .
 
     RUN dpkg -i my-music-cli_${VERSION}_amd64.deb
 

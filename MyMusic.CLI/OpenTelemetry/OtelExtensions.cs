@@ -19,10 +19,10 @@ public static class OtelExtensions
         OtelConfig config,
         params string[] sourceNames)
     {
+        // Diverges from MyMusic.OpenTelemetry: ASP.NET Core and EF Core instrumentation never fire in the CLI, and the
+        // EF Core one is not trim-compatible (Native AOT)
         return tracingBuilder
             .AddHttpClientInstrumentation()
-            .AddAspNetCoreInstrumentation()
-            .AddEntityFrameworkCoreInstrumentation()
             .AddSource(sourceNames)
             .AddOtlpExporter(options =>
             {

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Diagnostics;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -66,7 +67,7 @@ public class InitCommand : Command<InitCommand.Settings>
         }
     }
 
-    private static ExistingConfig? ReadExistingConfig(string configPath)
+    internal static ExistingConfig? ReadExistingConfig(string configPath)
     {
         if (!File.Exists(configPath))
         {
@@ -74,7 +75,8 @@ public class InitCommand : Command<InitCommand.Settings>
         }
 
         var existingJson = File.ReadAllText(configPath);
-        var doc = JsonSerializer.Deserialize<JsonElement>(existingJson);
+        using var document = JsonDocument.Parse(existingJson);
+        var doc = document.RootElement;
 
         if (!doc.TryGetProperty("MyMusic", out var myMusic))
         {
@@ -239,7 +241,7 @@ public class InitCommand : Command<InitCommand.Settings>
         return answer;
     }
 
-    private static void WriteConfig(
+    internal static void WriteConfig(
         string configPath,
         string serverUrl,
         string userName,
@@ -248,32 +250,32 @@ public class InitCommand : Command<InitCommand.Settings>
         bool importOnPurchase,
         string repositoryPath)
     {
-        var config = new Dictionary<string, object>
+        var config = new JsonObject
         {
-            ["MyMusic"] = new Dictionary<string, object>
+            ["MyMusic"] = new JsonObject
             {
-                ["Server"] = new Dictionary<string, object>
+                ["Server"] = new JsonObject
                 {
                     ["BaseUrl"] = serverUrl,
                     ["UserName"] = userName,
                 },
-                ["Device"] = new Dictionary<string, object>
+                ["Device"] = new JsonObject
                 {
                     ["Name"] = deviceName,
                     ["Icon"] = DeviceIcons[deviceType],
                     ["ImportOnPurchase"] = importOnPurchase,
                 },
-                ["Repository"] = new Dictionary<string, object>
+                ["Repository"] = new JsonObject
                 {
                     ["Path"] = repositoryPath,
-                    ["ExcludePatterns"] = new[] { "**/.*", "**/Thumbs.db", "**/*.tmp", "**/desktop.ini" },
-                    ["MusicExtensions"] = new[] { ".mp3" },
+                    ["ExcludePatterns"] = new JsonArray("**/.*", "**/Thumbs.db", "**/*.tmp", "**/desktop.ini"),
+                    ["MusicExtensions"] = new JsonArray(".mp3"),
                 },
-                ["Sync"] = new Dictionary<string, object>
+                ["Sync"] = new JsonObject
                 {
                     ["ChunkSize"] = 50,
                 },
-                ["Logging"] = new Dictionary<string, object>
+                ["Logging"] = new JsonObject
                 {
                     ["EnableFileLogging"] = false,
                     ["FilePath"] = "mymusic-cli.log",
@@ -281,7 +283,7 @@ public class InitCommand : Command<InitCommand.Settings>
             },
         };
 
-        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions
+        var json = config.ToJsonString(new JsonSerializerOptions
         {
             WriteIndented = true,
         });
@@ -292,7 +294,7 @@ public class InitCommand : Command<InitCommand.Settings>
         AnsiConsole.MarkupLine($"[green]Configuration saved to:[/] [cyan]{configPath}[/]");
     }
 
-    private record ExistingConfig(
+    internal record ExistingConfig(
         string? ServerUrl,
         string? UserName,
         string? DeviceName,

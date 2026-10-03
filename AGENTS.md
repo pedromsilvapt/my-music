@@ -52,6 +52,8 @@ dotnet run --project MyMusic.Common.Tests
 - Run with: `dotnet test MyMusic.IntegrationTests` or filter by name: `dotnet test --filter "FullyQualifiedName~TestName"`
 - The default configured RunSettings file is `MyMusic.IntegrationTests/.runsettings`
 - **IMPORTANT** You can run all unit tests, and you can run specific integration tests, but never run all tests (or all integration tests).
+- When asked to run many (>10) integration tests (e.g. "run the desktop sync tests"), publish the CLI as Native AOT once and point the tests at it, since it starts ~15x faster:
+  `dotnet publish MyMusic.CLI -c Release -r linux-x64 -o /tmp/cli-aot`, then `CLI_PATH=/tmp/cli-aot/my-music dotnet test MyMusic.IntegrationTests --filter "..."`
 
 ### Containerized Integration Tests (CI Debugging)
 

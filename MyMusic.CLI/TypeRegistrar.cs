@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
 
@@ -21,6 +22,8 @@ public class TypeRegistrar : ITypeRegistrar
 
     public ITypeResolver Build() => new TypeResolver(_provider ?? _services.BuildServiceProvider());
 
+    [UnconditionalSuppressMessage("Trimming", "IL2067",
+        Justification = "Spectre registers command/settings types from rooted assemblies (my-music, Spectre.Console.Cli).")]
     public void Register(Type service, Type implementation)
     {
         _services.AddSingleton(service, implementation);

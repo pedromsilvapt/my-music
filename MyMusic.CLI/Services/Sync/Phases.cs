@@ -549,13 +549,13 @@ public class Phases(
         };
     }
 
-    private static SyncCheckCreateUpdateData? DeserializeCheckCreateUpdateData(System.Text.Json.JsonElement? data)
+    internal static SyncCheckCreateUpdateData? DeserializeCheckCreateUpdateData(System.Text.Json.JsonElement? data)
     {
         if (!data.HasValue || data.Value.ValueKind == System.Text.Json.JsonValueKind.Null)
             return null;
         try
         {
-            return System.Text.Json.JsonSerializer.Deserialize<SyncCheckCreateUpdateData>(data.Value, RenameDataOptions);
+            return data.Value.Deserialize(SyncDataJsonContext.Default.SyncCheckCreateUpdateData);
         }
         catch
         {
@@ -570,11 +570,6 @@ public class Phases(
         public string? Reason { get; init; }
     }
 
-    private static readonly JsonSerializerOptions RenameDataOptions = new()
-    {
-        PropertyNameCaseInsensitive = true,
-    };
-
     /// <summary>
     /// The device path an <c>UpdateLocal</c> copies its content from, instead of downloading it (soundalikes of
     /// files uploaded in the same session).
@@ -586,13 +581,13 @@ public class Phases(
             ? value.GetString()
             : null;
 
-    private static RenameData? DeserializeRenameData(JsonElement? data)
+    internal static RenameData? DeserializeRenameData(JsonElement? data)
     {
         if (!data.HasValue || data.Value.ValueKind == JsonValueKind.Null)
             return null;
         try
         {
-            return JsonSerializer.Deserialize<RenameData>(data.Value, RenameDataOptions);
+            return data.Value.Deserialize(SyncDataJsonContext.Default.RenameData);
         }
         catch
         {

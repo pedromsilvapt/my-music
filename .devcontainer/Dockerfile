@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
     libgbm1 \
     libxkbcommon0 \
     libasound2t64 \
+    clang \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY certs/ /tmp/certs/

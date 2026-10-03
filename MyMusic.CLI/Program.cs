@@ -1,7 +1,6 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -50,7 +49,7 @@ using var rootActivity = CliActivitySource.Instance.StartActivity(
     activityKind,
     parentContext ?? default);
 
-var app = new CommandApp(new TypeRegistrar(services, provider));
+var app = CreateApp(new TypeRegistrar(services, provider));
 
 app.Configure(config =>
 {
@@ -101,6 +100,10 @@ static LogLevel? ParseLogLevelOverride(string[] args)
 static bool IsVerbose(string[] args) =>
     args.Contains("--verbose") || args.Contains("-v");
 
+[UnconditionalSuppressMessage("AOT", "IL3050",
+    Justification = "Spectre.Console.Cli is not AOT-annotated; its reflection targets are rooted in MyMusic.CLI.csproj.")]
+static CommandApp CreateApp(ITypeRegistrar registrar) => new(registrar);
+
 static void ConfigureConfiguration(IServiceCollection services, string[] args)
 {
     var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") ?? "Development";
@@ -128,8 +131,7 @@ static void ConfigureConfiguration(IServiceCollection services, string[] args)
     var configuration = configurationBuilder.Build();
 
     services.AddOptions<MyMusicOptions>()
-        .Bind(configuration.GetSection("MyMusic"))
-        .ValidateDataAnnotations();
+        .Bind(configuration.GetSection("MyMusic"));
 
     services.AddSingleton<IConfiguration>(configuration);
 }
@@ -195,10 +197,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
 static RefitSettings GetRefitSettings(IServiceProvider sp) =>
     new()
     {
-        ContentSerializer = new SystemTextJsonContentSerializer(new JsonSerializerOptions(JsonSerializerDefaults.Web)
-        {
-            Converters = { new JsonStringEnumConverter() },
-        }),
+        ContentSerializer = new SystemTextJsonContentSerializer(CliJsonContext.Default.Options),
     };
 
 public class FileLoggerProvider : ILoggerProvider
