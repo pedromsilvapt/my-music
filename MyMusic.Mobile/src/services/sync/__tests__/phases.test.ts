@@ -276,6 +276,35 @@ describe('resolveConflictsPhase - results', () => {
     });
 });
 
+describe('serverActionsPhase - progress', () => {
+    const mockedActionCreateLocal = actionCreateLocal as jest.MockedFunction<typeof actionCreateLocal>;
+    const mockedActionUpdateLocal = actionUpdateLocal as jest.MockedFunction<typeof actionUpdateLocal>;
+    const record = (id: number, filePath: string, action: SyncRecordItem['action']): SyncRecordItem =>
+        ({ id, filePath, action, songId: id, data: null, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem);
+    const counts = (delta: object) => ({ createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0, ...delta });
+
+    test('enters the server phase at 0 of every action, then reports each file and the counts', async () => {
+        // The upload phase left its own label and a full bar; the server has a download and an update pending
+        jest.clearAllMocks();
+        const deps = createMockDeps();
+        (deps.apiClient.createPendingActions as jest.Mock).mockResolvedValue({
+            records: [record(1, 'new.mp3', 'CreateLocal'), record(2, 'changed.mp3', 'UpdateLocal')],
+        });
+        mockedActionCreateLocal.mockResolvedValue({ action: 'CreateLocal', filePath: 'new.mp3', source: 'Server', counts: counts({ createLocalCount: 1 }) });
+        mockedActionUpdateLocal.mockResolvedValue({ action: 'UpdateLocal', filePath: 'changed.mp3', source: 'Server', counts: counts({ updateLocalCount: 1 }) });
+        const onProgress = jest.fn();
+
+        await serverActionsPhase(deps, createContext(), onProgress);
+
+        const reports = onProgress.mock.calls.map(([p]) => p);
+        expect(reports[0]).toEqual({ phase: 'server', currentFile: '' });
+        expect(reports[1]).toEqual({ phase: 'server', totalFiles: 2, processedFiles: 0, currentFile: '' });
+        expect(reports.slice(2).map(p => p.currentFile).filter(Boolean)).toEqual(['new.mp3', 'changed.mp3']);
+        expect(reports.filter(p => p.processedFiles > 0).map(p => [p.processedFiles, p.totalFiles, p.createLocal, p.updateLocal]))
+            .toEqual([[1, 2, 1, 0], [2, 2, 1, 1]]);
+    });
+});
+
 describe('completePhase', () => {
     test('authoritative server counts override client estimates', async () => {
         const deps = createMockDeps({

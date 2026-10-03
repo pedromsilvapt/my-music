@@ -266,16 +266,23 @@ export async function serverActionsPhase (
         throw new SyncCancelledError();
     }
 
+    onProgress({ phase: 'server', currentFile: '' });
+
     const pendingActionsResponse = await deps.apiClient.createPendingActions(ctx.deviceId, ctx.sessionId!);
     ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], pendingActionsResponse.records);
 
     const pendingActions = ctx.pendingActions;
     const serverResults: ActionResult[] = [];
 
+    // Resets the progress left by the upload phase before the first action finishes
+    onProgress({ phase: 'server', totalFiles: pendingActions.length, processedFiles: 0, currentFile: '' });
+
     for (const record of pendingActions) {
         if (deps.state.isCancelled) {
             throw new SyncCancelledError();
         }
+
+        onProgress({ currentFile: formatFilePath(record.filePath, ctx.repositoryPath) });
 
         if (ctx.uploadedPaths.has(record.filePath) && record.action !== 'CreateLocal' && record.action !== 'UpdateLocal') {
             await deps.apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, {
@@ -388,7 +395,9 @@ export async function serverActionsPhase (
 
         onProgress({
             createLocal: ctx.result.createLocal,
+            updateLocal: ctx.result.updateLocal,
             deleteLocal: ctx.result.deleteLocal,
+            error: ctx.result.error,
             processedFiles: pendingActions.indexOf(record) + 1,
             totalFiles: pendingActions.length,
         });
