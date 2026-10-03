@@ -149,7 +149,9 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
 
         if (verbose)
         {
-            builder.AddConsole();
+            // Logs go to stderr: the console logger writes from a background thread, so on stdout
+            // its lines would be interleaved with (and break up) the command's own output.
+            builder.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
         }
 
         if (loggerOptions.EnableFileLogging)

@@ -163,7 +163,8 @@ public class DesktopCliApplication : ISyncApplication
         {
             if (e.Data != null)
             {
-                _telemetry.TestsLogger.LogWarning("CLI: " + e.Data);
+                // The CLI writes its verbose logs to stderr, so these lines are not warnings
+                _telemetry.TestsLogger.LogDebug("CLI: " + e.Data);
                 stderr.AppendLine(e.Data);
             }
         };
