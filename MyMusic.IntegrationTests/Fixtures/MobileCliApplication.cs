@@ -289,7 +289,7 @@ public class MobileCliApplication : ISyncApplication
                 "Mobile CLI", process.ExitCode, stdout.ToString(), stderr.ToString());
         }
 
-        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
+        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString(), stderr.ToString());
 
         var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
             _api, DeviceId, result.SessionId);

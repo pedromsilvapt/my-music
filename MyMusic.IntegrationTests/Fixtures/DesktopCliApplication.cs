@@ -177,7 +177,7 @@ public class DesktopCliApplication : ISyncApplication
         span?.SetTag("exit_code", process.ExitCode);
         span?.Stop();
 
-        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString());
+        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString(), stderr.ToString());
 
         var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
             _api, _fixture.DeviceId, result.SessionId);

@@ -7,7 +7,7 @@ public static class SyncResultShouldlyExtensions
 {
     public static void ShouldBeSuccessful(this SyncResult result)
     {
-        result.Success.ShouldBeTrue($"Sync failed (Success=false)");
+        result.Success.ShouldBeTrue($"Sync failed (Success=false)\n{result.DescribeCliOutput()}");
     }
 
     public static void ShouldBe(
@@ -28,30 +28,38 @@ public static class SyncResultShouldlyExtensions
     {
         if (successful)
         {
-            result.Success.ShouldBeTrue($"Sync failed (Success=false)");
+            result.Success.ShouldBeTrue($"Sync failed (Success=false)\n{result.DescribeCliOutput()}");
         }
 
-        AssertCounter(nameof(result.CreateRemote), result.CreateRemote, createRemote, result.ApiRecordCounts);
-        AssertCounter(nameof(result.UpdateRemote), result.UpdateRemote, updateRemote, result.ApiRecordCounts);
-        AssertCounter(nameof(result.CreateLocal), result.CreateLocal, createLocal, result.ApiRecordCounts);
-        AssertCounter(nameof(result.UpdateLocal), result.UpdateLocal, updateLocal, result.ApiRecordCounts);
-        AssertCounter(nameof(result.DeleteLocal), result.DeleteLocal, deleteLocal, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Link), result.Link, link, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Unlink), result.Unlink, unlink, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Rename), result.Rename, rename, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Skipped), result.Skipped, skipped, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Conflict), result.Conflict, conflict, result.ApiRecordCounts);
-        AssertCounter(nameof(result.UpdateTimestamp), result.UpdateTimestamp, updateTimestamp, result.ApiRecordCounts);
-        AssertCounter(nameof(result.Error), result.Error, error, result.ApiRecordCounts);
+        AssertCounter(result, nameof(result.CreateRemote), result.CreateRemote, createRemote);
+        AssertCounter(result, nameof(result.UpdateRemote), result.UpdateRemote, updateRemote);
+        AssertCounter(result, nameof(result.CreateLocal), result.CreateLocal, createLocal);
+        AssertCounter(result, nameof(result.UpdateLocal), result.UpdateLocal, updateLocal);
+        AssertCounter(result, nameof(result.DeleteLocal), result.DeleteLocal, deleteLocal);
+        AssertCounter(result, nameof(result.Link), result.Link, link);
+        AssertCounter(result, nameof(result.Unlink), result.Unlink, unlink);
+        AssertCounter(result, nameof(result.Rename), result.Rename, rename);
+        AssertCounter(result, nameof(result.Skipped), result.Skipped, skipped);
+        AssertCounter(result, nameof(result.Conflict), result.Conflict, conflict);
+        AssertCounter(result, nameof(result.UpdateTimestamp), result.UpdateTimestamp, updateTimestamp);
+        AssertCounter(result, nameof(result.Error), result.Error, error);
     }
 
     private static void AssertCounter(
+        SyncResult result,
         string actionName,
         int actualCounter,
-        int? expected,
-        Dictionary<string, int>? apiRecordCounts)
+        int? expected)
     {
         var expectedValue = expected ?? 0;
+        var apiRecordCounts = result.ApiRecordCounts;
+
+        // A missing counter means the CLI's summary was not (fully) captured, so show what was
+        if (actualCounter == SyncResult.MissingCounter)
+        {
+            throw new ShouldAssertException(
+                $"CLI counter {actionName} was not found in the CLI output\n{result.DescribeCliOutput()}");
+        }
 
         actualCounter.ShouldBe(expectedValue, $"CLI counter {actionName} should be {expectedValue} but was {actualCounter}");
 

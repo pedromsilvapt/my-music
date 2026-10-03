@@ -20,13 +20,25 @@ public record SyncResult
     public int Error { get; init; }
     public Dictionary<string, int>? ApiRecordCounts { get; init; }
 
+    /// <summary>
+    /// Value of a counter that could not be found in the CLI's standard output.
+    /// </summary>
+    public const int MissingCounter = -1;
+
+    public int ExitCode { get; init; }
+    public string StandardOutput { get; init; } = "";
+    public string StandardError { get; init; } = "";
+
     public int TotalChanges => CreateRemote + UpdateRemote + CreateLocal + UpdateLocal + DeleteLocal + Link + Unlink + Rename;
 
-    public static SyncResult ParseCliOutput(int exitCode, string standardOutput)
+    public static SyncResult ParseCliOutput(int exitCode, string standardOutput, string standardError)
     {
         return new SyncResult
         {
             Success = exitCode == 0,
+            ExitCode = exitCode,
+            StandardOutput = standardOutput,
+            StandardError = standardError,
             SessionId = GetNullableLongValue(standardOutput, "SessionId"),
             CreateRemote = GetCounterValue(standardOutput, "CreateRemote"),
             UpdateRemote = GetCounterValue(standardOutput, "UpdateRemote"),
@@ -47,9 +59,15 @@ public record SyncResult
     {
         var strippedOutput = Regex.Replace(output, @"\x1b\[[0-9;]*m", "");
         var matches = Regex.Matches(strippedOutput, $@"{counterName}:\s*(\d+)");
-        if (matches.Count == 0) return -1;
+        if (matches.Count == 0) return MissingCounter;
         return int.Parse(matches[^1].Groups[1].Value);
     }
+
+    /// <summary>
+    /// Describes what the CLI process returned and printed, to diagnose a sync whose output was not the expected one.
+    /// </summary>
+    public string DescribeCliOutput() =>
+        $"CLI exited with code {ExitCode}\n--- stdout ---\n{StandardOutput}\n--- stderr ---\n{StandardError}";
 
     private static long? GetNullableLongValue(string output, string name)
     {
