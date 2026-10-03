@@ -34,7 +34,7 @@ jobs:
         run: earthly --ci --output +docker-integration-tests --TAG="$VERSION"
 
       - name: Run integration tests
-        run: docker compose -f compose.integration.yaml --profile otelite up --pull missing --exit-code-from integration-tests
+        run: docker compose -f compose.integration.yaml --profile otelite up --pull missing --no-attach otelite --no-attach client --exit-code-from integration-tests
         env:
           VERSION: ${{ env.VERSION }}
 
