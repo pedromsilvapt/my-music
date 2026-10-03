@@ -106,5 +106,7 @@ export function useScrollRequestLifecycle<T>(items: T[], keyOf: (item: T) => Rea
 
     const highlightKey = state.active?.phase === 'flashing' ? state.active.key : null;
 
-    return {issue, scrollTarget, onScrolled, highlightKey};
+    const phase = state.active?.phase ?? null;
+
+    return {issue, scrollTarget, onScrolled, highlightKey, phase};
 }

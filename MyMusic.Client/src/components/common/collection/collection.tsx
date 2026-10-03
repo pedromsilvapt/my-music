@@ -315,7 +315,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
     }, [onContextMenuTrigger]);
 
     // GoTo and parent-driven requests share one lifecycle, so the latest request always wins
-    const {issue: issueScrollRequest, scrollTarget, onScrolled, highlightKey} =
+    const {issue: issueScrollRequest, scrollTarget, onScrolled, highlightKey, phase: scrollRequestPhase} =
         useScrollRequestLifecycle(filteredAndSortedItems, props.schema.key);
 
     // Only a new key or id is a new request; a new object with the same values is not
@@ -408,7 +408,8 @@ export default function Collection<T extends { id: string | number }>(props: Col
 
     const toolbar = props.toolbar ?? (p => <CollectionToolbar {...p} />);
 
-    return <Flex ref={containerRef} direction="column" style={autoHeight ? undefined : {height: `100%`}} data-testid="collection" data-loading={props.isFetching ? "true" : "false"}>
+    return <Flex ref={containerRef} direction="column" style={autoHeight ? undefined : {height: `100%`}} data-testid="collection" data-loading={props.isFetching ? "true" : "false"}
+                 data-scroll-request={scrollRequestPhase ?? "idle"}>
         <Box ref={toolbarRef}>
             {toolbar({
                 search: searchFilter.value,

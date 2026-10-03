@@ -27,8 +27,7 @@ public class NowPlayingScrollTests(ITestOutputHelper output) : IntegrationTestBa
 
         // Jump to a song far down the queue; its flash should end, leaving the current song off screen
         await collection.GoToAsync(FarDownSongTitle);
-        await Assertions.Expect(collection.GetRowByTitle(FarDownSongTitle)).ToHaveAttributeAsync("data-highlighted", "true");
-        await Assertions.Expect(collection.HighlightedRows).ToHaveCountAsync(0);
+        await collection.WaitForScrollRequestFinishedAsync();
 
         // Skipping to the next song should still follow the track: scroll back up and flash the new current song
         await nowPlaying.FooterPlayer.NextAsync(nowPlaying.NextTitle);
@@ -47,8 +46,7 @@ public class NowPlayingScrollTests(ITestOutputHelper output) : IntegrationTestBa
 
         // Jump to a song far down the queue and let its flash end
         await collection.GoToAsync(FarDownSongTitle);
-        await Assertions.Expect(collection.GetRowByTitle(FarDownSongTitle)).ToHaveAttributeAsync("data-highlighted", "true");
-        await Assertions.Expect(collection.HighlightedRows).ToHaveCountAsync(0);
+        await collection.WaitForScrollRequestFinishedAsync();
 
         // Clicking the song in the footer player should scroll to the current song and flash it
         await nowPlaying.FooterPlayer.OpenPlayerPageAsync();

@@ -67,8 +67,7 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
 
         // Jump to a song far down the list and wait for its flash to end
         var collection = await new GoToSongFlow(FarDownSongTitle).ExecuteAsync(Page);
-        await Assertions.Expect(collection.GetRowByTitle(FarDownSongTitle)).ToHaveAttributeAsync("data-highlighted", "true");
-        await Assertions.Expect(collection.HighlightedRows).ToHaveCountAsync(0);
+        await collection.WaitForScrollRequestFinishedAsync();
 
         // Sorting by title descending moves the song near the top of the list, out of view
         await collection.SortByAsync("Title", descending: true);

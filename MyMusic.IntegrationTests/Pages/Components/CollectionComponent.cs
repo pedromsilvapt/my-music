@@ -46,6 +46,16 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
+    /// Waits for the current scroll request (e.g. from <see cref="GoToAsync"/>) to run its whole course:
+    /// scroll to the item, flash it, and clear. Unlike asserting on the flash itself, which only lasts a
+    /// few seconds, this can't be missed when the browser or the test runner is slow.
+    /// </summary>
+    public async Task WaitForScrollRequestFinishedAsync()
+    {
+        await WaitForAttributeAsync("data-scroll-request", "idle");
+    }
+
+    /// <summary>
     /// Adds a sort field through the toolbar's "Customize" popover. Unlike the column headers, this
     /// doesn't scroll the collection, since the toolbar stays in view.
     /// </summary>
