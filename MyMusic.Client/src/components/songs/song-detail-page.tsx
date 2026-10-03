@@ -29,6 +29,7 @@ import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueueMutations} from "../../contexts/player-context.tsx";
+import {useConfirmDelete} from "../../hooks/use-confirm-delete.ts";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useSongHistoryEvents} from "../../hooks/use-song-history-events.ts";
@@ -51,6 +52,7 @@ export default function SongDetailPage() {
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
     const deleteSongs = useDeleteSongs();
+    const confirmDelete = useConfirmDelete();
     const historyQuery = useGetSongHistory(Number(songId));
     const historyItems = (historyQuery.data?.data.history ?? [])
         .slice()
@@ -59,24 +61,18 @@ export default function SongDetailPage() {
 
     const handleDelete = useCallback(() => {
         if (!song) return;
-        modals.openConfirmModal({
+        confirmDelete({
             title: t("songs:detailPage.deleteTitle"),
             children: (
                 <Text size="sm">
                     {t("songs:detailPage.deleteConfirm", {name: song.title})}
                 </Text>
             ),
-            labels: {confirm: t("common:actions.delete"), cancel: t("common:actions.cancel")},
-            confirmProps: {color: 'red'},
-            onConfirm: () => {
-                deleteSongs.mutate({data: {songIds: [song.id]}}, {
-                    onSuccess: () => {
-                        navigate({to: '/songs'});
-                    },
-                });
-            },
+            onConfirm: () => deleteSongs.mutateAsync({data: {songIds: [song.id]}}),
+            onSuccess: () => navigate({to: '/songs'}),
+            errorMessage: t("songs:schema.deleteFailedSingle", {name: song.title}),
         });
-    }, [song, deleteSongs, navigate, t]);
+    }, [song, confirmDelete, deleteSongs, navigate, t]);
 
     if (!song) {
         return <Box p="md" data-testid="song-detail" data-loading="true">{t("common:common.loading")}</Box>;

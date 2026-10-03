@@ -123,6 +123,8 @@
         "deleteTitlePlural": "Eliminar {{count}} Músicas",
         "deleteConfirmSingle": "Tem a certeza que pretende eliminar \"{{name}}\"? Esta ação não pode ser desfeita.",
         "deleteConfirmPlural": "Tem a certeza que pretende eliminar {{count}} músicas? Esta ação não pode ser desfeita.",
+        "deleteFailedSingle": "Não foi possível eliminar \"{{name}}\"",
+        "deleteFailedPlural": "Não foi possível eliminar {{count}} músicas",
         "importSingle": "Importar Música",
         "importPlural": "Importar {{count}} Músicas",
         "editSingle": "Editar Música",

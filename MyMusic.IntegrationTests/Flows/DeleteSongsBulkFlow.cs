@@ -19,7 +19,11 @@ public class DeleteSongsBulkFlow(params string[] songTitles) : IFlow
         await confirmDialog.WaitForVisibleAsync();
         await confirmDialog.ConfirmAsync();
 
+        // The dialog closes once the delete succeeds, but the list refetch may still be in flight.
+        // Wait for the deleted rows to actually disappear.
         var songsPage = new SongsPage(page);
+        foreach (var title in songTitles)
+            await Assertions.Expect(songsPage.Collection.GetRowByTitle(title)).ToHaveCountAsync(0);
         await songsPage.Collection.WaitForLoadedAsync();
     }
 }

@@ -123,6 +123,8 @@
         "deleteTitlePlural": "Delete {{count}} Songs",
         "deleteConfirmSingle": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
         "deleteConfirmPlural": "Are you sure you want to delete {{count}} songs? This action cannot be undone.",
+        "deleteFailedSingle": "Failed to delete \"{{name}}\"",
+        "deleteFailedPlural": "Failed to delete {{count}} songs",
         "importSingle": "Import Song",
         "importPlural": "Import {{count}} Songs",
         "editSingle": "Edit Song",

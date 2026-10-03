@@ -27,6 +27,7 @@ import {useGetDevices} from "../../client/devices";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context";
 import {useQueue, useQueueMutations} from "../../contexts/player-context";
+import {useConfirmDelete} from "../../hooks/use-confirm-delete";
 import {useToggleFavorites} from "../../hooks/use-favorites";
 import {useImportSharedSongWithSongsInvalidation} from "../../hooks/use-import-shared-song";
 import {useQueueList} from "../../hooks/use-queues";
@@ -84,8 +85,9 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
     const toggleFavorites = useToggleFavorites(toggleFavoritesOnSuccess);
 
     const deleteSongs = useDeleteSongs();
+    const confirmDelete = useConfirmDelete();
     const handleDelete = useCallback((songs: ListSongItem[]) => {
-        modals.openConfirmModal({
+        confirmDelete({
             title: songs.length === 1 ? t("songs:schema.deleteTitle") : t("songs:schema.deleteTitlePlural", {count: songs.length}),
             children: (
                 <Text size="sm">
@@ -94,13 +96,12 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         : t("songs:schema.deleteConfirmPlural", {count: songs.length})}
                 </Text>
             ),
-            labels: {confirm: t("common:actions.delete"), cancel: t("common:actions.cancel")},
-            confirmProps: {color: 'red'},
-            onConfirm: () => {
-                deleteSongs.mutate({data: {songIds: songs.map(s => s.id)}});
-            },
+            onConfirm: () => deleteSongs.mutateAsync({data: {songIds: songs.map(s => s.id)}}),
+            errorMessage: songs.length === 1
+                ? t("songs:schema.deleteFailedSingle", {name: songs[0]!.title})
+                : t("songs:schema.deleteFailedPlural", {count: songs.length}),
         });
-    }, [deleteSongs, t]);
+    }, [confirmDelete, deleteSongs, t]);
 
     const queueContext = useMemo(() => 
         options?.queueContext ?? {type: 'songs' as const}, 
