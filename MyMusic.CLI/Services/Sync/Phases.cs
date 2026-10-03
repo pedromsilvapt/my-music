@@ -129,7 +129,7 @@ public class Phases(
 
             var chunk = chunks[i];
             var chunkNumber = i + 1;
-            var uploadedCount = 0;
+            var chunkProcessedCount = 0;
             logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
 
             var syncFiles = chunk
@@ -177,7 +177,12 @@ public class Phases(
 
             if (conflictRecords.Count > 0 || updateLocalRecords.Count > 0)
             {
-                await ResolveConflictsAsync(ctx, conflictRecords, updateLocalRecords, ct);
+                await ResolveConflictsAsync(ctx, conflictRecords, updateLocalRecords, resolvedCount =>
+                {
+                    chunkProcessedCount += resolvedCount;
+                    progress?.Report(SyncProgress.FromResult(
+                        ctx.Result, "resolving", files.Count, processedCount + chunkProcessedCount));
+                }, ct);
 
                 var superseded = conflictRecords
                     .Concat(updateLocalRecords)
@@ -221,9 +226,9 @@ public class Phases(
                 AddUploadClientActions(ctx, result);
 
                 ctx.UploadedPaths.Add(createRecord.FilePath);
-                uploadedCount++;
+                chunkProcessedCount++;
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, processedCount + uploadedCount,
+                    ctx.Result, "upload", files.Count, processedCount + chunkProcessedCount,
                     createRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
 
@@ -256,9 +261,9 @@ public class Phases(
                 AddUploadClientActions(ctx, result);
 
                 ctx.UploadedPaths.Add(updateRecord.FilePath);
-                uploadedCount++;
+                chunkProcessedCount++;
                 progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, processedCount + uploadedCount,
+                    ctx.Result, "upload", files.Count, processedCount + chunkProcessedCount,
                     updateRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
 
@@ -288,12 +293,13 @@ public class Phases(
         SyncContext ctx,
         List<SyncRecordItem> conflictRecords,
         List<SyncRecordItem> updateLocalRecords,
+        Action<int>? onFilesResolved = null,
         CancellationToken ct = default)
     {
         if (conflictRecords.Count > 0 || updateLocalRecords.Count > 0)
         {
             var result = await syncActions.ActionConflictAsync(
-                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, ct);
+                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, onFilesResolved, ct);
 
             ctx.Result = ctx.Result.AddDelta(result.Counts);
 

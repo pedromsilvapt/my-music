@@ -107,6 +107,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         var phaseLabel = p.Phase switch
         {
             "server" => "Server actions",
+            "resolving" => "Resolving conflicts",
             "fingerprinting" => "Fingerprinting server songs",
             _ => "Uploading",
         };

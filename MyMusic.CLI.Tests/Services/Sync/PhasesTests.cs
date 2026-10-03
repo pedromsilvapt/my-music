@@ -595,6 +595,39 @@ public class PhasesTests
         ctx.ConflictedPaths.ShouldBe(["song.mp3"]);
     }
 
+    [Fact]
+    public async Task UploadPhase_ReportsProgressWhileResolving_ThenUploadsContinueFromIt()
+    {
+        // 3 files in one chunk: a potential update to resolve, an upload and an unchanged file
+        _config.GetChunkSize().Returns(3);
+        SetupLocalFilesExist();
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult
+            {
+                Records =
+                [
+                    CreateRecord("changed.mp3", SyncRecordAction.UpdateLocal) with { SongId = 1 },
+                    CreateRecord("new.mp3", SyncRecordAction.CreateRemote)
+                ],
+                Counts = SyncActionCounts.Empty
+            });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [CreateRecord("changed.mp3", SyncRecordAction.UpdateTimestamp) with { SongId = 1 }] });
+        _apiClient.UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new UploadFileResult { Success = true, SongId = 2, Counts = new SyncActionCounts { CreateRemoteCount = 1 } });
+
+        var phases = CreatePhases();
+        var progress = new CapturingProgress();
+        var files = new List<ScannedFile> { CreateScannedFile("changed.mp3"), CreateScannedFile("new.mp3"), CreateScannedFile("same.mp3") };
+
+        await phases.UploadPhaseAsync(CreateContext(), files, progress);
+
+        // The resolve request settles 1 file, the upload continues from it, then the chunk tops up to 3
+        progress.Reports.Select(r => (r.Phase, r.ProcessedFiles)).ShouldBe(
+            [("upload", 0), ("resolving", 1), ("upload", 2), ("upload", 3)]);
+        progress.Reports.All(r => r.TotalFiles == 3).ShouldBeTrue();
+    }
+
     private void SetupPendingActions(params SyncRecordItem[] records)
     {
         _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())

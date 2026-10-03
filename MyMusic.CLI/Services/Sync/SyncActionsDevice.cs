@@ -387,6 +387,7 @@ public class SyncActionsDevice(
         string repositoryPath,
         List<SyncRecordItem> conflictRecords,
         List<SyncRecordItem> updateLocalRecords,
+        Action<int>? onFilesResolved = null,
         CancellationToken ct = default)
     {
         var resolveItems = new List<ConflictResolveItem>();
@@ -479,6 +480,9 @@ public class SyncActionsDevice(
 
                 allRecords.AddRange(resolveResponse.Records);
                 aggregatedCounts = aggregatedCounts.Add(resolveResponse.Counts);
+
+                // Each request carries whole files, so it is slow: report the files it settled
+                onFilesResolved?.Invoke(chunk.Conflicts.Count + chunk.PotentialUpdates.Count);
             }
 
             return new ResolveConflictsActionResult(
