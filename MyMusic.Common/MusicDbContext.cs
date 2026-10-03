@@ -72,6 +72,8 @@ public class MusicDbContext : DbContext
 
     public DbSet<SongHistoryQueue> SongHistoryQueues { get; set; } = null!;
 
+    public DbSet<SongMerge> SongMerges { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -258,6 +260,23 @@ public class MusicDbContext : DbContext
             entity.HasIndex(e => e.ProcessedAt);
             entity.HasIndex(e => e.SongId);
             entity.HasIndex(e => new { e.SongId, e.TransactionId });
+        });
+
+        // SongMerge entity configuration
+        // No FK on either song id: the merged song is deleted by the merge itself, and the kept song may be merged
+        // into another one (or deleted) later, while its row must stay so the merges form a tree. The owner FK
+        // cascades, removing the rows when the user is deleted.
+        modelBuilder.Entity<SongMerge>(entity =>
+        {
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.KeptSongId);
+
+            // A song is merged away only once
+            entity.HasIndex(e => e.MergedSongId).IsUnique();
         });
 
         modelBuilder.Entity<Song>(entity =>

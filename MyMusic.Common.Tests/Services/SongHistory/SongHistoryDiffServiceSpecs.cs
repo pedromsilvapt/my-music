@@ -38,6 +38,7 @@ public class SongHistoryDiffServiceSpecs
         List<SongSnapshotGenre>? genres = null,
         List<SongSnapshotSource>? sources = null,
         List<SongSnapshotDevice>? devices = null,
+        List<SongSnapshotMergedSong>? mergedSongs = null,
         SongSnapshotCover? cover = null)
     {
         var now = DateTime.UtcNow;
@@ -71,6 +72,7 @@ public class SongHistoryDiffServiceSpecs
             Genres = genres ?? [],
             Sources = sources ?? [],
             Devices = devices ?? [],
+            MergedSongs = mergedSongs ?? [],
             Cover = cover,
         };
     }
@@ -184,6 +186,40 @@ public class SongHistoryDiffServiceSpecs
         delta.Artists.Old.ShouldBe(oldArtists);
         delta.Artists.New.ShouldBe(newArtists);
         delta.Title.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ComputeDiff_SongMerged_ReturnsMergedSongsFieldChange()
+    {
+        var oldMergedSongs = new List<SongSnapshotMergedSong>
+        {
+            new() { Id = 10, Kind = SongMergeKind.ImportDuplicate },
+        };
+        var newMergedSongs = new List<SongSnapshotMergedSong>
+        {
+            new() { Id = 10, Kind = SongMergeKind.ImportDuplicate },
+            new() { Id = 11, Kind = SongMergeKind.SoundalikeMerge },
+        };
+        var oldSnapshot = BuildSnapshot(mergedSongs: oldMergedSongs);
+        var newSnapshot = BuildSnapshot(mergedSongs: newMergedSongs);
+
+        var delta = _service.ComputeDiff(oldSnapshot, newSnapshot);
+
+        delta.MergedSongs.ShouldNotBeNull();
+        delta.MergedSongs.Old.ShouldBe(oldMergedSongs);
+        delta.MergedSongs.New.ShouldBe(newMergedSongs);
+        delta.Title.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ComputeDiff_SameMergedSongs_ReturnsNoMergedSongsChange()
+    {
+        var oldSnapshot = BuildSnapshot(mergedSongs: [new() { Id = 10, Kind = SongMergeKind.SoundalikeDelete }]);
+        var newSnapshot = BuildSnapshot(mergedSongs: [new() { Id = 10, Kind = SongMergeKind.SoundalikeDelete }]);
+
+        var delta = _service.ComputeDiff(oldSnapshot, newSnapshot);
+
+        delta.MergedSongs.ShouldBeNull();
     }
 
     [Fact]
@@ -417,7 +453,8 @@ public class SongHistoryDiffServiceSpecs
             title: "Song",
             explicitFlag: false,
             year: null,
-            artists: [new SongSnapshotArtist { Id = 1, Name = "Artist" }]);
+            artists: [new SongSnapshotArtist { Id = 1, Name = "Artist" }],
+            mergedSongs: [new SongSnapshotMergedSong { Id = 10, Kind = SongMergeKind.ImportDuplicate }]);
 
         var baseline = _service.ComputeBaseline(snapshot);
 
@@ -430,6 +467,8 @@ public class SongHistoryDiffServiceSpecs
         baseline.Year.ShouldNotBeNull().New.ShouldBeNull();
         baseline.Artists.ShouldNotBeNull().Old.ShouldBeNull();
         baseline.Artists.New.ShouldNotBeNull().Select(a => a.Name).ShouldBe(["Artist"]);
+        baseline.MergedSongs.ShouldNotBeNull().Old.ShouldBeNull();
+        baseline.MergedSongs.New.ShouldNotBeNull().Select(m => m.Id).ShouldBe([10]);
         // Play count is not part of the history
         baseline.PlayCount.ShouldBeNull();
     }

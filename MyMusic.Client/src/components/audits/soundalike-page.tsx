@@ -251,7 +251,8 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
     }, [onToolbarChange, selectedGroups.size, readyToResolve]);
 
     return (
-        <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
+        <div style={{height: '100%', display: 'flex', flexDirection: 'column'}} data-testid="soundalikes"
+             data-loading={soundalikesQuery.isFetching ? "true" : "false"}>
             <Text c="dimmed" mb="md">
                 {t("audits:soundalike.instructions")}
             </Text>
@@ -387,7 +388,7 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
     };
 
     return (
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
+        <Card shadow="sm" padding="lg" radius="md" withBorder data-testid="soundalike-group">
             <Group justify="space-between" mb="md">
                 <Text fw={500}>{t("audits:soundalike.matchScore", {score: matchPercentage})}</Text>
                 <Text size="sm" c="dimmed">
@@ -406,6 +407,8 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                             key={song.id}
                             padding="sm"
                             withBorder
+                            data-testid="soundalike-song"
+                            data-primary={isPrimary ? "true" : "false"}
                             style={{
                                 cursor: 'pointer',
                                 backgroundColor: isPrimary ? primaryBg : undefined,
@@ -450,6 +453,8 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                                 return (
                                                     <Badge
                                                         key={action}
+                                                        data-testid={`soundalike-action-${action.toLowerCase()}`}
+                                                        data-active={isActive ? "true" : "false"}
                                                         color={props.color}
                                                         variant={isActive ? keepBadgeVariant : 'outline'}
                                                         style={{cursor: 'pointer', opacity: isActive ? 1 : 0.5}}
@@ -471,6 +476,8 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                                 return (
                                                     <Badge
                                                         key={action}
+                                                        data-testid={`soundalike-action-${action.toLowerCase()}`}
+                                                        data-active="false"
                                                         color={props.color}
                                                         variant="outline"
                                                         style={{cursor: 'pointer', opacity: 0.5}}

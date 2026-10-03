@@ -129,7 +129,7 @@ public class NavbarComponent(ILocator root) : BaseComponent(root)
     {
         await AuditsLink.ClickAsync();
         var page = new AuditsPage(Root.Page);
-        await page.Collection.WaitForLoadedAsync();
+        await page.WaitForLoadedAsync();
         return page;
     }
 

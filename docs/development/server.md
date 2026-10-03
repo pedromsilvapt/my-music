@@ -366,6 +366,18 @@ Song imports and song edits change files in the music repository inside a databa
 - Each operation takes an advisory lock on the paths it touches (`AdvisoryLockScope.File`), held until the transaction ends.
 - If an undo step fails, or the process dies mid-transaction, the `tx-*` folder is kept for manual recovery; nothing deletes it automatically.
 
+### Song history
+
+PostgreSQL triggers queue a snapshot of a song (built by the `song_history_build_snapshot` SQL function) before every change to it, and `SongHistoryWorker` turns each transaction's queued snapshots into one `song_histories` revision holding the fields that changed. A field only shows up in the history if that function reads it.
+
+#### Merged songs
+
+When a song absorbs another one, a `song_merges` row (`SongMerge`) records it: the kept song's id, the merged song's id, and the `Kind` (`ImportDuplicate`, `SoundalikeMerge` or `SoundalikeDelete`). The snapshot lists the songs merged directly into a song as `merged_songs`, so the merge is part of the kept song's history.
+
+- **No song FKs**: the merged song is deleted by the merge, and the kept song may itself be merged or deleted later. Only `owner_id` has an FK, which cascades when the user is deleted.
+- **Tree, not flattened**: rows are never updated, copied or deleted. Merging A into B, then B into C, leaves two rows (A→B, B→C); `merged_songs` of C lists only B. Walk `song_merges` recursively for the full lineage. `merged_song_id` is unique, since a song is merged away only once.
+- **Flush first in `SongMergeService`**: the worker uses the first snapshot queued in a transaction as the revision's "before" state. The merge re-points the merged song's artists, genres and devices with `UPDATE song_id`, which queues nothing, so the `SongMerge` row is saved before those steps: its insert trigger snapshots the kept song while it is still untouched, and the gained artists/genres land in the merge's revision.
+
 ## Dependencies
 
 NuGet versions are managed centrally in the root `Directory.Packages.props`. To add or bump a package, set its `<PackageVersion>` there and reference it from the `.csproj` without a `Version` attribute.

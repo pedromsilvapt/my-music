@@ -142,6 +142,46 @@ public class SongChecksumHistorySpecs
         checksums.Select(sc => sc.Checksum).ShouldBe(["from-current"]);
     }
 
+    [Fact]
+    public async Task MergeSongs_RecordsTheMerge()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var keep = scenario.CreateSong("Keep", checksum: "keep-current");
+        var mergeFrom = scenario.CreateSong("MergeFrom", checksum: "from-current");
+        var service = new SongMergeService(Substitute.For<ILogger<SongMergeService>>());
+
+        // Act
+        await service.MergeSongsAsync(scenario.DbContext, keep.Id, mergeFrom.Id);
+
+        // Assert
+        var merges = await scenario.DbContext.SongMerges.AsNoTracking().ToListAsync();
+        merges.ShouldHaveSingleItem().ShouldSatisfyAllConditions(
+            m => m.KeptSongId.ShouldBe(keep.Id),
+            m => m.MergedSongId.ShouldBe(mergeFrom.Id),
+            m => m.OwnerId.ShouldBe(scenario.AdminUser.Id),
+            m => m.Kind.ShouldBe(SongMergeKind.ImportDuplicate));
+    }
+
+    [Fact]
+    public async Task MergeSongs_KeptSongMergedLater_LeavesItsOwnMergesUntouched()
+    {
+        // Arrange: A was merged into B
+        var scenario = new Scenario();
+        var a = scenario.CreateSong("A", checksum: "a");
+        var b = scenario.CreateSong("B", checksum: "b");
+        var c = scenario.CreateSong("C", checksum: "c");
+        var service = new SongMergeService(Substitute.For<ILogger<SongMergeService>>());
+        await service.MergeSongsAsync(scenario.DbContext, b.Id, a.Id);
+
+        // Act: B is merged into C
+        await service.MergeSongsAsync(scenario.DbContext, c.Id, b.Id);
+
+        // Assert: the merges form a tree (A -> B -> C); A's merge is neither removed nor re-pointed at C
+        var merges = await scenario.DbContext.SongMerges.AsNoTracking().OrderBy(m => m.Id).ToListAsync();
+        merges.Select(m => (m.KeptSongId, m.MergedSongId)).ShouldBe([(b.Id, a.Id), (c.Id, b.Id)]);
+    }
+
     #endregion
 
     #region Import

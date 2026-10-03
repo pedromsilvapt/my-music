@@ -45,6 +45,19 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
 
         try
         {
+            // Saved before anything else: its insert queues the kept song's history snapshot, which is the "before"
+            // state of the merge's revision. The steps below re-point the merged song's artists, genres, etc. with
+            // updates that queue nothing, so saving it along with them could snapshot the song after those changes.
+            db.SongMerges.Add(new SongMerge
+            {
+                KeptSongId = keepSongId,
+                MergedSongId = mergeFromSongId,
+                OwnerId = keepSong.OwnerId,
+                Kind = SongMergeKind.ImportDuplicate,
+                MergedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(cancellationToken);
+
             await MergeSongDevicesAsync(db, keepSongId, mergeFromSongId, cancellationToken);
             await MergePlaylistSongsAsync(db, keepSongId, mergeFromSongId, cancellationToken);
             await MergePlayHistoryAsync(db, keepSongId, mergeFromSongId, cancellationToken);

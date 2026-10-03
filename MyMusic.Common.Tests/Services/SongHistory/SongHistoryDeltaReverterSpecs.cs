@@ -1,3 +1,4 @@
+using MyMusic.Common.Entities;
 using MyMusic.Common.Services.SongHistory;
 using MyMusic.Common.Services.SongHistory.Models;
 using Shouldly;
@@ -54,6 +55,24 @@ public class SongHistoryDeltaReverterSpecs
         reverted.Label.ShouldBe("Label");
         reverted.CoverId.ShouldBe(2);
         reverted.Cover.ShouldBe(CurrentCover);
+    }
+
+    [Fact]
+    public void Revert_MergedSongsChange_RestoresPreviousMergedSongs()
+    {
+        var before = new SongSnapshotMergedSong { Id = 10, Kind = SongMergeKind.ImportDuplicate };
+        var merged = new SongSnapshotMergedSong { Id = 11, Kind = SongMergeKind.SoundalikeMerge };
+        var current = Current with { MergedSongs = [before, merged] };
+        var delta = new SongHistoryDelta
+        {
+            MergedSongs = new FieldChange<List<SongSnapshotMergedSong>> { Old = [before], New = [before, merged] },
+        };
+
+        var reverted = SongHistoryDeltaReverter.Revert(current, delta);
+
+        reverted.MergedSongs.ShouldBe([before]);
+        // A revision that did not merge anything leaves the merged songs as they are
+        SongHistoryDeltaReverter.Revert(current, new SongHistoryDelta()).MergedSongs.ShouldBe([before, merged]);
     }
 
     [Fact]

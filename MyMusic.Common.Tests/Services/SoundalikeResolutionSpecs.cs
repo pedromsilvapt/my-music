@@ -525,6 +525,64 @@ public class SoundalikeResolutionSpecs
         newDevice.SyncAction.ShouldBe(SongSyncAction.Download);
     }
 
+    [Fact]
+    public async Task Resolve_RecordsMergeOfEverySecondaryWithItsChosenAction()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var merged = scenario.CreateSong("Merged");
+        var deleted = scenario.CreateSong("Deleted");
+        var kept = scenario.CreateSong("Kept");
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions =
+            [
+                new SecondarySongActionInput { SongId = merged.Id, Action = SecondaryAction.Merge },
+                new SecondarySongActionInput { SongId = deleted.Id, Action = SecondaryAction.Delete },
+                new SecondarySongActionInput { SongId = kept.Id, Action = SecondaryAction.Keep },
+            ]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert: one merge per removed secondary, none for the one that was kept
+        var merges = scenario.DbContext.SongMerges.OrderBy(m => m.MergedSongId).ToList();
+        merges.Select(m => (m.KeptSongId, m.MergedSongId, m.Kind)).ShouldBe(
+        [
+            (primary.Id, merged.Id, SongMergeKind.SoundalikeMerge),
+            (primary.Id, deleted.Id, SongMergeKind.SoundalikeDelete),
+        ]);
+        merges.ShouldAllBe(m => m.OwnerId == scenario.AdminUser.Id);
+    }
+
+    [Fact]
+    public async Task Resolve_SecondaryNotFound_RecordsNoMerge()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = 9999, Action = SecondaryAction.Delete }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        scenario.DbContext.SongMerges.ShouldBeEmpty();
+    }
+
     #region Helper Methods
 
 

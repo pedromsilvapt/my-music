@@ -56,6 +56,7 @@ public class SongHistoryVersionDiffServiceSpecs
         FieldChange<List<SongSnapshotGenre>>? genres = null,
         FieldChange<List<SongSnapshotSource>>? sources = null,
         FieldChange<List<SongSnapshotDevice>>? devices = null,
+        FieldChange<List<SongSnapshotMergedSong>>? mergedSongs = null,
         FieldChange<SongSnapshotCover?>? cover = null) => new()
         {
             Action = action,
@@ -86,6 +87,7 @@ public class SongHistoryVersionDiffServiceSpecs
             Genres = genres,
             Sources = sources,
             Devices = devices,
+            MergedSongs = mergedSongs,
             Cover = cover,
         };
 
@@ -688,6 +690,38 @@ public class SongHistoryVersionDiffServiceSpecs
         result.Metadata.Sources.ShouldNotBeNull();
         result.Metadata.Sources.Old!.Select(s => s.Name).ShouldBe(["Spotify"]);
         result.Metadata.Sources.New!.Select(s => s.Name).ShouldBe(["Spotify", "LastFM"]);
+    }
+
+    [Fact]
+    public async Task GetVersionDiffAsync_SongMerged_MergedSongsFieldPresent()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("Merge Target");
+        var delta = BuildDelta(
+            action: "updated",
+            mergedSongs: new()
+            {
+                Old = [],
+                New =
+                [
+                    new() { Id = 10, Kind = SongMergeKind.SoundalikeMerge },
+                    new() { Id = 11, Kind = SongMergeKind.SoundalikeDelete },
+                ],
+            });
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        await scenario.DbContext.SaveChangesAsync();
+        var (service, _) = CreateService(scenario);
+
+        // Act
+        var result = await service.GetVersionDiffAsync(song.Id, 1, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Metadata.MergedSongs.ShouldNotBeNull();
+        result.Metadata.MergedSongs.Old.ShouldNotBeNull().ShouldBeEmpty();
+        result.Metadata.MergedSongs.New!.Select(m => (m.Id, m.Kind))
+            .ShouldBe([(10L, "SoundalikeMerge"), (11L, "SoundalikeDelete")]);
     }
 
     [Fact]

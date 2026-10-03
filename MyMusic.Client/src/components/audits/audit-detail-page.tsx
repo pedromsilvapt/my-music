@@ -105,7 +105,8 @@ export default function AuditDetailPage() {
     const CustomComponent = hasCustomPage ? AUDIT_CUSTOM_COMPONENTS[rule!.customPage!] : null;
 
     return (
-        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
+        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="audit-detail"
+             data-loading={ruleQuery.isFetching ? "true" : "false"}>
             <Group justify="space-between" mb="md">
                 <Group>
                     <Title order={2}>{rule?.name ?? t("audits:detail.titleFallback")}</Title>

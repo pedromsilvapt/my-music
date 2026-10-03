@@ -39,6 +39,7 @@ public class SongHistoryDiffService : ISongHistoryDiffService
             Genres = DiffList(oldSnapshot.Genres, newSnapshot.Genres, g => (g.Id, g.Name)),
             Sources = DiffList(oldSnapshot.Sources, newSnapshot.Sources, s => (s.Id, s.Name)),
             Devices = DiffList(oldSnapshot.Devices, newSnapshot.Devices, d => (d.Id, d.DevicePath, d.SyncAction)),
+            MergedSongs = DiffList(oldSnapshot.MergedSongs, newSnapshot.MergedSongs, m => (m.Id, m.Kind)),
             Cover = DiffCover(oldSnapshot.Cover, newSnapshot.Cover, oldSnapshot.CoverId, newSnapshot.CoverId),
         };
     }
@@ -72,6 +73,7 @@ public class SongHistoryDiffService : ISongHistoryDiffService
         Genres = Baseline(snapshot.Genres),
         Sources = Baseline(snapshot.Sources),
         Devices = Baseline(snapshot.Devices),
+        MergedSongs = Baseline(snapshot.MergedSongs),
         Cover = Baseline(snapshot.Cover),
     };
 

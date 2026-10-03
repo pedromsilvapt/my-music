@@ -78,6 +78,7 @@ public record SongHistoryDiffMetadata
     public SongHistoryDiffField<List<string>?>? Genres { get; init; }
     public SongHistoryDiffField<List<SongHistoryDiffSource>?>? Sources { get; init; }
     public SongHistoryDiffField<List<SongHistoryDiffDevice>?>? Devices { get; init; }
+    public SongHistoryDiffField<List<SongHistoryDiffMergedSong>?>? MergedSongs { get; init; }
 
     public static SongHistoryDiffMetadata FromModel(SongHistoryVersionDiffModel model) => new()
     {
@@ -110,6 +111,7 @@ public record SongHistoryDiffMetadata
         Genres = MapScalar(model.Genres),
         Sources = MapSources(model.Sources),
         Devices = MapDevices(model.Devices),
+        MergedSongs = MapMergedSongs(model.MergedSongs),
     };
 
     private static SongHistoryDiffField<T?>? MapScalar<T>(SongHistoryVersionField<T?>? field)
@@ -149,6 +151,14 @@ public record SongHistoryDiffMetadata
         {
             Old = field.Old?.Select(SongHistoryDiffDevice.FromModel).ToList(),
             New = field.New?.Select(SongHistoryDiffDevice.FromModel).ToList(),
+        };
+
+    private static SongHistoryDiffField<List<SongHistoryDiffMergedSong>?>? MapMergedSongs(
+        SongHistoryVersionField<List<SongHistoryVersionMergedSong>?>? field)
+        => field is null ? null : new()
+        {
+            Old = field.Old?.Select(SongHistoryDiffMergedSong.FromModel).ToList(),
+            New = field.New?.Select(SongHistoryDiffMergedSong.FromModel).ToList(),
         };
 }
 
@@ -194,4 +204,13 @@ public record SongHistoryDiffDevice
 
     public static SongHistoryDiffDevice FromModel(SongHistoryVersionDevice device) =>
         new() { DevicePath = device.DevicePath, SyncAction = device.SyncAction };
+}
+
+public record SongHistoryDiffMergedSong
+{
+    public long Id { get; init; }
+    public string? Kind { get; init; }
+
+    public static SongHistoryDiffMergedSong FromModel(SongHistoryVersionMergedSong mergedSong) =>
+        new() { Id = mergedSong.Id, Kind = mergedSong.Kind };
 }

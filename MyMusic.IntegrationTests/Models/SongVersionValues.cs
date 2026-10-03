@@ -52,6 +52,7 @@ public record SongVersionValues
     public List<string>? Genres { get; init; }
     public List<SongHistoryVersionSource>? Sources { get; init; }
     public List<SongHistoryVersionDevice>? Devices { get; init; }
+    public List<SongHistoryVersionMergedSong>? MergedSongs { get; init; }
 
     /// <summary>
     /// Parses a panel's JSON text. Fails on keys not declared in this model, so schema drift is caught.

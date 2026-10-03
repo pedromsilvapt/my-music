@@ -50,6 +50,7 @@ public static class SongHistoryDeltaReverter
         Genres = delta.Genres is { } genres ? genres.Old ?? [] : snapshot.Genres,
         Sources = delta.Sources is { } sources ? sources.Old ?? [] : snapshot.Sources,
         Devices = delta.Devices is { } devices ? devices.Old ?? [] : snapshot.Devices,
+        MergedSongs = delta.MergedSongs is { } mergedSongs ? mergedSongs.Old ?? [] : snapshot.MergedSongs,
         Cover = delta.Cover is { } cover ? cover.Old : snapshot.Cover,
     };
 }

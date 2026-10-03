@@ -64,6 +64,8 @@ public record SongSnapshot
 
     [JsonPropertyName("devices")] public List<SongSnapshotDevice> Devices { get; init; } = [];
 
+    [JsonPropertyName("merged_songs")] public List<SongSnapshotMergedSong> MergedSongs { get; init; } = [];
+
     [JsonPropertyName("cover")] public SongSnapshotCover? Cover { get; init; }
 
     public static SongSnapshot Deserialize(JsonElement element)
@@ -113,6 +115,14 @@ public record SongSnapshotDevice
     [JsonPropertyName("device_path")] public required string DevicePath { get; init; }
 
     [JsonPropertyName("sync_action")] public SongSyncAction? SyncAction { get; init; }
+}
+
+/// <summary>A song merged directly into this one (songs merged into those are not listed).</summary>
+public record SongSnapshotMergedSong
+{
+    [JsonPropertyName("id")] public long Id { get; init; }
+
+    [JsonPropertyName("kind")] public SongMergeKind Kind { get; init; }
 }
 
 public record SongSnapshotCover

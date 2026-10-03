@@ -61,6 +61,8 @@ public record SongHistoryDelta
 
     [JsonPropertyName("devices")] public FieldChange<List<SongSnapshotDevice>>? Devices { get; init; }
 
+    [JsonPropertyName("merged_songs")] public FieldChange<List<SongSnapshotMergedSong>>? MergedSongs { get; init; }
+
     [JsonPropertyName("cover")] public FieldChange<SongSnapshotCover?>? Cover { get; init; }
 
     public static SongHistoryDelta Deserialize(JsonElement element)

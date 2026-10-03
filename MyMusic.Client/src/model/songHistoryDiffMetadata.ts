@@ -10,6 +10,7 @@ import type { SongHistoryDiffFieldOfdecimal } from './songHistoryDiffFieldOfdeci
 import type { SongHistoryDiffFieldOfint } from './songHistoryDiffFieldOfint';
 import type { SongHistoryDiffFieldOfListOfSongHistoryDiffArtist } from './songHistoryDiffFieldOfListOfSongHistoryDiffArtist';
 import type { SongHistoryDiffFieldOfListOfSongHistoryDiffDevice } from './songHistoryDiffFieldOfListOfSongHistoryDiffDevice';
+import type { SongHistoryDiffFieldOfListOfSongHistoryDiffMergedSong } from './songHistoryDiffFieldOfListOfSongHistoryDiffMergedSong';
 import type { SongHistoryDiffFieldOfListOfSongHistoryDiffSource } from './songHistoryDiffFieldOfListOfSongHistoryDiffSource';
 import type { SongHistoryDiffFieldOfListOfstring } from './songHistoryDiffFieldOfListOfstring';
 import type { SongHistoryDiffFieldOflong } from './songHistoryDiffFieldOflong';
@@ -46,4 +47,5 @@ export interface SongHistoryDiffMetadata {
   genres?: null | SongHistoryDiffFieldOfListOfstring;
   sources?: null | SongHistoryDiffFieldOfListOfSongHistoryDiffSource;
   devices?: null | SongHistoryDiffFieldOfListOfSongHistoryDiffDevice;
+  mergedSongs?: null | SongHistoryDiffFieldOfListOfSongHistoryDiffMergedSong;
 }

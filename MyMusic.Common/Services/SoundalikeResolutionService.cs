@@ -53,6 +53,22 @@ public class SoundalikeResolutionService(
                     throw new UnauthorizedAccessException($"User {ownerId} does not own song {song.Id}");
             }
 
+            foreach (var action in deleteActions)
+            {
+                if (songs.All(s => s.Id != action.SongId)) continue;
+
+                db.SongMerges.Add(new SongMerge
+                {
+                    KeptSongId = primarySong.Id,
+                    MergedSongId = action.SongId,
+                    OwnerId = ownerId,
+                    Kind = action.Action == SecondaryAction.Merge
+                        ? SongMergeKind.SoundalikeMerge
+                        : SongMergeKind.SoundalikeDelete,
+                    MergedAt = DateTime.UtcNow,
+                });
+            }
+
             if (mergeActions.Count > 0)
             {
                 var mergeSongs = songs

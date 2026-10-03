@@ -31,7 +31,8 @@ export default function AuditsPage() {
     };
 
     return (
-        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="audits">
+        <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}} data-testid="audits"
+             data-loading={auditRulesQuery.isFetching ? "true" : "false"}>
             <Group justify="space-between" mb="md">
                 <Title order={2}>{t("common:nav.audits")}</Title>
                 <Group gap="sm">

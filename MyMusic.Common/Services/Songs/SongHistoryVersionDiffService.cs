@@ -108,6 +108,7 @@ public class SongHistoryVersionDiffService(
         Genres = MapGenres(delta.Genres),
         Sources = MapSources(delta.Sources),
         Devices = MapDevices(delta.Devices),
+        MergedSongs = MapMergedSongs(delta.MergedSongs),
     };
 
     private static SongHistoryVersionField<T?>? MapScalar<T>(FieldChange<T>? change)
@@ -188,6 +189,14 @@ public class SongHistoryVersionDiffService(
         {
             Old = GetDevices(change.Old),
             New = GetDevices(change.New),
+        };
+
+    private static SongHistoryVersionField<List<SongHistoryVersionMergedSong>?>? MapMergedSongs(
+        FieldChange<List<SongSnapshotMergedSong>>? change)
+        => change is null ? null : new()
+        {
+            Old = GetMergedSongs(change.Old),
+            New = GetMergedSongs(change.New),
         };
 
     // ---------------------------------------------------------------------
@@ -276,6 +285,18 @@ public class SongHistoryVersionDiffService(
                 DevicePath = d.DevicePath,
                 SyncAction = d.SyncAction?.ToString(),
             })
+            .ToList();
+    }
+
+    private static List<SongHistoryVersionMergedSong>? GetMergedSongs(List<SongSnapshotMergedSong>? mergedSongs)
+    {
+        if (mergedSongs is null)
+        {
+            return null;
+        }
+
+        return mergedSongs
+            .Select(m => new SongHistoryVersionMergedSong { Id = m.Id, Kind = m.Kind.ToString() })
             .ToList();
     }
 }

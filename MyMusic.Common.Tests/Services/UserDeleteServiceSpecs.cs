@@ -294,6 +294,32 @@ public class UserDeleteServiceSpecs
     }
 
     [Fact]
+    public async Task DeleteAsync_DeletesSongMerges()
+    {
+        // Arrange — both users have a record of a merged song; neither merged song exists anymore.
+        var (service, scenario, _) = CreateService();
+        var otherSong = scenario.CreateSong("Other Song");
+        var user = scenario.CreateUser("Test", "testuser");
+        var artist = scenario.CreateArtist("Artist", user.Id);
+        var album = scenario.CreateAlbum("Album", artist, user.Id);
+        var song = scenario.CreateSong("Song", ownerId: user.Id, album: album);
+        scenario.DbContext.SongMerges.AddRange(
+            new SongMerge { KeptSongId = song.Id, MergedSongId = 1001, OwnerId = user.Id, MergedAt = DateTime.UtcNow },
+            new SongMerge
+            {
+                KeptSongId = otherSong.Id, MergedSongId = 1002, OwnerId = scenario.AdminUser.Id,
+                MergedAt = DateTime.UtcNow,
+            });
+        scenario.DbContext.SaveChanges();
+
+        // Act
+        await service.DeleteAsync(user.Id);
+
+        // Assert — only the deleted user's merges are gone.
+        scenario.DbContext.SongMerges.Select(m => m.MergedSongId).ToList().ShouldBe([1002]);
+    }
+
+    [Fact]
     public async Task DeleteAsync_DeletesUserMusicDirectory()
     {
         // Arrange

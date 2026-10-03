@@ -45,6 +45,7 @@ public record SongHistoryVersionDiffModel
     public SongHistoryVersionField<List<string>?>? Genres { get; init; }
     public SongHistoryVersionField<List<SongHistoryVersionSource>?>? Sources { get; init; }
     public SongHistoryVersionField<List<SongHistoryVersionDevice>?>? Devices { get; init; }
+    public SongHistoryVersionField<List<SongHistoryVersionMergedSong>?>? MergedSongs { get; init; }
 }
 
 /// <summary>
@@ -78,4 +79,10 @@ public record SongHistoryVersionDevice
 {
     public required string DevicePath { get; init; }
     public string? SyncAction { get; init; }
+}
+
+public record SongHistoryVersionMergedSong
+{
+    public required long Id { get; init; }
+    public required string Kind { get; init; }
 }

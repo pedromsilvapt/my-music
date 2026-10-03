@@ -1,5 +1,6 @@
 using MyMusic.IntegrationTests.Base;
 using MyMusic.IntegrationTests.Fixtures;
+using MyMusic.IntegrationTests.Fixtures.Models;
 using MyMusic.IntegrationTests.Flows;
 using MyMusic.IntegrationTests.Pages;
 
@@ -12,11 +13,13 @@ namespace MyMusic.IntegrationTests.Tests.SongHistory;
 public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     private SongsFixture _songs = null!;
+    private SoundalikesFixture _soundalikes = null!;
 
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         _songs = new SongsFixture();
+        _soundalikes = new SoundalikesFixture();
     }
 
     [Fact]
@@ -80,6 +83,27 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ValidateSongVersionFlow(song.Title, versionsCount: 2, new(
             Old: new() { Artists = [new() { Name = "Dylan" }] },
             New: new() { Artists = [new() { Name = "Dylan" }, new() { Name = "Freya Ridings" }] }))
+            .ExecuteAsync(Page);
+    }
+
+    [Fact]
+    public async Task ResolveSoundalikes_ShouldRecordMergedSongAsNewVersion()
+    {
+        // Setup: seed two soundalikes (same audio under different tags) and have them detected as a group; the
+        // one to keep already has its initial (upload) version recorded
+        var kept = await _songs.SeedAsync(RequestContext, UserId, SongsFixture.DefaultSongs[1] with { VersionsCount = 1 });
+        var merged = await _songs.SeedAsync(RequestContext, UserId, SongsFixture.DefaultSongs[2]);
+        await _soundalikes.SeedAsync(RequestContext);
+
+        // Action: resolve the group from the audits page, merging the other song into the kept one — the merged
+        // song is deleted, and the whole resolution should record a single second version of the kept song
+        await new ResolveSoundalikesFlow(kept.Title, new() { [merged.Title] = SoundalikeAction.Merge })
+            .ExecuteAsync(Page);
+
+        // Assert: the newest version shows the kept song gaining the merged song's id, along with how it was merged
+        await new ValidateSongVersionFlow(kept.Title, versionsCount: 2, new(
+            Old: new() { MergedSongs = [] },
+            New: new() { MergedSongs = [new() { Id = merged.Id, Kind = "SoundalikeMerge" }] }))
             .ExecuteAsync(Page);
     }
 
