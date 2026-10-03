@@ -7,6 +7,8 @@
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
         <OutputType>Exe</OutputType>
+        <!-- MyMusic.CLI publishes as self-contained Native AOT; it's only referenced here as a library -->
+        <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
     </PropertyGroup>
 
     <ItemGroup>

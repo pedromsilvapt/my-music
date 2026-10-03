@@ -6,6 +6,8 @@
     <IsPackable>false</IsPackable>
     <RunSettingsFilePath>$(MSBuildProjectDirectory)\.runsettings</RunSettingsFilePath>
     <OutputType>Exe</OutputType>
+    <!-- MyMusic.CLI publishes as self-contained Native AOT; it's only referenced here as a library -->
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
