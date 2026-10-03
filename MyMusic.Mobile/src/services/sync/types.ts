@@ -27,6 +27,8 @@ export interface SyncContext {
         deduplicate: boolean;
     };
     result: SyncResult;
+    /** Scanned files already checked, resolved or uploaded: the progress of the upload phase. */
+    processedFiles: number;
     uploadedPaths: Set<string>;
     conflictedPaths: Set<string>;
     pendingActions?: SyncRecordItem[];

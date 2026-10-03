@@ -29,6 +29,7 @@ export function createSyncContext(
         decodedRepoPath: decodeToFsPath(repositoryPath),
         options: state.options,
         result: createEmptyResult(),
+        processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
     };

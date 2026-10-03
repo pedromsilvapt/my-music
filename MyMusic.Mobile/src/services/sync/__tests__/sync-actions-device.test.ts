@@ -70,6 +70,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
             deduplicate: false,
         },
         result,
+        processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
         ...overrides,
@@ -965,6 +966,31 @@ describe('failed client actions', () => {
 
         expect(result.action).toBe('Error');
         expectFailureReported(apiClient, 42, 'new.mp3', undefined);
+    });
+});
+
+describe('actionConflict - progress', () => {
+    test('reports each file being read and the files settled by each resolve request', async () => {
+        // 3 files of 7MB: two fit in the first request, the third goes in a second one
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [], counts: {...ZERO_COUNTS} }),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+            readFileBase64: jest.fn().mockResolvedValue('A'.repeat(7_000_000)),
+        });
+        const updates = ['a.mp3', 'b.mp3', 'c.mp3'].map((filePath, i) =>
+            ({ id: i + 1, filePath, action: 'UpdateLocal', songId: i + 1, data: null, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem));
+        const ctx = createContext({ processedFiles: 10 });
+        const onProgress = jest.fn();
+
+        await actionConflict(apiClient, fileOps, createMockUserPrompt(), ctx, [], updates, new Set(), onProgress);
+
+        const reports = onProgress.mock.calls.map(([p]) => p);
+        expect(reports.every(p => p.phase === 'resolving')).toBe(true);
+        expect(reports.map(p => p.currentFile).filter(Boolean)).toEqual(['Checking conflicts...', 'a.mp3', 'b.mp3', 'c.mp3']);
+        expect(reports.map(p => p.processedFiles).filter(Boolean)).toEqual([12, 13]);
+        expect(ctx.processedFiles).toBe(13);
     });
 });
 

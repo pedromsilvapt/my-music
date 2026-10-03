@@ -126,6 +126,7 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
             treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
         },
         result,
+        processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
         ...overrides,
@@ -409,6 +410,59 @@ describe('uploadPhase - start progress', () => {
         await uploadPhase(deps, ctx, files as never, onProgress);
 
         expect(onProgress).toHaveBeenNthCalledWith(1, { phase: 'upload', totalFiles: 2, processedFiles: 0, currentFile: '' });
+    });
+});
+
+describe('uploadPhase - progress', () => {
+    const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
+    const mockedActionCreateRemote = actionCreateRemote as jest.MockedFunction<typeof actionCreateRemote>;
+    const scanned = (relativePath: string) => ({ relativePath, fullPath: `/music/${relativePath}`, modifiedAt: new Date(), createdAt: new Date(), size: 1 });
+    const record = (id: number, filePath: string, action: SyncRecordItem['action']): SyncRecordItem =>
+        ({ id, filePath, action, songId: 1, data: null, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('advances as files are checked, resolved and uploaded, returning to the upload phase after resolving', async () => {
+        // 4 files in chunks of 2: the first chunk has a potential update and an unchanged file, the second two uploads
+        const deps = createMockDeps();
+        (deps.config.getChunkSize as jest.Mock).mockReturnValue(2);
+        (deps.apiClient.checkSync as jest.Mock)
+            .mockResolvedValueOnce({ records: [record(1, 'a.mp3', 'UpdateLocal')] })
+            .mockResolvedValueOnce({ records: [record(2, 'c.mp3', 'CreateRemote'), record(3, 'd.mp3', 'CreateRemote')] });
+        // Resolving reports the files settled by its request through the context
+        mockedActionConflict.mockImplementation(async (_api, _ops, _prompt, ctx, _conflicts, _updates, _paths, onProgress) => {
+            ctx.processedFiles += 1;
+            onProgress({ phase: 'resolving', processedFiles: ctx.processedFiles });
+            return { records: [], counts: undefined };
+        });
+        mockedActionCreateRemote.mockResolvedValue({ action: 'CreateRemote', filePath: '', source: 'Device' });
+        const ctx = createContext();
+        const onProgress = jest.fn();
+
+        await uploadPhase(deps, ctx, ['a.mp3', 'b.mp3', 'c.mp3', 'd.mp3'].map(scanned), onProgress);
+
+        const reports = onProgress.mock.calls.map(([p]) => [p.phase, p.processedFiles]);
+        expect(reports).toEqual([
+            ['upload', 0],
+            ['upload', 1], ['resolving', 2], ['upload', 2],
+            ['upload', 2], ['upload', 3], ['upload', 4], ['upload', 4],
+        ]);
+    });
+
+    test('counts the files of a failed check as processed', async () => {
+        const deps = createMockDeps();
+        (deps.config.getChunkSize as jest.Mock).mockReturnValue(2);
+        (deps.apiClient.checkSync as jest.Mock)
+            .mockRejectedValueOnce(new Error('boom'))
+            .mockResolvedValueOnce({ records: [] });
+        const ctx = createContext();
+        const onProgress = jest.fn();
+
+        await uploadPhase(deps, ctx, ['a.mp3', 'b.mp3', 'c.mp3'].map(scanned), onProgress);
+
+        expect(onProgress.mock.calls.map(([p]) => p.processedFiles)).toEqual([0, 2, 3, 3]);
     });
 });
 

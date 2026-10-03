@@ -154,13 +154,7 @@ export async function resolveConflictsPhase (
         conflictRecords,
         updateLocalRecords,
         toUpdatePaths,
-        (progress) => {
-            onProgress({
-                phase: progress.phase ?? 'resolving',
-                currentFile: progress.currentFile,
-                conflict: progress.conflict,
-            });
-        }
+        (progress) => onProgress({ phase: 'resolving', ...progress })
     );
 
     ctx.result = addDeltaToResult(ctx.result, resolveResult.counts ?? EMPTY_COUNTS);
@@ -190,10 +184,12 @@ export async function uploadPhase (
     }
 
     // Resets the progress left by the previous phase (fingerprinting) before the first check returns
+    ctx.processedFiles = 0;
     onProgress({ phase: 'upload', totalFiles: files.length, processedFiles: 0, currentFile: '' });
 
     const chunkSize = deps.config.getChunkSize();
     const chunks = chunkArray(files, chunkSize);
+    let checkedFiles = 0;
 
     for (let i = 0; i < chunks.length; i++) {
         if (deps.state.isCancelled) {
@@ -215,8 +211,12 @@ export async function uploadPhase (
             });
         } catch (e) {
             ctx.result.error += chunk.length;
+            checkedFiles += chunk.length;
+            ctx.processedFiles = checkedFiles;
             onProgress({
                 phase: 'upload',
+                processedFiles: ctx.processedFiles,
+                error: ctx.result.error,
                 errorMessage: `Chunk ${i + 1} failed: ${e instanceof Error ? e.message : String(e)}`,
             });
             continue;
@@ -234,11 +234,21 @@ export async function uploadPhase (
         const toUpdateRecords = syncResponse.records.filter(r => r.action === 'UpdateRemote');
         const toUpdatePaths = new Set(toUpdateRecords.map(r => r.filePath));
 
+        // The files the check left nothing to resolve or upload for are done
+        const pendingFiles = conflictRecords.length + updateLocalRecords.length + toCreateRecords.length + toUpdateRecords.length;
+        ctx.processedFiles = checkedFiles + Math.max(0, chunk.length - pendingFiles);
+        reportUploadProgress(ctx, onProgress);
+
         if (conflictRecords.length > 0 || updateLocalRecords.length > 0) {
             await resolveConflictsPhase(deps, ctx, conflictRecords, updateLocalRecords, toUpdatePaths, onProgress);
         }
 
         await processChunkUploads(deps, ctx, toCreateRecords, toUpdateRecords, toUpdatePaths, onProgress);
+
+        // Also covers the files that were neither resolved nor uploaded (unreadable, failed request)
+        checkedFiles += chunk.length;
+        ctx.processedFiles = checkedFiles;
+        reportUploadProgress(ctx, onProgress);
     }
 }
 
@@ -465,7 +475,8 @@ async function processChunkUploads (
         queueUploadClientActions(ctx, result);
         ctx.uploadedPaths.add(createRecord.filePath);
 
-        reportUploadProgress(ctx, createRecord.filePath, onProgress);
+        ctx.processedFiles++;
+        reportUploadProgress(ctx, onProgress, createRecord.filePath);
     }
 
     for (const updateRecord of toUpdateRecords) {
@@ -487,7 +498,8 @@ async function processChunkUploads (
         queueUploadClientActions(ctx, result);
         ctx.uploadedPaths.add(updateRecord.filePath);
 
-        reportUploadProgress(ctx, updateRecord.filePath, onProgress);
+        ctx.processedFiles++;
+        reportUploadProgress(ctx, onProgress, updateRecord.filePath);
     }
 }
 
@@ -505,10 +517,11 @@ function uploadFileInfo (ctx: SyncContext, record: SyncRecordItem): SyncFileBase
     };
 }
 
-function reportUploadProgress (ctx: SyncContext, filePath: string, onProgress: ProgressHandler): void {
+function reportUploadProgress (ctx: SyncContext, onProgress: ProgressHandler, filePath?: string): void {
     onProgress({
-        processedFiles: ctx.result.createRemote + ctx.result.updateRemote + ctx.result.skipped + ctx.result.error + ctx.result.conflict,
-        currentFile: formatFilePath(filePath, ctx.repositoryPath),
+        phase: 'upload',
+        processedFiles: ctx.processedFiles,
+        currentFile: filePath ? formatFilePath(filePath, ctx.repositoryPath) : '',
         createRemote: ctx.result.createRemote,
         updateRemote: ctx.result.updateRemote,
         skipped: ctx.result.skipped,

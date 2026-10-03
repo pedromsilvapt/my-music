@@ -445,6 +445,7 @@ export async function actionConflict(
             continue;
         }
 
+        onProgress({ phase: 'resolving', currentFile: relativePath });
         const fileContentBase64 = await readLocalFileBase64(ResolveItemKind.Conflict, fileOps, ctx, relativePath);
         if (fileContentBase64 === null) {
             continue;
@@ -469,6 +470,7 @@ export async function actionConflict(
             continue;
         }
 
+        onProgress({ phase: 'resolving', currentFile: relativePath });
         const fileContentBase64 = await readLocalFileBase64(ResolveItemKind.PotentialUpdate, fileOps, ctx, relativePath);
         if (fileContentBase64 === null) {
             continue;
@@ -531,6 +533,10 @@ export async function actionConflict(
 
             allRecords.push(...resolveResponse.records);
             aggregatedCounts = addCounts(aggregatedCounts, resolveResponse.counts);
+
+            // Each request carries whole files, so it is slow: report the files it settled
+            ctx.processedFiles += chunk.conflicts.length + chunk.potentialUpdates.length;
+            onProgress({ phase: 'resolving', processedFiles: ctx.processedFiles });
         }
     } catch (e) {
         console.error('Failed to resolve conflicts:', e);
