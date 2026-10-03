@@ -30,4 +30,10 @@ public class SongHistoryQueue
 
     [MaxLength(2000)]
     public string? LastError { get; set; }
+
+    /// <summary>
+    /// When the worker last failed to process this entry (UTC). The song is not retried until the worker interval
+    /// has passed since. Null for entries that never failed.
+    /// </summary>
+    public DateTime? LastErrorAt { get; set; }
 }

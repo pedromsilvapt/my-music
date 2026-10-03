@@ -14,7 +14,9 @@ namespace MyMusic.Common.Services.SongHistory;
 
 /// <summary>
 /// Polling background service that drains the <c>song_history_queues</c> table.
-/// Each queue row (written by a DB trigger on song/album/artist/genre/cover
+/// Cycles run back to back while there is work: the worker only waits
+/// <c>SongHistoryWorkerIntervalSeconds</c> after a cycle that found no song to
+/// process. Each queue row (written by a DB trigger on song/album/artist/genre/cover
 /// mutations) contains the full JSON snapshot of the song at the moment of the
 /// change (captured by BEFORE triggers, i.e. the pre-action state). The worker
 /// batches queue rows by distinct <c>SongId</c>, fetches the live current
@@ -26,7 +28,9 @@ namespace MyMusic.Common.Services.SongHistory;
 /// replacement is applied to the delta's cover <c>FieldChange</c> before
 /// inserting the <c>song_history</c> row.
 /// <para>
-/// Rows that fail <see cref="MaxErrorCount"/> times
+/// A song that fails is not retried until the worker interval has passed since
+/// the failure (<c>LastErrorAt</c>), so its attempts stay one interval apart
+/// even though cycles do not wait. Rows that fail <see cref="MaxErrorCount"/> times
 /// (default 3) are dead-lettered: left in the queue with <c>ErrorCount &gt;= 3</c>
 /// and never retried. The <c>songs</c> BEFORE DELETE trigger blocks deletion
 /// of a song that still has dead-lettered queue entries.
@@ -68,6 +72,13 @@ public class SongHistoryWorker(
     /// </summary>
     private long _playCountCleanupCursor;
 
+    /// <summary>
+    /// How long the worker waits once the queue has nothing to process, and how long a failed song waits for its
+    /// next attempt.
+    /// </summary>
+    private int IntervalSeconds =>
+        config.Value.SongHistoryWorkerIntervalSeconds > 0 ? config.Value.SongHistoryWorkerIntervalSeconds : 10;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!config.Value.SongHistoryWorkerEnabled)
@@ -76,16 +87,14 @@ public class SongHistoryWorker(
             return;
         }
 
-        var intervalSeconds = config.Value.SongHistoryWorkerIntervalSeconds;
-        if (intervalSeconds <= 0)
-        {
-            intervalSeconds = 10;
-        }
+        var intervalSeconds = IntervalSeconds;
 
         logger.LogInformation("Song history worker starting (interval: {Interval}s)", intervalSeconds);
 
         while (!stoppingToken.IsCancellationRequested)
         {
+            var foundWork = false;
+
             try
             {
                 await using var scope = serviceScopeFactory.CreateAsyncScope();
@@ -94,7 +103,9 @@ public class SongHistoryWorker(
                 var thumbnailService = scope.ServiceProvider.GetRequiredService<ISongHistoryThumbnailService>();
                 var snapshotService = scope.ServiceProvider.GetRequiredService<ISongHistorySnapshotService>();
 
-                await ProcessQueueAsync(context, diffService, thumbnailService, snapshotService, stoppingToken);
+                var (processed, failed) = await ProcessQueueAsync(context, diffService, thumbnailService,
+                    snapshotService, stoppingToken);
+                foundWork = processed + failed > 0;
 
                 if (!_baselineBackfillComplete)
                 {
@@ -118,6 +129,16 @@ public class SongHistoryWorker(
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error during song history worker cycle");
+
+                // Waits even if songs were processed, so an error that keeps happening is not hit in a hot loop
+                foundWork = false;
+            }
+
+            // More songs may be waiting: failed ones are left out until the interval passes, so the cycles that
+            // follow end up finding nothing and waiting
+            if (foundWork)
+            {
+                continue;
             }
 
             try
@@ -277,8 +298,13 @@ public class SongHistoryWorker(
             batchSize = 50;
         }
 
+        // A song's entries are processed together, so one that failed recently holds back the whole song
+        var retryCutoff = DateTime.UtcNow.AddSeconds(-IntervalSeconds);
+
         var songIds = await context.SongHistoryQueues
             .Where(q => q.ProcessedAt == null && q.ErrorCount < MaxErrorCount)
+            .Where(q => !context.SongHistoryQueues.Any(f =>
+                f.SongId == q.SongId && f.ProcessedAt == null && f.LastErrorAt > retryCutoff))
             .Select(q => q.SongId)
             .Distinct()
             .OrderBy(id => id)
@@ -345,11 +371,13 @@ public class SongHistoryWorker(
                 context.ChangeTracker.Clear();
 
                 var lastError = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
+                var lastErrorAt = DateTime.UtcNow;
 
                 foreach (var entry in songEntries)
                 {
                     entry.ErrorCount++;
                     entry.LastError = lastError;
+                    entry.LastErrorAt = lastErrorAt;
                 }
 
                 // Updated in place: the entries may be gone by now (their owner was deleted), which would fail a
@@ -359,7 +387,8 @@ public class SongHistoryWorker(
                     .Where(q => entryIds.Contains(q.Id))
                     .ExecuteUpdateAsync(s => s
                         .SetProperty(q => q.ErrorCount, q => q.ErrorCount + 1)
-                        .SetProperty(q => q.LastError, lastError), cancellationToken);
+                        .SetProperty(q => q.LastError, lastError)
+                        .SetProperty(q => q.LastErrorAt, lastErrorAt), cancellationToken);
 
                 logger.LogError(ex,
                     "Failed to process song history queue entries for song {SongId} ({EntryCount} entries, attempt {ErrorCount})",

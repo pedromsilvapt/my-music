@@ -23,9 +23,11 @@ public class SongHistoryWorkerSpecs
         ISongHistoryThumbnailService? thumbnail = null,
         ISongHistorySnapshotService? snapshot = null,
         Config? config = null,
-        ISongHistoryNotifier? notifier = null)
+        ISongHistoryNotifier? notifier = null,
+        IServiceScopeFactory? scopeFactory = null,
+        Scenario? scenario = null)
     {
-        var scenario = new Scenario();
+        scenario ??= new Scenario();
         var thumbnailService = thumbnail ?? new SongHistoryThumbnailService(
             Substitute.For<ILogger<SongHistoryThumbnailService>>());
         var snapshotService = snapshot ?? Substitute.For<ISongHistorySnapshotService>();
@@ -37,7 +39,7 @@ public class SongHistoryWorkerSpecs
             SongHistoryWorkerBatchSize = 50,
         };
         var worker = new SongHistoryWorker(
-            Substitute.For<IServiceScopeFactory>(),
+            scopeFactory ?? Substitute.For<IServiceScopeFactory>(),
             Options.Create(cfg),
             notifier ?? Substitute.For<ISongHistoryNotifier>(),
             Substitute.For<ILogger<SongHistoryWorker>>());
@@ -121,6 +123,34 @@ public class SongHistoryWorkerSpecs
         scenario.DbContext.SongHistoryQueues.Add(entry);
         scenario.DbContext.SaveChanges();
         return entry;
+    }
+
+    /// <summary>
+    /// A scope factory whose scopes resolve everything a worker cycle asks for: the scenario's database and the given
+    /// services, with the baseline backfill and the play count cleanup reporting nothing left to do.
+    /// </summary>
+    private static IServiceScopeFactory CreateScopeFactory(
+        Scenario scenario,
+        ISongHistoryDiffService diffService,
+        ISongHistoryThumbnailService thumbnailService,
+        ISongHistorySnapshotService snapshotService)
+    {
+        var serviceProvider = Substitute.For<IServiceProvider>();
+        serviceProvider.GetService(typeof(MusicDbContext)).Returns(scenario.DbContext);
+        serviceProvider.GetService(typeof(ISongHistoryDiffService)).Returns(diffService);
+        serviceProvider.GetService(typeof(ISongHistoryThumbnailService)).Returns(thumbnailService);
+        serviceProvider.GetService(typeof(ISongHistorySnapshotService)).Returns(snapshotService);
+        serviceProvider.GetService(typeof(ISongHistoryBaselineBackfillService))
+            .Returns(Substitute.For<ISongHistoryBaselineBackfillService>());
+        serviceProvider.GetService(typeof(ISongHistoryPlayCountCleanupService))
+            .Returns(Substitute.For<ISongHistoryPlayCountCleanupService>());
+
+        var scope = Substitute.For<IServiceScope>();
+        scope.ServiceProvider.Returns(serviceProvider);
+
+        var scopeFactory = Substitute.For<IServiceScopeFactory>();
+        scopeFactory.CreateScope().Returns(scope);
+        return scopeFactory;
     }
 
     [Fact]
@@ -363,6 +393,7 @@ public class SongHistoryWorkerSpecs
         survivingQueue.Id.ShouldBe(badEntry.Id);
         survivingQueue.ErrorCount.ShouldBe(1);
         survivingQueue.LastError.ShouldNotBeNull();
+        survivingQueue.LastErrorAt.ShouldNotBeNull().ShouldBe(DateTime.UtcNow, TimeSpan.FromMinutes(1));
         survivingQueue.ProcessedAt.ShouldBeNull();
 
         var history = scenario.DbContext.SongHistories.Single();
@@ -370,6 +401,118 @@ public class SongHistoryWorkerSpecs
         history.Diff.Title.ShouldNotBeNull();
         history.Diff.Title.Old.ShouldBe("Good Old");
         history.Diff.Title.New.ShouldBe("Good New");
+    }
+
+    [Fact]
+    public async Task ProcessQueue_SongFailedWithinInterval_IsSkipped()
+    {
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker();
+        var failedEntry = InsertQueueEntry(scenario, songId: 80, revision: 1, BuildSnapshot(title: "Failed", songId: 80));
+        failedEntry.ErrorCount = 1;
+        failedEntry.LastError = "previous failure";
+        failedEntry.LastErrorAt = DateTime.UtcNow;
+        scenario.DbContext.SaveChanges();
+        // Queued after the failure: a song's entries are processed together, so it waits for the retry too
+        InsertQueueEntry(scenario, songId: 80, revision: 2, BuildSnapshot(title: "Failed Again", songId: 80));
+
+        InsertQueueEntry(scenario, songId: 81, revision: 1, BuildSnapshot(title: "Good Old", songId: 81));
+        snapshot.GetCurrentSnapshotAsync(81, true, Arg.Any<CancellationToken>())
+            .Returns(BuildSnapshot(title: "Good New", songId: 81));
+
+        var (processed, failed) = await worker.ProcessQueueAsync(
+            scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        processed.ShouldBe(1);
+        failed.ShouldBe(0);
+
+        await snapshot.DidNotReceive().GetCurrentSnapshotAsync(80, Arg.Any<bool>(), Arg.Any<CancellationToken>());
+
+        var surviving = scenario.DbContext.SongHistoryQueues.OrderBy(q => q.SongRevision).ToList();
+        surviving.Count.ShouldBe(2);
+        surviving.ShouldAllBe(q => q.SongId == 80);
+        surviving[0].ErrorCount.ShouldBe(1);
+        surviving[1].ErrorCount.ShouldBe(0);
+
+        var history = scenario.DbContext.SongHistories.Single();
+        history.SongId.ShouldBe(81);
+    }
+
+    [Fact]
+    public async Task ProcessQueue_SongFailedBeforeInterval_IsRetried()
+    {
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker();
+        var failedEntry = InsertQueueEntry(scenario, songId: 82, revision: 1, BuildSnapshot(title: "Old", songId: 82));
+        failedEntry.ErrorCount = 1;
+        failedEntry.LastError = "previous failure";
+        failedEntry.LastErrorAt = DateTime.UtcNow.AddSeconds(-11);
+        scenario.DbContext.SaveChanges();
+        snapshot.GetCurrentSnapshotAsync(82, true, Arg.Any<CancellationToken>())
+            .Returns(BuildSnapshot(title: "New", songId: 82));
+
+        var (processed, failed) = await worker.ProcessQueueAsync(
+            scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        processed.ShouldBe(1);
+        failed.ShouldBe(0);
+
+        scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
+        scenario.DbContext.SongHistories.Single().SongId.ShouldBe(82);
+    }
+
+    [Fact]
+    public async Task Execute_MoreSongsThanBatchSize_ProcessesNextBatchWithoutWaiting()
+    {
+        const int songCount = 5;
+        var scenario = new Scenario();
+        var snapshot = Substitute.For<ISongHistorySnapshotService>();
+        var thumbnail = Substitute.For<ISongHistoryThumbnailService>();
+
+        // Signals once every song was processed, so the database is only read after the worker stopped using it
+        var allProcessed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var processedCount = 0;
+        var notifier = Substitute.For<ISongHistoryNotifier>();
+        notifier.When(n => n.Publish(Arg.Any<long>(), SongHistoryNotificationKind.Processed)).Do(_ =>
+        {
+            if (Interlocked.Increment(ref processedCount) == songCount)
+            {
+                allProcessed.TrySetResult();
+            }
+        });
+
+        // An interval no test would wait for: only batches processed back to back can drain the queue
+        var (worker, _, _, _) = CreateWorker(
+            thumbnail,
+            snapshot,
+            new Config
+            {
+                MusicRepositoryPath = "/data",
+                SongHistoryWorkerEnabled = true,
+                SongHistoryWorkerIntervalSeconds = 3600,
+                SongHistoryWorkerBatchSize = 2,
+            },
+            notifier,
+            CreateScopeFactory(scenario, _diffService, thumbnail, snapshot),
+            scenario);
+
+        for (var songId = 90; songId < 90 + songCount; songId++)
+        {
+            InsertQueueEntry(scenario, songId, revision: 1, BuildSnapshot(title: "Old", songId: songId));
+            snapshot.GetCurrentSnapshotAsync(songId, true, Arg.Any<CancellationToken>())
+                .Returns(BuildSnapshot(title: "New", songId: songId));
+        }
+
+        await worker.StartAsync(CancellationToken.None);
+        try
+        {
+            await allProcessed.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+        }
+
+        scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
+        scenario.DbContext.SongHistories.Count().ShouldBe(songCount);
     }
 
     [Fact]
