@@ -304,6 +304,14 @@ public class SyncCommitService(
             songDevice.LastSyncedModifiedAt = (modifiedAt ?? DateTime.UtcNow).ToUniversalTime();
             songDevice.SyncAction = null;
             songDevice.SyncActionReason = null;
+
+            // The device created the file at the record's path, which differs from the SongDevice's when the
+            // naming template produced a new path before the first download (there is no Rename record then)
+            if (songDevice.DevicePath != record.FilePath && songDevice.SongId == (data?.SongId ?? record.SongId)
+                && !await db.SongDevices.AnyAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == record.FilePath, cancellationToken))
+            {
+                songDevice.DevicePath = record.FilePath;
+            }
         }
     }
 

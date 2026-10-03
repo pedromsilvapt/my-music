@@ -269,6 +269,35 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(App.GetSongPath(newDevicePath), title: newTitle);
     }
 
+    // Scenario: A title change before the first download keeps the device in sync
+    //   Given a song on the server is included on the device but was never downloaded
+    //   When the song title is edited on the server and the CLI sync runs
+    //   Then the file is downloaded with the new title in its name
+    //   And a second sync finds the device up to date
+    [Fact]
+    public async Task Sync_TitleChangedBeforeFirstDownload_ShouldDownloadToNewPathAndStayInSync()
+    {
+        // Seed song on server WITH device association; it is assigned a device path with its original title
+        var songsData = await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] }]);
+
+        // Edit the song title on the server before the device ever syncs
+        var newTitle = "Updated Title";
+        await new EditSongFlow(songsData[0].Title, new(Title: newTitle)).ExecuteAsync(Page);
+
+        // Sync should download the song once, to the path of its new title
+        var result = await App.SyncAsync(new SyncOptions());
+        result.ShouldBe(createLocal: 1);
+
+        var newDevicePath = "Freya Ridings/Wicker Woman/Updated Title - Freya Ridings.mp3";
+        App.GetAllFiles().ShouldBeEquivalentTo(new List<string> { newDevicePath });
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(newDevicePath), title: newTitle);
+
+        // A second sync should find the file where the server expects it, with nothing left to do
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(skipped: 1);
+    }
+
     // Scenario: Marking a song as explicit renames the local file
     //   Given a non-explicit song on the server was downloaded to the device
     //   When the song is marked as explicit on the server and the CLI sync runs

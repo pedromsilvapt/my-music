@@ -604,7 +604,9 @@ public class SyncCommitServiceSpecs
         var updated = GetSongDevice(ctx.Db, pending.Id);
         updated.SyncAction.ShouldBeNull();
         updated.LastSyncedModifiedAt.ShouldBe(downloadedAt);
+        updated.DevicePath.ShouldBe("/music/new.mp3", "the SongDevice must follow the path the file was downloaded to");
         GetSongDevice(ctx.Db, synced.Id).LastSyncedModifiedAt.ShouldBe(DefaultModifiedAt);
+        GetSongDevice(ctx.Db, synced.Id).DevicePath.ShouldBe("/music/copy.mp3");
     }
 
     [Fact]
