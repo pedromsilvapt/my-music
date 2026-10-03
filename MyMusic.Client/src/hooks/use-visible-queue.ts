@@ -6,6 +6,7 @@ export interface VisibleQueueResult {
     queue: import('../model').GetPlaylistSongItem[];
     currentSongId: number | null;
     isLoading: boolean;
+    isFetching: boolean;
     queueId: number | null;
 }
 
@@ -31,15 +32,17 @@ export function useVisibleQueue(): VisibleQueueResult {
         const queue = currentQueueQuery.data?.data?.playlist?.songs ?? [];
         const currentSongId = currentQueueQuery.data?.data?.playlist?.currentSongId ?? null;
         const isLoading = currentQueueQuery.isLoading;
+        const isFetching = currentQueueQuery.isFetching;
         const queueId = currentQueueId;
-        return {queue, currentSongId, isLoading, queueId};
+        return {queue, currentSongId, isLoading, isFetching, queueId};
     }
 
     const playlist = visibleQueueQuery.data?.data?.playlist;
     const queue = playlist?.songs ?? [];
     const currentSongId = playlist?.currentSongId ?? null;
     const isLoading = visibleQueueQuery.isLoading;
+    const isFetching = visibleQueueQuery.isFetching;
     const queueId = visibleQueueId;
 
-    return {queue, currentSongId, isLoading, queueId};
+    return {queue, currentSongId, isLoading, isFetching, queueId};
 }

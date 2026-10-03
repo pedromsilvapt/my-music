@@ -156,6 +156,8 @@ public class NavbarComponent(ILocator root) : BaseComponent(root)
     public async Task<PlayerPage> GoToPlayerAsync()
     {
         await PlayerLink.ClickAsync();
-        return new PlayerPage(Root.Page);
+        var page = new PlayerPage(Root.Page);
+        await page.WaitForLoadedAsync();
+        return page;
     }
 }

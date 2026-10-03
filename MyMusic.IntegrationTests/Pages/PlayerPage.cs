@@ -8,6 +8,15 @@ public class PlayerPage(IPage page) : BasePage(page, "player")
     public SongsCollectionComponent Collection => new(Root.GetByTestId("collection"));
 
     /// <summary>
+    /// Waits for the viewed queue's songs and the list of queues in the page header to finish loading.
+    /// </summary>
+    public async Task WaitForLoadedAsync()
+    {
+        await Root.WaitForAsync();
+        await Assertions.Expect(Root).ToHaveAttributeAsync("data-loading", "false");
+    }
+
+    /// <summary>
     /// Opens the queue switcher from the queue name in the page header.
     /// </summary>
     public async Task<QueueSwitcherComponent> OpenQueueSwitcherAsync()

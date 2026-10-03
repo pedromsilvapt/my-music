@@ -28,7 +28,6 @@ public class QueueSwitchTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await Page.ReloadAsync();
         var playerPage = await new HomePage(Page).Navbar.GoToPlayerAsync();
         var collection = playerPage.Collection;
-        await collection.WaitForLoadedAsync();
         await Assertions.Expect(collection.GetRowByTitle(onlyInPlayingQueue.Title)).ToBeVisibleAsync();
 
         // View the other queue without playing it: the song only in the playing queue should be gone

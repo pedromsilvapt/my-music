@@ -12,9 +12,9 @@ import {useQueueManagerStore} from '../stores/queue-manager-store';
 import type {ListQueueItem} from '../model';
 
 export function useQueues() {
-    const {data, isLoading} = useListQueues({});
+    const {data, isLoading, isFetching} = useListQueues({});
     const queues = data?.data?.queues ?? [];
-    return {queues, isLoading};
+    return {queues, isLoading, isFetching};
 }
 
 export function useVisibleQueueId() {
@@ -108,10 +108,11 @@ export function useQueueList(): {
     visibleQueueId: number | null;
     currentQueueId: number | null;
     isLoading: boolean;
+    isFetching: boolean;
 } {
-    const {queues, isLoading} = useQueues();
+    const {queues, isLoading, isFetching} = useQueues();
     const visibleQueueId = useVisibleQueueId();
     const currentQueueId = useCurrentQueueId();
     
-    return {queues, visibleQueueId, currentQueueId, isLoading};
+    return {queues, visibleQueueId, currentQueueId, isLoading, isFetching};
 }

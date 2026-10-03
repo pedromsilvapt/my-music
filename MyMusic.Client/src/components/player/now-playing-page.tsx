@@ -15,10 +15,10 @@ import {useMemo} from "react";
 export default function NowPlayingPage() {
     const {t} = useTranslation(["player", "queue", "common"]);
     const {reorder, reorderBatch} = useQueueMutations();
-    const {queue, currentSongId: visibleQueueCurrentSongId, queueId} = useVisibleQueue();
+    const {queue, currentSongId: visibleQueueCurrentSongId, queueId, isFetching: queueFetching} = useVisibleQueue();
     const scrollToCurrentRequestId = usePlaybackStore((s: { scrollToCurrentRequestId: number }) => s.scrollToCurrentRequestId);
     const {viewQueue} = useQueuesMutations();
-    const {queues, visibleQueueId, currentQueueId} = useQueueList();
+    const {queues, visibleQueueId, currentQueueId, isFetching: queuesFetching} = useQueueList();
 
     const songsSchema = useSongsSchema(true, {visibleQueueId, currentQueueId, visibleQueueCurrentSongId, queueId});
 
@@ -46,7 +46,7 @@ export default function NowPlayingPage() {
     const queueName = visibleQueue?.name ?? t("common:nav.nowPlaying");
 
     return (
-        <Stack gap="md" style={{height: 'var(--parent-height)'}} data-testid="player">
+        <Stack gap="md" style={{height: 'var(--parent-height)'}} data-testid="player" data-loading={queueFetching || queuesFetching ? "true" : "false"}>
             <Group justify="space-between" wrap="nowrap">
                 <Popover
                     position="bottom-start"
