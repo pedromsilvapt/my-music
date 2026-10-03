@@ -13,12 +13,13 @@ public interface ISyncSessionListService
     /// <summary>
     /// Lists up to <paramref name="count"/> most recent sessions for the device owned by
     /// <paramref name="ownerId"/>, ordered by <see cref="DeviceSyncSession.StartedAt"/>
-    /// descending. Returns <c>null</c> when no such device exists for the owner.
+    /// descending. A <c>null</c> <paramref name="count"/> lists all of them. Returns
+    /// <c>null</c> when no such device exists for the owner.
     /// </summary>
     Task<SyncSessionListResult?> ListAsync(
         long deviceId,
         long ownerId,
-        int count,
+        int? count,
         CancellationToken cancellationToken);
 }
 

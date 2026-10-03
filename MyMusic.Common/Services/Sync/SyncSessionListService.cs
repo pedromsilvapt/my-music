@@ -16,18 +16,20 @@ public class SyncSessionListService(
     public async Task<SyncSessionListResult?> ListAsync(
         long deviceId,
         long ownerId,
-        int count,
+        int? count,
         CancellationToken cancellationToken)
     {
         var device = await deviceLookup.FindDeviceAsync(db, deviceId, ownerId, cancellationToken);
         if (device == null) return null;
 
-        var sessions = await db.DeviceSyncSessions
+        IQueryable<DeviceSyncSession> query = db.DeviceSyncSessions
             .Include(s => s.Records)
             .Where(s => s.DeviceId == deviceId)
-            .OrderByDescending(s => s.StartedAt)
-            .Take(count)
-            .ToListAsync(cancellationToken);
+            .OrderByDescending(s => s.StartedAt);
+
+        if (count != null) query = query.Take(count.Value);
+
+        var sessions = await query.ToListAsync(cancellationToken);
 
         return new SyncSessionListResult { Sessions = sessions };
     }

@@ -78,6 +78,25 @@ public class SyncSessionListServiceSpecs
     }
 
     [Fact]
+    public async Task ListAsync_NullCount_ReturnsAllSessions()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        for (var i = 0; i < 7; i++)
+        {
+            scenario.CreateSession(device, status: SyncSessionStatus.Completed, startedAt: DateTime.UtcNow.AddDays(-i));
+        }
+
+        // Act
+        var result = await CreateService(scenario).ListAsync(device.Id, scenario.AdminUser.Id, count: null, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Sessions.Count.ShouldBe(7);
+    }
+
+    [Fact]
     public async Task ListAsync_IncludesRecordsForCounting()
     {
         // Arrange

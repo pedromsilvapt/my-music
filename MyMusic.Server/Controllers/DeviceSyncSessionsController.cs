@@ -27,7 +27,7 @@ public class DeviceSyncSessionsController(
     [HttpGet]
     public async Task<ActionResult<ListSyncSessionsResponse>> ListSessions(
         long deviceId,
-        [FromQuery] int count = 5,
+        [FromQuery] int? count = null,
         CancellationToken cancellationToken = default)
     {
         var result = await sessionListService.ListAsync(deviceId, currentUser.Id, count, cancellationToken);

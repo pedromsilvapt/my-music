@@ -94,7 +94,7 @@ public class DeviceSyncSessionsControllerListSessionsSpecs
     }
 
     [Fact]
-    public async Task ListSessions_DefaultCount_IsFive()
+    public async Task ListSessions_NoCount_ReturnsAllSessions()
     {
         // Arrange
         var scenario = new Scenario();
@@ -110,7 +110,7 @@ public class DeviceSyncSessionsControllerListSessionsSpecs
 
         // Assert
         result.Value.ShouldNotBeNull();
-        result.Value.Sessions.Count.ShouldBe(5);
+        result.Value.Sessions.Count.ShouldBe(8);
     }
 
     [Fact]
