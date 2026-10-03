@@ -40,14 +40,16 @@
     },
     "soundalike": {
         "fetchFailed": "Falha ao obter os grupos de músicas semelhantes",
-        "instructions": "Clique numa música para a marcar como principal. Depois escolha uma ação para cada música restante: eliminar, fundir metadados e eliminar, ou manter.",
+        "instructions": "Clique numa música para a marcar como a que é mantida, na qual as outras são fundidas. Depois escolha uma ação para cada música restante: eliminar, fundir metadados e eliminar, ou ignorar (fica intacta e deixa de ser reportada como duplicada da música mantida).",
         "noDuplicates": "Sem músicas duplicadas detetadas",
         "matchScore": "Pontuação de Correspondência: {{score}}%",
         "unknownAlbum": "Álbum Desconhecido",
         "lyrics": "Letra",
+        "resolveGroup": "Resolver este grupo",
         "actions": {
             "delete": "Eliminar",
-            "merge": "Fundir"
+            "merge": "Fundir",
+            "ignore": "Ignorar"
         },
         "confirmTitle": "Confirmar Resolução",
         "confirmProcessLabel": "Está prestes a processar",
@@ -59,7 +61,7 @@
         "confirmSongsToMerge_other": "{{count}} músicas terão os metadados fundidos primeiro",
         "deleting": "A eliminar: {{titles}}",
         "mergingThenDeleting": "A fundir e depois eliminar: {{titles}}",
-        "keeping": "A manter: {{titles}}",
+        "ignoring": "A ignorar: {{titles}}",
         "resolveButton_one": "Resolver {{count}} Grupo",
         "resolveButton_other": "Resolver {{count}} Grupos",
         "resolveSuccess_one": "{{count}} grupo de músicas semelhantes resolvido",

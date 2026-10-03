@@ -28,6 +28,20 @@ public class AuditDetailsPage(IPage page) : BasePage(page, "audit-detail")
     public async Task ResolveSoundalikesAsync()
     {
         await RemoveDuplicatesButton.ClickAsync();
+        await ConfirmResolutionAsync();
+    }
+
+    /// <summary>
+    /// Applies the resolution of a single soundalike group, through the group's own button, confirming the dialog.
+    /// </summary>
+    public async Task ResolveSoundalikeGroupAsync(SoundalikeGroupComponent group)
+    {
+        await group.ClickResolveAsync();
+        await ConfirmResolutionAsync();
+    }
+
+    private async Task ConfirmResolutionAsync()
+    {
         await ConfirmDialog.GetByRole(AriaRole.Button, new() { NameRegex = new Regex("^Resolve") }).ClickAsync();
         await ConfirmDialog.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
     }

@@ -40,14 +40,16 @@
     },
     "soundalike": {
         "fetchFailed": "Failed to fetch soundalike groups",
-        "instructions": "Click a song to mark it as primary. Then choose an action for each remaining song: delete, merge metadata then delete, or keep.",
+        "instructions": "Click a song to mark it as the one to keep, which the others are merged into. Then choose an action for each remaining song: delete, merge metadata then delete, or ignore (left untouched, and no longer reported as a duplicate of the kept song).",
         "noDuplicates": "No duplicate songs detected",
         "matchScore": "Match Score: {{score}}%",
         "unknownAlbum": "Unknown Album",
         "lyrics": "Lyrics",
+        "resolveGroup": "Resolve this group",
         "actions": {
             "delete": "Delete",
-            "merge": "Merge"
+            "merge": "Merge",
+            "ignore": "Ignore"
         },
         "confirmTitle": "Confirm Resolution",
         "confirmProcessLabel": "You are about to process",
@@ -59,7 +61,7 @@
         "confirmSongsToMerge_other": "{{count}} songs will have metadata merged first",
         "deleting": "Deleting: {{titles}}",
         "mergingThenDeleting": "Merging then deleting: {{titles}}",
-        "keeping": "Keeping: {{titles}}",
+        "ignoring": "Ignoring: {{titles}}",
         "resolveButton_one": "Resolve {{count}} Group",
         "resolveButton_other": "Resolve {{count}} Groups",
         "resolveSuccess_one": "Resolved {{count}} duplicate group",

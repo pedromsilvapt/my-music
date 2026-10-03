@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Tests.Utilities;
 using NSubstitute;
 using Shouldly;
@@ -15,9 +16,9 @@ public class SongUpdateServiceSpecs
 {
     private SongUpdateService CreateService(Scenario scenario)
     {
+        var config = Options.Create(new Config { MusicRepositoryPath = "/data" });
         return new SongUpdateService(
-            scenario.FileSystem,
-            Options.Create(new Config { MusicRepositoryPath = "/data" }),
+            new SongFileUpdateService(scenario.FileSystem, config),
             scenario.FileTransactions,
             Substitute.For<ILogger<SongUpdateService>>());
     }

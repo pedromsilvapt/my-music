@@ -1,4 +1,4 @@
-import {Button, Card, Group, Stack, Text, Modal, Divider, List, ThemeIcon, Badge, Tooltip, useComputedColorScheme} from "@mantine/core";
+import {ActionIcon, Button, Card, Group, Stack, Text, Modal, Divider, List, ThemeIcon, Badge, Tooltip, useComputedColorScheme} from "@mantine/core";
 import {IconCheck, IconTrash} from '@tabler/icons-react';
 import {useGetSoundalikeDuplicates, useUpdateSoundalikeSelection} from "../../client/audits.ts";
 import {useResolveSoundalikes} from "../../hooks/useResolveSoundalikes.ts";
@@ -16,7 +16,7 @@ import ExplicitLabel from "../common/explicit-label.tsx";
 import {formatFileSize} from "../../utils/format-file-size.ts";
 import {formatRelativeDate} from "../../utils/format-relative-date.ts";
 
-type SongAction = typeof SecondaryAction.Delete | typeof SecondaryAction.Merge | typeof SecondaryAction.Keep;
+type SongAction = typeof SecondaryAction.Delete | typeof SecondaryAction.Merge | typeof SecondaryAction.Ignore;
 
 interface GroupSelection {
     primaryId: number | null;
@@ -60,7 +60,8 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
     const resolveMutation = useResolveSoundalikes();
     const selectionMutation = useUpdateSoundalikeSelection();
     const [selectedGroups, setSelectedGroups] = useState<Map<number, GroupSelection>>(new Map());
-    const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+    // The groups awaiting confirmation: all the selected ones, or the single group being resolved on its own
+    const [confirmGroupIds, setConfirmGroupIds] = useState<number[] | null>(null);
 
     const soundalikesResponse = useQueryData(
         soundalikesQuery,
@@ -127,17 +128,13 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
         });
     };
 
-    const handleSetAction = (nonConformityId: number, songId: number, action: SongAction | null) => {
+    const handleSetAction = (nonConformityId: number, songId: number, action: SongAction) => {
         setSelectedGroups(prev => {
             const newMap = new Map(prev);
             const existing = newMap.get(nonConformityId);
             if (existing) {
                 const newActions = new Map(existing.actions);
-                if (action) {
-                    newActions.set(songId, action);
-                } else {
-                    newActions.delete(songId);
-                }
+                newActions.set(songId, action);
                 const newSelection: GroupSelection = {
                     ...existing,
                     actions: newActions
@@ -149,11 +146,13 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
         });
     };
 
-    const handleResolve = async () => {
-        setConfirmModalOpen(false);
+    const confirmSelections = Array.from(selectedGroups.entries())
+        .filter(([nonConformityId, selection]) => selection.primaryId != null && confirmGroupIds?.includes(nonConformityId));
 
-        const resolutions = Array.from(selectedGroups.entries())
-            .filter(([, selection]) => selection.primaryId != null)
+    const handleResolve = async () => {
+        setConfirmGroupIds(null);
+
+        const resolutions = confirmSelections
             .map(([nonConformityId, selection]) => ({
             nonConformityId,
             primarySongId: selection.primaryId!,
@@ -172,7 +171,13 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                         message: t("audits:soundalike.resolveSuccess", {count: resolutions.length}),
                         color: "green"
                     });
-                    setSelectedGroups(new Map());
+                    setSelectedGroups(prev => {
+                        const newMap = new Map(prev);
+                        for (const resolution of resolutions) {
+                            newMap.delete(resolution.nonConformityId);
+                        }
+                        return newMap;
+                    });
                     soundalikesQuery.refetch();
                 },
                 onError: (error: unknown) => {
@@ -223,7 +228,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
     };
 
     const getTotalSongsToDelete = () => {
-        return Array.from(selectedGroups.values()).reduce((sum, sel) => {
+        return confirmSelections.reduce((sum, [, sel]) => {
             return sum + Array.from(sel.actions.values())
                 .filter(a => a === SecondaryAction.Delete || a === SecondaryAction.Merge)
                 .length;
@@ -231,7 +236,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
     };
 
     const getTotalSongsToMerge = () => {
-        return Array.from(selectedGroups.values()).reduce((sum, sel) => {
+        return confirmSelections.reduce((sum, [, sel]) => {
             return sum + Array.from(sel.actions.values())
                 .filter(a => a === SecondaryAction.Merge)
                 .length;
@@ -245,10 +250,10 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
             <SoundalikeToolbar
                 selectedGroupsCount={selectedGroups.size}
                 readyToResolve={readyToResolve}
-                onRemoveDuplicates={() => setConfirmModalOpen(true)}
+                onRemoveDuplicates={() => setConfirmGroupIds(Array.from(selectedGroups.keys()))}
             />
         );
-    }, [onToolbarChange, selectedGroups.size, readyToResolve]);
+    }, [onToolbarChange, selectedGroups, readyToResolve]);
 
     return (
         <div style={{height: '100%', display: 'flex', flexDirection: 'column'}} data-testid="soundalikes"
@@ -266,6 +271,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                             selection={selectedGroups.get(group.nonConformityId)}
                             onSelectPrimary={handleSelectPrimary}
                             onSetAction={handleSetAction}
+                            onResolve={(nonConformityId) => setConfirmGroupIds([nonConformityId])}
                         />
                     ))}
 
@@ -278,14 +284,14 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
             </div>
 
             <Modal
-                opened={confirmModalOpen}
-                onClose={() => setConfirmModalOpen(false)}
+                opened={confirmGroupIds != null}
+                onClose={() => setConfirmGroupIds(null)}
                 title={t("audits:soundalike.confirmTitle")}
                 size="lg"
             >
                 <Stack>
                     <Text>
-                        {t("audits:soundalike.confirmProcessLabel")} <strong>{t("audits:soundalike.groupCount", {count: selectedGroups.size})}</strong>:
+                        {t("audits:soundalike.confirmProcessLabel")} <strong>{t("audits:soundalike.groupCount", {count: confirmSelections.length})}</strong>:
                     </Text>
                     <Group gap="md">
                         <Text size="sm"><strong>{getTotalSongsToDelete()}</strong> {t("audits:soundalike.confirmSongsToDelete", {count: getTotalSongsToDelete()})}</Text>
@@ -296,7 +302,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
 
                     <Divider my="sm" />
 
-                    {Array.from(selectedGroups.entries()).map(([groupId, selection]) => {
+                    {confirmSelections.map(([groupId, selection]) => {
                         const group = groups.find(g => g.nonConformityId === groupId);
                         if (!group) return null;
 
@@ -305,7 +311,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
 
                         const mergeSongs = group.songs.filter(s => selection.actions.get(s.id) === SecondaryAction.Merge);
                         const deleteSongs = group.songs.filter(s => selection.actions.get(s.id) === SecondaryAction.Delete);
-                        const keepSongs = group.songs.filter(s => selection.actions.get(s.id) === SecondaryAction.Keep);
+                        const ignoreSongs = group.songs.filter(s => selection.actions.get(s.id) === SecondaryAction.Ignore);
 
                         const changes = mergeSongs.length > 0 ? getMergedMetadataPreview(primarySong, mergeSongs) : [];
 
@@ -335,9 +341,9 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                                         {t("audits:soundalike.mergingThenDeleting", {titles: mergeSongs.map(s => s.title).join(', ')})}
                                     </Text>
                                 )}
-                                {keepSongs.length > 0 && (
+                                {ignoreSongs.length > 0 && (
                                     <Text size="sm" c="dimmed">
-                                        {t("audits:soundalike.keeping", {titles: keepSongs.map(s => s.title).join(', ')})}
+                                        {t("audits:soundalike.ignoring", {titles: ignoreSongs.map(s => s.title).join(', ')})}
                                     </Text>
                                 )}
                             </Card>
@@ -347,7 +353,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                     <Divider my="sm" />
 
                     <Group justify="flex-end">
-                        <Button variant="default" onClick={() => setConfirmModalOpen(false)}>
+                        <Button variant="default" onClick={() => setConfirmGroupIds(null)}>
                             {t("common:actions.cancel")}
                         </Button>
                         <Button
@@ -356,7 +362,7 @@ export default function SoundalikePage({onToolbarChange}: SoundalikePageProps) {
                             onClick={handleResolve}
                             loading={resolveMutation.isPending}
                         >
-                            {t("audits:soundalike.resolveButton", {count: selectedGroups.size})}
+                            {t("audits:soundalike.resolveButton", {count: confirmSelections.length})}
                         </Button>
                     </Group>
                 </Stack>
@@ -369,10 +375,13 @@ interface SoundalikeGroupCardProps {
     group: SoundalikeDuplicateGroup;
     selection?: GroupSelection;
     onSelectPrimary: (nonConformityId: number, songId: number) => void;
-    onSetAction: (nonConformityId: number, songId: number, action: SongAction | null) => void;
+    onSetAction: (nonConformityId: number, songId: number, action: SongAction) => void;
+    onResolve: (nonConformityId: number) => void;
 }
 
-function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: SoundalikeGroupCardProps) {
+const SONG_ACTIONS = [SecondaryAction.Delete, SecondaryAction.Merge, SecondaryAction.Ignore] as const;
+
+function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction, onResolve}: SoundalikeGroupCardProps) {
     const {t} = useTranslation(["audits", "common"]);
     const colorScheme = useComputedColorScheme('light');
     const matchPercentage = Math.round(group.matchScore * 100);
@@ -380,20 +389,37 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
     const primaryBg = colorScheme === 'dark' ? 'var(--mantine-color-blue-8)' : 'var(--mantine-color-blue-1)';
     const primaryBorder = colorScheme === 'dark' ? 'var(--mantine-color-blue-4)' : 'var(--mantine-color-blue-6)';
     const primaryText = colorScheme === 'dark' ? 'var(--mantine-color-blue-0)' : undefined;
-    const keepBadgeVariant = colorScheme === 'dark' ? 'white' : 'light';
+    const activeBadgeVariant = colorScheme === 'dark' ? 'white' : 'light';
 
-    const actionBadgeProps: Record<Exclude<SongAction, typeof SecondaryAction.Keep>, { color: string; label: string }> = {
+    const actionBadgeProps: Record<SongAction, { color: string; label: string }> = {
         [SecondaryAction.Delete]: { color: 'red', label: t("audits:soundalike.actions.delete") },
         [SecondaryAction.Merge]: { color: 'orange', label: t("audits:soundalike.actions.merge") },
+        [SecondaryAction.Ignore]: { color: 'gray', label: t("audits:soundalike.actions.ignore") },
     };
 
     return (
         <Card shadow="sm" padding="lg" radius="md" withBorder data-testid="soundalike-group">
             <Group justify="space-between" mb="md">
                 <Text fw={500}>{t("audits:soundalike.matchScore", {score: matchPercentage})}</Text>
-                <Text size="sm" c="dimmed">
-                    {t("common:count.songs", {count: group.songs.length})}
-                </Text>
+                <Group gap="sm">
+                    <Text size="sm" c="dimmed">
+                        {t("common:count.songs", {count: group.songs.length})}
+                    </Text>
+                    {selection && (
+                        <Tooltip label={t("audits:soundalike.resolveGroup")} openDelay={500}>
+                            <ActionIcon
+                                variant="light"
+                                color="green"
+                                size="sm"
+                                aria-label={t("audits:soundalike.resolveGroup")}
+                                data-testid="soundalike-group-resolve"
+                                onClick={() => onResolve(group.nonConformityId)}
+                            >
+                                <IconCheck size={14}/>
+                            </ActionIcon>
+                        </Tooltip>
+                    )}
+                </Group>
             </Group>
 
             <Stack gap="sm">
@@ -401,6 +427,8 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                     const isPrimary = selection?.primaryId === song.id;
                     const songAction = selection?.actions.get(song.id);
                     const hasSelection = !!selection;
+                    // Only the songs that will be gone once the group is resolved are struck through
+                    const isRemoved = songAction === SecondaryAction.Delete || songAction === SecondaryAction.Merge;
 
                     return (
                         <Card
@@ -423,15 +451,15 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                     </Tooltip>
                                     <div style={{minWidth: 0, flex: 1}}>
                                         <ExplicitLabel visible={song.isExplicit}>
-                                            <Text fw={isPrimary ? 600 : 400} c={isPrimary ? primaryText : undefined} lineClamp={1} style={{textDecoration: songAction ? 'line-through' : undefined}}>
+                                            <Text fw={isPrimary ? 600 : 400} c={isPrimary ? primaryText : undefined} lineClamp={1} style={{textDecoration: isRemoved ? 'line-through' : undefined}}>
                                                 {song.title}
                                             </Text>
                                         </ExplicitLabel>
-                                        <Text size="sm" c={isPrimary ? primaryText : "dimmed"} lineClamp={1} style={{textDecoration: songAction ? 'line-through' : undefined}}>
+                                        <Text size="sm" c={isPrimary ? primaryText : "dimmed"} lineClamp={1} style={{textDecoration: isRemoved ? 'line-through' : undefined}}>
                                             {song.artists.map(a => a.name).join(', ')} • {song.album?.name ?? t("audits:soundalike.unknownAlbum")}
                                         </Text>
                                         <Tooltip label={song.createdAt ? new Date(song.createdAt).toLocaleString() : undefined} disabled={!song.createdAt} openDelay={500}>
-                                            <Text size="xs" c={isPrimary ? primaryText : "dimmed"} lineClamp={1} style={{textDecoration: songAction ? 'line-through' : undefined}}>
+                                            <Text size="xs" c={isPrimary ? primaryText : "dimmed"} lineClamp={1} style={{textDecoration: isRemoved ? 'line-through' : undefined}}>
                                                 {[
                                                     song.duration,
                                                     song.size ? formatFileSize(song.size) : null,
@@ -444,54 +472,31 @@ function SoundalikeGroupCard({group, selection, onSelectPrimary, onSetAction}: S
                                     </div>
                                 </Group>
                                 <Group gap="xs" wrap="nowrap">
-                                    {isPrimary && <Badge color="blue" variant={keepBadgeVariant}>{t("common:common.keep")}</Badge>}
-                                    {!isPrimary && hasSelection && songAction && (
-                                        <>
-                                            {(['Delete', 'Merge'] as const).map(action => {
-                                                const props = actionBadgeProps[action];
-                                                const isActive = songAction === action;
-                                                return (
-                                                    <Badge
-                                                        key={action}
-                                                        data-testid={`soundalike-action-${action.toLowerCase()}`}
-                                                        data-active={isActive ? "true" : "false"}
-                                                        color={props.color}
-                                                        variant={isActive ? keepBadgeVariant : 'outline'}
-                                                        style={{cursor: 'pointer', opacity: isActive ? 1 : 0.5}}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onSetAction(group.nonConformityId, song.id, isActive ? null : action);
-                                                        }}
-                                                    >
-                                                        {props.label}
-                                                    </Badge>
-                                                );
-                                            })}
-                                        </>
+                                    {isPrimary && (
+                                        <Badge color="blue" variant={activeBadgeVariant}>
+                                            {t("common:common.keep")}
+                                        </Badge>
                                     )}
-                                    {!isPrimary && hasSelection && !songAction && (
-                                        <>
-                                            {(['Delete', 'Merge'] as const).map(action => {
-                                                const props = actionBadgeProps[action];
-                                                return (
-                                                    <Badge
-                                                        key={action}
-                                                        data-testid={`soundalike-action-${action.toLowerCase()}`}
-                                                        data-active="false"
-                                                        color={props.color}
-                                                        variant="outline"
-                                                        style={{cursor: 'pointer', opacity: 0.5}}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            onSetAction(group.nonConformityId, song.id, action);
-                                                        }}
-                                                    >
-                                                        {props.label}
-                                                    </Badge>
-                                                );
-                                            })}
-                                        </>
-                                    )}
+                                    {!isPrimary && hasSelection && SONG_ACTIONS.map(action => {
+                                        const props = actionBadgeProps[action];
+                                        const isActive = songAction === action;
+                                        return (
+                                            <Badge
+                                                key={action}
+                                                data-testid={`soundalike-action-${action.toLowerCase()}`}
+                                                data-active={isActive ? "true" : "false"}
+                                                color={props.color}
+                                                variant={isActive ? activeBadgeVariant : 'outline'}
+                                                style={{cursor: 'pointer', opacity: isActive ? 1 : 0.5}}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onSetAction(group.nonConformityId, song.id, action);
+                                                }}
+                                            >
+                                                {props.label}
+                                            </Badge>
+                                        );
+                                    })}
                                     {song.year && <Text size="sm" c={isPrimary ? primaryText : "dimmed"}>{song.year}</Text>}
                                     {song.hasLyrics && <Badge variant="light" color="grape">{t("audits:soundalike.lyrics")}</Badge>}
                                 </Group>

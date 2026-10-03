@@ -440,36 +440,26 @@ public class AuditsController(
     {
         var ownerId = currentUser.Id;
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        var resolutions = request.Resolutions.Select(r => new GroupResolutionInput
+        {
+            NonConformityId = r.NonConformityId,
+            PrimarySongId = r.PrimarySongId,
+            SecondaryActions = r.SecondaryActions.Select(a => new SecondarySongActionInput
+            {
+                SongId = a.SongId,
+                Action = a.Action,
+            }).ToList(),
+        }).ToList();
 
         try
         {
-            var resolutions = request.Resolutions.Select(r => new GroupResolutionInput
-            {
-                NonConformityId = r.NonConformityId,
-                PrimarySongId = r.PrimarySongId,
-                SecondaryActions = r.SecondaryActions.Select(a => new SecondarySongActionInput
-                {
-                    SongId = a.SongId,
-                    Action = a.Action,
-                }).ToList(),
-            }).ToList();
-
             var resolvedCount = await resolutionService.ResolveAsync(db, ownerId, resolutions, cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
 
             return Ok(new ResolveSoundalikesResponse { ResolvedCount = resolvedCount });
         }
         catch (UnauthorizedAccessException)
         {
-            await transaction.RollbackAsync(cancellationToken);
             return Forbid();
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
         }
     }
 

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.NamingStrategies;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Targets;
 using MyMusic.Common.Utilities;
 
@@ -21,8 +22,7 @@ public interface ISongUpdateService
 }
 
 public class SongUpdateService(
-    IFileSystem fileSystem,
-    IOptions<Config> config,
+    ISongFileUpdateService songFileUpdate,
     IFileTransactionService fileTransactions,
     ILogger<SongUpdateService> logger) : ISongUpdateService
 {
@@ -54,21 +54,16 @@ public class SongUpdateService(
         song = await LoadSongAsync(db, songId, cancellationToken);
 
         var previousChecksum = song.Checksum;
-        var previousPath = await UpdateFileAndChecksumAsync(db, files, song, cancellationToken);
+        var fileUpdate = await songFileUpdate.UpdateAsync(db, files, song,
+            () => BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames),
+            cancellationToken);
 
         logger.LogInformation("Song {SongId} update: previousChecksum={PreviousChecksum}, newChecksum={NewChecksum}",
             songId, previousChecksum, song.Checksum);
 
-        if (song.Checksum != previousChecksum)
+        if (fileUpdate.ChecksumChanged)
         {
-            logger.LogInformation("Marking devices for download for song {SongId} (checksumChanged={ChecksumChanged}",
-                songId, song.Checksum != previousChecksum);
-            var reason = BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames);
-            await MarkSongDevicesForDownloadAsync(db, songId, reason, cancellationToken);
             logger.LogInformation("Marked devices for download for song {SongId}, saving changes", songId);
-
-            // The file content actually changed: record the file-level modification time
-            song.FileModifiedAt = DateTime.UtcNow;
         }
         else
         {
@@ -78,7 +73,7 @@ public class SongUpdateService(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Saved changes for song {SongId}", songId);
 
-        await CommitMovingFileAsync(transaction, files, previousPath, song.RepositoryPath, cancellationToken);
+        await CommitMovingFileAsync(transaction, files, fileUpdate.PreviousPath, song.RepositoryPath, cancellationToken);
 
         return MapToResult(song);
     }
@@ -110,21 +105,13 @@ public class SongUpdateService(
             await ApplyUpdatesAsync(db, song, update, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
 
-            var previousChecksum = song.Checksum;
-            var previousPath = await UpdateFileAndChecksumAsync(db, files, song, cancellationToken);
-
-            if (song.Checksum != previousChecksum)
-            {
-                var reason = BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames);
-                await MarkSongDevicesForDownloadAsync(db, songId, reason, cancellationToken);
-
-                // The file content actually changed: record the file-level modification time
-                song.FileModifiedAt = DateTime.UtcNow;
-            }
+            var fileUpdate = await songFileUpdate.UpdateAsync(db, files, song,
+                () => BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames),
+                cancellationToken);
 
             await db.SaveChangesAsync(cancellationToken);
 
-            await CommitMovingFileAsync(transaction, files, previousPath, song.RepositoryPath, cancellationToken);
+            await CommitMovingFileAsync(transaction, files, fileUpdate.PreviousPath, song.RepositoryPath, cancellationToken);
 
             return new BatchUpdateResult
             {
@@ -500,59 +487,6 @@ public class SongUpdateService(
         await db.AddAsync(genre, cancellationToken);
 
         return genre;
-    }
-
-    private static async Task MarkSongDevicesForDownloadAsync(MusicDbContext db, long songId,
-        string reason, CancellationToken cancellationToken)
-    {
-        var songDevices = await db.SongDevices
-            .Where(sd => sd.SongId == songId && sd.SyncAction != SongSyncAction.Remove)
-            .ToListAsync(cancellationToken);
-
-        foreach (var songDevice in songDevices)
-        {
-            songDevice.SyncAction = SongSyncAction.Download;
-            songDevice.SyncActionReason = reason;
-        }
-    }
-
-    /// <summary>
-    ///     Writes the song's metadata into its file, and points the song to the path that metadata now generates. The
-    ///     file itself is only moved there by <see cref="CommitMovingFileAsync"/>, once that path is saved.
-    /// </summary>
-    /// <returns>The path the file still has to be moved from, if its path changed.</returns>
-    private async Task<string?> UpdateFileAndChecksumAsync(MusicDbContext db, IFileTransaction files, Song song,
-        CancellationToken cancellationToken)
-    {
-        var metadata = EntityConverter.ToSong(song);
-
-        var fileTarget = new FileTarget(fileSystem)
-        {
-            FilePath = song.RepositoryPath,
-            Folder = fileSystem.Path.Join(config.Value.MusicRepositoryPath, song.Owner.Username),
-        };
-
-        // The file is edited in place, and restored if the transaction fails
-        await files.PrepareEditAsync(song.RepositoryPath, cancellationToken);
-        await fileTarget.SaveMetadata(metadata, cancellationToken);
-
-        var naming = NamingMetadata.FromPath(song.RepositoryPath);
-        var newPath = await fileTarget.GetRelocatedPath(naming, async path =>
-                await FilePathResolver.ResolveConflictAsync(path, song.OwnerId, song.Id, db, cancellationToken),
-            cancellationToken);
-
-        // The file is still at its current path
-        var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
-        song.Checksum = ChecksumService.CalculateChecksum(fileSystem, checksumAlgorithm, song.RepositoryPath);
-        song.ChecksumAlgorithm = checksumAlgorithm.GetType().Name;
-
-        var previousPath = newPath != song.RepositoryPath ? song.RepositoryPath : null;
-
-        song.RepositoryPath = newPath;
-
-        song.Label = SongLabelBuilder.Build(song);
-
-        return previousPath;
     }
 
     /// <summary>

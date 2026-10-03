@@ -11,5 +11,5 @@ export type SecondaryAction = typeof SecondaryAction[keyof typeof SecondaryActio
 export const SecondaryAction = {
   Delete: 'Delete',
   Merge: 'Merge',
-  Keep: 'Keep',
+  Ignore: 'Ignore',
 } as const;

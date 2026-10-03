@@ -11,4 +11,7 @@ public enum SoundalikeAction
 
     /// <summary>The song's metadata is merged into the kept song, then the song is deleted.</summary>
     Merge,
+
+    /// <summary>The song is left untouched, and is no longer reported as a soundalike of the kept song.</summary>
+    Ignore,
 }

@@ -374,6 +374,11 @@ PostgreSQL triggers queue a snapshot of a song (built by the `song_history_build
 
 When a song absorbs another one, a `song_merges` row (`SongMerge`) records it: the kept song's id, the merged song's id, and the `Kind` (`ImportDuplicate`, `SoundalikeMerge` or `SoundalikeDelete`). The snapshot lists the songs merged directly into a song as `merged_songs`, so the merge is part of the kept song's history.
 
+Resolving a soundalike group (`SoundalikeResolutionService`) gives each song other than the kept one a `SecondaryAction`:
+
+- **`Delete` / `Merge`**: the song is absorbed by the kept song and deleted (`Merge` copies its missing metadata first). The kept song takes the oldest `CreatedAt` and `AddedAt` among itself and the absorbed songs, and its `ModifiedAt` becomes now. After a `Merge`, the merged metadata is written to the kept song's file (`ISongFileUpdateService`, shared with song edits): only if the checksum changes is `FileModifiedAt` updated and the song's devices marked for download.
+- **`Ignore`**: the song is left untouched, and an `ExcludedDuplicatePair` with the kept song stops the pair from being reported again.
+
 - **No song FKs**: the merged song is deleted by the merge, and the kept song may itself be merged or deleted later. Only `owner_id` has an FK, which cascades when the user is deleted.
 - **Tree, not flattened**: rows are never updated, copied or deleted. Merging A into B, then B into C, leaves two rows (A→B, B→C); `merged_songs` of C lists only B. Walk `song_merges` recursively for the full lineage. `merged_song_id` is unique, since a song is merged away only once.
 - **Flush first in `SongMergeService`**: the worker uses the first snapshot queued in a transaction as the revision's "before" state. The merge re-points the merged song's artists, genres and devices with `UPDATE song_id`, which queues nothing, so the `SongMerge` row is saved before those steps: its insert trigger snapshots the kept song while it is still untouched, and the gained artists/genres land in the merge's revision.

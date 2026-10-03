@@ -5,17 +5,24 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services.AuditRules;
+using MyMusic.Common.Services.Songs;
 
 namespace MyMusic.Common.Services;
 
 public class SoundalikeResolutionService(
     ISoundalikeMergeService mergeService,
+    ISongFileUpdateService songFileUpdate,
+    IFileTransactionService fileTransactions,
     IOptions<Config> config,
     ILogger<SoundalikeResolutionService> logger) : ISoundalikeResolutionService
 {
     public async Task<int> ResolveAsync(MusicDbContext db, long ownerId, List<GroupResolutionInput> resolutions, CancellationToken cancellationToken = default)
     {
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var files = fileTransactions.Begin(db);
+
         var resolvedCount = 0;
+        var movedFiles = new List<(string PreviousPath, Song Song)>();
 
         foreach (var resolution in resolutions)
         {
@@ -25,6 +32,7 @@ public class SoundalikeResolutionService(
 
             var songs = await db.Songs
                 .Where(s => allSongIds.Contains(s.Id))
+                .Include(s => s.Owner)
                 .Include(s => s.Album).ThenInclude(a => a.Artist)
                 .Include(s => s.Artists).ThenInclude(sa => sa.Artist)
                 .Include(s => s.Genres).ThenInclude(sg => sg.Genre)
@@ -69,6 +77,8 @@ public class SoundalikeResolutionService(
                 });
             }
 
+            await ExcludeIgnoredSongsAsync(db, ownerId, primarySong, resolution, songs, cancellationToken);
+
             if (mergeActions.Count > 0)
             {
                 var mergeSongs = songs
@@ -78,6 +88,8 @@ public class SoundalikeResolutionService(
             }
 
             var secondaryIds = deleteActions.Select(a => a.SongId).ToHashSet();
+
+            KeepOldestDates(primarySong, songs.Where(s => secondaryIds.Contains(s.Id)).ToList());
 
             var primaryPlaylistIds = await db.PlaylistSongs
                 .Where(ps => ps.SongId == primarySong.Id)
@@ -185,12 +197,85 @@ public class SoundalikeResolutionService(
                 db.AuditNonConformities.Remove(nonConformity);
             }
 
+            if (mergeActions.Count > 0)
+            {
+                // The merged songs must be gone before the file is written, so their paths are free for the kept song
+                await db.SaveChangesAsync(cancellationToken);
+
+                var fileUpdate = await songFileUpdate.UpdateAsync(db, files, primarySong,
+                    () => "Soundalike resolution: merged metadata", cancellationToken);
+                if (fileUpdate.PreviousPath is not null)
+                {
+                    movedFiles.Add((fileUpdate.PreviousPath, primarySong));
+                }
+            }
+
             resolvedCount++;
         }
 
         await db.SaveChangesAsync(cancellationToken);
 
+        // The files only move once their new paths are saved, and move back if the commit fails
+        foreach (var (previousPath, song) in movedFiles)
+        {
+            await files.MoveAsync(previousPath, song.RepositoryPath, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+
         return resolvedCount;
+    }
+
+    /// <summary>
+    /// Records each ignored song as not being a duplicate of the kept song, so the pair is not detected again.
+    /// </summary>
+    private static async Task ExcludeIgnoredSongsAsync(MusicDbContext db, long ownerId, Song primarySong,
+        GroupResolutionInput resolution, List<Song> songs, CancellationToken cancellationToken)
+    {
+        var ignoredIds = resolution.SecondaryActions
+            .Where(a => a.Action == SecondaryAction.Ignore && songs.Any(s => s.Id == a.SongId))
+            .Select(a => a.SongId)
+            .Distinct();
+
+        foreach (var ignoredId in ignoredIds)
+        {
+            var (aId, bId) = primarySong.Id < ignoredId ? (primarySong.Id, ignoredId) : (ignoredId, primarySong.Id);
+
+            var alreadyExcluded = await db.ExcludedDuplicatePairs
+                .AnyAsync(p => p.SongAId == aId && p.SongBId == bId && p.OwnerId == ownerId, cancellationToken);
+            if (alreadyExcluded) continue;
+
+            db.ExcludedDuplicatePairs.Add(new ExcludedDuplicatePair
+            {
+                SongAId = aId,
+                SongBId = bId,
+                OwnerId = ownerId,
+                Reason = "Soundalike resolution: ignored",
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+    }
+
+    /// <summary>
+    /// Makes the kept song as old as the oldest of the songs it absorbs, and marks it as modified now.
+    /// </summary>
+    private static void KeepOldestDates(Song primarySong, List<Song> absorbedSongs)
+    {
+        if (absorbedSongs.Count == 0) return;
+
+        primarySong.CreatedAt = absorbedSongs
+            .Select(s => s.CreatedAt)
+            .Append(primarySong.CreatedAt)
+            .Min()
+            .ToUniversalTime();
+
+        primarySong.AddedAt = absorbedSongs
+            .Select(s => s.AddedAt)
+            .Append(primarySong.AddedAt)
+            .Min()
+            ?.ToUniversalTime();
+
+        primarySong.ModifiedAt = DateTime.UtcNow;
     }
 
     private static string GetUniquePath(string basePath, HashSet<string> existingPaths)

@@ -3,6 +3,8 @@ using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
+using MyMusic.Common.Services.Songs;
+using MyMusic.Common.Tests.Utilities;
 using NSubstitute;
 using Shouldly;
 
@@ -10,12 +12,28 @@ namespace MyMusic.Common.Tests.Services;
 
 public class SoundalikeResolutionSpecs
 {
-    private SoundalikeResolutionService CreateService(ISoundalikeMergeService? mergeService = null)
+    private static readonly IOptions<Config> ConfigOptions = Options.Create(new Config { MusicRepositoryPath = "/data" });
+
+    private SoundalikeResolutionService CreateService(
+        ISoundalikeMergeService? mergeService = null,
+        ISongFileUpdateService? songFileUpdate = null,
+        IFileTransactionService? fileTransactions = null)
     {
         mergeService ??= Substitute.For<ISoundalikeMergeService>();
-        var config = Options.Create(new Config { MusicRepositoryPath = "/data" });
+        songFileUpdate ??= CreateSongFileUpdate(checksumChanged: false);
+        fileTransactions ??= Substitute.For<IFileTransactionService>();
         var logger = Substitute.For<ILogger<SoundalikeResolutionService>>();
-        return new SoundalikeResolutionService(mergeService, config, logger);
+        return new SoundalikeResolutionService(mergeService, songFileUpdate, fileTransactions, ConfigOptions, logger);
+    }
+
+    private static ISongFileUpdateService CreateSongFileUpdate(bool checksumChanged)
+    {
+        var songFileUpdate = Substitute.For<ISongFileUpdateService>();
+        songFileUpdate
+            .UpdateAsync(Arg.Any<MusicDbContext>(), Arg.Any<IFileTransaction>(), Arg.Any<Song>(),
+                Arg.Any<Func<string>>(), Arg.Any<CancellationToken>())
+            .Returns(new SongFileUpdateResult { PreviousPath = null, ChecksumChanged = checksumChanged });
+        return songFileUpdate;
     }
 
     [Fact]
@@ -380,7 +398,7 @@ public class SoundalikeResolutionSpecs
     }
 
     [Fact]
-    public async Task Resolve_KeepAction_DoesNotDeleteOrTransfer()
+    public async Task Resolve_IgnoreAction_DoesNotDeleteOrTransfer()
     {
         // Arrange
         var scenario = new Scenario();
@@ -394,7 +412,7 @@ public class SoundalikeResolutionSpecs
         {
             NonConformityId = 1,
             PrimarySongId = primary.Id,
-            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Keep }]
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Ignore }]
         };
 
         // Act
@@ -544,7 +562,7 @@ public class SoundalikeResolutionSpecs
             [
                 new SecondarySongActionInput { SongId = merged.Id, Action = SecondaryAction.Merge },
                 new SecondarySongActionInput { SongId = deleted.Id, Action = SecondaryAction.Delete },
-                new SecondarySongActionInput { SongId = kept.Id, Action = SecondaryAction.Keep },
+                new SecondarySongActionInput { SongId = kept.Id, Action = SecondaryAction.Ignore },
             ]
         };
 
@@ -583,8 +601,265 @@ public class SoundalikeResolutionSpecs
         scenario.DbContext.SongMerges.ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task Resolve_IgnoreAction_ExcludesThePairAndRemovesNonConformity()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var ignored = scenario.CreateSong("Ignored");
+        var nc = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = nc.Id,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = ignored.Id, Action = SecondaryAction.Ignore }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        var pair = scenario.DbContext.ExcludedDuplicatePairs.ShouldHaveSingleItem();
+        pair.SongAId.ShouldBe(Math.Min(primary.Id, ignored.Id));
+        pair.SongBId.ShouldBe(Math.Max(primary.Id, ignored.Id));
+        pair.OwnerId.ShouldBe(scenario.AdminUser.Id);
+
+        scenario.DbContext.SongMerges.ShouldBeEmpty();
+        scenario.DbContext.AuditNonConformities.Any(n => n.Id == nc.Id).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Resolve_IgnoreAction_PairAlreadyExcluded_DoesNotDuplicate()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var ignored = scenario.CreateSong("Ignored");
+        scenario.DbContext.ExcludedDuplicatePairs.Add(new ExcludedDuplicatePair
+        {
+            SongAId = Math.Min(primary.Id, ignored.Id),
+            SongBId = Math.Max(primary.Id, ignored.Id),
+            OwnerId = scenario.AdminUser.Id,
+        });
+        scenario.DbContext.SaveChanges();
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = ignored.Id, Action = SecondaryAction.Ignore }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        scenario.DbContext.ExcludedDuplicatePairs.Count().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Resolve_KeepsOldestDatesOfMergedAndDeletedSongs_ButNotOfIgnoredOnes()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var merged = scenario.CreateSong("Merged");
+        var deleted = scenario.CreateSong("Deleted");
+        var ignored = scenario.CreateSong("Ignored");
+        SetDates(scenario, primary, createdAt: Utc(2020), addedAt: Utc(2021), modifiedAt: Utc(2021));
+        SetDates(scenario, merged, createdAt: Utc(2015), addedAt: Utc(2022), modifiedAt: Utc(2022));
+        SetDates(scenario, deleted, createdAt: Utc(2018), addedAt: Utc(2019), modifiedAt: Utc(2019));
+        SetDates(scenario, ignored, createdAt: Utc(2010), addedAt: Utc(2010), modifiedAt: Utc(2010));
+        var before = DateTime.UtcNow;
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions =
+            [
+                new SecondarySongActionInput { SongId = merged.Id, Action = SecondaryAction.Merge },
+                new SecondarySongActionInput { SongId = deleted.Id, Action = SecondaryAction.Delete },
+                new SecondarySongActionInput { SongId = ignored.Id, Action = SecondaryAction.Ignore },
+            ]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        var kept = scenario.DbContext.Songs.First(s => s.Id == primary.Id);
+        kept.CreatedAt.ShouldBe(Utc(2015));
+        kept.AddedAt.ShouldBe(Utc(2019));
+        kept.ModifiedAt.ShouldBeGreaterThanOrEqualTo(before);
+    }
+
+    [Fact]
+    public async Task Resolve_PrimaryIsTheOldest_KeepsItsDates()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
+        SetDates(scenario, primary, createdAt: Utc(2015), addedAt: null, modifiedAt: Utc(2016));
+        SetDates(scenario, secondary, createdAt: Utc(2018), addedAt: Utc(2019), modifiedAt: Utc(2019));
+        var before = DateTime.UtcNow;
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert: a missing added date does not count as the oldest one
+        var kept = scenario.DbContext.Songs.First(s => s.Id == primary.Id);
+        kept.CreatedAt.ShouldBe(Utc(2015));
+        kept.AddedAt.ShouldBe(Utc(2019));
+        kept.ModifiedAt.ShouldBeGreaterThanOrEqualTo(before);
+    }
+
+    [Fact]
+    public async Task Resolve_OnlyIgnoredSongs_DoesNotTouchTheDates()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var ignored = scenario.CreateSong("Ignored");
+        SetDates(scenario, primary, createdAt: Utc(2020), addedAt: Utc(2021), modifiedAt: Utc(2021));
+        SetDates(scenario, ignored, createdAt: Utc(2010), addedAt: Utc(2010), modifiedAt: Utc(2010));
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = ignored.Id, Action = SecondaryAction.Ignore }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        var kept = scenario.DbContext.Songs.First(s => s.Id == primary.Id);
+        kept.CreatedAt.ShouldBe(Utc(2020));
+        kept.AddedAt.ShouldBe(Utc(2021));
+        kept.ModifiedAt.ShouldBe(Utc(2021));
+    }
+
+    [Fact]
+    public async Task Resolve_MergeAction_FileChecksumChanges_UpdatesFileModifiedAtAndMarksDevicesForDownload()
+    {
+        // Arrange: the kept song's file lacks the genre the merged song brings
+        var scenario = new Scenario();
+        var service = CreateService(
+            new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>()),
+            new SongFileUpdateService(scenario.FileSystem, ConfigOptions),
+            scenario.FileTransactions);
+        scenario.FileSystem.Directory.CreateDirectory("/data/admin");
+        MockMusicFile.Create(scenario.FileSystem, "/data/admin/Primary.mp3", "Primary", "Album", ["Artist"], ["Rock"]);
+        var checksumAlgorithm = ChecksumService.CreateChecksumAlgorithm();
+        var checksum = ChecksumService.CalculateChecksum(scenario.FileSystem, checksumAlgorithm, "/data/admin/Primary.mp3");
+        var primary = scenario.CreateSong("Primary", repositoryPath: "/data/admin/Primary.mp3", checksum: checksum,
+            checksumAlgorithm: checksumAlgorithm.GetType().Name, fileModifiedAt: Utc(2020),
+            genres: [scenario.CreateGenre("Rock")]);
+        var secondary = scenario.CreateSong("Secondary", genres: [scenario.CreateGenre("Jazz")]);
+        var device = scenario.CreateDevice("Phone");
+        scenario.CreateSongDevice(device, primary, "/music/Primary.mp3");
+        var before = DateTime.UtcNow;
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Merge }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        var kept = scenario.DbContext.Songs.First(s => s.Id == primary.Id);
+        kept.Checksum.ShouldNotBe(checksum);
+        kept.Checksum.ShouldBe(ChecksumService.CalculateChecksum(scenario.FileSystem,
+            ChecksumService.CreateChecksumAlgorithm(), kept.RepositoryPath));
+        kept.FileModifiedAt.ShouldNotBeNull().ShouldBeGreaterThanOrEqualTo(before);
+
+        var songDevice = scenario.DbContext.SongDevices.First(sd => sd.SongId == primary.Id);
+        songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
+    }
+
+    [Fact]
+    public async Task Resolve_MergeAction_FileChecksumUnchanged_KeepsFileModifiedAt()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var songFileUpdate = CreateSongFileUpdate(checksumChanged: false);
+        var service = CreateService(songFileUpdate: songFileUpdate);
+        var primary = scenario.CreateSong("Primary", fileModifiedAt: Utc(2020));
+        var secondary = scenario.CreateSong("Secondary");
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Merge }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        await songFileUpdate.Received(1).UpdateAsync(scenario.DbContext, Arg.Any<IFileTransaction>(),
+            Arg.Is<Song>(s => s.Id == primary.Id), Arg.Any<Func<string>>(), Arg.Any<CancellationToken>());
+        scenario.DbContext.Songs.First(s => s.Id == primary.Id).FileModifiedAt.ShouldBe(Utc(2020));
+    }
+
+    [Fact]
+    public async Task Resolve_DeleteAction_DoesNotWriteTheFile()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var songFileUpdate = CreateSongFileUpdate(checksumChanged: false);
+        var service = CreateService(songFileUpdate: songFileUpdate);
+        var primary = scenario.CreateSong("Primary", fileModifiedAt: Utc(2020));
+        var secondary = scenario.CreateSong("Secondary");
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        await songFileUpdate.DidNotReceiveWithAnyArgs().UpdateAsync(default!, default!, default!, default!);
+        scenario.DbContext.Songs.First(s => s.Id == primary.Id).FileModifiedAt.ShouldBe(Utc(2020));
+    }
+
     #region Helper Methods
 
+    private static DateTime Utc(int year) => new(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    private static void SetDates(Scenario scenario, Song song, DateTime createdAt, DateTime? addedAt, DateTime modifiedAt)
+    {
+        song.CreatedAt = createdAt;
+        song.AddedAt = addedAt;
+        song.ModifiedAt = modifiedAt;
+        scenario.DbContext.SaveChanges();
+    }
 
     private AuditNonConformity CreateNonConformity(MusicDbContext db, long ownerId)
     {

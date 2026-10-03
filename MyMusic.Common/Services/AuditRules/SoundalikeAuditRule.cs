@@ -9,9 +9,14 @@ namespace MyMusic.Common.Services.AuditRules;
 
 public enum SecondaryAction
 {
+    /// <summary>The song is discarded in favour of the kept song.</summary>
     Delete = 0,
+
+    /// <summary>The song's metadata is merged into the kept song, then the song is discarded.</summary>
     Merge = 1,
-    Keep = 2
+
+    /// <summary>The song is left untouched, and no longer considered a duplicate of the kept song.</summary>
+    Ignore = 2
 }
 
 public record SoundalikeGroupData

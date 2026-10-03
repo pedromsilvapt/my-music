@@ -37,6 +37,15 @@ public class SoundalikeGroupComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
+    /// Asks to resolve this group alone, which opens the confirmation dialog. Requires a song to keep to be selected
+    /// first.
+    /// </summary>
+    public async Task ClickResolveAsync()
+    {
+        await Root.GetByTestId("soundalike-group-resolve").ClickAsync();
+    }
+
+    /// <summary>
     /// Waits until the group is gone from the page, once its resolution has been applied.
     /// </summary>
     public async Task WaitForResolvedAsync()
