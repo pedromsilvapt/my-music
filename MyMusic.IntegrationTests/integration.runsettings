@@ -13,9 +13,7 @@
     </EnvironmentVariables>
   </RunConfiguration>
   <xUnit>
-    <!-- Test classes run in parallel: every test creates its own users and temp directories -->
-    <ParallelizeTestCollections>true</ParallelizeTestCollections>
-    <MaxParallelThreads>2</MaxParallelThreads>
+    <ParallelizeTestCollections>false</ParallelizeTestCollections>
   </xUnit>
   <Playwright>
     <BrowserName>chromium</BrowserName>
