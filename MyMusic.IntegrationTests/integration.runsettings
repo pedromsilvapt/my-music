@@ -15,7 +15,7 @@
   <xUnit>
     <!-- Test classes run in parallel: every test creates its own users and temp directories -->
     <ParallelizeTestCollections>true</ParallelizeTestCollections>
-    <MaxParallelThreads>4</MaxParallelThreads>
+    <MaxParallelThreads>2</MaxParallelThreads>
   </xUnit>
   <Playwright>
     <BrowserName>chromium</BrowserName>

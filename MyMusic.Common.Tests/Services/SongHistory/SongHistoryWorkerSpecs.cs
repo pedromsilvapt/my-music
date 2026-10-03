@@ -1,5 +1,6 @@
 using System.Drawing;
 using System.Drawing.Imaging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -369,6 +370,36 @@ public class SongHistoryWorkerSpecs
         history.Diff.Title.ShouldNotBeNull();
         history.Diff.Title.Old.ShouldBe("Good Old");
         history.Diff.Title.New.ShouldBe("Good New");
+    }
+
+    [Fact]
+    public async Task ProcessQueue_EntriesDeletedWhileProcessing_ContinuesWithRemainingSongs()
+    {
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker();
+
+        // The song's queue entries are removed mid-cycle, as deleting its owner does
+        InsertQueueEntry(scenario, songId: 40, revision: 1, BuildSnapshot(title: "Gone Old", songId: 40));
+        snapshot.GetCurrentSnapshotAsync(40, true, Arg.Any<CancellationToken>())
+            .Returns(_ =>
+            {
+                scenario.DbContext.SongHistoryQueues.Where(q => q.SongId == 40).ExecuteDelete();
+                return BuildSnapshot(title: "Gone New", songId: 40);
+            });
+
+        InsertQueueEntry(scenario, songId: 41, revision: 1, BuildSnapshot(title: "Good Old", songId: 41));
+        snapshot.GetCurrentSnapshotAsync(41, true, Arg.Any<CancellationToken>())
+            .Returns(BuildSnapshot(title: "Good New", songId: 41));
+
+        var (processed, failed) = await worker.ProcessQueueAsync(
+            scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        processed.ShouldBe(1);
+        failed.ShouldBe(1);
+
+        scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
+
+        var history = scenario.DbContext.SongHistories.Single();
+        history.SongId.ShouldBe(41);
     }
 
     [Fact]

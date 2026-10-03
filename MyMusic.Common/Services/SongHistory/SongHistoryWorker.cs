@@ -340,11 +340,26 @@ public class SongHistoryWorker(
             {
                 failed++;
 
+                // Drops the song's half-recorded history, so it is neither saved with the error counts nor carried
+                // over to the next songs
+                context.ChangeTracker.Clear();
+
+                var lastError = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
+
                 foreach (var entry in songEntries)
                 {
                     entry.ErrorCount++;
-                    entry.LastError = ex.Message.Length > 2000 ? ex.Message[..2000] : ex.Message;
+                    entry.LastError = lastError;
                 }
+
+                // Updated in place: the entries may be gone by now (their owner was deleted), which would fail a
+                // tracked save and abort the cycle for every remaining song
+                var entryIds = songEntries.Select(e => e.Id).ToList();
+                await context.SongHistoryQueues
+                    .Where(q => entryIds.Contains(q.Id))
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(q => q.ErrorCount, q => q.ErrorCount + 1)
+                        .SetProperty(q => q.LastError, lastError), cancellationToken);
 
                 logger.LogError(ex,
                     "Failed to process song history queue entries for song {SongId} ({EntryCount} entries, attempt {ErrorCount})",
@@ -359,7 +374,6 @@ public class SongHistoryWorker(
                         songGroup.Key, songEntries[0].ErrorCount);
                 }
 
-                await context.SaveChangesAsync(cancellationToken);
                 notifier.Publish(songGroup.Key, SongHistoryNotificationKind.Failed);
             }
         }
