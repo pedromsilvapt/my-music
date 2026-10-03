@@ -60,6 +60,15 @@
             "lyrics": "Letra da música"
         }
     },
+    "tools": {
+        "title": "Ferramentas",
+        "recalculateChecksum": {
+            "label": "Recalcular Checksum",
+            "unchanged": "Nada mudou, o checksum já estava atualizado.",
+            "changed": "Alteração aplicada, o checksum foi atualizado.",
+            "failed": "Falha ao recalcular o checksum: {{error}}"
+        }
+    },
     "import": {
         "dropTitle": "Largue os ficheiros de áudio aqui",
         "dropHelp": "Suporta ficheiros MP3 e M4A",

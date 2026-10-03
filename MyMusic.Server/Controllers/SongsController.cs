@@ -1003,6 +1003,18 @@ public class SongsController(
         };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot run tools on the owner's song.
+    [HttpPost("{id:long}/recalculate-checksum", Name = "RecalculateSongChecksum")]
+    public async Task<RecalculateSongChecksumResponse> RecalculateChecksum(
+        long id,
+        [FromServices] ISongChecksumRecalculateService songChecksumRecalculateService,
+        CancellationToken cancellationToken)
+    {
+        var result = await songChecksumRecalculateService.RecalculateAsync(id, cancellationToken);
+
+        return new RecalculateSongChecksumResponse { Changed = result.Changed };
+    }
+
     // Owner-only by design — sharing is read-only. Recipients cannot trigger metadata fetch on the owner's song.
     [HttpPost("{id:long}/fetch-metadata", Name = "FetchSongMetadata")]
     public async Task<ActionResult<FetchMetadataResponse>> FetchMetadata(

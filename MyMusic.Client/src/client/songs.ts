@@ -50,6 +50,7 @@ import type {
   ImportSongsBody,
   ListSongsParams,
   ListSongsResponse,
+  RecalculateSongChecksumResponse,
   ToggleFavoriteResponse,
   ToggleFavoritesRequest,
   ToggleFavoritesResponse,
@@ -2222,7 +2223,106 @@ export const invalidateAutocompleteGenres = async (
 
 
 
-export type fetchSongMetadataResponse200TextPlain = {
+export type recalculateSongChecksumResponse200TextPlain = {
+  data: RecalculateSongChecksumResponse
+  status: 200
+}
+
+export type recalculateSongChecksumResponse200ApplicationJson = {
+  data: RecalculateSongChecksumResponse
+  status: 200
+}
+
+export type recalculateSongChecksumResponse200TextJson = {
+  data: RecalculateSongChecksumResponse
+  status: 200
+}
+
+export type recalculateSongChecksumResponseSuccess = (recalculateSongChecksumResponse200TextPlain | recalculateSongChecksumResponse200ApplicationJson | recalculateSongChecksumResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type recalculateSongChecksumResponse = (recalculateSongChecksumResponseSuccess)
+
+export const getRecalculateSongChecksumUrl = (id: number,) => {
+
+
+
+
+  return `/api/songs/${id}/recalculate-checksum`
+}
+
+export const recalculateSongChecksum = async (id: number, options?: RequestInit): Promise<recalculateSongChecksumResponse> => {
+
+  const res = await fetch(getRecalculateSongChecksumUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: recalculateSongChecksumResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as recalculateSongChecksumResponse
+}
+
+
+
+
+export const getRecalculateSongChecksumMutationOptions = <TError = unknown,
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recalculateSongChecksum>>, TError,{id: number}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof recalculateSongChecksum>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['recalculateSongChecksum'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recalculateSongChecksum>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  recalculateSongChecksum(id,fetchOptions)
+        }
+
+  const onSuccess = (data: Awaited<ReturnType<typeof recalculateSongChecksum>>, variables: {id: number}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: getListSongsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ['sources'] });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
+
+
+
+
+  return  { ...mutationOptions, mutationFn, onSuccess }}
+
+    export type RecalculateSongChecksumMutationResult = NonNullable<Awaited<ReturnType<typeof recalculateSongChecksum>>>
+
+    export type RecalculateSongChecksumMutationError = unknown
+
+    export const useRecalculateSongChecksum = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recalculateSongChecksum>>, TError,{id: number}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof recalculateSongChecksum>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      const backupQueryClient = useQueryClient();
+      return useMutation(getRecalculateSongChecksumMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
+    }
+    export type fetchSongMetadataResponse200TextPlain = {
   data: FetchMetadataResponse
   status: 200
 }
@@ -2456,6 +2556,8 @@ export const getAutocompleteSongsResponseMock = (overrideResponse: Partial<Extra
 export const getAutocompleteArtistsResponseMock = (overrideResponse: Partial<Extract<AutocompleteArtistsResponse, object>> = {}): AutocompleteArtistsResponse => (faker.helpers.arrayElement([{artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), albumCount: faker.helpers.arrayElement([faker.number.int(), undefined]), songCount: faker.helpers.arrayElement([faker.number.int(), undefined])})), ...overrideResponse}, {artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), albumCount: faker.helpers.arrayElement([faker.number.int(), undefined]), songCount: faker.helpers.arrayElement([faker.number.int(), undefined])})), ...overrideResponse}, {artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), albumCount: faker.helpers.arrayElement([faker.number.int(), undefined]), songCount: faker.helpers.arrayElement([faker.number.int(), undefined])})), ...overrideResponse}]))
 
 export const getAutocompleteGenresResponseMock = (overrideResponse: Partial<Extract<AutocompleteGenresResponse, object>> = {}): AutocompleteGenresResponse => (faker.helpers.arrayElement([{genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), ...overrideResponse}, {genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), ...overrideResponse}, {genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), ...overrideResponse}]))
+
+export const getRecalculateSongChecksumResponseMock = (overrideResponse: Partial<Extract<RecalculateSongChecksumResponse, object>> = {}): RecalculateSongChecksumResponse => (faker.helpers.arrayElement([{changed: faker.datatype.boolean(), ...overrideResponse}, {changed: faker.datatype.boolean(), ...overrideResponse}, {changed: faker.datatype.boolean(), ...overrideResponse}]))
 
 export const getFetchSongMetadataResponseSongMetadataFieldOfstringMock = (overrideResponse: Partial<SongMetadataFieldOfstring> = {}): SongMetadataFieldOfstring => ({...{old: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), null]), new: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), null])}, ...overrideResponse});
 
@@ -2694,6 +2796,18 @@ export const getAutocompleteGenresMockHandler = (overrideResponse?: Autocomplete
   }, options)
 }
 
+export const getRecalculateSongChecksumMockHandler = (overrideResponse?: RecalculateSongChecksumResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<RecalculateSongChecksumResponse> | RecalculateSongChecksumResponse), options?: RequestHandlerOptions) => {
+  return http.post('*/songs/:id/recalculate-checksum', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getRecalculateSongChecksumResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
 export const getFetchSongMetadataMockHandler = (overrideResponse?: FetchMetadataResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<FetchMetadataResponse> | FetchMetadataResponse), options?: RequestHandlerOptions) => {
   return http.post('*/songs/:id/fetch-metadata', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
 
@@ -2736,6 +2850,7 @@ export const getSongsMock = () => [
   getAutocompleteSongsMockHandler(),
   getAutocompleteArtistsMockHandler(),
   getAutocompleteGenresMockHandler(),
+  getRecalculateSongChecksumMockHandler(),
   getFetchSongMetadataMockHandler(),
   getBatchMultiUpdateSongsMockHandler()
 ]

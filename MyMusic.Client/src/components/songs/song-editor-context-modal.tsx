@@ -41,6 +41,7 @@ import type {SongMultiUpdateItem} from "../../model/songMultiUpdateItem";
 import AutocompleteField, {type AutocompleteItem} from "./autocomplete-field.tsx";
 import CoverUploadField from "./cover-upload-field.tsx";
 import MetadataSearchModal from "./metadata-search-modal.tsx";
+import SongToolsMenu from "./song-tools-menu.tsx";
 import TagsAutocompleteField, {type TagsAutocompleteItem} from "./tags-autocomplete-field.tsx";
 import {
     checkboxesFromMetadata,
@@ -1232,6 +1233,9 @@ export default function SongEditorContextModal({
                     >
                         <IconSearch/>
                     </ActionIcon>
+                    {currentState && (
+                        <SongToolsMenu songId={currentState.song.id} disabled={isLoading}/>
+                    )}
                 </Group>
                 <Group gap="xs">
                     <Button variant="subtle" onClick={handleClose}>

@@ -60,6 +60,15 @@
             "lyrics": "Song lyrics"
         }
     },
+    "tools": {
+        "title": "Tools",
+        "recalculateChecksum": {
+            "label": "Recalculate Checksum",
+            "unchanged": "Nothing changed, checksum was already up to date.",
+            "changed": "Change applied, checksum has been updated.",
+            "failed": "Failed to recalculate the checksum: {{error}}"
+        }
+    },
     "import": {
         "dropTitle": "Drop audio files here",
         "dropHelp": "Supports MP3 and M4A files",

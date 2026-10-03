@@ -65,6 +65,7 @@ public static class HostBuilderExtensions
         builder.Services.AddSingleton<FileTransactionInterceptor>();
         builder.Services.AddScoped<ISongMergeService, SongMergeService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
+        builder.Services.AddScoped<ISongChecksumRecalculateService, SongChecksumRecalculateService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
         builder.Services.AddScoped<IWishlistService, WishlistService>();
         builder.Services.AddScoped<IPurchasesSearchService, PurchasesSearchService>();

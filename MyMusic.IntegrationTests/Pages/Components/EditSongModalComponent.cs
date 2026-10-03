@@ -69,6 +69,17 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         }
     }
 
+    /// <summary>
+    /// Runs the "Recalculate Checksum" tool from the tools menu. Its outcome is reported in a notification.
+    /// </summary>
+    public async Task RecalculateChecksumAsync()
+    {
+        await Root.GetByTestId("edit-song-tools").ClickAsync();
+
+        // The menu is rendered in a portal, outside the dialog
+        await Root.Page.GetByTestId("song-tool-recalculate-checksum").ClickAsync();
+    }
+
     public async Task SaveAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();

@@ -219,6 +219,7 @@ export * from './pruneSessionsRequest';
 export * from './pruneSessionsResponse';
 export * from './purchasedSongStatus';
 export * from './recalculateCountsResponse';
+export * from './recalculateSongChecksumResponse';
 export * from './removeFromQueueRequest';
 export * from './renameQueueRequest';
 export * from './renameQueueResponse';
