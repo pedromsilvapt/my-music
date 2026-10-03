@@ -198,6 +198,8 @@ export default function SongVersionModal({
 function extractSide(metadata: Record<string, unknown>, side: "old" | "new"): Record<string, unknown> {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(metadata)) {
+        // The cover is rendered as an image above, not as text
+        if (key === "cover") continue;
         if (value == null || typeof value !== "object") continue;
         const field = value as DiffField<unknown>;
         if (!("old" in field) && !("new" in field)) continue;
