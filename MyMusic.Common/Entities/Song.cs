@@ -118,4 +118,7 @@ public class Song
             .SelectMany(ps => ps.Playlist.PlaylistSharings);
 
     [Projectable] public string SearchableText => (Label ?? "") + " " + (Album.Name ?? "");
+
+    [Projectable]
+    public string SearchableTextWithLyrics => (Label ?? "") + " " + (Album.Name ?? "") + " " + (Lyrics ?? "");
 }

@@ -33,6 +33,30 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
     }
 
     [Fact]
+    public async Task Search_WithLyricsToggle_ShouldFindSongByLyrics()
+    {
+        // Seed two songs sharing the same words: one only has them in its lyrics, the other in its title
+        var lyricsSong = SongsFixture.SongWithLyrics;
+        var titleSong = SongsFixture.SongTitledLikeLyrics;
+        await _songs.SeedAsync(RequestContext, UserId, SongsFixture.LyricsSearchSongs);
+
+        // Search for those words with the "Lyrics" toggle off: only the title should match
+        var collection = await new SearchSongsFlow("crimson harbour").ExecuteAsync(Page);
+        await Assertions.Expect(collection.GetRowByTitle(titleSong.Title!)).ToBeVisibleAsync();
+        await Assertions.Expect(collection.Rows).ToHaveCountAsync(1);
+
+        // Turning the toggle on should also find the other song through its lyrics
+        await collection.SetLyricsSearchAsync(true);
+        await Assertions.Expect(collection.GetRowByTitle(lyricsSong.Title!)).ToBeVisibleAsync();
+        await Assertions.Expect(collection.Rows).ToHaveCountAsync(2);
+
+        // Turning it back off should leave only the title match again
+        await collection.SetLyricsSearchAsync(false);
+        await Assertions.Expect(collection.GetRowByTitle(titleSong.Title!)).ToBeVisibleAsync();
+        await Assertions.Expect(collection.Rows).ToHaveCountAsync(1);
+    }
+
+    [Fact]
     public async Task GoTo_ShouldScrollToSelectedSong()
     {
         // Seed enough songs for the collection to overflow the viewport

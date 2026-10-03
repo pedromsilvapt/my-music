@@ -52,7 +52,8 @@ public class SongsController(
         CancellationToken cancellationToken,
         [FromQuery] string? filter = null,
         [FromQuery] string? search = null,
-        [FromQuery] long? ownerId = null)
+        [FromQuery] long? ownerId = null,
+        [FromQuery] bool searchLyrics = false)
     {
         // ownerId null or self → my library (unchanged behavior);
         // ownerId another user → only songs that owner has shared with me (gate-by-sharing).
@@ -64,7 +65,9 @@ public class SongsController(
 
         if (!string.IsNullOrWhiteSpace(search))
         {
-            query = FuzzySearchHelper.ApplyFuzzySearch(query, search, s => s.SearchableText);
+            query = searchLyrics
+                ? FuzzySearchHelper.ApplyFuzzySearch(query, search, s => s.SearchableTextWithLyrics)
+                : FuzzySearchHelper.ApplyFuzzySearch(query, search, s => s.SearchableText);
         }
 
         if (!string.IsNullOrWhiteSpace(filter))

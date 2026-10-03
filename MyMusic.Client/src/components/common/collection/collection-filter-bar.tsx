@@ -1,4 +1,5 @@
 import {ActionIcon, Button, Group, Popover, Stack, Text, TextInput, Tooltip} from "@mantine/core";
+import {useElementSize} from "@mantine/hooks";
 import {IconCode, IconFilter, IconSearch, IconX} from "@tabler/icons-react";
 import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
 import {useTranslation} from "react-i18next";
@@ -19,6 +20,8 @@ export interface CollectionFilterBarProps {
     filterMode: 'client' | 'server' | 'none';
     filterMetadata?: FilterMetadataResponse;
     fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
+    /** Extra content shown inside the search input, before the clear button */
+    searchRightSection?: React.ReactNode;
 }
 
 export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, CollectionFilterBarProps>(
@@ -32,9 +35,12 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                       filterMode,
                                       filterMetadata,
                                       fetchFilterValues,
+                                      searchRightSection,
                                   }, ref) {
         const {t} = useTranslation(["collection", "common"]);
         const searchInputRef = useRef<HTMLInputElement>(null);
+        // The input reserves the measured width, so typed text never runs under the custom content
+        const {ref: rightSectionRef, width: rightSectionWidth} = useElementSize<HTMLDivElement>();
 
         useImperativeHandle(ref, () => ({
             focusAndSelect: () => {
@@ -100,6 +106,16 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
 
         const hasFilter = filterValue.trim().length > 0;
 
+        const clearSearchButton = localSearch ? (
+            <ActionIcon
+                size="sm"
+                variant="subtle"
+                onClick={() => handleSearchChange("")}
+            >
+                <IconX size={12}/>
+            </ActionIcon>
+        ) : null;
+
         const handleClearFilter = () => {
             setLocalFilter("");
             onFilterChange("");
@@ -116,22 +132,22 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
             <Group gap="sm" align="center" justify="space-between" style={{flex: 1}}>
                 <TextInput
                     ref={searchInputRef}
+                    data-testid="collection-search"
                     placeholder={placeholder ?? t("collection:filterBar.searchPlaceholder")}
                     leftSection={<IconSearch size={16}/>}
                     value={localSearch}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     style={{flex: 1}}
                     rightSection={
-                        localSearch ? (
-                            <ActionIcon
-                                size="sm"
-                                variant="subtle"
-                                onClick={() => handleSearchChange("")}
-                            >
-                                <IconX size={12}/>
-                            </ActionIcon>
-                        ) : null
+                        searchRightSection ? (
+                            <Group ref={rightSectionRef} gap={4} wrap="nowrap" px={6}>
+                                {searchRightSection}
+                                {clearSearchButton}
+                            </Group>
+                        ) : clearSearchButton
                     }
+                    rightSectionWidth={searchRightSection && rightSectionWidth > 0 ? rightSectionWidth + 12 : undefined}
+                    rightSectionPointerEvents={searchRightSection ? "all" : undefined}
                 />
 
                 {filterMode !== 'none' && (

@@ -5,6 +5,23 @@ namespace MyMusic.IntegrationTests.Pages.Components;
 
 public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
 {
+    /// <summary>
+    /// The "Lyrics" pill inside the search box, which makes the search text also match lyrics.
+    /// </summary>
+    public ILocator LyricsSearchToggle => Root.GetByTestId("search-lyrics-toggle");
+
+    /// <summary>
+    /// Turns the lyrics search on or off, clicking the pill only when it isn't in the wanted state yet.
+    /// </summary>
+    public async Task SetLyricsSearchAsync(bool enabled)
+    {
+        var wanted = enabled ? "true" : "false";
+        if (await LyricsSearchToggle.GetAttributeAsync("aria-pressed") != wanted)
+            await LyricsSearchToggle.ClickAsync();
+
+        await Assertions.Expect(LyricsSearchToggle).ToHaveAttributeAsync("aria-pressed", wanted);
+    }
+
     public async Task<string> GetCellValueAsync(int rowIndex, string column)
     {
         var row = Root.Locator($"tr[data-index=\"{rowIndex}\"]");
@@ -50,7 +67,7 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
     /// Returns the row of the song with the given title.
     /// </summary>
     public ILocator GetRowByTitle(string title) =>
-        Root.Locator("tr[data-index]").Filter(new()
+        Rows.Filter(new()
         {
             Has = Root.Page.Locator("td[data-testid^='collection-cell-title-']", new() { HasTextString = title }),
         }).First;

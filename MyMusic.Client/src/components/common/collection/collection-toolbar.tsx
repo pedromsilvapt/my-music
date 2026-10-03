@@ -46,6 +46,7 @@ export interface CollectionToolbarProps<M> {
     filterMetadata?: FilterMetadataResponse;
     fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
     searchPlaceholder?: string;
+    searchRightSection?: React.ReactNode;
     searchInputRef?: React.RefObject<CollectionFilterBarRef | null>;
     view?: CollectionView;
     setView?: (view: CollectionView) => void;
@@ -233,6 +234,7 @@ export default function CollectionToolbar<M extends { id: string | number }>(pro
             placeholder={props.searchPlaceholder}
             filterMetadata={props.filterMetadata}
             fetchFilterValues={props.fetchFilterValues}
+            searchRightSection={props.searchRightSection}
         />;
 
     const rightSection = props.renderRightSection

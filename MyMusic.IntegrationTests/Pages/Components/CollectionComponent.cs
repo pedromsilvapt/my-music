@@ -7,10 +7,22 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     public ILocator GetCell(string column, object rowKey) =>
         Root.GetByTestId($"collection-cell-{column}-{rowKey}");
 
+    public ILocator Rows => Root.Locator("tr[data-index]");
+
+    public ILocator SearchInput => Root.GetByTestId("collection-search");
+
+    /// <summary>
+    /// Types into the toolbar's search box. The search is applied after a short debounce, so assert on
+    /// the resulting rows with auto-retrying expectations.
+    /// </summary>
+    public async Task SearchAsync(string text)
+    {
+        await SearchInput.FillAsync(text);
+    }
+
     public async Task<int> GetRowCountAsync()
     {
-        var rows = Root.Locator("tr[data-index]");
-        return await rows.CountAsync();
+        return await Rows.CountAsync();
     }
 
     /// <summary>

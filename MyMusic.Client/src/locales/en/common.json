@@ -91,6 +91,8 @@
     },
     "songs": {
         "searchPlaceholder": "Search songs...",
+        "searchLyrics": "Lyrics",
+        "searchLyricsTooltip": "Also search in lyrics",
         "sharedBy": "Shared by {{name}}",
         "sharedByUnknown": "Shared by Unknown"
     }

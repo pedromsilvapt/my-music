@@ -9,6 +9,7 @@ import {useListSongs} from "../../client/songs.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "./useSongsSchema.tsx";
+import SearchLyricsToggle from "./search-lyrics-toggle.tsx";
 import SongImportDropzone from "./song-import-dropzone.tsx";
 import SongImportProgress from "./song-import-progress.tsx";
 
@@ -30,6 +31,7 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
     const collectionState = useCollectionStateByKey(SONGS_STATE_KEY);
     const appliedSearch = collectionState.filter.search;
     const appliedFilter = collectionState.filter.expression;
+    const searchLyrics = collectionState.filter.searchLyrics ?? false;
 
     const [importFiles, setImportFiles] = useState<File[]>([]);
     const [showImportProgress, setShowImportProgress] = useState(false);
@@ -37,7 +39,8 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
     const isSharedView = ownerId !== undefined;
 
     const songsQuery = useListSongs(
-        {ownerId, search: appliedSearch, filter: appliedFilter},
+        // Only sent along with search text, so toggling it on an empty search doesn't refetch
+        {ownerId, search: appliedSearch, filter: appliedFilter, searchLyrics: searchLyrics && appliedSearch ? true : undefined},
         {
             query: {
                 enabled: true,
@@ -104,6 +107,12 @@ export default function SongsPage({ownerId, sharerName}: SongsPageProps) {
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
                 searchPlaceholder={t("common:songs.searchPlaceholder")}
+                searchRightSection={
+                    <SearchLyricsToggle
+                        checked={searchLyrics}
+                        onChange={checked => setCollectionFilter(SONGS_STATE_KEY, {searchLyrics: checked})}
+                    />
+                }
             />
             {!isSharedView && (
                 <SongImportProgress

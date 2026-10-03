@@ -43,6 +43,8 @@ interface CollectionProps<T extends { id: string | number }> {
     serverFilter?: string;
     onServerFilterChange?: (search: string, filter: string) => void;
     searchPlaceholder?: string;
+    /** Extra content shown inside the search input (e.g. a search option toggle) */
+    searchRightSection?: React.ReactNode;
     /** Scrolls to and highlights an item; a new request is issued whenever its key or id changes */
     scrollRequest?: ScrollRequest;
     autoHeight?: boolean;
@@ -419,6 +421,7 @@ export default function Collection<T extends { id: string | number }>(props: Col
                 onApplyFilter: handleApplyFilter,
                 filterMode: filterMode,
                 searchPlaceholder: props.searchPlaceholder,
+                searchRightSection: props.searchRightSection,
                 view: view,
                 setView: setView,
                 sort: sort,

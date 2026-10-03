@@ -161,6 +161,25 @@ public class SongsFixture
         new("Two Faced", "Two Faced", ["Linkin Park"], [], 2024),
     ];
 
+    /// <summary>
+    /// A song whose lyrics contain words found in neither its title, artists nor album.
+    /// </summary>
+    public static SampleSong SongWithLyrics { get; } = new(
+        "Paper Lanterns", "Paper Lanterns", ["The Lamplighters"], [], 2024,
+        Lyrics: "We sailed beyond the crimson harbour\nCounting every silver sparrow");
+
+    /// <summary>
+    /// A song without lyrics whose title contains words of the lyrics of <see cref="SongWithLyrics"/>,
+    /// so a search for those words always has a match, with or without lyrics.
+    /// </summary>
+    public static SampleSong SongTitledLikeLyrics { get; } = new(
+        "Crimson Harbour", "Tidewater", ["Marrow & Vine"], [], 2023);
+
+    /// <summary>
+    /// Songs to search by lyrics: one only matches through its lyrics, the other through its title.
+    /// </summary>
+    public static SampleSong[] LyricsSearchSongs { get; } = [SongWithLyrics, SongTitledLikeLyrics];
+
     public async Task<List<SongData>> SeedAsync(IAPIRequestContext api, long userId, SampleSong[]? songs = null, ILogger? logger = null)
     {
         var sampleSongs = songs ?? DefaultSongs;

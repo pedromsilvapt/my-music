@@ -15,6 +15,8 @@ export interface ScrollPosition {
 export interface CollectionFilterState {
     search: string;
     expression: string;
+    /** Whether the search text should also match lyrics (songs only) */
+    searchLyrics?: boolean;
 }
 
 export interface CollectionState<T = unknown> {
@@ -32,7 +34,8 @@ type CollectionStoreActions = {
     getCollectionState: (key: string) => CollectionState;
     setCollectionView: (key: string, view: CollectionView) => void;
     setCollectionSort: (key: string, sort: CollectionSort<unknown>) => void;
-    setCollectionFilter: (key: string, filter: CollectionFilterState) => void;
+    /** Merges the given fields into the collection's filter, keeping the ones left out */
+    setCollectionFilter: (key: string, filter: Partial<CollectionFilterState>) => void;
     setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => void;
     clearCollectionState: (key: string) => void;
 };
@@ -70,12 +73,12 @@ function createCollectionStore(): StoreApi<CollectionStore> {
                     state.collections[key].sort = sort;
                 });
             },
-            setCollectionFilter: (key: string, filter: CollectionFilterState) => {
+            setCollectionFilter: (key: string, filter: Partial<CollectionFilterState>) => {
                 set((state) => {
                     if (!state.collections[key]) {
                         state.collections[key] = {...DEFAULT_COLLECTION_STATE};
                     }
-                    state.collections[key].filter = filter;
+                    state.collections[key].filter = {...state.collections[key].filter, ...filter};
                 });
             },
             setCollectionScrollPosition: (key: string, position: ScrollPosition | null) => {

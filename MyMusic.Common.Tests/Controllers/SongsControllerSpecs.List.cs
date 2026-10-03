@@ -193,4 +193,73 @@ public class SongsControllerSpecs
         // Assert — only the song Carol can actually access is reported as shared with her
         response.Songs.Select(s => s.Title).ShouldBe(["Shared Song"]);
     }
+
+    [Fact]
+    public async Task List_SearchMatchesOnlyLyrics_SearchLyricsFalse_ReturnsNoSongs()
+    {
+        // Arrange — the searched words only exist in the song's lyrics
+        var scenario = new Scenario();
+        scenario.CreateSong("Hello", lyrics: "Hello from the other side");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None, search: "other side");
+
+        // Assert — lyrics are not searched unless asked for
+        response.Songs.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task List_SearchMatchesOnlyLyrics_SearchLyricsTrue_ReturnsSong()
+    {
+        // Arrange — the searched words only exist in one song's lyrics
+        var scenario = new Scenario();
+        scenario.CreateSong("Hello", lyrics: "Hello from the Other Side");
+        scenario.CreateSong("Numb", lyrics: "I've become so numb");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None,
+            search: "other side", searchLyrics: true);
+
+        // Assert — the song is found by its lyrics, ignoring case
+        response.Songs.Select(s => s.Title).ShouldBe(["Hello"]);
+    }
+
+    [Fact]
+    public async Task List_SearchTermsSplitAcrossTitleAndLyrics_SearchLyricsTrue_ReturnsSong()
+    {
+        // Arrange — "skyfall" is only in the title, "crumbles" only in the lyrics
+        var scenario = new Scenario();
+        scenario.CreateSong("Skyfall", lyrics: "Let the sky fall, when it crumbles");
+        scenario.CreateSong("Hello", lyrics: "Hello from the other side");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None,
+            search: "skyfall crumbles", searchLyrics: true);
+
+        // Assert — each term may match either the usual fields or the lyrics
+        response.Songs.Select(s => s.Title).ShouldBe(["Skyfall"]);
+    }
+
+    [Fact]
+    public async Task List_SongWithoutLyrics_SearchLyricsTrue_StillMatchesByTitle()
+    {
+        // Arrange — a song with no lyrics at all
+        var scenario = new Scenario();
+        scenario.CreateSong("Instrumental Piece");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None,
+            search: "instrumental", searchLyrics: true);
+
+        // Assert — missing lyrics must not exclude the song from the usual matches
+        response.Songs.Select(s => s.Title).ShouldBe(["Instrumental Piece"]);
+    }
 }
