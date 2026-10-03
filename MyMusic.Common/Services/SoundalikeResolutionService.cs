@@ -186,6 +186,22 @@ public class SoundalikeResolutionService(
                 db.Update(sd);
             }
 
+            // A purchase of a removed song is now a purchase of the kept song
+            var secondaryPurchases = await db.PurchasedSongs
+                .Where(ps => secondaryIds.Contains(ps.SongId ?? -1))
+                .ToListAsync(cancellationToken);
+
+            foreach (var purchase in secondaryPurchases)
+            {
+                purchase.SongId = primarySong.Id;
+            }
+
+            // What other audit rules found on the removed songs goes away with them
+            var secondaryNonConformities = await db.AuditNonConformities
+                .Where(nc => secondaryIds.Contains(nc.SongId ?? -1))
+                .ToListAsync(cancellationToken);
+            db.AuditNonConformities.RemoveRange(secondaryNonConformities);
+
             var secondaries = songs.Where(s => secondaryIds.Contains(s.Id)).ToList();
             db.Songs.RemoveRange(secondaries);
 

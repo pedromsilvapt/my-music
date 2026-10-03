@@ -4,6 +4,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.AuditRules;
 using MyMusic.Common.Services.Songs;
+using MyMusic.Common.Tests.Services.BackgroundJobs;
 using MyMusic.Common.Tests.Utilities;
 using NSubstitute;
 using Shouldly;
@@ -476,6 +477,64 @@ public class SoundalikeResolutionSpecs
         scenario.DbContext.AuditNonConformities.Any(nc => nc.Id == nc.Id).ShouldBeFalse();
     }
 
+    [Theory]
+    [InlineData(SecondaryAction.Delete)]
+    [InlineData(SecondaryAction.Merge)]
+    public async Task Resolve_SecondaryHasOwnNonConformities_RemovesThemWithTheSong(SecondaryAction action)
+    {
+        // Arrange: both songs were also flagged by another audit rule
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
+        var group = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
+        var primaryOwn = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id, ruleId: 2, songId: primary.Id);
+        var secondaryOwn = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id, ruleId: 2, songId: secondary.Id);
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = group.Id,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = action }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        scenario.DbContext.Songs.Any(s => s.Id == secondary.Id).ShouldBeFalse();
+        scenario.DbContext.AuditNonConformities.Any(n => n.Id == secondaryOwn.Id).ShouldBeFalse();
+        scenario.DbContext.AuditNonConformities.Any(n => n.Id == primaryOwn.Id).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task Resolve_SecondaryWasPurchased_PointsThePurchaseToThePrimary()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService();
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
+        var purchase = scenario.CreatePurchase(scenario.CreateSource(), scenario.AdminUser.Id,
+            PurchasedSongStatus.Completed);
+        purchase.SongId = secondary.Id;
+        scenario.DbContext.SaveChanges();
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = 1,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Delete }]
+        };
+
+        // Act
+        await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert
+        scenario.DbContext.Songs.Any(s => s.Id == secondary.Id).ShouldBeFalse();
+        scenario.DbContext.PurchasedSongs.Single(p => p.Id == purchase.Id).SongId.ShouldBe(primary.Id);
+    }
+
     [Fact]
     public async Task Resolve_ReturnsResolvedCount()
     {
@@ -861,11 +920,12 @@ public class SoundalikeResolutionSpecs
         scenario.DbContext.SaveChanges();
     }
 
-    private AuditNonConformity CreateNonConformity(MusicDbContext db, long ownerId)
+    private AuditNonConformity CreateNonConformity(MusicDbContext db, long ownerId, long ruleId = 9, long? songId = null)
     {
         var nc = new AuditNonConformity
         {
-            AuditRuleId = 9,
+            AuditRuleId = ruleId,
+            SongId = songId,
             OwnerId = ownerId,
             Owner = db.Users.First(u => u.Id == ownerId),
             CreatedAt = DateTime.UtcNow
