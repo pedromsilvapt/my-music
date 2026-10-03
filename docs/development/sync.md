@@ -57,6 +57,7 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
       - If the file was deleted locally, should result in an Unlink (the Song stays on the server)
    - Metadata-only edits (such as increasing `Song.PlayCount`) on the server never cause a download (because they do not change the physical file); only changes to the file content do
    - Downloaded and renamed files follow the device's naming template; a name collision gets a ` (2)`, ` (3)`, … suffix
+      - A collision is only with *another* path of the device: a SongDevice never collides with its own path, so a path that already has a suffix is kept while the name without it is still taken
    - Content present in the server library only once: duplicate local files (same Checksum) link to one Song and are never imported twice
    - Direction `up`:
       - Anything that would change the device (UpdateLocal, CreateLocal, DeleteLocal, Rename) should result in a Skipped instead

@@ -137,6 +137,44 @@ public class SyncPathResolverSpecs
     }
 
     [Fact]
+    public void ComputePendingActionPath_DevicePathIsCounterVariantOfCollidingBase_KeepsDevicePath()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var strategy = Strategy("/music/{{ album.artist.name }}/{{ album.name }}/{{ simple_label }}{{ extension }}");
+
+        // Another song holds the base path, so this one was assigned the " (2)" variant
+        var basePath = strategy.Generate(EntityConverter.ToSong(song), NamingMetadata.FromPath("song.mp3"));
+        var assignedPath = Path.ChangeExtension(basePath, null) + " (2).mp3";
+        var sd = scenario.CreateSongDevice(device, song, assignedPath);
+
+        var (path, previousPath) = _resolver.ComputePendingActionPath(sd, strategy, new HashSet<string> { basePath, assignedPath });
+
+        path.ShouldBe(assignedPath);
+        previousPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ComputePendingActionPath_DevicePathHasCounterButBaseIsFree_RenamesToBasePath()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var strategy = Strategy("/music/{{ album.artist.name }}/{{ album.name }}/{{ simple_label }}{{ extension }}");
+
+        // The song that held the base path is gone from the device, so the counter is no longer needed
+        var basePath = strategy.Generate(EntityConverter.ToSong(song), NamingMetadata.FromPath("song.mp3"));
+        var assignedPath = Path.ChangeExtension(basePath, null) + " (2).mp3";
+        var sd = scenario.CreateSongDevice(device, song, assignedPath);
+
+        var (path, previousPath) = _resolver.ComputePendingActionPath(sd, strategy, new HashSet<string> { assignedPath });
+
+        path.ShouldBe(basePath);
+        previousPath.ShouldBe(assignedPath);
+    }
+
+    [Fact]
     public void ComputePendingActionPath_DoesNotMutateUsedPaths()
     {
         var scenario = new Scenario();

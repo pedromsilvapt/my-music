@@ -150,4 +150,36 @@ public abstract partial class SyncTestsBase
         var repoPath3 = await songDetails3.GetRepositoryPathAsync();
         repoPath3.ShouldBe($"{ServerRepositoryBase}/CollisionArtist/CollisionAlbum/CollisionMulti - CollisionArtist (3).mp3");
     }
+
+    // Scenario: Server songs whose device paths collide are downloaded to the paths the server assigned them
+    //   Given two server songs with the same tags but different content, both included on the device
+    //   And the second one was therefore assigned a device path with a collision counter
+    //   When the device syncs
+    //   Then each song is downloaded to its assigned device path
+    //   And a second sync finds the device up to date
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Sync_ServerSongsWithCollidingDevicePaths_ShouldDownloadToAssignedPathsAndStayInSync(bool deduplicate)
+    {
+        var song = new SampleSong("CollisionDownload", "CollisionAlbum", ["CollisionArtist"], [], 2025, DeviceIds: [App.DeviceId]);
+
+        // Seed two distinct server songs that generate the same device path, one after the other, so the
+        // second one should be assigned the " (2)" variant of the path
+        var first = await ServerSongs.SeedAsync(RequestContext, UserId, song with { Lyrics = "Variant 1" });
+        var second = await ServerSongs.SeedAsync(RequestContext, UserId, song with { Lyrics = "Variant 2" });
+        var firstPath = first.DevicePaths![App.DeviceId];
+        var secondPath = second.DevicePaths![App.DeviceId];
+        secondPath.ShouldEndWith(" (2).mp3");
+
+        // Sync should download both songs, each to the device path the server holds for it
+        var result = await App.SyncAsync(new SyncOptions { Deduplicate = deduplicate });
+        result.ShouldBe(createLocal: 2);
+        App.GetAllFiles().Count.ShouldBe(2);
+        App.FilesShouldExist([firstPath, secondPath]);
+
+        // A second sync should find both files where the server expects them, with nothing left to do
+        var result2 = await App.SyncAsync(new SyncOptions { Deduplicate = deduplicate });
+        result2.ShouldBe(skipped: 2);
+    }
 }

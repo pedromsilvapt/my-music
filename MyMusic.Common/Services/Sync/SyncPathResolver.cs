@@ -17,9 +17,10 @@ public class SyncPathResolver : ISyncPathResolver
             var metadata = EntityConverter.ToSong(sd.Song);
             var naming = NamingMetadata.FromPath(sd.DevicePath);
             var basePath = namingStrategy.Generate(metadata, naming);
-            var newPath = basePath == sd.DevicePath
-                ? basePath
-                : GetUniquePath(basePath, usedPaths);
+
+            // usedPaths holds the SongDevice's own path too, which must not count as a collision: a path
+            // that carries a collision counter would otherwise get the next counter instead of being kept
+            var newPath = GetUniquePath(basePath, usedPaths, sd.DevicePath);
 
             return newPath != sd.DevicePath
                 ? (newPath, sd.DevicePath)
@@ -30,9 +31,14 @@ public class SyncPathResolver : ISyncPathResolver
     }
 
     /// <inheritdoc />
-    public string GetUniquePath(string basePath, HashSet<string> existingPaths)
+    public string GetUniquePath(string basePath, HashSet<string> existingPaths) =>
+        GetUniquePath(basePath, existingPaths, ownPath: null);
+
+    private static string GetUniquePath(string basePath, HashSet<string> existingPaths, string? ownPath)
     {
-        if (!existingPaths.Contains(basePath))
+        bool IsTaken(string path) => path != ownPath && existingPaths.Contains(path);
+
+        if (!IsTaken(basePath))
         {
             return basePath;
         }
@@ -47,7 +53,7 @@ public class SyncPathResolver : ISyncPathResolver
         {
             newPath = Path.Combine(directory, $"{fileNameWithoutExt} ({counter}){extension}");
             counter++;
-        } while (existingPaths.Contains(newPath));
+        } while (IsTaken(newPath));
 
         return newPath;
     }

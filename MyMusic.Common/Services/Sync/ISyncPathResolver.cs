@@ -13,7 +13,8 @@ public interface ISyncPathResolver
     /// <summary>
     /// Computes the target device path (and previous path, if a rename is required) for the
     /// pending action against <paramref name="sd"/>, using <paramref name="namingStrategy"/> and
-    /// mutating/consulting <paramref name="usedPaths"/> to avoid collisions.
+    /// consulting <paramref name="usedPaths"/> to avoid collisions with the device's other paths. The
+    /// current path of <paramref name="sd"/> is never a collision, so a path with a collision counter is kept.
     /// </summary>
     (string Path, string? PreviousPath) ComputePendingActionPath(SongDevice sd, TemplateNamingStrategy namingStrategy, HashSet<string> usedPaths);
 
