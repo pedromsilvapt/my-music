@@ -48,6 +48,10 @@ public class SyncConflictChooseService(
             return new SyncConflictChooseResult { Records = records };
         }
 
+        // One transaction for the whole request: a failure midway leaves no records behind, which the
+        // device would never receive, and so never acknowledge
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         var conflicts = await db.DeviceSyncSessionRecords
             .Where(r => r.SessionId == activeSession.Id
                         && r.Action == SyncRecordAction.Conflict
@@ -96,6 +100,7 @@ public class SyncConflictChooseService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "Resolved {ConflictCount} conflicts with the server version for device {DeviceId}: {RecordCount} records",

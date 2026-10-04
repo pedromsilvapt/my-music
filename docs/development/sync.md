@@ -16,6 +16,7 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
  - The device client applications should not keep track of counters on their own, they should instead just keep track of the counters sent to them by the server. The server is the authoritative source of counter values.
  - The server should create all the `DeviceSyncSessionRecord` before the commit phase: only in the commit phase are those actions really performed (songs created, files uploaded, downloaded, renamed, etc...)
     - The list of `DeviceSyncSessionRecord` is the source of truth for what operations to perform
+    - The records of a `resolve-conflicts` or `conflict-choices` request are created in one transaction: a failed request leaves none.
  - During song upload, we save the uploaded song files inside a temp folder in the music repository directory. And during commit, we move those files to the correct repository.
     - Files that will not be imported at commit (dry-run uploads, and uploads recorded as `Link`, `UpdateLocal`, `Skipped` or `Error`) are deleted at the end of the upload request.
     - The upload response returns every record created for the file. When the file matches a previous Checksum of a Song, those include the `UpdateLocal` the device performs in the same session (see the rules below). The session's temp folder, with any leftovers, is deleted when the session ends.

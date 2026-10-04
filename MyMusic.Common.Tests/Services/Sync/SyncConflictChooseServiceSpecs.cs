@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.NamingStrategies;
+using MyMusic.Common.Services;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Sync;
 using NSubstitute;
@@ -16,7 +18,27 @@ public class SyncConflictChooseServiceSpecs
 {
     private const string NamingTemplate = "{{ simple_label }}{{ extension }}";
 
-    private static SyncConflictChooseService CreateService(Scenario scenario)
+    /// <summary>Cancels the Nth save after <see cref="FailOnSave"/> is set, as a client disconnect would.</summary>
+    private sealed class SaveFailure : SaveChangesInterceptor
+    {
+        public int? FailOnSave { get; set; }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (FailOnSave != null && --FailOnSave == 0)
+            {
+                FailOnSave = null;
+                throw new OperationCanceledException("Save cancelled by the test");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
+    /// <param name="db">A context of its own, as each request has; defaults to the scenario's.</param>
+    private static SyncConflictChooseService CreateService(Scenario scenario, MusicDbContext? db = null)
     {
         var config = Options.Create(new Config
         {
@@ -24,7 +46,7 @@ public class SyncConflictChooseServiceSpecs
             DefaultNamingTemplate = NamingTemplate,
         });
         return new SyncConflictChooseService(
-            scenario.DbContext,
+            db ?? scenario.DbContext,
             new DeviceLookupService(),
             new SyncSessionLookupService(),
             new SyncActionsServerFactory(),
@@ -328,5 +350,98 @@ public class SyncConflictChooseServiceSpecs
         // Assert
         var renames = result!.Records.Where(r => r.Action == SyncRecordAction.Rename).ToList();
         renames.Select(r => r.FilePath).ShouldBe([ComputeExpectedPath(other), expectedPath]);
+    }
+
+    /// <summary>
+    /// A session with one conflict whose file the template renames, so choosing the server version saves
+    /// three times: the <c>UpdateLocal</c>, the <c>Rename</c>, and the links to the conflict.
+    /// </summary>
+    private static (Device Device, DeviceSyncSession Session, Song Song, DeviceSyncSessionRecord Conflict) CreateRenamedConflict(Scenario scenario)
+    {
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var song = scenario.CreateSong("Song");
+        scenario.CreateSongDevice(device, song, "OldName.mp3");
+        var conflict = scenario.AddRecord(session.Id, "OldName.mp3", SyncRecordAction.Conflict, songId: song.Id);
+        return (device, session, song, conflict);
+    }
+
+    private static async Task FailChooseDownloadAsync(
+        Scenario scenario, SaveFailure saveFailure, int failOnSave, Device device, DeviceSyncSession session, DeviceSyncSessionRecord conflict)
+    {
+        await using var db = await scenario.DbContextFactory.CreateDbContextAsync();
+        var service = CreateService(scenario, db);
+        saveFailure.FailOnSave = failOnSave;
+
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            service.ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [conflict.Id], CancellationToken.None));
+    }
+
+    [Theory]
+    // The Rename insert
+    [InlineData(2)]
+    // The save that links the records to the conflict
+    [InlineData(3)]
+    public async Task ChooseDownloadAsync_SaveFails_LeavesNoRecords(int failOnSave)
+    {
+        // Arrange
+        var saveFailure = new SaveFailure();
+        var scenario = new Scenario(saveFailure);
+        var (device, session, _, conflict) = CreateRenamedConflict(scenario);
+
+        // Act
+        await FailChooseDownloadAsync(scenario, saveFailure, failOnSave, device, session, conflict);
+
+        // Assert: only the conflict is left in the session
+        var saved = await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking()
+            .Where(r => r.SessionId == session.Id)
+            .ToListAsync();
+        saved.ShouldHaveSingleItem().Id.ShouldBe(conflict.Id);
+    }
+
+    [Fact]
+    public async Task ChooseDownloadAsync_SaveFails_SessionCanStillBeCommitted()
+    {
+        // Arrange
+        var saveFailure = new SaveFailure();
+        var scenario = new Scenario(saveFailure);
+        var (device, session, _, conflict) = CreateRenamedConflict(scenario);
+        await FailChooseDownloadAsync(scenario, saveFailure, 3, device, session, conflict);
+        var commitService = new SyncCommitService(
+            scenario.FileSystem,
+            Substitute.For<IMusicService>(),
+            Substitute.For<ISyncSoundalikeMatcher>(),
+            Substitute.For<ILoggerFactory>(),
+            Substitute.For<ILogger<SyncCommitService>>());
+
+        // Act & Assert: no undelivered client-action records are left to block the commit
+        await using var db = await scenario.DbContextFactory.CreateDbContextAsync();
+        await Should.NotThrowAsync(() => commitService.CommitAsync(db, session.Id, device.Id, session.IsDryRun));
+    }
+
+    [Fact]
+    public async Task ChooseDownloadAsync_AfterAFailedRequest_ResolvesTheConflictAsIfItWereTheFirst()
+    {
+        // Arrange
+        var saveFailure = new SaveFailure();
+        var scenario = new Scenario(saveFailure);
+        var (device, session, song, conflict) = CreateRenamedConflict(scenario);
+        await FailChooseDownloadAsync(scenario, saveFailure, 3, device, session, conflict);
+
+        // Act
+        await using var db = await scenario.DbContextFactory.CreateDbContextAsync();
+        var result = await CreateService(scenario, db).ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [conflict.Id], CancellationToken.None);
+
+        // Assert: the template path was not left taken by the failed request
+        result.ShouldNotBeNull();
+        result.Records.Select(r => r.Action).ShouldBe([SyncRecordAction.UpdateLocal, SyncRecordAction.Rename]);
+        result.Records[1].FilePath.ShouldBe(ComputeExpectedPath(song));
+        result.Records.ShouldAllBe(r => r.ResolvesConflictRecordId == conflict.Id);
+
+        var saved = await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking()
+            .Where(r => r.SessionId == session.Id && r.Action != SyncRecordAction.Conflict)
+            .ToListAsync();
+        saved.Count.ShouldBe(2);
+        saved.ShouldAllBe(r => r.ResolvesConflictRecordId == conflict.Id);
     }
 }

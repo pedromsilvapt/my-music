@@ -1,5 +1,6 @@
 using System.IO.Hashing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common;
@@ -16,6 +17,25 @@ namespace MyMusic.Common.Tests.Services.Sync;
 public class SyncResolveConflictsServiceSpecs
 {
     private const string NamingTemplate = "{{ simple_label }}{{ extension }}";
+
+    /// <summary>Cancels the Nth save after <see cref="FailOnSave"/> is set, as a client disconnect would.</summary>
+    private sealed class SaveFailure : SaveChangesInterceptor
+    {
+        public int? FailOnSave { get; set; }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (FailOnSave != null && --FailOnSave == 0)
+            {
+                FailOnSave = null;
+                throw new OperationCanceledException("Save cancelled by the test");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
 
     private static SyncResolveConflictsService CreateService(Scenario scenario, ISyncActionsServerFactory? factory = null)
     {
@@ -1147,5 +1167,44 @@ public class SyncResolveConflictsServiceSpecs
         var secondRename = second!.Records.Single(r => r.Action == SyncRecordAction.Rename);
         firstRename.FilePath.ShouldBe(expectedPath);
         secondRename.FilePath.ShouldNotBe(expectedPath);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_SaveFails_LeavesNoRecords()
+    {
+        // Arrange: two files needing the server's version, each one an UpdateLocal and a Rename
+        var saveFailure = new SaveFailure();
+        var scenario = new Scenario(saveFailure);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var first = scenario.CreateSong("First", checksum: ComputeChecksum([1, 2, 3]));
+        var second = scenario.CreateSong("Second", checksum: ComputeChecksum([4, 5, 6]));
+        scenario.CreateSongDevice(device, first, "Old First.mp3");
+        scenario.CreateSongDevice(device, second, "Old Second.mp3");
+
+        SyncResolvePotentialUpdateItem UpdateFor(Song song, string path) => new()
+        {
+            Path = path,
+            SongId = song.Id,
+            Checksum = ComputeChecksum([9, 8, 7]),
+            ChecksumAlgorithm = song.ChecksumAlgorithm,
+            LocalModifiedAt = DateTime.UtcNow,
+            LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+        };
+
+        var input = InputFor(potentialUpdates: [UpdateFor(first, "Old First.mp3"), UpdateFor(second, "Old Second.mp3")]);
+
+        // Act: the request is cancelled while creating the records of the second file
+        saveFailure.FailOnSave = 3;
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None));
+
+        // Assert: the records of the first file are gone too
+        var saved = await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking()
+            .Where(r => r.SessionId == session.Id)
+            .ToListAsync();
+        saved.ShouldBeEmpty();
     }
 }

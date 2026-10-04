@@ -51,6 +51,10 @@ public class SyncResolveConflictsService(
             return new SyncResolveConflictsResult { Records = records };
         }
 
+        // One transaction for the whole request: a failure midway leaves no records behind, which the
+        // device would never receive, and so never acknowledge
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
         // Both conflicts (stale local copies) and potential updates can produce UpdateLocal actions,
         // whose target paths are computed with the device's naming template
         var namingStrategy = new TemplateNamingStrategy(
@@ -71,6 +75,7 @@ public class SyncResolveConflictsService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         logger.LogInformation(
             "Resolved conflicts for device {DeviceId}: {RecordCount} records",
