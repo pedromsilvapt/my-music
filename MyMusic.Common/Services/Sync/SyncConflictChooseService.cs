@@ -87,6 +87,8 @@ public class SyncConflictChooseService(
                 pathResolver, songDevice, songDevice.Song.Id, "Conflict resolved by user: server version wins",
                 namingStrategy, usedPaths, syncActions, cancellationToken);
 
+            // The user's choice overrides the conflict, even if these actions later fail: the failure is
+            // reported as an Error, and the conflict no longer counts as one in this session
             foreach (var record in resolving)
             {
                 record.ResolvesConflictRecordId = conflict.Id;

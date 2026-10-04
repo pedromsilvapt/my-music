@@ -116,7 +116,8 @@ public class SyncUploadService(
     /// <summary>
     /// Points the records of an upload to the conflict the user resolved by keeping the local file. An
     /// upload that produced an error leaves the conflict unresolved, and so does an id that is not a
-    /// conflict of this session at this path.
+    /// conflict of this session at this path. Once linked, the conflict stays overridden even if the
+    /// commit fails to import the file: that failure is reported as an <c>Error</c>, not as a conflict.
     /// </summary>
     private async Task LinkToResolvedConflictAsync(
         List<DeviceSyncSessionRecord> records, long sessionId, string path, long conflictRecordId,
