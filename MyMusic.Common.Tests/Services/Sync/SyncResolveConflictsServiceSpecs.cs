@@ -534,6 +534,43 @@ public class SyncResolveConflictsServiceSpecs
         renameRecords[0].FilePath.ShouldBe(expectedPath);
     }
 
+    [Theory]
+    [InlineData("session/{{ simple_label }}{{ extension }}", "session/")]
+    // Sessions started before the template was recorded on them have none
+    [InlineData(null, "device/")]
+    public async Task ResolveAsync_RenamesWithSessionNamingTemplate_FallingBackToDeviceTemplate(
+        string? sessionTemplate, string expectedFolder)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice(namingTemplate: "device/{{ simple_label }}{{ extension }}");
+        var session = scenario.CreateSession(device, isDryRun: true, namingTemplate: sessionTemplate);
+        var service = CreateService(scenario);
+
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum([1, 2, 3, 4, 5]));
+        scenario.CreateSongDevice(device, song, "OldName.mp3");
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "OldName.mp3",
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(new byte[] { 9, 8, 7, 6, 5 }),
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var rename = result.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        rename.FilePath.ShouldStartWith(expectedFolder);
+    }
+
     [Fact]
     public async Task ResolveAsync_DirectionUp_PotentialUpdateChecksumsDiffer_CreatesSkippedRecordInsteadOfUpdateLocal()
     {

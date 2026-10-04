@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services.Devices;
@@ -14,6 +15,7 @@ public class SyncStartService(
     IDeviceLookupService deviceLookup,
     ISyncActionsServerFactory syncActionsServerFactory,
     IFpcalcService fpcalc,
+    IOptions<Config> config,
     ILogger<SyncStartService> logger) : ISyncStartService
 {
     /// <inheritdoc />
@@ -32,6 +34,18 @@ public class SyncStartService(
                 "Deduplication is not available: fpcalc (Chromaprint) is not installed on the server");
         }
 
+        // A real run renames files on the device, so its template must be the one saved on the device:
+        // the next sync would otherwise undo those paths
+        if (input.DeviceOptions != null && !input.DryRun)
+        {
+            throw new SyncStartValidationException(
+                "Device options can only be overridden in a dry run; save them to the device instead");
+        }
+
+        var namingTemplate = input.DeviceOptions != null
+            ? input.DeviceOptions.NamingTemplate
+            : device.NamingTemplate;
+
         var session = new DeviceSyncSession
         {
             DeviceId = deviceId,
@@ -41,6 +55,7 @@ public class SyncStartService(
             Direction = input.Direction,
             RepositoryPath = input.RepositoryPath,
             Deduplicate = input.Deduplicate,
+            NamingTemplate = namingTemplate ?? config.Value.DefaultNamingTemplate,
         };
 
         db.DeviceSyncSessions.Add(session);
@@ -56,8 +71,8 @@ public class SyncStartService(
         }
 
         logger.LogInformation(
-            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, Direction: {Direction}, Deduplicate: {Deduplicate}, RepositoryPath: {RepositoryPath})",
-            session.Id, deviceId, session.IsDryRun, session.Direction, session.Deduplicate, session.RepositoryPath);
+            "Started sync session {SessionId} for device {DeviceId} (DryRun: {IsDryRun}, Direction: {Direction}, Deduplicate: {Deduplicate}, RepositoryPath: {RepositoryPath}, NamingTemplate: {NamingTemplate})",
+            session.Id, deviceId, session.IsDryRun, session.Direction, session.Deduplicate, session.RepositoryPath, session.NamingTemplate);
 
         return new SyncStartResult { SessionId = session.Id };
     }

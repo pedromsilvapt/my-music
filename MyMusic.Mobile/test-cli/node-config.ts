@@ -1,7 +1,10 @@
-import type { ISyncConfig } from '../src/services/sync/types';
+import type { DeviceOptions, ISyncConfig } from '../src/services/sync/types';
 
 interface NodeSyncConfigJson {
     deviceId: number;
+    deviceIcon?: string | null;
+    namingTemplate?: string | null;
+    importOnPurchase?: boolean;
     repositoryPath: string;
     serverUrl: string;
     userId: number;
@@ -24,6 +27,14 @@ export class NodeSyncConfig implements ISyncConfig {
 
     getDeviceId(): number | null {
         return this._config.deviceId ?? null;
+    }
+
+    getDeviceOptions(): DeviceOptions {
+        return {
+            icon: this._config.deviceIcon ?? null,
+            namingTemplate: this._config.namingTemplate || null,
+            importOnPurchase: this._config.importOnPurchase ?? false,
+        };
     }
 
     getRepositoryPath(): string {

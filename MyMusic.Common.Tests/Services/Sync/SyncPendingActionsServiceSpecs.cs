@@ -26,6 +26,7 @@ public class SyncPendingActionsServiceSpecs
         return new SyncPendingActionsService(
             scenario.DbContext,
             new DeviceLookupService(),
+            new SyncSessionLookupService(),
             new SyncPathResolver(),
             config,
             Substitute.For<ILogger<SyncPendingActionsService>>());
@@ -101,6 +102,51 @@ public class SyncPendingActionsServiceSpecs
         records.Count.ShouldBe(1);
         records[0].Action.ShouldBe(SyncRecordAction.CreateLocal);
         records[0].Acknowledged.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task CreateAsync_SessionNamingTemplate_TakesPrecedenceOverDeviceTemplate()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice(namingTemplate: "device/{{ simple_label }}{{ extension }}");
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, isDryRun: true,
+            namingTemplate: "session/{{ simple_label }}{{ extension }}");
+        var songDevice = scenario.CreateSongDevice(device, song, "Old.mp3", syncAction: SongSyncAction.Download);
+        songDevice.LastSyncedModifiedAt = DateTime.UtcNow;
+        scenario.DbContext.SaveChanges();
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var rename = result.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        rename.FilePath.ShouldStartWith("session/");
+    }
+
+    [Fact]
+    public async Task CreateAsync_SessionWithoutNamingTemplate_FallsBackToDeviceTemplate()
+    {
+        // Arrange: sessions started before the template was recorded on them have none
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice(namingTemplate: "device/{{ simple_label }}{{ extension }}");
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device);
+        var songDevice = scenario.CreateSongDevice(device, song, "Old.mp3", syncAction: SongSyncAction.Download);
+        songDevice.LastSyncedModifiedAt = DateTime.UtcNow;
+        scenario.DbContext.SaveChanges();
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var rename = result.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        rename.FilePath.ShouldStartWith("device/");
     }
 
     [Fact]

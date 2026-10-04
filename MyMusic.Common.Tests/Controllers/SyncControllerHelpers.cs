@@ -17,12 +17,19 @@ namespace MyMusic.Common.Tests.Controllers;
 /// </summary>
 internal static class SyncControllerHelpers
 {
+    public const string DefaultNamingTemplate = "{{ simple_label }}{{ extension }}";
+
     public static ISyncStartService CreateSyncStartService(Scenario scenario, ISyncActionsServerFactory? factory = null) =>
         new SyncStartService(
             scenario.DbContext,
             DevicesControllerHelpers.DeviceLookup,
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
             Substitute.For<IFpcalcService>(),
+            Microsoft.Extensions.Options.Options.Create(new Config
+            {
+                MusicRepositoryPath = "/music",
+                DefaultNamingTemplate = DefaultNamingTemplate,
+            }),
             Substitute.For<ILogger<SyncStartService>>());
 
     public static ISyncCompleteService CreateSyncCompleteService(Scenario scenario) =>
@@ -44,6 +51,7 @@ internal static class SyncControllerHelpers
         new SyncPendingActionsService(
             scenario.DbContext,
             DevicesControllerHelpers.DeviceLookup,
+            DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
             Microsoft.Extensions.Options.Options.Create(new Config
             {

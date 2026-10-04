@@ -127,6 +127,16 @@ public class MobileCliApplication : ISyncApplication
         });
 
         response.Ok.ShouldBeTrue();
+
+        // Update the local config to match: a real sync saves the local device options to the server
+        await SetLocalNamingTemplateAsync(namingTemplate);
+    }
+
+    public async Task SetLocalNamingTemplateAsync(string namingTemplate)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(_configPath))!;
+        config["namingTemplate"] = namingTemplate;
+        await File.WriteAllTextAsync(_configPath, config.ToJsonString());
     }
 
     public async Task SetChunkSizeAsync(int chunkSize)
@@ -314,6 +324,7 @@ public class MobileCliApplication : ISyncApplication
         var config = new
         {
             deviceId = DeviceId,
+            deviceIcon = "IconDeviceMobile",
             repositoryPath = _repoPath,
             serverUrl,
             userId,

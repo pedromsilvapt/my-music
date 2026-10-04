@@ -20,6 +20,7 @@ public class SyncStartServiceSpecs
             new DeviceLookupService(),
             factory ?? Substitute.For<ISyncActionsServerFactory>(),
             fpcalc,
+            Microsoft.Extensions.Options.Options.Create(new Config { MusicRepositoryPath = "/music" }),
             Substitute.For<ILogger<SyncStartService>>());
     }
 

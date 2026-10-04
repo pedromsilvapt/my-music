@@ -58,7 +58,11 @@ public class Phases(
             Direction = ctx.Options.Direction,
             RepositoryPath = ctx.RepositoryPath,
             Deduplicate = ctx.Options.Deduplicate,
-            ScanErrors = scanErrors
+            ScanErrors = scanErrors,
+            // A dry run doesn't save the device options, so the session previews the local ones
+            DeviceOptions = ctx.Options.DryRun
+                ? new StartSyncDeviceOptions { NamingTemplate = config.GetNamingTemplate() }
+                : null
         }, ct);
         ctx.SessionId = startResponse.SessionId;
         logger.LogInformation("Started sync session: {SessionId} (DryRun: {DryRun}, Direction: {Direction}, Deduplicate: {Deduplicate})", ctx.SessionId, ctx.Options.DryRun, ctx.Options.Direction, ctx.Options.Deduplicate);

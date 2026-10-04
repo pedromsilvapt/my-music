@@ -221,6 +221,17 @@ The list of `DeviceSyncSessionRecord` entries must be **identical** regardless o
 - **No `Device.LastSyncAt` timestamp is updated.** A dry-run session is invisible to the next real sync.
 - **Session and record tables are still written.** These are the output of the dry-run, not a side effect of syncing.
 
+### Device Options in a Dry-Run
+
+Paths are computed with the session's naming template, which is resolved once when the session starts and stored on `DeviceSyncSession.NamingTemplate`; check, resolve-conflicts and pending-actions all read it from there.
+
+- **Real sync** — The client saves its device options (naming template, icon, import on purchase) to the server device *before* starting the session, which then uses the device's template.
+- **Dry-run** — The client saves nothing. It sends its local template in `SyncStartRequest.DeviceOptions`, which overrides the device's template for that session only, so the preview shows what the real sync would do. A `DeviceOptions` with a `null` template previews the server default.
+
+`DeviceOptions` is rejected on a real sync: files would be renamed with a template the device doesn't have, and the next sync would rename them back.
+
+Outside of a sync, the options are saved by `my-music device save` (CLI) and by saving the device settings screen (mobile).
+
 ## Server as Authority
 
 The server is the sole authority for several aspects of the sync process. Clients never compute these independently:

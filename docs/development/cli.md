@@ -77,6 +77,16 @@ Rules to keep the AOT build working:
 - `dotnet publish` still reports `IL2104`/`IL3053` (and a few `IL2026`/`IL3000`) from inside Refit and Spectre. These
   are expected. Any warning pointing at MyMusic.CLI code is not.
 
+## Device Options
+
+The device options in the `MyMusic:Device` configuration section (icon, color, naming template, import on purchase)
+are saved to the server device by `IDeviceConfigService`:
+
+- `my-music sync` saves them before the session starts.
+- `my-music sync --dry-run` leaves the server device untouched and sends the naming template with the session instead,
+  so the dry run previews the local template (see "Device Options in a Dry-Run" in [sync.md](sync.md)).
+- `my-music device save` saves them without running a sync.
+
 ## Other Development Topics
 
 Development documentation for other MyMusic.CLI topics will be added here as the project evolves.

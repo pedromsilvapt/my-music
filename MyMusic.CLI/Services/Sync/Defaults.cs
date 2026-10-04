@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
+using MyMusic.CLI.Services.Devices;
 using MyMusic.CLI.Services.Sync.Types;
 using Refit;
 using SyncOptions = MyMusic.CLI.Services.Sync.Types.SyncOptions;
@@ -130,12 +131,12 @@ public class CliUserPrompt : IUserPrompt
 
 public class CliSyncConfig(
     IOptions<MyMusicOptions> options,
-    IMyMusicClient client,
+    IDeviceConfigService deviceConfig,
     ILogger<CliSyncConfig> logger) : ISyncConfig
 {
     private long? _deviceId;
 
-    public async Task<long?> GetDeviceIdAsync(CancellationToken ct = default)
+    public async Task<long?> GetDeviceIdAsync(bool saveOptions, CancellationToken ct = default)
     {
         if (_deviceId.HasValue)
         {
@@ -144,46 +145,7 @@ public class CliSyncConfig(
 
         try
         {
-            var devicesResponse = await client.GetDevicesAsync(ct);
-            var existingDevice = devicesResponse.Devices.FirstOrDefault(d => d.Name == options.Value.Device.Name);
-
-            if (existingDevice is not null)
-            {
-                logger.LogInformation("Found existing device: {DeviceName} (ID: {DeviceId})",
-                    existingDevice.Name, existingDevice.Id);
-
-                var needsUpdate = existingDevice.Icon != options.Value.Device.Icon ||
-                                  existingDevice.Color != options.Value.Device.Color ||
-                                  existingDevice.NamingTemplate != options.Value.Device.NamingTemplate ||
-                                  existingDevice.ImportOnPurchase != options.Value.Device.ImportOnPurchase;
-
-                if (needsUpdate)
-                {
-                    logger.LogInformation("Updating device properties for: {DeviceName}", existingDevice.Name);
-                    await client.UpdateDeviceAsync(existingDevice.Id, new UpdateDeviceRequest
-                    {
-                        Icon = options.Value.Device.Icon,
-                        Color = options.Value.Device.Color,
-                        NamingTemplate = options.Value.Device.NamingTemplate,
-                        ImportOnPurchase = options.Value.Device.ImportOnPurchase,
-                    }, ct);
-                }
-
-                _deviceId = existingDevice.Id;
-                return _deviceId;
-            }
-
-            logger.LogInformation("Creating new device: {DeviceName}", options.Value.Device.Name);
-            var newDevice = await client.CreateDeviceAsync(new CreateDeviceRequest
-            {
-                Name = options.Value.Device.Name,
-                Icon = options.Value.Device.Icon,
-                Color = options.Value.Device.Color,
-                NamingTemplate = options.Value.Device.NamingTemplate,
-                ImportOnPurchase = options.Value.Device.ImportOnPurchase,
-            }, ct);
-            logger.LogInformation("Created device with ID: {DeviceId}", newDevice.Device.Id);
-            _deviceId = newDevice.Device.Id;
+            _deviceId = (await deviceConfig.ResolveAsync(saveOptions, ct)).DeviceId;
             return _deviceId;
         }
         catch (Exception ex)
@@ -193,6 +155,7 @@ public class CliSyncConfig(
         }
     }
 
+    public string? GetNamingTemplate() => options.Value.Device.NamingTemplate;
     public string GetRepositoryPath() => options.Value.Repository.Path;
     public string[] GetMusicExtensions() => options.Value.Repository.MusicExtensions.ToArray();
     public string[] GetExcludePatterns() => options.Value.Repository.ExcludePatterns.ToArray();
@@ -216,7 +179,10 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             {
                 FilePath = e.Path,
                 ErrorMessage = e.Error
-            }).ToList()
+            }).ToList(),
+            DeviceOptions = request.DeviceOptions is { } deviceOptions
+                ? new SyncStartDeviceOptions { NamingTemplate = deviceOptions.NamingTemplate }
+                : null
         }, ct);
         return new StartSyncResult { SessionId = response.SessionId };
     }

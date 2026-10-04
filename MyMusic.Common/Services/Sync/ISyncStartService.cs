@@ -19,6 +19,21 @@ public record SyncStartInput
     public bool Deduplicate { get; init; }
 
     public List<SyncStartScanError>? ScanErrors { get; init; }
+
+    /// <summary>
+    /// Device options to preview in a dry run without saving them to the device. When <c>null</c>,
+    /// the session uses the options stored on the device.
+    /// </summary>
+    public SyncStartDeviceOptionsInput? DeviceOptions { get; init; }
+}
+
+/// <summary>
+/// Device options a client sends to override the stored ones for a single dry run session.
+/// </summary>
+public record SyncStartDeviceOptionsInput
+{
+    /// <summary>Naming template to use for the session; <c>null</c> means the server default.</summary>
+    public string? NamingTemplate { get; init; }
 }
 
 /// <summary>

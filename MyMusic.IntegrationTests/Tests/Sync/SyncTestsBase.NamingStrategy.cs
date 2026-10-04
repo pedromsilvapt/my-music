@@ -35,6 +35,49 @@ public abstract partial class SyncTestsBase
     }
 
     [Fact]
+    public async Task Sync_DryRun_ShouldPreviewChangedNamingTemplateWithoutSavingIt()
+    {
+        var savedTemplate = "Saved/{{ title }} - {{ artists_label }}{{ extension }}";
+        var changedTemplate = "Changed/{{ title }} - {{ artists_label }}{{ extension }}";
+        await App.SetNamingTemplateAsync(savedTemplate);
+
+        // Initial sync uploads the song to the server
+        var song = SongsFixture.DefaultSongs[1];
+        var originalPath = $"Saved/{song.Title} - {song.Artists![0]}.mp3";
+        await App.CreateSongAsync(song, originalPath);
+
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1);
+
+        // A server-side edit leaves an update pending for the device, which re-applies the naming template
+        var updatedTitle = "Previewed Title";
+        await new EditSongFlow(song.Title!, new(Title: updatedTitle)).ExecuteAsync(Page);
+
+        // The user changes the template in the application, without it reaching the server yet
+        await App.SetLocalNamingTemplateAsync(changedTemplate);
+
+        // A dry run should preview the changed template...
+        var dryRun = await App.SyncAsync(new SyncOptions { DryRun = true });
+        dryRun.ShouldBe(updateLocal: 1, rename: 1);
+
+        var expectedPath = $"Changed/{updatedTitle} - {song.Artists[0]}.mp3";
+        var renamedPaths = await SessionRecordHelper.FetchRecordPathsAsync(RequestContext, App.DeviceId, dryRun.SessionId!.Value, "Rename");
+        renamedPaths.ShouldBe([expectedPath]);
+
+        // ...without saving it to the server device or touching the local file
+        (await DevicesFixture.GetNamingTemplateAsync(RequestContext, App.DeviceId)).ShouldBe(savedTemplate);
+        App.FileShouldExist(originalPath, "A dry run should not rename files");
+
+        // A real sync should save the changed template and apply it
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(updateLocal: 1, rename: 1);
+
+        (await DevicesFixture.GetNamingTemplateAsync(RequestContext, App.DeviceId)).ShouldBe(changedTemplate);
+        App.FileShouldNotExist(originalPath, "The file should be moved by the changed template");
+        App.FileShouldExist(expectedPath);
+    }
+
+    [Fact]
     public async Task Sync_ShouldPreserveOriginalFolderOnMetadataChange()
     {
         var namingTemplate = "{{ original_folder ?? year }}/{{ title }} - {{ artists_label }}{{ extension }}";

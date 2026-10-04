@@ -243,11 +243,13 @@ public class Scenario
         bool isDryRun = false,
         string? repositoryPath = null,
         DateTime? startedAt = null,
-        SyncDirection direction = SyncDirection.Both)
+        SyncDirection direction = SyncDirection.Both,
+        string? namingTemplate = null)
     {
         var session = new DeviceSyncSession
         {
             Direction = direction,
+            NamingTemplate = namingTemplate,
             DeviceId = device.Id,
             Device = device,
             StartedAt = startedAt ?? DateTime.UtcNow,

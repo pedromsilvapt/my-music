@@ -4,10 +4,8 @@ import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Button, ErrorDisplay, ProgressBar} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
-import {createDevice, getDevices} from '../../src/api/devices';
-import {getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
 import {useTheme} from '../../src/hooks/useTheme';
-import {getDeviceIcon, getDeviceName, getImportOnPurchase, getNamingTemplate, setDeviceId} from '../../src/services/configService';
+import {saveDeviceConfig} from '../../src/services/deviceConfigService';
 import {runSync, SyncCancelledError} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 import {useSyncStore} from '../../src/stores/syncStore';
@@ -44,22 +42,7 @@ export default function SyncProgressScreen() {
 
         const reacquireDeviceId = async (): Promise<boolean> => {
             try {
-                const deviceName = getDeviceName();
-                const devicesResponse = await getDevices();
-                const existingDevice = devicesResponse.devices.find(d => d.name === deviceName);
-
-                if (existingDevice) {
-                    await setDeviceId(existingDevice.id);
-                    return true;
-                }
-
-                const newDevice = await createDevice({
-                    name: deviceName,
-                    icon: getDeviceTypeIdByLabel(getDeviceIcon()),
-                    namingTemplate: getNamingTemplate() || undefined,
-                    importOnPurchase: getImportOnPurchase(),
-                });
-                await setDeviceId(newDevice.device.id);
+                await saveDeviceConfig();
                 return true;
             } catch (reacquireErr) {
                 console.error('Failed to re-acquire device ID:', reacquireErr);

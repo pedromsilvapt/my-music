@@ -10,6 +10,7 @@ using MyMusic.CLI.Api;
 using MyMusic.CLI.Commands;
 using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services;
+using MyMusic.CLI.Services.Devices;
 using MyMusic.CLI.Services.Sync;
 using MyMusic.OpenTelemetry;
 using OpenTelemetry.Logs;
@@ -61,6 +62,11 @@ app.Configure(config =>
         history.AddCommand<HistoryShowCommand>("show");
         history.AddCommand<HistoryRemoveCommand>("rm");
         history.AddCommand<HistoryPruneCommand>("prune");
+    });
+    config.AddBranch("device", device =>
+    {
+        device.AddCommand<DeviceSaveCommand>("save")
+            .WithDescription("Save the configured device options (naming template, icon, ...) to the server");
     });
     config.SetApplicationName("my-music");
     config.UseAssemblyInformationalVersion();
@@ -168,6 +174,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddTransient<HistoryListCommand>();
     services.AddTransient<HistoryRemoveCommand>();
     services.AddTransient<HistoryPruneCommand>();
+    services.AddTransient<DeviceSaveCommand>();
 
     services.AddTransient<AuthenticatedHttpClientHandler>();
     services.AddTransient<HttpLoggingHandler>();
@@ -185,6 +192,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddSingleton<IFileOps, CliFileOps>();
     services.AddSingleton<IKeepAwake, CliKeepAwake>();
     services.AddSingleton<IUserPrompt, CliUserPrompt>();
+    services.AddSingleton<IDeviceConfigService, DeviceConfigService>();
     services.AddSingleton<ISyncConfig, CliSyncConfig>();
     services.AddSingleton<ISyncApiClient, CliSyncApiClient>();
 

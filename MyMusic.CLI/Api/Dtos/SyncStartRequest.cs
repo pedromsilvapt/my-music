@@ -7,6 +7,12 @@ public record SyncStartRequest
     public string? RepositoryPath { get; init; }
     public bool Deduplicate { get; init; }
     public List<SyncScanErrorItem>? ScanErrors { get; init; }
+    public SyncStartDeviceOptions? DeviceOptions { get; init; }
+}
+
+public record SyncStartDeviceOptions
+{
+    public string? NamingTemplate { get; init; }
 }
 
 public record SyncScanErrorItem

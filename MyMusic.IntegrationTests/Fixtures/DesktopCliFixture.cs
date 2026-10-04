@@ -85,10 +85,10 @@ public class DesktopCliFixture : IAsyncDisposable
         response.Ok.ShouldBeTrue();
 
         // Update the local CLI config to match
-        await UpdateConfigNamingTemplateAsync(namingTemplate);
+        await SetLocalNamingTemplateAsync(namingTemplate);
     }
 
-    private async Task UpdateConfigNamingTemplateAsync(string namingTemplate)
+    public async Task SetLocalNamingTemplateAsync(string namingTemplate)
     {
         // Read existing config
         var json = await File.ReadAllTextAsync(ConfigPath);

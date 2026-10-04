@@ -71,6 +71,9 @@ public class DesktopCliApplication : ISyncApplication
     public Task SetNamingTemplateAsync(string namingTemplate)
         => _fixture.SetNamingTemplateAsync(namingTemplate);
 
+    public Task SetLocalNamingTemplateAsync(string namingTemplate)
+        => _fixture.SetLocalNamingTemplateAsync(namingTemplate);
+
     public Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options)
         => _fixture.UpdateLocalFileMetadataAsync(fileName, options);
 

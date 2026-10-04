@@ -2,7 +2,12 @@ namespace MyMusic.CLI.Services.Sync;
 
 public interface ISyncConfig
 {
-    Task<long?> GetDeviceIdAsync(CancellationToken ct = default);
+    /// <summary>
+    /// Resolves the server device for this installation, registering it when missing.
+    /// <paramref name="saveOptions"/> also saves the configured device options to an existing device.
+    /// </summary>
+    Task<long?> GetDeviceIdAsync(bool saveOptions, CancellationToken ct = default);
+    string? GetNamingTemplate();
     string GetRepositoryPath();
     string[] GetMusicExtensions();
     string[] GetExcludePatterns();

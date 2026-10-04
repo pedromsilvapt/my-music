@@ -1,4 +1,4 @@
-import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase, startSessionPhase, prepareDeduplicatePhase } from '../phases';
+import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase, startSessionPhase, saveDeviceOptionsPhase, prepareDeduplicatePhase } from '../phases';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure } from '../sync-actions-device';
 import type { SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt, SyncRecordItem } from '../types';
 import type { RenameData } from '../../../api/types';
@@ -26,6 +26,8 @@ jest.mock('../sync-actions-device', () => ({
 
 function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
     const mockApiClient: ISyncApiClient = {
+        getDevice: jest.fn().mockResolvedValue({device: {icon: 'IconDeviceMobile', color: '#10B981', namingTemplate: null, importOnPurchase: false}}),
+        updateDevice: jest.fn().mockResolvedValue({}),
         startSync: jest.fn().mockResolvedValue({ sessionId: 1 }),
         prepareDeduplicate: jest.fn().mockResolvedValue({ total: 0, processed: 0, done: true }),
         checkSync: jest.fn(),
@@ -52,6 +54,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
 
     const mockConfig: ISyncConfig = {
         getDeviceId: jest.fn().mockReturnValue(1),
+        getDeviceOptions: jest.fn().mockReturnValue({icon: 'IconDeviceMobile', namingTemplate: null, importOnPurchase: false}),
         getRepositoryPath: jest.fn().mockReturnValue('/music'),
         getMusicExtensions: jest.fn().mockReturnValue(['.mp3']),
         getExcludePatterns: jest.fn().mockReturnValue([]),
@@ -132,6 +135,67 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
         ...overrides,
     };
 }
+
+describe('device options', () => {
+    const defaultOptions = createContext().options;
+    const localOptions = { icon: 'IconDeviceMobile', namingTemplate: '{{ year }}/{{ simple_label }}.mp3', importOnPurchase: false };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test('a real sync saves the local options that differ, keeping the server color', async () => {
+        const deps = createMockDeps();
+        (deps.config.getDeviceOptions as jest.Mock).mockReturnValue(localOptions);
+
+        await saveDeviceOptionsPhase(deps, createContext());
+
+        expect(deps.apiClient.updateDevice).toHaveBeenCalledWith(1, {
+            icon: 'IconDeviceMobile',
+            color: '#10B981',
+            namingTemplate: '{{ year }}/{{ simple_label }}.mp3',
+            importOnPurchase: false,
+        });
+    });
+
+    test('a real sync does not update a device that is already up to date', async () => {
+        const deps = createMockDeps();
+
+        await saveDeviceOptionsPhase(deps, createContext());
+
+        expect(deps.apiClient.updateDevice).not.toHaveBeenCalled();
+    });
+
+    test('a dry run leaves the server device untouched', async () => {
+        const deps = createMockDeps();
+        (deps.config.getDeviceOptions as jest.Mock).mockReturnValue(localOptions);
+
+        await saveDeviceOptionsPhase(deps, createContext({ options: { ...defaultOptions, dryRun: true } }));
+
+        expect(deps.apiClient.getDevice).not.toHaveBeenCalled();
+        expect(deps.apiClient.updateDevice).not.toHaveBeenCalled();
+    });
+
+    test('a dry run sends the local naming template with the session', async () => {
+        const deps = createMockDeps();
+        (deps.config.getDeviceOptions as jest.Mock).mockReturnValue(localOptions);
+
+        await startSessionPhase(deps, createContext({ options: { ...defaultOptions, dryRun: true } }), [], jest.fn());
+
+        expect(deps.apiClient.startSync).toHaveBeenCalledWith(1, expect.objectContaining({
+            deviceOptions: { namingTemplate: '{{ year }}/{{ simple_label }}.mp3' },
+        }));
+    });
+
+    test('a real sync does not send device options with the session', async () => {
+        const deps = createMockDeps();
+        (deps.config.getDeviceOptions as jest.Mock).mockReturnValue(localOptions);
+
+        await startSessionPhase(deps, createContext(), [], jest.fn());
+
+        expect(deps.apiClient.startSync).toHaveBeenCalledWith(1, expect.objectContaining({ deviceOptions: undefined }));
+    });
+});
 
 describe('sync direction', () => {
     const defaultOptions = createContext().options;

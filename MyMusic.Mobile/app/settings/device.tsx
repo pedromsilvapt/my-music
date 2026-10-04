@@ -8,7 +8,6 @@ import {ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, T
 import {Controller, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {testConnection, type ConnectionTestResult} from '../../src/api/client';
-import {createDevice, getDevices, updateDevice} from '../../src/api/devices';
 import {Button, Card, ErrorDisplay, Input} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
@@ -22,7 +21,6 @@ import {
     getServerUrl,
     getUserName,
     setDeviceIcon,
-    setDeviceId,
     setDeviceName,
     setImportOnPurchase,
     setIsConfigured,
@@ -32,6 +30,7 @@ import {
     setServerUrl,
     setUserName
 } from '../../src/services/configService';
+import {saveDeviceConfig} from '../../src/services/deviceConfigService';
 
 const configSchema = z.object({
     serverUrl: z.string().url('Invalid URL').or(z.string().startsWith('http://') || z.string().startsWith('https://')),
@@ -145,32 +144,29 @@ export default function DeviceConfigScreen() {
             const apiServerUrl = data.serverUrl.endsWith('/api') ? data.serverUrl : `${data.serverUrl}/api`;
             await setServerUrl(apiServerUrl);
 
+            // The settings are kept on the device even when the server can't be reached: the next
+            // sync saves them before it starts
+            let savedToServer = true;
             try {
-                const devicesResponse = await getDevices();
-                const existingDevice = devicesResponse.devices.find(d => d.name === data.deviceName);
-
-                if (existingDevice) {
-                    await setDeviceId(existingDevice.id);
-                    if (existingDevice.namingTemplate !== data.namingTemplate) {
-                        await updateDevice(existingDevice.id, {
-                            namingTemplate: data.namingTemplate || undefined,
-                        });
-                    }
-                } else {
-                    const newDevice = await createDevice({
-                        name: data.deviceName,
-                        icon: getDeviceTypeIdByLabel(data.deviceType),
-                        namingTemplate: data.namingTemplate || undefined,
-                        importOnPurchase: data.importOnPurchase,
-                    });
-                    await setDeviceId(newDevice.device.id);
-                }
+                await saveDeviceConfig();
             } catch (apiError) {
-                console.error('API error (non-critical):', apiError);
+                console.error('Failed to save the device configuration to the server:', apiError);
+                savedToServer = false;
             }
 
             await setIsConfigured(true);
             await setLastSyncAt(null);
+
+            if (!savedToServer) {
+                setStep('form');
+                Alert.alert(
+                    'Saved on this device only',
+                    'The server could not be reached, so the device settings were not saved there. They will be saved on the next sync; a dry run previews them without saving.',
+                    [{text: 'OK', onPress: () => router.back()}]
+                );
+                return;
+            }
+
             setStep('done');
 
             setTimeout(() => {

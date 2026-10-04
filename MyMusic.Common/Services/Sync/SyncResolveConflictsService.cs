@@ -53,7 +53,7 @@ public class SyncResolveConflictsService(
         // Both conflicts (stale local copies) and potential updates can produce UpdateLocal actions,
         // whose target paths are computed with the device's naming template
         var namingStrategy = new TemplateNamingStrategy(
-            device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
+            activeSession.NamingTemplate ?? device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
         var usedPaths = new HashSet<string>(await db.SongDevices
             .Where(sd => sd.DeviceId == deviceId)

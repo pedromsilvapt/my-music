@@ -52,7 +52,7 @@ public class SyncCheckService(
         var isDirectionUp = activeSession.Direction == SyncDirection.Up;
 
         var namingStrategy = new TemplateNamingStrategy(
-            device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
+            activeSession.NamingTemplate ?? device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
         var clientPaths = input.Files.Select(f => f.Path).ToList();
 

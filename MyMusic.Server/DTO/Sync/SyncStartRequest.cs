@@ -20,6 +20,18 @@ public record SyncStartRequest
     public bool Deduplicate { get; init; }
 
     public List<SyncScanErrorItem>? ScanErrors { get; init; }
+
+    /// <summary>
+    /// Device options to preview in a dry run without saving them to the device. Only allowed when
+    /// <see cref="DryRun"/> is set.
+    /// </summary>
+    public SyncStartDeviceOptions? DeviceOptions { get; init; }
+}
+
+public record SyncStartDeviceOptions
+{
+    /// <summary>Naming template to use for the session; <c>null</c> means the server default.</summary>
+    public string? NamingTemplate { get; init; }
 }
 
 public record SyncScanErrorItem

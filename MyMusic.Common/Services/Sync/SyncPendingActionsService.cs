@@ -19,6 +19,7 @@ namespace MyMusic.Common.Services.Sync;
 public class SyncPendingActionsService(
     MusicDbContext db,
     IDeviceLookupService deviceLookup,
+    ISyncSessionLookupService sessionLookup,
     ISyncPathResolver pathResolver,
     IOptions<Config> config,
     ILogger<SyncPendingActionsService> logger) : ISyncPendingActionsService
@@ -33,7 +34,9 @@ public class SyncPendingActionsService(
         var device = await deviceLookup.FindDeviceAsync(db, deviceId, ownerId, cancellationToken);
         if (device == null) return null;
 
-        var records = await CreatePendingActionsForDevice(deviceId, device.NamingTemplate, sessionId, cancellationToken);
+        var session = await sessionLookup.FindSessionAsync(db, sessionId, deviceId, ownerId, cancellationToken);
+
+        var records = await CreatePendingActionsForDevice(deviceId, session?.NamingTemplate ?? device.NamingTemplate, sessionId, cancellationToken);
 
         logger.LogInformation("Created {Count} pending action records for device {DeviceId}", records.Count, deviceId);
 

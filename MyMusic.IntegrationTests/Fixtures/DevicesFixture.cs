@@ -61,6 +61,18 @@ public class DevicesFixture
         return data;
     }
 
+    /// <summary>
+    /// Returns the naming template saved on the server for a device.
+    /// </summary>
+    public static async Task<string?> GetNamingTemplateAsync(IAPIRequestContext api, long deviceId)
+    {
+        var response = await api.GetWithTraceAsync($"/api/devices/{deviceId}");
+        response.Ok.ShouldBeTrue($"Failed to get device: {response.Status} {response.StatusText}");
+
+        var json = await response.JsonAsync();
+        return json!.Value.GetProperty("device").GetProperty("namingTemplate").GetString();
+    }
+
     public async Task<DeviceData> SeedAsync(IAPIRequestContext api, long userId, SampleDevice device, ILogger? logger = null)
     {
         var devices = await SeedAsync(api, userId, [device], logger);

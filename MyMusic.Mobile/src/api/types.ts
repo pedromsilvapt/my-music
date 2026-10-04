@@ -27,6 +27,10 @@ export const SyncStartRequestSchema = z.object({
         path: z.string(),
         error: z.string(),
     })).optional(),
+    // Device options previewed by a dry run without saving them to the device
+    deviceOptions: z.object({
+        namingTemplate: z.string().nullable(),
+    }).optional(),
 });
 
 export type SyncStartRequest = z.infer<typeof SyncStartRequestSchema>;

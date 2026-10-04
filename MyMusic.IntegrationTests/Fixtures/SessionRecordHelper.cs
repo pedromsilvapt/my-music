@@ -1,11 +1,32 @@
 using System.Text.Json;
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Extensions;
+using Shouldly;
 
 namespace MyMusic.IntegrationTests.Fixtures;
 
 public static class SessionRecordHelper
 {
+    /// <summary>
+    /// Returns the file paths of the session's records with the given action.
+    /// </summary>
+    public static async Task<List<string>> FetchRecordPathsAsync(
+        IAPIRequestContext api,
+        long deviceId,
+        long sessionId,
+        string action)
+    {
+        var response = await api.GetWithTraceAsync($"/api/devices/{deviceId}/sessions/{sessionId}/records");
+        response.Ok.ShouldBeTrue($"Failed to list session records: {response.Status} {response.StatusText}");
+
+        var json = await response.JsonAsync();
+
+        return json!.Value.GetProperty("records").EnumerateArray()
+            .Where(record => record.GetProperty("action").GetString() == action)
+            .Select(record => record.GetProperty("filePath").GetString()!)
+            .ToList();
+    }
+
     public static async Task<Dictionary<string, int>?> FetchApiRecordCountsAsync(
         IAPIRequestContext api,
         long deviceId,

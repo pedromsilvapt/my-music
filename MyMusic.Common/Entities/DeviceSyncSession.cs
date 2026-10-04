@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace MyMusic.Common.Entities;
 
 public class DeviceSyncSession
@@ -30,6 +32,15 @@ public class DeviceSyncSession
     /// See docs/development/sync.md, "Soundalike Deduplication".
     /// </summary>
     public bool Deduplicate { get; set; }
+
+    /// <summary>
+    /// Naming template resolved when the session starts: the device's template, or the one the client
+    /// sent to preview in a dry run. Every step of the session (check, resolve-conflicts,
+    /// pending-actions) reads it from here so paths are always computed with a single template.
+    /// <c>null</c> only for sessions started before this was recorded.
+    /// </summary>
+    [MaxLength(512)]
+    public string? NamingTemplate { get; set; }
 
     public List<DeviceSyncSessionRecord> Records { get; set; } = [];
 }

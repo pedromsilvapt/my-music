@@ -57,6 +57,9 @@ public class SyncController(
                     ScanErrors = request?.ScanErrors?
                         .Select(e => new SyncStartScanError { FilePath = e.FilePath, ErrorMessage = e.ErrorMessage })
                         .ToList(),
+                    DeviceOptions = request?.DeviceOptions is { } deviceOptions
+                        ? new SyncStartDeviceOptionsInput { NamingTemplate = deviceOptions.NamingTemplate }
+                        : null,
                 },
                 cancellationToken);
         }

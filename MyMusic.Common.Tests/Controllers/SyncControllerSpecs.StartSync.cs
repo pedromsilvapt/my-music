@@ -110,6 +110,86 @@ public class SyncControllerStartSyncSpecs
     }
 
     [Fact]
+    public async Task StartSync_StoresDeviceNamingTemplateOnSession()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone", namingTemplate: "device/{{ simple_label }}.mp3");
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.StartSync(device.Id, new SyncStartRequest(), CancellationToken.None);
+
+        // Assert
+        response.Value.ShouldNotBeNull();
+        var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == response.Value.SessionId);
+        session.NamingTemplate.ShouldBe("device/{{ simple_label }}.mp3");
+    }
+
+    [Fact]
+    public async Task StartSync_DeviceWithoutNamingTemplate_StoresDefaultTemplateOnSession()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.StartSync(device.Id, new SyncStartRequest(), CancellationToken.None);
+
+        // Assert
+        response.Value.ShouldNotBeNull();
+        var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == response.Value.SessionId);
+        session.NamingTemplate.ShouldBe(SyncControllerHelpers.DefaultNamingTemplate);
+    }
+
+    [Theory]
+    [InlineData("preview/{{ simple_label }}.mp3", "preview/{{ simple_label }}.mp3")]
+    // A null template in the override previews the server default, not the device's template
+    [InlineData(null, SyncControllerHelpers.DefaultNamingTemplate)]
+    public async Task StartSync_DryRunWithDeviceOptions_OverridesTemplateOnSessionWithoutChangingDevice(
+        string? overrideTemplate, string expectedTemplate)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone", namingTemplate: "device/{{ simple_label }}.mp3");
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.StartSync(device.Id, new SyncStartRequest
+        {
+            DryRun = true,
+            DeviceOptions = new SyncStartDeviceOptions { NamingTemplate = overrideTemplate },
+        }, CancellationToken.None);
+
+        // Assert
+        response.Value.ShouldNotBeNull();
+        var session = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == response.Value.SessionId);
+        session.NamingTemplate.ShouldBe(expectedTemplate);
+        (await scenario.DbContext.Devices.FirstAsync(d => d.Id == device.Id))
+            .NamingTemplate.ShouldBe("device/{{ simple_label }}.mp3");
+    }
+
+    [Fact]
+    public async Task StartSync_DeviceOptionsOnRealRun_ReturnsBadRequest()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.StartSync(device.Id, new SyncStartRequest
+        {
+            DeviceOptions = new SyncStartDeviceOptions { NamingTemplate = "preview/{{ simple_label }}.mp3" },
+        }, CancellationToken.None);
+
+        // Assert
+        response.Result.ShouldBeOfType<ObjectResult>().StatusCode.ShouldBe(400);
+        scenario.DbContext.DeviceSyncSessions.Any().ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task StartSync_NullRequest_CreatesNonDryRunSessionWithNullRepositoryPath()
     {
         // Arrange
