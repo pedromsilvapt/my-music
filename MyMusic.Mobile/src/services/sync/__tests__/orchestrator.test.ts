@@ -53,6 +53,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
             records: [],
             counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0},
         }),
+        chooseConflicts: jest.fn(),
         downloadSong: jest.fn().mockResolvedValue(undefined),
         reportSyncError: jest.fn().mockResolvedValue({counts: {createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1}}),
     };

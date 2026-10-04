@@ -48,6 +48,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         createPendingActions: jest.fn().mockResolvedValue({ records: [] }),
         acknowledgeAction: jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
         resolveConflicts: jest.fn(),
+        chooseConflicts: jest.fn(),
         downloadSong: jest.fn().mockResolvedValue(undefined),
         reportSyncError: jest.fn().mockResolvedValue({ counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 } }),
     };
@@ -270,7 +271,8 @@ describe('resolveConflictsPhase', () => {
             conflictRecords,
             [],
             toUpdatePaths,
-            expect.any(Function)
+            expect.any(Function),
+            []
         );
     });
 
@@ -298,6 +300,35 @@ describe('resolveConflictsPhase', () => {
         const onProgress = jest.fn();
 
         await resolveConflictsPhase(deps, ctx, conflictRecords, [], toUpdatePaths, onProgress);
+
+        expect(ctx.conflictedPaths.size).toBe(0);
+    });
+
+    test('unmarks the path and queues the download when the user chose the server version', async () => {
+        const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
+        const resolvedConflict = { ...conflictRecords[0], id: 8 };
+        const updateLocal: SyncRecordItem = { id: 9, filePath: 'song.mp3', action: 'UpdateLocal', songId: 42, data: null, resolvesConflictRecordId: 8, reason: null, acknowledged: false, processedAt: '' };
+        mockedActionConflict.mockResolvedValue({ records: [resolvedConflict, updateLocal], counts: undefined });
+
+        const deps = createMockDeps();
+        const ctx = createContext();
+
+        await resolveConflictsPhase(deps, ctx, conflictRecords, [], new Set<string>(), jest.fn());
+
+        expect(ctx.conflictedPaths.size).toBe(0);
+        expect(ctx.pendingActions).toEqual([updateLocal]);
+    });
+
+    test('unmarks the path when the user chose to upload the local version', async () => {
+        const mockedActionConflict = actionConflict as jest.MockedFunction<typeof actionConflict>;
+        const resolvedConflict = { ...conflictRecords[0], id: 8 };
+        const updateRemote: SyncRecordItem = { id: 9, filePath: 'song.mp3', action: 'UpdateRemote', songId: 42, data: null, resolvesConflictRecordId: 8, reason: null, acknowledged: false, processedAt: '' };
+        mockedActionConflict.mockResolvedValue({ records: [resolvedConflict, updateRemote], counts: undefined });
+
+        const deps = createMockDeps();
+        const ctx = createContext();
+
+        await resolveConflictsPhase(deps, ctx, conflictRecords, [], new Set<string>(), jest.fn());
 
         expect(ctx.conflictedPaths.size).toBe(0);
     });

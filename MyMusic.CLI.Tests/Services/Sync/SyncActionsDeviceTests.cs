@@ -22,6 +22,8 @@ public class SyncActionsDeviceTests
         _apiClient = Substitute.For<ISyncApiClient>();
         _fileOps = Substitute.For<IFileOps>();
         _userPrompt = Substitute.For<IUserPrompt>();
+        _userPrompt.PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(ConflictResolution.Skip);
         _logger = Substitute.For<ILogger<SyncActionsDevice>>();
 
         _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
@@ -733,6 +735,131 @@ public class SyncActionsDeviceTests
         Acknowledged = false,
         ProcessedAt = DateTime.UtcNow
     };
+
+    private void SetupRealConflict(SyncRecordItem resolvedConflict)
+    {
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(true);
+        mockFile.OpenRead(Arg.Any<string>()).Returns(_ => Substitute.For<System.IO.Abstractions.FileSystemStream>(new MemoryStream(), "song.mp3", false));
+        _fileSystem.File.Returns(mockFile);
+
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("checksum");
+
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [resolvedConflict], Counts = new SyncActionCounts { ConflictCount = 1 } });
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_UserChoosesDownload_AsksTheServerForTheResolvingRecords()
+    {
+        var device = CreateDevice();
+        var resolvedConflict = CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict);
+        SetupRealConflict(resolvedConflict);
+        var updateLocal = CreateResolveRecord(11, "song.mp3", SyncRecordAction.UpdateLocal) with { ResolvesConflictRecordId = 10 };
+        _userPrompt.PromptConflictResolutionAsync("song.mp3", Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(ConflictResolution.Download);
+        _apiClient.ChooseConflictsAsync(1, 1, Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [updateLocal], Counts = new SyncActionCounts { UpdateLocalCount = 1, ConflictCount = -1 } });
+
+        var result = await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], []);
+
+        await _apiClient.Received(1).ChooseConflictsAsync(1, 1, Arg.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 10 })), Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
+        result.Records.ShouldBe([resolvedConflict, updateLocal]);
+        result.Counts.UpdateLocalCount.ShouldBe(1);
+        result.Counts.ConflictCount.ShouldBe(0);
+        result.UploadedPaths.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_UserChoosesUpload_UploadsTheLocalFileResolvingTheConflict()
+    {
+        var device = CreateDevice();
+        var resolvedConflict = CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict);
+        SetupRealConflict(resolvedConflict);
+        var updateRemote = CreateResolveRecord(11, "song.mp3", SyncRecordAction.UpdateRemote) with { ResolvesConflictRecordId = 10 };
+        _userPrompt.PromptConflictResolutionAsync("song.mp3", Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(ConflictResolution.Upload);
+        _apiClient.UploadFileAsync(1, 1, Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new UploadFileResult { Success = true, SongId = 10, Records = [updateRemote], Counts = new SyncActionCounts { UpdateRemoteCount = 1, ConflictCount = -1 } });
+        var modifiedAt = new DateTime(2024, 6, 1, 10, 0, 0, DateTimeKind.Utc);
+        var createdAt = new DateTime(2024, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+        var files = new List<SyncFileInfo> { new() { Path = "song.mp3", ModifiedAt = modifiedAt, CreatedAt = createdAt } };
+
+        var result = await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], [], files: files);
+
+        await _apiClient.Received(1).UploadFileAsync(1, 1, Arg.Is<UploadFileRequest>(r =>
+            r.Path == "song.mp3" && r.ResolvesConflictRecordId == 10
+            && r.ModifiedAt == modifiedAt.ToString("O") && r.CreatedAt == createdAt.ToString("O")), Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().ChooseConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>());
+        result.Records.ShouldBe([resolvedConflict, updateRemote]);
+        result.Counts.UpdateRemoteCount.ShouldBe(1);
+        result.Counts.ConflictCount.ShouldBe(0);
+        result.UploadedPaths.ShouldBe(["song.mp3"]);
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_UploadFails_LeavesTheConflictUnresolved()
+    {
+        var device = CreateDevice();
+        var resolvedConflict = CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict);
+        SetupRealConflict(resolvedConflict);
+        _userPrompt.PromptConflictResolutionAsync("song.mp3", Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(ConflictResolution.Upload);
+        _apiClient.UploadFileAsync(1, 1, Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns<UploadFileResult>(_ => throw new HttpRequestException("Network error"));
+
+        var result = await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], []);
+
+        result.Records.ShouldBe([resolvedConflict]);
+        result.UploadedPaths.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData(ConflictResolution.Download)]
+    [InlineData(ConflictResolution.Skip)]
+    public async Task ActionConflictAsync_ResolutionGivenInOptions_DoesNotAsk(ConflictResolution conflicts)
+    {
+        var device = CreateDevice();
+        SetupRealConflict(CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict));
+        _apiClient.ChooseConflictsAsync(1, 1, Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [] });
+
+        await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], [],
+            options: new SyncOptions { DryRun = true, Conflicts = conflicts });
+
+        await _userPrompt.DidNotReceive().PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(conflicts == ConflictResolution.Download ? 1 : 0)
+            .ChooseConflictsAsync(1, 1, Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(SyncDirection.Up, new[] { ConflictResolution.Upload, ConflictResolution.Skip })]
+    [InlineData(SyncDirection.Down, new[] { ConflictResolution.Download, ConflictResolution.Skip })]
+    [InlineData(SyncDirection.Both, new[] { ConflictResolution.Upload, ConflictResolution.Download, ConflictResolution.Skip })]
+    public async Task ActionConflictAsync_OnlyOffersTheChoicesTheDirectionCanApply(SyncDirection direction, ConflictResolution[] choices)
+    {
+        var device = CreateDevice();
+        SetupRealConflict(CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict));
+
+        await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], [],
+            options: new SyncOptions { Direction = direction });
+
+        await _userPrompt.Received(1).PromptConflictResolutionAsync("song.mp3",
+            Arg.Is<IReadOnlyList<ConflictResolution>>(c => c.SequenceEqual(choices)), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_DirectionUp_DownloadGivenInOptions_SkipsTheConflict()
+    {
+        var device = CreateDevice();
+        SetupRealConflict(CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict));
+
+        await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], [],
+            options: new SyncOptions { Direction = SyncDirection.Up, Conflicts = ConflictResolution.Download });
+
+        await _apiClient.DidNotReceive().ChooseConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>());
+    }
 
     private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);
 }

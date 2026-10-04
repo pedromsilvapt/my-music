@@ -506,6 +506,20 @@ export const SyncResolveConflictsResponseSchema = z.object({
 
 export type SyncResolveConflictsResponse = z.infer<typeof SyncResolveConflictsResponseSchema>;
 
+export const SyncConflictChoicesRequestSchema = z.object({
+    // Ids of the Conflict records the user resolved by downloading the server's version
+    downloadRecordIds: z.array(z.number()),
+});
+
+export type SyncConflictChoicesRequest = z.infer<typeof SyncConflictChoicesRequestSchema>;
+
+export const SyncConflictChoicesResponseSchema = z.object({
+    records: z.array(SyncRecordItemSchema),
+    counts: SyncActionCountsSchema,
+});
+
+export type SyncConflictChoicesResponse = z.infer<typeof SyncConflictChoicesResponseSchema>;
+
 export const ReportSyncErrorRequestSchema = z.object({
     filePath: z.string(),
     errorMessage: z.string(),

@@ -62,6 +62,111 @@ public abstract partial class SyncTestsBase
         result2.ShouldBe(conflict: 1);
     }
 
+    // Scenario: A conflict resolved with the server's version is downloaded and stays resolved
+    //   Given a song on the server was downloaded to the device
+    //   When the song is edited differently on the server and on the device
+    //   And the sync resolves conflicts by downloading
+    //   Then the device receives the server's version
+    //   And the next sync has nothing left to do
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldDownloadServerVersionWhenUserChoosesDownload()
+    {
+        // Seed song on server associated with this device, and download it
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Edit the song differently on each side, so it becomes a real conflict
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+        var originalPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        await App.UpdateLocalFileMetadataAsync(originalPath, new(Title: "Local Title"));
+
+        // Sync choosing the server's version: the conflict should be resolved by a download and a rename
+        var result2 = await App.SyncAsync(new SyncOptions { Conflicts = ConflictResolution.Download });
+        result2.ShouldBe(updateLocal: 1, rename: 1);
+
+        // The device should hold the server's version at its new path
+        var newPath = "Freya Ridings/Wicker Woman/Server Title - Freya Ridings.mp3";
+        App.FileShouldExist(newPath);
+        App.FileShouldNotExist(originalPath);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(newPath), title: "Server Title");
+
+        // Sync again: the conflict should not come back
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(skipped: 1);
+    }
+
+    // Scenario: A conflict resolved with the local version is uploaded and stays resolved
+    //   Given a song on the server was downloaded to the device
+    //   When the song is edited differently on the server and on the device
+    //   And the sync resolves conflicts by uploading
+    //   Then the server receives the device's version
+    //   And the conflict does not come back on the next sync
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldUploadLocalVersionWhenUserChoosesUpload()
+    {
+        // Seed song on server associated with this device, and download it
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Edit the song differently on each side, so it becomes a real conflict
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+        var originalPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        await App.UpdateLocalFileMetadataAsync(originalPath, new(Title: "Local Title"));
+
+        // Sync choosing the local version: the conflict should be resolved by an upload
+        var result2 = await App.SyncAsync(new SyncOptions { Conflicts = ConflictResolution.Upload });
+        result2.ShouldBe(updateRemote: 1);
+
+        // The server should hold the device's version, and the local file should be untouched
+        await new ShouldSongExistInServerFlow("Local Title").ExecuteAsync(Page);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(originalPath), title: "Local Title");
+
+        // Sync again: the conflict should not come back
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.Conflict.ShouldBe(0);
+        result3.UpdateRemote.ShouldBe(0);
+        result3.UpdateLocal.ShouldBe(0);
+    }
+
+    // Scenario: A song conflicted at two paths of the device is resolved at both
+    //   Given two identical local files were synced and linked to one song
+    //   When both files are edited on the device, each differently
+    //   And the song is edited on the server
+    //   And the sync resolves conflicts by downloading
+    //   Then both files receive the server's version
+    //   And the next sync has nothing left to do
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldDownloadServerVersionAtEveryConflictedPathOfSong()
+    {
+        // Upload two identical local files: they become one song, linked at both paths
+        var firstPath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        var secondPath = "Local Copies/Wicker Woman.mp3";
+        await App.CreateSongsAsync((SongsFixture.DefaultSongs[2], firstPath), (SongsFixture.DefaultSongs[2], secondPath));
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1, link: 1);
+
+        // Edit both copies on the device, and the song on the server, each with a different title
+        await App.UpdateLocalFileMetadataAsync(firstPath, new(Title: "First Local Title"));
+        await App.UpdateLocalFileMetadataAsync(secondPath, new(Title: "Second Local Title"));
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+
+        // Sync choosing the server's version: both conflicts should be resolved by a download and a rename
+        var result2 = await App.SyncAsync(new SyncOptions { Conflicts = ConflictResolution.Download });
+        result2.ShouldBe(updateLocal: 2, rename: 2);
+
+        // Neither copy should be left at its old path
+        App.FileShouldNotExist(firstPath);
+        App.FileShouldNotExist(secondPath);
+
+        // Sync again: the conflicts should not come back
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(skipped: 2);
+    }
+
     // Scenario: A conflict found in an earlier chunk is kept while later chunks download server changes
     //   Given two songs on the server were downloaded to the device
     //   When one song is edited differently on the server and on the device

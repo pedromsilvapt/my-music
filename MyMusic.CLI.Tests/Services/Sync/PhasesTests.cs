@@ -31,6 +31,8 @@ public class PhasesTests
         _apiClient = Substitute.For<ISyncApiClient>();
         _fileOps = Substitute.For<IFileOps>();
         _userPrompt = Substitute.For<IUserPrompt>();
+        _userPrompt.PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(ConflictResolution.Skip);
         _fileSystem = Substitute.For<System.IO.Abstractions.IFileSystem>();
         _config = Substitute.For<ISyncConfig>();
         _scanner = Substitute.For<IFileSystemScanner>();
@@ -463,6 +465,59 @@ public class PhasesTests
         ctx.ConflictedPaths.ShouldBeEmpty();
         ctx.PendingServerRecords.ShouldContain(updateLocal);
         ctx.PendingServerRecords.ShouldNotContain(conflict);
+    }
+
+    [Fact]
+    public async Task UploadPhase_UserChoosesDownload_ConflictIsNotMarkedAndDownloadIsQueued()
+    {
+        _config.GetChunkSize().Returns(10);
+        SetupLocalFilesExist();
+        var conflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
+        var resolvedConflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { Id = 10, SongId = 1 };
+        var updateLocal = CreateRecord("song.mp3", SyncRecordAction.UpdateLocal) with { Id = 11, SongId = 1, ResolvesConflictRecordId = 10 };
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [conflict], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [resolvedConflict], Counts = new SyncActionCounts { ConflictCount = 1 } });
+        _apiClient.ChooseConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [updateLocal], Counts = new SyncActionCounts { UpdateLocalCount = 1, ConflictCount = -1 } });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Conflicts = ConflictResolution.Download });
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
+
+        // The server's version should be downloaded in the server actions phase
+        ctx.ConflictedPaths.ShouldBeEmpty();
+        ctx.PendingServerRecords.ShouldBe([updateLocal]);
+        ctx.Result.Conflict.ShouldBe(0);
+        ctx.Result.UpdateLocal.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task UploadPhase_UserChoosesUpload_ConflictIsNotMarkedAndPathIsUploaded()
+    {
+        _config.GetChunkSize().Returns(10);
+        SetupLocalFilesExist();
+        var conflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
+        var resolvedConflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { Id = 10, SongId = 1 };
+        var updateRemote = CreateRecord("song.mp3", SyncRecordAction.UpdateRemote) with { Id = 11, SongId = 1, ResolvesConflictRecordId = 10 };
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [conflict], Counts = SyncActionCounts.Empty });
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [resolvedConflict], Counts = new SyncActionCounts { ConflictCount = 1 } });
+        _apiClient.UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new UploadFileResult { Success = true, SongId = 1, Records = [updateRemote], Counts = new SyncActionCounts { UpdateRemoteCount = 1, ConflictCount = -1 } });
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { Conflicts = ConflictResolution.Upload });
+
+        await phases.UploadPhaseAsync(ctx, [CreateScannedFile("song.mp3")], null);
+
+        ctx.ConflictedPaths.ShouldBeEmpty();
+        ctx.UploadedPaths.ShouldBe(["song.mp3"]);
+        ctx.Result.Conflict.ShouldBe(0);
+        ctx.Result.UpdateRemote.ShouldBe(1);
     }
 
     [Theory]

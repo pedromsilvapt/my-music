@@ -1,4 +1,5 @@
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.Sync;
 
 namespace MyMusic.Server.DTO.Sync;
 
@@ -17,9 +18,13 @@ public record SyncActionCounts
     public int UpdateTimestampCount { get; init; }
     public int ErrorCount { get; init; }
 
+    /// <summary>
+    /// Counts the records of each action. <see cref="ConflictCount"/> only counts unresolved conflicts, so
+    /// it is negative for records that resolve conflicts created by an earlier request.
+    /// </summary>
     public static SyncActionCounts FromRecords(IEnumerable<DeviceSyncSessionRecord> records)
     {
-        var counts = records.GroupBy(r => r.Action).ToDictionary(g => g.Key, g => g.Count());
+        var counts = records.ToList().CountByAction();
         return new SyncActionCounts
         {
             CreateRemoteCount = counts.GetValueOrDefault(SyncRecordAction.CreateRemote),

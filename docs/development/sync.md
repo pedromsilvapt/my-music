@@ -45,7 +45,11 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
       - If both sides changed:
          - If the contents are equal, should result in an UpdateTimestamp
          - If the local file matches a previous Checksum of the Song, should result in an UpdateLocal (the server version wins)
-         - Otherwise, should result in a Conflict; the local file is kept and not downloaded
+         - Otherwise, should result in a Conflict; the local file is kept and not downloaded, unless the user resolves it:
+            - Choosing the server's version should result in an UpdateLocal (+ Rename only if the naming template now produces a different path)
+            - Choosing the local version uploads the file, which should result in an UpdateRemote (or whatever the upload rules give for its content, such as an Unlink + Link when it matches another Song)
+            - The Conflict record is kept, and the records that resolve it point to it (`ResolvesConflictRecordId`)
+            - The Conflict counter only counts the conflicts left unresolved
       - If it was never synced before (the server assigned a song to the device, it hasn't been downloaded yet, and a local file already exists at exactly the path it would be downloaded to):
          - If the server changed it after it was assigned to the device, it is treated as "both sides changed"
          - Otherwise, should result in an UpdateRemote
@@ -130,6 +134,22 @@ A conflict occurs when both the device and the server have modified the same fil
 2. **Resolve by checksum** — The device computes the checksum of its file (with the algorithm the `check` response reports for the song) and sends only that; the server compares it against the stored song. Older clients upload the whole file instead and the server computes the checksum, which is slower but gives the same result:
    - **Checksums match** → The content is identical despite the timestamp difference (e.g., the file was copied or touched without changing audio). Auto-resolve: treat as a normal update. The timestamps diverged, but the music didn't.
    - **Checksums differ** → The content genuinely changed on both sides. This is a real conflict. The conflict is recorded and surfaced to the user; the device does not download the server's version, preserving the local file.
+
+### Resolving a Real Conflict
+
+Only the user can settle a real conflict, so the device asks what to do with each one, right after the server reports it:
+
+- **Download** — the server's version wins. The device sends the ids of those `Conflict` records (`conflict-choices`), and the server creates the `UpdateLocal` (and a `Rename`, when the naming template now gives the file another path) that the device performs in the server actions phase.
+- **Upload** — the local version wins. The device uploads the file, naming the `Conflict` record it resolves; the upload is decided like any other (normally an `UpdateRemote`).
+- **Skip** — the conflict stays, the local file is untouched, and the next sync reports it again.
+
+The `Conflict` record is never removed: the records created by the choice point to it through `ResolvesConflictRecordId`, which is how the session history shows what was decided. A resolved conflict no longer counts as a conflict, so the conflict counter (in the session and in each response's delta, where it can be negative) only covers the unresolved ones. An upload that fails leaves the conflict unresolved.
+
+A direction that never changes one side cannot pick it: `up` offers no download, `down` no upload. In `up`, a download chosen anyway is recorded as `Skipped`.
+
+The choice is asked in a dry run too, and creates the same records. Resolving a conflict can affect other records (the renamed path of a downloaded file is taken for the rest of the session, an uploaded file can be linked to another song), so a dry run that did not ask would not preview the real sync. As with every other record, a dry run performs none of them: the conflict is still there on the next sync.
+
+How the question is asked is up to each client. The CLI prompts, or takes the answer for every conflict from `--conflicts`; the mobile app shows a dialog, unless "Treat Conflicts as Errors" is on.
 
 ### Why Checksums Are Not the Primary Signal
 
@@ -237,7 +257,7 @@ Outside of a sync, the options are saved by `my-music device save` (CLI) and by 
 The server is the sole authority for several aspects of the sync process. Clients never compute these independently:
 
 - **Counter values** — The counts of actions by type (creates, updates, deletes, etc.) are determined by the server. The server returns delta counters with every response during the record phase. At commit and completion, the server returns the authoritative totals, and the client replaces its accumulated counts with these. This prevents drift between what the client displays and what the server recorded.
-- **Conflict outcomes** — The server decides whether a conflict is auto-resolved or real, by comparing checksums. The client does not make this determination.
+- **Conflict outcomes** — The server decides whether a conflict is auto-resolved or real, by comparing checksums. The client does not make this determination. For a real conflict the client only carries the user's choice; the server creates the records that apply it.
 - **Deduplication** — The server decides whether an uploaded file is a new song or a link to an existing one. The client cannot know the full library state.
 - **Orphan detection** — The server determines which `SongDevice` associations are orphans based on the record list and the direction of the sync. The client has no visibility into this.
 
@@ -247,6 +267,6 @@ The server is the sole authority for several aspects of the sync process. Client
 2. **Commit atomicity** — All record actions are applied in a single transaction. Either all succeed or none do.
 3. **One song per unique content** — Duplicate files (same checksum) are linked to a single song in the library, never imported twice.
 4. **Server-authoritative counters** — Counter values displayed to the user always reflect the server's record of what happened, not the client's accumulation.
-5. **No silent data loss** — Real conflicts are recorded and preserved. The device file is never overwritten by the server file when content diverges. Orphaned associations in `down` direction are not removed.
+5. **No silent data loss** — Real conflicts are recorded and preserved. The device file is never overwritten by the server file when content diverges, unless the user chose the server's version for that conflict. Orphaned associations in `down` direction are not removed.
 6. **Client parity** — The CLI and Mobile implementations make the same sync decisions for the same inputs. Allowed differences are limited to technology-specific concerns (DI vs. dependency passing, file system APIs, screen wake management, conflict UX presentation).
 7. **Unified record responses** — Sync endpoints return a single ordered list of `DeviceSyncSessionRecord` entries. The client dispatches by `Action` on each record. Response DTOs must not partition records into separate lists by action category.

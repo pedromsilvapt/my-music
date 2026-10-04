@@ -114,6 +114,11 @@ public class DesktopCliApplication : ISyncApplication
             args.Add("--direction");
             args.Add(options.Direction.Value.ToString().ToLowerInvariant());
         }
+        if (options.Conflicts is not null)
+        {
+            args.Add("--conflicts");
+            args.Add(options.Conflicts.Value.ToString().ToLowerInvariant());
+        }
         if (options.AutoConfirm) args.Add("--yes");
 
         // Spectre.Console requires global options AFTER the command name, not before.

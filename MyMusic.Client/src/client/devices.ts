@@ -670,6 +670,10 @@ if(postDevicesDeviceIdSyncSessionIdUploadBody.createdAt !== undefined) {
  formData.append(`createdAt`, postDevicesDeviceIdSyncSessionIdUploadBody.createdAt);
  }
 
+if(postDevicesDeviceIdSyncSessionIdUploadBody.resolvesConflictRecordId !== undefined && postDevicesDeviceIdSyncSessionIdUploadBody.resolvesConflictRecordId !== null) {
+ formData.append(`resolvesConflictRecordId`, postDevicesDeviceIdSyncSessionIdUploadBody.resolvesConflictRecordId.toString())
+ }
+
   const res = await fetch(getPostDevicesDeviceIdSyncSessionIdUploadUrl(deviceId,sessionId),
   {
     ...options,

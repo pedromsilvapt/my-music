@@ -1,7 +1,3 @@
-// @TODO: Mobile has treatConflictsAsErrors option, but CLI uses checksum-based conflict resolution.
-// CLI sends file content to server for checksum comparison to auto-resolve conflicts.
-// Consider aligning conflict resolution strategies between platforms.
-//
 // @TODO: CLI has Verbose option for detailed logging output during sync. Mobile doesn't have
 // this option. Consider adding verbose mode for debugging sync operations.
 import type { SyncPhase, SyncProgress } from '../../stores/syncStore';
@@ -192,7 +188,9 @@ export interface ISyncApiClient {
         file: { uri: string; name: string },
         path: string,
         modifiedAt: string,
-        createdAt: string
+        createdAt: string,
+        /** The Conflict record the user resolved by keeping this local file. */
+        resolvesConflictRecordId?: number
     ) => Promise<{ success: boolean; songId: number | null; records: SyncRecordItem[]; counts: SyncActionCounts }>;
 
     commitSync: (
@@ -270,6 +268,16 @@ export interface ISyncApiClient {
         counts: SyncActionCounts;
     }>;
 
+    /** Resolves real conflicts with the server's version, as chosen by the user. */
+    chooseConflicts: (
+        deviceId: number,
+        sessionId: number,
+        request: { downloadRecordIds: number[] }
+    ) => Promise<{
+        records: SyncRecordItem[];
+        counts: SyncActionCounts;
+    }>;
+
     /** Downloads the file of a song to the given local path, replacing any file already there. */
     downloadSong: (songId: number, destinationPath: string) => Promise<void>;
 
@@ -340,6 +348,7 @@ export interface IKeepAwake {
 }
 
 export interface IUserPrompt {
-    promptConflictResolution: (filePath: string) => Promise<ConflictResolution>;
+    /** Asks what to do with a real conflict. Only the given choices can be answered. */
+    promptConflictResolution: (filePath: string, choices: ConflictResolution[]) => Promise<ConflictResolution>;
     confirmDeletion: (filePath: string) => Promise<boolean>;
 }

@@ -118,6 +118,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISyncDeviceSongsService, SyncDeviceSongsService>();
         builder.Services.AddScoped<ISyncCheckService, SyncCheckService>();
         builder.Services.AddScoped<ISyncResolveConflictsService, SyncResolveConflictsService>();
+        builder.Services.AddScoped<ISyncConflictChooseService, SyncConflictChooseService>();
         builder.Services.AddScoped<ISyncReportErrorService, SyncReportErrorService>();
         builder.Services.AddScoped<ISyncAcknowledgeService, SyncAcknowledgeService>();
         builder.Services.AddSingleton<SyncSoundalikeSessionCache>();

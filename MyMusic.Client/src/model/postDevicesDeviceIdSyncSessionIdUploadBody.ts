@@ -14,4 +14,10 @@ export type PostDevicesDeviceIdSyncSessionIdUploadBody = {
   modifiedAt?: string;
 } & {
   createdAt?: string;
-};
+} & ({
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  resolvesConflictRecordId?: number | null;
+});

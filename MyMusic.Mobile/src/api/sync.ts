@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
 import {downloadFile} from '../../modules/repo-files';
 import {apiMultipartRequest, apiRequest} from './client';
-import type {AcknowledgeActionRequest, PruneSessionsRequest, ReportSyncErrorRequest, SyncCheckRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
+import type {AcknowledgeActionRequest, PruneSessionsRequest, ReportSyncErrorRequest, SyncCheckRequest, SyncConflictChoicesRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
 import {
     AcknowledgeActionResponseSchema,
     CreatePendingActionsResponseSchema,
@@ -15,6 +15,7 @@ import {
     SyncCommitResponseSchema,
     SyncCompleteResponseSchema,
     SyncDeduplicatePrepareResponseSchema,
+    SyncConflictChoicesResponseSchema,
     SyncResolveConflictsResponseSchema,
     SyncStartResponseSchema,
     SyncUploadResponseSchema,
@@ -83,13 +84,17 @@ export async function uploadFile(
     file: { uri: string; name: string },
     path: string,
     modifiedAt: string,
-    createdAt: string
+    createdAt: string,
+    resolvesConflictRecordId?: number
 ) {
     const formData = new FormData();
     formData.append('file', file as any);
     formData.append('path', path);
     formData.append('modifiedAt', modifiedAt);
     formData.append('createdAt', createdAt);
+    if (resolvesConflictRecordId != null) {
+        formData.append('resolvesConflictRecordId', String(resolvesConflictRecordId));
+    }
 
     return apiMultipartRequest(`/devices/${deviceId}/sync/${sessionId}/upload`, formData, SyncUploadResponseSchema);
 }
@@ -176,6 +181,14 @@ export async function resolveConflicts(deviceId: number, sessionId: number, requ
         method: 'POST',
         body: request,
         schema: SyncResolveConflictsResponseSchema,
+    });
+}
+
+export async function chooseConflicts(deviceId: number, sessionId: number, request: SyncConflictChoicesRequest) {
+    return apiRequest(`/devices/${deviceId}/sync/${sessionId}/conflict-choices`, {
+        method: 'POST',
+        body: request,
+        schema: SyncConflictChoicesResponseSchema,
     });
 }
 

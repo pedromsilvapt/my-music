@@ -6,6 +6,7 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import type { SyncDirection } from './syncDirection';
 import type { SyncScanErrorItem } from './syncScanErrorItem';
+import type { SyncStartDeviceOptions } from './syncStartDeviceOptions';
 
 export interface SyncStartRequest {
   dryRun?: boolean;
@@ -15,4 +16,5 @@ export interface SyncStartRequest {
   deduplicate?: boolean;
   /** @nullable */
   scanErrors?: SyncScanErrorItem[] | null;
+  deviceOptions?: null | SyncStartDeviceOptions;
 }

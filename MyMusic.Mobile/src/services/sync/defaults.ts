@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 import {
     acknowledgeAction,
     checkSync,
+    chooseConflicts,
     commitSync,
     completeSync,
     downloadSong,
@@ -39,6 +40,7 @@ import type {
     ISyncConfig,
     ISyncState,
     IUserPrompt,
+    ConflictResolution,
     SyncRecordItem,
 } from './types';
 
@@ -55,9 +57,9 @@ export function createDefaultApiClient(): ISyncApiClient {
                 records: result.records as SyncRecordItem[],
             };
         },
-        uploadFile: async (deviceId, sessionId, file, path, modifiedAt, createdAt) => {
+        uploadFile: async (deviceId, sessionId, file, path, modifiedAt, createdAt, resolvesConflictRecordId) => {
             // The sync engine passes filesystem paths; React Native's FormData needs a URI
-            const result = await uploadFile(deviceId, sessionId, { ...file, uri: toFileUri(file.uri) }, path, modifiedAt, createdAt);
+            const result = await uploadFile(deviceId, sessionId, { ...file, uri: toFileUri(file.uri) }, path, modifiedAt, createdAt, resolvesConflictRecordId);
             return {
                 success: result.success,
                 songId: result.songId,
@@ -75,6 +77,13 @@ export function createDefaultApiClient(): ISyncApiClient {
         },
         acknowledgeAction,
         resolveConflicts,
+        chooseConflicts: async (deviceId, sessionId, request) => {
+            const result = await chooseConflicts(deviceId, sessionId, request);
+            return {
+                ...result,
+                records: result.records as SyncRecordItem[],
+            };
+        },
         downloadSong,
         reportSyncError,
     };
@@ -177,15 +186,15 @@ export function createDefaultKeepAwake(): IKeepAwake {
 
 export function createDefaultUserPrompt(): IUserPrompt {
     return {
-        promptConflictResolution: async (filePath: string) => {
+        promptConflictResolution: async (filePath: string, choices: ConflictResolution[]) => {
             return new Promise((resolve) => {
                 Alert.alert(
                     'Conflict Detected',
                     `The file "${filePath}" has been modified both locally and on the server. What would you like to do?`,
                     [
-                        { text: 'Upload', onPress: () => resolve('upload') },
-                        { text: 'Download', onPress: () => resolve('download') },
-                        { text: 'Skip (Error)', style: 'destructive', onPress: () => resolve('skip') },
+                        ...(choices.includes('upload') ? [{ text: 'Upload', onPress: () => resolve('upload') }] : []),
+                        ...(choices.includes('download') ? [{ text: 'Download', onPress: () => resolve('download') }] : []),
+                        { text: 'Skip', style: 'destructive' as const, onPress: () => resolve('skip') },
                     ],
                     { cancelable: false }
                 );

@@ -31,6 +31,7 @@ public class SyncControllerStartSyncSpecs
             SyncControllerHelpers.CreateSyncDeviceSongsService(scenario),
             Substitute.For<ISyncCheckService>(),
             Substitute.For<ISyncResolveConflictsService>(),
+            Substitute.For<ISyncConflictChooseService>(),
             Substitute.For<ISyncReportErrorService>(),
             Substitute.For<ISyncAcknowledgeService>(),
             Substitute.For<ISyncDeduplicatePrepareService>(),

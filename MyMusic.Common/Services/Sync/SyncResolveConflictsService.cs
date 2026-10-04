@@ -153,7 +153,7 @@ public class SyncResolveConflictsService(
             else
             {
                 var reason = $"Local file is a previous version of the song, server modified at {songFileModifiedAt:O} wins";
-                await AddUpdateLocalRecordsAsync(songDevice, conflict.SongId, reason, namingStrategy, usedPaths, syncActions, records, cancellationToken);
+                records.AddRange(await SyncUpdateLocalRecords.AddAsync(pathResolver, songDevice, conflict.SongId, reason, namingStrategy, usedPaths, syncActions, cancellationToken));
             }
 
             logger.LogInformation(
@@ -245,40 +245,11 @@ public class SyncResolveConflictsService(
         {
             var songFileModifiedAt = songDevice.Song.FileModifiedAt ?? songDevice.Song.ModifiedAt;
             var reason = $"Server modified at {songFileModifiedAt:O} is newer than last synced at {update.LastSyncedAt:O}, checksums differ";
-            await AddUpdateLocalRecordsAsync(songDevice, update.SongId, reason, namingStrategy, usedPaths, syncActions, records, cancellationToken);
+            records.AddRange(await SyncUpdateLocalRecords.AddAsync(pathResolver, songDevice, update.SongId, reason, namingStrategy, usedPaths, syncActions, cancellationToken));
 
             logger.LogInformation(
                 "Potential update for {Path} (SongId={SongId}) - checksums differ, creating UpdateLocal action",
                 update.Path, update.SongId);
-        }
-    }
-
-    /// <summary>
-    /// Adds an <c>UpdateLocal</c> record that downloads the song's current file to the device, followed
-    /// by a <c>Rename</c> record when the naming template changed the file's target path.
-    /// </summary>
-    private async Task AddUpdateLocalRecordsAsync(
-        SongDevice songDevice,
-        long songId,
-        string reason,
-        TemplateNamingStrategy namingStrategy,
-        HashSet<string> usedPaths,
-        ISyncActionsServer syncActions,
-        List<DeviceSyncSessionRecord> records,
-        CancellationToken cancellationToken)
-    {
-        var pendingAction = pathResolver.ComputePendingActionPath(songDevice, namingStrategy, usedPaths);
-        usedPaths.Add(pendingAction.Path);
-
-        var updateFilePath = pendingAction.PreviousPath ?? pendingAction.Path;
-        var songFileModifiedAt = songDevice.Song!.FileModifiedAt ?? songDevice.Song.ModifiedAt;
-        var updateRecord = await syncActions.ActionUpdateLocal(updateFilePath, songId, songFileModifiedAt, reason, cancellationToken);
-        records.Add(updateRecord);
-
-        if (pendingAction.PreviousPath != null)
-        {
-            var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, songId, "Path updated by naming template", cancellationToken);
-            records.Add(renameRecord);
         }
     }
 

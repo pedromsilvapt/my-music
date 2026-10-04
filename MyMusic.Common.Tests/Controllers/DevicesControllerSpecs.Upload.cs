@@ -66,7 +66,7 @@ public class DevicesControllerUploadSpecs
         var modifiedAt = DateTime.UtcNow.ToString("O");
         var createdAt = DateTime.UtcNow.ToString("O");
 
-        var response = await controller.UploadFile(device.Id, session.Id, formFile, "/music/song.mp3", modifiedAt, createdAt, CancellationToken.None);
+        var response = await controller.UploadFile(device.Id, session.Id, formFile, "/music/song.mp3", modifiedAt, createdAt, null, CancellationToken.None);
 
         response.Value.Success.ShouldBeTrue();
         response.Value.SongId.ShouldBeNull();
@@ -91,7 +91,7 @@ public class DevicesControllerUploadSpecs
         var modifiedAt = DateTime.UtcNow.ToString("O");
         var createdAt = DateTime.UtcNow.ToString("O");
 
-        var response = await controller.UploadFile(device.Id, session.Id, formFile, "/music/song.mp3", modifiedAt, createdAt, CancellationToken.None);
+        var response = await controller.UploadFile(device.Id, session.Id, formFile, "/music/song.mp3", modifiedAt, createdAt, null, CancellationToken.None);
 
         response.Value.Success.ShouldBeTrue();
         response.Value.SongId.ShouldBe(song.Id);

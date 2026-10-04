@@ -163,4 +163,31 @@ public class SyncCompleteServiceSpecs
         result.UnlinkCount.ShouldBe(0);
         result.ErrorCount.ShouldBe(0);
     }
+
+    [Fact]
+    public async Task CompleteAsync_CountsOnlyUnresolvedConflicts()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
+        var resolved = scenario.AddRecord(session.Id, "resolved.mp3", SyncRecordAction.Conflict);
+        scenario.AddRecord(session.Id, "kept.mp3", SyncRecordAction.Conflict);
+        // An UpdateLocal and its Rename resolve the same conflict
+        var update = scenario.AddRecord(session.Id, "resolved.mp3", SyncRecordAction.UpdateLocal, acknowledged: true);
+        var rename = scenario.AddRecord(session.Id, "renamed.mp3", SyncRecordAction.Rename, acknowledged: true);
+        update.ResolvesConflictRecordId = resolved.Id;
+        rename.ResolvesConflictRecordId = resolved.Id;
+        await scenario.DbContext.SaveChangesAsync();
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CompleteAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.ConflictCount.ShouldBe(1);
+        result.UpdateLocalCount.ShouldBe(1);
+        result.RenameCount.ShouldBe(1);
+    }
 }

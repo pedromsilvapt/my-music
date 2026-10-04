@@ -19,11 +19,11 @@ public static class SyncCommitResponseMapper
 
     /// <summary>
     /// Maps the records of an already-committed session into a <see cref="SyncCommitResponse"/>,
-    /// grouping records by <see cref="DeviceSyncSessionRecord.Action"/> and using
+    /// counting records by <see cref="DeviceSyncSessionRecord.Action"/> (only unresolved conflicts) and using
     /// <paramref name="committedAt"/> as the <see cref="SyncCommitResponse.CommittedAt"/>.
     /// </summary>
     public static SyncCommitResponse Map(List<DeviceSyncSessionRecord> records, DateTime committedAt)
-        => Map(records.GroupBy(r => r.Action).ToDictionary(g => g.Key, g => g.Count()), committedAt);
+        => Map(records.CountByAction(), committedAt);
 
     private static SyncCommitResponse Map(Dictionary<SyncRecordAction, int> counts, DateTime committedAt)
     {

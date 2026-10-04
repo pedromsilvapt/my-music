@@ -136,6 +136,42 @@ public abstract partial class SyncTestsBase
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
+    public async Task Sync_DryRun_UpdatedResolveConflictWithDownload(bool dryRun)
+    {
+        // Seed a song on the server assigned to this device, and download it
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[1] with { DeviceIds = [App.DeviceId] }]);  // The Alibi - Dylan
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        // Edit the song differently on each side, so it becomes a real conflict
+        var originalPath = "Dylan/The Alibi/The Alibi - Dylan.mp3";
+        await App.UpdateLocalFileMetadataAsync(originalPath, new EditSongOptions(Title: "The Alibi (Edited)"));
+        await new EditSongFlow("The Alibi", new(Title: "The Alibi (Unedited)")).ExecuteAsync(Page);
+
+        // The counters should be the same with or without dry run
+        var dryResult = await App.SyncAsync(new SyncOptions { DryRun = dryRun, Conflicts = ConflictResolution.Download });
+        dryResult.ShouldBe(updateLocal: 1, rename: 1);
+
+        // Only a real run should replace the local file with the server's version
+        if (dryRun)
+        {
+            await FileValidator.AssertMetadataAsync(App.GetSongPath(originalPath), title: "The Alibi (Edited)");
+
+            // A dry run resolves nothing: the conflict should still be there for the next sync
+            var result3 = await App.SyncAsync(new SyncOptions());
+            result3.ShouldBe(conflict: 1);
+        }
+        else
+        {
+            var newPath = "Dylan/The Alibi/The Alibi (Unedited) - Dylan.mp3";
+            await FileValidator.AssertMetadataAsync(App.GetSongPath(newPath), title: "The Alibi (Unedited)");
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public async Task Sync_DryRun_UpdatedAutoResolveConflict(bool dryRun)
     {
         // Seed two songs on the server assigned to this device

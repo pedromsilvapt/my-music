@@ -28,6 +28,8 @@ namespace MyMusic.CLI.Api;
 [JsonSerializable(typeof(SyncCommitResponse))]
 [JsonSerializable(typeof(SyncCompleteResponse))]
 [JsonSerializable(typeof(SyncDeduplicatePrepareResponse))]
+[JsonSerializable(typeof(SyncConflictChoicesRequest))]
+[JsonSerializable(typeof(SyncConflictChoicesResponse))]
 [JsonSerializable(typeof(SyncResolveConflictsRequest))]
 [JsonSerializable(typeof(SyncResolveConflictsResponse))]
 [JsonSerializable(typeof(SyncStartRequest))]

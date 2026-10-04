@@ -30,6 +30,7 @@ public class SyncUploadService(
         long ownerId,
         SyncDirection direction,
         bool deduplicate = false,
+        long? resolvesConflictRecordId = null,
         CancellationToken cancellationToken = default)
     {
         var staging = await StageFileAsync(sessionId, fileStream, fileName, isDryRun, repositoryPath, cancellationToken);
@@ -75,6 +76,11 @@ public class SyncUploadService(
                 ? [await syncActions.ActionError(path, importError, songIdForRecord, reason: importError, cancellationToken: cancellationToken)]
                 : await ExecuteDecisionAsync(decision, syncActions, path, staging, modifiedAt, createdAt, direction, cancellationToken);
 
+            if (resolvesConflictRecordId.HasValue)
+            {
+                await LinkToResolvedConflictAsync(records, sessionId, path, resolvesConflictRecordId.Value, cancellationToken);
+            }
+
             await db.SaveChangesAsync(cancellationToken);
 
             // In a real run, a file that will be imported must outlive this request: the commit imports it
@@ -104,6 +110,34 @@ public class SyncUploadService(
             {
                 TryDeleteStagedFile(staging.StagedFilePath);
             }
+        }
+    }
+
+    /// <summary>
+    /// Points the records of an upload to the conflict the user resolved by keeping the local file. An
+    /// upload that produced an error leaves the conflict unresolved, and so does an id that is not a
+    /// conflict of this session at this path.
+    /// </summary>
+    private async Task LinkToResolvedConflictAsync(
+        List<DeviceSyncSessionRecord> records, long sessionId, string path, long conflictRecordId,
+        CancellationToken cancellationToken)
+    {
+        if (records.Any(r => r.Action == SyncRecordAction.Error)) return;
+
+        var isConflict = await db.DeviceSyncSessionRecords.AnyAsync(
+            r => r.Id == conflictRecordId && r.SessionId == sessionId
+                 && r.Action == SyncRecordAction.Conflict && r.FilePath == path,
+            cancellationToken);
+
+        if (!isConflict)
+        {
+            logger.LogWarning("Record {ConflictRecordId} is not a conflict of session {SessionId} at {Path}", conflictRecordId, sessionId, path);
+            return;
+        }
+
+        foreach (var record in records)
+        {
+            record.ResolvesConflictRecordId = conflictRecordId;
         }
     }
 

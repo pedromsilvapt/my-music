@@ -64,7 +64,8 @@ public class SyncActionsDevice(
         long sessionId,
         string repositoryPath,
         SyncFileInfo fileInfo,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        long? resolvesConflictRecordId = null)
     {
         var fullPath = Path.Combine(repositoryPath, fileInfo.Path);
         if (!fileSystem.File.Exists(fullPath))
@@ -83,7 +84,8 @@ public class SyncActionsDevice(
                 FileName = fileName,
                 Path = fileInfo.Path,
                 ModifiedAt = fileInfo.ModifiedAt.ToUniversalTime().ToString("O"),
-                CreatedAt = fileInfo.CreatedAt.ToUniversalTime().ToString("O")
+                CreatedAt = fileInfo.CreatedAt.ToUniversalTime().ToString("O"),
+                ResolvesConflictRecordId = resolvesConflictRecordId
             }, ct);
 
             return new ActionResult("Updated", fileInfo.Path, Reason: fileInfo.Reason, SongId: uploadResult.SongId, Counts: uploadResult.Counts, Records: uploadResult.Records);
@@ -387,8 +389,11 @@ public class SyncActionsDevice(
         List<SyncRecordItem> conflictRecords,
         List<SyncRecordItem> updateLocalRecords,
         Action<int>? onFilesResolved = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        SyncOptions? options = null,
+        IReadOnlyList<SyncFileInfo>? files = null)
     {
+        options ??= new SyncOptions();
         var resolveItems = new List<ConflictResolveItem>();
         foreach (var conflict in conflictRecords)
         {
@@ -456,6 +461,7 @@ public class SyncActionsDevice(
 
         var allRecords = new List<SyncRecordItem>();
         var aggregatedCounts = SyncActionCounts.Empty;
+        var uploadedPaths = new List<string>();
 
         try
         {
@@ -466,6 +472,13 @@ public class SyncActionsDevice(
                     Conflicts = chunk.Conflicts,
                     PotentialUpdates = chunk.PotentialUpdates
                 }, ct);
+
+                allRecords.AddRange(resolveResponse.Records);
+                aggregatedCounts = aggregatedCounts.Add(resolveResponse.Counts);
+
+                // Real conflicts are settled by the user: keep the local file (upload), take the server's
+                // (download), or leave the conflict unresolved (skip)
+                var downloadRecordIds = new List<long>();
 
                 foreach (var record in resolveResponse.Records)
                 {
@@ -479,10 +492,36 @@ public class SyncActionsDevice(
                         _ => $"Created {record.Action} action for record {record.Id}"
                     };
                     logger.LogInformation("{LogMessage}", logMessage);
+
+                    if (record.Action != SyncRecordAction.Conflict)
+                    {
+                        continue;
+                    }
+
+                    var resolution = await ChooseConflictResolutionAsync(record.FilePath, options, ct);
+                    if (resolution == ConflictResolution.Download)
+                    {
+                        downloadRecordIds.Add(record.Id);
+                    }
+                    else if (resolution == ConflictResolution.Upload)
+                    {
+                        var uploadResult = await UploadConflictedFileAsync(deviceId, sessionId, repositoryPath, record, files, ct);
+                        allRecords.AddRange(uploadResult.Records ?? []);
+                        aggregatedCounts = aggregatedCounts.Add(uploadResult.Counts ?? SyncActionCounts.Empty);
+
+                        if (uploadResult.Action != "Error")
+                        {
+                            uploadedPaths.Add(record.FilePath);
+                        }
+                    }
                 }
 
-                allRecords.AddRange(resolveResponse.Records);
-                aggregatedCounts = aggregatedCounts.Add(resolveResponse.Counts);
+                if (downloadRecordIds.Count > 0)
+                {
+                    var choicesResponse = await apiClient.ChooseConflictsAsync(deviceId, sessionId, downloadRecordIds, ct);
+                    allRecords.AddRange(choicesResponse.Records);
+                    aggregatedCounts = aggregatedCounts.Add(choicesResponse.Counts);
+                }
 
                 // Report the files this request settled
                 onFilesResolved?.Invoke(chunk.Conflicts.Count + chunk.PotentialUpdates.Count);
@@ -490,13 +529,60 @@ public class SyncActionsDevice(
 
             return new ResolveConflictsActionResult(
                 Records: allRecords,
-                Counts: aggregatedCounts);
+                Counts: aggregatedCounts,
+                UploadedPaths: uploadedPaths);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to resolve conflicts");
-            return new ResolveConflictsActionResult(Records: allRecords, Counts: aggregatedCounts);
+            return new ResolveConflictsActionResult(Records: allRecords, Counts: aggregatedCounts, UploadedPaths: uploadedPaths);
         }
+    }
+
+    /// <summary>
+    /// The resolution of a real conflict: the one given in the options, or the user's answer. A direction
+    /// that never changes one side cannot pick it, so the conflict is skipped instead.
+    /// </summary>
+    private async Task<ConflictResolution> ChooseConflictResolutionAsync(string filePath, SyncOptions options, CancellationToken ct)
+    {
+        ConflictResolution[] choices = options.Direction switch
+        {
+            SyncDirection.Up => [ConflictResolution.Upload, ConflictResolution.Skip],
+            SyncDirection.Down => [ConflictResolution.Download, ConflictResolution.Skip],
+            _ => [ConflictResolution.Upload, ConflictResolution.Download, ConflictResolution.Skip],
+        };
+
+        var resolution = options.Conflicts ?? await userPrompt.PromptConflictResolutionAsync(filePath, choices, ct);
+
+        return choices.Contains(resolution) ? resolution : ConflictResolution.Skip;
+    }
+
+    /// <summary>
+    /// Uploads the local file of a conflict the user resolved by keeping it. The records the server creates
+    /// for the file point to the conflict; a failed upload leaves it unresolved.
+    /// </summary>
+    private async Task<ActionResult> UploadConflictedFileAsync(
+        long deviceId, long sessionId, string repositoryPath, SyncRecordItem conflict,
+        IReadOnlyList<SyncFileInfo>? files, CancellationToken ct)
+    {
+        var localModifiedAt = SyncDataDeserialization.DeserializeConflictCheckData(conflict.Data)?.LocalModifiedAt ?? DateTime.UtcNow;
+        var scannedFile = files?.FirstOrDefault(f => f.Path == conflict.FilePath);
+        var fileInfo = new SyncFileInfo
+        {
+            Path = conflict.FilePath,
+            ModifiedAt = scannedFile?.ModifiedAt ?? localModifiedAt,
+            CreatedAt = scannedFile?.CreatedAt ?? localModifiedAt,
+            Reason = "Conflict resolved by user: local version wins",
+        };
+
+        var result = await ActionUpdateRemoteAsync(deviceId, sessionId, repositoryPath, fileInfo, ct, conflict.Id);
+
+        if (result.Action == "Error")
+        {
+            logger.LogError("Failed to upload the local version of {Path}: {Error}", conflict.FilePath, result.ErrorMessage ?? result.Reason);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -594,7 +680,8 @@ public class SyncActionsDevice(
     }
 }
 
-public record ResolveConflictsActionResult(List<SyncRecordItem> Records, SyncActionCounts Counts);
+/// <param name="UploadedPaths">Paths of the conflicts the user resolved by uploading the local file.</param>
+public record ResolveConflictsActionResult(List<SyncRecordItem> Records, SyncActionCounts Counts, List<string>? UploadedPaths = null);
 
 internal record ConflictCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, string? ServerChecksumAlgorithm = null);
 internal record UpdateLocalCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, DateTime LastSyncedAt, string? ServerChecksumAlgorithm = null);

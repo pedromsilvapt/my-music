@@ -186,7 +186,7 @@ public class Phases(
                     chunkProcessedCount += resolvedCount;
                     progress?.Report(SyncProgress.FromResult(
                         ctx.Result, "resolving", files.Count, processedCount + chunkProcessedCount));
-                }, ct);
+                }, ct, syncFiles);
 
                 var superseded = conflictRecords
                     .Concat(updateLocalRecords)
@@ -298,16 +298,23 @@ public class Phases(
         List<SyncRecordItem> conflictRecords,
         List<SyncRecordItem> updateLocalRecords,
         Action<int>? onFilesResolved = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        IReadOnlyList<SyncFileInfo>? files = null)
     {
         if (conflictRecords.Count > 0 || updateLocalRecords.Count > 0)
         {
             var result = await syncActions.ActionConflictAsync(
-                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, onFilesResolved, ct);
+                ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, conflictRecords, updateLocalRecords, onFilesResolved, ct,
+                ctx.Options, files);
 
             ctx.Result = ctx.Result.AddDelta(result.Counts);
 
             TrackConflictedPaths(ctx, conflictRecords, result.Records);
+
+            foreach (var uploadedPath in result.UploadedPaths ?? [])
+            {
+                ctx.UploadedPaths.Add(uploadedPath);
+            }
 
             foreach (var record in result.Records)
             {
@@ -324,7 +331,8 @@ public class Phases(
     /// Marks the paths of conflicts, so the server actions phase does not download over (or rename) their
     /// local files. Other paths of the same song sync normally. The set only grows during a session: a path
     /// is unmarked only when the resolve result settles it (<c>UpdateTimestamp</c>, <c>UpdateLocal</c> or
-    /// <c>Skipped</c>). If the resolve request fails, its paths stay marked.
+    /// <c>Skipped</c>), or when the user resolved its conflict (a record pointing to the conflict). If the
+    /// resolve request fails, its paths stay marked.
     /// </summary>
     private static void TrackConflictedPaths(
         SyncContext ctx,
@@ -344,6 +352,15 @@ public class Phases(
             if (record.Action is SyncRecordAction.UpdateTimestamp or SyncRecordAction.UpdateLocal or SyncRecordAction.Skipped)
             {
                 ctx.ConflictedPaths.Remove(record.FilePath);
+            }
+
+            if (record.ResolvesConflictRecordId.HasValue)
+            {
+                var conflict = resolvedRecords.FirstOrDefault(r => r.Id == record.ResolvesConflictRecordId.Value);
+                if (conflict != null)
+                {
+                    ctx.ConflictedPaths.Remove(conflict.FilePath);
+                }
             }
         }
     }

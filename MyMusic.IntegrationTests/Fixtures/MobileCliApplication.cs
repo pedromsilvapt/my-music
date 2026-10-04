@@ -231,6 +231,11 @@ public class MobileCliApplication : ISyncApplication
             args.Add("--direction");
             args.Add(options.Direction.Value.ToString().ToLowerInvariant());
         }
+        if (options.Conflicts is not null)
+        {
+            args.Add("--conflicts");
+            args.Add(options.Conflicts.Value.ToString().ToLowerInvariant());
+        }
 
         var cliPath = FindCliPath();
         var argsString = string.Join(" ", args);

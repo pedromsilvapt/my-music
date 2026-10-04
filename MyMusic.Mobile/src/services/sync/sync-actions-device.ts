@@ -1,4 +1,4 @@
-import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
+import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ConflictResolution, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
 import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData, ConflictData, SongModifiedAtData} from '../../api/types';
 import {safeToIsoString} from './utils';
 
@@ -63,7 +63,8 @@ export async function actionUpdateRemote(
     fileOps: IFileOps,
     ctx: SyncContext,
     file: SyncFileBase,
-    reason?: string
+    reason?: string,
+    resolvesConflictRecordId?: number
 ): Promise<ActionResult> {
     if (!fileOps.fileExists(file.fullPath)) {
         return {
@@ -90,7 +91,8 @@ export async function actionUpdateRemote(
             },
             file.relativePath,
             safeToIsoString(file.modifiedAt)!,
-            safeToIsoString(file.createdAt)!
+            safeToIsoString(file.createdAt)!,
+            resolvesConflictRecordId
         );
 
         return {
@@ -425,7 +427,8 @@ export async function actionConflict(
     conflictRecords: SyncRecordItem[],
     updateLocalRecords: SyncRecordItem[],
     toUpdatePaths: Set<string>,
-    onProgress: ProgressHandler
+    onProgress: ProgressHandler,
+    files: SyncFileBase[] = []
 ): Promise<ResolveConflictsResult> {
     if (conflictRecords.length === 0 && updateLocalRecords.length === 0) {
         return { records: [], counts: undefined };
@@ -502,6 +505,13 @@ export async function actionConflict(
         for (const chunk of chunks) {
             const resolveResponse = await apiClient.resolveConflicts(ctx.deviceId, ctx.sessionId!, chunk);
 
+            allRecords.push(...resolveResponse.records);
+            aggregatedCounts = addCounts(aggregatedCounts, resolveResponse.counts);
+
+            // Real conflicts are settled by the user: keep the local file (upload), take the server's
+            // (download), or leave the conflict unresolved (skip)
+            const downloadRecordIds: number[] = [];
+
             for (const record of resolveResponse.records) {
                 switch (record.action) {
                     case 'UpdateTimestamp':
@@ -513,9 +523,13 @@ export async function actionConflict(
                             ctx.result.error++;
                             ctx.result.conflict++;
                         } else {
-                            const resolution = await userPrompt.promptConflictResolution(record.filePath);
-                            if (resolution === 'upload') {
-                                toUpdatePaths.add(record.filePath);
+                            const resolution = await userPrompt.promptConflictResolution(record.filePath, conflictChoices(ctx));
+                            if (resolution === 'download') {
+                                downloadRecordIds.push(record.id);
+                            } else if (resolution === 'upload') {
+                                const uploadResult = await uploadConflictedFile(apiClient, fileOps, ctx, record, files);
+                                allRecords.push(...(uploadResult.records ?? []));
+                                aggregatedCounts = addCounts(aggregatedCounts, uploadResult.counts);
                             } else {
                                 ctx.result.error++;
                             }
@@ -533,8 +547,11 @@ export async function actionConflict(
                 }
             }
 
-            allRecords.push(...resolveResponse.records);
-            aggregatedCounts = addCounts(aggregatedCounts, resolveResponse.counts);
+            if (downloadRecordIds.length > 0) {
+                const choicesResponse = await apiClient.chooseConflicts(ctx.deviceId, ctx.sessionId!, { downloadRecordIds });
+                allRecords.push(...choicesResponse.records);
+                aggregatedCounts = addCounts(aggregatedCounts, choicesResponse.counts);
+            }
 
             // Report the files this request settled
             ctx.processedFiles += chunk.conflicts.length + chunk.potentialUpdates.length;
@@ -545,6 +562,50 @@ export async function actionConflict(
     }
 
     return { records: allRecords, counts: aggregatedCounts };
+}
+
+/** The choices the user has for a real conflict: a direction that never changes one side cannot pick it. */
+function conflictChoices(ctx: SyncContext): ConflictResolution[] {
+    switch (ctx.options.direction) {
+        case 'Up':
+            return ['upload', 'skip'];
+        case 'Down':
+            return ['download', 'skip'];
+        default:
+            return ['upload', 'download', 'skip'];
+    }
+}
+
+/**
+ * Uploads the local file of a conflict the user resolved by keeping it. The records the server creates
+ * for the file point to the conflict; a failed upload leaves it unresolved.
+ */
+async function uploadConflictedFile(
+    apiClient: ISyncApiClient,
+    fileOps: IFileOps,
+    ctx: SyncContext,
+    conflict: SyncRecordItem,
+    files: SyncFileBase[]
+): Promise<ActionResult> {
+    const conflictData = conflict.data as ConflictData | null | undefined;
+    const localModifiedAt = new Date(conflictData?.localModifiedAt ?? NaN);
+    const file = files.find(f => f.relativePath === conflict.filePath) ?? {
+        relativePath: conflict.filePath,
+        fullPath: ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${conflict.filePath}` : conflict.filePath,
+        modifiedAt: localModifiedAt,
+        createdAt: localModifiedAt,
+    };
+
+    const result = await actionUpdateRemote(apiClient, fileOps, ctx, file, 'Conflict resolved by user: local version wins', conflict.id);
+
+    if (result.action === 'Error') {
+        console.error('Failed to upload the local version of', conflict.filePath, ':', result.errorMessage);
+        ctx.result.error++;
+    } else {
+        ctx.uploadedPaths.add(conflict.filePath);
+    }
+
+    return result;
 }
 
 /**

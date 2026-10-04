@@ -108,9 +108,11 @@ public class CliKeepAwake : IKeepAwake
 
 public class CliUserPrompt : IUserPrompt
 {
-    public Task<ConflictResolution> PromptConflictResolutionAsync(string filePath, CancellationToken ct = default)
+    public Task<ConflictResolution> PromptConflictResolutionAsync(string filePath, IReadOnlyList<ConflictResolution> choices, CancellationToken ct = default)
     {
-        Console.Write($"Conflict detected for '{filePath}'. Upload, download, or skip? [u/d/s]: ");
+        var names = string.Join(", ", choices.Select(c => c.ToString().ToLowerInvariant()));
+        var keys = string.Join("/", choices.Select(c => c.ToString().ToLowerInvariant()[0]));
+        Console.Write($"Conflict detected for '{filePath}'. Choose one of: {names} [{keys}]: ");
         var response = Console.ReadLine()?.Trim().ToLowerInvariant();
         var resolution = response switch
         {
@@ -118,7 +120,7 @@ public class CliUserPrompt : IUserPrompt
             "d" or "download" => ConflictResolution.Download,
             _ => ConflictResolution.Skip
         };
-        return Task.FromResult(resolution);
+        return Task.FromResult(choices.Contains(resolution) ? resolution : ConflictResolution.Skip);
     }
 
     public Task<bool> ConfirmDeletionAsync(string filePath, CancellationToken ct = default)
@@ -224,7 +226,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
     public async Task<UploadFileResult> UploadFileAsync(long deviceId, long sessionId, UploadFileRequest request, CancellationToken ct = default)
     {
         var streamPart = new StreamPart(request.FileStream, request.FileName);
-        var response = await client.UploadFileAsync(deviceId, sessionId, streamPart, request.Path, request.ModifiedAt, request.CreatedAt, ct);
+        var response = await client.UploadFileAsync(deviceId, sessionId, streamPart, request.Path, request.ModifiedAt, request.CreatedAt, request.ResolvesConflictRecordId?.ToString(), ct);
         return new UploadFileResult
         {
             Success = true,
@@ -344,18 +346,18 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
 
         return new ResolveConflictsResult
         {
-            Records = response.Records.Select(r => new SyncRecordItem
-            {
-                Id = r.Id,
-                FilePath = r.FilePath,
-                Action = r.Action,
-                SongId = r.SongId,
-                Data = r.Data,
-                ResolvesConflictRecordId = r.ResolvesConflictRecordId,
-                Reason = r.Reason,
-                Acknowledged = r.Acknowledged,
-                ProcessedAt = r.ProcessedAt,
-            }).ToList(),
+            Records = response.Records.Select(ToRecordItem).ToList(),
+            Counts = SyncActionCounts.FromApi(response.Counts)
+        };
+    }
+
+    public async Task<ResolveConflictsResult> ChooseConflictsAsync(long deviceId, long sessionId, IReadOnlyCollection<long> downloadRecordIds, CancellationToken ct = default)
+    {
+        var response = await client.ChooseConflictsAsync(deviceId, sessionId, new SyncConflictChoicesRequest { DownloadRecordIds = downloadRecordIds.ToList() }, ct);
+
+        return new ResolveConflictsResult
+        {
+            Records = response.Records.Select(ToRecordItem).ToList(),
             Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }

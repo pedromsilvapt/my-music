@@ -48,7 +48,7 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
                     });
 
                     syncResult = await syncService.SyncAsync(settings.Force, settings.DryRun,
-                        settings.AutoConfirm, settings.Direction, settings.Deduplicate, progress);
+                        settings.AutoConfirm, settings.Direction, settings.Deduplicate, settings.ConflictChoice, progress);
                 });
 
             AnsiConsole.WriteLine();
@@ -77,12 +77,6 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
             if (syncResult.SessionId.HasValue)
             {
                 AnsiConsole.WriteLine($"SessionId: {syncResult.SessionId.Value}");
-            }
-
-            if (syncResult.Conflict > 0)
-            {
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine("[yellow]Run without --dry-run to resolve conflicts[/]");
             }
 
             if (syncResult.Error > 0)
@@ -201,6 +195,30 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
         [CommandOption("-d|--direction")]
         [TypeConverter(typeof(SyncDirectionConverter))]
         public SyncDirection Direction { get; set; } = SyncDirection.Both;
+
+        [CommandOption("--conflicts <CHOICE>")]
+        [Description("What to do with files changed on both sides: ask, upload (keep the local file), download (take the server's) or skip. Defaults to ask, or to skip with --yes")]
+        public string? Conflicts { get; set; }
+
+        /// <summary>
+        /// How conflicts are resolved without asking, or null to ask for each one.
+        /// </summary>
+        public ConflictResolution? ConflictChoice => Conflicts?.ToLowerInvariant() switch
+        {
+            "ask" => null,
+            "upload" => ConflictResolution.Upload,
+            "download" => ConflictResolution.Download,
+            "skip" => ConflictResolution.Skip,
+            null => AutoConfirm ? ConflictResolution.Skip : null,
+            _ => throw new ArgumentException($"Invalid conflicts '{Conflicts}'. Valid values are: ask, upload, download, skip"),
+        };
+
+        public override ValidationResult Validate()
+        {
+            return Conflicts?.ToLowerInvariant() is null or "ask" or "upload" or "download" or "skip"
+                ? ValidationResult.Success()
+                : ValidationResult.Error($"Invalid conflicts '{Conflicts}'. Valid values are: ask, upload, download, skip");
+        }
     }
 
     public class SyncDirectionConverter : TypeConverter

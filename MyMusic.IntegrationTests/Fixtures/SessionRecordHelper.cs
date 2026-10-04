@@ -53,12 +53,24 @@ public static class SessionRecordHelper
         var recordsElement = json.Value.GetProperty("records");
 
         var counts = new Dictionary<string, int>();
+        var resolvedConflicts = new HashSet<long>();
 
         foreach (var record in recordsElement.EnumerateArray())
         {
             var action = record.GetProperty("action").GetString()!;
             counts.TryGetValue(action, out var current);
             counts[action] = current + 1;
+
+            if (record.TryGetProperty("resolvesConflictRecordId", out var resolves) && resolves.ValueKind == JsonValueKind.Number)
+            {
+                resolvedConflicts.Add(resolves.GetInt64());
+            }
+        }
+
+        // Like the sync counters, only the conflicts no other record resolves are counted
+        if (resolvedConflicts.Count > 0)
+        {
+            counts["Conflict"] = counts.GetValueOrDefault("Conflict") - resolvedConflicts.Count;
         }
 
         return counts;

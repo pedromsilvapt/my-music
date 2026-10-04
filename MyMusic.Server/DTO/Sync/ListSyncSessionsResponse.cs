@@ -1,4 +1,5 @@
 using MyMusic.Common.Entities;
+using MyMusic.Common.Services.Sync;
 
 namespace MyMusic.Server.DTO.Sync;
 
@@ -48,7 +49,7 @@ public record SyncSessionItem
             LinkCount = session.Records.Count(r => r.Action == SyncRecordAction.Link),
             UnlinkCount = session.Records.Count(r => r.Action == SyncRecordAction.Unlink),
             RenameCount = session.Records.Count(r => r.Action == SyncRecordAction.Rename),
-            ConflictCount = session.Records.Count(r => r.Action == SyncRecordAction.Conflict),
+            ConflictCount = session.Records.CountUnresolvedConflicts(),
             UpdateTimestampCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateTimestamp),
             ErrorCount = session.Records.Count(r => r.Action == SyncRecordAction.Error),
             RepositoryPath = session.RepositoryPath,

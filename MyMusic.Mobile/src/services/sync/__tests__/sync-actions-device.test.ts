@@ -19,6 +19,7 @@ function createMockApiClient(overrides: Partial<ISyncApiClient> = {}): ISyncApiC
         createPendingActions: jest.fn(),
         acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS}}),
         resolveConflicts: jest.fn(),
+        chooseConflicts: jest.fn(),
         downloadSong: jest.fn(),
         ...overrides,
     } as unknown as ISyncApiClient;
@@ -865,27 +866,116 @@ describe('actionConflict', () => {
         expect(apiClient.resolveConflicts).not.toHaveBeenCalled();
     });
 
-    test('user prompt for upload adds to toUpdate', async () => {
+    const realConflict = { id: 1, filePath: 'song.mp3', action: 'Conflict', songId: 42, data: { localModifiedAt: '2024-06-01', serverModifiedAt: '2024-06-02' }, resolvesConflictRecordId: null, reason: 'Different checksums', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' };
+
+    test('user prompt for upload uploads the local file resolving the conflict', async () => {
+        const updateRemote = { id: 2, filePath: 'song.mp3', action: 'UpdateRemote', songId: 42, data: null, resolvesConflictRecordId: 1, reason: 'File re-uploaded (updated)', acknowledged: true, processedAt: '2024-01-01T00:00:00Z' };
         const apiClient = createMockApiClient({
-            resolveConflicts: jest.fn().mockResolvedValue({
-                records: [
-                    { id: 1, filePath: 'song.mp3', action: 'Conflict', songId: 42, data: { localModifiedAt: '2024-06-01', serverModifiedAt: '2024-06-02' }, resolvesConflictRecordId: null, reason: 'Different checksums', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' },
-                ],
-                counts: {...ZERO_COUNTS},
-            }),
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict], counts: {...ZERO_COUNTS, conflictCount: 1} }),
+            uploadFile: jest.fn().mockResolvedValue({ success: true, songId: 42, records: [updateRemote], counts: {...ZERO_COUNTS, updateRemoteCount: 1, conflictCount: -1} }),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
             promptConflictResolution: jest.fn().mockResolvedValue('upload'),
         });
         const ctx = createContext();
-        const toUpdatePaths = new Set<string>();
-        const onProgress = jest.fn();
+        const modifiedAt = new Date('2024-06-01T10:00:00Z');
+        const createdAt = new Date('2024-01-01T10:00:00Z');
+        const files = [{ relativePath: 'song.mp3', fullPath: '/music/song.mp3', modifiedAt, createdAt }];
 
-        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], toUpdatePaths, onProgress);
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], new Set<string>(), jest.fn(), files);
 
-        expect(toUpdatePaths.has('song.mp3')).toBe(true);
-        expect(userPrompt.promptConflictResolution).toHaveBeenCalledWith('song.mp3');
+        expect(userPrompt.promptConflictResolution).toHaveBeenCalledWith('song.mp3', ['upload', 'download', 'skip']);
+        expect(apiClient.uploadFile).toHaveBeenCalledWith(
+            1, 1, { uri: '/music/song.mp3', name: 'song.mp3' }, 'song.mp3',
+            modifiedAt.toISOString(), createdAt.toISOString(), 1
+        );
+        expect(apiClient.chooseConflicts).not.toHaveBeenCalled();
+        expect(result.records).toEqual([realConflict, updateRemote]);
+        expect(result.counts).toMatchObject({ updateRemoteCount: 1, conflictCount: 0 });
+        expect(ctx.uploadedPaths.has('song.mp3')).toBe(true);
+        expect(ctx.result.error).toBe(0);
+    });
+
+    test('a failed upload leaves the conflict unresolved', async () => {
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict], counts: {...ZERO_COUNTS, conflictCount: 1} }),
+            uploadFile: jest.fn().mockRejectedValue(new Error('Network error')),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const userPrompt = createMockUserPrompt({
+            promptConflictResolution: jest.fn().mockResolvedValue('upload'),
+        });
+        const ctx = createContext();
+
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], new Set<string>(), jest.fn());
+
+        expect(result.records).toEqual([realConflict]);
+        expect(ctx.uploadedPaths.has('song.mp3')).toBe(false);
+        expect(ctx.result.error).toBe(1);
+    });
+
+    test('user prompt for download asks the server for the records resolving the conflicts', async () => {
+        const otherConflict = { ...realConflict, id: 3, filePath: 'other.mp3', songId: 43 };
+        const updateLocal = { id: 4, filePath: 'song.mp3', action: 'UpdateLocal', songId: 42, data: null, resolvesConflictRecordId: 1, reason: 'Conflict resolved by user: server version wins', acknowledged: false, processedAt: '2024-01-01T00:00:00Z' };
+        const otherUpdateLocal = { ...updateLocal, id: 5, filePath: 'other.mp3', songId: 43, resolvesConflictRecordId: 3 };
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict, otherConflict], counts: {...ZERO_COUNTS, conflictCount: 2} }),
+            chooseConflicts: jest.fn().mockResolvedValue({ records: [updateLocal, otherUpdateLocal], counts: {...ZERO_COUNTS, updateLocalCount: 2, conflictCount: -2} }),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const userPrompt = createMockUserPrompt({
+            promptConflictResolution: jest.fn().mockResolvedValue('download'),
+        });
+        const ctx = createContext();
+        const conflicts = [...conflictRecords, { ...conflictRecords[0], id: 99, filePath: 'other.mp3', songId: 43 }];
+
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflicts, [], new Set<string>(), jest.fn());
+
+        // One request for all the conflicts of the chunk
+        expect(apiClient.chooseConflicts).toHaveBeenCalledTimes(1);
+        expect(apiClient.chooseConflicts).toHaveBeenCalledWith(1, 1, { downloadRecordIds: [1, 3] });
+        expect(apiClient.uploadFile).not.toHaveBeenCalled();
+        expect(result.records).toEqual([realConflict, otherConflict, updateLocal, otherUpdateLocal]);
+        expect(result.counts).toMatchObject({ updateLocalCount: 2, conflictCount: 0 });
+        expect(ctx.result.error).toBe(0);
+    });
+
+    test.each([
+        ['Up', ['upload', 'skip']],
+        ['Down', ['download', 'skip']],
+        ['Both', ['upload', 'download', 'skip']],
+    ] as const)('direction %s only offers the choices it can apply', async (direction, choices) => {
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict], counts: {...ZERO_COUNTS, conflictCount: 1} }),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const userPrompt = createMockUserPrompt({
+            promptConflictResolution: jest.fn().mockResolvedValue('skip'),
+        });
+        const ctx = createContext();
+        ctx.options.direction = direction;
+
+        await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], new Set<string>(), jest.fn());
+
+        expect(userPrompt.promptConflictResolution).toHaveBeenCalledWith('song.mp3', [...choices]);
+    });
+
+    test('a dry run prompts like a real sync', async () => {
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict], counts: {...ZERO_COUNTS, conflictCount: 1} }),
+            chooseConflicts: jest.fn().mockResolvedValue({ records: [], counts: {...ZERO_COUNTS} }),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const userPrompt = createMockUserPrompt({
+            promptConflictResolution: jest.fn().mockResolvedValue('download'),
+        });
+        const ctx = createContext();
+        ctx.options.dryRun = true;
+
+        await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], new Set<string>(), jest.fn());
+
+        expect(apiClient.chooseConflicts).toHaveBeenCalledWith(1, 1, { downloadRecordIds: [1] });
     });
 
     test('user prompt for skip increments failed', async () => {

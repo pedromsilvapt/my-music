@@ -45,6 +45,10 @@ public record SyncOptions
     public bool AutoConfirm { get; init; }
     public SyncDirection Direction { get; init; } = SyncDirection.Both;
     public bool Deduplicate { get; init; }
+    /// <summary>
+    /// How real conflicts are resolved without asking. When null, the user is asked for each one.
+    /// </summary>
+    public ConflictResolution? Conflicts { get; init; }
 }
 
 public record SyncResult
@@ -266,6 +270,8 @@ public record UploadFileRequest
     public required string Path { get; init; }
     public required string ModifiedAt { get; init; }
     public required string CreatedAt { get; init; }
+    /// <summary>The Conflict record the user resolved by keeping this local file.</summary>
+    public long? ResolvesConflictRecordId { get; init; }
 }
 
 public record UploadFileResult

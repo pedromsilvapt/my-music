@@ -75,7 +75,7 @@ public class SyncCompleteService(
             LinkCount = records.Count(r => r.Action == SyncRecordAction.Link),
             UnlinkCount = records.Count(r => r.Action == SyncRecordAction.Unlink),
             RenameCount = records.Count(r => r.Action == SyncRecordAction.Rename),
-            ConflictCount = records.Count(r => r.Action == SyncRecordAction.Conflict),
+            ConflictCount = records.CountUnresolvedConflicts(),
             UpdateTimestampCount = records.Count(r => r.Action == SyncRecordAction.UpdateTimestamp),
             ErrorCount = records.Count(r => r.Action == SyncRecordAction.Error),
         };

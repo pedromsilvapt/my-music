@@ -125,7 +125,8 @@ export class NodeApiClient implements ISyncApiClient {
         file: { uri: string; name: string },
         path: string,
         modifiedAt: string,
-        createdAt: string
+        createdAt: string,
+        resolvesConflictRecordId?: number
     ): Promise<{ success: boolean; songId: number | null; records: SyncRecordItem[]; counts: SyncActionCounts }> {
         const fs = require('fs');
         const buffer = fs.readFileSync(file.uri);
@@ -136,6 +137,9 @@ export class NodeApiClient implements ISyncApiClient {
         formData.append('path', path);
         formData.append('modifiedAt', modifiedAt);
         formData.append('createdAt', createdAt);
+        if (resolvesConflictRecordId != null) {
+            formData.append('resolvesConflictRecordId', String(resolvesConflictRecordId));
+        }
 
         const headers = this._headers();
         delete headers['Content-Type'];
@@ -238,6 +242,18 @@ export class NodeApiClient implements ISyncApiClient {
         counts: SyncActionCounts;
     }> {
         const response = await this._post<{ records?: unknown[]; counts: SyncActionCounts }>(`/devices/${deviceId}/sync/${sessionId}/resolve-conflicts`, request);
+        return { records: this._parseRecords(response.records ?? []), counts: response.counts };
+    }
+
+    async chooseConflicts(
+        deviceId: number,
+        sessionId: number,
+        request: { downloadRecordIds: number[] }
+    ): Promise<{
+        records: SyncRecordItem[];
+        counts: SyncActionCounts;
+    }> {
+        const response = await this._post<{ records?: unknown[]; counts: SyncActionCounts }>(`/devices/${deviceId}/sync/${sessionId}/conflict-choices`, request);
         return { records: this._parseRecords(response.records ?? []), counts: response.counts };
     }
 

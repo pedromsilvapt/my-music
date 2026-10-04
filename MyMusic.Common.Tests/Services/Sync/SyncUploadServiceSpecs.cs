@@ -824,4 +824,108 @@ public class SyncUploadServiceSpecs
             ownerId: scenario.AdminUser.Id,
             direction: direction,
             cancellationToken: CancellationToken.None);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UploadAsync_ResolvingConflict_RecordsPointToTheConflict(bool isDryRun)
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data", isDryRun: isDryRun);
+        var song = scenario.CreateSong("Existing Song");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        var conflict = scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Conflict, songId: song.Id);
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: isDryRun,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream([1, 2, 3, 4, 5]),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: true,
+            songDeviceForImport: songDevice,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
+            resolvesConflictRecordId: conflict.Id,
+            cancellationToken: CancellationToken.None);
+
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.UpdateRemote);
+        record.ResolvesConflictRecordId.ShouldBe(conflict.Id);
+        result.Records.CountUnresolvedConflicts().ShouldBe(-1);
+    }
+
+    [Fact]
+    public async Task UploadAsync_ResolvingConflict_UnimportableFile_LeavesConflictUnresolved()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var song = scenario.CreateSong("Existing Song");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        var conflict = scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Conflict, songId: song.Id);
+        _songFileValidate.ValidateAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("Invalid file");
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: false,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream([1, 2, 3, 4, 5]),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: true,
+            songDeviceForImport: songDevice,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
+            resolvesConflictRecordId: conflict.Id,
+            cancellationToken: CancellationToken.None);
+
+        var record = result.Records.ShouldHaveSingleItem();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.ResolvesConflictRecordId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task UploadAsync_ResolvingRecordThatIsNotAConflictAtThePath_DoesNotPointToIt()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, repositoryPath: "/data");
+        var song = scenario.CreateSong("Existing Song");
+        var songDevice = scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        var otherConflict = scenario.AddRecord(session.Id, "/music/other.mp3", SyncRecordAction.Conflict, songId: song.Id);
+
+        var service = CreateService(scenario.DbContext, scenario.FileSystem);
+
+        var result = await service.UploadAsync(
+            deviceId: device.Id,
+            sessionId: session.Id,
+            isDryRun: false,
+            path: "/music/song.mp3",
+            fileStream: new MemoryStream([1, 2, 3, 4, 5]),
+            fileName: "song.mp3",
+            modifiedAt: DateTime.UtcNow,
+            createdAt: DateTime.UtcNow,
+            isUpdate: true,
+            songDeviceForImport: songDevice,
+            repositoryPath: "/data",
+            ownerId: scenario.AdminUser.Id,
+            direction: session.Direction,
+            resolvesConflictRecordId: otherConflict.Id,
+            cancellationToken: CancellationToken.None);
+
+        result.Records.ShouldHaveSingleItem().ResolvesConflictRecordId.ShouldBeNull();
+    }
 }

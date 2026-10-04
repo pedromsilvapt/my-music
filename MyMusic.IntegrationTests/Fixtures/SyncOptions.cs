@@ -7,4 +7,6 @@ public record SyncOptions
     public bool DryRun { get; init; }
     public bool Deduplicate { get; init; }
     public SyncDirection? Direction { get; init; }
+    /// <summary>How real conflicts are resolved. When null, they are left unresolved.</summary>
+    public ConflictResolution? Conflicts { get; init; }
 }

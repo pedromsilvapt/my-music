@@ -170,7 +170,8 @@ export async function resolveConflictsPhase (
     conflictRecords: SyncRecordItem[],
     updateLocalRecords: SyncRecordItem[],
     toUpdatePaths: Set<string>,
-    onProgress: ProgressHandler
+    onProgress: ProgressHandler,
+    files: SyncFileInfo[] = []
 ): Promise<void> {
     const resolveResult = await actionConflict(
         deps.apiClient,
@@ -180,7 +181,8 @@ export async function resolveConflictsPhase (
         conflictRecords,
         updateLocalRecords,
         toUpdatePaths,
-        (progress) => onProgress({ phase: 'resolving', ...progress })
+        (progress) => onProgress({ phase: 'resolving', ...progress }),
+        files
     );
 
     ctx.result = addDeltaToResult(ctx.result, resolveResult.counts ?? EMPTY_COUNTS);
@@ -266,7 +268,7 @@ export async function uploadPhase (
         reportUploadProgress(ctx, onProgress);
 
         if (conflictRecords.length > 0 || updateLocalRecords.length > 0) {
-            await resolveConflictsPhase(deps, ctx, conflictRecords, updateLocalRecords, toUpdatePaths, onProgress);
+            await resolveConflictsPhase(deps, ctx, conflictRecords, updateLocalRecords, toUpdatePaths, onProgress, chunk);
         }
 
         await processChunkUploads(deps, ctx, toCreateRecords, toUpdateRecords, toUpdatePaths, onProgress);
@@ -579,8 +581,9 @@ function queueUploadClientActions (ctx: SyncContext, result: ActionResult): void
 /**
  * Marks the paths of conflicts, so the server actions phase does not download over (or rename) their local files.
  * Other paths of the same song sync normally. The set only grows during a session: a path is unmarked only when
- * the resolve result settles it (UpdateTimestamp, UpdateLocal or Skipped). If the resolve request fails, its paths
- * stay marked. A conflict whose local file will be uploaded is not marked.
+ * the resolve result settles it (UpdateTimestamp, UpdateLocal or Skipped), or when the user resolved its conflict
+ * (a record pointing to the conflict). If the resolve request fails, its paths stay marked. A conflict whose local
+ * file will be uploaded is not marked.
  */
 function trackConflictedPaths (
     ctx: SyncContext,
@@ -597,6 +600,13 @@ function trackConflictedPaths (
     for (const record of resolvedRecords) {
         if (record.action === 'UpdateTimestamp' || record.action === 'UpdateLocal' || record.action === 'Skipped') {
             ctx.conflictedPaths.delete(record.filePath);
+        }
+
+        if (record.resolvesConflictRecordId != null) {
+            const conflict = resolvedRecords.find(r => r.id === record.resolvesConflictRecordId);
+            if (conflict) {
+                ctx.conflictedPaths.delete(conflict.filePath);
+            }
         }
     }
 }

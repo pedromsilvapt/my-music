@@ -13,10 +13,14 @@ const keepAwake: IKeepAwake = {
     deactivate: () => {},
 };
 
-const autoConfirmPrompt: IUserPrompt = {
-    promptConflictResolution: async (_filePath: string): Promise<ConflictResolution> => 'upload',
-    confirmDeletion: async (_filePath: string): Promise<boolean> => true,
-};
+/** Answers every prompt without asking: conflicts with the given resolution (when the direction allows it). */
+function createAutoConfirmPrompt(conflicts: ConflictResolution): IUserPrompt {
+    return {
+        promptConflictResolution: async (_filePath: string, choices: ConflictResolution[]): Promise<ConflictResolution> =>
+            choices.includes(conflicts) ? conflicts : 'skip',
+        confirmDeletion: async (_filePath: string): Promise<boolean> => true,
+    };
+}
 
 interface CliArgs {
     command: string;
@@ -25,6 +29,7 @@ interface CliArgs {
     autoConfirm: boolean;
     direction: SyncDirection;
     deduplicate: boolean;
+    conflicts: ConflictResolution;
     verbose: boolean;
 }
 
@@ -37,6 +42,7 @@ function parseArgs(argv: string[]): CliArgs {
         autoConfirm: false,
         direction: 'Both',
         deduplicate: false,
+        conflicts: 'skip',
         verbose: false,
     };
 
@@ -61,6 +67,9 @@ function parseArgs(argv: string[]): CliArgs {
             case '-d':
                 result.direction = parseDirection(args[++i]);
                 break;
+            case '--conflicts':
+                result.conflicts = parseConflicts(args[++i]);
+                break;
             case '--verbose':
                 result.verbose = true;
                 break;
@@ -80,6 +89,17 @@ function parseDirection(value: string | undefined): SyncDirection {
             return 'Both';
         default:
             throw new Error(`Invalid direction: ${value}. Expected up, down or both`);
+    }
+}
+
+function parseConflicts(value: string | undefined): ConflictResolution {
+    switch (value?.toLowerCase()) {
+        case 'upload':
+        case 'download':
+        case 'skip':
+            return value.toLowerCase() as ConflictResolution;
+        default:
+            throw new Error(`Invalid conflicts: ${value}. Expected upload, download or skip`);
     }
 }
 
@@ -107,7 +127,7 @@ async function main(): Promise<number> {
 
     if (args.command !== 'sync') {
         console.error(`Unknown command: ${args.command}`);
-        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--deduplicate] [--yes] [--direction up|down|both]');
+        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--deduplicate] [--yes] [--direction up|down|both] [--conflicts upload|download|skip]');
         return 1;
     }
 
@@ -141,7 +161,7 @@ async function main(): Promise<number> {
         scanner: nodeScanner,
         fileOps,
         keepAwake,
-        userPrompt: autoConfirmPrompt,
+        userPrompt: createAutoConfirmPrompt(args.conflicts),
     };
 
     if (args.verbose) {

@@ -88,6 +88,7 @@ public interface IMyMusicClient
         [AliasAs("path")] string path,
         [AliasAs("modifiedAt")] string modifiedAt,
         [AliasAs("createdAt")] string createdAt,
+        [AliasAs("resolvesConflictRecordId")] string? resolvesConflictRecordId = null,
         CancellationToken ct = default);
 
     [Post("/api/devices/{deviceId}/sync/{sessionId}/pending-actions")]
@@ -113,6 +114,13 @@ public interface IMyMusicClient
         long deviceId,
         long sessionId,
         [Body] SyncResolveConflictsRequest request,
+        CancellationToken ct = default);
+
+    [Post("/api/devices/{deviceId}/sync/{sessionId}/conflict-choices")]
+    Task<SyncConflictChoicesResponse> ChooseConflictsAsync(
+        long deviceId,
+        long sessionId,
+        [Body] SyncConflictChoicesRequest request,
         CancellationToken ct = default);
 
     [Post("/api/devices/{deviceId}/sync/{sessionId}/error")]

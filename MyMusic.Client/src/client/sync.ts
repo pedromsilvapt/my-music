@@ -36,6 +36,8 @@ import type {
   SyncCheckResponse,
   SyncCommitResponse,
   SyncCompleteResponse,
+  SyncConflictChoicesRequest,
+  SyncConflictChoicesResponse,
   SyncDeduplicatePrepareResponse,
   SyncResolveConflictsRequest,
   SyncResolveConflictsResponse,
@@ -951,6 +953,101 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       > => {
       return useMutation(getPostDevicesDeviceIdSyncSessionIdResolveConflictsMutationOptions(options), queryClient);
     }
+    export type postDevicesDeviceIdSyncSessionIdConflictChoicesResponse200TextPlain = {
+  data: SyncConflictChoicesResponse
+  status: 200
+}
+
+export type postDevicesDeviceIdSyncSessionIdConflictChoicesResponse200ApplicationJson = {
+  data: SyncConflictChoicesResponse
+  status: 200
+}
+
+export type postDevicesDeviceIdSyncSessionIdConflictChoicesResponse200TextJson = {
+  data: SyncConflictChoicesResponse
+  status: 200
+}
+
+export type postDevicesDeviceIdSyncSessionIdConflictChoicesResponseSuccess = (postDevicesDeviceIdSyncSessionIdConflictChoicesResponse200TextPlain | postDevicesDeviceIdSyncSessionIdConflictChoicesResponse200ApplicationJson | postDevicesDeviceIdSyncSessionIdConflictChoicesResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type postDevicesDeviceIdSyncSessionIdConflictChoicesResponse = (postDevicesDeviceIdSyncSessionIdConflictChoicesResponseSuccess)
+
+export const getPostDevicesDeviceIdSyncSessionIdConflictChoicesUrl = (deviceId: number,
+    sessionId: number,) => {
+
+
+
+
+  return `/api/devices/${deviceId}/sync/${sessionId}/conflict-choices`
+}
+
+export const postDevicesDeviceIdSyncSessionIdConflictChoices = async (deviceId: number,
+    sessionId: number,
+    syncConflictChoicesRequest: SyncConflictChoicesRequest, options?: RequestInit): Promise<postDevicesDeviceIdSyncSessionIdConflictChoicesResponse> => {
+
+  const res = await fetch(getPostDevicesDeviceIdSyncSessionIdConflictChoicesUrl(deviceId,sessionId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(syncConflictChoicesRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: postDevicesDeviceIdSyncSessionIdConflictChoicesResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as postDevicesDeviceIdSyncSessionIdConflictChoicesResponse
+}
+
+
+
+
+export const getPostDevicesDeviceIdSyncSessionIdConflictChoicesMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdConflictChoices>>, TError,{deviceId: number;sessionId: number;data: SyncConflictChoicesRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdConflictChoices>>, TError,{deviceId: number;sessionId: number;data: SyncConflictChoicesRequest}, TContext> => {
+
+const mutationKey = ['postDevicesDeviceIdSyncSessionIdConflictChoices'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdConflictChoices>>, {deviceId: number;sessionId: number;data: SyncConflictChoicesRequest}> = (props) => {
+          const {deviceId,sessionId,data} = props ?? {};
+
+          return  postDevicesDeviceIdSyncSessionIdConflictChoices(deviceId,sessionId,data,fetchOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PostDevicesDeviceIdSyncSessionIdConflictChoicesMutationResult = NonNullable<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdConflictChoices>>>
+    export type PostDevicesDeviceIdSyncSessionIdConflictChoicesMutationBody = SyncConflictChoicesRequest
+    export type PostDevicesDeviceIdSyncSessionIdConflictChoicesMutationError = unknown
+
+    export const usePostDevicesDeviceIdSyncSessionIdConflictChoices = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdConflictChoices>>, TError,{deviceId: number;sessionId: number;data: SyncConflictChoicesRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof postDevicesDeviceIdSyncSessionIdConflictChoices>>,
+        TError,
+        {deviceId: number;sessionId: number;data: SyncConflictChoicesRequest},
+        TContext
+      > => {
+      return useMutation(getPostDevicesDeviceIdSyncSessionIdConflictChoicesMutationOptions(options), queryClient);
+    }
     export type postDevicesDeviceIdSyncSessionIdErrorResponse200TextPlain = {
   data: ReportSyncErrorResponse
   status: 200
@@ -1167,6 +1264,10 @@ export const getPostDevicesDeviceIdSyncSessionIdResolveConflictsResponseSyncReco
 
 export const getPostDevicesDeviceIdSyncSessionIdResolveConflictsResponseMock = (overrideResponse: Partial<Extract<SyncResolveConflictsResponse, object>> = {}): SyncResolveConflictsResponse => (faker.helpers.arrayElement([{records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdResolveConflictsResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdResolveConflictsResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdResolveConflictsResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}]))
 
+export const getPostDevicesDeviceIdSyncSessionIdConflictChoicesResponseSyncRecordSongInfoMock = (overrideResponse: Partial<SyncRecordSongInfo> = {}): SyncRecordSongInfo => ({...{id: faker.number.int(), title: faker.string.alpha({length: {min: 10, max: 20}}), artistNames: faker.string.alpha({length: {min: 10, max: 20}}), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])}, ...overrideResponse});
+
+export const getPostDevicesDeviceIdSyncSessionIdConflictChoicesResponseMock = (overrideResponse: Partial<Extract<SyncConflictChoicesResponse, object>> = {}): SyncConflictChoicesResponse => (faker.helpers.arrayElement([{records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdConflictChoicesResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdConflictChoicesResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdConflictChoicesResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}]))
+
 export const getPostDevicesDeviceIdSyncSessionIdErrorResponseMock = (overrideResponse: Partial<Extract<ReportSyncErrorResponse, object>> = {}): ReportSyncErrorResponse => (faker.helpers.arrayElement([{counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}]))
 
 export const getPostDevicesDeviceIdSyncSessionIdAcknowledgeResponseMock = (overrideResponse: Partial<Extract<AcknowledgeActionResponse, object>> = {}): AcknowledgeActionResponse => (faker.helpers.arrayElement([{success: faker.datatype.boolean(), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {success: faker.datatype.boolean(), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {success: faker.datatype.boolean(), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}]))
@@ -1280,6 +1381,18 @@ export const getPostDevicesDeviceIdSyncSessionIdResolveConflictsMockHandler = (o
   }, options)
 }
 
+export const getPostDevicesDeviceIdSyncSessionIdConflictChoicesMockHandler = (overrideResponse?: SyncConflictChoicesResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<SyncConflictChoicesResponse> | SyncConflictChoicesResponse), options?: RequestHandlerOptions) => {
+  return http.post('*/devices/:deviceId/sync/:sessionId/conflict-choices', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPostDevicesDeviceIdSyncSessionIdConflictChoicesResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
 export const getPostDevicesDeviceIdSyncSessionIdErrorMockHandler = (overrideResponse?: ReportSyncErrorResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ReportSyncErrorResponse> | ReportSyncErrorResponse), options?: RequestHandlerOptions) => {
   return http.post('*/devices/:deviceId/sync/:sessionId/error', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
 
@@ -1313,6 +1426,7 @@ export const getSyncMock = () => [
   getPostDevicesDeviceIdSyncSessionIdDeduplicatePrepareMockHandler(),
   getPostDevicesDeviceIdSyncSessionIdCheckMockHandler(),
   getPostDevicesDeviceIdSyncSessionIdResolveConflictsMockHandler(),
+  getPostDevicesDeviceIdSyncSessionIdConflictChoicesMockHandler(),
   getPostDevicesDeviceIdSyncSessionIdErrorMockHandler(),
   getPostDevicesDeviceIdSyncSessionIdAcknowledgeMockHandler()
 ]

@@ -758,7 +758,7 @@ public class SyncCommitService(
     {
         return new SyncCommitResult
         {
-            ActionCounts = records.GroupBy(r => r.Action).ToDictionary(g => g.Key, g => g.Count()),
+            ActionCounts = records.CountByAction(),
             CommittedAt = session.CompletedAt ?? DateTime.UtcNow,
         };
     }
@@ -768,7 +768,7 @@ public class SyncCommitService(
     {
         return new SyncCommitResult
         {
-            ActionCounts = records.GroupBy(r => r.Action).ToDictionary(g => g.Key, g => g.Count()),
+            ActionCounts = records.CountByAction(),
             CommittedAt = committedAt,
         };
     }

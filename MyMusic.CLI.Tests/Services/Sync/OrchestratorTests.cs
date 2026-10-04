@@ -28,6 +28,8 @@ public class OrchestratorTests
         _fileOps = Substitute.For<IFileOps>();
         _keepAwake = Substitute.For<IKeepAwake>();
         _userPrompt = Substitute.For<IUserPrompt>();
+        _userPrompt.PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(ConflictResolution.Skip);
         _phasesLogger = Substitute.For<ILogger<Phases>>();
         _orchestratorLogger = Substitute.For<ILogger<Orchestrator>>();
         _fileSystem = Substitute.For<System.IO.Abstractions.IFileSystem>();

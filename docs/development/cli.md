@@ -87,6 +87,20 @@ are saved to the server device by `IDeviceConfigService`:
   so the dry run previews the local template (see "Device Options in a Dry-Run" in [sync.md](sync.md)).
 - `my-music device save` saves them without running a sync.
 
+## Sync Conflicts
+
+A file changed differently on the device and on the server is a real conflict (see "Resolving a Real Conflict" in
+[sync.md](sync.md)). `my-music sync` decides what to do with them through `--conflicts`:
+
+| Value | Behaviour |
+| --- | --- |
+| `ask` | Prompts for each conflict, offering the choices the direction allows. The default. |
+| `upload` | Keeps the local file: it is uploaded over the server's version. |
+| `download` | Takes the server's version: it is downloaded over the local file. |
+| `skip` | Leaves every conflict unresolved. The default with `--yes`, so unattended runs never wait for an answer. |
+
+The option applies to a `--dry-run` as well, which then records what the real sync would do without doing it.
+
 ## Other Development Topics
 
 Development documentation for other MyMusic.CLI topics will be added here as the project evolves.

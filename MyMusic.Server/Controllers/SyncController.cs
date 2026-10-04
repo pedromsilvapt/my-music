@@ -33,6 +33,7 @@ public class SyncController(
     ISyncDeviceSongsService syncDeviceSongsService,
     ISyncCheckService syncCheckService,
     ISyncResolveConflictsService syncResolveConflictsService,
+    ISyncConflictChooseService syncConflictChooseService,
     ISyncReportErrorService syncReportErrorService,
     ISyncAcknowledgeService syncAcknowledgeService,
     ISyncDeduplicatePrepareService syncDeduplicatePrepareService,
@@ -269,6 +270,24 @@ public class SyncController(
         if (result == null) return NotFound();
 
         return new SyncResolveConflictsResponse
+        {
+            Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+            Counts = SyncActionCounts.FromRecords(result.Records),
+        };
+    }
+
+    [HttpPost("{deviceId:long}/sync/{sessionId:long}/conflict-choices")]
+    public async Task<ActionResult<SyncConflictChoicesResponse>> ChooseConflicts(
+        long deviceId,
+        long sessionId,
+        [FromBody] SyncConflictChoicesRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await syncConflictChooseService.ChooseDownloadAsync(
+            deviceId, sessionId, currentUser.Id, request.DownloadRecordIds, cancellationToken);
+        if (result == null) return NotFound();
+
+        return new SyncConflictChoicesResponse
         {
             Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
             Counts = SyncActionCounts.FromRecords(result.Records),

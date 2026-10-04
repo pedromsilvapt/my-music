@@ -138,6 +138,7 @@ public class DevicesController(
         [FromForm] string path,
         [FromForm] string modifiedAt,
         [FromForm] string createdAt,
+        [FromForm] long? resolvesConflictRecordId,
         CancellationToken cancellationToken)
     {
         var device = await FindDeviceAsync(deviceId, cancellationToken);
@@ -166,6 +167,7 @@ public class DevicesController(
             ownerId: currentUser.Id,
             direction: activeSession.Direction,
             deduplicate: activeSession.Deduplicate,
+            resolvesConflictRecordId: resolvesConflictRecordId,
             cancellationToken: cancellationToken);
 
         return new SyncUploadResponse

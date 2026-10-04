@@ -103,6 +103,15 @@ A slot shows an icon and value, each in its own color, for every action that has
 has. Every sync record action must belong to a slot (a test enforces it), so a session with records never shows only
 zeros.
 
+## Conflict Prompt
+
+When a sync finds a real conflict (see "Resolving a Real Conflict" in [sync.md](sync.md)), `createDefaultUserPrompt`
+(`services/sync/defaults.ts`) shows a dialog with the choices the sync direction allows: Upload, Download and Skip.
+The dialog is shown in a dry run as well. With "Treat Conflicts as Errors" on, nothing is asked and every conflict is
+left unresolved. `actionConflict` (`services/sync/sync-actions-device.ts`) applies the answer: downloads are sent to the
+server in one `conflict-choices` request per check chunk, uploads go through `actionUpdateRemote` with the id of the
+conflict they resolve.
+
 ## Running the App
 
 ```bash
