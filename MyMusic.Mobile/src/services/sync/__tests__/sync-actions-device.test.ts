@@ -1005,7 +1005,7 @@ describe('actionConflict', () => {
         expect(apiClient.chooseConflicts).toHaveBeenCalledWith(1, 1, { downloadRecordIds: [1] });
     });
 
-    test('user prompt for skip increments failed', async () => {
+    test('user prompt for skip leaves the conflict unresolved', async () => {
         const apiClient = createMockApiClient({
             resolveConflicts: jest.fn().mockResolvedValue({
                 records: [
@@ -1024,7 +1024,11 @@ describe('actionConflict', () => {
 
         const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], toUpdatePaths, onProgress);
 
-        expect(ctx.result.error).toBe(1);
+        expect(ctx.result.error).toBe(0);
+        expect(apiClient.chooseConflicts).not.toHaveBeenCalled();
+        expect(apiClient.uploadFile).not.toHaveBeenCalled();
+        expect(result.records).toHaveLength(1);
+        expect(result.records[0].action).toBe('Conflict');
         expect(toUpdatePaths.has('song.mp3')).toBe(false);
     });
 });

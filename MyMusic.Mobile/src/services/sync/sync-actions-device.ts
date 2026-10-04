@@ -537,8 +537,6 @@ export async function actionConflict(
                                 const uploadResult = await uploadConflictedFile(apiClient, fileOps, ctx, record, files);
                                 allRecords.push(...(uploadResult.records ?? []));
                                 aggregatedCounts = addCounts(aggregatedCounts, uploadResult.counts);
-                            } else {
-                                ctx.result.error++;
                             }
                         }
                         break;
