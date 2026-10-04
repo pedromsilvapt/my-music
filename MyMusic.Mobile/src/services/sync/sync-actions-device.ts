@@ -10,13 +10,7 @@ export async function actionCreateRemote(
     reason?: string
 ): Promise<ActionResult> {
     if (!fileOps.fileExists(file.fullPath)) {
-        return {
-            action: 'Error',
-            filePath: file.relativePath,
-            source: 'Device',
-            reason,
-            errorMessage: `File not found: ${file.fullPath}`,
-        };
+        return reportUploadFailure(apiClient, ctx, file.relativePath, `File not found: ${file.fullPath}`, reason);
     }
 
     try {
@@ -48,13 +42,7 @@ export async function actionCreateRemote(
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        return {
-            action: 'Error',
-            filePath: file.relativePath,
-            source: 'Device',
-            reason,
-            errorMessage,
-        };
+        return reportUploadFailure(apiClient, ctx, file.relativePath, errorMessage, reason);
     }
 }
 
@@ -67,13 +55,7 @@ export async function actionUpdateRemote(
     resolvesConflictRecordId?: number
 ): Promise<ActionResult> {
     if (!fileOps.fileExists(file.fullPath)) {
-        return {
-            action: 'Error',
-            filePath: file.relativePath,
-            source: 'Device',
-            reason,
-            errorMessage: `File not found: ${file.fullPath}`,
-        };
+        return reportUploadFailure(apiClient, ctx, file.relativePath, `File not found: ${file.fullPath}`, reason);
     }
 
     try {
@@ -106,13 +88,7 @@ export async function actionUpdateRemote(
         };
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        return {
-            action: 'Error',
-            filePath: file.relativePath,
-            source: 'Device',
-            reason,
-            errorMessage,
-        };
+        return reportUploadFailure(apiClient, ctx, file.relativePath, errorMessage, reason);
     }
 }
 
@@ -374,6 +350,21 @@ export async function actionRename(
 }
 
 /**
+ * Reports a file that could not be uploaded as an `Error`, so the failure shows in the session.
+ * The check does not save a record for an upload (the upload itself does), so there is none to link to.
+ */
+async function reportUploadFailure(
+    apiClient: ISyncApiClient,
+    ctx: SyncContext,
+    filePath: string,
+    errorMessage: string,
+    reason: string | undefined
+): Promise<ActionResult> {
+    const result = await reportFailure(apiClient, ctx, undefined, filePath, undefined, errorMessage, reason);
+    return { ...result, source: 'Device' };
+}
+
+/**
  * Reports a client action that could not be performed as an `Error` linked to its record.
  * The server acknowledges the record, so the commit is not blocked, and does not apply it, so
  * the server state keeps reflecting what is actually on the device.
@@ -381,11 +372,11 @@ export async function actionRename(
 export async function reportFailure(
     apiClient: ISyncApiClient,
     ctx: SyncContext,
-    recordId: number,
+    recordId: number | undefined,
     filePath: string,
     songId: number | undefined,
     errorMessage: string,
-    reason: string
+    reason: string | undefined
 ): Promise<ActionResult> {
     let counts: SyncActionCounts | undefined;
     try {
@@ -397,7 +388,7 @@ export async function reportFailure(
         });
         counts = response.counts;
     } catch (e) {
-        console.error(`Failed to report the error of record ${recordId}: ${filePath}`, e);
+        console.error(`Failed to report the error of ${recordId != null ? `record ${recordId}` : 'the upload'}: ${filePath}`, e);
     }
 
     return {
@@ -605,7 +596,10 @@ async function uploadConflictedFile(
 
     if (result.action === 'Error') {
         console.error('Failed to upload the local version of', conflict.filePath, ':', result.errorMessage);
-        ctx.result.error++;
+        // An error reported to the server comes back in the counts of the result
+        if (!result.counts) {
+            ctx.result.error++;
+        }
     } else {
         ctx.uploadedPaths.add(conflict.filePath);
     }

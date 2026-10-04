@@ -635,6 +635,34 @@ describe('uploadPhase - uploadedPaths', () => {
         expect(ctx.uploadedPaths.has('unchanged-song.mp3')).toBe(false);
     });
 
+    test('a failed upload reported to the server counts as an error', async () => {
+        mockedActionCreateRemote.mockResolvedValue({
+            action: 'Error',
+            filePath: 'new-song.mp3',
+            source: 'Device',
+            errorMessage: 'Network request failed',
+            counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 },
+        });
+        const deps = createMockDeps({
+            apiClient: {
+                ...createMockDeps().apiClient,
+                checkSync: jest.fn().mockResolvedValue({
+                    records: [
+                        { id: 1, filePath: 'new-song.mp3', action: 'CreateRemote', songId: null, data: null, reason: null, acknowledged: false, processedAt: '' },
+                    ],
+                }),
+            },
+        });
+        const ctx = createContext();
+
+        await uploadPhase(deps, ctx, [
+            { relativePath: 'new-song.mp3', fullPath: '/music/new-song.mp3', modifiedAt: new Date(), createdAt: new Date(), size: 1000 },
+        ], jest.fn());
+
+        expect(ctx.result.error).toBe(1);
+        expect(ctx.result.createRemote).toBe(0);
+    });
+
     test('does not call createPendingActions', async () => {
         const mockCreatePendingActions = jest.fn().mockResolvedValue({ records: [] });
         const deps = createMockDeps({

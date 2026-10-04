@@ -34,7 +34,7 @@ public class SyncActionsDevice(
         if (!fileSystem.File.Exists(fullPath))
         {
             logger.LogWarning("File not found: {Path}", fullPath);
-            return new ActionResult("Error", fileInfo.Path, Reason: "File not found");
+            return await ReportUploadFailureAsync(deviceId, sessionId, fileInfo, $"File not found: {fullPath}", ct);
         }
 
         try
@@ -55,7 +55,7 @@ public class SyncActionsDevice(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to upload file: {Path}", fileInfo.Path);
-            return new ActionResult("Error", fileInfo.Path, ErrorMessage: ex.Message, Reason: fileInfo.Reason);
+            return await ReportUploadFailureAsync(deviceId, sessionId, fileInfo, ex.Message, ct);
         }
     }
 
@@ -71,7 +71,7 @@ public class SyncActionsDevice(
         if (!fileSystem.File.Exists(fullPath))
         {
             logger.LogWarning("File not found: {Path}", fullPath);
-            return new ActionResult("Error", fileInfo.Path, Reason: "File not found");
+            return await ReportUploadFailureAsync(deviceId, sessionId, fileInfo, $"File not found: {fullPath}", ct);
         }
 
         try
@@ -93,7 +93,7 @@ public class SyncActionsDevice(
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to update file: {Path}", fileInfo.Path);
-            return new ActionResult("Error", fileInfo.Path, ErrorMessage: ex.Message, Reason: fileInfo.Reason);
+            return await ReportUploadFailureAsync(deviceId, sessionId, fileInfo, ex.Message, ct);
         }
     }
 
@@ -343,6 +343,17 @@ public class SyncActionsDevice(
     }
 
     /// <summary>
+    /// Reports a file that could not be uploaded as an <c>Error</c>, so the failure shows in the session.
+    /// The check does not save a record for an upload (the upload itself does), so there is none to link to.
+    /// </summary>
+    private async Task<ActionResult> ReportUploadFailureAsync(
+        long deviceId, long sessionId, SyncFileInfo fileInfo, string errorMessage, CancellationToken ct)
+    {
+        var result = await ReportFailureAsync(deviceId, sessionId, recordId: null, fileInfo.Path, songId: null, errorMessage, fileInfo.Reason, ct);
+        return result with { Source = "Device" };
+    }
+
+    /// <summary>
     /// Reports a client action that could not be performed as an <c>Error</c> linked to its record.
     /// The server acknowledges the record, so the commit is not blocked, and does not apply it, so
     /// the server state keeps reflecting what is actually on the device.
@@ -350,11 +361,11 @@ public class SyncActionsDevice(
     public async Task<ActionResult> ReportFailureAsync(
         long deviceId,
         long sessionId,
-        long recordId,
+        long? recordId,
         string relativePath,
         long? songId,
         string errorMessage,
-        string reason,
+        string? reason,
         CancellationToken ct)
     {
         SyncActionCounts? counts = null;
@@ -370,7 +381,7 @@ public class SyncActionsDevice(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to report the error of record {RecordId}: {Path}", recordId, relativePath);
+            logger.LogError(ex, "Failed to report the error of {Action}: {Path}", recordId.HasValue ? $"record {recordId}" : "the upload", relativePath);
         }
 
         return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: errorMessage, Reason: reason, SongId: songId, RecordId: recordId, Counts: counts);

@@ -112,6 +112,16 @@ left unresolved. `actionConflict` (`services/sync/sync-actions-device.ts`) appli
 server in one `conflict-choices` request per check chunk, uploads go through `actionUpdateRemote` with the id of the
 conflict they resolve.
 
+## Uploads
+
+`uploadFile` (`api/sync.ts`) sends the file part with a content type taken from its extension. React Native on
+Android fails the request without sending it when a file part has none ("Binary FormData part needs a content-type
+header"), so a new extension in `getMusicExtensions` needs an entry in `UPLOAD_CONTENT_TYPES`, or it is sent as
+`application/octet-stream`.
+
+A file that fails to upload is reported to the server by `actionCreateRemote` / `actionUpdateRemote`
+(`services/sync/sync-actions-device.ts`) and shows in the session as an `Error` record.
+
 ## Running the App
 
 ```bash

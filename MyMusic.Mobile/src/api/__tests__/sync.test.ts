@@ -1,5 +1,6 @@
 import {downloadFile} from '../../../modules/repo-files';
-import {downloadSong} from '../sync';
+import {apiMultipartRequest} from '../client';
+import {downloadSong, uploadFile} from '../sync';
 
 jest.mock('../../../modules/repo-files', () => ({
     downloadFile: jest.fn(),
@@ -39,5 +40,23 @@ describe('downloadSong', () => {
         downloadFileMock.mockRejectedValue(new Error('response has status: 404'));
 
         await expect(downloadSong(42, '/music/song.mp3.tmp')).rejects.toThrow('Failed to download song 42: response has status: 404');
+    });
+});
+
+describe('uploadFile', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    // React Native on Android rejects a file part without a content type before sending the request
+    test.each([
+        ['song.mp3', 'audio/mpeg'],
+        ['SONG.MP3', 'audio/mpeg'],
+        ['song.xyz', 'application/octet-stream'],
+    ])('sends %s with the content type %s', async (name, type) => {
+        const append = jest.spyOn(FormData.prototype, 'append').mockImplementation(() => undefined);
+
+        await uploadFile(2, 65, {uri: `file:///music/${name}`, name}, `2018/${name}`, '2024-01-01T00:00:00.000Z', '2023-01-01T00:00:00.000Z');
+
+        expect(append).toHaveBeenCalledWith('file', {uri: `file:///music/${name}`, name, type});
+        expect(apiMultipartRequest).toHaveBeenCalledWith('/devices/2/sync/65/upload', expect.any(FormData), expect.anything());
     });
 });

@@ -102,25 +102,101 @@ public class SyncActionsDeviceTests
         await _apiClient.Received(1).UploadFileAsync(1, 1, Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task ActionCreateRemoteAsync_FileNotFound_ReturnsError()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ActionUploadAsync_FileNotFound_ReportsError(bool isUpdate)
     {
         var device = CreateDevice();
-        var fileInfo = new SyncFileInfo
-        {
-            Path = "missing.mp3",
-            ModifiedAt = DateTime.UtcNow,
-            CreatedAt = DateTime.UtcNow
-        };
+        SetupUploadFile(exists: false);
+        SetupErrorReport();
 
-        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
-        mockFile.Exists(Arg.Any<string>()).Returns(false);
-        _fileSystem.File.Returns(mockFile);
-
-        var result = await device.ActionCreateRemoteAsync(1, 1, "/music", fileInfo);
+        var result = await UploadAsync(device, isUpdate, "missing.mp3");
 
         result.Action.ShouldBe("Error");
-        result.Reason.ShouldBe("File not found");
+        result.Source.ShouldBe("Device");
+        result.ErrorMessage.ShouldBe($"File not found: {Path.Combine("/music", "missing.mp3")}");
+        result.Counts!.ErrorCount.ShouldBe(1);
+        await AssertUploadFailureReported("missing.mp3", result.ErrorMessage!);
+        await _apiClient.DidNotReceive().UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ActionUploadAsync_UploadFails_ReportsError(bool isUpdate)
+    {
+        var device = CreateDevice();
+        SetupUploadFile(exists: true);
+        SetupErrorReport();
+        _apiClient.UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns<UploadFileResult>(_ => throw new HttpRequestException("Network error"));
+
+        var result = await UploadAsync(device, isUpdate, "test.mp3");
+
+        result.Action.ShouldBe("Error");
+        result.Source.ShouldBe("Device");
+        result.Reason.ShouldBe("Upload reason");
+        result.ErrorMessage.ShouldBe("Network error");
+        result.Counts!.ErrorCount.ShouldBe(1);
+        await AssertUploadFailureReported("test.mp3", "Network error");
+    }
+
+    [Fact]
+    public async Task ActionCreateRemoteAsync_UploadAndReportFail_ReturnsErrorWithoutCounts()
+    {
+        var device = CreateDevice();
+        SetupUploadFile(exists: true);
+        _apiClient.UploadFileAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<UploadFileRequest>(), Arg.Any<CancellationToken>())
+            .Returns<UploadFileResult>(_ => throw new HttpRequestException("Network error"));
+        _apiClient.ReportSyncErrorAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ReportSyncErrorCliRequest>(), Arg.Any<CancellationToken>())
+            .Returns<SyncActionCounts>(_ => throw new HttpRequestException("Server unreachable"));
+
+        var result = await UploadAsync(device, isUpdate: false, "test.mp3");
+
+        result.Action.ShouldBe("Error");
+        result.ErrorMessage.ShouldBe("Network error");
+        result.Counts.ShouldBeNull();
+    }
+
+    private static Task<SyncActionsDevice.ActionResult> UploadAsync(SyncActionsDevice device, bool isUpdate, string path)
+    {
+        var fileInfo = new SyncFileInfo
+        {
+            Path = path,
+            ModifiedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.UtcNow,
+            Reason = "Upload reason"
+        };
+
+        return isUpdate
+            ? device.ActionUpdateRemoteAsync(1, 1, "/music", fileInfo)
+            : device.ActionCreateRemoteAsync(1, 1, "/music", fileInfo);
+    }
+
+    private void SetupUploadFile(bool exists)
+    {
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(exists);
+        mockFile.OpenRead(Arg.Any<string>()).Returns(_ =>
+            Substitute.For<System.IO.Abstractions.FileSystemStream>(new MemoryStream(), "test.mp3", false));
+        _fileSystem.File.Returns(mockFile);
+    }
+
+    private void SetupErrorReport()
+    {
+        _apiClient.ReportSyncErrorAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ReportSyncErrorCliRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new SyncActionCounts { ErrorCount = 1 });
+    }
+
+    /// <summary>
+    /// A failed upload has no record of its own (the check does not save one), so it is reported by path alone.
+    /// </summary>
+    private async Task AssertUploadFailureReported(string path, string errorMessage)
+    {
+        await _apiClient.Received(1).ReportSyncErrorAsync(1, 1,
+            Arg.Is<ReportSyncErrorCliRequest>(r => r.RecordId == null && r.SongId == null && r.FilePath == path && r.ErrorMessage == errorMessage),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

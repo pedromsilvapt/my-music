@@ -84,6 +84,17 @@ const file = {
     createdAt: new Date('2023-01-01T00:00:00Z'),
 };
 
+/** A failed upload has no record of its own, so it is reported by path alone. */
+function expectUploadFailureReported(apiClient: ISyncApiClient, errorMessage: string) {
+    expect(apiClient.reportSyncError).toHaveBeenCalledTimes(1);
+    expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 1, {
+        filePath: 'song.mp3',
+        errorMessage,
+        songId: undefined,
+        recordId: undefined,
+    });
+}
+
 describe('actionCreateRemote', () => {
     test('success returns CreateRemote action', async () => {
         const apiClient = createMockApiClient({
@@ -109,31 +120,54 @@ describe('actionCreateRemote', () => {
         );
     });
 
-    test('failure returns Error action', async () => {
+    test('failure is reported to the server as an Error', async () => {
         const apiClient = createMockApiClient({
             uploadFile: jest.fn().mockRejectedValue(new Error('Network error')),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext();
 
         const result = await actionCreateRemote(apiClient, fileOps, ctx, file, 'new file');
+        if (result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result.action).toBe('Error');
         expect(result.source).toBe('Device');
+        expect(result.reason).toBe('new file');
         expect(result.errorMessage).toBe('Network error');
-        expect(ctx.result.error).toBe(0);
+        expectUploadFailureReported(apiClient, 'Network error');
+        expect(ctx.result.error).toBe(1);
         expect(ctx.result.createRemote).toBe(0);
     });
 
-    test('returns Error when file does not exist', async () => {
-        const apiClient = createMockApiClient();
+    test('failure whose report fails too still returns Error action', async () => {
+        const apiClient = createMockApiClient({
+            uploadFile: jest.fn().mockRejectedValue(new Error('Network error')),
+            reportSyncError: jest.fn().mockRejectedValue(new Error('Server unreachable')),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+
+        const result = await actionCreateRemote(apiClient, fileOps, createContext(), file, 'new file');
+
+        expect(result.action).toBe('Error');
+        expect(result.errorMessage).toBe('Network error');
+        expect(result.counts).toBeUndefined();
+    });
+
+    test('reports an Error when file does not exist', async () => {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(false) });
         const ctx = createContext();
 
         const result = await actionCreateRemote(apiClient, fileOps, ctx, file, 'new file');
 
         expect(result.action).toBe('Error');
+        expect(result.source).toBe('Device');
         expect(result.errorMessage).toBe('File not found: /music/song.mp3');
+        expect(result.counts?.errorCount).toBe(1);
+        expectUploadFailureReported(apiClient, 'File not found: /music/song.mp3');
         expect(apiClient.uploadFile).not.toHaveBeenCalled();
     });
 
@@ -176,22 +210,29 @@ describe('actionUpdateRemote', () => {
         expect(ctx.result.updateRemote).toBe(1);
     });
 
-    test('failure returns Error action', async () => {
+    test('failure is reported to the server as an Error', async () => {
         const apiClient = createMockApiClient({
             uploadFile: jest.fn().mockRejectedValue(new Error('Upload failed')),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const ctx = createContext();
 
         const result = await actionUpdateRemote(apiClient, fileOps, ctx, file, 'modified');
+        if (result.counts) ctx.result = addDeltaToResult(ctx.result, result.counts);
 
         expect(result.action).toBe('Error');
-        expect(ctx.result.error).toBe(0);
+        expect(result.source).toBe('Device');
+        expect(result.reason).toBe('modified');
+        expectUploadFailureReported(apiClient, 'Upload failed');
+        expect(ctx.result.error).toBe(1);
         expect(ctx.result.updateRemote).toBe(0);
     });
 
-    test('returns Error when file does not exist', async () => {
-        const apiClient = createMockApiClient();
+    test('reports an Error when file does not exist', async () => {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(false) });
         const ctx = createContext();
 
@@ -199,6 +240,8 @@ describe('actionUpdateRemote', () => {
 
         expect(result.action).toBe('Error');
         expect(result.errorMessage).toBe('File not found: /music/song.mp3');
+        expect(result.counts?.errorCount).toBe(1);
+        expectUploadFailureReported(apiClient, 'File not found: /music/song.mp3');
         expect(apiClient.uploadFile).not.toHaveBeenCalled();
     });
 
@@ -940,6 +983,26 @@ describe('actionConflict', () => {
         expect(result.records).toEqual([realConflict]);
         expect(ctx.uploadedPaths.has('song.mp3')).toBe(false);
         expect(ctx.result.error).toBe(1);
+    });
+
+    test('a failed upload reported to the server is counted once', async () => {
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict], counts: {...ZERO_COUNTS, conflictCount: 1} }),
+            uploadFile: jest.fn().mockRejectedValue(new Error('Network error')),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const userPrompt = createMockUserPrompt({
+            promptConflictResolution: jest.fn().mockResolvedValue('upload'),
+        });
+        const ctx = createContext();
+
+        const result = await actionConflict(apiClient, fileOps, userPrompt, ctx, conflictRecords, [], new Set<string>(), jest.fn());
+
+        // The caller adds the returned counts to the session result
+        expect(result.counts?.errorCount).toBe(1);
+        expect(ctx.result.error).toBe(0);
+        expect(ctx.uploadedPaths.has('song.mp3')).toBe(false);
     });
 
     test('user prompt for download asks the server for the records resolving the conflicts', async () => {

@@ -79,6 +79,7 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
       - Files deleted locally are not unlinked
       - All server actions (CreateLocal, UpdateLocal, DeleteLocal, Rename) are applied on the device
    - Failures:
+      - If a file fails to upload (missing on the device, or the request fails), the device should report it and it should result in an Error; nothing is linked, so the upload is retried on the next sync
       - If an upload fails to import at commit, should result in an Error; the local change stays pending and is retried on the next sync
       - Links to content whose import failed should result in an Error too
       - Files that fail to scan on the device should result in an Error

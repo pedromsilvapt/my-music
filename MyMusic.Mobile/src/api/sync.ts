@@ -78,6 +78,15 @@ export async function commitSync(deviceId: number, sessionId: number) {
     });
 }
 
+const UPLOAD_CONTENT_TYPES: Record<string, string> = {
+    mp3: 'audio/mpeg',
+};
+
+function uploadContentType(fileName: string): string {
+    const extension = fileName.split('.').pop()?.toLowerCase() ?? '';
+    return UPLOAD_CONTENT_TYPES[extension] ?? 'application/octet-stream';
+}
+
 export async function uploadFile(
     deviceId: number,
     sessionId: number,
@@ -88,7 +97,8 @@ export async function uploadFile(
     resolvesConflictRecordId?: number
 ) {
     const formData = new FormData();
-    formData.append('file', file as any);
+    // React Native on Android fails the request without sending it when a file part has no content type
+    formData.append('file', { ...file, type: uploadContentType(file.name) } as any);
     formData.append('path', path);
     formData.append('modifiedAt', modifiedAt);
     formData.append('createdAt', createdAt);
