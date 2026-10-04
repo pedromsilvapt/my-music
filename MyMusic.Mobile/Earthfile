@@ -50,6 +50,8 @@ build:
     COPY app.json tsconfig.json* ./
     COPY assets ./assets
     COPY plugins ./plugins
+    # Local native modules are autolinked into the Gradle build, so its dependency layer needs them
+    COPY modules ./modules
     RUN npx expo prebuild --platform android --clean
 
     # --- Layer 3: Gradle wrapper + ABI config ---

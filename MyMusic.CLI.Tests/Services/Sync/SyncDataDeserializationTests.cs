@@ -127,6 +127,14 @@ public class SyncDataDeserializationTests
         result.ServerModifiedAt.ShouldBe(default);
     }
 
+    [Fact]
+    public void DeserializeConflictCheckData_ServerChecksumAlgorithm_IsReadWhenPresent()
+    {
+        SyncDataDeserialization.DeserializeConflictCheckData(Parse("""{"serverChecksumAlgorithm":"XxHash128"}"""))!
+            .ServerChecksumAlgorithm.ShouldBe("XxHash128");
+        SyncDataDeserialization.DeserializeConflictCheckData(Parse("{}"))!.ServerChecksumAlgorithm.ShouldBeNull();
+    }
+
     [Theory]
     [MemberData(nameof(NoData))]
     public void DeserializeConflictCheckData_NoData_ReturnsNull(string? json) =>
@@ -166,6 +174,14 @@ public class SyncDataDeserializationTests
         result.LocalModifiedAt.ShouldBe(default);
         result.ServerModifiedAt.ShouldBe(default);
         result.LastSyncedAt.ShouldBe(default);
+    }
+
+    [Fact]
+    public void DeserializeUpdateLocalCheckData_ServerChecksumAlgorithm_IsReadWhenPresent()
+    {
+        SyncDataDeserialization.DeserializeUpdateLocalCheckData(Parse("""{"serverChecksumAlgorithm":"XxHash128"}"""))!
+            .ServerChecksumAlgorithm.ShouldBe("XxHash128");
+        SyncDataDeserialization.DeserializeUpdateLocalCheckData(Parse("{}"))!.ServerChecksumAlgorithm.ShouldBeNull();
     }
 
     [Theory]

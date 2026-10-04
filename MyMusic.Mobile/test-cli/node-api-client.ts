@@ -195,13 +195,15 @@ export class NodeApiClient implements ISyncApiClient {
             conflicts: Array<{
                 path: string;
                 songId: number;
-                fileContentBase64: string;
+                checksum: string;
+                checksumAlgorithm: string;
                 localModifiedAt: string;
             }>;
             potentialUpdates: Array<{
                 path: string;
                 songId: number;
-                fileContentBase64: string;
+                checksum: string;
+                checksumAlgorithm: string;
                 localModifiedAt: string;
                 lastSyncedAt: string;
             }>;

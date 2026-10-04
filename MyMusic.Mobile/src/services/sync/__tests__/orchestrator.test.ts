@@ -87,7 +87,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         deleteFile: jest.fn().mockResolvedValue(undefined),
         moveFile: jest.fn().mockResolvedValue(undefined),
         copyFile: jest.fn().mockResolvedValue(undefined),
-        readFileBase64: jest.fn().mockResolvedValue('base64'),
+        computeChecksum: jest.fn().mockResolvedValue('checksum'),
         getModificationTime: jest.fn().mockReturnValue(null),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
     };

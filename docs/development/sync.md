@@ -127,7 +127,7 @@ A conflict occurs when both the device and the server have modified the same fil
 ### The Two-Step Resolution Algorithm
 
 1. **Detect by timestamps** — If both `deviceModifiedAt` and `serverModifiedAt` are newer than `LastSyncedModifiedAt`, we have a potential conflict.
-2. **Resolve by checksum** — Send the device file content to the server and compare checksums against the stored song:
+2. **Resolve by checksum** — The device computes the checksum of its file (with the algorithm the `check` response reports for the song) and sends only that; the server compares it against the stored song. Older clients upload the whole file instead and the server computes the checksum, which is slower but gives the same result:
    - **Checksums match** → The content is identical despite the timestamp difference (e.g., the file was copied or touched without changing audio). Auto-resolve: treat as a normal update. The timestamps diverged, but the music didn't.
    - **Checksums differ** → The content genuinely changed on both sides. This is a real conflict. The conflict is recorded and surfaced to the user; the device does not download the server's version, preserving the local file.
 

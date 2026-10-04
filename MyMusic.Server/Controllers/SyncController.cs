@@ -246,6 +246,8 @@ public class SyncController(
                 {
                     Path = c.Path,
                     SongId = c.SongId,
+                    Checksum = c.Checksum,
+                    ChecksumAlgorithm = c.ChecksumAlgorithm,
                     FileContentBase64 = c.FileContentBase64,
                     LocalModifiedAt = c.LocalModifiedAt,
                 }).ToList(),
@@ -253,6 +255,8 @@ public class SyncController(
                 {
                     Path = u.Path,
                     SongId = u.SongId,
+                    Checksum = u.Checksum,
+                    ChecksumAlgorithm = u.ChecksumAlgorithm,
                     FileContentBase64 = u.FileContentBase64,
                     LocalModifiedAt = u.LocalModifiedAt,
                     LastSyncedAt = u.LastSyncedAt,

@@ -9,6 +9,11 @@ export interface SyncConflictResolveItem {
   path: string;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   songId: number;
-  fileContentBase64: string;
+  /** @nullable */
+  checksum?: string | null;
+  /** @nullable */
+  checksumAlgorithm?: string | null;
+  /** @nullable */
+  fileContentBase64?: string | null;
   localModifiedAt: string;
 }

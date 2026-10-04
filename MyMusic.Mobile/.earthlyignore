@@ -40,6 +40,10 @@ yarn-error.*
 /ios
 /android
 
+# build outputs of local native modules (their android/ sources are tracked)
+/modules/*/android/build/
+/modules/*/android/.cxx/
+
 .earthlyignore
 Earthfile
 .expo/

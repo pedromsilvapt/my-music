@@ -1,6 +1,7 @@
 import type { IFileOps } from '../src/services/sync/types';
 import * as fs from 'fs';
 import * as path from 'path';
+import { createXXHash128 } from 'hash-wasm';
 
 export class NodeFileOps implements IFileOps {
     fileExists(filePath: string): boolean {
@@ -33,9 +34,17 @@ export class NodeFileOps implements IFileOps {
         }
     }
 
-    async readFileBase64(filePath: string): Promise<string> {
-        const buffer = fs.readFileSync(filePath);
-        return buffer.toString('base64');
+    async computeChecksum(filePath: string, algorithm: string): Promise<string> {
+        if (algorithm !== 'XxHash128') {
+            throw new Error(`Unsupported checksum algorithm: ${algorithm}`);
+        }
+
+        // The digest is the canonical (big-endian) form of the hash, like the server's
+        const hasher = await createXXHash128();
+        for await (const chunk of fs.createReadStream(filePath)) {
+            hasher.update(chunk as Buffer);
+        }
+        return Buffer.from(hasher.digest('binary')).toString('base64');
     }
 
     getModificationTime(filePath: string): Date | null {

@@ -27,6 +27,7 @@ import {
 import { getScanner } from '../scannerRegistry';
 import { toFileUri } from '../pathUtils';
 import { useSyncStore } from '../../stores/syncStore';
+import { hashFile } from '../../../modules/xxhash';
 import type {
     IFileOps,
     IFileSystemScanner,
@@ -139,8 +140,11 @@ export function createDefaultFileOps(): IFileOps {
             const toFile = new File(toFileUri(toPath));
             fromFile.copy(toFile);
         },
-        readFileBase64: async (path: string) => {
-            return new File(toFileUri(path)).base64();
+        computeChecksum: async (path: string, algorithm: string) => {
+            if (algorithm !== 'XxHash128') {
+                throw new Error(`Unsupported checksum algorithm: ${algorithm}`);
+            }
+            return hashFile(toFileUri(path));
         },
         getModificationTime: (path: string) => {
             const info = new File(toFileUri(path));

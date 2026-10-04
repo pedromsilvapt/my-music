@@ -470,7 +470,8 @@ export type DeleteSessionResponse = z.infer<typeof DeleteSessionResponseSchema>;
 export const SyncConflictResolveItemSchema = z.object({
     path: z.string(),
     songId: z.number(),
-    fileContentBase64: z.string(),
+    checksum: z.string(),
+    checksumAlgorithm: z.string(),
     localModifiedAt: z.string(),
 });
 
@@ -479,7 +480,8 @@ export type SyncConflictResolveItem = z.infer<typeof SyncConflictResolveItemSche
 export const SyncPotentialUpdateResolveItemSchema = z.object({
     path: z.string(),
     songId: z.number(),
-    fileContentBase64: z.string(),
+    checksum: z.string(),
+    checksumAlgorithm: z.string(),
     localModifiedAt: z.string(),
     lastSyncedAt: z.string(),
 });

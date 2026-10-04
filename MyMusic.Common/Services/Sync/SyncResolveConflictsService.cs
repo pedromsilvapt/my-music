@@ -82,13 +82,13 @@ public class SyncResolveConflictsService(
     }
 
     /// <summary>
-    /// Handles a single conflict item: looks up the <see cref="SongDevice"/> at the item's path, decodes the base64
-    /// file content, and compares the local checksum against the server song checksum. Matching
+    /// Handles a single conflict item: looks up the <see cref="SongDevice"/> at the item's path, resolves
+    /// the local checksum, and compares it against the server song checksum. Matching
     /// checksums produce an <c>UpdateTimestamp</c> record. A local checksum matching an older version
     /// of the song means the local file is a stale copy, so the server wins: an <c>UpdateLocal</c>
     /// record (<c>Skipped</c> in <c>up</c> direction). Any other difference produces a
-    /// <c>Conflict</c> record. A missing <see cref="SongDevice"/> or invalid base64 produces an
-    /// <c>Error</c> record (or is skipped when the SongDevice is not found).
+    /// <c>Conflict</c> record. A local checksum that cannot be resolved produces an <c>Error</c>
+    /// record; the item is skipped when the SongDevice is not found.
     /// </summary>
     private async Task ProcessConflictAsync(
         long deviceId,
@@ -110,14 +110,12 @@ public class SyncResolveConflictsService(
             return;
         }
 
-        var (fileBytes, errorRecord) = await DecodeFileBytesAsync(conflict.FileContentBase64, conflict.Path, conflict.SongId, syncActions, cancellationToken);
+        var (localChecksum, errorRecord) = await ResolveLocalChecksumAsync(conflict.Checksum, conflict.ChecksumAlgorithm, conflict.FileContentBase64, songDevice.Song, conflict.Path, conflict.SongId, syncActions, cancellationToken);
         if (errorRecord != null)
         {
             records.Add(errorRecord);
             return;
         }
-
-        var localChecksum = ChecksumService.ComputeChecksumFromBytes(fileBytes!, songDevice.Song.ChecksumAlgorithm);
 
         if (localChecksum == songDevice.Song.Checksum)
         {
@@ -177,11 +175,11 @@ public class SyncResolveConflictsService(
 
     /// <summary>
     /// Handles a single potential-update item: looks up the <see cref="SongDevice"/> at the item's path (with full
-    /// song metadata), decodes the base64 file content, and compares the local checksum against
+    /// song metadata), resolves the local checksum, and compares it against
     /// the server song checksum. Matching checksums produce an <c>UpdateTimestamp</c> record;
     /// differing checksums produce an <c>UpdateLocal</c> record (optionally followed by a
     /// <c>Rename</c> record when the naming template changed the target path). Missing
-    /// SongDevice/Song or invalid base64 are skipped or produce an <c>Error</c> record.
+    /// SongDevice/Song are skipped; a local checksum that cannot be resolved produces an <c>Error</c> record.
     /// In <c>up</c> direction the device never processes server actions, so differing checksums
     /// produce a <c>Skipped</c> record instead of <c>UpdateLocal</c>/<c>Rename</c>.
     /// </summary>
@@ -211,14 +209,12 @@ public class SyncResolveConflictsService(
             return;
         }
 
-        var (fileBytes, errorRecord) = await DecodeFileBytesAsync(update.FileContentBase64, update.Path, update.SongId, syncActions, cancellationToken);
+        var (localChecksum, errorRecord) = await ResolveLocalChecksumAsync(update.Checksum, update.ChecksumAlgorithm, update.FileContentBase64, songDevice.Song, update.Path, update.SongId, syncActions, cancellationToken);
         if (errorRecord != null)
         {
             records.Add(errorRecord);
             return;
         }
-
-        var localChecksum = ChecksumService.ComputeChecksumFromBytes(fileBytes!, songDevice.Song.ChecksumAlgorithm);
 
         if (localChecksum == songDevice.Song.Checksum)
         {
@@ -284,6 +280,47 @@ public class SyncResolveConflictsService(
             var renameRecord = await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, songId, "Path updated by naming template", cancellationToken);
             records.Add(renameRecord);
         }
+    }
+
+    /// <summary>
+    /// Resolves the checksum of the client's local file. A client-computed checksum is used as is
+    /// when its algorithm matches the song's; legacy clients send the whole file as base64 instead,
+    /// which is decoded and hashed here. An unsupported algorithm, invalid base64, or an item with
+    /// neither field produces an <c>Error</c> record, returned as the second tuple element with a
+    /// <c>null</c> checksum.
+    /// </summary>
+    private async Task<(string? LocalChecksum, DeviceSyncSessionRecord? ErrorRecord)> ResolveLocalChecksumAsync(
+        string? checksum,
+        string? checksumAlgorithm,
+        string? fileContentBase64,
+        Song song,
+        string path,
+        long songId,
+        ISyncActionsServer syncActions,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(checksum))
+        {
+            if (checksumAlgorithm == song.ChecksumAlgorithm) return (checksum, null);
+
+            logger.LogError(
+                "Unsupported checksum algorithm {Algorithm} for {Path}, song {SongId} uses {SongAlgorithm}",
+                checksumAlgorithm, path, songId, song.ChecksumAlgorithm);
+
+            return (null, await syncActions.ActionError(path, "Unsupported checksum algorithm", songId, "Unsupported checksum algorithm", cancellationToken: cancellationToken));
+        }
+
+        if (fileContentBase64 == null)
+        {
+            logger.LogError("Neither a checksum nor the file content was sent for {Path}", path);
+
+            return (null, await syncActions.ActionError(path, "Missing checksum or file content", songId, "Missing checksum or file content", cancellationToken: cancellationToken));
+        }
+
+        var (fileBytes, errorRecord) = await DecodeFileBytesAsync(fileContentBase64, path, songId, syncActions, cancellationToken);
+        if (errorRecord != null) return (null, errorRecord);
+
+        return (ChecksumService.ComputeChecksumFromBytes(fileBytes!, song.ChecksumAlgorithm), null);
     }
 
     /// <summary>

@@ -13,7 +13,21 @@ public record SyncResolveConflictItem
 
     public required long SongId { get; init; }
 
-    public required string FileContentBase64 { get; init; }
+    /// <summary>
+    /// Base64 checksum of the local file, computed by the client with <see cref="ChecksumAlgorithm"/>.
+    /// </summary>
+    public string? Checksum { get; init; }
+
+    /// <summary>
+    /// Algorithm used for <see cref="Checksum"/>. Must match the song's checksum algorithm.
+    /// </summary>
+    public string? ChecksumAlgorithm { get; init; }
+
+    /// <summary>
+    /// Whole local file as base64, sent by legacy clients instead of <see cref="Checksum"/>; the
+    /// server then computes the checksum itself.
+    /// </summary>
+    public string? FileContentBase64 { get; init; }
 
     public required DateTime LocalModifiedAt { get; init; }
 }
@@ -28,7 +42,21 @@ public record SyncResolvePotentialUpdateItem
 
     public required long SongId { get; init; }
 
-    public required string FileContentBase64 { get; init; }
+    /// <summary>
+    /// Base64 checksum of the local file, computed by the client with <see cref="ChecksumAlgorithm"/>.
+    /// </summary>
+    public string? Checksum { get; init; }
+
+    /// <summary>
+    /// Algorithm used for <see cref="Checksum"/>. Must match the song's checksum algorithm.
+    /// </summary>
+    public string? ChecksumAlgorithm { get; init; }
+
+    /// <summary>
+    /// Whole local file as base64, sent by legacy clients instead of <see cref="Checksum"/>; the
+    /// server then computes the checksum itself.
+    /// </summary>
+    public string? FileContentBase64 { get; init; }
 
     public required DateTime LocalModifiedAt { get; init; }
 
@@ -57,8 +85,9 @@ public record SyncResolveConflictsResult
 
 /// <summary>
 /// Resolves client-reported sync conflicts and potential updates for a device sync session owned
-/// by the current user. For each conflict/potential-update, the local file content (base64) is
-/// compared against the server song checksum: matching checksums produce a timestamp-update record
+/// by the current user. For each conflict/potential-update, the local file checksum (sent by the
+/// client, or computed from the base64 file content sent by legacy clients) is compared against the
+/// server song checksum: matching checksums produce a timestamp-update record
 /// (no file transfer), while differing checksums produce a conflict record (conflicts) or an
 /// update-local record (potential updates, optionally followed by a rename record when the naming
 /// template changed the target path). Reuses <see cref="MyMusic.Common.Services.Devices.IDeviceLookupService"/> and

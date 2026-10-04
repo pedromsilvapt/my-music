@@ -236,13 +236,15 @@ export interface ISyncApiClient {
             conflicts: Array<{
                 path: string;
                 songId: number;
-                fileContentBase64: string;
+                checksum: string;
+                checksumAlgorithm: string;
                 localModifiedAt: string;
             }>;
             potentialUpdates: Array<{
                 path: string;
                 songId: number;
-                fileContentBase64: string;
+                checksum: string;
+                checksumAlgorithm: string;
                 localModifiedAt: string;
                 lastSyncedAt: string;
             }>;
@@ -306,7 +308,11 @@ export interface IFileOps {
     deleteFile: (path: string) => Promise<void>;
     moveFile: (fromPath: string, toPath: string) => Promise<void>;
     copyFile: (fromPath: string, toPath: string) => Promise<void>;
-    readFileBase64: (path: string) => Promise<string>;
+    /**
+     * Computes the base64 checksum of a file with the named algorithm, the same way the server does.
+     * Throws for an algorithm this client does not implement.
+     */
+    computeChecksum: (path: string, algorithm: string) => Promise<string>;
     getModificationTime: (path: string) => Date | null;
     deleteEmptyDirectories: (filePath: string, basePath: string) => Promise<void>;
 }

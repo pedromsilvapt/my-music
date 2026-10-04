@@ -719,4 +719,357 @@ public class SyncResolveConflictsServiceSpecs
         var unchangedSd = await scenario.DbContext.SongDevices.FirstAsync(s => s.Id == sd.Id);
         unchangedSd.LastSyncedModifiedAt.ShouldBe(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc));
     }
+
+    [Fact]
+    public async Task ResolveAsync_ConflictWithMatchingChecksum_CreatesUpdateTimestampRecord()
+    {
+        // Arrange: the client hashes the file itself and sends only the checksum
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var content = new byte[] { 1, 2, 3, 4, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(content));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                Checksum = ComputeChecksum(content),
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
+        record.SongId.ShouldBe(song.Id);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ConflictWithChecksumOfPreviousVersion_CreatesUpdateLocalRecord()
+    {
+        // Arrange: the sent checksum matches an older version of the song, so the local file is stale
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.AddChecksumHistory(song, ComputeChecksum(clientContent));
+        var devicePath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, devicePath);
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = devicePath,
+                SongId = song.Id,
+                Checksum = ComputeChecksum(clientContent),
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        record.FilePath.ShouldBe(devicePath);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ConflictWithDifferingChecksum_CreatesConflictRecord()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientChecksum = ComputeChecksum([9, 8, 7, 6, 5]);
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                Checksum = clientChecksum,
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert: the conflict record carries the checksum exactly as the client sent it
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Conflict);
+        var data = SyncActionDataSerializer.Deserialize<ConflictData>(record.Data)!;
+        data.LocalChecksum.ShouldBe(clientChecksum);
+        data.ServerChecksum.ShouldBe(song.Checksum);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ChecksumTakesPrecedenceOverFileContent()
+    {
+        // Arrange: both fields are sent; the file content would differ, the checksum matches
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var content = new byte[] { 1, 2, 3, 4, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(content));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                Checksum = ComputeChecksum(content),
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                FileContentBase64 = Convert.ToBase64String(new byte[] { 9, 9, 9 }),
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.Single().Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
+    }
+
+    [Theory]
+    [InlineData("Sha256")]
+    [InlineData(null)]
+    public async Task ResolveAsync_ConflictWithOtherChecksumAlgorithm_CreatesErrorRecord(string? algorithm)
+    {
+        // Arrange: a checksum from another algorithm can never be compared with the song's
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var content = new byte[] { 1, 2, 3 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(content));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                Checksum = ComputeChecksum(content),
+                ChecksumAlgorithm = algorithm,
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.Reason.ShouldBe("Unsupported checksum algorithm");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_ConflictWithoutChecksumOrFileContent_CreatesErrorRecord()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum([1, 2, 3]));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(conflicts:
+        [
+            new SyncResolveConflictItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                LocalModifiedAt = DateTime.UtcNow,
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.Reason.ShouldBe("Missing checksum or file content");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_PotentialUpdateWithMatchingChecksum_CreatesUpdateTimestampRecord()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var content = new byte[] { 1, 2, 3, 4, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(content));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                Checksum = ComputeChecksum(content),
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Records.Single().Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_PotentialUpdateWithDifferingChecksum_CreatesUpdateLocalRecord()
+    {
+        // Arrange: the device path matches the template-generated path so no rename is produced
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum([1, 2, 3, 4, 5]));
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, expectedPath);
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = expectedPath,
+                SongId = song.Id,
+                Checksum = ComputeChecksum([9, 8, 7, 6, 5]),
+                ChecksumAlgorithm = song.ChecksumAlgorithm,
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.UpdateLocal);
+        record.FilePath.ShouldBe(expectedPath);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_PotentialUpdateWithOtherChecksumAlgorithm_CreatesErrorRecord()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var content = new byte[] { 1, 2, 3 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(content));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                Checksum = ComputeChecksum(content),
+                ChecksumAlgorithm = "Sha256",
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.Reason.ShouldBe("Unsupported checksum algorithm");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_PotentialUpdateWithoutChecksumOrFileContent_CreatesErrorRecord()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum([1, 2, 3]));
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "/music/song.mp3",
+                SongId = song.Id,
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var record = result.Records.Single();
+        record.Action.ShouldBe(SyncRecordAction.Error);
+        record.Reason.ShouldBe("Missing checksum or file content");
+    }
 }

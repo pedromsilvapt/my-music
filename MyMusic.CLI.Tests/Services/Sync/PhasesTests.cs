@@ -657,7 +657,7 @@ public class PhasesTests
     }
 
     /// <summary>
-    /// Makes every local file exist and readable, as the conflict resolution reads them.
+    /// Makes every local file exist and hashable, as the conflict resolution checksums them.
     /// </summary>
     private void SetupLocalFilesExist()
     {
@@ -665,7 +665,7 @@ public class PhasesTests
         mockFile.Exists(Arg.Any<string>()).Returns(true);
         _fileSystem.File.Returns(mockFile);
         _fileOps.FileExists(Arg.Any<string>()).Returns(true);
-        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("AAAA");
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("AAAA");
     }
 
     /// <summary>
@@ -713,7 +713,10 @@ public class PhasesTests
             Id = Random.Shared.NextInt64(),
             FilePath = path,
             Action = action,
-            Data = null
+            // The check tells which algorithm to hash the local file with
+            Data = action is SyncRecordAction.Conflict or SyncRecordAction.UpdateLocal
+                ? JsonSerializer.SerializeToElement(new { serverChecksumAlgorithm = "XxHash128" })
+                : null
         };
     }
 }

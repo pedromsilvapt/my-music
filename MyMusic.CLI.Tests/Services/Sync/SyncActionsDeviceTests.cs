@@ -410,7 +410,7 @@ public class SyncActionsDeviceTests
                 FilePath = "conflict.mp3",
                 Action = SyncRecordAction.Conflict,
                 SongId = 1,
-                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow }),
+                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow, serverChecksumAlgorithm = "XxHash128" }),
                 Acknowledged = false,
                 ProcessedAt = DateTime.UtcNow
             }
@@ -420,7 +420,7 @@ public class SyncActionsDeviceTests
         mockFile.Exists(Arg.Any<string>()).Returns(true);
         _fileSystem.File.Returns(mockFile);
 
-        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("base64content");
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("checksum");
 
         _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new ResolveConflictsResult
@@ -457,7 +457,7 @@ public class SyncActionsDeviceTests
                 FilePath = "conflict.mp3",
                 Action = SyncRecordAction.Conflict,
                 SongId = 1,
-                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow }),
+                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow, serverChecksumAlgorithm = "XxHash128" }),
                 Acknowledged = false,
                 ProcessedAt = DateTime.UtcNow
             }
@@ -467,7 +467,7 @@ public class SyncActionsDeviceTests
         mockFile.Exists(Arg.Any<string>()).Returns(true);
         _fileSystem.File.Returns(mockFile);
 
-        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("base64content");
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("checksum");
 
         var serverCounts = new SyncActionCounts { UpdateTimestampCount = 1 };
         _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
@@ -493,40 +493,79 @@ public class SyncActionsDeviceTests
         result.Records.Count.ShouldBe(1);
         result.Records[0].Action.ShouldBe(SyncRecordAction.UpdateTimestamp);
         result.Counts.ShouldBe(serverCounts);
-        await _fileOps.Received(1).ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _fileOps.Received(1).ComputeChecksumAsync("/music/conflict.mp3", "XxHash128", Arg.Any<CancellationToken>());
         await _apiClient.Received(1).ResolveConflictsAsync(1, 1, Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task ActionConflictAsync_LargePayload_ChunksRequestsAndAggregatesResults()
+    public async Task ActionConflictAsync_SendsChecksumAndAlgorithmInsteadOfFileContent()
     {
         var device = CreateDevice();
-        // Generate enough conflicts that combined base64 payload exceeds the chunk threshold.
-        // The default chunk threshold is ~20 MB of base64; each conflict carries a 7 MB base64 string,
-        // so 4 conflicts => 28 MB => must split into at least 2 chunks.
-        var bigBase64 = new string('A', 7_000_000);
-        const int conflictCount = 4;
+        var conflicts = new List<SyncRecordItem> { CreateResolveRecord(1, "conflict.mp3", SyncRecordAction.Conflict) };
+        var potentialUpdates = new List<SyncRecordItem> { CreateResolveRecord(2, "changed.mp3", SyncRecordAction.UpdateLocal) };
 
-        var conflicts = new List<SyncRecordItem>();
-        for (var i = 0; i < conflictCount; i++)
+        SetupLocalFilesExist();
+        _fileOps.ComputeChecksumAsync("/music/conflict.mp3", "XxHash128", Arg.Any<CancellationToken>()).Returns("conflict-checksum");
+        _fileOps.ComputeChecksumAsync("/music/changed.mp3", "XxHash128", Arg.Any<CancellationToken>()).Returns("changed-checksum");
+
+        ResolveConflictsRequest? sentRequest = null;
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Do<ResolveConflictsRequest>(r => sentRequest = r), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ResolveConflictsResult { Records = [] }));
+
+        await device.ActionConflictAsync(1, 1, "/music", conflicts, potentialUpdates);
+
+        sentRequest.ShouldNotBeNull();
+        var conflict = sentRequest.Conflicts.Single();
+        conflict.Checksum.ShouldBe("conflict-checksum");
+        conflict.ChecksumAlgorithm.ShouldBe("XxHash128");
+        var potentialUpdate = sentRequest.PotentialUpdates.Single();
+        potentialUpdate.Checksum.ShouldBe("changed-checksum");
+        potentialUpdate.ChecksumAlgorithm.ShouldBe("XxHash128");
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_NoChecksumAlgorithmOrUnsupportedOne_SkipsItAndResolvesTheRest()
+    {
+        var device = CreateDevice();
+        var conflicts = new List<SyncRecordItem>
         {
-            conflicts.Add(new SyncRecordItem
-            {
-                Id = i + 1,
-                FilePath = $"conflict{i}.mp3",
-                Action = SyncRecordAction.Conflict,
-                SongId = i + 1,
-                Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow }),
-                Acknowledged = false,
-                ProcessedAt = DateTime.UtcNow
-            });
-        }
+            CreateResolveRecord(1, "no-algorithm.mp3", SyncRecordAction.Conflict) with { Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow }) },
+            CreateResolveRecord(2, "unsupported.mp3", SyncRecordAction.Conflict, algorithm: "Sha256"),
+            CreateResolveRecord(3, "song.mp3", SyncRecordAction.Conflict),
+        };
 
-        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
-        mockFile.Exists(Arg.Any<string>()).Returns(true);
-        _fileSystem.File.Returns(mockFile);
+        SetupLocalFilesExist();
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), "XxHash128", Arg.Any<CancellationToken>()).Returns("checksum");
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), "Sha256", Arg.Any<CancellationToken>())
+            .Returns<Task<string>>(_ => throw new NotSupportedException("Unsupported checksum algorithm: Sha256"));
 
-        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(bigBase64);
+        ResolveConflictsRequest? sentRequest = null;
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Do<ResolveConflictsRequest>(r => sentRequest = r), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ResolveConflictsResult { Records = [] }));
+
+        await device.ActionConflictAsync(1, 1, "/music", conflicts, []);
+
+        sentRequest.ShouldNotBeNull();
+        sentRequest.Conflicts.Select(c => c.Path).ShouldBe(["song.mp3"]);
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_ManyItems_ChunksRequestsByCountAndAggregatesResults()
+    {
+        var device = CreateDevice();
+        // One more conflict than fits in a request, plus a few potential updates to interleave
+        const int conflictCount = SyncActionsDevice.MaxItemsPerResolveChunk + 1;
+        const int potentialUpdateCount = 3;
+
+        var conflicts = Enumerable.Range(0, conflictCount)
+            .Select(i => CreateResolveRecord(i + 1, $"conflict{i}.mp3", SyncRecordAction.Conflict))
+            .ToList();
+        var potentialUpdates = Enumerable.Range(0, potentialUpdateCount)
+            .Select(i => CreateResolveRecord(1000 + i, $"changed{i}.mp3", SyncRecordAction.UpdateLocal))
+            .ToList();
+
+        SetupLocalFilesExist();
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("checksum");
 
         var chunkCalls = new List<ResolveConflictsRequest>();
         _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ResolveConflictsRequest>(), Arg.Any<CancellationToken>())
@@ -549,22 +588,16 @@ public class SyncActionsDeviceTests
                 });
             });
 
-        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, []);
+        var result = await device.ActionConflictAsync(1, 1, "/music", conflicts, potentialUpdates);
 
-        // Should have made more than one request (chunking kicked in)
-        chunkCalls.Count.ShouldBeGreaterThan(1);
-        // Each chunk's total base64 payload must respect the threshold
-        foreach (var chunk in chunkCalls)
-        {
-            var chunkBytes = chunk.Conflicts.Sum(c => c.FileContentBase64.Length)
-                                + chunk.PotentialUpdates.Sum(p => p.FileContentBase64.Length);
-            chunkBytes.ShouldBeLessThanOrEqualTo(20_000_000);
-        }
-        // All conflicts were processed across chunks
-        chunkCalls.Sum(c => c.Conflicts.Count).ShouldBe(conflictCount);
+        // Every request but the last is full, and none exceeds the limit
+        chunkCalls.Select(c => c.Conflicts.Count + c.PotentialUpdates.Count)
+            .ShouldBe([SyncActionsDevice.MaxItemsPerResolveChunk, conflictCount + potentialUpdateCount - SyncActionsDevice.MaxItemsPerResolveChunk]);
+        // The potential updates are interleaved into the first request instead of waiting for all conflicts
+        chunkCalls[0].PotentialUpdates.Count.ShouldBe(potentialUpdateCount);
         // All records aggregated into the final result
         result.Records.Count.ShouldBe(conflictCount);
-        result.Counts.UpdateTimestampCount.ShouldBe(conflictCount);
+        result.Counts.UpdateTimestampCount.ShouldBe(conflictCount + potentialUpdateCount);
     }
 
     [Theory]
@@ -649,7 +682,7 @@ public class SyncActionsDeviceTests
     public async Task ActionConflictAsync_UnreadableFile_SkipsItAndResolvesTheRest()
     {
         var device = CreateDevice();
-        var data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow, lastSyncedAt = DateTime.UtcNow });
+        var data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow, lastSyncedAt = DateTime.UtcNow, serverChecksumAlgorithm = "XxHash128" });
         var conflicts = new List<SyncRecordItem>
         {
             new() { Id = 1, FilePath = "unreadable.mp3", Action = SyncRecordAction.Conflict, SongId = 1, Data = data, Acknowledged = false, ProcessedAt = DateTime.UtcNow },
@@ -664,8 +697,8 @@ public class SyncActionsDeviceTests
         mockFile.Exists(Arg.Any<string>()).Returns(true);
         _fileSystem.File.Returns(mockFile);
 
-        _fileOps.ReadFileBase64Async(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("base64content");
-        _fileOps.ReadFileBase64Async(Arg.Is<string>(p => p.EndsWith("unreadable.mp3") || p.EndsWith("unreadable-update.mp3")), Arg.Any<CancellationToken>())
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("checksum");
+        _fileOps.ComputeChecksumAsync(Arg.Is<string>(p => p.EndsWith("unreadable.mp3") || p.EndsWith("unreadable-update.mp3")), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns<Task<string>>(_ => throw new IOException("Permission denied"));
 
         ResolveConflictsRequest? sentRequest = null;
@@ -682,6 +715,24 @@ public class SyncActionsDeviceTests
         sentRequest.PotentialUpdates.ShouldBeEmpty();
         result.Records.Single().FilePath.ShouldBe("song.mp3");
     }
+
+    private void SetupLocalFilesExist()
+    {
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        mockFile.Exists(Arg.Any<string>()).Returns(true);
+        _fileSystem.File.Returns(mockFile);
+    }
+
+    private static SyncRecordItem CreateResolveRecord(long id, string path, SyncRecordAction action, string algorithm = "XxHash128") => new()
+    {
+        Id = id,
+        FilePath = path,
+        Action = action,
+        SongId = id,
+        Data = System.Text.Json.JsonSerializer.SerializeToElement(new { localModifiedAt = DateTime.UtcNow, serverModifiedAt = DateTime.UtcNow, lastSyncedAt = DateTime.UtcNow, serverChecksumAlgorithm = algorithm }),
+        Acknowledged = false,
+        ProcessedAt = DateTime.UtcNow
+    };
 
     private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);
 }

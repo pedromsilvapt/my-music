@@ -2,6 +2,7 @@ namespace MyMusic.CLI.Services.Sync;
 
 using System.Globalization;
 using System.IO.Abstractions;
+using System.IO.Hashing;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
@@ -57,10 +58,17 @@ public class CliFileOps(IFileSystem fileSystem) : IFileOps
         return Task.CompletedTask;
     }
 
-    public Task<string> ReadFileBase64Async(string path, CancellationToken ct = default)
+    public async Task<string> ComputeChecksumAsync(string path, string algorithm, CancellationToken ct = default)
     {
-        var bytes = fileSystem.File.ReadAllBytes(path);
-        return Task.FromResult(Convert.ToBase64String(bytes));
+        NonCryptographicHashAlgorithm hash = algorithm switch
+        {
+            "XxHash128" => new XxHash128(),
+            _ => throw new NotSupportedException($"Unsupported checksum algorithm: {algorithm}"),
+        };
+
+        await using var stream = fileSystem.File.OpenRead(path);
+        await hash.AppendAsync(stream, ct);
+        return Convert.ToBase64String(hash.GetCurrentHash());
     }
 
     public Task<DateTime?> GetModificationTimeAsync(string path, CancellationToken ct = default)
@@ -351,7 +359,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         {
             Path = c.Path,
             SongId = c.SongId,
-            FileContentBase64 = c.FileContentBase64,
+            Checksum = c.Checksum,
+            ChecksumAlgorithm = c.ChecksumAlgorithm,
             LocalModifiedAt = c.LocalModifiedAt.ToUniversalTime()
         }).ToList();
 
@@ -359,7 +368,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         {
             Path = u.Path,
             SongId = u.SongId,
-            FileContentBase64 = u.FileContentBase64,
+            Checksum = u.Checksum,
+            ChecksumAlgorithm = u.ChecksumAlgorithm,
             LocalModifiedAt = u.LocalModifiedAt.ToUniversalTime(),
             LastSyncedAt = u.LastSyncedAt.ToUniversalTime()
         }).ToList();

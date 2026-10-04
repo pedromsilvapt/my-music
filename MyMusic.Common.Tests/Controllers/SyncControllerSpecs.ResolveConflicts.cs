@@ -400,4 +400,117 @@ public class SyncControllerResolveConflictsSpecs
         tsData.NewTimestamp.ShouldBe(fileModifiedAt, "NewLastSynced should be max(local, FileModifiedAt), not the newer ModifiedAt");
         tsData.NewTimestamp.ShouldNotBe(modifiedAt, "NewLastSynced must NOT use the metadata-bumped ModifiedAt");
     }
+
+    [Fact]
+    public async Task ResolveConflicts_ClientChecksumMatches_CreatesUpdateTimestampRecord()
+    {
+        var scenario = new Scenario();
+        var controller = CreateController(scenario, new SyncActionsServerFactory());
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+
+        var content = new byte[] { 10, 20, 30 };
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, content);
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+        scenario.CreateSongDevice(device, song, "/music/copy.mp3");
+
+        // The client sends the checksum it computed instead of the whole file
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    Checksum = song.Checksum,
+                    ChecksumAlgorithm = song.ChecksumAlgorithm,
+                    LocalModifiedAt = DateTime.UtcNow,
+                }
+            ],
+            PotentialUpdates =
+            [
+                new SyncPotentialUpdateResolveItem
+                {
+                    Path = "/music/copy.mp3",
+                    SongId = song.Id,
+                    Checksum = song.Checksum,
+                    ChecksumAlgorithm = song.ChecksumAlgorithm,
+                    LocalModifiedAt = DateTime.UtcNow,
+                    LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+                }
+            ]
+        };
+
+        var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.Records.Count.ShouldBe(2);
+        response.Value.Records.ShouldAllBe(r => r.Action == SyncRecordAction.UpdateTimestamp);
+    }
+
+    [Fact]
+    public async Task ResolveConflicts_ClientChecksumAlgorithmDiffers_CreatesErrorRecord()
+    {
+        var scenario = new Scenario();
+        var controller = CreateController(scenario, new SyncActionsServerFactory());
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, [10, 20, 30]);
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    Checksum = song.Checksum,
+                    ChecksumAlgorithm = "Sha256",
+                    LocalModifiedAt = DateTime.UtcNow,
+                }
+            ],
+            PotentialUpdates = []
+        };
+
+        var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Error);
+        response.Value.Records[0].Reason.ShouldBe("Unsupported checksum algorithm");
+    }
+
+    [Fact]
+    public async Task ResolveConflicts_NoChecksumOrFileContent_CreatesErrorRecord()
+    {
+        var scenario = new Scenario();
+        var controller = CreateController(scenario, new SyncActionsServerFactory());
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+
+        var song = CreateSongWithChecksum(scenario.DbContext, scenario.AdminUser.Id, [10, 20, 30]);
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        var request = new SyncResolveConflictsRequest
+        {
+            Conflicts =
+            [
+                new SyncConflictResolveItem
+                {
+                    Path = "/music/song.mp3",
+                    SongId = song.Id,
+                    LocalModifiedAt = DateTime.UtcNow,
+                }
+            ],
+            PotentialUpdates = []
+        };
+
+        var response = await controller.ResolveConflicts(device.Id, session.Id, request, CancellationToken.None);
+
+        response.Value.Records.Count.ShouldBe(1);
+        response.Value.Records[0].Action.ShouldBe(SyncRecordAction.Error);
+        response.Value.Records[0].Reason.ShouldBe("Missing checksum or file content");
+    }
 }

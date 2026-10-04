@@ -375,11 +375,10 @@ public class SyncActionsDevice(
     }
 
     /// <summary>
-    /// Maximum base64 payload size (in characters, roughly bytes) sent per resolve-conflicts
-    /// request. The server has a 100 MB request body limit; chunking keeps each request well
-    /// under that ceiling while leaving headroom for the JSON envelope and metadata.
+    /// Maximum number of items sent per resolve-conflicts request. Each item only carries a
+    /// checksum, so the limit just keeps a single request (one server transaction) bounded.
     /// </summary>
-    private const long MaxBytesPerResolveChunk = 20_000_000;
+    internal const int MaxItemsPerResolveChunk = 200;
 
     public async Task<ResolveConflictsActionResult> ActionConflictAsync(
         long deviceId,
@@ -399,18 +398,20 @@ public class SyncActionsDevice(
                 continue;
             }
 
-            var fileContentBase64 = await ReadLocalFileBase64Async(ResolveItemKind.Conflict, repositoryPath, conflict.FilePath, ct);
-            if (fileContentBase64 is null)
+            var conflictData = SyncDataDeserialization.DeserializeConflictCheckData(conflict.Data);
+            var checksumAlgorithm = conflictData?.ServerChecksumAlgorithm;
+            var checksum = await ComputeLocalChecksumAsync(ResolveItemKind.Conflict, repositoryPath, conflict.FilePath, checksumAlgorithm, ct);
+            if (checksum is null)
             {
                 continue;
             }
 
-            var conflictData = SyncDataDeserialization.DeserializeConflictCheckData(conflict.Data);
             resolveItems.Add(new ConflictResolveItem
             {
                 Path = conflict.FilePath,
                 SongId = conflict.SongId.Value,
-                FileContentBase64 = fileContentBase64,
+                Checksum = checksum,
+                ChecksumAlgorithm = checksumAlgorithm!,
                 LocalModifiedAt = conflictData?.LocalModifiedAt ?? DateTime.UtcNow
             });
         }
@@ -424,18 +425,20 @@ public class SyncActionsDevice(
                 continue;
             }
 
-            var fileContentBase64 = await ReadLocalFileBase64Async(ResolveItemKind.PotentialUpdate, repositoryPath, update.FilePath, ct);
-            if (fileContentBase64 is null)
+            var updateData = SyncDataDeserialization.DeserializeUpdateLocalCheckData(update.Data);
+            var checksumAlgorithm = updateData?.ServerChecksumAlgorithm;
+            var checksum = await ComputeLocalChecksumAsync(ResolveItemKind.PotentialUpdate, repositoryPath, update.FilePath, checksumAlgorithm, ct);
+            if (checksum is null)
             {
                 continue;
             }
 
-            var updateData = SyncDataDeserialization.DeserializeUpdateLocalCheckData(update.Data);
             potentialUpdateItems.Add(new PotentialUpdateResolveItem
             {
                 Path = update.FilePath,
                 SongId = update.SongId.Value,
-                FileContentBase64 = fileContentBase64,
+                Checksum = checksum,
+                ChecksumAlgorithm = checksumAlgorithm!,
                 LocalModifiedAt = updateData?.LocalModifiedAt ?? DateTime.UtcNow,
                 LastSyncedAt = updateData?.LastSyncedAt ?? DateTime.UtcNow
             });
@@ -481,7 +484,7 @@ public class SyncActionsDevice(
                 allRecords.AddRange(resolveResponse.Records);
                 aggregatedCounts = aggregatedCounts.Add(resolveResponse.Counts);
 
-                // Each request carries whole files, so it is slow: report the files it settled
+                // Report the files this request settled
                 onFilesResolved?.Invoke(chunk.Conflicts.Count + chunk.PotentialUpdates.Count);
             }
 
@@ -497,11 +500,18 @@ public class SyncActionsDevice(
     }
 
     /// <summary>
-    /// Reads a local file for conflict resolution. Returns <c>null</c>, after logging, when the file is
-    /// missing or cannot be read, so the other items are still resolved.
+    /// Computes the checksum of a local file for conflict resolution, with the algorithm the server
+    /// uses for the song. Returns <c>null</c>, after logging, when the file is missing, cannot be
+    /// read, or the algorithm is unknown, so the other items are still resolved.
     /// </summary>
-    private async Task<string?> ReadLocalFileBase64Async(ResolveItemKind kind, string repositoryPath, string relativePath, CancellationToken ct)
+    private async Task<string?> ComputeLocalChecksumAsync(ResolveItemKind kind, string repositoryPath, string relativePath, string? algorithm, CancellationToken ct)
     {
+        if (string.IsNullOrEmpty(algorithm))
+        {
+            logger.LogError("No checksum algorithm given for {Kind} resolution: {Path}", kind, relativePath);
+            return null;
+        }
+
         var fullPath = Path.Combine(repositoryPath, relativePath);
         if (!fileSystem.File.Exists(fullPath))
         {
@@ -511,19 +521,19 @@ public class SyncActionsDevice(
 
         try
         {
-            return await fileOps.ReadFileBase64Async(fullPath, ct);
+            return await fileOps.ComputeChecksumAsync(fullPath, algorithm, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(ex, "Failed to read file for {Kind} resolution: {Path}", kind, relativePath);
+            logger.LogError(ex, "Failed to compute the checksum for {Kind} resolution: {Path}", kind, relativePath);
             return null;
         }
     }
 
     /// <summary>
-    /// Splits the combined conflict + potential-update items into request chunks whose total
-    /// base64 payload does not exceed <see cref="MaxBytesPerResolveChunk"/>. Items are
-    /// interleaved so neither list is starved when one is much larger than the other.
+    /// Splits the combined conflict + potential-update items into request chunks of at most
+    /// <see cref="MaxItemsPerResolveChunk"/> items. Items are interleaved so neither list is
+    /// starved when one is much larger than the other.
     /// </summary>
     private static List<ResolveChunk> BuildResolveChunks(
         List<ConflictResolveItem> conflicts,
@@ -531,7 +541,6 @@ public class SyncActionsDevice(
     {
         var chunks = new List<ResolveChunk>();
         var current = new ResolveChunk();
-        var currentSize = 0L;
 
         // Interleave by index so a long conflict list doesn't defer all potential updates
         var maxIndex = Math.Max(conflicts.Count, potentialUpdates.Count);
@@ -539,30 +548,14 @@ public class SyncActionsDevice(
         {
             if (i < conflicts.Count)
             {
-                var item = conflicts[i];
-                var itemSize = item.FileContentBase64.Length;
-                if (currentSize > 0 && currentSize + itemSize > MaxBytesPerResolveChunk)
-                {
-                    chunks.Add(current);
-                    current = new ResolveChunk();
-                    currentSize = 0;
-                }
-                current.Conflicts.Add(item);
-                currentSize += itemSize;
+                current = StartNewChunkIfFull(chunks, current);
+                current.Conflicts.Add(conflicts[i]);
             }
 
             if (i < potentialUpdates.Count)
             {
-                var item = potentialUpdates[i];
-                var itemSize = item.FileContentBase64.Length;
-                if (currentSize > 0 && currentSize + itemSize > MaxBytesPerResolveChunk)
-                {
-                    chunks.Add(current);
-                    current = new ResolveChunk();
-                    currentSize = 0;
-                }
-                current.PotentialUpdates.Add(item);
-                currentSize += itemSize;
+                current = StartNewChunkIfFull(chunks, current);
+                current.PotentialUpdates.Add(potentialUpdates[i]);
             }
         }
 
@@ -572,6 +565,17 @@ public class SyncActionsDevice(
         }
 
         return chunks;
+    }
+
+    private static ResolveChunk StartNewChunkIfFull(List<ResolveChunk> chunks, ResolveChunk current)
+    {
+        if (current.Conflicts.Count + current.PotentialUpdates.Count < MaxItemsPerResolveChunk)
+        {
+            return current;
+        }
+
+        chunks.Add(current);
+        return new ResolveChunk();
     }
 
     /// <summary>
@@ -592,8 +596,8 @@ public class SyncActionsDevice(
 
 public record ResolveConflictsActionResult(List<SyncRecordItem> Records, SyncActionCounts Counts);
 
-internal record ConflictCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt);
-internal record UpdateLocalCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, DateTime LastSyncedAt);
+internal record ConflictCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, string? ServerChecksumAlgorithm = null);
+internal record UpdateLocalCheckData(DateTime LocalModifiedAt, DateTime ServerModifiedAt, DateTime LastSyncedAt, string? ServerChecksumAlgorithm = null);
 
 internal static class SyncDataDeserialization
 {

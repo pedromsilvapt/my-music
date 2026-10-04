@@ -82,7 +82,7 @@ The system SHALL define an `IFileSystemScanner` interface matching the existing 
 - **AND** it returns music files matching configured extensions
 
 ### Requirement: IFileOps interface for local file operations
-The system SHALL define an `IFileOps` interface that abstracts all local file system operations performed during sync. The interface SHALL expose: `fileExists(path)`, `ensureDirectory(path)`, `writeFile(path, data)`, `deleteFile(path)`, `readFileBase64(path)`, `getModificationTime(path)`. The production implementation SHALL use `expo-file-system`'s `File` class (Mobile) or `System.IO.Abstractions` (CLI).
+The system SHALL define an `IFileOps` interface that abstracts all local file system operations performed during sync. The interface SHALL expose: `fileExists(path)`, `ensureDirectory(path)`, `writeFile(path, data)`, `deleteFile(path)`, `computeChecksum(path, algorithm)`, `getModificationTime(path)`. `computeChecksum` SHALL return the base64 checksum of the file computed with the named algorithm exactly as the server computes it, and SHALL fail for an algorithm the client does not implement. The production implementation SHALL use `expo-file-system`'s `File` class (Mobile) or `System.IO.Abstractions` (CLI); `computeChecksum` SHALL hash the file natively (the local `xxhash` module on Mobile, `System.IO.Hashing` on CLI) without loading its content into the request.
 
 #### Scenario: IFileOps can be mocked to avoid file system access in tests
 - **WHEN** a test provides a mock IFileOps
@@ -93,7 +93,7 @@ The system SHALL define an `IFileOps` interface that abstracts all local file sy
 - **THEN** `fileExists` delegates to `new File(toFileUri(path)).exists`
 - **AND** `writeFile` delegates to `new File(toFileUri(path)).write(data)`
 - **AND** `deleteFile` delegates to `new File(toFileUri(path)).delete()`
-- **AND** `readFileBase64` delegates to `new File(toFileUri(path)).base64()`
+- **AND** `computeChecksum` delegates to `hashFile(toFileUri(path))` of the local `modules/xxhash` native module for `XxHash128`, and throws for any other algorithm
 
 #### Scenario: CLI IFileOps delegates to System.IO.Abstractions
 - **WHEN** CLI's IFileOps is used

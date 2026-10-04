@@ -405,11 +405,10 @@ export async function reportFailure(
 }
 
 /**
- * Maximum base64 payload size (in characters, roughly bytes) sent per resolve-conflicts request.
- * The server has a 100 MB request body limit; chunking keeps each request well under that ceiling
- * while leaving headroom for the JSON envelope and metadata. Same limit as the CLI.
+ * Maximum number of items sent per resolve-conflicts request. Each item only carries a checksum, so
+ * the limit just keeps a single request (one server transaction) bounded. Same limit as the CLI.
  */
-export const MAX_RESOLVE_REQUEST_SIZE = 20_000_000;
+export const MAX_RESOLVE_ITEMS_PER_REQUEST = 200;
 
 /** The kind of item sent for conflict resolution, used in log messages. */
 const ResolveItemKind = {
@@ -446,16 +445,18 @@ export async function actionConflict(
         }
 
         onProgress({ phase: 'resolving', currentFile: relativePath });
-        const fileContentBase64 = await readLocalFileBase64(ResolveItemKind.Conflict, fileOps, ctx, relativePath);
-        if (fileContentBase64 === null) {
+        const conflictData = conflict.data as ConflictData | null | undefined;
+        const checksumAlgorithm = conflictData?.serverChecksumAlgorithm;
+        const checksum = await computeLocalChecksum(ResolveItemKind.Conflict, fileOps, ctx, relativePath, checksumAlgorithm);
+        if (checksum === null) {
             continue;
         }
 
-        const conflictData = conflict.data as ConflictData | null | undefined;
         resolveItems.push({
             path: relativePath,
             songId: conflict.songId,
-            fileContentBase64,
+            checksum,
+            checksumAlgorithm: checksumAlgorithm!,
             localModifiedAt: dataDateOrNow(conflictData?.localModifiedAt),
         });
     }
@@ -471,16 +472,18 @@ export async function actionConflict(
         }
 
         onProgress({ phase: 'resolving', currentFile: relativePath });
-        const fileContentBase64 = await readLocalFileBase64(ResolveItemKind.PotentialUpdate, fileOps, ctx, relativePath);
-        if (fileContentBase64 === null) {
+        const updateData = update.data as SongModifiedAtData | null | undefined;
+        const checksumAlgorithm = updateData?.serverChecksumAlgorithm;
+        const checksum = await computeLocalChecksum(ResolveItemKind.PotentialUpdate, fileOps, ctx, relativePath, checksumAlgorithm);
+        if (checksum === null) {
             continue;
         }
 
-        const updateData = update.data as SongModifiedAtData | null | undefined;
         potentialUpdateItems.push({
             path: relativePath,
             songId: update.songId,
-            fileContentBase64,
+            checksum,
+            checksumAlgorithm: checksumAlgorithm!,
             localModifiedAt: dataDateOrNow(updateData?.localModifiedAt),
             lastSyncedAt: dataDateOrNow(updateData?.lastSyncedAt),
         });
@@ -534,7 +537,7 @@ export async function actionConflict(
             allRecords.push(...resolveResponse.records);
             aggregatedCounts = addCounts(aggregatedCounts, resolveResponse.counts);
 
-            // Each request carries whole files, so it is slow: report the files it settled
+            // Report the files this request settled
             ctx.processedFiles += chunk.conflicts.length + chunk.potentialUpdates.length;
             onProgress({ phase: 'resolving', processedFiles: ctx.processedFiles });
         }
@@ -546,10 +549,16 @@ export async function actionConflict(
 }
 
 /**
- * Reads a local file for conflict resolution. Returns null, after logging, when the file is missing
- * or cannot be read, so the other items are still resolved.
+ * Computes the checksum of a local file for conflict resolution, with the algorithm the server uses
+ * for the song. Returns null, after logging, when the file is missing, cannot be read, or the
+ * algorithm is absent or unknown, so the other items are still resolved.
  */
-async function readLocalFileBase64(kind: ResolveItemKind, fileOps: IFileOps, ctx: SyncContext, relativePath: string): Promise<string | null> {
+async function computeLocalChecksum(kind: ResolveItemKind, fileOps: IFileOps, ctx: SyncContext, relativePath: string, algorithm: string | null | undefined): Promise<string | null> {
+    if (!algorithm) {
+        console.error(`No checksum algorithm given for ${kind} resolution:`, relativePath);
+        return null;
+    }
+
     try {
         const fullPath = ctx.decodedRepoPath ? `${ctx.decodedRepoPath}/${relativePath}` : relativePath;
         if (!fileOps.fileExists(fullPath)) {
@@ -557,9 +566,9 @@ async function readLocalFileBase64(kind: ResolveItemKind, fileOps: IFileOps, ctx
             return null;
         }
 
-        return await fileOps.readFileBase64(fullPath);
+        return await fileOps.computeChecksum(fullPath, algorithm);
     } catch (e) {
-        console.error(`Failed to read file for ${kind} resolution:`, relativePath, e);
+        console.error(`Failed to compute the checksum for ${kind} resolution:`, relativePath, e);
         return null;
     }
 }
@@ -588,9 +597,9 @@ interface ResolveChunk {
 }
 
 /**
- * Splits the combined conflict + potential-update items into request chunks whose total base64
- * payload does not exceed {@link MAX_RESOLVE_REQUEST_SIZE}. Items are interleaved so neither list
- * is starved when one is much larger than the other. Mirrors the CLI's BuildResolveChunks.
+ * Splits the combined conflict + potential-update items into request chunks of at most
+ * {@link MAX_RESOLVE_ITEMS_PER_REQUEST} items. Items are interleaved so neither list is starved
+ * when one is much larger than the other. Mirrors the CLI's BuildResolveChunks.
  */
 function buildResolveChunks(
     conflicts: SyncConflictResolveItem[],
@@ -598,13 +607,11 @@ function buildResolveChunks(
 ): ResolveChunk[] {
     const chunks: ResolveChunk[] = [];
     let current: ResolveChunk = { conflicts: [], potentialUpdates: [] };
-    let currentSize = 0;
 
-    const startNewChunkIfFull = (itemSize: number) => {
-        if (currentSize > 0 && currentSize + itemSize > MAX_RESOLVE_REQUEST_SIZE) {
+    const startNewChunkIfFull = () => {
+        if (current.conflicts.length + current.potentialUpdates.length >= MAX_RESOLVE_ITEMS_PER_REQUEST) {
             chunks.push(current);
             current = { conflicts: [], potentialUpdates: [] };
-            currentSize = 0;
         }
     };
 
@@ -612,17 +619,13 @@ function buildResolveChunks(
     const maxIndex = Math.max(conflicts.length, potentialUpdates.length);
     for (let i = 0; i < maxIndex; i++) {
         if (i < conflicts.length) {
-            const item = conflicts[i];
-            startNewChunkIfFull(item.fileContentBase64.length);
-            current.conflicts.push(item);
-            currentSize += item.fileContentBase64.length;
+            startNewChunkIfFull();
+            current.conflicts.push(conflicts[i]);
         }
 
         if (i < potentialUpdates.length) {
-            const item = potentialUpdates[i];
-            startNewChunkIfFull(item.fileContentBase64.length);
-            current.potentialUpdates.push(item);
-            currentSize += item.fileContentBase64.length;
+            startNewChunkIfFull();
+            current.potentialUpdates.push(potentialUpdates[i]);
         }
     }
 
