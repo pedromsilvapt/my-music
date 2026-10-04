@@ -5,13 +5,14 @@ import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from
 import {FlashList} from '@shopify/flash-list';
 import type {SyncRecordResponseItem, SyncSessionItem} from '../../src/api/types';
 import {deleteSession} from '../../src/api/sync';
-import {Card, ErrorDisplay} from '../../src/components/ui';
+import {Card, ErrorDisplay, SessionCounters} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {useTheme} from '../../src/hooks/useTheme';
+import {getSessionActionCount} from '../../src/services/sync/sessionCounters';
 import {fetchSessionDetails, fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 
-type FilterType = 'all' | 'CreateRemote' | 'UpdateRemote' | 'CreateLocal' | 'UpdateLocal' | 'Delete' | 'Link' | 'Unlink' | 'Rename' | 'Skipped' | 'Conflict' | 'UpdateTimestamp' | 'Error';
+type FilterType = 'all' | 'CreateRemote' | 'UpdateRemote' | 'CreateLocal' | 'UpdateLocal' | 'DeleteLocal' | 'Link' | 'Unlink' | 'Rename' | 'Skipped' | 'Conflict' | 'UpdateTimestamp' | 'Error';
 
 const PAGE_SIZE = 50;
 
@@ -246,7 +247,7 @@ export default function SessionDetailScreen() {
             case 'createlocal':
             case 'updatelocal':
                 return colors.syncDownload;
-            case 'delete':
+            case 'deletelocal':
             case 'unlink':
                 return colors.error;
             case 'error':
@@ -267,7 +268,7 @@ export default function SessionDetailScreen() {
             case 'createlocal':
             case 'updatelocal':
                 return 'syncDownload';
-            case 'delete':
+            case 'deletelocal':
             case 'unlink':
                 return 'error';
             case 'error':
@@ -280,33 +281,14 @@ export default function SessionDetailScreen() {
     const getActionIcon = (action: string) => {
         if (action.toLowerCase() === 'error') return 'alert-circle';
         if (action.toLowerCase() === 'skipped') return 'skip-forward';
-        if (action === 'CreateLocal' || action === 'UpdateLocal' || action === 'Delete' || action === 'Link' || action === 'Unlink' || action === 'Rename') return 'cloud-download';
+        if (action === 'CreateLocal' || action === 'UpdateLocal' || action === 'DeleteLocal' || action === 'Link' || action === 'Unlink' || action === 'Rename') return 'cloud-download';
         return 'cloud-upload';
     };
 
     const getActionSource = (action: string): string => {
-        if (action === 'CreateLocal' || action === 'UpdateLocal' || action === 'Delete' || action === 'Link' || action === 'Unlink' || action === 'Rename') return 'Server';
+        if (action === 'CreateLocal' || action === 'UpdateLocal' || action === 'DeleteLocal' || action === 'Link' || action === 'Unlink' || action === 'Rename') return 'Server';
         return 'Device';
     };
-
-    const getSessionActionCount = useCallback((action: string): number => {
-        if (!session) return 0;
-        switch (action.toLowerCase()) {
-            case 'createremote': return session.createRemoteCount;
-            case 'updateremote': return session.updateRemoteCount;
-            case 'skipped': return session.skippedCount;
-            case 'createlocal': return session.createLocalCount;
-            case 'updatelocal': return session.updateLocalCount;
-            case 'delete': return session.deleteLocalCount;
-            case 'link': return session.linkCount;
-            case 'unlink': return session.unlinkCount;
-            case 'rename': return session.renameCount;
-            case 'conflict': return session.conflictCount;
-            case 'updatetimestamp': return session.updateTimestampCount;
-            case 'error': return session.errorCount;
-            default: return 0;
-        }
-    }, [session]);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleString();
@@ -319,7 +301,7 @@ export default function SessionDetailScreen() {
         {key: 'Skipped', label: 'Skipped'},
         {key: 'CreateLocal', label: 'Down'},
         {key: 'UpdateLocal', label: 'UpdLocal'},
-        {key: 'Delete', label: 'Deleted'},
+        {key: 'DeleteLocal', label: 'Deleted'},
         {key: 'Link', label: 'Linked'},
         {key: 'Unlink', label: 'Unlinked'},
         {key: 'Rename', label: 'Renamed'},
@@ -350,7 +332,7 @@ export default function SessionDetailScreen() {
                 data.push({
                     type: 'group_header',
                     action: group.action,
-                    count: getSessionActionCount(group.action),
+                    count: getSessionActionCount(session, group.action),
                     firstRecord: group.records[0],
                 });
 
@@ -369,7 +351,7 @@ export default function SessionDetailScreen() {
         }
 
         return data;
-    }, [session, groupEntries, filter, loadingMore, isLoadingFilter, getSessionActionCount]);
+    }, [session, groupEntries, filter, loadingMore, isLoadingFilter]);
 
     const handleLoadMore = useCallback(() => {
         if (hasMore && !loadingMore && !loading) {
@@ -403,32 +385,7 @@ export default function SessionDetailScreen() {
                 return (
                     <Card style={{marginHorizontal: spacing.md}}>
                         <Text style={[styles.summaryTitle, {fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.cardText, marginBottom: spacing.md}]}>Summary</Text>
-                        <View style={[styles.summaryGrid, {flexDirection: 'row', flexWrap: 'wrap'}]}>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.success}]}>{item.session.createRemoteCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
-                            </View>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.info}]}>{item.session.updateRemoteCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
-                            </View>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{item.session.createLocalCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
-                            </View>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textMuted}]}>{item.session.skippedCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
-                            </View>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.deleteLocalCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Deleted</Text>
-                            </View>
-                            <View style={[styles.summaryItem, {width: '33%', alignItems: 'center', paddingVertical: spacing.sm}]}>
-                                <Text style={[styles.summaryValue, {fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.error}]}>{item.session.errorCount}</Text>
-                                <Text style={[styles.summaryLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Errors</Text>
-                            </View>
-                        </View>
+                        <SessionCounters session={item.session} size="lg"/>
                     </Card>
                 );
 
@@ -644,21 +601,6 @@ const styles = StyleSheet.create({
     summaryTitle: {
         fontSize: 14,
         fontWeight: '600',
-    },
-    summaryGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-    },
-    summaryItem: {
-        width: '33%',
-        alignItems: 'center',
-    },
-    summaryValue: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    summaryLabel: {
-        fontSize: 10,
     },
     filterContainer: {
         flexDirection: 'row',

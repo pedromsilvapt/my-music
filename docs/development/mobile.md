@@ -83,6 +83,25 @@ The device options set on the device settings screen (icon, naming template, imp
 The server replaces every option on update, so always send the full set; `saveDeviceOptions`
 (`services/sync/device-options.ts`) sends the server's color back, as the app has no setting for it.
 
+## Session Counters
+
+The session cards (history list and session details, which is also where a finished sync lands) show the record counts
+through `SessionCounters` (`components/ui/SessionCounters.tsx`), in six slots defined in
+`services/sync/sessionCounters.ts`:
+
+| Slot     | Actions                                       |
+|----------|-----------------------------------------------|
+| Remote   | CreateRemote, UpdateRemote                    |
+| Local    | CreateLocal, UpdateLocal, DeleteLocal, Rename |
+| Links    | Link, Unlink, UpdateTimestamp                 |
+| Conflict | Conflict                                      |
+| Error    | Error                                         |
+| Skipped  | Skipped                                       |
+
+A slot shows an icon and value, each in its own color, for every action that has records, or a single `0` when none
+has. Every sync record action must belong to a slot (a test enforces it), so a session with records never shows only
+zeros.
+
 ## Running the App
 
 ```bash

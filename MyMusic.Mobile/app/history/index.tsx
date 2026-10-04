@@ -4,7 +4,7 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import type {SyncSessionItem} from '../../src/api/types';
 import {pruneSessions} from '../../src/api/sync';
-import {ErrorDisplay} from '../../src/components/ui';
+import {ErrorDisplay, SessionCounters} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {useTheme} from '../../src/hooks/useTheme';
 import {fetchSyncHistory} from '../../src/services/syncService';
@@ -248,31 +248,11 @@ export default function HistoryListScreen() {
 
                     <Text style={[styles.sessionDate, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>{formatDate(session.startedAt)}</Text>
 
-                    <View style={[styles.sessionStats, {flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.cardBorder}]}>
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.success}]}>{session.createRemoteCount}</Text>
-                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Created</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.info}]}>{session.updateRemoteCount}</Text>
-                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Updated</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.cardTextMuted}]}>{session.skippedCount}</Text>
-                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Skipped</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                            <Text
-                                style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.syncDownload}]}>{session.createLocalCount}</Text>
-                            <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Downloaded</Text>
-                        </View>
-                        {session.errorCount > 0 && (
-                            <View style={styles.statItem}>
-                                <Text style={[styles.statValue, {fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.error}]}>{session.errorCount}</Text>
-                                <Text style={[styles.statLabel, {fontSize: fontSize.xs, color: colors.cardTextMuted}]}>Errors</Text>
-                            </View>
-                        )}
-                    </View>
+                    <SessionCounters
+                        session={session}
+                        size="sm"
+                        style={{marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.cardBorder}}
+                    />
                 </TouchableOpacity>
             ))}
         </ScrollView>
@@ -387,21 +367,6 @@ const styles = StyleSheet.create({
     },
     sessionDate: {
         fontSize: 12,
-    },
-    sessionStats: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        borderTopWidth: 1,
-    },
-    statItem: {
-        alignItems: 'center',
-    },
-    statValue: {
-        fontSize: 14,
-        fontWeight: '700',
-    },
-    statLabel: {
-        fontSize: 10,
     },
     modalOverlay: {
         flex: 1,
