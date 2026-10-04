@@ -1,6 +1,13 @@
 import Editor, {type Monaco, type OnMount} from "@monaco-editor/react";
 import {useEffect, useRef} from "react";
 import {i18n} from "../../locales";
+import {
+    extractFieldName,
+    extractListContext,
+    extractStringContext,
+    isAfterField,
+    isAfterOperator
+} from "./filter-completion-context.ts";
 import type {FilterFieldMetadata, FilterMetadataResponse} from "./use-filter-metadata.ts";
 
 interface FilterCodeEditorProps {
@@ -31,30 +38,6 @@ interface EditorContext {
 
 const editorContexts = new Map<string, EditorContext>();
 let isProviderRegistered = false;
-
-const isAfterOperator = (text: string): boolean => {
-    const trimmed = text.trimEnd();
-    return /[=<>!~]|\b(?:contains|startsWith|endsWith|in|notIn|between|isNull|isNotNull|isTrue|isFalse)\s*$/i.test(trimmed);
-};
-
-const isAfterField = (text: string): boolean => {
-    const trimmed = text.trimEnd();
-    if (/\b(?:and|or)\s*$/i.test(trimmed)) return false;
-    return /[a-zA-Z._]+$/.test(trimmed) && !isAfterOperator(trimmed);
-};
-
-const extractFieldName = (text: string): string | null => {
-    const match = text.match(/([a-zA-Z._[\]]+)\s*(?:=|!=|>|>=|<|<=|~|contains|startsWith|endsWith|in|notIn|between)/);
-    return match ? match[1] : null;
-};
-
-const extractStringContext = (textBeforeCursor: string): { field: string; partialValue: string } | null => {
-    const match = textBeforeCursor.match(/([a-zA-Z._[\]]+)\s*(?:=|!=|>|>=|<|<=|~|contains|startsWith|endsWith|in|notIn)\s*"([^"]*)$/);
-    if (match) {
-        return {field: match[1], partialValue: match[2]};
-    }
-    return null;
-};
 
 const getFieldCompletions = (range: unknown, fields: FilterFieldMetadata[]): CompletionItem[] => {
     return fields.map((field) => ({
@@ -98,8 +81,7 @@ const getOperatorCompletions = (range: unknown): CompletionItem[] => {
     }));
 };
 
-const getValueCompletions = (range: unknown, fields: FilterFieldMetadata[], textBefore: string): CompletionItem[] => {
-    const fieldName = extractFieldName(textBefore);
+const getValueCompletions = (range: unknown, fields: FilterFieldMetadata[], fieldName: string | null): CompletionItem[] => {
     if (!fieldName) return [];
 
     const field = fields.find((f) => f.name === fieldName);
@@ -292,6 +274,12 @@ function ensureProviderRegistered(monaco: Monaco) {
                 return {suggestions};
             }
 
+            const listContext = extractListContext(textBeforeCursor);
+            if (listContext) {
+                suggestions.push(...getValueCompletions(range, fields, listContext.field));
+                return {suggestions};
+            }
+
             const isAfterQuantifierBracket = /\[\s*$/i.test(textBeforeCursor);
             if (isAfterQuantifierBracket) {
                 suggestions.push(...getQuantifierCompletions(range));
@@ -311,7 +299,7 @@ function ensureProviderRegistered(monaco: Monaco) {
             } else if (isAfterField(textBeforeWord)) {
                 suggestions.push(...getOperatorCompletions(range));
             } else if (isAfterOperator(textBeforeWord)) {
-                suggestions.push(...getValueCompletions(range, fields, textBeforeCursor));
+                suggestions.push(...getValueCompletions(range, fields, extractFieldName(textBeforeWord)));
             } else {
                 suggestions.push(
                     ...getFieldCompletions(range, fields),
