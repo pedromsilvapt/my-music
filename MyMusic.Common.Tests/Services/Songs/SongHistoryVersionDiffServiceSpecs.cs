@@ -175,13 +175,14 @@ public class SongHistoryVersionDiffServiceSpecs
     }
 
     private static SongHistoryEntity CreateHistoryRow(
-        long songId,
+        Song song,
         int revision,
         SongHistoryDelta diff,
         DateTime? createdAt = null) =>
         new()
         {
-            SongId = songId,
+            SongId = song.Id,
+            OwnerId = song.OwnerId,
             SongRevision = revision,
             Diff = diff,
             CreatedAt = createdAt ?? DateTime.UtcNow,
@@ -195,7 +196,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var otherUser = scenario.CreateUser("Other", "other");
         var otherSong = scenario.CreateSong("Other's Song", ownerId: otherUser.Id);
         var snapshot = BuildCreatedDelta(title: "Other");
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(otherSong.Id, 1, snapshot));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(otherSong, 1, snapshot));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario, userId: scenario.AdminUser.Id);
 
@@ -230,8 +231,8 @@ public class SongHistoryVersionDiffServiceSpecs
         var song2 = scenario.CreateSong("Song Two");
         var snap1 = BuildCreatedDelta(title: "Song One");
         var snap2 = BuildCreatedDelta(title: "Song Two");
-        var h1 = CreateHistoryRow(song1.Id, 1, snap1);
-        var h2 = CreateHistoryRow(song2.Id, 1, snap2);
+        var h1 = CreateHistoryRow(song1, 1, snap1);
+        var h2 = CreateHistoryRow(song2, 1, snap2);
         scenario.DbContext.SongHistories.AddRange(h1, h2);
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
@@ -254,7 +255,7 @@ public class SongHistoryVersionDiffServiceSpecs
             action: "created",
             title: new() { Old = null, New = "First Title" },
             explicitFlag: new() { Old = false, New = true });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta, createdAt));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta, createdAt));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -282,8 +283,8 @@ public class SongHistoryVersionDiffServiceSpecs
             action: "updated",
             title: new() { Old = "Old Title", New = "New Title" });
         scenario.DbContext.SongHistories.AddRange(
-            CreateHistoryRow(song.Id, 1, firstDelta, oldDate),
-            CreateHistoryRow(song.Id, 2, secondDelta, newDate));
+            CreateHistoryRow(song, 1, firstDelta, oldDate),
+            CreateHistoryRow(song, 2, secondDelta, newDate));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -310,9 +311,9 @@ public class SongHistoryVersionDiffServiceSpecs
         var snap2 = BuildDelta(action: "updated", title: new() { Old = "V1", New = "V2" });
         var snap3 = BuildDelta(action: "updated", title: new() { Old = "V2", New = "V3" });
         scenario.DbContext.SongHistories.AddRange(
-            CreateHistoryRow(song.Id, 1, snap1),
-            CreateHistoryRow(song.Id, 2, snap2),
-            CreateHistoryRow(song.Id, 3, snap3));
+            CreateHistoryRow(song, 1, snap1),
+            CreateHistoryRow(song, 2, snap2),
+            CreateHistoryRow(song, 3, snap3));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -342,7 +343,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             explicitFlag: new() { Old = false, New = true });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -395,7 +396,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             title: new() { Old = "Old Title", New = "New Title" });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -432,7 +433,7 @@ public class SongHistoryVersionDiffServiceSpecs
             action: "updated",
             coverId: new() { Old = null, New = 5 },
             cover: new() { Old = null, New = newCover });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -461,7 +462,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             explicitFlag: new() { Old = false, New = true });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -491,7 +492,7 @@ public class SongHistoryVersionDiffServiceSpecs
             action: "updated",
             coverId: new() { Old = 5, New = null },
             cover: new() { Old = oldCover, New = null });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -523,7 +524,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             artists: new() { Old = oldArtists, New = newArtists });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -556,7 +557,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             genres: new() { Old = oldGenres, New = newGenres });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -587,7 +588,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             devices: new() { Old = oldDevices, New = newDevices });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -614,7 +615,7 @@ public class SongHistoryVersionDiffServiceSpecs
             action: "updated",
             checksum: new() { Old = "oldhash", New = "newhash" },
             checksumAlgorithm: new() { Old = "MD5", New = "XxHash128" });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -643,7 +644,7 @@ public class SongHistoryVersionDiffServiceSpecs
             action: "updated",
             albumId: new() { Old = 1, New = 2 },
             album: new() { Old = oldAlbum, New = newAlbum });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -678,7 +679,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             sources: new() { Old = oldSources, New = newSources });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -709,7 +710,7 @@ public class SongHistoryVersionDiffServiceSpecs
                     new() { Id = 11, Kind = SongMergeKind.SoundalikeDelete },
                 ],
             });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -741,7 +742,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             cover: new() { Old = null, New = newCover });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -771,7 +772,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             cover: new() { Old = null, New = newCover });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -805,7 +806,7 @@ public class SongHistoryVersionDiffServiceSpecs
             coverId: 9,
             createdAt: createdAt,
             modifiedAt: createdAt);
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta, createdAt));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta, createdAt));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -844,7 +845,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var delta = BuildDelta(
             action: "updated",
             album: new() { Old = oldAlbum, New = newAlbum });
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -886,7 +887,7 @@ public class SongHistoryVersionDiffServiceSpecs
         delta.Album!.New!.ArtistId.ShouldBeNull();
         delta.Album!.Old!.ArtistName.ShouldBeNull();
         delta.Album!.New!.ArtistName.ShouldBeNull();
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, delta));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, delta));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -910,7 +911,7 @@ public class SongHistoryVersionDiffServiceSpecs
         var scenario = new Scenario();
         var song = scenario.CreateSong("Doomed");
         var snapshot = BuildCreatedDelta(title: "Doomed");
-        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song.Id, 1, snapshot));
+        scenario.DbContext.SongHistories.Add(CreateHistoryRow(song, 1, snapshot));
         await scenario.DbContext.SaveChangesAsync();
         var songId = song.Id;
         var historyId = scenario.DbContext.SongHistories.First(h => h.SongId == songId).Id;

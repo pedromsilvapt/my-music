@@ -43,6 +43,7 @@ public class SongHistoryBaselineBackfillServiceSpecs
         _scenario.DbContext.SongHistories.Add(new SongHistoryEntity
         {
             SongId = song.Id,
+            OwnerId = song.OwnerId,
             SongRevision = revision,
             Diff = new SongHistoryDelta
             {
@@ -59,6 +60,7 @@ public class SongHistoryBaselineBackfillServiceSpecs
         _scenario.DbContext.SongHistoryQueues.Add(new SongHistoryQueue
         {
             SongId = song.Id,
+            OwnerId = song.OwnerId,
             SongRevision = 1,
             Data = new SongSnapshot
             {
@@ -91,6 +93,7 @@ public class SongHistoryBaselineBackfillServiceSpecs
         recorded.ShouldBe(1);
         var baseline = HistoryOf(song).ShouldHaveSingleItem();
         baseline.SongRevision.ShouldBe(1);
+        baseline.OwnerId.ShouldBe(song.OwnerId);
         baseline.Action.ShouldBe("created");
         baseline.Diff.Action.ShouldBe("created");
         baseline.Diff.Title.ShouldNotBeNull();

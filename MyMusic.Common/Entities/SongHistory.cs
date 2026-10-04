@@ -14,6 +14,10 @@ public class SongHistory
 
     public long SongId { get; set; }
 
+    /// <summary>The song's owner, kept here because the history outlives the song.</summary>
+    public User Owner { get; set; } = null!;
+    public long OwnerId { get; set; }
+
     public int SongRevision { get; set; }
 
     public required SongHistoryDelta Diff { get; set; }

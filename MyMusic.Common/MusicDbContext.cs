@@ -221,10 +221,15 @@ public class MusicDbContext : DbContext
 
         // SongHistory entity configuration
         // No FK on SongId: individual song deletion preserves history (triggers
-        // enqueue snapshots, worker processes them). UserDeleteService cleans up
-        // both SongHistory and SongHistoryQueue when a user is deleted.
+        // enqueue snapshots, worker processes them). The owner FK cascades,
+        // removing the rows when the user is deleted.
         modelBuilder.Entity<SongHistory>(entity =>
         {
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             var jsonConverter = new ValueConverter<SongHistoryDelta, string>(
                 v => JsonSerializer.Serialize(v, SongHistoryJsonOptions.Options),
                 v => DeserializeSongHistoryDelta(v));
@@ -243,10 +248,15 @@ public class MusicDbContext : DbContext
 
         // SongHistoryQueue entity configuration
         // No FK on SongId: individual song deletion preserves queue entries
-        // (triggers enqueue snapshots for the worker). UserDeleteService cleans
-        // up both SongHistoryQueue and SongHistory when a user is deleted.
+        // (triggers enqueue snapshots for the worker). The owner FK cascades,
+        // removing the entries when the user is deleted.
         modelBuilder.Entity<SongHistoryQueue>(entity =>
         {
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             var jsonConverter = new ValueConverter<SongSnapshot, string>(
                 v => JsonSerializer.Serialize(v, SongHistoryJsonOptions.Options),
                 v => DeserializeSongSnapshot(v));

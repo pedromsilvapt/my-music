@@ -17,6 +17,7 @@ public class SongHistoryPendingServiceSpecs
         var entry = new SongHistoryQueue
         {
             SongId = songId,
+            OwnerId = scenario.SongOwnerId(songId),
             // Revisions are unique per song
             SongRevision = scenario.DbContext.SongHistoryQueues.Count(q => q.SongId == songId) + 1,
             Data = new SongSnapshot

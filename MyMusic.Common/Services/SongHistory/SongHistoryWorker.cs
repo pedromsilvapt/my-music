@@ -486,6 +486,7 @@ public class SongHistoryWorker(
             var history = new SongHistoryEntity
             {
                 SongId = songId,
+                OwnerId = orderedGroups[i].Representative.OwnerId,
                 SongRevision = maxHistoryRevision + 1 + i,
                 Diff = delta,
                 DiffFormat = "delta",

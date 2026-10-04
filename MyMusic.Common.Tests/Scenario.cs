@@ -59,6 +59,13 @@ public class Scenario
         return user;
     }
 
+    /// <summary>
+    /// The owner to record on a song's history rows and queue entries: the song's owner, or the administrator when
+    /// the song does not exist (anymore).
+    /// </summary>
+    public long SongOwnerId(long songId) =>
+        DbContext.Songs.Where(s => s.Id == songId).Select(s => (long?)s.OwnerId).FirstOrDefault() ?? AdminUser.Id;
+
     public Artist CreateArtist(string name, long? ownerId = null)
     {
         ownerId ??= AdminUser.Id;

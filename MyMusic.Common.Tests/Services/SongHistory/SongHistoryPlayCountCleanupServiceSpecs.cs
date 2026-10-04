@@ -23,6 +23,7 @@ public class SongHistoryPlayCountCleanupServiceSpecs
         _scenario.DbContext.SongHistories.Add(new SongHistoryEntity
         {
             SongId = songId,
+            OwnerId = _scenario.SongOwnerId(songId),
             SongRevision = revision,
             Diff = diff,
             Action = diff.Action ?? SongHistoryEntity.UpdatedAction,

@@ -9,6 +9,13 @@ public class SongHistoryQueue
 
     public long SongId { get; set; }
 
+    /// <summary>
+    /// The song's owner, kept here because the entry outlives the song. In PostgreSQL a trigger fills it in from
+    /// <see cref="Data"/>, as the triggers queueing the entries do not set it.
+    /// </summary>
+    public User Owner { get; set; } = null!;
+    public long OwnerId { get; set; }
+
     public int SongRevision { get; set; }
 
     /// <summary>

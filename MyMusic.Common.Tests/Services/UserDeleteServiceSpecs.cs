@@ -35,11 +35,13 @@ public class UserDeleteServiceSpecs
         int revision,
         long? transactionId = null,
         int errorCount = 0,
-        DateTime? processedAt = null)
+        DateTime? processedAt = null,
+        long? ownerId = null)
     {
         var entry = new SongHistoryQueue
         {
             SongId = songId,
+            OwnerId = ownerId ?? scenario.SongOwnerId(songId),
             SongRevision = revision,
             TransactionId = transactionId,
             Data = new SongSnapshot
@@ -63,11 +65,16 @@ public class UserDeleteServiceSpecs
         return entry;
     }
 
-    private static SongHistoryEntity CreateHistoryEntry(Scenario scenario, long songId, int revision)
+    private static SongHistoryEntity CreateHistoryEntry(
+        Scenario scenario,
+        long songId,
+        int revision,
+        long? ownerId = null)
     {
         var entry = new SongHistoryEntity
         {
             SongId = songId,
+            OwnerId = ownerId ?? scenario.SongOwnerId(songId),
             SongRevision = revision,
             Diff = new SongHistoryDelta { Action = "updated" },
             CreatedAt = DateTime.UtcNow,
@@ -291,6 +298,52 @@ public class UserDeleteServiceSpecs
         // Deleted user's entries are gone.
         scenario.DbContext.SongHistories.Any(h => h.SongId == song.Id).ShouldBeFalse();
         scenario.DbContext.SongHistoryQueues.Any(q => q.SongId == song.Id).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DeletesSongHistoryOfSongsThatNoLongerExist()
+    {
+        // Arrange — both users have history and queue entries left behind by songs deleted earlier.
+        var (service, scenario, _) = CreateService();
+        var user = scenario.CreateUser("Test", "testuser");
+        var otherUser = scenario.CreateUser("Other", "otheruser");
+        CreateHistoryEntry(scenario, songId: 1001, revision: 1, ownerId: user.Id);
+        CreateQueueEntry(scenario, songId: 1001, revision: 2, ownerId: user.Id);
+        CreateHistoryEntry(scenario, songId: 1002, revision: 1, ownerId: otherUser.Id);
+        CreateQueueEntry(scenario, songId: 1002, revision: 2, ownerId: otherUser.Id);
+
+        // Act
+        await service.DeleteAsync(user.Id);
+
+        // Assert — only the deleted user's rows are gone.
+        scenario.DbContext.SongHistories.Select(h => h.SongId).ToList().ShouldBe([1002]);
+        scenario.DbContext.SongHistoryQueues.Select(q => q.SongId).ToList().ShouldBe([1002]);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_DeletesEveryLevelOfAMergeChain()
+    {
+        // Arrange — song 1001 was merged into 1002, which was merged into 1003, which was then deleted: none of
+        // the three songs exists anymore, and each left its history behind.
+        var (service, scenario, _) = CreateService();
+        var user = scenario.CreateUser("Test", "testuser");
+        scenario.DbContext.SongMerges.AddRange(
+            new SongMerge { KeptSongId = 1002, MergedSongId = 1001, OwnerId = user.Id, MergedAt = DateTime.UtcNow },
+            new SongMerge { KeptSongId = 1003, MergedSongId = 1002, OwnerId = user.Id, MergedAt = DateTime.UtcNow });
+        scenario.DbContext.SaveChanges();
+        foreach (var songId in new long[] { 1001, 1002, 1003 })
+        {
+            CreateHistoryEntry(scenario, songId, revision: 1, ownerId: user.Id);
+            CreateQueueEntry(scenario, songId, revision: 2, ownerId: user.Id);
+        }
+
+        // Act
+        await service.DeleteAsync(user.Id);
+
+        // Assert
+        scenario.DbContext.SongMerges.ShouldBeEmpty();
+        scenario.DbContext.SongHistories.ShouldBeEmpty();
+        scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
     }
 
     [Fact]

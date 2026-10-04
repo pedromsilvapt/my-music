@@ -26,17 +26,12 @@ public class UserDeleteService(
         var username = user.Username;
         logger.LogInformation("Deleting user {UserId} ({Username})", id, username);
 
-        // Collect the user's song IDs before any deletion so we can clean up
-        // SongHistory and SongHistoryQueue (which have no FK to Songs and are
-        // not cascaded). Pre-cleanup removes dead-lettered queue entries that
-        // would otherwise block song deletion via the BEFORE DELETE trigger.
-        var songIds = await db.Songs
-            .Where(s => s.OwnerId == id)
-            .Select(s => s.Id)
-            .ToArrayAsync(cancellationToken);
-
-        await DeleteSongHistoryQueuesAsync(songIds, cancellationToken);
-        await DeleteSongHistoriesAsync(songIds, cancellationToken);
+        // SongHistory and SongHistoryQueue have no FK to Songs, so they are
+        // removed by owner, which also covers the songs deleted or merged
+        // earlier. This removes the dead-lettered queue entries that would
+        // otherwise block song deletion via the BEFORE DELETE trigger.
+        await DeleteSongHistoryQueuesAsync(id, cancellationToken);
+        await DeleteSongHistoriesAsync(id, cancellationToken);
 
         await DeleteDeviceSyncSessionRecordsAsync(id, cancellationToken);
         await DeleteDeviceSyncSessionsAsync(id, cancellationToken);
@@ -59,13 +54,11 @@ public class UserDeleteService(
         await DeleteGenresAsync(id, cancellationToken);
         await DeleteDevicesAsync(id, cancellationToken);
 
-        // Post-cleanup: the deletion steps above fire PostgreSQL triggers that
-        // enqueue new SongHistoryQueue entries (song BEFORE DELETE, artist/genre/
-        // source/device AFTER INSERT/DELETE). Remove those trigger-created
-        // entries along with any SongHistory rows the worker may have produced
-        // between the pre-cleanup and now.
-        await DeleteSongHistoryQueuesAsync(songIds, cancellationToken);
-        await DeleteSongHistoriesAsync(songIds, cancellationToken);
+        // The deletion steps above fire PostgreSQL triggers that enqueue new
+        // SongHistoryQueue entries (song BEFORE DELETE, artist/genre/source/
+        // device AFTER INSERT/DELETE), and the worker may turn them into
+        // SongHistory rows. Deleting the user below cascades to all of them,
+        // along with the user's SongMerges.
 
         user.CurrentQueueId = null;
         await db.SaveChangesAsync(cancellationToken);
@@ -327,21 +320,19 @@ public class UserDeleteService(
         logger.LogDebug("Deleted {Count} Playlists for user {UserId}", playlists, ownerId);
     }
 
-    private async Task DeleteSongHistoryQueuesAsync(long[] songIds, CancellationToken ct)
+    private async Task DeleteSongHistoryQueuesAsync(long ownerId, CancellationToken ct)
     {
-        if (songIds.Length == 0) return;
         var count = await db.SongHistoryQueues
-            .Where(q => songIds.Contains(q.SongId))
+            .Where(q => q.OwnerId == ownerId)
             .ExecuteDeleteAsync(ct);
-        logger.LogDebug("Deleted {Count} SongHistoryQueues for user", count);
+        logger.LogDebug("Deleted {Count} SongHistoryQueues for user {UserId}", count, ownerId);
     }
 
-    private async Task DeleteSongHistoriesAsync(long[] songIds, CancellationToken ct)
+    private async Task DeleteSongHistoriesAsync(long ownerId, CancellationToken ct)
     {
-        if (songIds.Length == 0) return;
         var count = await db.SongHistories
-            .Where(h => songIds.Contains(h.SongId))
+            .Where(h => h.OwnerId == ownerId)
             .ExecuteDeleteAsync(ct);
-        logger.LogDebug("Deleted {Count} SongHistories for user", count);
+        logger.LogDebug("Deleted {Count} SongHistories for user {UserId}", count, ownerId);
     }
 }

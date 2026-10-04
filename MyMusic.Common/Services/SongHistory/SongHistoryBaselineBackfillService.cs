@@ -90,6 +90,7 @@ public class SongHistoryBaselineBackfillService(
             .Select(s => new
             {
                 s.CreatedAt,
+                s.OwnerId,
                 HasBaseline = db.SongHistories.Any(h =>
                     h.SongId == s.Id && h.Action == SongHistoryEntity.CreatedAction),
                 HasPendingChanges = db.SongHistoryQueues.Any(q => q.SongId == s.Id && q.ProcessedAt == null),
@@ -157,6 +158,7 @@ public class SongHistoryBaselineBackfillService(
         db.SongHistories.Add(new SongHistoryEntity
         {
             SongId = songId,
+            OwnerId = song.OwnerId,
             SongRevision = 1,
             Diff = baseline,
             DiffFormat = "delta",

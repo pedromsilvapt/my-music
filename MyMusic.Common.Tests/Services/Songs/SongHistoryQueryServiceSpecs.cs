@@ -21,11 +21,12 @@ public class SongHistoryQueryServiceSpecs
         return (service, currentUser);
     }
 
-    private static SongHistoryEntity CreateHistoryRow(long songId, int revision, string? action = null)
+    private static SongHistoryEntity CreateHistoryRow(Song song, int revision, string? action = null)
     {
         return new SongHistoryEntity
         {
-            SongId = songId,
+            SongId = song.Id,
+            OwnerId = song.OwnerId,
             SongRevision = revision,
             Diff = new SongHistoryDelta { Action = action ?? (revision == 1 ? "created" : "updated") },
             CreatedAt = DateTime.UtcNow,
@@ -40,9 +41,9 @@ public class SongHistoryQueryServiceSpecs
         var song = scenario.CreateSong("History Song");
         // Insert rows out of order (revisions 3, 1, 2) to verify ascending ordering.
         scenario.DbContext.SongHistories.AddRange(
-            CreateHistoryRow(song.Id, 3),
-            CreateHistoryRow(song.Id, 1),
-            CreateHistoryRow(song.Id, 2));
+            CreateHistoryRow(song, 3),
+            CreateHistoryRow(song, 1),
+            CreateHistoryRow(song, 2));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario);
 
@@ -77,8 +78,8 @@ public class SongHistoryQueryServiceSpecs
         var otherUser = scenario.CreateUser("Other", "other");
         var otherSong = scenario.CreateSong("Other's Song", ownerId: otherUser.Id);
         scenario.DbContext.SongHistories.AddRange(
-            CreateHistoryRow(otherSong.Id, 1),
-            CreateHistoryRow(otherSong.Id, 2));
+            CreateHistoryRow(otherSong, 1),
+            CreateHistoryRow(otherSong, 2));
         await scenario.DbContext.SaveChangesAsync();
         var (service, _) = CreateService(scenario, userId: scenario.AdminUser.Id);
 
@@ -96,8 +97,8 @@ public class SongHistoryQueryServiceSpecs
         var scenario = new Scenario();
         var song = scenario.CreateSong("Doomed Song");
         scenario.DbContext.SongHistories.AddRange(
-            CreateHistoryRow(song.Id, 1),
-            CreateHistoryRow(song.Id, 2));
+            CreateHistoryRow(song, 1),
+            CreateHistoryRow(song, 2));
         await scenario.DbContext.SaveChangesAsync();
         var songId = song.Id;
 

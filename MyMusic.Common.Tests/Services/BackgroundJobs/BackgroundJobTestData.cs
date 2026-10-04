@@ -84,6 +84,7 @@ internal static class BackgroundJobTestData
         var entry = new SongHistoryQueue
         {
             SongId = songId,
+            OwnerId = scenario.SongOwnerId(songId),
             SongRevision = revision,
             TransactionId = 1000 + revision,
             Data = new SongSnapshot
@@ -124,6 +125,7 @@ internal static class BackgroundJobTestData
         var history = new Entities.SongHistory
         {
             SongId = songId,
+            OwnerId = scenario.SongOwnerId(songId),
             SongRevision = revision,
             Diff = diff,
             DiffFormat = "delta",

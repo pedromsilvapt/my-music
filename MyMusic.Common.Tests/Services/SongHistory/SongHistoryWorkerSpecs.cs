@@ -107,11 +107,13 @@ public class SongHistoryWorkerSpecs
         long songId,
         int revision,
         SongSnapshot data,
-        long? transactionId = null)
+        long? transactionId = null,
+        long? ownerId = null)
     {
         var entry = new SongHistoryQueue
         {
             SongId = songId,
+            OwnerId = ownerId ?? scenario.SongOwnerId(songId),
             SongRevision = revision,
             TransactionId = transactionId,
             Data = data,
@@ -182,6 +184,24 @@ public class SongHistoryWorkerSpecs
         delta.Cover.ShouldBeNull();
 
         scenario.DbContext.SongHistoryQueues.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ProcessQueue_HistoryKeepsTheOwnerOfTheQueueEntry()
+    {
+        // The song was deleted, so its queue entry is the only record left of who owned it
+        var (worker, scenario, thumbnail, snapshot) = CreateWorker();
+        var owner = scenario.CreateUser("Owner", "owner");
+        var deletedSnapshot = BuildSnapshot(title: "Deleted Song", songId: 1, action: "deleted");
+        InsertQueueEntry(scenario, songId: 1, revision: 1, deletedSnapshot, ownerId: owner.Id);
+        snapshot.GetCurrentSnapshotAsync(1, true, Arg.Any<CancellationToken>()).Returns((SongSnapshot?)null);
+
+        await worker.ProcessQueueAsync(
+            scenario.DbContext, _diffService, thumbnail, snapshot, CancellationToken.None);
+
+        var history = scenario.DbContext.SongHistories.Single();
+        history.Action.ShouldBe("deleted");
+        history.OwnerId.ShouldBe(owner.Id);
     }
 
     [Fact]
