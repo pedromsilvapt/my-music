@@ -213,7 +213,7 @@ export function useDeviceSessionsSchema(deviceId: number) {
                 displayName: t("devices:schema.columns.repositoryPath"),
                 render: row => (
                     <Tooltip label={row.repositoryPath || '-'} openDelay={500}>
-                        <Code style={{maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <Code style={{display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                             {row.repositoryPath || '-'}
                         </Code>
                     </Tooltip>

@@ -90,27 +90,10 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         useSensor(KeyboardSensor),
     );
 
-    const columns = useMemo(() => {
-        const columns = propSchema.columns.filter(col => !col.hidden);
-
-        const fixedWidth = columns
-            .map(c => getColumnWidthPixels(c.width))
-            .filter(width => width != null)
-            .reduce((sum, width) => sum + width, 0);
-
-        const totalWidth = Math.max(tableWidth, fixedWidth);
-        const freeWidth = totalWidth - fixedWidth - 100;
-
-        const freeFractions = columns
-            .map(c => getColumnWidthFractions(c.width))
-            .filter(width => width != null)
-            .reduce((sum, width) => sum + width, 0);
-
-        return columns.map(col => ({
-            ...col,
-            width: getActualColumnWidth(col.width, freeWidth, freeFractions),
-        }) as CollectionSchemaColumnCalculated<M>);
-    }, [propSchema.columns, tableWidth]);
+    const columns = useMemo(
+        () => computeColumnWidths(propSchema.columns, tableWidth),
+        [propSchema.columns, tableWidth]
+    );
 
     const parentRef = useRef<HTMLDivElement>(null)
 
@@ -237,8 +220,10 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
 
     const tableContent = (
         <Box style={autoHeight ? undefined : {height: `${Math.max(height ?? 0, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
+            {/* Fixed layout: widths come from the header only, so they don't shift as virtualized rows swap */}
             <Table highlightOnHover ref={tableRef} style={{
                 borderCollapse: 'separate',
+                tableLayout: 'fixed',
             }}>
                 <Table.Thead ref={tableHeaderRef}>
                     <Table.Tr>
@@ -274,7 +259,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                                 </Table.Th>
                             );
                         })}
-                        <Table.Th key="__actions" style={{width: "60px"}}>{/* Actions Menu */}</Table.Th>
+                        <Table.Th key="__actions" style={{width: ACTIONS_COLUMN_WIDTH}}>{/* Actions Menu */}</Table.Th>
                     </Table.Tr>
                 </Table.Thead>
                 {sortable ? (
@@ -307,7 +292,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
             >
-                <Box ref={parentRef} style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
+                <Box ref={parentRef} data-testid="collection-table-scroll" style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
                     {tableContent}
                 </Box>
                 <DragOverlay>
@@ -328,7 +313,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
                                     {col.render(draggedItem, propItems.findIndex(item => propSchema.key(item) === activeId), propItems)}
                                 </Box>
                             ))}
-                            <Box style={{display: 'table-cell', width: '60px'}}/>
+                            <Box style={{display: 'table-cell', width: ACTIONS_COLUMN_WIDTH}}/>
                         </Box>
                     )}
                     {isDraggingMultiple && (
@@ -341,7 +326,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         );
     }
 
-    return <Box ref={parentRef} style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
+    return <Box ref={parentRef} data-testid="collection-table-scroll" style={autoHeight ? undefined : {height: height, overflowY: "auto"}}>
         {tableContent}
     </Box>;
 }
@@ -517,7 +502,8 @@ function CollectionTableRowInner<M>(props: CollectionTableRowProps<M>) {
                               data-testid={`collection-cell-${col.name}-${itemId}`}
                               style={{
                                   borderBottom: 'calc(0.0625rem * var(--mantine-scale)) solid var(--table-border-color)',
-                                  textAlign: col.align ?? 'left'
+                                  textAlign: col.align ?? 'left',
+                                  overflow: 'hidden'
                               }}>
                         {col.render(row, virtualRow.index, items)}
                     </Table.Td>
@@ -547,6 +533,38 @@ const CollectionTableRow = React.memo(CollectionTableRowInner, areTableRowPropsE
 
 export interface CollectionSchemaColumnCalculated<M> extends CollectionSchemaColumn<M> {
     width?: number;
+}
+
+export const ACTIONS_COLUMN_WIDTH = 60;
+// Keeps fractional columns usable when the fixed ones leave no room: the table scrolls sideways instead
+const MIN_FRACTION_WIDTH = 60;
+
+/**
+ * Resolves the schema widths (pixels or `fr` fractions) of the visible columns into pixels,
+ * so that together with the actions column they fill the table width.
+ * Columns without a width take one fraction of the free space.
+ */
+export function computeColumnWidths<M>(schemaColumns: CollectionSchemaColumn<M>[], tableWidth: number): CollectionSchemaColumnCalculated<M>[] {
+    const columns = schemaColumns
+        .filter(col => !col.hidden)
+        .map(col => ({...col, width: col.width ?? '1fr'}));
+
+    const fixedWidth = columns
+        .map(c => getColumnWidthPixels(c.width))
+        .filter(width => width != null)
+        .reduce((sum, width) => sum + width, 0);
+
+    const freeFractions = columns
+        .map(c => getColumnWidthFractions(c.width))
+        .filter(width => width != null)
+        .reduce((sum, width) => sum + width, 0);
+
+    const freeWidth = Math.max(freeFractions * MIN_FRACTION_WIDTH, tableWidth - fixedWidth - ACTIONS_COLUMN_WIDTH);
+
+    return columns.map(col => ({
+        ...col,
+        width: getActualColumnWidth(col.width, freeWidth, freeFractions),
+    }) as CollectionSchemaColumnCalculated<M>);
 }
 
 export function getActualColumnWidth(width: unknown, freeWidth: number, freeFractions: number) {

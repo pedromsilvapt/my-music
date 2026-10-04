@@ -14,12 +14,12 @@ export default function SessionRecordSong({songInfo}: SessionRecordSongProps) {
 
     return (
         <Link to={`/songs/$songId`} params={{songId: String(songInfo.id)}} style={{textDecoration: 'none'}}>
-            <Flex gap="sm" align="center">
+            <Flex gap="sm" align="center" wrap="nowrap">
                 <Artwork 
                     id={songInfo.coverId ? parseInt(songInfo.coverId, 10) : null} 
                     size={40}
                 />
-                <div>
+                <div style={{minWidth: 0}}>
                     <Text fw={500} lineClamp={1}>
                         {songInfo.title}
                     </Text>

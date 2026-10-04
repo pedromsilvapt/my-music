@@ -70,7 +70,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
                 displayName: t("devices:schema.columns.filePath"),
                 render: row => (
                     <Tooltip label={row.filePath} openDelay={500}>
-                        <Code style={{maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                        <Code style={{display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                             {row.filePath}
                         </Code>
                     </Tooltip>
@@ -100,7 +100,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
                     const formatted = formatData(row.data);
                     return formatted !== '-' ? (
                         <Tooltip label={formatted} openDelay={500}>
-                            <Text lineClamp={1} style={{maxWidth: '200px'}}>
+                            <Text lineClamp={1}>
                                 {formatted}
                             </Text>
                         </Tooltip>
@@ -113,7 +113,7 @@ export function useSessionRecordsSchema(deviceId: number, sessionId: number) {
                 displayName: t("devices:schema.columns.reason"),
                 render: row => row.reason ? (
                     <Tooltip label={row.reason} openDelay={500}>
-                        <Text lineClamp={1} style={{maxWidth: '200px'}}>
+                        <Text lineClamp={1}>
                             {row.reason}
                         </Text>
                     </Tooltip>

@@ -20,6 +20,29 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         await SearchInput.FillAsync(text);
     }
 
+    public ILocator ColumnHeaders => Root.GetByRole(AriaRole.Columnheader);
+
+    private ILocator TableScrollArea => Root.GetByTestId("collection-table-scroll");
+
+    /// <summary>
+    /// Rendered width, in pixels, of each column header of the table view, in display order.
+    /// </summary>
+    public async Task<double[]> GetColumnHeaderWidthsAsync()
+    {
+        return await ColumnHeaders.EvaluateAllAsync<double[]>(
+            "headers => headers.map(header => header.getBoundingClientRect().width)");
+    }
+
+    /// <summary>
+    /// Scrolls the table view all the way down, waiting for the last of <paramref name="totalRows"/> rows
+    /// to be rendered by the virtualizer.
+    /// </summary>
+    public async Task ScrollTableToEndAsync(int totalRows)
+    {
+        await TableScrollArea.EvaluateAsync("area => area.scrollTo(0, area.scrollHeight)");
+        await Assertions.Expect(Root.Locator($"tr[data-index=\"{totalRows - 1}\"]")).ToBeVisibleAsync();
+    }
+
     public async Task<int> GetRowCountAsync()
     {
         return await Rows.CountAsync();
