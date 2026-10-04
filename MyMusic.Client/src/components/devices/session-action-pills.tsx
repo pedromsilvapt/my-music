@@ -2,7 +2,7 @@ import {useTranslation} from "react-i18next";
 import {Badge, Group} from "@mantine/core";
 import {IconCheck, IconPointFilled} from "@tabler/icons-react";
 import type {SyncRecordAction, SyncSessionItem} from "../../model";
-import {buildActionFilter, getActionColor, getActionCount, parseActionFilter, SYNC_RECORD_ACTIONS} from "./sync-record-action.ts";
+import {buildActionFilter, getActionColor, getActionCount, isActionFilterable, parseActionFilter, SYNC_RECORD_ACTIONS} from "./sync-record-action.ts";
 
 interface SessionActionPillsProps {
     session?: SyncSessionItem;
@@ -12,7 +12,8 @@ interface SessionActionPillsProps {
 
 /**
  * One pill per sync record action, with the session's record count. Clicking a pill toggles that
- * action in the advanced filter expression; pills with no records are disabled.
+ * action in the advanced filter expression; pills with no records are disabled, except Conflict,
+ * whose count leaves out the resolved conflicts that are still listed.
  */
 export default function SessionActionPills({session, filter, onFilterChange}: SessionActionPillsProps) {
     const {t} = useTranslation(["devices"]);
@@ -31,7 +32,7 @@ export default function SessionActionPills({session, filter, onFilterChange}: Se
             {SYNC_RECORD_ACTIONS.map(action => {
                 const count = session ? getActionCount(session, action) : 0;
                 const isSelected = selected.includes(action);
-                const disabled = count === 0;
+                const disabled = !session || !isActionFilterable(session, action);
                 return (
                     <Badge
                         key={action}

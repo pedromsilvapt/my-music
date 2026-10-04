@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
-import {buildActionFilter, parseActionFilter} from './sync-record-action';
+import type {SyncSessionItem} from '../../model';
+import {buildActionFilter, isActionFilterable, parseActionFilter} from './sync-record-action';
 
 describe('buildActionFilter', () => {
     it('returns an empty expression when no actions are selected', () => {
@@ -41,5 +42,21 @@ describe('parseActionFilter', () => {
         expect(parseActionFilter('filePath contains "abc"')).toBeNull();
         expect(parseActionFilter('action = "Error" and filePath contains "abc"')).toBeNull();
         expect(parseActionFilter('action != "Error"')).toBeNull();
+    });
+});
+
+describe('isActionFilterable', () => {
+    const session = {createRemoteCount: 2, skippedCount: 0, conflictCount: 0} as SyncSessionItem;
+
+    it('is true for an action with records', () => {
+        expect(isActionFilterable(session, 'CreateRemote')).toBe(true);
+    });
+
+    it('is false for an action with no records', () => {
+        expect(isActionFilterable(session, 'Skipped')).toBe(false);
+    });
+
+    it('is true for Conflict with a zero count, as resolved conflicts are not counted', () => {
+        expect(isActionFilterable(session, 'Conflict')).toBe(true);
     });
 });

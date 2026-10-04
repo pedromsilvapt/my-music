@@ -53,6 +53,15 @@ export function getActionCount(session: SyncSessionItem, action: SyncRecordActio
 }
 
 /**
+ * Whether filtering the session's records by the given action can return any.
+ * The conflict count only covers the unresolved conflicts, while the resolved `Conflict` records
+ * are kept, so a session can have them even when the count is zero.
+ */
+export function isActionFilterable(session: SyncSessionItem, action: SyncRecordAction): boolean {
+    return action === SyncRecordAction.Conflict || getActionCount(session, action) > 0;
+}
+
+/**
  * Builds the advanced filter expression selecting records of the given actions.
  * Actions are emitted in enum order so the expression is stable regardless of click order.
  */
