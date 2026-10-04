@@ -1,7 +1,6 @@
-import {File} from 'expo-file-system';
 import * as SecureStore from 'expo-secure-store';
 import {getServerUrl} from '../services/configService';
-import {toFileUri} from '../services/pathUtils';
+import {downloadFile} from '../../modules/repo-files';
 import {apiMultipartRequest, apiRequest} from './client';
 import type {AcknowledgeActionRequest, PruneSessionsRequest, ReportSyncErrorRequest, SyncCheckRequest, SyncResolveConflictsRequest, SyncStartRequest} from './types';
 import {
@@ -143,14 +142,15 @@ export async function getSessionRecords(
 /**
  * Downloads the file of a song to the given local path, replacing any file already there.
  * The download is streamed to disk natively: React Native's Blob cannot be read as bytes
- * (it has no `arrayBuffer()`), and a song should not be held in memory anyway.
+ * (it has no `arrayBuffer()`), and a song should not be held in memory anyway. It goes through the
+ * repo-files module because expo-file-system cannot create files in shared storage.
  */
 export async function downloadSong(songId: number, destinationPath: string): Promise<void> {
     const headers = await getAuthHeaders();
     const url = `${getServerUrl()}/songs/${songId}/download`;
 
     try {
-        await File.downloadFileAsync(url, new File(toFileUri(destinationPath)), { headers, idempotent: true });
+        await downloadFile(url, headers, destinationPath);
     } catch (e) {
         throw new Error(`Failed to download song ${songId}: ${e instanceof Error ? e.message : String(e)}`);
     }

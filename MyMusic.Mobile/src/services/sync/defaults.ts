@@ -30,6 +30,7 @@ import { getScanner } from '../scannerRegistry';
 import { toFileUri } from '../pathUtils';
 import { useSyncStore } from '../../stores/syncStore';
 import { hashFile } from '../../../modules/xxhash';
+import * as repoFiles from '../../../modules/repo-files';
 import type {
     IFileOps,
     IFileSystemScanner,
@@ -112,6 +113,11 @@ export function createDefaultScanner(scannerType: 'fileSystem' | 'mediaLibrary' 
     };
 }
 
+/**
+ * File operations of the sync. Reads go through expo-file-system; everything that writes to the
+ * repository goes through the repo-files module, since expo-file-system rejects any target that
+ * does not exist yet in shared storage.
+ */
 export function createDefaultFileOps(): IFileOps {
     return {
         fileExists: (path: string) => {
@@ -121,25 +127,11 @@ export function createDefaultFileOps(): IFileOps {
             return new Directory(toFileUri(path)).exists;
         },
         ensureDirectory: async (path: string) => {
-            const file = new File(toFileUri(path));
-            const dir = file.parentDirectory;
-            if (dir && !dir.exists) {
-                dir.create();
-            }
+            await repoFiles.ensureDirectory(path.substring(0, path.lastIndexOf('/')));
         },
-        deleteFile: async (path: string) => {
-            await new File(toFileUri(path)).delete();
-        },
-        moveFile: async (fromPath: string, toPath: string) => {
-            const fromFile = new File(toFileUri(fromPath));
-            const toFile = new File(toFileUri(toPath));
-            fromFile.move(toFile);
-        },
-        copyFile: async (fromPath: string, toPath: string) => {
-            const fromFile = new File(toFileUri(fromPath));
-            const toFile = new File(toFileUri(toPath));
-            fromFile.copy(toFile);
-        },
+        deleteFile: repoFiles.deleteFile,
+        moveFile: repoFiles.moveFile,
+        copyFile: repoFiles.copyFile,
         computeChecksum: async (path: string, algorithm: string) => {
             if (algorithm !== 'XxHash128') {
                 throw new Error(`Unsupported checksum algorithm: ${algorithm}`);

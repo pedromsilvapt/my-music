@@ -14,6 +14,7 @@ import {
 import {orchestrateSync} from './sync/orchestrator';
 import {type SyncProgress, useSyncStore} from '../stores/syncStore';
 import {getDeviceId, getRepositoryPath} from './configService';
+import {ensureRepositoryWriteAccess, MISSING_ALL_FILES_ACCESS_MESSAGE} from './storageAccess';
 
 import {SyncCancelledError} from './sync/errors';
 export {SyncCancelledError};
@@ -48,6 +49,11 @@ export async function runSync(
     }
 
     const options = useSyncStore.getState().options;
+
+    // A dry run writes nothing to the device, so it does not need the permission
+    if (!options.dryRun && !(await ensureRepositoryWriteAccess())) {
+        throw new Error(MISSING_ALL_FILES_ACCESS_MESSAGE);
+    }
 
     const deps: SyncDeps = {
         apiClient: createDefaultApiClient(),

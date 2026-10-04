@@ -45,7 +45,8 @@ MyMusic.Mobile/
 │   ├── components/ui/            # Reusable UI components
 │   └── constants/                # Theme & device icons
 ├── modules/
-│   └── xxhash/                   # Local native module: XXH3-128 file hashing (Android, JNI)
+│   ├── xxhash/                   # Local native module: XXH3-128 file hashing (Android, JNI)
+│   └── repo-files/               # Local native module: writes to the music repository in shared storage (Android)
 └── app.json
 ```
 
@@ -131,6 +132,16 @@ npx expo run:android
   same value the server stores as `XxHash128`). Sync uses it to resolve conflicts by sending only the checksum instead
   of uploading the file. It is the official `xxhash.h` (vendored, unmodified) behind a small JNI function
   (`android/src/main/cpp/xxhash_jni.cpp`), exposed through `XxhashModule.kt`. Android only.
+
+- **`modules/repo-files`** — the file operations that write to the music repository: `downloadFile`, `ensureDirectory`,
+  `moveFile`, `copyFile`, `deleteFile`, plus `hasAllFilesAccess` / `requestAllFilesAccess`. The repository lives in
+  shared storage (e.g. `/storage/emulated/0/Music`), where expo-file-system cannot write: it decides permissions with
+  `File.canRead()` / `File.canWrite()`, which are false for a file that does not exist yet, so every download, move or
+  copy to a new path is rejected with "Missing 'WRITE' permission". The module uses `java.io.File` directly
+  (`RepoFilesModule.kt`) and relies on Android's **All files access** (`MANAGE_EXTERNAL_STORAGE`, declared in
+  `app.json`). `src/services/storageAccess.ts` checks the grant before a non-dry-run sync and when the repository
+  folder is picked, and sends the user to the system settings screen when it is missing. Reads (existence, listing,
+  modification time) still go through expo-file-system. Android only.
 
 Adding or changing a native module needs a new dev build: run `npm run android`. A Metro reload only updates the
 JavaScript, so the app would keep running the old native code (or fail with "Cannot find native module 'Xxhash'").

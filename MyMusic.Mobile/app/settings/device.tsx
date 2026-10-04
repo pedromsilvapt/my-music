@@ -12,6 +12,7 @@ import {Button, Card, ErrorDisplay, Input} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
 import {useTheme} from '../../src/hooks/useTheme';
+import {ensureRepositoryWriteAccess} from '../../src/services/storageAccess';
 import {
     getDeviceIcon,
     getDeviceName,
@@ -118,6 +119,8 @@ export default function DeviceConfigScreen() {
 
             if (uri) {
                 setValue('repositoryPath', uri);
+                // Syncing writes to this folder, which the folder grant alone does not allow
+                await ensureRepositoryWriteAccess();
             }
         } catch (error: any) {
             console.error('Error picking folder:', error);
