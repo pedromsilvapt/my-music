@@ -48,7 +48,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         createPendingActions: jest.fn().mockResolvedValue({ records: [] }),
         acknowledgeAction: jest.fn().mockResolvedValue({ success: true, counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 } }),
         resolveConflicts: jest.fn(),
-        downloadSong: jest.fn().mockResolvedValue(new Blob(['data'])),
+        downloadSong: jest.fn().mockResolvedValue(undefined),
         reportSyncError: jest.fn().mockResolvedValue({ counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 } }),
     };
 
@@ -76,7 +76,6 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         fileExists: jest.fn().mockReturnValue(false),
         directoryExists: jest.fn().mockReturnValue(false),
         ensureDirectory: jest.fn().mockResolvedValue(undefined),
-        writeFile: jest.fn().mockResolvedValue(undefined),
         deleteFile: jest.fn().mockResolvedValue(undefined),
         moveFile: jest.fn().mockResolvedValue(undefined),
         copyFile: jest.fn().mockResolvedValue(undefined),

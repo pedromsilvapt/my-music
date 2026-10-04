@@ -188,8 +188,7 @@ async function downloadAndAck(
             if (localSourcePath) {
                 await fileOps.copyFile(`${decodedRepoPath}/${localSourcePath}`, tempPath);
             } else {
-                const blob = await apiClient.downloadSong(songId!);
-                await fileOps.writeFile(tempPath, blob);
+                await apiClient.downloadSong(songId!, tempPath);
             }
 
             if (isUpdate) {

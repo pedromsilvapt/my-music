@@ -29,7 +29,6 @@ function createMockFileOps(overrides: Partial<IFileOps> = {}): IFileOps {
         fileExists: jest.fn().mockReturnValue(false),
         directoryExists: jest.fn().mockReturnValue(false),
         ensureDirectory: jest.fn().mockResolvedValue(undefined),
-        writeFile: jest.fn().mockResolvedValue(undefined),
         deleteFile: jest.fn().mockResolvedValue(undefined),
         moveFile: jest.fn().mockResolvedValue(undefined),
         copyFile: jest.fn().mockResolvedValue(undefined),
@@ -225,9 +224,8 @@ describe('actionUpdateRemote', () => {
 
 describe('actionCreateLocal', () => {
     test('success case downloads, writes, and acknowledges', async () => {
-        const blob = new Blob(['audio data']);
         const apiClient = createMockApiClient({
-            downloadSong: jest.fn().mockResolvedValue(blob),
+            downloadSong: jest.fn().mockResolvedValue(undefined),
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
         });
         const fileOps = createMockFileOps();
@@ -242,7 +240,7 @@ describe('actionCreateLocal', () => {
         expect(result!.songId).toBe(42);
         expect(ctx.result.createLocal).toBe(1);
         expect(fileOps.ensureDirectory).toHaveBeenCalled();
-        expect(fileOps.writeFile).toHaveBeenCalledWith('/music/song.mp3.tmp', blob);
+        expect(apiClient.downloadSong).toHaveBeenCalledWith(42, '/music/song.mp3.tmp');
         expect(fileOps.deleteFile).not.toHaveBeenCalledWith('/music/song.mp3');
         expect(fileOps.moveFile).toHaveBeenCalledWith('/music/song.mp3.tmp', '/music/song.mp3');
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {
@@ -305,14 +303,12 @@ describe('actionCreateLocal', () => {
         expect(result!.action).toBe('CreateLocal');
         expect(ctx.result.createLocal).toBe(1);
         expect(apiClient.downloadSong).not.toHaveBeenCalled();
-        expect(fileOps.writeFile).not.toHaveBeenCalled();
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: undefined});
     });
 
     test('with reason parameter passes reason to result', async () => {
-        const blob = new Blob(['audio data']);
         const apiClient = createMockApiClient({
-            downloadSong: jest.fn().mockResolvedValue(blob),
+            downloadSong: jest.fn().mockResolvedValue(undefined),
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, createLocalCount: 1}}),
         });
         const fileOps = createMockFileOps();
@@ -323,7 +319,7 @@ describe('actionCreateLocal', () => {
         expect(result).not.toBeNull();
         expect(result!.action).toBe('CreateLocal');
         expect(result!.reason).toBe("Server-initiated download; renamed from 'old-song.mp3'");
-        expect(fileOps.writeFile).toHaveBeenCalledWith('/music/new-song.mp3.tmp', blob);
+        expect(apiClient.downloadSong).toHaveBeenCalledWith(expect.any(Number), '/music/new-song.mp3.tmp');
         expect(fileOps.moveFile).toHaveBeenCalledWith('/music/new-song.mp3.tmp', '/music/new-song.mp3');
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {
             recordIds: [1],
@@ -332,9 +328,8 @@ describe('actionCreateLocal', () => {
     });
 
     test('returns recordId from input parameter', async () => {
-        const blob = new Blob(['audio data']);
         const apiClient = createMockApiClient({
-            downloadSong: jest.fn().mockResolvedValue(blob),
+            downloadSong: jest.fn().mockResolvedValue(undefined),
         });
         const fileOps = createMockFileOps();
         const ctx = createContext();
@@ -356,9 +351,8 @@ describe('actionUpdateLocal', () => {
     }
 
     test('replaces the existing file without a prompt and acknowledges', async () => {
-        const blob = new Blob(['audio data']);
         const apiClient = createMockApiClient({
-            downloadSong: jest.fn().mockResolvedValue(blob),
+            downloadSong: jest.fn().mockResolvedValue(undefined),
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, updateLocalCount: 1}}),
         });
         const fileOps = fileOpsWithLocalFile();
@@ -371,7 +365,7 @@ describe('actionUpdateLocal', () => {
         expect(result!.source).toBe('Server');
         expect(result!.reason).toBe('Server-initiated update');
         expect(ctx.result.updateLocal).toBe(1);
-        expect(fileOps.writeFile).toHaveBeenCalledWith('/music/song.mp3.tmp', blob);
+        expect(apiClient.downloadSong).toHaveBeenCalledWith(42, '/music/song.mp3.tmp');
         expect(fileOps.deleteFile).toHaveBeenCalledWith('/music/song.mp3');
         expect(fileOps.moveFile).toHaveBeenCalledWith('/music/song.mp3.tmp', '/music/song.mp3');
         expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: expect.any(String)});

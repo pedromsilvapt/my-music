@@ -23,11 +23,6 @@ export class NodeFileOps implements IFileOps {
         }
     }
 
-    async writeFile(filePath: string, data: Blob): Promise<void> {
-        const buffer = Buffer.from(await data.arrayBuffer());
-        fs.writeFileSync(filePath, buffer);
-    }
-
     async deleteFile(filePath: string): Promise<void> {
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);

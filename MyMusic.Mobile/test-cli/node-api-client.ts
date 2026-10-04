@@ -241,7 +241,7 @@ export class NodeApiClient implements ISyncApiClient {
         return { records: this._parseRecords(response.records ?? []), counts: response.counts };
     }
 
-    async downloadSong(songId: number): Promise<Blob> {
+    async downloadSong(songId: number, destinationPath: string): Promise<void> {
         const response = await fetch(`${this._serverUrl}/songs/${songId}/download`, {
             method: 'GET',
             headers: this._headers(),
@@ -252,7 +252,8 @@ export class NodeApiClient implements ISyncApiClient {
             throw new Error(`API error ${response.status} on download: ${text}`);
         }
 
-        return response.blob();
+        const fs = require('fs');
+        fs.writeFileSync(destinationPath, Buffer.from(await response.arrayBuffer()));
     }
 
     async reportSyncError(

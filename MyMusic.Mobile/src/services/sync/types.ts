@@ -270,7 +270,8 @@ export interface ISyncApiClient {
         counts: SyncActionCounts;
     }>;
 
-    downloadSong: (songId: number) => Promise<Blob>;
+    /** Downloads the file of a song to the given local path, replacing any file already there. */
+    downloadSong: (songId: number, destinationPath: string) => Promise<void>;
 
     reportSyncError: (deviceId: number, sessionId: number, request: { filePath: string; errorMessage: string; songId?: number | null; recordId?: number | null }) => Promise<{ counts: SyncActionCounts }>;
 }
@@ -321,7 +322,6 @@ export interface IFileOps {
     fileExists: (path: string) => boolean;
     directoryExists: (path: string) => boolean;
     ensureDirectory: (path: string) => Promise<void>;
-    writeFile: (path: string, data: Blob) => Promise<void>;
     deleteFile: (path: string) => Promise<void>;
     moveFile: (fromPath: string, toPath: string) => Promise<void>;
     copyFile: (fromPath: string, toPath: string) => Promise<void>;

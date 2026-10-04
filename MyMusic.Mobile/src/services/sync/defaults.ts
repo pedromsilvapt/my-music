@@ -127,11 +127,6 @@ export function createDefaultFileOps(): IFileOps {
                 dir.create();
             }
         },
-        writeFile: async (path: string, data: Blob) => {
-            const file = new File(toFileUri(path));
-            const bytes = new Uint8Array(await data.arrayBuffer());
-            await file.write(bytes);
-        },
         deleteFile: async (path: string) => {
             await new File(toFileUri(path)).delete();
         },
