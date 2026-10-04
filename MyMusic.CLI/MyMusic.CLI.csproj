@@ -6,7 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AssemblyName>my-music</AssemblyName>
-        <Version>0.23.0</Version>
+        <Version>0.23.1</Version>
         <!-- Only affects `dotnet publish`; `dotnet build`/`dotnet run` stay JIT. Pass -p:PublishAot=false for a JIT publish -->
         <PublishAot>true</PublishAot>
         <!-- Surfaces trim/AOT analyzer warnings in regular `dotnet build`, not only at publish -->
