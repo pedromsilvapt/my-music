@@ -21,7 +21,11 @@ export default function RootLayout() {
 
     return (
         <SafeAreaProvider>
-            <SafeAreaView style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}>
+            {/* The stack header already insets itself below the status bar, so the top edge is left to it. */}
+            <SafeAreaView
+                edges={['bottom', 'left', 'right']}
+                style={[styles.container, {backgroundColor: colors.backgroundSecondary}]}
+            >
                 <StatusBar style={statusBarStyle}/>
                 <Stack
                     screenOptions={{
