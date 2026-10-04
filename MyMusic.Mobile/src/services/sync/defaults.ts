@@ -73,6 +73,7 @@ export function createDefaultApiClient(): ISyncApiClient {
             const result = await createPendingActions(deviceId, sessionId);
             return {
                 records: result.records as SyncRecordItem[],
+                counts: result.counts,
             };
         },
         acknowledgeAction,

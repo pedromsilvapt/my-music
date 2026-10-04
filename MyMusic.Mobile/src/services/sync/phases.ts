@@ -297,6 +297,7 @@ export async function serverActionsPhase (
     onProgress({ phase: 'server', currentFile: '' });
 
     const pendingActionsResponse = await deps.apiClient.createPendingActions(ctx.deviceId, ctx.sessionId!);
+    ctx.result = addDeltaToResult(ctx.result, pendingActionsResponse.counts ?? EMPTY_COUNTS);
     ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], pendingActionsResponse.records);
 
     const pendingActions = ctx.pendingActions;

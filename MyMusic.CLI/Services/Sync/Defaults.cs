@@ -302,7 +302,8 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
         var response = await client.CreatePendingActionsAsync(deviceId, sessionId, ct);
         return new CreatePendingActionsResult
         {
-            Records = response.Records.Select(ToRecordItem).ToList()
+            Records = response.Records.Select(ToRecordItem).ToList(),
+            Counts = SyncActionCounts.FromApi(response.Counts)
         };
     }
 

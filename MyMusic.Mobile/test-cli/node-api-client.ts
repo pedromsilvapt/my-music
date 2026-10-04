@@ -204,9 +204,9 @@ export class NodeApiClient implements ISyncApiClient {
         return this._post(`/devices/${deviceId}/sync/${sessionId}/complete`, {});
     }
 
-    async createPendingActions(deviceId: number, sessionId: number): Promise<{ records: SyncRecordItem[] }> {
-        const response = await this._post<{ records: unknown[] }>(`/devices/${deviceId}/sync/${sessionId}/pending-actions`, {});
-        return { records: this._parseRecords(response.records) };
+    async createPendingActions(deviceId: number, sessionId: number): Promise<{ records: SyncRecordItem[]; counts: SyncActionCounts }> {
+        const response = await this._post<{ records: unknown[]; counts: SyncActionCounts }>(`/devices/${deviceId}/sync/${sessionId}/pending-actions`, {});
+        return { records: this._parseRecords(response.records), counts: response.counts };
     }
 
     async acknowledgeAction(

@@ -7,6 +7,7 @@ using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services;
 using MyMusic.Common.Services.Sync;
 using MyMusic.Server.Controllers;
+using MyMusic.Server.DTO.Sync;
 using NSubstitute;
 using Shouldly;
 
@@ -101,6 +102,30 @@ public class SyncControllerPendingActionsSpecs
             .ToListAsync();
         records.Count.ShouldBe(1);
         records[0].Action.ShouldBe(SyncRecordAction.DeleteLocal);
+    }
+
+    [Fact]
+    public async Task CreatePendingActions_ReturnsCountsOfCreatedRecords()
+    {
+        // One song to download and another to remove from the device
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var device = scenario.CreateDevice();
+        var download = scenario.CreateSong("Download");
+        var remove = scenario.CreateSong("Remove");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        scenario.CreateSongDevice(device, download, ComputeExpectedPath(download), syncAction: SongSyncAction.Download);
+        scenario.CreateSongDevice(device, remove, ComputeExpectedPath(remove), syncAction: SongSyncAction.Remove);
+
+        // The first call creates both records, and should count them
+        var response = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
+        response.Value.ShouldNotBeNull();
+        response.Value.Counts.ShouldBe(new SyncActionCounts { CreateLocalCount = 1, DeleteLocalCount = 1 });
+
+        // A second call creates nothing, so it should count nothing
+        var repeated = await controller.CreatePendingActions(device.Id, session.Id, CancellationToken.None);
+        repeated.Value.ShouldNotBeNull();
+        repeated.Value.Counts.ShouldBe(new SyncActionCounts());
     }
 
     [Fact]

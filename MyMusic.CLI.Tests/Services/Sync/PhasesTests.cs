@@ -95,6 +95,28 @@ public class PhasesTests
             Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(renameRecord.Id)), Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task ServerActionsPhase_CountsRecordsWhenCreated_NotWhenAcknowledged()
+    {
+        // The server marks a song for removal, and counts the record in the response that creates it
+        var deleteRecord = CreateRecord("removed.mp3", SyncRecordAction.DeleteLocal);
+        _apiClient.CreatePendingActionsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(new CreatePendingActionsResult { Records = [deleteRecord], Counts = new SyncActionCounts { DeleteLocalCount = 1 } });
+        _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AcknowledgeActionResult { Success = true });
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // The removal should be acknowledged, and counted once
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1,
+            Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.Contains(deleteRecord.Id)), Arg.Any<CancellationToken>());
+        ctx.Result.DeleteLocal.ShouldBe(1);
+    }
+
     [Theory]
     [InlineData(SyncDirection.Both)]
     [InlineData(SyncDirection.Up)]

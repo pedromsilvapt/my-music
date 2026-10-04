@@ -156,6 +156,7 @@ public class SyncController(
         return new CreatePendingActionsResponse
         {
             Records = result.Records.Select(r => SyncRecordResponseItem.FromEntity(r)).ToList(),
+            Counts = SyncActionCounts.FromRecords(result.Records),
         };
     }
 
@@ -345,7 +346,8 @@ public class SyncController(
         return new AcknowledgeActionResponse
         {
             Success = true,
-            Counts = SyncActionCounts.FromRecords(result.Records),
+            // Acknowledging creates no records: the acknowledged ones were counted by the request that created them
+            Counts = new SyncActionCounts(),
         };
     }
 }

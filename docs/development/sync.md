@@ -12,6 +12,7 @@ When running a sync session, we can use dry run. When in dry-run, we do not:
 During a sync session, we create a list of `DeviceSyncSessionRecord`. Each record has a Action , which indicates its type, and a JSON Data field (schema varies by action type), which stores the values necessary for performing such action.
  - The list of `DeviceSyncSessionRecord` must be exactly the same when running in dry-run vs when not.
  - The server should return in each endpoint called during the sync process, return the delta counters for how many DeviceSyncSessionRecord of each action type were created by that request.
+    - A record is only counted by the request that creates it. Acknowledging a record creates none, so its delta counters are empty: the records the device performs were already counted when they were created (by `check`, `resolve-conflicts`, `conflict-choices`, `upload` or `pending-actions`).
  - The device client applications should not keep track of counters on their own, they should instead just keep track of the counters sent to them by the server. The server is the authoritative source of counter values.
  - The server should create all the `DeviceSyncSessionRecord` before the commit phase: only in the commit phase are those actions really performed (songs created, files uploaded, downloaded, renamed, etc...)
     - The list of `DeviceSyncSessionRecord` is the source of truth for what operations to perform

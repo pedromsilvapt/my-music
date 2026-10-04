@@ -116,6 +116,32 @@ public class DevicesControllerAcknowledgeActionSpecs
     }
 
     [Fact]
+    public async Task AcknowledgeAction_ReturnsNoCounts_AsItCreatesNoRecords()
+    {
+        // A conflict resolved by a download and a rename: both records were counted when they were created
+        var scenario = new Scenario();
+        var controller = CreateController(scenario, CreateRealAcknowledgeService());
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var conflict = scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Conflict, songId: song.Id);
+        var update = scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal, songId: song.Id);
+        var rename = scenario.AddRecord(session.Id, "/music/renamed.mp3", SyncRecordAction.Rename, songId: song.Id);
+        update.ResolvesConflictRecordId = conflict.Id;
+        rename.ResolvesConflictRecordId = conflict.Id;
+        await scenario.DbContext.SaveChangesAsync();
+
+        // Acknowledging them should not count them again, nor resolve the conflict a second time
+        var updateResponse = await controller.AcknowledgeAction(device.Id, session.Id,
+            new AcknowledgeActionRequest { RecordIds = [update.Id] }, CancellationToken.None);
+        var renameResponse = await controller.AcknowledgeAction(device.Id, session.Id,
+            new AcknowledgeActionRequest { RecordIds = [rename.Id] }, CancellationToken.None);
+
+        updateResponse.Value.Counts.ShouldBe(new SyncActionCounts());
+        renameResponse.Value.Counts.ShouldBe(new SyncActionCounts());
+    }
+
+    [Fact]
     public async Task AcknowledgeAction_MultipleRecordIds_SetsAllAcknowledged()
     {
         var scenario = new Scenario();

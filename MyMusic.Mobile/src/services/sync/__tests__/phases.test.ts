@@ -1355,6 +1355,26 @@ describe('serverActionsPhase - createPendingActions call', () => {
         expect(ctx.pendingActions!.map(r => r.id)).toContain(2);
     });
 
+    test('adds the counts of the records created by createPendingActions', async () => {
+        // The server creates a removal, and counts it in the response that creates it
+        const newRecord: SyncRecordItem = { id: 2, filePath: 'song-to-delete.mp3', action: 'DeleteLocal', songId: 1, data: null, reason: 'Server removed', acknowledged: false, processedAt: '' };
+        const deps = createMockDeps({
+            apiClient: {
+                ...createMockDeps().apiClient,
+                createPendingActions: jest.fn().mockResolvedValue({
+                    records: [newRecord],
+                    counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 1, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 0 },
+                }),
+            },
+        });
+        const ctx = createContext({ uploadedPaths: new Set<string>(), pendingActions: [] });
+
+        await serverActionsPhase(deps, ctx, jest.fn());
+
+        // The removal should be counted once: performing it adds nothing
+        expect(ctx.result.deleteLocal).toBe(1);
+    });
+
     test('calls createPendingActions at the beginning of serverActionsPhase', async () => {
         const mockCreatePendingActions = jest.fn().mockResolvedValue({ records: [] });
         const deps = createMockDeps({

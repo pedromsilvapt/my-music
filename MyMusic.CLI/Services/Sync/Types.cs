@@ -321,6 +321,7 @@ public record CommitSyncResult
 public record CreatePendingActionsResult
 {
     public required List<SyncRecordItem> Records { get; init; }
+    public SyncActionCounts Counts { get; init; } = SyncActionCounts.Empty;
 }
 
 public record AcknowledgeActionRequest

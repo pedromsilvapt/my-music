@@ -235,6 +235,7 @@ export interface ISyncApiClient {
         sessionId: number
     ) => Promise<{
         records: SyncRecordItem[];
+        counts: SyncActionCounts;
     }>;
 
     acknowledgeAction: (

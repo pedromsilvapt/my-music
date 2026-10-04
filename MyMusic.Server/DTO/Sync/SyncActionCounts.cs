@@ -20,7 +20,8 @@ public record SyncActionCounts
 
     /// <summary>
     /// Counts the records of each action. <see cref="ConflictCount"/> only counts unresolved conflicts, so
-    /// it is negative for records that resolve conflicts created by an earlier request.
+    /// it is negative for records that resolve conflicts created by an earlier request. As a response's
+    /// delta, it must only be given the records that request created, so no record is counted twice.
     /// </summary>
     public static SyncActionCounts FromRecords(IEnumerable<DeviceSyncSessionRecord> records)
     {

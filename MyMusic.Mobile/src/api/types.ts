@@ -261,6 +261,7 @@ export type SyncUploadResponse = z.infer<typeof SyncUploadResponseSchema>;
 
 export const CreatePendingActionsResponseSchema = z.object({
     records: z.array(SyncRecordItemSchema),
+    counts: SyncActionCountsSchema,
 });
 
 export type CreatePendingActionsResponse = z.infer<typeof CreatePendingActionsResponseSchema>;

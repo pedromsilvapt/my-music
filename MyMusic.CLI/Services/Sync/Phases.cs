@@ -378,6 +378,7 @@ public class Phases(
 
         logger.LogInformation("Fetching pending actions for device {DeviceId}", ctx.DeviceId);
         var pendingResponse = await apiClient.CreatePendingActionsAsync(ctx.DeviceId, ctx.SessionId, ct);
+        ctx.Result = ctx.Result.AddDelta(pendingResponse.Counts);
 
         var existingIds = ctx.PendingServerRecords.Select(r => r.Id).ToHashSet();
         var newRecords = pendingResponse.Records
