@@ -29,6 +29,7 @@ public class SyncConflictChooseServiceSpecs
             new SyncSessionLookupService(),
             new SyncActionsServerFactory(),
             new SyncPathResolver(),
+            new SyncUsedPathsService(),
             config,
             Substitute.For<ILogger<SyncConflictChooseService>>());
     }
@@ -222,5 +223,110 @@ public class SyncConflictChooseServiceSpecs
         var renames = result.Records.Where(r => r.Action == SyncRecordAction.Rename).ToList();
         renames.Select(r => r.FilePath).Distinct().Count().ShouldBe(2);
         result.Records.CountUnresolvedConflicts().ShouldBe(-2);
+    }
+
+    private static void AddRename(Scenario scenario, long sessionId, string previousPath, string newPath, long songId) =>
+        scenario.AddRecord(sessionId, newPath, SyncRecordAction.Rename,
+            data: SyncActionDataSerializer.Serialize(new RenameData { PreviousPath = previousPath, NewPath = newPath }),
+            songId: songId);
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ChooseDownloadAsync_TemplatePathTakenByAnEarlierRequestOfTheSession_GetsASuffix(bool isDryRun)
+    {
+        // Arrange: an earlier request (resolve-conflicts) already renamed the other copy to the template path
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, isDryRun: isDryRun);
+        var song = scenario.CreateSong("Song");
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, "Copy A.mp3");
+        scenario.CreateSongDevice(device, song, "Copy B.mp3");
+        AddRename(scenario, session.Id, "Copy A.mp3", expectedPath, song.Id);
+        var conflict = scenario.AddRecord(session.Id, "Copy B.mp3", SyncRecordAction.Conflict, songId: song.Id);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [conflict.Id], CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var rename = result.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        rename.FilePath.ShouldNotBe(expectedPath);
+        rename.FilePath.ShouldBe(Path.ChangeExtension(expectedPath, null) + " (2)" + Path.GetExtension(expectedPath));
+    }
+
+    [Fact]
+    public async Task ChooseDownloadAsync_DifferentSongsWithTheSameTemplatePath_InSeparateRequests_GetDifferentPaths()
+    {
+        // Arrange: two songs the template names the same way
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var first = scenario.CreateSong("Song");
+        var second = scenario.CreateSong("Song", repositoryPath: "/music/second/Song.mp3");
+        ComputeExpectedPath(second).ShouldBe(ComputeExpectedPath(first));
+        scenario.CreateSongDevice(device, first, "First.mp3");
+        scenario.CreateSongDevice(device, second, "Second.mp3");
+        var firstConflict = scenario.AddRecord(session.Id, "First.mp3", SyncRecordAction.Conflict, songId: first.Id);
+        var secondConflict = scenario.AddRecord(session.Id, "Second.mp3", SyncRecordAction.Conflict, songId: second.Id);
+
+        // Act: each choice is its own request
+        var firstResult = await CreateService(scenario).ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [firstConflict.Id], CancellationToken.None);
+        var secondResult = await CreateService(scenario).ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [secondConflict.Id], CancellationToken.None);
+
+        // Assert
+        var firstRename = firstResult!.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        var secondRename = secondResult!.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        firstRename.FilePath.ShouldBe(ComputeExpectedPath(first));
+        secondRename.FilePath.ShouldNotBe(firstRename.FilePath);
+    }
+
+    [Fact]
+    public async Task ChooseDownloadAsync_TemplatePathFreedByAnEarlierRename_IsUsedWithoutASuffix()
+    {
+        // Arrange: another file held the template path, and an earlier request renamed it away
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var song = scenario.CreateSong("Song");
+        var other = scenario.CreateSong("Other");
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, other, expectedPath);
+        scenario.CreateSongDevice(device, song, "Copy.mp3");
+        AddRename(scenario, session.Id, expectedPath, ComputeExpectedPath(other), other.Id);
+        var conflict = scenario.AddRecord(session.Id, "Copy.mp3", SyncRecordAction.Conflict, songId: song.Id);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [conflict.Id], CancellationToken.None);
+
+        // Assert
+        result!.Records.Single(r => r.Action == SyncRecordAction.Rename).FilePath.ShouldBe(expectedPath);
+    }
+
+    [Fact]
+    public async Task ChooseDownloadAsync_PathFreedByARenameOfTheSameRequest_IsUsedByTheNextFile()
+    {
+        // Arrange: the first file leaves the path the template gives the second one
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var song = scenario.CreateSong("Song");
+        var other = scenario.CreateSong("Other");
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, other, expectedPath);
+        scenario.CreateSongDevice(device, song, "Copy.mp3");
+        var first = scenario.AddRecord(session.Id, expectedPath, SyncRecordAction.Conflict, songId: other.Id);
+        var second = scenario.AddRecord(session.Id, "Copy.mp3", SyncRecordAction.Conflict, songId: song.Id);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.ChooseDownloadAsync(device.Id, session.Id, scenario.AdminUser.Id, [first.Id, second.Id], CancellationToken.None);
+
+        // Assert
+        var renames = result!.Records.Where(r => r.Action == SyncRecordAction.Rename).ToList();
+        renames.Select(r => r.FilePath).ShouldBe([ComputeExpectedPath(other), expectedPath]);
     }
 }

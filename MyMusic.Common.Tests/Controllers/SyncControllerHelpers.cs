@@ -53,6 +53,7 @@ internal static class SyncControllerHelpers
             DevicesControllerHelpers.DeviceLookup,
             DevicesControllerHelpers.SessionLookup,
             DevicesControllerHelpers.PathResolver,
+            new SyncUsedPathsService(),
             Microsoft.Extensions.Options.Options.Create(new Config
             {
                 MusicRepositoryPath = "/music",
@@ -79,6 +80,7 @@ internal static class SyncControllerHelpers
             DevicesControllerHelpers.SessionLookup,
             factory ?? new SyncActionsServerFactory(),
             DevicesControllerHelpers.PathResolver,
+            new SyncUsedPathsService(),
             DevicesControllerHelpers.ComparisonHelper,
             config,
             Substitute.For<ILogger<SyncCheckService>>());
@@ -97,6 +99,7 @@ internal static class SyncControllerHelpers
             DevicesControllerHelpers.SessionLookup,
             factory ?? new SyncActionsServerFactory(),
             DevicesControllerHelpers.PathResolver,
+            new SyncUsedPathsService(),
             config,
             Substitute.For<ILogger<SyncResolveConflictsService>>());
     }

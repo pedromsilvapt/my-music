@@ -343,6 +343,13 @@ export async function actionRename(
 
     try {
         if (fileOps.fileExists(previousFullPath)) {
+            // A move replaces the target, so a file already there (one whose own rename or deletion
+            // failed) would be lost. A rename that only changes the case finds the file itself
+            if (fullPath.toLowerCase() !== previousFullPath.toLowerCase() && fileOps.fileExists(fullPath)) {
+                console.error('File already exists during rename:', relativePath);
+                return reportFailure(apiClient, ctx, recordId, relativePath, undefined, 'File already exists', `Rename from '${previousRelativePath}' failed`);
+            }
+
             await fileOps.ensureDirectory(fullPath);
             await fileOps.moveFile(previousFullPath, fullPath);
             await fileOps.deleteEmptyDirectories(previousFullPath, decodedRepoPath);

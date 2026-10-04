@@ -1477,5 +1477,39 @@ public class SyncCommitServiceSpecs
         result.ActionCounts[SyncRecordAction.CreateLocal].ShouldBe(1);
     }
 
+    #region Reused paths
+
+    [Fact]
+    public async Task Rename_OntoThePathAnotherRenameLeft_UpdatesBothDevicePaths()
+    {
+        var ctx = SetupWithSong();
+        var first = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/x.mp3");
+        var second = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/w.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/y.mp3", SyncRecordAction.Rename, data: CreateRenameData("/music/x.mp3", "/music/y.mp3"), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/x.mp3", SyncRecordAction.Rename, data: CreateRenameData("/music/w.mp3", "/music/x.mp3"), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        GetSongDevice(ctx.Db, first.Id).DevicePath.ShouldBe("/music/y.mp3");
+        GetSongDevice(ctx.Db, second.Id).DevicePath.ShouldBe("/music/x.mp3");
+    }
+
+    [Fact]
+    public async Task Rename_OntoThePathOfADeletedFile_RemovesOneAndRenamesTheOther()
+    {
+        var ctx = SetupWithSong();
+        var deleted = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/x.mp3", syncAction: SongSyncAction.Remove);
+        var renamed = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/w.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/x.mp3", SyncRecordAction.DeleteLocal, data: CreateSongIdData(ctx.Song.Id), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/x.mp3", SyncRecordAction.Rename, data: CreateRenameData("/music/w.mp3", "/music/x.mp3"), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        SongDeviceExists(ctx.Db, deleted.Id).ShouldBeFalse();
+        GetSongDevice(ctx.Db, renamed.Id).DevicePath.ShouldBe("/music/x.mp3");
+    }
+
+    #endregion
+
     #endregion
 }

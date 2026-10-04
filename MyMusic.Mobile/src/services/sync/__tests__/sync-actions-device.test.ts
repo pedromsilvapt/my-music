@@ -686,7 +686,7 @@ describe('actionRename', () => {
             acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, renameCount: 1}}),
         });
         const fileOps = createMockFileOps({
-            fileExists: jest.fn().mockReturnValue(true),
+            fileExists: jest.fn((path: string) => path === '/music/old-song.mp3'),
         });
         const ctx = createContext();
 
@@ -741,10 +741,37 @@ describe('actionRename', () => {
         expect(apiClient.acknowledgeAction).toHaveBeenCalled();
     });
 
-    test('failure returns Error action without mutating ctx.result', async () => {
+    test('reports a failure instead of replacing a file at the new path', async () => {
         const apiClient = createMockApiClient();
         const fileOps = createMockFileOps({
             fileExists: jest.fn().mockReturnValue(true),
+        });
+        const ctx = createContext();
+
+        const result = await actionRename(apiClient, fileOps, ctx, 'new-song.mp3', 'old-song.mp3', '/music', 1);
+
+        expect(result.action).toBe('Error');
+        expect(fileOps.moveFile).not.toHaveBeenCalled();
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    });
+
+    test('renames a file whose new path only differs in case', async () => {
+        const apiClient = createMockApiClient();
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+        });
+        const ctx = createContext();
+
+        const result = await actionRename(apiClient, fileOps, ctx, 'Song.mp3', 'song.mp3', '/music', 1);
+
+        expect(result.action).toBe('Rename');
+        expect(fileOps.moveFile).toHaveBeenCalledWith('/music/song.mp3', '/music/Song.mp3');
+    });
+
+    test('failure returns Error action without mutating ctx.result', async () => {
+        const apiClient = createMockApiClient();
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn((path: string) => path === '/music/old-song.mp3'),
             moveFile: jest.fn().mockRejectedValue(new Error('Move failed')),
         });
         const ctx = createContext();

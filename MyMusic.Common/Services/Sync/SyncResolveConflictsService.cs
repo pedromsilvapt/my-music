@@ -19,6 +19,7 @@ public class SyncResolveConflictsService(
     ISyncSessionLookupService sessionLookup,
     ISyncActionsServerFactory syncActionsServerFactory,
     ISyncPathResolver pathResolver,
+    ISyncUsedPathsService usedPathsService,
     IOptions<Config> config,
     ILogger<SyncResolveConflictsService> logger) : ISyncResolveConflictsService
 {
@@ -55,10 +56,7 @@ public class SyncResolveConflictsService(
         var namingStrategy = new TemplateNamingStrategy(
             activeSession.NamingTemplate ?? device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
-        var usedPaths = new HashSet<string>(await db.SongDevices
-            .Where(sd => sd.DeviceId == deviceId)
-            .Select(sd => sd.DevicePath)
-            .ToHashSetAsync(cancellationToken));
+        var usedPaths = await usedPathsService.GetAsync(db, deviceId, activeSession.Id, cancellationToken);
 
         foreach (var conflict in input.Conflicts)
         {
@@ -95,7 +93,7 @@ public class SyncResolveConflictsService(
         SyncResolveConflictItem conflict,
         SyncDirection direction,
         TemplateNamingStrategy namingStrategy,
-        HashSet<string> usedPaths,
+        SyncUsedPaths usedPaths,
         ISyncActionsServer syncActions,
         List<DeviceSyncSessionRecord> records,
         CancellationToken cancellationToken)
@@ -188,7 +186,7 @@ public class SyncResolveConflictsService(
         SyncResolvePotentialUpdateItem update,
         SyncDirection direction,
         TemplateNamingStrategy namingStrategy,
-        HashSet<string> usedPaths,
+        SyncUsedPaths usedPaths,
         ISyncActionsServer syncActions,
         List<DeviceSyncSessionRecord> records,
         CancellationToken cancellationToken)

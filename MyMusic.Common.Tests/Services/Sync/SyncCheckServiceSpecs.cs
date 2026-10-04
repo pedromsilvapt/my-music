@@ -25,6 +25,7 @@ public class SyncCheckServiceSpecs
             new SyncSessionLookupService(),
             factory ?? new SyncActionsServerFactory(),
             new SyncPathResolver(),
+            new SyncUsedPathsService(),
             new SyncComparisonHelper(),
             config,
             Substitute.For<ILogger<SyncCheckService>>());

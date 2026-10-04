@@ -18,6 +18,7 @@ public class SyncConflictChooseService(
     ISyncSessionLookupService sessionLookup,
     ISyncActionsServerFactory syncActionsServerFactory,
     ISyncPathResolver pathResolver,
+    ISyncUsedPathsService usedPathsService,
     IOptions<Config> config,
     ILogger<SyncConflictChooseService> logger) : ISyncConflictChooseService
 {
@@ -60,10 +61,7 @@ public class SyncConflictChooseService(
         var namingStrategy = new TemplateNamingStrategy(
             activeSession.NamingTemplate ?? device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
 
-        var usedPaths = new HashSet<string>(await db.SongDevices
-            .Where(sd => sd.DeviceId == deviceId)
-            .Select(sd => sd.DevicePath)
-            .ToHashSetAsync(cancellationToken));
+        var usedPaths = await usedPathsService.GetAsync(db, deviceId, activeSession.Id, cancellationToken);
 
         foreach (var conflict in conflicts)
         {

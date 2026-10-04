@@ -167,6 +167,49 @@ public abstract partial class SyncTestsBase
         result3.ShouldBe(skipped: 2);
     }
 
+    // Scenario: Copies of a song renamed by different requests of a sync get different paths
+    //   Given two identical local files were synced and linked to one song
+    //   When the song is edited on the server
+    //   And one of the files is touched without changing its content
+    //   And the other file is edited on the device
+    //   And the user chooses the server's version for the conflict
+    //   Then both files receive the server's version
+    //   And each one is renamed to a path of its own
+    [Fact]
+    public async Task Sync_ConflictResolution_ShouldRenameCopiesToDifferentPathsWhenResolvedSeparately()
+    {
+        // Upload two identical local files: they become one song, linked at both paths
+        var stalePath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        var conflictPath = "Local Copies/Wicker Woman.mp3";
+        await App.CreateSongsAsync((SongsFixture.DefaultSongs[2], stalePath), (SongsFixture.DefaultSongs[2], conflictPath));
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1, link: 1);
+
+        // Edit the song on the server, so the naming template gives both copies the same new path
+        await new EditSongFlow("Wicker Woman", new(Title: "Server Title")).ExecuteAsync(Page);
+
+        // Touch one copy (a previous version: the server wins on its own) and edit the other (a real conflict)
+        App.TouchLocalFile(stalePath);
+        await App.UpdateLocalFileMetadataAsync(conflictPath, new(Title: "Local Title"));
+
+        // Sync choosing the server's version: the conflict is resolved by a later request than the stale
+        // copy, and should still be renamed to a path that is not taken
+        var result2 = await App.SyncAsync(new SyncOptions { Conflicts = ConflictResolution.Download });
+        result2.ShouldBe(updateLocal: 2, rename: 2);
+
+        // Both copies should hold the server's version, each at its own path
+        var firstNewPath = "Freya Ridings/Wicker Woman/Server Title - Freya Ridings.mp3";
+        var secondNewPath = "Freya Ridings/Wicker Woman/Server Title - Freya Ridings (2).mp3";
+        App.FileShouldNotExist(stalePath);
+        App.FileShouldNotExist(conflictPath);
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(firstNewPath), title: "Server Title");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(secondNewPath), title: "Server Title");
+
+        // Sync again: both copies should be in sync at their new paths
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(skipped: 2);
+    }
+
     // Scenario: A conflict found in an earlier chunk is kept while later chunks download server changes
     //   Given two songs on the server were downloaded to the device
     //   When one song is edited differently on the server and on the device

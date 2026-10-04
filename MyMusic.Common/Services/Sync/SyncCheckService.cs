@@ -18,14 +18,15 @@ public class SyncCheckService(
     ISyncSessionLookupService sessionLookup,
     ISyncActionsServerFactory syncActionsServerFactory,
     ISyncPathResolver pathResolver,
+    ISyncUsedPathsService usedPathsService,
     ISyncComparisonHelper comparisonHelper,
     IOptions<Config> config,
     ILogger<SyncCheckService> logger) : ISyncCheckService
 {
-    // Lazy-loaded cache of all device paths, used only by the CreateLocal fallback branch.
+    // Lazy-loaded used paths of the device, needed only by the CreateLocal fallback branch.
     // Reset at the start of each CheckAsync call; the service is scoped (one instance per
     // request) so this is safe.
-    private HashSet<string>? _usedPaths;
+    private SyncUsedPaths? _usedPaths;
 
     /// <inheritdoc />
     public async Task<SyncCheckResult?> CheckAsync(
@@ -94,6 +95,7 @@ public class SyncCheckService(
                 logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> DELETE_LOCAL (marked for removal or song deleted)", clientFile.Path, existingSongDevice.SongId);
                 var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal or deleted on server", cancellationToken);
                 allRecords.Add(record);
+                _usedPaths?.Free(existingSongDevice.DevicePath);
             }
             else if (input.Force)
             {
@@ -263,6 +265,7 @@ public class SyncCheckService(
             {
                 var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                 allRecords.Add(record);
+                _usedPaths?.Free(existingSongDevice.DevicePath);
             }
             else if (existingSongDevice.LastSyncedModifiedAt != null)
             {
@@ -286,15 +289,12 @@ public class SyncCheckService(
             }
             else
             {
-                // Lazy-load the full set of device paths, which are only needed for naming-collision
-                // detection on CreateLocal. Cached across iterations in _usedPaths.
-                _usedPaths ??= await db.SongDevices
-                    .Where(sd => sd.DeviceId == deviceId)
-                    .Select(sd => sd.DevicePath)
-                    .ToHashSetAsync(cancellationToken);
+                // Lazy-load the used paths of the device, which are only needed for naming-collision
+                // detection on CreateLocal. Cached across iterations in _usedPaths; a path deleted before
+                // the load is freed by the load itself, which reads the session's records.
+                _usedPaths ??= await usedPathsService.GetAsync(db, deviceId, sessionId, cancellationToken);
 
-                var pendingAction = pathResolver.ComputePendingActionPath(existingSongDevice, namingStrategy, _usedPaths);
-                _usedPaths.Add(pendingAction.Path);
+                var pendingAction = _usedPaths.Take(pathResolver, existingSongDevice, namingStrategy);
 
                 var reason = $"Server modified at {songFileModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}";
                 var record = await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, songFileModifiedAt, reason, cancellationToken);

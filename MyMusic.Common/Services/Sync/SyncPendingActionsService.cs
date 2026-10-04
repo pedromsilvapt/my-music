@@ -21,6 +21,7 @@ public class SyncPendingActionsService(
     IDeviceLookupService deviceLookup,
     ISyncSessionLookupService sessionLookup,
     ISyncPathResolver pathResolver,
+    ISyncUsedPathsService usedPathsService,
     IOptions<Config> config,
     ILogger<SyncPendingActionsService> logger) : ISyncPendingActionsService
 {
@@ -73,15 +74,10 @@ public class SyncPendingActionsService(
             .DistinctBy(r => r.SongId)
             .ToDictionary(r => r.SongId, r => r.FilePath);
 
-        var allExistingPaths = await db.SongDevices
-            .Where(sd => sd.DeviceId == deviceId)
-            .Select(sd => sd.DevicePath)
-            .ToHashSetAsync(cancellationToken);
-
         var namingStrategy = new TemplateNamingStrategy(
             namingTemplate ?? config.Value.DefaultNamingTemplate);
 
-        var usedPaths = new HashSet<string>(allExistingPaths);
+        var usedPaths = await usedPathsService.GetAsync(db, deviceId, sessionId, cancellationToken);
         var createdRecords = new List<DeviceSyncSessionRecord>();
 
         foreach (var sd in songDevices)
@@ -90,6 +86,7 @@ public class SyncPendingActionsService(
             {
                 var record = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.DeleteLocal, sd.DevicePath, sd.SongId, sd.SyncActionReason);
                 createdRecords.Add(record);
+                usedPaths.Free(sd.DevicePath);
             }
             else if (sd.SyncAction == SongSyncAction.Download)
             {
@@ -101,8 +98,7 @@ public class SyncPendingActionsService(
                     continue;
                 }
 
-                var (path, previousPath) = pathResolver.ComputePendingActionPath(sd, namingStrategy, usedPaths);
-                usedPaths.Add(path);
+                var (path, previousPath) = usedPaths.Take(pathResolver, sd, namingStrategy);
 
                 var isUpdate = sd.LastSyncedModifiedAt != null;
                 var action = isUpdate ? SyncRecordAction.UpdateLocal : SyncRecordAction.CreateLocal;
@@ -144,6 +140,7 @@ public class SyncPendingActionsService(
                         ProcessedAt = DateTime.UtcNow,
                     };
                     createdRecords.Add(renameRecord);
+                    usedPaths.Rename(previousPath, path);
                 }
 
                 logger.LogInformation(

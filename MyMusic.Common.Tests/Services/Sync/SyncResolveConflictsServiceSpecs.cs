@@ -30,6 +30,7 @@ public class SyncResolveConflictsServiceSpecs
             new SyncSessionLookupService(),
             factory ?? new SyncActionsServerFactory(),
             new SyncPathResolver(),
+            new SyncUsedPathsService(),
             config,
             Substitute.For<ILogger<SyncResolveConflictsService>>());
     }
@@ -1108,5 +1109,43 @@ public class SyncResolveConflictsServiceSpecs
         var record = result.Records.Single();
         record.Action.ShouldBe(SyncRecordAction.Error);
         record.Reason.ShouldBe("Missing checksum or file content");
+    }
+
+    [Fact]
+    public async Task ResolveAsync_CopiesOfASongInSeparateRequests_AreRenamedToDifferentPaths()
+    {
+        // Arrange: two copies of a song, both needing the server's file; each is sent in its own chunk
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, "Copy A.mp3");
+        scenario.CreateSongDevice(device, song, "Copy B.mp3");
+
+        SyncResolveConflictsInput InputForCopy(string path) => InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = path,
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var first = await CreateService(scenario).ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, InputForCopy("Copy A.mp3"), CancellationToken.None);
+        var second = await CreateService(scenario).ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, InputForCopy("Copy B.mp3"), CancellationToken.None);
+
+        // Assert: the path taken by the first request stays taken
+        var firstRename = first!.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        var secondRename = second!.Records.Single(r => r.Action == SyncRecordAction.Rename);
+        firstRename.FilePath.ShouldBe(expectedPath);
+        secondRename.FilePath.ShouldNotBe(expectedPath);
     }
 }

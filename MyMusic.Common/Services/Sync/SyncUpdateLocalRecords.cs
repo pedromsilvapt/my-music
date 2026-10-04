@@ -11,7 +11,8 @@ public static class SyncUpdateLocalRecords
     /// <summary>
     /// Adds an <c>UpdateLocal</c> record that downloads the song's current file to the device, followed
     /// by a <c>Rename</c> record when the naming template changed the file's target path. The target path
-    /// is added to <paramref name="usedPaths"/>. Returns the created records, in that order.
+    /// is taken in <paramref name="usedPaths"/>, and the path the file is renamed from is freed. Returns the
+    /// created records, in that order.
     /// </summary>
     public static async Task<List<DeviceSyncSessionRecord>> AddAsync(
         ISyncPathResolver pathResolver,
@@ -19,14 +20,13 @@ public static class SyncUpdateLocalRecords
         long songId,
         string reason,
         TemplateNamingStrategy namingStrategy,
-        HashSet<string> usedPaths,
+        SyncUsedPaths usedPaths,
         ISyncActionsServer syncActions,
         CancellationToken cancellationToken)
     {
         var records = new List<DeviceSyncSessionRecord>();
 
-        var pendingAction = pathResolver.ComputePendingActionPath(songDevice, namingStrategy, usedPaths);
-        usedPaths.Add(pendingAction.Path);
+        var pendingAction = usedPaths.Take(pathResolver, songDevice, namingStrategy);
 
         var updateFilePath = pendingAction.PreviousPath ?? pendingAction.Path;
         var songFileModifiedAt = songDevice.Song!.FileModifiedAt ?? songDevice.Song.ModifiedAt;
@@ -34,6 +34,7 @@ public static class SyncUpdateLocalRecords
 
         if (pendingAction.PreviousPath != null)
         {
+            usedPaths.Rename(pendingAction.PreviousPath, pendingAction.Path);
             records.Add(await syncActions.ActionRename(pendingAction.Path, pendingAction.PreviousPath, pendingAction.Path, songId, "Path updated by naming template", cancellationToken));
         }
 

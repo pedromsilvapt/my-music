@@ -108,6 +108,7 @@ public static class HostBuilderExtensions
         // Sync workflow services
         builder.Services.AddScoped<ISyncActionsServerFactory, SyncActionsServerFactory>();
         builder.Services.AddSingleton<ISyncPathResolver, SyncPathResolver>();
+        builder.Services.AddScoped<ISyncUsedPathsService, SyncUsedPathsService>();
         builder.Services.AddSingleton<ISyncComparisonHelper, SyncComparisonHelper>();
         builder.Services.AddScoped<ISyncCommitService, SyncCommitService>();
         builder.Services.AddScoped<ISyncUploadService, SyncUploadService>();
