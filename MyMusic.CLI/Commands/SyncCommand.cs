@@ -1,16 +1,16 @@
 using System.ComponentModel;
 using System.Globalization;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services;
 using MyMusic.CLI.Services.Sync.Types;
+using MyMusic.CLI.Services.Terminal;
 using Spectre.Console;
 using Spectre.Console.Cli;
 using MyMusic.CLI;
 
 namespace MyMusic.CLI.Commands;
 
-public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) : AsyncCommand<SyncCommand.Settings>
+public class SyncCommand(ISyncService syncService, ITerminal terminal, ILogger<SyncCommand> logger) : AsyncCommand<SyncCommand.Settings>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
@@ -24,35 +24,32 @@ public class SyncCommand(ISyncService syncService, ILogger<SyncCommand> logger) 
 
         AnsiConsole.WriteLine();
 
-        var stopwatch = Stopwatch.StartNew();
-
         try
         {
-            SyncResult syncResult = new();
+            var elapsed = TimeSpan.Zero;
 
-            await AnsiConsole.Progress()
-                .AutoClear(false)
-                .Columns(new SpinnerColumn(), new TaskDescriptionColumn(), new ProgressBarColumn(),
-                    new PercentageColumn())
-                .StartAsync(async ctx =>
+            var syncResult = await terminal.RunWithProgressAsync(async display =>
+            {
+                var syncTask = display.AddTask("[cyan]Uploading...[/]");
+                var progress = new Progress<SyncProgress>(p =>
                 {
-                    var syncTask = ctx.AddTask("[cyan]Uploading...[/]");
-                    var progress = new Progress<SyncProgress>(p =>
+                    if (p.TotalFiles > 0)
                     {
-                        if (p.TotalFiles > 0)
-                        {
-                            syncTask.MaxValue(p.TotalFiles);
-                            syncTask.Value(p.ProcessedFiles);
-                            syncTask.Description(BuildStatus(p, stopwatch.Elapsed));
-                        }
-                    });
-
-                    syncResult = await syncService.SyncAsync(settings.Force, settings.DryRun,
-                        settings.AutoConfirm, settings.Direction, settings.Deduplicate, settings.ConflictChoice, progress);
+                        syncTask.MaxValue = p.TotalFiles;
+                        syncTask.Value = p.ProcessedFiles;
+                        syncTask.Description = BuildStatus(p, display.Elapsed);
+                    }
                 });
 
+                var result = await syncService.SyncAsync(settings.Force, settings.DryRun,
+                    settings.AutoConfirm, settings.Direction, settings.Deduplicate, settings.ConflictChoice, progress);
+
+                elapsed = display.Elapsed;
+                return result;
+            });
+
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[bold]Sync completed in {FormatElapsedTime(stopwatch.Elapsed)}[/]");
+            AnsiConsole.MarkupLine($"[bold]Sync completed in {FormatElapsedTime(elapsed)}[/]");
             AnsiConsole.WriteLine();
 
             var summaryTable = new Table { Border = TableBorder.None };

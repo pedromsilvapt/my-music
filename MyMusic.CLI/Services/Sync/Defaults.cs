@@ -10,6 +10,7 @@ using MyMusic.CLI.Api.Dtos;
 using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services.Devices;
 using MyMusic.CLI.Services.Sync.Types;
+using MyMusic.CLI.Services.Terminal;
 using Refit;
 using SyncOptions = MyMusic.CLI.Services.Sync.Types.SyncOptions;
 using SyncRecordItem = MyMusic.CLI.Services.Sync.Types.SyncRecordItem;
@@ -106,28 +107,27 @@ public class CliKeepAwake : IKeepAwake
     public void Deactivate() { }
 }
 
-public class CliUserPrompt : IUserPrompt
+public class CliUserPrompt(ITerminal terminal) : IUserPrompt
 {
-    public Task<ConflictResolution> PromptConflictResolutionAsync(string filePath, IReadOnlyList<ConflictResolution> choices, CancellationToken ct = default)
+    public async Task<ConflictResolution> PromptConflictResolutionAsync(string filePath, IReadOnlyList<ConflictResolution> choices, CancellationToken ct = default)
     {
         var names = string.Join(", ", choices.Select(c => c.ToString().ToLowerInvariant()));
         var keys = string.Join("/", choices.Select(c => c.ToString().ToLowerInvariant()[0]));
-        Console.Write($"Conflict detected for '{filePath}'. Choose one of: {names} [{keys}]: ");
-        var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-        var resolution = response switch
+        var answer = await terminal.AskAsync($"Conflict detected for '{filePath}'. Choose one of: {names} [{keys}]: ", ct);
+        var resolution = answer?.Trim().ToLowerInvariant() switch
         {
             "u" or "upload" => ConflictResolution.Upload,
             "d" or "download" => ConflictResolution.Download,
             _ => ConflictResolution.Skip
         };
-        return Task.FromResult(choices.Contains(resolution) ? resolution : ConflictResolution.Skip);
+        return choices.Contains(resolution) ? resolution : ConflictResolution.Skip;
     }
 
-    public Task<bool> ConfirmDeletionAsync(string filePath, CancellationToken ct = default)
+    public async Task<bool> ConfirmDeletionAsync(string filePath, CancellationToken ct = default)
     {
-        Console.Write($"Delete '{filePath}'? [y/N]: ");
-        var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-        return Task.FromResult(response == "y" || response == "yes");
+        var answer = await terminal.AskAsync($"Delete '{filePath}'? [y/N]: ", ct);
+        var response = answer?.Trim().ToLowerInvariant();
+        return response == "y" || response == "yes";
     }
 }
 

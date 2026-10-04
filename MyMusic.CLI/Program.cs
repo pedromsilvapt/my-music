@@ -12,6 +12,7 @@ using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services;
 using MyMusic.CLI.Services.Devices;
 using MyMusic.CLI.Services.Sync;
+using MyMusic.CLI.Services.Terminal;
 using MyMusic.OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Trace;
@@ -191,6 +192,8 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddSingleton<IFileSystemScanner, CliFileSystemScanner>();
     services.AddSingleton<IFileOps, CliFileOps>();
     services.AddSingleton<IKeepAwake, CliKeepAwake>();
+    services.AddSingleton<IProgressRenderer, SpectreProgressRenderer>();
+    services.AddSingleton<ITerminal, CliTerminal>();
     services.AddSingleton<IUserPrompt, CliUserPrompt>();
     services.AddSingleton<IDeviceConfigService, DeviceConfigService>();
     services.AddSingleton<ISyncConfig, CliSyncConfig>();

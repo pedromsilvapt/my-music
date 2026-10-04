@@ -101,6 +101,19 @@ A file changed differently on the device and on the server is a real conflict (s
 
 The option applies to a `--dry-run` as well, which then records what the real sync would do without doing it.
 
+## Prompts and Progress
+
+A live progress redraws itself several times a second, so anything else written to the console meanwhile is painted
+over. `ITerminal` (`Services/Terminal/`) owns both the progress and the questions:
+
+- `RunWithProgressAsync` runs the work with a live progress display.
+- `PromptAsync` (or `AskAsync`, for a plain line of text) asks a question from anywhere in the code. While a progress
+  is running, it is hidden for the question and shown again afterwards in the state it was in; its elapsed time does
+  not advance meanwhile.
+
+Never call `Console.ReadLine` or `AnsiConsole.Prompt` directly from code that can run during a sync: ask through
+`ITerminal`.
+
 ## Other Development Topics
 
 Development documentation for other MyMusic.CLI topics will be added here as the project evolves.
