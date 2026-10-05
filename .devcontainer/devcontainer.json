@@ -11,7 +11,7 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
-  "postCreateCommand": "dotnet restore && cd MyMusic.Client && pnpm install",
+  "postCreateCommand": "dotnet restore && npm install && cd MyMusic.Client && pnpm install",
   "postStartCommand": "sudo sysctl -p",
   "customizations": {
     "vscode": {

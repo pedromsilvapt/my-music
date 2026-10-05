@@ -1,5 +1,12 @@
 {
+  "private": true,
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "commitlint": "commitlint"
+  },
   "devDependencies": {
+    "@commitlint/cli": "^21",
+    "@commitlint/config-conventional": "^21",
     "typescript": "^5.9.3"
   }
 }

@@ -46,6 +46,8 @@ dotnet run --project MyMusic.Common.Tests
 ## Git Commands
 **CRITICAL** Do not, under any circunstance, execute git write commands (commit, stash, reset, checkout, etc..) without the user's explicit instruction.
 
+Commit messages are linted (commitlint): conventional commits `type(scope): subject`, scope optional, single or comma-separated from `ui`, `server`, `mobile`, `cli`; lower-case subject, no trailing period; every line <= 100 chars; empty line between subject and body.
+
 ## Integration Tests
 
 - **MyMusic.IntegrationTests** - Playwright browser tests for end-user functionality; inherit from `IntegrationTestBase` for automatic user lifecycle
@@ -460,7 +462,7 @@ The project maintains a **TECHDEBT.md** file that tracks all identified code qua
 - [ ] Refactoring implemented
 - [ ] Tests pass after changes
 - [ ] Checkbox updated in TECHDEBT.md
-- [ ] Commit message references task ID (e.g., "TD0042 - Fix useShallow violation")
+- [ ] Commit message references task ID (e.g., "refactor(ui): fix useShallow violation (TD0042)")
 
 ### Why This Matters
 
