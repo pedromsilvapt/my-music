@@ -37,7 +37,7 @@ export async function orchestrateSync(
         return {...createEmptyResult(), error: 1};
     }
 
-    const ctx = createSyncContext(deviceId, repositoryPath, deps.state);
+    const ctx = createSyncContext(deviceId, repositoryPath, deps.state, deps.config.getExcludePatterns());
 
     try {
         await deps.keepAwake.activate();

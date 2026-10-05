@@ -2,7 +2,8 @@ import * as MediaLibrary from 'expo-media-library';
 import { File } from 'expo-file-system';
 import { computeRelativePath, decodeSafUriToFilesystemPath, decodeToFsPath, isContentUri, isWithinDirectory, toFileUri } from './pathUtils';
 import { type FileMetadata, type ScanError, type ScanOptions, type ScanResult } from './scanner/types';
-import { fromEpochTimestamp, shouldExclude, yieldToUI } from './scanner/utils';
+import { fromEpochTimestamp, yieldToUI } from './scanner/utils';
+import { createExclusionMatcher } from './sync/exclusions';
 
 const PROGRESS_INTERVAL_MS = 100;
 const YIELD_INTERVAL_MS = 16;
@@ -32,6 +33,7 @@ export async function scanFromDirectory (
         let hasMore = true;
         let cursor: string | undefined = undefined;
         let processedCount = 0;
+        const isExcluded = createExclusionMatcher(options.excludePatterns);
 
         const repoFsPath = isContentUri(directoryUri)
             ? decodeSafUriToFilesystemPath(directoryUri)
@@ -90,11 +92,11 @@ export async function scanFromDirectory (
                         continue;
                     }
 
-                    if (shouldExclude(filename, options.excludePatterns)) {
+                    const relativePath = computeRelativePath(filePath, repoFsPath, filename);
+
+                    if (isExcluded(relativePath)) {
                         continue;
                     }
-
-                    const relativePath = computeRelativePath(filePath, repoFsPath, filename);
 
                     console.log('[mediaLibraryScanner] sourceUri:', sourceUri);
                     console.log('[mediaLibraryScanner] filePath:', filePath);

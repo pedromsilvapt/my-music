@@ -87,6 +87,16 @@ are saved to the server device by `IDeviceConfigService`:
   so the dry run previews the local template (see "Device Options in a Dry-Run" in [sync.md](sync.md)).
 - `my-music device save` saves them without running a sync.
 
+## Exclusion Rules
+
+`MyMusic:Repository:ExcludePatterns` lists the rules that keep local paths out of the sync (syntax and behaviour in
+"Exclusion Rules" in [sync.md](sync.md)). `FileScanner` skips the paths they match, and `SyncActionsDevice` fails
+every server action on one (`ReportExcludedAsync`); both use `ExclusionMatcher`.
+
+.NET merges configuration arrays by index, so a list in the user's configuration file that is shorter than the one
+in the `appsettings.json` next to the binary keeps the remaining default rules. `my-music init` writes the full
+default list for that reason.
+
 ## Sync Conflicts
 
 A file changed differently on the device and on the server is a real conflict (see "Resolving a Real Conflict" in

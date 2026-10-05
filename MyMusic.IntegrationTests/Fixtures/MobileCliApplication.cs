@@ -146,6 +146,13 @@ public class MobileCliApplication : ISyncApplication
         await File.WriteAllTextAsync(_configPath, config.ToJsonString());
     }
 
+    public async Task SetExcludePatternsAsync(params string[] patterns)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(_configPath))!;
+        config["excludePatterns"] = new JsonArray(patterns.Select(p => (JsonNode)p).ToArray());
+        await File.WriteAllTextAsync(_configPath, config.ToJsonString());
+    }
+
     public void TouchLocalFile(string relativePath)
     {
         File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);

@@ -84,6 +84,16 @@ The device options set on the device settings screen (icon, naming template, imp
 The server replaces every option on update, so always send the full set; `saveDeviceOptions`
 (`services/sync/device-options.ts`) sends the server's color back, as the app has no setting for it.
 
+## Exclusion Rules
+
+The "Excluded Files" field of the device settings screen holds the rules that keep local paths out of the sync, one
+per line (syntax and behaviour in "Exclusion Rules" in [sync.md](sync.md)). They are stored in `configService`
+(`getExcludePatterns` / `setExcludePatterns`) and stay on the device: nothing is saved to the server device.
+
+`createExclusionMatcher` (`services/sync/exclusions.ts`) builds the matcher. The scanners skip the paths it matches,
+and the sync context carries it (`ctx.isExcluded`) so the actions in `services/sync/sync-actions-device.ts` fail
+every server action on one (`reportExcluded`).
+
 ## Session Counters
 
 The session cards (history list and session details, which is also where a finished sync lands) show the record counts

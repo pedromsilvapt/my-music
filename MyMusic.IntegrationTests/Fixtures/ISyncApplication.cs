@@ -30,6 +30,9 @@ public interface ISyncApplication : IAsyncDisposable
     /// <summary>Sets how many files the client sends to the server per check request.</summary>
     Task SetChunkSizeAsync(int chunkSize);
 
+    /// <summary>Sets the rules that keep local paths out of the sync.</summary>
+    Task SetExcludePatternsAsync(params string[] patterns);
+
     /// <summary>Bumps a local file's modification time without changing its content.</summary>
     void TouchLocalFile(string relativePath);
 

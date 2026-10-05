@@ -14,6 +14,7 @@ public class SyncActionsDeviceTests
     private readonly ISyncApiClient _apiClient;
     private readonly IFileOps _fileOps;
     private readonly IUserPrompt _userPrompt;
+    private readonly ISyncConfig _config;
     private readonly ILogger<SyncActionsDevice> _logger;
 
     public SyncActionsDeviceTests()
@@ -24,6 +25,8 @@ public class SyncActionsDeviceTests
         _userPrompt = Substitute.For<IUserPrompt>();
         _userPrompt.PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
             .Returns(ConflictResolution.Skip);
+        _config = Substitute.For<ISyncConfig>();
+        _config.GetExcludePatterns().Returns([]);
         _logger = Substitute.For<ILogger<SyncActionsDevice>>();
 
         _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
@@ -745,6 +748,113 @@ public class SyncActionsDeviceTests
     }
 
     /// <summary>
+    /// An action on a path that an exclusion rule matches fails without touching any file, whether or not
+    /// the file exists and in a dry run as well.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ActionCreateLocalAsync_ExcludedPath_ReportsErrorForRecord(bool fileExists, bool dryRun)
+    {
+        var device = CreateDeviceExcluding("Podcasts/");
+        _fileOps.FileExists(Arg.Any<string>()).Returns(fileExists);
+
+        var result = await device.ActionCreateLocalAsync(1, 7, "/music", 3, "Podcasts/ep1.mp3", dryRun, autoConfirm: true, recordId: 42);
+
+        AssertExcluded(result, "Podcasts/", "Server-initiated download failed");
+        await AssertFailureReported(recordId: 42, path: "Podcasts/ep1.mp3", songId: 3);
+        await AssertNoFileTouched();
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ActionUpdateLocalAsync_ExcludedPath_ReportsErrorForRecord(bool fileExists, bool dryRun)
+    {
+        var device = CreateDeviceExcluding("Podcasts/");
+        _fileOps.FileExists(Arg.Any<string>()).Returns(fileExists);
+
+        var result = await device.ActionUpdateLocalAsync(1, 7, "/music", 3, "Podcasts/ep1.mp3", dryRun, autoConfirm: true, recordId: 42);
+
+        AssertExcluded(result, "Podcasts/", "Server-initiated update failed");
+        await AssertFailureReported(recordId: 42, path: "Podcasts/ep1.mp3", songId: 3);
+        await AssertNoFileTouched();
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task ActionDeleteLocalAsync_ExcludedPath_ReportsErrorForRecord(bool fileExists, bool dryRun)
+    {
+        var device = CreateDeviceExcluding("Podcasts/");
+        _fileOps.FileExists(Arg.Any<string>()).Returns(fileExists);
+
+        var result = await device.ActionDeleteLocalAsync(1, 7, "/music", 3, "Podcasts/ep1.mp3", dryRun, autoConfirm: false, recordId: 42);
+
+        AssertExcluded(result, "Podcasts/", "Server-initiated removal failed");
+        await AssertFailureReported(recordId: 42, path: "Podcasts/ep1.mp3", songId: 3);
+        await AssertNoFileTouched();
+        await _userPrompt.DidNotReceive().ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("Podcasts/ep1.mp3", "Shows/ep1.mp3", false)]
+    [InlineData("Podcasts/ep1.mp3", "Shows/ep1.mp3", true)]
+    [InlineData("Shows/ep1.mp3", "Podcasts/ep1.mp3", false)]
+    [InlineData("Shows/ep1.mp3", "Podcasts/ep1.mp3", true)]
+    public async Task ActionRenameAsync_ExcludedNewOrPreviousPath_ReportsErrorForRecord(string path, string previousPath, bool dryRun)
+    {
+        var device = CreateDeviceExcluding("Podcasts/");
+        _fileOps.FileExists(Arg.Any<string>()).Returns(call => (string)call[0] == $"/music/{previousPath}");
+
+        var result = await device.ActionRenameAsync(1, 7, "/music", path, previousPath, dryRun, recordId: 42);
+
+        AssertExcluded(result, "Podcasts/", $"Rename from '{previousPath}' failed");
+        await AssertFailureReported(recordId: 42, path: path, songId: null);
+        await AssertNoFileTouched();
+    }
+
+    [Fact]
+    public async Task ActionUnlinkAsync_ExcludedPath_IsAcknowledged()
+    {
+        var device = CreateDeviceExcluding("Podcasts/");
+
+        var result = await device.ActionUnlinkAsync(1, 7, 3, "Podcasts/ep1.mp3", dryRun: false, recordId: 42);
+
+        result!.Action.ShouldBe("Unlink");
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 7, Arg.Is<AcknowledgeActionRequest>(r => r.RecordIds.SequenceEqual(new long[] { 42 })), Arg.Any<CancellationToken>());
+    }
+
+    private SyncActionsDevice CreateDeviceExcluding(params string[] patterns)
+    {
+        _config.GetExcludePatterns().Returns(patterns);
+        return CreateDevice();
+    }
+
+    private static void AssertExcluded(SyncActionsDevice.ActionResult? result, string rule, string reason)
+    {
+        result.ShouldNotBeNull();
+        result.Action.ShouldBe("Error");
+        result.ErrorMessage.ShouldBe($"Path is excluded from sync by the rule '{rule}'");
+        result.Reason.ShouldBe(reason);
+    }
+
+    private async Task AssertNoFileTouched()
+    {
+        await _fileOps.DidNotReceive().EnsureDirectoryAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _fileOps.DidNotReceive().WriteFileAsync(Arg.Any<string>(), Arg.Any<Stream>(), Arg.Any<CancellationToken>());
+        await _fileOps.DidNotReceive().DeleteFileAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _fileOps.DidNotReceive().MoveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>
     /// A failed client action is reported as an Error linked to its record (which the server
     /// acknowledges), instead of being acknowledged as if it had succeeded.
     /// </summary>
@@ -937,5 +1047,5 @@ public class SyncActionsDeviceTests
         await _apiClient.DidNotReceive().ChooseConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>());
     }
 
-    private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _logger);
+    private SyncActionsDevice CreateDevice() => new(_fileOps, _apiClient, _userPrompt, _fileSystem, _config, _logger);
 }

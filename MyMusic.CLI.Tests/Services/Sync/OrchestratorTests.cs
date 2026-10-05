@@ -34,7 +34,7 @@ public class OrchestratorTests
         _orchestratorLogger = Substitute.For<ILogger<Orchestrator>>();
         _fileSystem = Substitute.For<System.IO.Abstractions.IFileSystem>();
 
-        _syncActions = new SyncActionsDevice(_fileOps, _apiClient, _userPrompt, _fileSystem, Substitute.For<ILogger<SyncActionsDevice>>());
+        _syncActions = new SyncActionsDevice(_fileOps, _apiClient, _userPrompt, _fileSystem, _config, Substitute.For<ILogger<SyncActionsDevice>>());
 
         SetupDefaults();
     }

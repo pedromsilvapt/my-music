@@ -1,6 +1,7 @@
 import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict, MAX_RESOLVE_ITEMS_PER_REQUEST} from '../sync-actions-device';
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncResult, ActionResult, SyncRecordItem} from '../types';
 import {addDeltaToResult} from '../types';
+import {createExclusionMatcher} from '../exclusions';
 
 const ZERO_COUNTS = {
     createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0,
@@ -60,6 +61,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
         sessionId: 1,
         repositoryPath: '/music',
         decodedRepoPath: '/music',
+        isExcluded: () => null,
         options: {
             force: false,
             dryRun: false,
@@ -1364,5 +1366,106 @@ describe('actionConflict - resolve requests', () => {
 
         const request = resolveConflicts.mock.calls[0][2] as ResolveRequest;
         expect(request.conflicts.map(c => c.path)).toEqual(['song.mp3']);
+    });
+});
+
+/**
+ * An action on a path that an exclusion rule matches fails without touching any file, whether or not
+ * the file exists and in a dry run as well.
+ */
+describe('excluded paths', () => {
+    const cases = [
+        {fileExists: false, dryRun: false},
+        {fileExists: false, dryRun: true},
+        {fileExists: true, dryRun: false},
+        {fileExists: true, dryRun: true},
+    ];
+
+    function setup(fileExists: boolean | ((path: string) => boolean), dryRun: boolean) {
+        const apiClient = createMockApiClient({
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn(typeof fileExists === 'function' ? fileExists : () => fileExists),
+        });
+        const userPrompt = createMockUserPrompt();
+        const base = createContext();
+        const ctx = createContext({
+            sessionId: 7,
+            isExcluded: createExclusionMatcher(['Podcasts/']),
+            options: {...base.options, dryRun},
+        });
+        return {apiClient, fileOps, userPrompt, ctx};
+    }
+
+    function expectExcluded(
+        result: ActionResult | null,
+        apiClient: ISyncApiClient,
+        fileOps: IFileOps,
+        expected: {filePath: string; songId: number | undefined; reason: string}
+    ) {
+        const errorMessage = "Path is excluded from sync by the rule 'Podcasts/'";
+
+        expect(result).toMatchObject({action: 'Error', filePath: expected.filePath, errorMessage, reason: expected.reason, recordId: 42});
+        expect(apiClient.reportSyncError).toHaveBeenCalledTimes(1);
+        expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 7, {
+            filePath: expected.filePath,
+            errorMessage,
+            songId: expected.songId,
+            recordId: 42,
+        });
+        expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+        expect(apiClient.downloadSong).not.toHaveBeenCalled();
+        expect(fileOps.ensureDirectory).not.toHaveBeenCalled();
+        expect(fileOps.copyFile).not.toHaveBeenCalled();
+        expect(fileOps.moveFile).not.toHaveBeenCalled();
+        expect(fileOps.deleteFile).not.toHaveBeenCalled();
+    }
+
+    test.each(cases)('actionCreateLocal reports an error (%p)', async ({fileExists, dryRun}) => {
+        const {apiClient, fileOps, ctx} = setup(fileExists, dryRun);
+
+        const result = await actionCreateLocal(apiClient, fileOps, ctx, 3, 'Podcasts/ep1.mp3', '/music', 42);
+
+        expectExcluded(result, apiClient, fileOps, {filePath: 'Podcasts/ep1.mp3', songId: 3, reason: 'Server-initiated download failed'});
+    });
+
+    test.each(cases)('actionUpdateLocal reports an error (%p)', async ({fileExists, dryRun}) => {
+        const {apiClient, fileOps, ctx} = setup(fileExists, dryRun);
+
+        const result = await actionUpdateLocal(apiClient, fileOps, ctx, 3, 'Podcasts/ep1.mp3', '/music', 42);
+
+        expectExcluded(result, apiClient, fileOps, {filePath: 'Podcasts/ep1.mp3', songId: 3, reason: 'Server-initiated update failed'});
+    });
+
+    test.each(cases)('actionDeleteLocal reports an error without asking (%p)', async ({fileExists, dryRun}) => {
+        const {apiClient, fileOps, userPrompt, ctx} = setup(fileExists, dryRun);
+
+        const result = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'Podcasts/ep1.mp3', '/music', 3, 42);
+
+        expectExcluded(result, apiClient, fileOps, {filePath: 'Podcasts/ep1.mp3', songId: 3, reason: 'Server-initiated removal failed'});
+        expect(userPrompt.confirmDeletion).not.toHaveBeenCalled();
+    });
+
+    test.each([
+        {path: 'Podcasts/ep1.mp3', previousPath: 'Shows/ep1.mp3', dryRun: false},
+        {path: 'Podcasts/ep1.mp3', previousPath: 'Shows/ep1.mp3', dryRun: true},
+        {path: 'Shows/ep1.mp3', previousPath: 'Podcasts/ep1.mp3', dryRun: false},
+        {path: 'Shows/ep1.mp3', previousPath: 'Podcasts/ep1.mp3', dryRun: true},
+    ])('actionRename reports an error when the new or the previous path is excluded (%p)', async ({path, previousPath, dryRun}) => {
+        const {apiClient, fileOps, ctx} = setup(p => p === `/music/${previousPath}`, dryRun);
+
+        const result = await actionRename(apiClient, fileOps, ctx, path, previousPath, '/music', 42);
+
+        expectExcluded(result, apiClient, fileOps, {filePath: path, songId: undefined, reason: `Rename from '${previousPath}' failed`});
+    });
+
+    test('actionUnlink is acknowledged', async () => {
+        const {apiClient, ctx} = setup(false, false);
+
+        const result = await actionUnlink(apiClient, ctx, 'Podcasts/ep1.mp3', 3, 42);
+
+        expect(result!.action).toBe('Unlink');
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 7, {recordIds: [42]});
     });
 });

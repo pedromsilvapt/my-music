@@ -231,6 +231,44 @@ How orphans are handled depends on the sync direction:
 - **`up`** — The device is explicitly the source of truth for this session. Orphaned associations are removed, and any pending server-initiated actions (downloads marked on `SongDevice`) for files that are present are cleared — the user chose to push, not pull.
 - **`down`** — The server is the source of truth for this session. Orphan detection is not performed; the server does not assume the device has intentionally deleted files just because it isn't mentioning them. The user is only pulling changes, not declaring that their local deletions should be reflected server-side.
 
+## Exclusion Rules
+
+Each client has a list of rules that keep local paths out of the sync (the "Excluded Files" setting of the mobile
+app, `MyMusic:Repository:ExcludePatterns` in the CLI). The rules live on the client only: the server does not know
+them.
+
+A rule is matched against the path relative to the repository, ignoring case:
+
+| Rule | Excludes |
+| --- | --- |
+| `*.tmp`, `Podcasts` | A rule without a `/` matches a file or folder name at any depth. |
+| `Podcasts/*.mp3`, `/Inbox` | A rule with a `/` is relative to the repository. A leading `/` is dropped. |
+| `Podcasts/` | A trailing `/` matches folders only. |
+| `*`, `?` | Any characters, or one character, of a single name: they never cross a `/`. |
+| `**/Live/*.mp3`, `Artist/**/demo.mp3`, `Podcasts/**` | `**` matches any number of folders, including none. |
+
+A rule that matches a folder excludes everything in it. Blank rules and rules starting with `#` are ignored. Every
+other character is literal, including `[` and `]`, and there is no negation (`!`).
+
+An excluded path is invisible to the sync, and the sync never touches it:
+
+- **It is not scanned.** Excluded files are not counted, not sent to the server and not uploaded.
+- **No action is performed on it.** A `CreateLocal`, `UpdateLocal` or `DeleteLocal` of an excluded path, and a
+  `Rename` to or from one, is reported to the server as an `Error` for its record, whether or not the file exists
+  and in a dry run as well. An `Unlink` is still acknowledged, as it touches no file.
+
+Two consequences follow from the server not knowing the rules:
+
+- A file that was already synced and starts matching a rule is no longer mentioned by the device, so
+  [Orphan Detection](#orphan-detection) unlinks it in `both` and `up`. The file stays on the device and the song on
+  the server; removing the rule links them again on the next sync.
+- A song the server wants on the device at an excluded path fails on every sync, until the rule is removed or the
+  song is no longer assigned to the device.
+
+The two matchers (`ExclusionMatcher` in the CLI, `createExclusionMatcher` in the mobile app) must exclude the same
+paths: they are pinned by the same table of test vectors (`ExclusionMatcherTests.cs` and `exclusions.test.ts`), so a
+change to the syntax changes both tables.
+
 ## Dry-Run Mode
 
 Dry-run is not a debug flag — it is a user-facing feature that answers the question "what would happen if I synced right now?" The answer is the record list: every action that would be taken, summarized by type and count.

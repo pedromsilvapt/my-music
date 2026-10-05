@@ -1,6 +1,7 @@
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ConflictResolution, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
 import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData, ConflictData, SongModifiedAtData} from '../../api/types';
 import {safeToIsoString} from './utils';
+import {excludedPathError} from './exclusions';
 
 export async function actionCreateRemote(
     apiClient: ISyncApiClient,
@@ -102,6 +103,11 @@ export async function actionCreateLocal(
     recordId: number,
     reason?: string
 ): Promise<ActionResult> {
+    const excluded = await reportExcluded(apiClient, ctx, recordId, path, songId ?? undefined, `${reason ?? 'Server-initiated download'} failed`);
+    if (excluded) {
+        return excluded;
+    }
+
     const fullPath = `${decodedRepoPath}/${path}`;
 
     if (fileOps.fileExists(fullPath)) {
@@ -123,6 +129,11 @@ export async function actionUpdateLocal(
     reason?: string,
     localSourcePath?: string
 ): Promise<ActionResult> {
+    const excluded = await reportExcluded(apiClient, ctx, recordId, path, songId ?? undefined, `${reason ?? 'Server-initiated update'} failed`);
+    if (excluded) {
+        return excluded;
+    }
+
     const fullPath = `${decodedRepoPath}/${path}`;
 
     if (!fileOps.fileExists(fullPath)) {
@@ -213,6 +224,11 @@ export async function actionDeleteLocal(
     recordId: number,
     reason?: string
 ): Promise<ActionResult | null> {
+    const excluded = await reportExcluded(apiClient, ctx, recordId, path, songId, `${reason ?? 'Server-initiated removal'} failed`);
+    if (excluded) {
+        return excluded;
+    }
+
     const fullPath = `${decodedRepoPath}/${path}`;
     const fileExists = fileOps.fileExists(fullPath);
 
@@ -300,6 +316,11 @@ export async function actionRename(
     decodedRepoPath: string,
     recordId: number
 ): Promise<ActionResult> {
+    const excluded = await reportExcluded(apiClient, ctx, recordId, relativePath, undefined, `Rename from '${previousRelativePath}' failed`, previousRelativePath);
+    if (excluded) {
+        return excluded;
+    }
+
     const fullPath = `${decodedRepoPath}/${relativePath}`;
     const previousFullPath = `${decodedRepoPath}/${previousRelativePath}`;
 
@@ -347,6 +368,29 @@ export async function actionRename(
         const errorMessage = e instanceof Error ? e.message : String(e);
         return reportFailure(apiClient, ctx, recordId, relativePath, undefined, errorMessage, `Rename from '${previousRelativePath}' failed`);
     }
+}
+
+/**
+ * Reports an action on a path that an exclusion rule matches as an `Error`, whether or not the file exists
+ * and in a dry run as well: a sync never creates, changes, moves or deletes an excluded file. Returns null
+ * when neither the path nor `otherPath` (the path a rename moves from) is excluded.
+ */
+async function reportExcluded(
+    apiClient: ISyncApiClient,
+    ctx: SyncContext,
+    recordId: number,
+    filePath: string,
+    songId: number | undefined,
+    reason: string,
+    otherPath?: string
+): Promise<ActionResult | null> {
+    const rule = ctx.isExcluded(filePath) ?? (otherPath ? ctx.isExcluded(otherPath) : null);
+    if (rule === null) {
+        return null;
+    }
+
+    console.error(`Excluded path in a server action (rule '${rule}'):`, filePath);
+    return reportFailure(apiClient, ctx, recordId, filePath, songId, excludedPathError(rule), reason);
 }
 
 /**

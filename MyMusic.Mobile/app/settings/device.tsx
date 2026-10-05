@@ -16,6 +16,7 @@ import {ensureRepositoryWriteAccess} from '../../src/services/storageAccess';
 import {
     getDeviceIcon,
     getDeviceName,
+    getExcludePatterns,
     getImportOnPurchase,
     getNamingTemplate,
     getRepositoryPath,
@@ -23,6 +24,7 @@ import {
     getUserName,
     setDeviceIcon,
     setDeviceName,
+    setExcludePatterns,
     setImportOnPurchase,
     setIsConfigured,
     setLastSyncAt,
@@ -41,6 +43,7 @@ const configSchema = z.object({
     namingTemplate: z.string().optional(),
     importOnPurchase: z.boolean(),
     repositoryPath: z.string().optional(),
+    excludePatterns: z.string().optional(),
 });
 
 type ConfigFormData = z.infer<typeof configSchema>;
@@ -64,6 +67,7 @@ export default function DeviceConfigScreen() {
             namingTemplate: getNamingTemplate() || '',
             importOnPurchase: getImportOnPurchase(),
             repositoryPath: getRepositoryPath() || '',
+            excludePatterns: getExcludePatterns().join('\n'),
         },
     });
 
@@ -143,6 +147,7 @@ export default function DeviceConfigScreen() {
             await setNamingTemplate(data.namingTemplate || '');
             await setImportOnPurchase(data.importOnPurchase);
             await setRepositoryPath(data.repositoryPath || '');
+            await setExcludePatterns((data.excludePatterns || '').split('\n').map(p => p.trim()).filter(p => p !== ''));
 
             const apiServerUrl = data.serverUrl.endsWith('/api') ? data.serverUrl : `${data.serverUrl}/api`;
             await setServerUrl(apiServerUrl);
@@ -399,6 +404,31 @@ export default function DeviceConfigScreen() {
                 <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
                     Tap "Browse" to select a folder from your device, or enter the path manually.
                 </Text>
+
+                <Controller
+                    control={control}
+                    name="excludePatterns"
+                    render={({field: {onChange, onBlur, value}}) => (
+                        <Input
+                            label="Excluded Files"
+                            placeholder={'*.tmp\nPodcasts/\n**/Live/*.mp3'}
+                            value={value}
+                            onChangeText={onChange}
+                            onBlur={onBlur}
+                            multiline
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            textAlignVertical="top"
+                            style={styles.excludePatternsInput}
+                            containerStyle={{marginTop: spacing.md, marginBottom: 0}}
+                            variant="card"
+                        />
+                    )}
+                />
+
+                <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
+                    One rule per line. Matching files are never uploaded, downloaded, renamed or deleted by a sync. A name matches in any folder (*.tmp), a trailing / matches a folder (Podcasts/), and ** matches any number of folders (**/Live/*.mp3).
+                </Text>
             </Card>
 
             <View style={[styles.actions, {marginTop: spacing.lg}]}>
@@ -502,6 +532,10 @@ const styles = StyleSheet.create({
     },
     namingTemplateContainer: {
         marginTop: 16,
+    },
+    excludePatternsInput: {
+        minHeight: 110,
+        fontFamily: 'monospace',
     },
     toggle: {
         width: 50,

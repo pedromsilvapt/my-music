@@ -3,6 +3,9 @@ import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import {DEFAULT_DEVICE_TYPE} from '../constants/deviceIcons';
 
+/** The exclusion rules of a new installation (see "Exclusion Rules" in docs/development/sync.md). */
+export const DEFAULT_EXCLUDE_PATTERNS = ['**/.*', '**/Thumbs.db', '**/*.tmp', '**/desktop.ini'];
+
 interface ConfigState {
     isLoading: boolean;
     serverUrl: string;
@@ -12,6 +15,7 @@ interface ConfigState {
     importOnPurchase: boolean;
     repositoryPath: string;
     namingTemplate: string;
+    excludePatterns: string[];
     isConfigured: boolean;
     lastSyncAt: string | null;
     userId: number | null;
@@ -24,6 +28,7 @@ interface ConfigState {
     setImportOnPurchase: (value: boolean) => void;
     setRepositoryPath: (path: string) => void;
     setNamingTemplate: (template: string) => void;
+    setExcludePatterns: (patterns: string[]) => void;
     setIsConfigured: (configured: boolean) => void;
     setLastSyncAt: (date: string | null) => void;
     setUserId: (id: number | null) => void;
@@ -41,6 +46,7 @@ export const useConfigStore = create<ConfigState>()(
             importOnPurchase: false,
             repositoryPath: '',
             namingTemplate: '',
+            excludePatterns: DEFAULT_EXCLUDE_PATTERNS,
             isConfigured: false,
             lastSyncAt: null,
             userId: null,
@@ -53,6 +59,7 @@ export const useConfigStore = create<ConfigState>()(
             setImportOnPurchase: (importOnPurchase) => set({importOnPurchase}),
             setRepositoryPath: (repositoryPath) => set({repositoryPath}),
             setNamingTemplate: (namingTemplate) => set({namingTemplate}),
+            setExcludePatterns: (excludePatterns) => set({excludePatterns}),
             setIsConfigured: (isConfigured) => set({isConfigured}),
             setLastSyncAt: (lastSyncAt) => set({lastSyncAt}),
             setUserId: (userId) => set({userId}),
@@ -69,6 +76,7 @@ export const useConfigStore = create<ConfigState>()(
                 importOnPurchase: state.importOnPurchase,
                 repositoryPath: state.repositoryPath,
                 namingTemplate: state.namingTemplate,
+                excludePatterns: state.excludePatterns,
                 isConfigured: state.isConfigured,
                 lastSyncAt: state.lastSyncAt,
                 userId: state.userId,

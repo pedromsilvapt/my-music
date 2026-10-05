@@ -38,7 +38,7 @@ public class PhasesTests
         _scanner = Substitute.For<IFileSystemScanner>();
         _logger = Substitute.For<ILogger<Phases>>();
 
-        _syncActions = new SyncActionsDevice(_fileOps, _apiClient, _userPrompt, _fileSystem, Substitute.For<ILogger<SyncActionsDevice>>());
+        _syncActions = new SyncActionsDevice(_fileOps, _apiClient, _userPrompt, _fileSystem, _config, Substitute.For<ILogger<SyncActionsDevice>>());
     }
 
     [Fact]

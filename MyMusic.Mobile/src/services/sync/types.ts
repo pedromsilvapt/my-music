@@ -3,6 +3,7 @@
 import type { SyncPhase, SyncProgress } from '../../stores/syncStore';
 import type { ScannerType } from '../../services/scannerRegistry';
 import type {SyncRecordAction, SyncRecordItem} from '../../api/types';
+import type {ExclusionMatcher} from './exclusions';
 
 export type {SyncRecordAction, SyncRecordItem};
 
@@ -12,6 +13,8 @@ export interface SyncContext {
     deviceId: number;
     repositoryPath: string;
     decodedRepoPath: string;
+    /** Matches the paths the exclusion rules keep out of the sync: they are not scanned, and no action touches them. */
+    isExcluded: ExclusionMatcher;
     sessionId?: number;
     options: {
         force: boolean;

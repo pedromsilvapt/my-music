@@ -71,6 +71,13 @@ public class DesktopCliFixture : IAsyncDisposable
         await File.WriteAllTextAsync(ConfigPath, config.ToJsonString());
     }
 
+    public async Task SetExcludePatternsAsync(string[] patterns)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(ConfigPath))!;
+        config["myMusic"]!["repository"]!["excludePatterns"] = new JsonArray(patterns.Select(p => (JsonNode)p).ToArray());
+        await File.WriteAllTextAsync(ConfigPath, config.ToJsonString());
+    }
+
     public async Task SetNamingTemplateAsync(string namingTemplate)
     {
         // Update the server device

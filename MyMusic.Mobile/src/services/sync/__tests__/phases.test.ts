@@ -123,6 +123,7 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
         deviceId: 1,
         repositoryPath: '/music',
         decodedRepoPath: '/music',
+        isExcluded: () => null,
         sessionId: 1,
         options: {
             force: false, dryRun: false, autoConfirm: false,

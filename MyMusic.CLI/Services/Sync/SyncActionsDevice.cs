@@ -10,8 +10,12 @@ public class SyncActionsDevice(
     ISyncApiClient apiClient,
     IUserPrompt userPrompt,
     IFileSystem fileSystem,
+    ISyncConfig config,
     ILogger<SyncActionsDevice> logger)
 {
+    // The paths the exclusion rules keep out of the sync: they are not scanned, and no action touches them
+    private readonly Lazy<ExclusionMatcher> _exclusions = new(() => new ExclusionMatcher(config.GetExcludePatterns()));
+
     public record ActionResult(
         string Action,
         string FilePath,
@@ -109,6 +113,12 @@ public class SyncActionsDevice(
         string? reason = null,
         CancellationToken ct = default)
     {
+        var excluded = await ReportExcludedAsync(deviceId, sessionId, recordId, relativePath, songId, $"{reason ?? "Server-initiated download"} failed", ct: ct);
+        if (excluded != null)
+        {
+            return excluded;
+        }
+
         var fullPath = Path.Combine(repositoryPath, relativePath);
         var fileExists = fileOps.FileExists(fullPath);
 
@@ -134,6 +144,12 @@ public class SyncActionsDevice(
         string? localSourcePath = null,
         CancellationToken ct = default)
     {
+        var excluded = await ReportExcludedAsync(deviceId, sessionId, recordId, relativePath, songId, $"{reason ?? "Server-initiated update"} failed", ct: ct);
+        if (excluded != null)
+        {
+            return excluded;
+        }
+
         var fullPath = Path.Combine(repositoryPath, relativePath);
         var fileExists = fileOps.FileExists(fullPath);
 
@@ -236,6 +252,12 @@ public class SyncActionsDevice(
         string? reason = null,
         CancellationToken ct = default)
     {
+        var excluded = await ReportExcludedAsync(deviceId, sessionId, recordId, relativePath, songId, $"{reason ?? "Server-initiated removal"} failed", ct: ct);
+        if (excluded != null)
+        {
+            return excluded;
+        }
+
         var fullPath = Path.Combine(repositoryPath, relativePath);
         var fileExists = fileOps.FileExists(fullPath);
 
@@ -316,6 +338,12 @@ public class SyncActionsDevice(
         long recordId,
         CancellationToken ct = default)
     {
+        var excluded = await ReportExcludedAsync(deviceId, sessionId, recordId, relativePath, songId: null, $"Rename from '{previousRelativePath}' failed", previousRelativePath, ct);
+        if (excluded != null)
+        {
+            return excluded;
+        }
+
         var fullPath = Path.Combine(repositoryPath, relativePath);
         var previousFullPath = Path.Combine(repositoryPath, previousRelativePath);
 
@@ -340,6 +368,31 @@ public class SyncActionsDevice(
             logger.LogError(ex, "Failed to rename file: {PreviousPath} -> {Path}", previousRelativePath, relativePath);
             return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId: null, ex.Message, $"Rename from '{previousRelativePath}' failed", ct);
         }
+    }
+
+    /// <summary>
+    /// Reports an action on a path that an exclusion rule matches as an <c>Error</c>, whether or not the file
+    /// exists and in a dry run as well: a sync never creates, changes, moves or deletes an excluded file.
+    /// Returns null when neither the path nor <paramref name="otherPath"/> (the path a rename moves from) is excluded.
+    /// </summary>
+    private async Task<ActionResult?> ReportExcludedAsync(
+        long deviceId,
+        long sessionId,
+        long recordId,
+        string relativePath,
+        long? songId,
+        string reason,
+        string? otherPath = null,
+        CancellationToken ct = default)
+    {
+        var rule = _exclusions.Value.Match(relativePath) ?? (otherPath != null ? _exclusions.Value.Match(otherPath) : null);
+        if (rule == null)
+        {
+            return null;
+        }
+
+        logger.LogError("Excluded path in a server action (rule '{Rule}'): {Path}", rule, relativePath);
+        return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, ExclusionMatcher.ErrorMessage(rule), reason, ct);
     }
 
     /// <summary>

@@ -2,7 +2,8 @@ import { Directory, File } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { computeRelativePath, decodeToFsPath, isWithinDirectory } from './pathUtils';
 import { type FileMetadata, type ScanError, type ScanOptions, type ScanResult } from './scanner/types';
-import { fromEpochTimestamp, shouldExclude, yieldToUI } from './scanner/utils';
+import { fromEpochTimestamp, yieldToUI } from './scanner/utils';
+import { createExclusionMatcher } from './sync/exclusions';
 
 const PROGRESS_INTERVAL_MS = 100;
 const YIELD_INTERVAL_MS = 16;
@@ -19,6 +20,7 @@ export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult>
         }
 
         const repoFsPath = decodeToFsPath(options.basePath);
+        const isExcluded = createExclusionMatcher(options.excludePatterns);
 
         const media = await MediaLibrary.getAssetsAsync({
             mediaType: MediaLibrary.MediaType.audio,
@@ -30,10 +32,6 @@ export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult>
             const ext = '.' + filename.split('.').pop()?.toLowerCase();
 
             if (!options.extensions.includes(ext)) {
-                continue;
-            }
-
-            if (shouldExclude(filename, options.excludePatterns)) {
                 continue;
             }
 
@@ -59,6 +57,10 @@ export async function scanMusicFiles (options: ScanOptions): Promise<ScanResult>
                 console.log('[scanMusicFiles] relativePath:', relativePath);
 
                 if (repoFsPath && !isWithinDirectory(filePath, repoFsPath)) {
+                    continue;
+                }
+
+                if (isExcluded(relativePath)) {
                     continue;
                 }
 
@@ -103,6 +105,7 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
         }
 
         const repoFsPath = decodeToFsPath(directoryUri);
+        const isExcluded = createExclusionMatcher(options.excludePatterns);
 
         let lastProgressTime = Date.now();
         let lastYieldTime = Date.now();
@@ -126,7 +129,10 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                 const itemPath = currentPath ? `${currentPath}/${item.name}` : item.name;
 
                 if (item instanceof Directory) {
-                    yield* scanDirectoryGenerator(item, itemPath);
+                    // An excluded folder is not listed at all
+                    if (!isExcluded(`${itemPath}/`)) {
+                        yield* scanDirectoryGenerator(item, itemPath);
+                    }
                 } else if (item instanceof File) {
                     const filename = item.name;
                     const ext = '.' + filename.split('.').pop()?.toLowerCase();
@@ -136,14 +142,14 @@ export async function scanFromDirectory (directoryUri: string, options: ScanOpti
                         continue;
                     }
 
-                    if (shouldExclude(item.name, options.excludePatterns)) {
-                        yield null;
-                        continue;
-                    }
-
                     try {
                         const fileFsPath = decodeToFsPath(item.uri);
                         const relativePath = computeRelativePath(fileFsPath, repoFsPath, filename);
+
+                        if (isExcluded(relativePath)) {
+                            yield null;
+                            continue;
+                        }
 
                         console.log('[fileScanner:scanFromDirectory] item.uri:', item.uri);
                         console.log('[fileScanner:scanFromDirectory] fileFsPath:', fileFsPath);

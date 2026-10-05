@@ -1,24 +1,7 @@
 import type { IFileSystemScanner, ScannerOptions, ScannerResult, SyncFileInfo, ScanError } from '../src/services/sync/types';
 import * as fs from 'fs';
 import * as path from 'path';
-
-function matchesExcludePatterns(filePath: string, excludePatterns: string[]): boolean {
-    for (const pattern of excludePatterns) {
-        // Simple glob-like matching for common patterns
-        const regex = new RegExp(
-            pattern
-                .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-                .replace(/\./g, '\\.')
-                .replace(/\*/g, '[^/]*')
-                .replace(/<<<DOUBLESTAR>>>/g, '.*')
-                .replace(/\?/g, '.')
-        );
-        if (regex.test(filePath)) {
-            return true;
-        }
-    }
-    return false;
-}
+import { createExclusionMatcher } from '../src/services/sync/exclusions';
 
 export const nodeScanner: IFileSystemScanner = async (
     directoryUri: string,
@@ -27,6 +10,7 @@ export const nodeScanner: IFileSystemScanner = async (
     const files: SyncFileInfo[] = [];
     const errors: ScanError[] = [];
     const extensions = options.extensions.map(e => e.toLowerCase());
+    const isExcluded = createExclusionMatcher(options.excludePatterns);
 
     const basePath = options.basePath.replace(/\\/g, '/').replace(/\/$/, '');
 
@@ -40,7 +24,7 @@ export const nodeScanner: IFileSystemScanner = async (
                     ? normalizedFullPath.substring(basePath.length + 1)
                     : normalizedFullPath;
 
-                if (matchesExcludePatterns(relativePath, options.excludePatterns)) {
+                if (isExcluded(entry.isDirectory() ? `${relativePath}/` : relativePath)) {
                     continue;
                 }
 

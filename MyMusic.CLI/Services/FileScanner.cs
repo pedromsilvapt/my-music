@@ -1,6 +1,6 @@
 using System.IO.Abstractions;
-using System.Text.RegularExpressions;
 using MyMusic.CLI.Configuration;
+using MyMusic.CLI.Services.Sync;
 
 namespace MyMusic.CLI.Services;
 
@@ -46,6 +46,7 @@ public class FileScanner(IFileSystem fileSystem) : IFileScanner
             return Task.FromResult(new FileScanResult { Files = files, Errors = errors });
         }
 
+        var exclusions = new ExclusionMatcher(options.ExcludePatterns);
         var allFiles = fileSystem.Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories);
 
         foreach (var filePath in allFiles)
@@ -55,7 +56,7 @@ public class FileScanner(IFileSystem fileSystem) : IFileScanner
             var relativePath = Path.GetRelativePath(rootPath, filePath).Replace('\\', '/');
             var directory = Path.GetDirectoryName(relativePath)?.Replace('\\', '/') ?? "";
 
-            if (ShouldExclude(relativePath, options.ExcludePatterns))
+            if (exclusions.Match(relativePath) != null)
             {
                 continue;
             }
@@ -89,41 +90,5 @@ public class FileScanner(IFileSystem fileSystem) : IFileScanner
         onProgress?.Invoke(scannedCount, rootPath);
 
         return Task.FromResult(new FileScanResult { Files = files, Errors = errors });
-    }
-
-    private static bool ShouldExclude(string relativePath, List<string> excludePatterns)
-    {
-        foreach (var pattern in excludePatterns)
-        {
-            var regexPattern = GlobToRegex(pattern);
-            if (Regex.IsMatch(relativePath, regexPattern, RegexOptions.IgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string GlobToRegex(string glob)
-    {
-        var regex = "^";
-        foreach (var c in glob)
-        {
-            regex += c switch
-            {
-                '*' => ".*",
-                '?' => ".",
-                '.' => "\\.",
-                '/' => "[\\\\/]",
-                '\\' => "[\\\\/]",
-                '[' => "[",
-                ']' => "]",
-                _ => Regex.Escape(c.ToString()),
-            };
-        }
-
-        regex += "$";
-        return regex;
     }
 }

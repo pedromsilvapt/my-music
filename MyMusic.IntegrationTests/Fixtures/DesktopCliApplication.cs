@@ -80,6 +80,9 @@ public class DesktopCliApplication : ISyncApplication
     public Task SetChunkSizeAsync(int chunkSize)
         => _fixture.SetChunkSizeAsync(chunkSize);
 
+    public Task SetExcludePatternsAsync(params string[] patterns)
+        => _fixture.SetExcludePatternsAsync(patterns);
+
     public void TouchLocalFile(string relativePath)
         => File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
 
