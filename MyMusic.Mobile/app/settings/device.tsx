@@ -12,7 +12,8 @@ import {Button, Card, ErrorDisplay, ExcludedFilesSheet, Input} from '../../src/c
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
 import {useTheme} from '../../src/hooks/useTheme';
-import {ensureRepositoryWriteAccess} from '../../src/services/storageAccess';
+import {resolveRepositoryPath} from '../../src/services/repositoryPath';
+import {ensureRepositoryAccess} from '../../src/services/storageAccess';
 import {
     getDeviceIcon,
     getDeviceName,
@@ -144,9 +145,17 @@ export default function DeviceConfigScreen() {
             });
 
             if (uri) {
+                // The sync reads and writes the files directly: a folder with no path in the storage cannot be synced
+                try {
+                    await resolveRepositoryPath(uri);
+                } catch (error: any) {
+                    Alert.alert('Folder Not Supported', error?.message || 'Failed to select folder');
+                    return;
+                }
+
                 setValue('repositoryPath', uri);
-                // Syncing writes to this folder, which the folder grant alone does not allow
-                await ensureRepositoryWriteAccess();
+                // Syncing reads and writes this folder directly, which the folder grant alone does not allow
+                await ensureRepositoryAccess();
             }
         } catch (error: any) {
             console.error('Error picking folder:', error);

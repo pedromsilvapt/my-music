@@ -1,51 +1,39 @@
 import * as MediaLibrary from 'expo-media-library';
 import { File } from 'expo-file-system';
-import { computeRelativePath, decodeSafUriToFilesystemPath, decodeToFsPath, isContentUri, isWithinDirectory, toFileUri } from './pathUtils';
-import { type FileMetadata, type ScanError, type ScanOptions, type ScanResult } from './scanner/types';
-import { fromEpochTimestamp, yieldToUI } from './scanner/utils';
+import { computeRelativePath, isWithinDirectory, normalizePath, toFileUri } from './pathUtils';
+import { resolveRepositoryPath } from './repositoryPath';
+import { type FileMetadata, type ScanOptions, type ScanResult } from './scanner/types';
+import { createScanErrors, fromEpochTimestamp } from './scanner/utils';
 import { createExclusionMatcher } from './sync/exclusions';
 
-const PROGRESS_INTERVAL_MS = 100;
-const YIELD_INTERVAL_MS = 16;
 const PAGE_SIZE = 1000;
 
+export const MISSING_MEDIA_LIBRARY_PERMISSION_MESSAGE = 'Media library permission not granted';
+
+/**
+ * Scans the music files of a folder from the audio files Android has indexed, keeping the ones inside it.
+ * It throws when the folder has no path or the media library cannot be read, as nothing can be said of
+ * the files then.
+ */
 export async function scanFromDirectory (
     directoryUri: string,
     options: ScanOptions
 ): Promise<ScanResult> {
     const files: FileMetadata[] = [];
-    const errors: ScanError[] = [];
-    const { onProgress, onError } = options;
+    const { errors, report } = createScanErrors(options.onError);
+    const { onProgress } = options;
+
+    const repoFsPath = await resolveRepositoryPath(directoryUri);
+
+    const { status } = await MediaLibrary.requestPermissionsAsync();
+    if (status !== 'granted') {
+        throw new Error(MISSING_MEDIA_LIBRARY_PERMISSION_MESSAGE);
+    }
 
     try {
-        const { status } = await MediaLibrary.requestPermissionsAsync();
-        if (status !== 'granted') {
-            const errorMsg = 'Media library permission not granted';
-            if (onError) {
-                onError('media-library', errorMsg);
-            }
-            errors.push({ path: 'media-library', error: errorMsg });
-            return { files, errors };
-        }
-
-        let lastProgressTime = Date.now();
-        let lastYieldTime = Date.now();
         let hasMore = true;
         let cursor: string | undefined = undefined;
-        let processedCount = 0;
         const isExcluded = createExclusionMatcher(options.excludePatterns);
-
-        const repoFsPath = isContentUri(directoryUri)
-            ? decodeSafUriToFilesystemPath(directoryUri)
-            : decodeToFsPath(directoryUri);
-
-        if (isContentUri(directoryUri) && !repoFsPath) {
-            console.warn(
-                'Could not decode SAF URI to filesystem path. ' +
-                'Directory filtering will be skipped and all audio files will be included. ' +
-                `URI: ${directoryUri}`
-            );
-        }
 
         while (hasMore) {
             const result = await MediaLibrary.getAssetsAsync({
@@ -58,37 +46,23 @@ export async function scanFromDirectory (
             cursor = result.endCursor;
 
             for (const asset of result.assets) {
-                processedCount++;
-
                 try {
-                    const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
-
-                    const sourceUri = assetInfo.localUri || asset.uri;
-
-                    if (!sourceUri) {
-                        if (onError) {
-                            onError(
-                                asset.uri,
-                                'Could not get any valid URI for media asset'
-                            );
-                        }
-                        errors.push({
-                            path: asset.uri,
-                            error: 'Could not get any valid URI for media asset',
-                        });
-                        continue;
-                    }
-
-                    const filePath = decodeToFsPath(sourceUri);
-
-                    if (!isContentUri(sourceUri) && repoFsPath && !isWithinDirectory(filePath, repoFsPath)) {
-                        continue;
-                    }
-
                     const filename = asset.filename;
                     const ext = '.' + filename.split('.').pop()?.toLowerCase();
 
                     if (!options.extensions.includes(ext)) {
+                        continue;
+                    }
+
+                    // On Android the asset already has the file:// URI of the file, no need to ask for its info
+                    if (!asset.uri) {
+                        report(asset.id, 'Could not get any valid URI for media asset');
+                        continue;
+                    }
+
+                    const filePath = normalizePath(asset.uri);
+
+                    if (!isWithinDirectory(filePath, repoFsPath)) {
                         continue;
                     }
 
@@ -97,13 +71,6 @@ export async function scanFromDirectory (
                     if (isExcluded(relativePath)) {
                         continue;
                     }
-
-                    console.log('[mediaLibraryScanner] sourceUri:', sourceUri);
-                    console.log('[mediaLibraryScanner] filePath:', filePath);
-                    console.log('[mediaLibraryScanner] directoryUri:', directoryUri);
-                    console.log('[mediaLibraryScanner] repoFsPath:', repoFsPath);
-                    console.log('[mediaLibraryScanner] isWithinDirectory:', isWithinDirectory(filePath, repoFsPath));
-                    console.log('[mediaLibraryScanner] relativePath:', relativePath);
 
                     let size = 0;
                     try {
@@ -114,44 +81,30 @@ export async function scanFromDirectory (
 
                     files.push({
                         relativePath,
-                        fullPath: sourceUri,
+                        fullPath: asset.uri,
                         modifiedAt: fromEpochTimestamp(asset.modificationTime),
                         createdAt: fromEpochTimestamp(asset.creationTime),
                         size,
                     });
-
-                    const now = Date.now();
-                    if (onProgress && now - lastProgressTime >= PROGRESS_INTERVAL_MS) {
-                        onProgress(files.length, repoFsPath);
-                        lastProgressTime = now;
-                    }
-
-                    if (now - lastYieldTime >= YIELD_INTERVAL_MS) {
-                        await yieldToUI();
-                        lastYieldTime = now;
-                    }
                 } catch (error) {
-                    const errorMsg =
-                        error instanceof Error ? error.message : 'Failed to process asset';
-                    if (onError) {
-                        onError(asset.uri, errorMsg);
-                    }
-                    errors.push({ path: asset.uri, error: errorMsg });
+                    report(asset.uri || asset.id, error instanceof Error ? error.message : 'Failed to process asset');
                 }
             }
-        }
 
-        if (onProgress) {
-            onProgress(files.length, repoFsPath);
+            // Each page is awaited, which is where the UI gets to render the progress
+            if (onProgress && hasMore) {
+                onProgress(files.length, repoFsPath);
+            }
         }
     } catch (error) {
         const errorMsg =
             error instanceof Error ? error.message : 'Unknown error scanning media library';
         console.error('Error scanning media library:', errorMsg);
-        if (onError) {
-            onError('media-library', errorMsg);
-        }
-        errors.push({ path: 'media-library', error: errorMsg });
+        report('media-library', errorMsg);
+    }
+
+    if (onProgress) {
+        onProgress(files.length, repoFsPath);
     }
 
     return { files, errors };

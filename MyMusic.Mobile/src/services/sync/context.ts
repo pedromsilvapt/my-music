@@ -1,5 +1,4 @@
 import type {SyncContext, ISyncState, SyncResult} from './types';
-import {decodeToFsPath} from '../pathUtils';
 import {createExclusionMatcher} from './exclusions';
 
 export function createEmptyResult(): SyncResult {
@@ -22,13 +21,14 @@ export function createEmptyResult(): SyncResult {
 export function createSyncContext(
     deviceId: number,
     repositoryPath: string,
+    decodedRepoPath: string,
     state: ISyncState,
     excludePatterns: string[]
 ): SyncContext {
     return {
         deviceId,
         repositoryPath,
-        decodedRepoPath: decodeToFsPath(repositoryPath),
+        decodedRepoPath,
         isExcluded: createExclusionMatcher(excludePatterns),
         options: state.options,
         result: createEmptyResult(),

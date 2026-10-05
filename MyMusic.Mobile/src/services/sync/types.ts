@@ -331,6 +331,8 @@ export interface ScannerResult {
 }
 
 export interface IFileOps {
+    /** The filesystem path of the configured repository folder. Throws when the folder has none. */
+    resolveRepositoryPath: (repositoryPath: string) => Promise<string>;
     fileExists: (path: string) => boolean;
     directoryExists: (path: string) => boolean;
     ensureDirectory: (path: string) => Promise<void>;

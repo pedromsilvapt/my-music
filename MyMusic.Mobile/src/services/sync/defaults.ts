@@ -28,6 +28,7 @@ import {
 import { getDevice, updateDevice } from '../../api/devices';
 import { getLocalDeviceOptions } from '../deviceConfigService';
 import { getScanner } from '../scannerRegistry';
+import { resolveRepositoryPath } from '../repositoryPath';
 import { toFileUri } from '../pathUtils';
 import { useSyncStore } from '../../stores/syncStore';
 import { hashFile } from '../../../modules/xxhash';
@@ -130,6 +131,7 @@ export function createDefaultScanner(scannerType: 'fileSystem' | 'mediaLibrary' 
  */
 export function createDefaultFileOps(): IFileOps {
     return {
+        resolveRepositoryPath,
         fileExists: (path: string) => {
             return new File(toFileUri(path)).exists;
         },

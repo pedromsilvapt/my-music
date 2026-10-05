@@ -1,6 +1,5 @@
 import type {SyncDeps, SyncResult, ProgressHandler} from './types';
 import {SyncCancelledError} from './errors';
-import {decodeToFsPath} from '../pathUtils';
 import {createEmptyResult, createSyncContext} from './context';
 import {scanPhase, saveDeviceOptionsPhase, startSessionPhase, prepareDeduplicatePhase, uploadPhase, serverActionsPhase, commitPhase, completePhase} from './phases';
 
@@ -32,12 +31,15 @@ export async function orchestrateSync(
         return {...createEmptyResult(), error: 1};
     }
 
-    if (!deps.fileOps.directoryExists(decodeToFsPath(repositoryPath))) {
+    // The same path for the scan and for every file the sync writes
+    const decodedRepoPath = await deps.fileOps.resolveRepositoryPath(repositoryPath);
+
+    if (!deps.fileOps.directoryExists(decodedRepoPath)) {
         console.error(`Repository path does not exist: ${repositoryPath}`);
         return {...createEmptyResult(), error: 1};
     }
 
-    const ctx = createSyncContext(deviceId, repositoryPath, deps.state, deps.config.getExcludePatterns());
+    const ctx = createSyncContext(deviceId, repositoryPath, decodedRepoPath, deps.state, deps.config.getExcludePatterns());
 
     try {
         await deps.keepAwake.activate();

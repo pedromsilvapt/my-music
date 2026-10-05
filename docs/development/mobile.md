@@ -40,7 +40,8 @@ MyMusic.Mobile/
 │   │   └── syncStore.ts          # Sync progress state
 │   ├── services/                 # Business logic
 │   │   ├── configService.ts      # Centralized config management (single source of truth)
-│   │   ├── fileScanner.ts        # Music file scanner
+│   │   ├── fileScanner.ts        # File System scanner (native walk of the music folder)
+│   │   ├── mediaLibraryScanner.ts # Media Library scanner (MediaStore query)
 │   │   └── syncService.ts        # Core sync orchestration
 │   ├── components/ui/            # Reusable UI components
 │   └── constants/                # Theme & device icons
@@ -100,6 +101,41 @@ screen is open; the refresh button of the drawer scans the folder again.
 `createExclusionMatcher` (`services/sync/exclusions.ts`) builds the matcher. The scanners skip the paths it matches,
 and the sync context carries it (`ctx.isExcluded`) so the actions in `services/sync/sync-actions-device.ts` fail
 every server action on one (`reportExcluded`).
+
+## Scanners
+
+A sync starts by listing the music files of the repository with one of two scanners, chosen on the sync screen
+(`getScanner` in `services/scannerRegistry.ts`); both return the same `ScanResult`:
+
+- **File System** (`services/fileScanner.ts`, the default) walks the folder natively with `listFiles` of the
+  `repo-files` module: one native call for the whole folder, one `stat` per file. The folder is read through its
+  filesystem path, also when it was picked as a `content://` folder, and the files come back as `file://` URIs. It needs "All files access": without it Android lists an empty or partial folder with no error,
+  so the scanner asks for it first (`ensureRepositoryAccess`) and throws when it is not granted.
+- **Media Library** (`services/mediaLibraryScanner.ts`) pages through the audio files Android has indexed
+  (`MediaLibrary.getAssetsAsync`) and keeps the ones inside the folder. It only sees what the media scanner has
+  indexed, and its modification times have a precision of one second.
+
+Both scanners, and the sync itself for every file it writes (`ctx.decodedRepoPath`), get the filesystem path of the
+repository from `resolveRepositoryPath` (`services/repositoryPath.ts`). The folder picker gives a `content://`
+folder, which `resolveDirectoryPath` of the `repo-files` module resolves natively: the document id is read with
+`DocumentsContract` and the folder of its root (primary storage, Documents, an SD card) is asked to
+`StorageManager` / `Environment`. Never work the path out of the text of the URI: the Documents root, another
+Android user or an SD card do not map to `/storage/emulated/0/...`. A folder with no path (a cloud provider) is
+refused when it is picked and fails the sync.
+
+A scanner throws when it cannot tell what is in the folder (no path, missing permission): an empty result would
+sync as "every file was deleted". What it could not read inside the folder is a scan error (`createScanErrors` in
+`services/scanner/utils.ts`), and the sync goes on.
+
+Keep the scan to a constant number of native calls: a call per file (or worse, per file property, as
+expo-file-system's `File` / `Directory` need) makes listing a few thousand files take many seconds, above all on a
+`content://` folder, where each of them is a query to the document provider. The same goes for logging per file.
+
+The exclusion rules have a single implementation, `createExclusionMatcher` (`services/sync/exclusions.ts`), and
+never reach the native side: `listFiles` lists every music file, excluded folders included, and the scanner filters
+the result. Do not reimplement the rules natively to skip folders: another regular expression engine does not match
+the same names (case folding of non-ASCII letters, for one), and a folder skipped by only one of them syncs as
+deleted files.
 
 ## Session Counters
 
@@ -170,13 +206,17 @@ npx expo run:android
   (`android/src/main/cpp/xxhash_jni.cpp`), exposed through `XxhashModule.kt`. Android only.
 
 - **`modules/repo-files`** — the file operations that write to the music repository: `downloadFile`, `ensureDirectory`,
-  `moveFile`, `copyFile`, `deleteFile`, plus `hasAllFilesAccess` / `requestAllFilesAccess`. The repository lives in
+  `moveFile`, `copyFile`, `deleteFile`, plus `hasAllFilesAccess` / `requestAllFilesAccess`, `listFiles`, which
+  lists the music files of the repository in a single call, and `resolveDirectoryPath`, which gives the filesystem
+  path of a picked folder (see "Scanners"). The repository lives in
   shared storage (e.g. `/storage/emulated/0/Music`), where expo-file-system cannot write: it decides permissions with
   `File.canRead()` / `File.canWrite()`, which are false for a file that does not exist yet, so every download, move or
   copy to a new path is rejected with "Missing 'WRITE' permission". The module uses `java.io.File` directly
   (`RepoFilesModule.kt`) and relies on Android's **All files access** (`MANAGE_EXTERNAL_STORAGE`, declared in
-  `app.json`). `src/services/storageAccess.ts` checks the grant before a non-dry-run sync and when the repository
-  folder is picked, and sends the user to the system settings screen when it is missing. Reads (existence, listing,
+  `app.json`). `ensureRepositoryAccess` (`src/services/storageAccess.ts`) checks the grant before a non-dry-run sync,
+  before every File System scan (dry runs and the Excluded Files drawer included) and when the repository folder is
+  picked. When it is missing it offers to open the system settings screen, waits for the user to come back to the
+  app and checks again; only a second miss (or a declined prompt) fails the sync. Single-file reads (existence,
   modification time) still go through expo-file-system. Android only.
 
 Adding or changing a native module needs a new dev build: run `npm run android`. A Metro reload only updates the

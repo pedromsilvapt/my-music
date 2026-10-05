@@ -4,6 +4,10 @@ import * as path from 'path';
 import { createXXHash128 } from 'hash-wasm';
 
 export class NodeFileOps implements IFileOps {
+    async resolveRepositoryPath(repositoryPath: string): Promise<string> {
+        return repositoryPath.startsWith('file://') ? repositoryPath.substring(7) : repositoryPath;
+    }
+
     fileExists(filePath: string): boolean {
         return fs.existsSync(filePath);
     }

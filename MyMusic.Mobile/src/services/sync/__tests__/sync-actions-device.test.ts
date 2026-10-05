@@ -28,6 +28,7 @@ function createMockApiClient(overrides: Partial<ISyncApiClient> = {}): ISyncApiC
 
 function createMockFileOps(overrides: Partial<IFileOps> = {}): IFileOps {
     return {
+        resolveRepositoryPath: jest.fn(async (path: string) => path),
         fileExists: jest.fn().mockReturnValue(false),
         directoryExists: jest.fn().mockReturnValue(false),
         ensureDirectory: jest.fn().mockResolvedValue(undefined),

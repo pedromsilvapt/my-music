@@ -14,7 +14,7 @@ import {
 import {orchestrateSync} from './sync/orchestrator';
 import {type SyncProgress, useSyncStore} from '../stores/syncStore';
 import {getDeviceId, getRepositoryPath} from './configService';
-import {ensureRepositoryWriteAccess, MISSING_ALL_FILES_ACCESS_MESSAGE} from './storageAccess';
+import {ensureRepositoryAccess, MISSING_ALL_FILES_ACCESS_MESSAGE} from './storageAccess';
 
 import {SyncCancelledError} from './sync/errors';
 export {SyncCancelledError};
@@ -50,8 +50,9 @@ export async function runSync(
 
     const options = useSyncStore.getState().options;
 
-    // A dry run writes nothing to the device, so it does not need the permission
-    if (!options.dryRun && !(await ensureRepositoryWriteAccess())) {
+    // A dry run writes nothing to the device: it only needs the permission to scan the folder, and the
+    // scanner that reads it directly asks for it
+    if (!options.dryRun && !(await ensureRepositoryAccess())) {
         throw new Error(MISSING_ALL_FILES_ACCESS_MESSAGE);
     }
 

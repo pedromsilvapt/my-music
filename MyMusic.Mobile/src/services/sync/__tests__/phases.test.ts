@@ -74,6 +74,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
     };
 
     const mockFileOps: IFileOps = {
+        resolveRepositoryPath: jest.fn(async (path: string) => path),
         fileExists: jest.fn().mockReturnValue(false),
         directoryExists: jest.fn().mockReturnValue(false),
         ensureDirectory: jest.fn().mockResolvedValue(undefined),
