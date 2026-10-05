@@ -872,7 +872,6 @@ public class MusicService(
 
         song.RepositoryPath = targetFile.FilePath!;
         song.Title = effectiveTitle;
-        song.Label = metadata.FullLabel;
         song.Year = metadata.Year;
         song.Lyrics = metadata.Lyrics;
         song.Explicit = metadata.Explicit;
@@ -887,6 +886,8 @@ public class MusicService(
         song.Genres = songGenres;
         song.Devices = song.Devices is { Count: > 0 } ? song.Devices : songDevices;
         song.Artists = songArtists;
+        // Built from the song (not the file's tags) so it reflects the placeholder values used for missing metadata
+        song.Label = SongLabelBuilder.Build(song);
 
         // ModifiedAt reflects any row-level change and must bump on every re-import,
         // since not all DB-row fields impact the file (e.g. rating, lyrics, labels).

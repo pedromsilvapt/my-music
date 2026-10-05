@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.Services;
 using MyMusic.Common.Tests.Utilities;
@@ -284,6 +285,41 @@ public class MusicServiceSpecs
         await using var db = scenario.DbContextFactory.CreateDbContext();
         db.Songs.Select(s => s.RepositoryPath).ToList().ShouldBe([originalPath]);
         scenario.FileSystem.Directory.GetFiles("/data", "*.mp3", SearchOption.AllDirectories).ShouldBe([originalPath]);
+    }
+
+    [Fact]
+    public async Task ImportMusic_TaggedFile_BuildsLabelFromTitleAndArtists()
+    {
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        MockMusicFile.Create(scenario.FileSystem, "/music/Title A.mp3", "Title A", "Album A", ["Artist A"], ["Genre A"]);
+
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        job.Exceptions.ShouldBeEmpty();
+        LoadSongs(scenario.DbContext).Single().Label.ShouldBe("Title A - Artist A");
+    }
+
+    [Fact]
+    public async Task ImportMusic_FileWithoutTags_BuildsLabelFromFileNameTitle()
+    {
+        // A file without tags gets its title from the file name and the placeholder artist; the label (which is
+        // what the search matches against) must be built from those, not from the empty tags
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        scenario.FileSystem.Directory.CreateDirectory("/music");
+        MockMusicFile.Create(scenario.FileSystem, "/music/Some Untagged Song.mp3", new SongMetadata(null, ""));
+
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        job.Exceptions.ShouldBeEmpty();
+        var song = LoadSongs(scenario.DbContext).Single();
+        song.Title.ShouldBe("Some Untagged Song");
+        song.Label.ShouldBe($"Some Untagged Song - {Artist.PlaceholderName}");
     }
 
     /// <summary>
