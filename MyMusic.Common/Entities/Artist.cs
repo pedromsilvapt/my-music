@@ -5,6 +5,9 @@ namespace MyMusic.Common.Entities;
 
 public class Artist
 {
+    /// <summary>Name of the artist that stands in for a missing artist.</summary>
+    public const string PlaceholderName = "(No Artist)";
+
     public long Id { get; set; }
 
     [MaxLength(256)] public required string Name { get; set; }

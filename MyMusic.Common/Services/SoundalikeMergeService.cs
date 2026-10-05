@@ -42,6 +42,17 @@ public class SoundalikeMergeService(ILogger<SoundalikeMergeService> logger) : IS
             primary.Bitrate = secondaries.FirstOrDefault(s => s.Bitrate != null)?.Bitrate;
         }
 
+        // The placeholder album only stands in for a missing one, so any merged song's real album replaces it
+        if (primary.Album.Name == Album.PlaceholderName)
+        {
+            var firstWithAlbum = secondaries.FirstOrDefault(s => s.Album.Name != Album.PlaceholderName);
+            if (firstWithAlbum != null)
+            {
+                primary.AlbumId = firstWithAlbum.AlbumId;
+                primary.Album = firstWithAlbum.Album;
+            }
+        }
+
         var existingArtistIds = primary.Artists.Select(a => a.ArtistId).ToHashSet();
         foreach (var secondary in secondaries)
         {
@@ -57,6 +68,21 @@ public class SoundalikeMergeService(ILogger<SoundalikeMergeService> logger) : IS
                     };
                     primary.Artists.Add(newSongArtist);
                     existingArtistIds.Add(artist.ArtistId);
+                }
+            }
+        }
+
+        // The placeholder artist only stands in for a missing one, so it goes away once the song has a real artist
+        if (primary.Artists.Any(a => a.Artist.Name != Artist.PlaceholderName))
+        {
+            foreach (var placeholder in primary.Artists.Where(a => a.Artist.Name == Artist.PlaceholderName).ToList())
+            {
+                primary.Artists.Remove(placeholder);
+
+                // Those the merge has just added were never saved, and have nothing to delete
+                if (placeholder.Id != 0)
+                {
+                    db.SongArtists.Remove(placeholder);
                 }
             }
         }

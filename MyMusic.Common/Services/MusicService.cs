@@ -364,11 +364,11 @@ public class MusicService(
             : metadata.Title;
 
         var effectiveAlbumName = metadata.Album is null || string.IsNullOrEmpty(metadata.Album.Name)
-            ? "(No Album)"
+            ? Album.PlaceholderName
             : metadata.Album.Name;
 
         var effectiveAlbumArtistName = metadata.Album?.Artist is null || string.IsNullOrEmpty(metadata.Album!.Artist!.Name)
-            ? "(No Artist)"
+            ? Artist.PlaceholderName
             : metadata.Album.Artist.Name;
 
         #endregion

@@ -281,5 +281,159 @@ public class SoundalikeMergeServiceSpecs
         scenario.DbContext.Entry(primary).Reload();
         primary.Year.ShouldBeNull();
     }
-    
+
+    [Fact]
+    public async Task MergeMetadata_DropsNoArtistWhenSecondaryHasRealArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var noArtist = scenario.CreateArtist(Artist.PlaceholderName);
+        var artistA = scenario.CreateArtist("Artist A");
+
+        var primary = scenario.CreateSong("Primary", artists: new List<Artist> { noArtist });
+        var secondary = scenario.CreateSong("Secondary", artists: new List<Artist> { artistA });
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
+
+        // Assert
+        LoadArtistIds(scenario, primary).ShouldBe([artistA.Id]);
+    }
+
+    [Fact]
+    public async Task MergeMetadata_DropsNoArtistWhenPrimaryHasRealArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var noArtist = scenario.CreateArtist(Artist.PlaceholderName);
+        var artistA = scenario.CreateArtist("Artist A");
+
+        var primary = scenario.CreateSong("Primary", artists: new List<Artist> { artistA });
+        var secondary = scenario.CreateSong("Secondary", artists: new List<Artist> { noArtist });
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
+
+        // Assert
+        LoadArtistIds(scenario, primary).ShouldBe([artistA.Id]);
+    }
+
+    [Fact]
+    public async Task MergeMetadata_DropsNoArtistWhenPrimaryHasBothRealAndNoArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var noArtist = scenario.CreateArtist(Artist.PlaceholderName);
+        var artistA = scenario.CreateArtist("Artist A");
+
+        var primary = scenario.CreateSong("Primary", artists: new List<Artist> { noArtist, artistA });
+        var secondary = scenario.CreateSong("Secondary", artists: new List<Artist> { noArtist });
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
+
+        // Assert
+        LoadArtistIds(scenario, primary).ShouldBe([artistA.Id]);
+    }
+
+    [Fact]
+    public async Task MergeMetadata_KeepsNoArtistWhenNoSongHasRealArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var noArtist = scenario.CreateArtist(Artist.PlaceholderName);
+
+        var primary = scenario.CreateSong("Primary", artists: new List<Artist> { noArtist });
+        var secondary = scenario.CreateSong("Secondary", artists: new List<Artist> { noArtist });
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
+
+        // Assert
+        LoadArtistIds(scenario, primary).ShouldBe([noArtist.Id]);
+    }
+
+    [Fact]
+    public async Task MergeMetadata_ReplacesNoAlbumWithFirstSecondaryAlbum()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var artist = scenario.CreateArtist("Artist A");
+        var noAlbum = scenario.CreateAlbum(Album.PlaceholderName, artist);
+        var albumA = scenario.CreateAlbum("Album A", artist);
+        var albumB = scenario.CreateAlbum("Album B", artist);
+
+        var primary = scenario.CreateSong("Primary", album: noAlbum);
+        var secondary1 = scenario.CreateSong("Secondary 1", album: noAlbum);
+        var secondary2 = scenario.CreateSong("Secondary 2", album: albumA);
+        var secondary3 = scenario.CreateSong("Secondary 3", album: albumB);
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary1, secondary2, secondary3]);
+
+        // Assert
+        scenario.DbContext.Entry(primary).Reload();
+        primary.AlbumId.ShouldBe(albumA.Id);
+    }
+
+    [Fact]
+    public async Task MergeMetadata_KeepsNoAlbumWhenNoSongHasRealAlbum()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var artist = scenario.CreateArtist("Artist A");
+        var noAlbum = scenario.CreateAlbum(Album.PlaceholderName, artist);
+
+        var primary = scenario.CreateSong("Primary", album: noAlbum);
+        var secondary = scenario.CreateSong("Secondary", album: noAlbum);
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
+
+        // Assert
+        scenario.DbContext.Entry(primary).Reload();
+        primary.AlbumId.ShouldBe(noAlbum.Id);
+    }
+
+    [Fact]
+    public async Task MergeMetadata_KeepsPrimaryRealAlbum()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var mergeService = new SoundalikeMergeService(Substitute.For<ILogger<SoundalikeMergeService>>());
+
+        var artist = scenario.CreateArtist("Artist A");
+        var albumA = scenario.CreateAlbum("Album A", artist);
+        var albumB = scenario.CreateAlbum("Album B", artist);
+
+        var primary = scenario.CreateSong("Primary", album: albumA);
+        var secondary = scenario.CreateSong("Secondary", album: albumB);
+
+        // Act
+        await mergeService.MergeMetadataAsync(scenario.DbContext, primary, [secondary]);
+
+        // Assert
+        scenario.DbContext.Entry(primary).Reload();
+        primary.AlbumId.ShouldBe(albumA.Id);
+    }
+
+    /// <summary>Reads the song's artists as saved, ignoring what the context tracks.</summary>
+    private static List<long> LoadArtistIds(Scenario scenario, Song song) =>
+        scenario.DbContext.SongArtists
+            .Where(sa => sa.SongId == song.Id)
+            .Select(sa => sa.ArtistId)
+            .OrderBy(id => id)
+            .ToList();
 }

@@ -7,6 +7,9 @@ namespace MyMusic.Common.Entities;
 [Index(nameof(OwnerId), nameof(ArtistId), nameof(Name), IsUnique = true)]
 public class Album
 {
+    /// <summary>Name of the album that stands in for a missing album.</summary>
+    public const string PlaceholderName = "(No Album)";
+
     public long Id { get; set; }
 
     [MaxLength(256)] public required string Name { get; set; }
