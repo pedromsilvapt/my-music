@@ -6,6 +6,8 @@ using Microsoft.Extensions.Hosting;
 using MyMusic.Common.AudioIntegrity;
 using MyMusic.Common.Seeding;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Albums;
+using MyMusic.Common.Services.Artists;
 using MyMusic.Common.Services.AuditRules;
 using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Services.Devices;
@@ -76,6 +78,8 @@ public static class HostBuilderExtensions
         // Delete services
         builder.Services.AddScoped<IUserDeleteService, UserDeleteService>();
         builder.Services.AddScoped<ISongDeleteService, SongDeleteService>();
+        builder.Services.AddScoped<IAlbumCreateService, AlbumCreateService>();
+        builder.Services.AddScoped<IArtistCreateService, ArtistCreateService>();
         builder.Services.AddScoped<IAlbumDeleteService, AlbumDeleteService>();
         builder.Services.AddScoped<IArtistDeleteService, ArtistDeleteService>();
         builder.Services.AddScoped<IGenreDeleteService, GenreDeleteService>();

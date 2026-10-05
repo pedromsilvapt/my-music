@@ -5,6 +5,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Artists;
 using MyMusic.Server.DTO.Artists;
 using MyMusic.Server.DTO.Filters;
 
@@ -53,36 +54,28 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
     }
 
     [HttpPost(Name = "CreateArtist")]
-    public async Task<CreateArtistResponse> Create(
+    public async Task<ActionResult<CreateArtistResponse>> Create(
         [FromBody] CreateArtistRequest request,
-        MusicDbContext context,
+        [FromServices] IArtistCreateService artistCreateService,
         CancellationToken cancellationToken)
     {
-        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken)
-            ?? throw new Exception("User not found");
-
-        var artist = new Artist
+        try
         {
-            Name = request.Name,
-            Owner = user,
-            OwnerId = currentUser.Id,
-            CreatedAt = DateTime.UtcNow,
-        };
+            var artist = await artistCreateService.CreateAsync(currentUser.Id, request.Name, cancellationToken);
 
-        context.Artists.Add(artist);
-        await context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Created artist {ArtistName} with ID {ArtistId} for user {UserId}",
-            artist.Name, artist.Id, currentUser.Id);
-
-        return new CreateArtistResponse
-        {
-            Artist = new CreateArtistItem
+            return new CreateArtistResponse
             {
-                Id = artist.Id,
-                Name = artist.Name,
-            },
-        };
+                Artist = new CreateArtistItem
+                {
+                    Id = artist.Id,
+                    Name = artist.Name,
+                },
+            };
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Artist cannot be created");
+        }
     }
 
     [HttpGet("{id:long}", Name = "GetArtist")]

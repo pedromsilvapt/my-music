@@ -49,7 +49,7 @@ public class SongUpdateService(
         CancellationToken cancellationToken = default)
     {
         // Declared first, so the locks are only released once the transaction has ended
-        await using var locks = new SongUpdateLocks();
+        await using var locks = new AdvisoryLockHolder();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await using var files = fileTransactions.Begin(db);
 
@@ -75,7 +75,7 @@ public class SongUpdateService(
         }
 
         // Declared first, so the locks are only released once the transaction has ended
-        await using var locks = new SongUpdateLocks();
+        await using var locks = new AdvisoryLockHolder();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await using var files = fileTransactions.Begin(db);
         try
@@ -129,7 +129,7 @@ public class SongUpdateService(
     ///     Receives the artist and album locks the update takes; <c>null</c> when the caller already holds them.
     /// </param>
     private async Task<Song> UpdateSongCoreAsync(MusicDbContext db, IFileTransaction files, long songId,
-        SongUpdateModel update, SongUpdateLocks? locks, SongUpdateOptions options,
+        SongUpdateModel update, AdvisoryLockHolder? locks, SongUpdateOptions options,
         CancellationToken cancellationToken)
     {
         var song = await LoadSongAsync(db, songId, cancellationToken);
@@ -200,7 +200,7 @@ public class SongUpdateService(
     }
 
     private async Task ApplyUpdatesAsync(MusicDbContext db, Song song, SongUpdateModel update,
-        SongUpdateLocks? locks, CancellationToken cancellationToken)
+        AdvisoryLockHolder? locks, CancellationToken cancellationToken)
     {
         if (update.Title is not null)
         {
@@ -338,7 +338,7 @@ public class SongUpdateService(
     ///     created, among the albums of its album artist, who must be one of the song's artists.
     /// </summary>
     private async Task UpdateAlbumAndArtistsAsync(MusicDbContext db, Song song, SongUpdateModel update,
-        SongUpdateLocks? locks, CancellationToken cancellationToken)
+        AdvisoryLockHolder? locks, CancellationToken cancellationToken)
     {
         var artistRefs = update.Artists?.NewValue;
         if (update.Artists is not null && artistRefs is not { Count: > 0 })
@@ -554,14 +554,6 @@ public class SongUpdateService(
         {
             entry.State = EntityState.Detached;
         }
-    }
-
-    /// <summary>Holds the advisory locks of an update until its transaction has ended.</summary>
-    private sealed class SongUpdateLocks : IAsyncDisposable
-    {
-        public IAsyncDisposable? Handle { get; set; }
-
-        public ValueTask DisposeAsync() => Handle?.DisposeAsync() ?? ValueTask.CompletedTask;
     }
 
     private async Task UpdateGenresAsync(MusicDbContext db, Song song, List<GenreRef> genreRefs,

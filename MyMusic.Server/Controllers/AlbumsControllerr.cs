@@ -5,6 +5,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Albums;
 using MyMusic.Server.DTO.Albums;
 using MyMusic.Server.DTO.Filters;
 
@@ -53,45 +54,36 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
     }
 
     [HttpPost(Name = "CreateAlbum")]
-    public async Task<CreateAlbumResponse> Create(
+    public async Task<ActionResult<CreateAlbumResponse>> Create(
         [FromBody] CreateAlbumRequest request,
-        MusicDbContext context,
+        [FromServices] IAlbumCreateService albumCreateService,
         CancellationToken cancellationToken)
     {
-        var user = await context.Users.FindAsync([currentUser.Id], cancellationToken)
-            ?? throw new Exception("User not found");
-
-        var artist = await context.Artists
-            .FirstOrDefaultAsync(a => a.Id == request.ArtistId && a.OwnerId == currentUser.Id, cancellationToken)
-            ?? throw new Exception($"Artist not found with id {request.ArtistId}");
-
-        var album = new Album
+        try
         {
-            Name = request.Name,
-            Artist = artist,
-            ArtistId = request.ArtistId,
-            Owner = user,
-            OwnerId = currentUser.Id,
-            Year = request.Year,
-            CreatedAt = DateTime.UtcNow,
-        };
+            var album = await albumCreateService.CreateAsync(currentUser.Id,
+                new AlbumCreateInput { Name = request.Name, ArtistId = request.ArtistId, Year = request.Year },
+                cancellationToken);
 
-        context.Albums.Add(album);
-        await context.SaveChangesAsync(cancellationToken);
-
-        _logger.LogInformation("Created album {AlbumName} with ID {AlbumId} for user {UserId}",
-            album.Name, album.Id, currentUser.Id);
-
-        return new CreateAlbumResponse
-        {
-            Album = new CreateAlbumItem
+            return new CreateAlbumResponse
             {
-                Id = album.Id,
-                Name = album.Name,
-                Year = album.Year,
-                ArtistId = album.ArtistId,
-            },
-        };
+                Album = new CreateAlbumItem
+                {
+                    Id = album.Id,
+                    Name = album.Name,
+                    Year = album.Year,
+                    ArtistId = album.ArtistId,
+                },
+            };
+        }
+        catch (AlbumAlreadyExistsException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Album already exists");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Album cannot be created");
+        }
     }
 
     [HttpGet("{id:long}", Name = "GetAlbum")]

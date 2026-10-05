@@ -6,7 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import {
   useMutation,
-  useQuery
+  useQuery,
+  useQueryClient
 } from '@tanstack/react-query';
 import type {
   DataTag,
@@ -14,6 +15,7 @@ import type {
   DefinedUseQueryResult,
   InvalidateOptions,
   MutationFunction,
+  MutationFunctionContext,
   QueryClient,
   QueryFunction,
   QueryKey,
@@ -243,7 +245,7 @@ export const createArtist = async (createArtistRequest: CreateArtistRequest, opt
 
 
 export const getCreateArtistMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createArtist>>, TError,{data: CreateArtistRequest}, TContext>, fetch?: RequestInit}
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createArtist>>, TError,{data: CreateArtistRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createArtist>>, TError,{data: CreateArtistRequest}, TContext> => {
 
 const mutationKey = ['createArtist'];
@@ -262,26 +264,32 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
           return  createArtist(data,fetchOptions)
         }
 
+  const onSuccess = (data: Awaited<ReturnType<typeof createArtist>>, variables: {data: CreateArtistRequest}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: getListArtistsQueryKey() });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
 
 
 
 
-
-  return  { mutationFn, ...mutationOptions }}
+  return  { ...mutationOptions, mutationFn, onSuccess }}
 
     export type CreateArtistMutationResult = NonNullable<Awaited<ReturnType<typeof createArtist>>>
     export type CreateArtistMutationBody = CreateArtistRequest
     export type CreateArtistMutationError = unknown
 
     export const useCreateArtist = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createArtist>>, TError,{data: CreateArtistRequest}, TContext>, fetch?: RequestInit}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createArtist>>, TError,{data: CreateArtistRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createArtist>>,
         TError,
         {data: CreateArtistRequest},
         TContext
       > => {
-      return useMutation(getCreateArtistMutationOptions(options), queryClient);
+      const backupQueryClient = useQueryClient();
+      return useMutation(getCreateArtistMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
     }
     export type getArtistResponse200TextPlain = {
   data: GetArtistResponse

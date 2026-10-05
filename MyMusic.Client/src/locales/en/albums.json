@@ -1,7 +1,17 @@
 {
     "page": {
         "fetchFailed": "Failed to fetch albums",
-        "searchPlaceholder": "Search albums..."
+        "searchPlaceholder": "Search albums...",
+        "createAlbum": "New album"
+    },
+    "createModal": {
+        "title": "New Album",
+        "nameLabel": "Name",
+        "namePlaceholder": "Album name",
+        "artistLabel": "Artist",
+        "yearLabel": "Year",
+        "create": "Create",
+        "createFailed": "Failed to create the album"
     },
     "detail": {
         "fetchFailed": "Failed to fetch album",

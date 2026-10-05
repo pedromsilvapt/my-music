@@ -17,4 +17,17 @@ public class AlbumsPage(IPage page) : BasePage(page, "albums")
         await details.WaitForLoadedAsync();
         return details;
     }
+
+    /// <summary>
+    /// Opens the "New album" dialog from the toolbar.
+    /// </summary>
+    public async Task<CreateAlbumModalComponent> OpenCreateAlbumAsync()
+    {
+        await Root.GetByTestId("create-album").ClickAsync();
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new CreateAlbumModalComponent(Page.GetByRole(AriaRole.Dialog, new() { Name = "New Album" }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
 }

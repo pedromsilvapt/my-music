@@ -203,6 +203,13 @@ useEffect(() => {
 The Mantine hook is cleaner, avoids potential memory leaks from forgotten cleanup, and is consistent with existing
 codebase patterns.
 
+## Pickers over collection items
+
+Any picker, dropdown or autocomplete listing collection items (artists, albums, songs, ...) must be virtualized and
+must not cap the number of items. Use `VirtualSelect` (`src/components/common/virtual-select.tsx`) for a searchable
+single-value select: it only renders the options inside the dropdown's viewport and precomputes each item's search
+text once per item list. `ArtistSelect` (`src/components/artists/artist-select.tsx`) is the artist picker built on it.
+
 ## Translations (i18n)
 
 Translations are managed with `react-i18next`. Namespaces live under `src/locales/<lang>/<ns>.json` and are

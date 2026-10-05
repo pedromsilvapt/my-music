@@ -6,7 +6,8 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import {
   useMutation,
-  useQuery
+  useQuery,
+  useQueryClient
 } from '@tanstack/react-query';
 import type {
   DataTag,
@@ -14,6 +15,7 @@ import type {
   DefinedUseQueryResult,
   InvalidateOptions,
   MutationFunction,
+  MutationFunctionContext,
   QueryClient,
   QueryFunction,
   QueryKey,
@@ -242,7 +244,7 @@ export const createAlbum = async (createAlbumRequest: CreateAlbumRequest, option
 
 
 export const getCreateAlbumMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAlbum>>, TError,{data: CreateAlbumRequest}, TContext>, fetch?: RequestInit}
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAlbum>>, TError,{data: CreateAlbumRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
 ): UseMutationOptions<Awaited<ReturnType<typeof createAlbum>>, TError,{data: CreateAlbumRequest}, TContext> => {
 
 const mutationKey = ['createAlbum'];
@@ -261,26 +263,32 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
           return  createAlbum(data,fetchOptions)
         }
 
+  const onSuccess = (data: Awaited<ReturnType<typeof createAlbum>>, variables: {data: CreateAlbumRequest}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: getListAlbumsQueryKey() });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
 
 
 
 
-
-  return  { mutationFn, ...mutationOptions }}
+  return  { ...mutationOptions, mutationFn, onSuccess }}
 
     export type CreateAlbumMutationResult = NonNullable<Awaited<ReturnType<typeof createAlbum>>>
     export type CreateAlbumMutationBody = CreateAlbumRequest
     export type CreateAlbumMutationError = unknown
 
     export const useCreateAlbum = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAlbum>>, TError,{data: CreateAlbumRequest}, TContext>, fetch?: RequestInit}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAlbum>>, TError,{data: CreateAlbumRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof createAlbum>>,
         TError,
         {data: CreateAlbumRequest},
         TContext
       > => {
-      return useMutation(getCreateAlbumMutationOptions(options), queryClient);
+      const backupQueryClient = useQueryClient();
+      return useMutation(getCreateAlbumMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
     }
     export type getAlbumResponse200TextPlain = {
   data: GetAlbumResponse

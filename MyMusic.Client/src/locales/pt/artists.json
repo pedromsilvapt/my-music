@@ -1,7 +1,19 @@
 {
     "page": {
         "fetchFailed": "Falha ao obter os artistas",
-        "searchPlaceholder": "Pesquisar artistas..."
+        "searchPlaceholder": "Pesquisar artistas...",
+        "createArtist": "Novo artista"
+    },
+    "createModal": {
+        "title": "Novo Artista",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Nome do artista",
+        "create": "Criar",
+        "createFailed": "Falha ao criar o artista"
+    },
+    "select": {
+        "placeholder": "Pesquisar artistas...",
+        "empty": "Nenhum artista encontrado"
     },
     "detail": {
         "fetchFailed": "Falha ao obter o artista",

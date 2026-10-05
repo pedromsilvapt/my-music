@@ -359,7 +359,7 @@ Operations that change what many songs say about themselves (renaming, merging o
 await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 await using var files = fileTransactions.Begin(db);
 
-// The handle must be disposed only after the transaction has ended (see SongUpdateService.SongUpdateLocks)
+// The handle must be disposed only after the transaction has ended (see AdvisoryLockHolder)
 var locks = await advisoryLocks.AcquireTransactionLocksAsync(db,
     AlbumArtistLockKeys.Create(ownerId, artistNames, albums), cancellationToken);
 // ... change the album/artist rows ...

@@ -70,6 +70,8 @@ export interface CollectionToolbarProps<M> {
     renderLeftSection?: () => React.ReactNode;
     renderMiddleSection?: () => React.ReactNode;
     renderRightSection?: () => React.ReactNode;
+    /** Page-specific actions (e.g. a "new item" button), shown before the default actions of the right section */
+    renderExtraActions?: () => React.ReactNode;
 }
 
 export default function CollectionToolbar<M extends { id: string | number }>(props: CollectionToolbarProps<M>) {
@@ -240,6 +242,7 @@ export default function CollectionToolbar<M extends { id: string | number }>(pro
     const rightSection = props.renderRightSection
         ? props.renderRightSection()
         : <Group justify="flex-end">
+            {props.renderExtraActions?.()}
             {props.onGoTo && props.items && props.schema && (
                 <>
                     <ActionIcon

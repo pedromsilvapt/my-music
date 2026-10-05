@@ -101,6 +101,14 @@ module.exports = {
                             onMutations: ['managePlaylistShares'],
                             invalidates: ['listSharers', 'listPlaylistSharesBatch'],
                         },
+                        {
+                            onMutations: ['createAlbum'],
+                            invalidates: ['listAlbums'],
+                        },
+                        {
+                            onMutations: ['createArtist'],
+                            invalidates: ['listArtists'],
+                        },
                     ],
                 }
             }

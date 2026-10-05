@@ -1,7 +1,19 @@
 {
     "page": {
         "fetchFailed": "Failed to fetch artists",
-        "searchPlaceholder": "Search artists..."
+        "searchPlaceholder": "Search artists...",
+        "createArtist": "New artist"
+    },
+    "createModal": {
+        "title": "New Artist",
+        "nameLabel": "Name",
+        "namePlaceholder": "Artist name",
+        "create": "Create",
+        "createFailed": "Failed to create the artist"
+    },
+    "select": {
+        "placeholder": "Search artists...",
+        "empty": "No artists found"
     },
     "detail": {
         "fetchFailed": "Failed to fetch artist",

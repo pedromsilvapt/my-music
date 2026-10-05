@@ -1,8 +1,13 @@
-import {useQuery} from "@tanstack/react-query";
+import {ActionIcon} from "@mantine/core";
+import {useDisclosure} from "@mantine/hooks";
+import {IconPlus} from "@tabler/icons-react";
 import {useTranslation} from "react-i18next";
+import {useListAlbums} from "../../client/albums.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import {useCollectionActions, useCollectionStateByKey} from "../../stores/collection-store.tsx";
 import Collection from "../common/collection/collection.tsx";
+import CollectionToolbar from "../common/collection/collection-toolbar.tsx";
+import CreateAlbumModal from "./create-album-modal.tsx";
 import {useAlbumsSchema} from "./useAlbumsSchema.tsx";
 
 const ALBUMS_STATE_KEY = "albums";
@@ -16,27 +21,15 @@ export default function AlbumsPage() {
     const appliedSearch = collectionState.filter.search;
     const appliedFilter = collectionState.filter.expression;
 
-    const albumsQuery = useQuery({
-        queryKey: ["albums", appliedSearch, appliedFilter],
-        queryFn: async () => {
-            const params = new URLSearchParams();
-            if (appliedSearch) params.set("search", appliedSearch);
-            if (appliedFilter) params.set("filter", appliedFilter);
-
-            const url = `/api/albums${params.toString() ? `?${params.toString()}` : ""}`;
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(t("albums:page.fetchFailed"));
-            }
-
-            return response.json();
-        },
-    });
+    const albumsQuery = useListAlbums(
+        {search: appliedSearch, filter: appliedFilter},
+        {query: {select: response => response.data}},
+    );
 
     const albums = useQueryData(albumsQuery, t("albums:page.fetchFailed")) ?? {albums: []};
 
     const albumsSchema = useAlbumsSchema();
+    const [createOpened, {open: openCreate, close: closeCreate}] = useDisclosure(false);
 
     const handleFilterChange = (newSearch: string, newFilter: string) => {
         setCollectionFilter(ALBUMS_STATE_KEY, { search: newSearch, expression: newFilter });
@@ -57,7 +50,25 @@ export default function AlbumsPage() {
                 serverFilter={appliedFilter}
                 onServerFilterChange={handleFilterChange}
                 searchPlaceholder={t("albums:page.searchPlaceholder")}
+                toolbar={p => (
+                    <CollectionToolbar
+                        {...p}
+                        renderExtraActions={() => (
+                            <ActionIcon
+                                variant="default"
+                                size="lg"
+                                aria-label={t("albums:page.createAlbum")}
+                                title={t("albums:page.createAlbum")}
+                                onClick={openCreate}
+                                data-testid="create-album"
+                            >
+                                <IconPlus/>
+                            </ActionIcon>
+                        )}
+                    />
+                )}
             />
+            <CreateAlbumModal opened={createOpened} onClose={closeCreate}/>
         </div>
     );
 }

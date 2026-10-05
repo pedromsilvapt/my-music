@@ -1,7 +1,17 @@
 {
     "page": {
         "fetchFailed": "Falha ao obter os álbuns",
-        "searchPlaceholder": "Pesquisar álbuns..."
+        "searchPlaceholder": "Pesquisar álbuns...",
+        "createAlbum": "Novo álbum"
+    },
+    "createModal": {
+        "title": "Novo Álbum",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Nome do álbum",
+        "artistLabel": "Artista",
+        "yearLabel": "Ano",
+        "create": "Criar",
+        "createFailed": "Falha ao criar o álbum"
     },
     "detail": {
         "fetchFailed": "Falha ao obter o álbum",
