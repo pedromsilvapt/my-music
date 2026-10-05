@@ -37,6 +37,21 @@
         "failedSingle": "Failed to delete the album \"{{name}}\"",
         "failedPlural": "Failed to delete {{count}} albums"
     },
+    "merge": {
+        "title": "Merge {{count}} Albums",
+        "instructions": "Choose the album to keep. The songs of the other albums move to it, and those albums are deleted.",
+        "targetLabel": "Album to keep",
+        "empty": "No albums found",
+        "summary_one": "{{count}} song will be moved to \"{{name}}\" by {{artist}}.",
+        "summary_other": "{{count}} songs will be moved to \"{{name}}\" by {{artist}}.",
+        "gainingArtist_one": "{{count}} of them does not have the artist {{artist}} yet, and will gain it.",
+        "gainingArtist_other": "{{count}} of them do not have the artist {{artist}} yet, and will gain it.",
+        "deleted_one": "The other album will be deleted. This action cannot be undone.",
+        "deleted_other": "The other {{count}} albums will be deleted. This action cannot be undone.",
+        "confirm": "Merge",
+        "failed": "Failed to merge the albums",
+        "previewFailed": "Failed to check what merging the albums would change"
+    },
     "detail": {
         "fetchFailed": "Failed to fetch album",
         "loading": "Loading...",

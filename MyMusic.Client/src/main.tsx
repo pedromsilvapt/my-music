@@ -16,7 +16,9 @@ import {ArtworkLightboxProvider} from "./contexts/artwork-lightbox-context.tsx";
 import VolumeInitializer from "./components/volume-initializer.tsx";
 import QueueInitializer from "./components/queue-initializer.tsx";
 import AlbumEditorModal from "./components/albums/album-editor-modal.tsx";
+import AlbumMergeModal from "./components/albums/album-merge-modal.tsx";
 import ArtistEditorModal from "./components/artists/artist-editor-modal.tsx";
+import ArtistMergeModal from "./components/artists/artist-merge-modal.tsx";
 import SongEditorContextModal from "./components/songs/song-editor-context-modal.tsx";
 import SongMergeModal from "./components/songs/song-merge-modal.tsx";
 import SongVersionModal from "./components/songs/song-version-modal.tsx";
@@ -60,6 +62,8 @@ createRoot(document.getElementById('root')!).render(
                                 'delete-queue': DeleteQueueModal,
                                 'album-editor': AlbumEditorModal,
                                 'artist-editor': ArtistEditorModal,
+                                'album-merge': AlbumMergeModal,
+                                'artist-merge': ArtistMergeModal,
                             }}>
                             <PlayerProvider>
                                 <QueueManagerProvider>

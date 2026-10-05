@@ -1,5 +1,5 @@
 import {Anchor, Tooltip} from "@mantine/core";
-import {IconEdit, IconTrash, IconUserFilled} from "@tabler/icons-react";
+import {IconArrowMerge, IconEdit, IconTrash, IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import {useTranslation} from "react-i18next";
@@ -10,12 +10,14 @@ import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {useConfirmDeleteArtists} from "./use-confirm-delete-artists.tsx";
 import {useEditArtists} from "./use-edit-artists.ts";
+import {useMergeArtistsModal} from "./use-merge-artists-modal.ts";
 
 
 export function useArtistsSchema() {
     const {t} = useTranslation(["artists", "common"]);
     const confirmDeleteArtists = useConfirmDeleteArtists();
     const editArtists = useEditArtists();
+    const mergeArtists = useMergeArtistsModal();
     const {data: filterMetadata} = useFilterMetadata('artists');
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
@@ -96,6 +98,13 @@ export function useArtistsSchema() {
                         : t("artists:editModal.titlePlural", {count: elems.length}),
                     onClick: (artists: ListArtistItem[]) => editArtists(artists),
                 },
+                // Merging takes at least two artists: the one that is kept, and the ones merged into it
+                ...(elems.length > 1 ? [{
+                    name: "merge",
+                    renderIcon: () => <IconArrowMerge/>,
+                    renderLabel: () => t("artists:merge.title", {count: elems.length}),
+                    onClick: (artists: ListArtistItem[]) => mergeArtists(artists),
+                }] : []),
                 {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,
@@ -117,5 +126,5 @@ export function useArtistsSchema() {
             <Anchor component={Link} to={`/artists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => t("artists:schema.albumsCount", {count: row.albumsCount}),
-    }) as CollectionSchema<ListArtistItem>, [filterMetadata, fetchFilterValues, t, confirmDeleteArtists, editArtists]);
+    }) as CollectionSchema<ListArtistItem>, [filterMetadata, fetchFilterValues, t, confirmDeleteArtists, editArtists, mergeArtists]);
 }

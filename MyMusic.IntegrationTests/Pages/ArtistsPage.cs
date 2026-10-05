@@ -94,4 +94,22 @@ public class ArtistsPage(IPage page) : BasePage(page, "artists")
         await dialog.WaitForLoadedAsync();
         return dialog;
     }
+
+    /// <summary>
+    /// Selects several artists and opens their merge dialog from the selection's Actions menu, once the dialog knows
+    /// what merging into the artist it keeps by default changes.
+    /// </summary>
+    public async Task<EntityMergeModalComponent> OpenMergeArtistsAsync(params string[] artistNames)
+    {
+        await Collection.SelectRowsByCellTextAsync("name", "songsCount", artistNames);
+
+        var menu = await Collection.OpenFloatingActionsMenuAsync();
+        await menu.ClickItemAsync(new Regex(@"^Merge \d+ Artists$"));
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new EntityMergeModalComponent(
+            Page.GetByRole(AriaRole.Dialog, new() { NameRegex = new Regex(@"^Merge \d+ Artists$") }), "artist");
+        await modal.WaitForLoadedAsync();
+        return modal;
+    }
 }

@@ -34,6 +34,21 @@
         "failedSingle": "Failed to delete the artist \"{{name}}\"",
         "failedPlural": "Failed to delete {{count}} artists"
     },
+    "merge": {
+        "title": "Merge {{count}} Artists",
+        "instructions": "Choose the artist to keep. It takes the place of the other artists in their songs and gets their albums, and those artists are deleted.",
+        "targetLabel": "Artist to keep",
+        "empty": "No artists found",
+        "summary_one": "{{count}} song will be updated to reference \"{{name}}\".",
+        "summary_other": "{{count}} songs will be updated to reference \"{{name}}\".",
+        "mergedAlbums_one": "{{count}} album has the same name as another one, and will be merged into it.",
+        "mergedAlbums_other": "{{count}} albums have the same name as another one, and will be merged into it.",
+        "deleted_one": "The other artist will be deleted. This action cannot be undone.",
+        "deleted_other": "The other {{count}} artists will be deleted. This action cannot be undone.",
+        "confirm": "Merge",
+        "failed": "Failed to merge the artists",
+        "previewFailed": "Failed to check what merging the artists would change"
+    },
     "select": {
         "placeholder": "Search artists...",
         "empty": "No artists found"

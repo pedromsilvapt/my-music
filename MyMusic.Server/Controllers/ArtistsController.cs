@@ -154,6 +154,55 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         }
     }
 
+    [HttpPost("merge", Name = "MergeArtists")]
+    public async Task<IActionResult> Merge([FromBody] MergeArtistsRequest request,
+        [FromServices] IArtistMergeService artistMergeService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await artistMergeService.MergeAsync(currentUser.Id, request.TargetId, request.SourceIds,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (ArtistNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Artist not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Artists cannot be merged");
+        }
+    }
+
+    [HttpPost("merge/preview", Name = "PreviewArtistsMerge")]
+    public async Task<ActionResult<PreviewArtistsMergeResponse>> PreviewMerge(
+        [FromBody] PreviewArtistsMergeRequest request,
+        [FromServices] IArtistMergeService artistMergeService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var preview = await artistMergeService.PreviewAsync(currentUser.Id, request.TargetId, request.SourceIds,
+                cancellationToken);
+
+            return new PreviewArtistsMergeResponse
+            {
+                SongsCount = preview.SongsCount,
+                MergedAlbumsCount = preview.MergedAlbumsCount,
+            };
+        }
+        catch (ArtistNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Artist not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Artists cannot be merged");
+        }
+    }
+
     [HttpDelete(Name = "DeleteArtists")]
     public async Task<IActionResult> Delete([FromBody] DeleteArtistsRequest request,
         [FromServices] IArtistRemoveService artistRemoveService, CancellationToken cancellationToken)

@@ -1,5 +1,5 @@
 import {Anchor, Tooltip} from "@mantine/core";
-import {IconEdit, IconTrash, IconUserFilled} from "@tabler/icons-react";
+import {IconArrowMerge, IconEdit, IconTrash, IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import {useTranslation} from "react-i18next";
@@ -10,6 +10,7 @@ import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {useConfirmDeleteAlbums} from "./use-confirm-delete-albums.tsx";
 import {useEditAlbums} from "./use-edit-albums.ts";
+import {useMergeAlbumsModal} from "./use-merge-albums-modal.ts";
 
 export interface AlbumsSchemaOptions {
     /** Albums of another user (a shared view) cannot be changed: their actions are hidden. */
@@ -20,6 +21,7 @@ export function useAlbumsSchema({readOnly = false}: AlbumsSchemaOptions = {}) {
     const {t} = useTranslation(["albums", "common"]);
     const confirmDeleteAlbums = useConfirmDeleteAlbums();
     const editAlbums = useEditAlbums();
+    const mergeAlbums = useMergeAlbumsModal();
     const {data: filterMetadata} = useFilterMetadata('albums');
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
@@ -100,6 +102,13 @@ export function useAlbumsSchema({readOnly = false}: AlbumsSchemaOptions = {}) {
                         : t("albums:editModal.titlePlural", {count: elems.length}),
                     onClick: (albums: ListAlbumItem[]) => editAlbums(albums),
                 },
+                // Merging takes at least two albums: the one that is kept, and the ones merged into it
+                ...(elems.length > 1 ? [{
+                    name: "merge",
+                    renderIcon: () => <IconArrowMerge/>,
+                    renderLabel: () => t("albums:merge.title", {count: elems.length}),
+                    onClick: (albums: ListAlbumItem[]) => mergeAlbums(albums),
+                }] : []),
                 {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,
@@ -121,5 +130,5 @@ export function useAlbumsSchema({readOnly = false}: AlbumsSchemaOptions = {}) {
             <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => t("albums:schema.songsCount", {count: row.songsCount}),
-    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues, t, readOnly, confirmDeleteAlbums, editAlbums]);
+    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues, t, readOnly, confirmDeleteAlbums, editAlbums, mergeAlbums]);
 }

@@ -39,6 +39,9 @@ import type {
   GetArtistsUsageResponse,
   ListArtistsParams,
   ListArtistsResponse,
+  MergeArtistsRequest,
+  PreviewArtistsMergeRequest,
+  PreviewArtistsMergeResponse,
   UpdateArtistsRequest
 } from '../model';
 
@@ -698,6 +701,180 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       > => {
       return useMutation(getGetArtistsUsageMutationOptions(options), queryClient);
     }
+    export type mergeArtistsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type mergeArtistsResponseSuccess = (mergeArtistsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type mergeArtistsResponse = (mergeArtistsResponseSuccess)
+
+export const getMergeArtistsUrl = () => {
+
+
+
+
+  return `/api/artists/merge`
+}
+
+export const mergeArtists = async (mergeArtistsRequest: MergeArtistsRequest, options?: RequestInit): Promise<mergeArtistsResponse> => {
+
+  const res = await fetch(getMergeArtistsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mergeArtistsRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: mergeArtistsResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as mergeArtistsResponse
+}
+
+
+
+
+export const getMergeArtistsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mergeArtists>>, TError,{data: MergeArtistsRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof mergeArtists>>, TError,{data: MergeArtistsRequest}, TContext> => {
+
+const mutationKey = ['mergeArtists'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mergeArtists>>, {data: MergeArtistsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  mergeArtists(data,fetchOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MergeArtistsMutationResult = NonNullable<Awaited<ReturnType<typeof mergeArtists>>>
+    export type MergeArtistsMutationBody = MergeArtistsRequest
+    export type MergeArtistsMutationError = unknown
+
+    export const useMergeArtists = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mergeArtists>>, TError,{data: MergeArtistsRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof mergeArtists>>,
+        TError,
+        {data: MergeArtistsRequest},
+        TContext
+      > => {
+      return useMutation(getMergeArtistsMutationOptions(options), queryClient);
+    }
+    export type previewArtistsMergeResponse200TextPlain = {
+  data: PreviewArtistsMergeResponse
+  status: 200
+}
+
+export type previewArtistsMergeResponse200ApplicationJson = {
+  data: PreviewArtistsMergeResponse
+  status: 200
+}
+
+export type previewArtistsMergeResponse200TextJson = {
+  data: PreviewArtistsMergeResponse
+  status: 200
+}
+
+export type previewArtistsMergeResponseSuccess = (previewArtistsMergeResponse200TextPlain | previewArtistsMergeResponse200ApplicationJson | previewArtistsMergeResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type previewArtistsMergeResponse = (previewArtistsMergeResponseSuccess)
+
+export const getPreviewArtistsMergeUrl = () => {
+
+
+
+
+  return `/api/artists/merge/preview`
+}
+
+export const previewArtistsMerge = async (previewArtistsMergeRequest: PreviewArtistsMergeRequest, options?: RequestInit): Promise<previewArtistsMergeResponse> => {
+
+  const res = await fetch(getPreviewArtistsMergeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(previewArtistsMergeRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: previewArtistsMergeResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as previewArtistsMergeResponse
+}
+
+
+
+
+export const getPreviewArtistsMergeMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewArtistsMerge>>, TError,{data: PreviewArtistsMergeRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof previewArtistsMerge>>, TError,{data: PreviewArtistsMergeRequest}, TContext> => {
+
+const mutationKey = ['previewArtistsMerge'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewArtistsMerge>>, {data: PreviewArtistsMergeRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewArtistsMerge(data,fetchOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewArtistsMergeMutationResult = NonNullable<Awaited<ReturnType<typeof previewArtistsMerge>>>
+    export type PreviewArtistsMergeMutationBody = PreviewArtistsMergeRequest
+    export type PreviewArtistsMergeMutationError = unknown
+
+    export const usePreviewArtistsMerge = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewArtistsMerge>>, TError,{data: PreviewArtistsMergeRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof previewArtistsMerge>>,
+        TError,
+        {data: PreviewArtistsMergeRequest},
+        TContext
+      > => {
+      return useMutation(getPreviewArtistsMergeMutationOptions(options), queryClient);
+    }
     export type getArtistFilterMetadataResponse200TextPlain = {
   data: FilterMetadataResponse
   status: 200
@@ -977,6 +1154,8 @@ export const getGetArtistResponseMock = (overrideResponse: Partial<Extract<GetAr
 
 export const getGetArtistsUsageResponseMock = (overrideResponse: Partial<Extract<GetArtistsUsageResponse, object>> = {}): GetArtistsUsageResponse => (faker.helpers.arrayElement([{songsCount: faker.number.int(), ...overrideResponse}, {songsCount: faker.number.int(), ...overrideResponse}, {songsCount: faker.number.int(), ...overrideResponse}]))
 
+export const getPreviewArtistsMergeResponseMock = (overrideResponse: Partial<Extract<PreviewArtistsMergeResponse, object>> = {}): PreviewArtistsMergeResponse => (faker.helpers.arrayElement([{songsCount: faker.number.int(), mergedAlbumsCount: faker.number.int(), ...overrideResponse}, {songsCount: faker.number.int(), mergedAlbumsCount: faker.number.int(), ...overrideResponse}, {songsCount: faker.number.int(), mergedAlbumsCount: faker.number.int(), ...overrideResponse}]))
+
 export const getGetArtistFilterMetadataResponseMock = (overrideResponse: Partial<Extract<FilterMetadataResponse, object>> = {}): FilterMetadataResponse => (faker.helpers.arrayElement([{fields: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}}), entityPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), clientPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), type: faker.string.alpha({length: {min: 10, max: 20}}), description: faker.string.alpha({length: {min: 10, max: 20}}), supportedOperators: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), isComputed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), isCollection: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), nestedFields: faker.helpers.arrayElement([[], undefined]), values: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), undefined]), supportsDynamicValues: faker.helpers.arrayElement([faker.datatype.boolean(), undefined])})), operators: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}}), displayName: faker.string.alpha({length: {min: 10, max: 20}}), description: faker.string.alpha({length: {min: 10, max: 20}}), applicableTypes: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}})))})), ...overrideResponse}, {fields: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}}), entityPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), clientPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), type: faker.string.alpha({length: {min: 10, max: 20}}), description: faker.string.alpha({length: {min: 10, max: 20}}), supportedOperators: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), isComputed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), isCollection: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), nestedFields: faker.helpers.arrayElement([[], undefined]), values: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), undefined]), supportsDynamicValues: faker.helpers.arrayElement([faker.datatype.boolean(), undefined])})), operators: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}}), displayName: faker.string.alpha({length: {min: 10, max: 20}}), description: faker.string.alpha({length: {min: 10, max: 20}}), applicableTypes: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}})))})), ...overrideResponse}, {fields: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}}), entityPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), clientPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), type: faker.string.alpha({length: {min: 10, max: 20}}), description: faker.string.alpha({length: {min: 10, max: 20}}), supportedOperators: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), isComputed: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), isCollection: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), nestedFields: faker.helpers.arrayElement([[], undefined]), values: faker.helpers.arrayElement([Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), undefined]), supportsDynamicValues: faker.helpers.arrayElement([faker.datatype.boolean(), undefined])})), operators: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({name: faker.string.alpha({length: {min: 10, max: 20}}), displayName: faker.string.alpha({length: {min: 10, max: 20}}), description: faker.string.alpha({length: {min: 10, max: 20}}), applicableTypes: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}})))})), ...overrideResponse}]))
 
 export const getGetArtistFilterValuesResponseMock = (overrideResponse: Partial<Extract<FilterValuesResponse, object>> = {}): FilterValuesResponse => (faker.helpers.arrayElement([{values: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), ...overrideResponse}, {values: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), ...overrideResponse}, {values: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => (faker.string.alpha({length: {min: 10, max: 20}}))), ...overrideResponse}]))
@@ -1050,6 +1229,28 @@ export const getGetArtistsUsageMockHandler = (overrideResponse?: GetArtistsUsage
   }, options)
 }
 
+export const getMergeArtistsMockHandler = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.post('*/artists/merge', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 200
+      })
+  }, options)
+}
+
+export const getPreviewArtistsMergeMockHandler = (overrideResponse?: PreviewArtistsMergeResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<PreviewArtistsMergeResponse> | PreviewArtistsMergeResponse), options?: RequestHandlerOptions) => {
+  return http.post('*/artists/merge/preview', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPreviewArtistsMergeResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
 export const getGetArtistFilterMetadataMockHandler = (overrideResponse?: FilterMetadataResponse | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<FilterMetadataResponse> | FilterMetadataResponse), options?: RequestHandlerOptions) => {
   return http.get('*/artists/filter-metadata', async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
 
@@ -1080,6 +1281,8 @@ export const getArtistsMock = () => [
   getDeleteArtistsMockHandler(),
   getGetArtistMockHandler(),
   getGetArtistsUsageMockHandler(),
+  getMergeArtistsMockHandler(),
+  getPreviewArtistsMergeMockHandler(),
   getGetArtistFilterMetadataMockHandler(),
   getGetArtistFilterValuesMockHandler()
 ]

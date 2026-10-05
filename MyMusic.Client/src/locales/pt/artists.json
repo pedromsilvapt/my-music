@@ -34,6 +34,21 @@
         "failedSingle": "Não foi possível eliminar o artista \"{{name}}\"",
         "failedPlural": "Não foi possível eliminar {{count}} artistas"
     },
+    "merge": {
+        "title": "Fundir {{count}} Artistas",
+        "instructions": "Escolha o artista a manter. Ele toma o lugar dos outros artistas nas músicas deles e fica com os seus álbuns, e esses artistas são eliminados.",
+        "targetLabel": "Artista a manter",
+        "empty": "Nenhum artista encontrado",
+        "summary_one": "{{count}} música será atualizada para referenciar \"{{name}}\".",
+        "summary_other": "{{count}} músicas serão atualizadas para referenciar \"{{name}}\".",
+        "mergedAlbums_one": "{{count}} álbum tem o mesmo nome que outro, e será fundido com ele.",
+        "mergedAlbums_other": "{{count}} álbuns têm o mesmo nome que outro, e serão fundidos com ele.",
+        "deleted_one": "O outro artista será eliminado. Esta ação não pode ser desfeita.",
+        "deleted_other": "Os outros {{count}} artistas serão eliminados. Esta ação não pode ser desfeita.",
+        "confirm": "Fundir",
+        "failed": "Falha ao fundir os artistas",
+        "previewFailed": "Falha ao verificar o que fundir os artistas iria alterar"
+    },
     "select": {
         "placeholder": "Pesquisar artistas...",
         "empty": "Nenhum artista encontrado"

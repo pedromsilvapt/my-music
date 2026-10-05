@@ -20,6 +20,11 @@ public class VirtualSelectComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
+    /// The text of the option currently picked, as the input shows it while the dropdown is closed.
+    /// </summary>
+    public Task<string> GetValueAsync() => Root.InputValueAsync();
+
+    /// <summary>
     /// Searches for the option and picks it; the input shows it afterwards.
     /// </summary>
     public async Task SelectAsync(string text)

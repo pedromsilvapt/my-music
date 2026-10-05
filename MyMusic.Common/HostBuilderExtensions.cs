@@ -82,6 +82,8 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IArtistCreateService, ArtistCreateService>();
         builder.Services.AddScoped<IAlbumEditService, AlbumEditService>();
         builder.Services.AddScoped<IArtistEditService, ArtistEditService>();
+        builder.Services.AddScoped<IAlbumMergeService, AlbumMergeService>();
+        builder.Services.AddScoped<IArtistMergeService, ArtistMergeService>();
         builder.Services.AddScoped<IAlbumRemoveService, AlbumRemoveService>();
         builder.Services.AddScoped<IArtistRemoveService, ArtistRemoveService>();
         builder.Services.AddScoped<IAlbumDeleteService, AlbumDeleteService>();

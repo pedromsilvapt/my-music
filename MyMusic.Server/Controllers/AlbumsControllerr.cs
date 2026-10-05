@@ -162,6 +162,56 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         }
     }
 
+    [HttpPost("merge", Name = "MergeAlbums")]
+    public async Task<IActionResult> Merge([FromBody] MergeAlbumsRequest request,
+        [FromServices] IAlbumMergeService albumMergeService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await albumMergeService.MergeAsync(currentUser.Id, request.TargetId, request.SourceIds,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (AlbumNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Album not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Albums cannot be merged");
+        }
+    }
+
+    [HttpPost("merge/preview", Name = "PreviewAlbumsMerge")]
+    public async Task<ActionResult<PreviewAlbumsMergeResponse>> PreviewMerge(
+        [FromBody] PreviewAlbumsMergeRequest request,
+        [FromServices] IAlbumMergeService albumMergeService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var preview = await albumMergeService.PreviewAsync(currentUser.Id, request.TargetId, request.SourceIds,
+                cancellationToken);
+
+            return new PreviewAlbumsMergeResponse
+            {
+                SongsCount = preview.SongsCount,
+                SongsGainingArtistCount = preview.SongsGainingArtistCount,
+                TargetArtistName = preview.TargetArtistName,
+            };
+        }
+        catch (AlbumNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Album not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Albums cannot be merged");
+        }
+    }
+
     [HttpDelete(Name = "DeleteAlbums")]
     public async Task<IActionResult> Delete([FromBody] DeleteAlbumsRequest request,
         [FromServices] IAlbumRemoveService albumRemoveService, CancellationToken cancellationToken)

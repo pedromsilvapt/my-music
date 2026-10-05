@@ -94,4 +94,22 @@ public class AlbumsPage(IPage page) : BasePage(page, "albums")
         await dialog.WaitForLoadedAsync();
         return dialog;
     }
+
+    /// <summary>
+    /// Selects several albums and opens their merge dialog from the selection's Actions menu, once the dialog knows
+    /// what merging into the album it keeps by default changes.
+    /// </summary>
+    public async Task<EntityMergeModalComponent> OpenMergeAlbumsAsync(params string[] albumNames)
+    {
+        await Collection.SelectRowsByCellTextAsync("name", "songsCount", albumNames);
+
+        var menu = await Collection.OpenFloatingActionsMenuAsync();
+        await menu.ClickItemAsync(new Regex(@"^Merge \d+ Albums$"));
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new EntityMergeModalComponent(
+            Page.GetByRole(AriaRole.Dialog, new() { NameRegex = new Regex(@"^Merge \d+ Albums$") }), "album");
+        await modal.WaitForLoadedAsync();
+        return modal;
+    }
 }

@@ -37,6 +37,21 @@
         "failedSingle": "Não foi possível eliminar o álbum \"{{name}}\"",
         "failedPlural": "Não foi possível eliminar {{count}} álbuns"
     },
+    "merge": {
+        "title": "Fundir {{count}} Álbuns",
+        "instructions": "Escolha o álbum a manter. As músicas dos outros álbuns passam para ele, e esses álbuns são eliminados.",
+        "targetLabel": "Álbum a manter",
+        "empty": "Nenhum álbum encontrado",
+        "summary_one": "{{count}} música será movida para \"{{name}}\" de {{artist}}.",
+        "summary_other": "{{count}} músicas serão movidas para \"{{name}}\" de {{artist}}.",
+        "gainingArtist_one": "{{count}} delas ainda não tem o artista {{artist}}, e passará a tê-lo.",
+        "gainingArtist_other": "{{count}} delas ainda não têm o artista {{artist}}, e passarão a tê-lo.",
+        "deleted_one": "O outro álbum será eliminado. Esta ação não pode ser desfeita.",
+        "deleted_other": "Os outros {{count}} álbuns serão eliminados. Esta ação não pode ser desfeita.",
+        "confirm": "Fundir",
+        "failed": "Falha ao fundir os álbuns",
+        "previewFailed": "Falha ao verificar o que fundir os álbuns iria alterar"
+    },
     "detail": {
         "fetchFailed": "Falha ao obter o álbum",
         "loading": "A carregar...",
