@@ -13,6 +13,12 @@ public interface ISyncCommitService
     Task AcknowledgeRecordsAsync(List<DeviceSyncSessionRecord> records, DateTime? modifiedAt);
 }
 
+/// <summary>
+/// Thrown when a session cannot be committed in its current state (e.g. the client left
+/// client-action records unacknowledged).
+/// </summary>
+public class SyncCommitValidationException(string message) : Exception(message);
+
 public class SyncCommitResult
 {
     public required Dictionary<SyncRecordAction, int> ActionCounts { get; set; }

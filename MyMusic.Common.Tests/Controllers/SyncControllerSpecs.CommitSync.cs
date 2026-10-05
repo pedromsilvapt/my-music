@@ -84,7 +84,7 @@ public class SyncControllerCommitSyncSpecs
     }
 
     [Fact]
-    public async Task CommitSync_CompletedSession_ThrowsException()
+    public async Task CommitSync_CompletedSession_ReturnsConflict()
     {
         // Arrange
         var scenario = new Scenario();
@@ -92,13 +92,15 @@ public class SyncControllerCommitSyncSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed);
 
-        // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.CommitSync(device.Id, session.Id, CancellationToken.None));
+        // Act
+        var result = await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
+
+        // Assert
+        ShouldBeConflict(result).ShouldContain("status: Completed");
     }
 
     [Fact]
-    public async Task CommitSync_CancelledSession_ThrowsException()
+    public async Task CommitSync_CancelledSession_ReturnsConflict()
     {
         // Arrange
         var scenario = new Scenario();
@@ -106,9 +108,45 @@ public class SyncControllerCommitSyncSpecs
         var device = scenario.CreateDevice();
         var session = scenario.CreateSession(device, status: SyncSessionStatus.Cancelled);
 
-        // Act & Assert
-        await Should.ThrowAsync<Exception>(() =>
-            controller.CommitSync(device.Id, session.Id, CancellationToken.None));
+        // Act
+        var result = await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
+
+        // Assert
+        ShouldBeConflict(result).ShouldContain("status: Cancelled");
+    }
+
+    [Fact]
+    public async Task CommitSync_CommitRejected_ReturnsConflictWithMessageAndKeepsSessionInProgress()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+
+        _syncCommitService.CommitAsync(Arg.Any<MusicDbContext>(), session.Id, device.Id, false, Arg.Any<CancellationToken>())
+            .Returns<SyncCommitResult>(_ => throw new SyncCommitValidationException("17 unacknowledged client-action records"));
+
+        // Act
+        var result = await controller.CommitSync(device.Id, session.Id, CancellationToken.None);
+
+        // Assert
+        ShouldBeConflict(result).ShouldBe("17 unacknowledged client-action records");
+
+        var updated = await scenario.DbContext.DeviceSyncSessions.FirstAsync(s => s.Id == session.Id);
+        updated.Status.ShouldBe(SyncSessionStatus.InProgress);
+    }
+
+    /// <summary>Asserts a 409 problem response, returning its detail message.</summary>
+    private static string ShouldBeConflict(ActionResult<SyncCommitResponse> result)
+    {
+        var objectResult = result.Result.ShouldBeOfType<ObjectResult>();
+        objectResult.StatusCode.ShouldBe(409);
+
+        var problem = objectResult.Value.ShouldBeOfType<ProblemDetails>();
+        problem.Title.ShouldBe("Sync session cannot be committed");
+
+        return problem.Detail.ShouldNotBeNull();
     }
 
     [Fact]

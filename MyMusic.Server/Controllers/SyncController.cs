@@ -121,7 +121,8 @@ public class SyncController(
 
         if (session.Status != SyncSessionStatus.InProgress && session.Status != SyncSessionStatus.Committed)
         {
-            throw new Exception($"Sync session {sessionId} cannot be committed (status: {session.Status})");
+            return Problem($"Sync session {sessionId} cannot be committed (status: {session.Status})",
+                statusCode: StatusCodes.Status409Conflict, title: "Sync session cannot be committed");
         }
 
         if (session.Status == SyncSessionStatus.Committed)
@@ -133,7 +134,15 @@ public class SyncController(
             return SyncCommitResponseMapper.Map(existingRecords, session.CompletedAt ?? DateTime.UtcNow);
         }
 
-        var result = await syncCommitService.CommitAsync(context, sessionId, deviceId, session.IsDryRun, cancellationToken);
+        SyncCommitResult result;
+        try
+        {
+            result = await syncCommitService.CommitAsync(context, sessionId, deviceId, session.IsDryRun, cancellationToken);
+        }
+        catch (SyncCommitValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Sync session cannot be committed");
+        }
 
         session.Status = SyncSessionStatus.Committed;
         session.CompletedAt = DateTime.UtcNow;

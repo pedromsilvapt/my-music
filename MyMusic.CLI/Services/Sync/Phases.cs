@@ -150,21 +150,8 @@ public class Phases(
                 Force = ctx.Options.Force
             };
 
-            CheckSyncResult syncResponse;
-            try
-            {
-                syncResponse = await apiClient.CheckSyncAsync(ctx.DeviceId, ctx.SessionId, syncRequest, ct);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to check sync for chunk {ChunkNumber}", chunkNumber);
-                ctx.Result = ctx.Result.AddDelta(new SyncActionCounts { ErrorCount = chunk.Length });
-                processedCount += chunk.Length;
-                progress?.Report(SyncProgress.FromResult(
-                    ctx.Result, "upload", files.Count, processedCount,
-                    errorMessage: $"Chunk {chunkNumber} failed: {ex.Message}"));
-                continue;
-            }
+            // A failed check aborts the sync: its records would be lost, and the commit rejects unacknowledged ones
+            var syncResponse = await apiClient.CheckSyncAsync(ctx.DeviceId, ctx.SessionId, syncRequest, ct);
 
             ctx.Result = ctx.Result.AddDelta(syncResponse.Counts);
 

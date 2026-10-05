@@ -34,7 +34,7 @@ public class SyncCommitServiceAcknowledgedSpecs
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.CreateLocal);
 
-        var ex = await Should.ThrowAsync<InvalidOperationException>(async () =>
+        var ex = await Should.ThrowAsync<SyncCommitValidationException>(async () =>
             await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default));
 
         ex.Message.ShouldContain("unacknowledged client-action records");
@@ -52,7 +52,7 @@ public class SyncCommitServiceAcknowledgedSpecs
 
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.Unlink);
 
-        var ex = await Should.ThrowAsync<InvalidOperationException>(async () =>
+        var ex = await Should.ThrowAsync<SyncCommitValidationException>(async () =>
             await service.CommitAsync(db, session.Id, device.Id, false, cancellationToken: default));
 
         ex.Message.ShouldContain("unacknowledged client-action records");
@@ -130,7 +130,7 @@ public class SyncCommitServiceAcknowledgedSpecs
         scenario.AddRecord(session.Id, "/music/song.mp3", SyncRecordAction.UpdateLocal);
         scenario.AddRecord(session.Id, "/music/song2.mp3", SyncRecordAction.CreateLocal);
 
-        var ex = await Should.ThrowAsync<InvalidOperationException>(async () =>
+        var ex = await Should.ThrowAsync<SyncCommitValidationException>(async () =>
             await service.CommitAsync(db, session.Id, device.Id, isDryRun, cancellationToken: default));
 
         ex.Message.ShouldContain("unacknowledged client-action records");

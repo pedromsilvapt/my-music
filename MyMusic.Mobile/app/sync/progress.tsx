@@ -36,7 +36,7 @@ export default function SyncProgressScreen() {
         startSync({});
 
         const isDeviceNotFoundError = (err: any): boolean => {
-            return err?.status === 404 || err?.status === 500 ||
+            return err?.status === 404 ||
                    (err?.message && /device.*not found|not found.*device/i.test(err.message));
         };
 

@@ -231,24 +231,11 @@ export async function uploadPhase (
             createdAt: safeToIsoString(f.createdAt)!,
         }));
 
-        let syncResponse;
-        try {
-            syncResponse = await deps.apiClient.checkSync(ctx.deviceId, ctx.sessionId!, {
-                files: syncFiles,
-                force: ctx.options.force,
-            });
-        } catch (e) {
-            ctx.result.error += chunk.length;
-            checkedFiles += chunk.length;
-            ctx.processedFiles = checkedFiles;
-            onProgress({
-                phase: 'upload',
-                processedFiles: ctx.processedFiles,
-                error: ctx.result.error,
-                errorMessage: `Chunk ${i + 1} failed: ${e instanceof Error ? e.message : String(e)}`,
-            });
-            continue;
-        }
+        // A failed check aborts the sync: its records would be lost, and the commit rejects unacknowledged ones
+        const syncResponse = await deps.apiClient.checkSync(ctx.deviceId, ctx.sessionId!, {
+            files: syncFiles,
+            force: ctx.options.force,
+        });
 
         ctx.result = addDeltaToResult(ctx.result, syncResponse.counts ?? EMPTY_COUNTS);
 

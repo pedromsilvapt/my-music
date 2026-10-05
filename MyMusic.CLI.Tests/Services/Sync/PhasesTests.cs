@@ -407,9 +407,10 @@ public class PhasesTests
     }
 
     [Fact]
-    public async Task UploadPhase_CheckFailureReportsChunkProgressAndContinues()
+    public async Task UploadPhase_CheckFailureAbortsWithoutCheckingRemainingChunks()
     {
-        // Setup: 3 files, chunk size 2 -> 2 chunks. First chunk fails, second succeeds (all skipped).
+        // Setup: 3 files, chunk size 2 -> 2 chunks. First chunk fails, second would succeed (all skipped).
+        // The records of a failed check are lost, so going on would leave them unacknowledged at the commit.
         _config.GetChunkSize().Returns(2);
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(
@@ -426,19 +427,10 @@ public class PhasesTests
 
         var progress = new CapturingProgress();
 
-        await phases.UploadPhaseAsync(ctx, files, progress);
+        var ex = await Should.ThrowAsync<Exception>(() => phases.UploadPhaseAsync(ctx, files, progress));
 
-        var chunkReports = ChunkReports(progress, files.Count);
-        // Chunk 1 failed -> processedCount=2 with error message.
-        // Chunk 2 succeeded -> processedCount=3 (end-of-chunk report).
-        chunkReports.Count.ShouldBe(2);
-        chunkReports[0].ProcessedFiles.ShouldBe(2);
-        chunkReports[0].ErrorMessage.ShouldBeOfType<string>();
-        chunkReports[0].ErrorMessage!.ShouldContain("Chunk 1 failed");
-        chunkReports[1].ProcessedFiles.ShouldBe(3);
-        chunkReports[1].ErrorMessage.ShouldBeNull();
-
-        ctx.Result.Error.ShouldBe(2);
+        ex.Message.ShouldBe("network error");
+        await _apiClient.Received(1).CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

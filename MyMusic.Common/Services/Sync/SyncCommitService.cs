@@ -43,7 +43,7 @@ public class SyncCommitService(
             var unacknowledgedSummary = string.Join(", ",
                 unacknowledgedClientActions.GroupBy(r => r.Action)
                     .Select(g => $"{g.Key}: {g.Count()}"));
-            throw new InvalidOperationException(
+            throw new SyncCommitValidationException(
                 $"Cannot commit session {sessionId}: {unacknowledgedClientActions.Count} unacknowledged client-action records ({unacknowledgedSummary}). " +
                 "Client must acknowledge all pending actions before commit.");
         }

@@ -169,7 +169,7 @@ export const SyncRecordItemSchema = z.discriminatedUnion('action', [
     SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateRemote'), data: UpdateRemoteDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('CreateLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('UpdateLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
-    SyncRecordItemBaseSchema.extend({ action: z.literal('DeleteLocal'), data: z.null().optional() }),
+    SyncRecordItemBaseSchema.extend({ action: z.literal('DeleteLocal'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('Unlink'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('Link'), data: SongModifiedAtDataSchema.nullable().optional() }),
     SyncRecordItemBaseSchema.extend({ action: z.literal('Rename'), data: RenameDataSchema.nullable().optional() }),

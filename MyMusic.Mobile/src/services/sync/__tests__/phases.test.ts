@@ -576,7 +576,8 @@ describe('uploadPhase - progress', () => {
         ]);
     });
 
-    test('counts the files of a failed check as processed', async () => {
+    test('a failed check aborts the phase, without checking the remaining chunks', async () => {
+        // The records of a failed check are lost, so going on would leave them unacknowledged at the commit
         const deps = createMockDeps();
         (deps.config.getChunkSize as jest.Mock).mockReturnValue(2);
         (deps.apiClient.checkSync as jest.Mock)
@@ -585,9 +586,10 @@ describe('uploadPhase - progress', () => {
         const ctx = createContext();
         const onProgress = jest.fn();
 
-        await uploadPhase(deps, ctx, ['a.mp3', 'b.mp3', 'c.mp3'].map(scanned), onProgress);
+        await expect(uploadPhase(deps, ctx, ['a.mp3', 'b.mp3', 'c.mp3'].map(scanned), onProgress))
+            .rejects.toThrow('boom');
 
-        expect(onProgress.mock.calls.map(([p]) => p.processedFiles)).toEqual([0, 2, 3, 3]);
+        expect(deps.apiClient.checkSync).toHaveBeenCalledTimes(1);
     });
 });
 
