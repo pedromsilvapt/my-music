@@ -86,9 +86,16 @@ The server replaces every option on update, so always send the full set; `saveDe
 
 ## Exclusion Rules
 
-The "Excluded Files" field of the device settings screen holds the rules that keep local paths out of the sync, one
-per line (syntax and behaviour in "Exclusion Rules" in [sync.md](sync.md)). They are stored in `configService`
+The "Excluded Files" list of the device settings screen holds the rules that keep local paths out of the sync, one
+per row (syntax and behaviour in "Exclusion Rules" in [sync.md](sync.md)). They are stored in `configService`
 (`getExcludePatterns` / `setExcludePatterns`) and stay on the device: nothing is saved to the server device.
+
+The list button of a rule opens `ExcludedFilesSheet` (`components/ui/ExcludedFilesSheet.tsx`), a drawer with the
+music files of the repository that the rule matches and a search input to look for a file in them. It works on the
+values in the form, saved or not: `scanRepositoryPaths` (`services/excludedFilesService.ts`) scans the folder once
+with no rule applied, using the scanner selected for the sync, and each rule is tried on its own against that list
+(`filterExcludedPaths`), so a file also shows under a rule that an earlier one already covers. The scan is kept while the settings
+screen is open; the refresh button of the drawer scans the folder again.
 
 `createExclusionMatcher` (`services/sync/exclusions.ts`) builds the matcher. The scanners skip the paths it matches,
 and the sync context carries it (`ctx.isExcluded`) so the actions in `services/sync/sync-actions-device.ts` fail

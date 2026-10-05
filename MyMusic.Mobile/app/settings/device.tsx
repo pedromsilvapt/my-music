@@ -5,10 +5,10 @@ import {useRouter} from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, {useState} from 'react';
 import {ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
-import {Controller, useForm} from 'react-hook-form';
+import {Controller, useFieldArray, useForm} from 'react-hook-form';
 import {z} from 'zod';
 import {testConnection, type ConnectionTestResult} from '../../src/api/client';
-import {Button, Card, ErrorDisplay, Input} from '../../src/components/ui';
+import {Button, Card, ErrorDisplay, ExcludedFilesSheet, Input} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {DEVICE_TYPES, getDeviceTypeById, getDeviceTypeIdByLabel} from '../../src/constants/deviceIcons';
 import {useTheme} from '../../src/hooks/useTheme';
@@ -34,6 +34,7 @@ import {
     setUserName
 } from '../../src/services/configService';
 import {saveDeviceConfig} from '../../src/services/deviceConfigService';
+import {splitRules} from '../../src/services/sync/exclusions';
 
 const configSchema = z.object({
     serverUrl: z.string().url('Invalid URL').or(z.string().startsWith('http://') || z.string().startsWith('https://')),
@@ -43,19 +44,20 @@ const configSchema = z.object({
     namingTemplate: z.string().optional(),
     importOnPurchase: z.boolean(),
     repositoryPath: z.string().optional(),
-    excludePatterns: z.string().optional(),
+    excludePatterns: z.array(z.object({value: z.string()})),
 });
 
 type ConfigFormData = z.infer<typeof configSchema>;
 
 export default function DeviceConfigScreen() {
     const router = useRouter();
-    const {colors, fontSize, fontWeight, spacing, borderRadius, withAlpha} = useTheme();
+    const {colors, fontSize, fontWeight, fontFamily, spacing, borderRadius, withAlpha} = useTheme();
     const [saving, setSaving] = useState(false);
     const [testingConnection, setTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [step, setStep] = useState<'form' | 'registering' | 'done'>('form');
     const [connectionError, setConnectionError] = useState<ErrorDetails | null>(null);
+    const [excludedFilesRule, setExcludedFilesRule] = useState<string | null>(null);
 
     const {control, handleSubmit, watch, setValue, formState: {errors}} = useForm<ConfigFormData>({
         resolver: zodResolver(configSchema),
@@ -67,12 +69,32 @@ export default function DeviceConfigScreen() {
             namingTemplate: getNamingTemplate() || '',
             importOnPurchase: getImportOnPurchase(),
             repositoryPath: getRepositoryPath() || '',
-            excludePatterns: getExcludePatterns().join('\n'),
+            excludePatterns: getExcludePatterns().map(value => ({value})),
         },
     });
 
+    const excludePatternFields = useFieldArray({control, name: 'excludePatterns'});
+
     const selectedType = watch('deviceType');
     const importOnPurchaseValue = watch('importOnPurchase');
+    const repositoryPathValue = watch('repositoryPath') || '';
+    const excludePatternValues = watch('excludePatterns');
+
+    // A row holds one rule: the lines of a pasted list, or what follows an Enter, go to rows of their own
+    const handleExcludePatternChange = (index: number, text: string, onChange: (value: string) => void) => {
+        if (!/[\r\n]/.test(text)) {
+            onChange(text);
+            return;
+        }
+
+        const [first = '', ...rest] = splitRules(text);
+        onChange(first);
+        excludePatternFields.insert(
+            index + 1,
+            rest.length > 0 ? rest.map(value => ({value})) : [{value: ''}],
+            {shouldFocus: false}
+        );
+    };
 
     const handleTestConnection = async (serverUrlValue: string) => {
         if (!serverUrlValue) {
@@ -147,7 +169,7 @@ export default function DeviceConfigScreen() {
             await setNamingTemplate(data.namingTemplate || '');
             await setImportOnPurchase(data.importOnPurchase);
             await setRepositoryPath(data.repositoryPath || '');
-            await setExcludePatterns((data.excludePatterns || '').split('\n').map(p => p.trim()).filter(p => p !== ''));
+            await setExcludePatterns(data.excludePatterns.flatMap(p => splitRules(p.value)));
 
             const apiServerUrl = data.serverUrl.endsWith('/api') ? data.serverUrl : `${data.serverUrl}/api`;
             await setServerUrl(apiServerUrl);
@@ -405,29 +427,62 @@ export default function DeviceConfigScreen() {
                     Tap "Browse" to select a folder from your device, or enter the path manually.
                 </Text>
 
-                <Controller
-                    control={control}
-                    name="excludePatterns"
-                    render={({field: {onChange, onBlur, value}}) => (
-                        <Input
-                            label="Excluded Files"
-                            placeholder={'*.tmp\nPodcasts/\n**/Live/*.mp3'}
-                            value={value}
-                            onChangeText={onChange}
-                            onBlur={onBlur}
-                            multiline
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                            textAlignVertical="top"
-                            style={styles.excludePatternsInput}
-                            containerStyle={{marginTop: spacing.md, marginBottom: 0}}
-                            variant="card"
-                        />
-                    )}
-                />
+                <Text style={[styles.label, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.cardTextSecondary, marginTop: spacing.md, marginBottom: spacing.xs}]}>Excluded Files</Text>
 
-                <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
-                    One rule per line. Matching files are never uploaded, downloaded, renamed or deleted by a sync. A name matches in any folder (*.tmp), a trailing / matches a folder (Podcasts/), and ** matches any number of folders (**/Live/*.mp3).
+                {excludePatternFields.fields.map((field, index) => {
+                    const rule = excludePatternValues[index]?.value ?? '';
+                    const canShowFiles = rule.trim() !== '' && repositoryPathValue !== '';
+
+                    return (
+                        <View key={field.id} style={[styles.excludePatternRow, {gap: spacing.xs, marginBottom: spacing.sm}]}>
+                            <Controller
+                                control={control}
+                                name={`excludePatterns.${index}.value`}
+                                render={({field: {onChange, onBlur, value}}) => (
+                                    <Input
+                                        placeholder="*.tmp"
+                                        value={value}
+                                        onChangeText={(text) => handleExcludePatternChange(index, text, onChange)}
+                                        multiline
+                                        onBlur={onBlur}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        style={{fontFamily: fontFamily.monospace}}
+                                        containerStyle={styles.excludePatternInput}
+                                        variant="card"
+                                    />
+                                )}
+                            />
+                            <TouchableOpacity
+                                onPress={() => setExcludedFilesRule(rule)}
+                                disabled={!canShowFiles}
+                                style={{padding: spacing.sm}}
+                                accessibilityLabel="Show excluded files"
+                            >
+                                <Ionicons name="list-outline" size={22} color={canShowFiles ? colors.primary : colors.cardTextMuted}/>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => excludePatternFields.remove(index)}
+                                style={{padding: spacing.sm}}
+                                accessibilityLabel="Remove rule"
+                            >
+                                <Ionicons name="close" size={22} color={colors.cardTextSecondary}/>
+                            </TouchableOpacity>
+                        </View>
+                    );
+                })}
+
+                <View style={styles.addExcludePatternRow}>
+                    <Button
+                        title="Add rule"
+                        onPress={() => excludePatternFields.append({value: ''})}
+                        variant="outline"
+                        size="small"
+                    />
+                </View>
+
+                <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.sm}]}>
+                    One rule per row. Matching files are never uploaded, downloaded, renamed or deleted by a sync. A name matches in any folder (*.tmp), a trailing / matches a folder (Podcasts/), and ** matches any number of folders (**/Live/*.mp3). The list button of a rule shows the music files it excludes.
                 </Text>
             </Card>
 
@@ -457,6 +512,12 @@ export default function DeviceConfigScreen() {
                     </View>
                 </View>
             </Modal>
+
+            <ExcludedFilesSheet
+                rule={excludedFilesRule}
+                repositoryPath={repositoryPathValue}
+                onClose={() => setExcludedFilesRule(null)}
+            />
         </ScrollView>
     );
 }
@@ -533,9 +594,16 @@ const styles = StyleSheet.create({
     namingTemplateContainer: {
         marginTop: 16,
     },
-    excludePatternsInput: {
-        minHeight: 110,
-        fontFamily: 'monospace',
+    excludePatternRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    excludePatternInput: {
+        flex: 1,
+        marginBottom: 0,
+    },
+    addExcludePatternRow: {
+        flexDirection: 'row',
     },
     toggle: {
         width: 50,

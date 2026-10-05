@@ -79,3 +79,30 @@ function ruleToRegex(rule: string): RegExp | null {
 
     return new RegExp(prefix + body + suffix, 'i');
 }
+
+/** The paths a single exclusion rule matches, sorted. The rule is tested on its own, whatever the other rules are. */
+export function filterExcludedPaths(relativePaths: string[], rule: string): string[] {
+    const isExcluded = createExclusionMatcher([rule]);
+
+    return relativePaths
+        .filter(path => isExcluded(path) !== null)
+        .sort((a, b) => a.localeCompare(b));
+}
+
+/** The paths that contain the search text, ignoring case. A blank search keeps every path. */
+export function searchPaths(paths: string[], search: string): string[] {
+    const term = search.trim().toLowerCase();
+    if (term === '') {
+        return paths;
+    }
+
+    return paths.filter(path => path.toLowerCase().includes(term));
+}
+
+/** The rules of a text with one rule per line, trimmed and without the blank lines. */
+export function splitRules(text: string): string[] {
+    return text
+        .split(/\r?\n|\r/)
+        .map(rule => rule.trim())
+        .filter(rule => rule !== '');
+}

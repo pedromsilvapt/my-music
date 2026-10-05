@@ -1,4 +1,4 @@
-import {createExclusionMatcher, excludedPathError} from '../exclusions';
+import {createExclusionMatcher, excludedPathError, filterExcludedPaths, searchPaths, splitRules} from '../exclusions';
 
 /**
  * The test vectors shared with the CLI (`ExclusionMatcherTests`): both clients must exclude the same
@@ -79,4 +79,74 @@ describe('createExclusionMatcher', () => {
 
 test('excludedPathError names the rule', () => {
     expect(excludedPathError('*.tmp')).toBe("Path is excluded from sync by the rule '*.tmp'");
+});
+
+describe('filterExcludedPaths', () => {
+    const paths = ['Podcasts/ep2.mp3', 'Artist/song.mp3', 'Artist/Live/b.mp3', 'Podcasts/ep1.mp3', 'Shows/Podcasts/ep1.mp3'];
+
+    test('returns the paths the rule matches, sorted', () => {
+        expect(filterExcludedPaths(paths, 'Podcasts/')).toEqual(['Podcasts/ep1.mp3', 'Podcasts/ep2.mp3', 'Shows/Podcasts/ep1.mp3']);
+        expect(filterExcludedPaths(paths, '/Podcasts')).toEqual(['Podcasts/ep1.mp3', 'Podcasts/ep2.mp3']);
+        expect(filterExcludedPaths(paths, 'ep1.mp3')).toEqual(['Podcasts/ep1.mp3', 'Shows/Podcasts/ep1.mp3']);
+    });
+
+    test('returns nothing for a rule that matches no path', () => {
+        expect(filterExcludedPaths(paths, '*.tmp')).toEqual([]);
+    });
+
+    test('returns nothing for a blank rule or a comment', () => {
+        expect(filterExcludedPaths(paths, '  ')).toEqual([]);
+        expect(filterExcludedPaths(paths, '# Podcasts/')).toEqual([]);
+    });
+
+    test('does not reorder the paths it was given', () => {
+        const given = [...paths];
+
+        filterExcludedPaths(given, 'Podcasts/');
+
+        expect(given).toEqual(paths);
+    });
+});
+
+describe('searchPaths', () => {
+    const paths = ['Artist/Live/b.mp3', 'Podcasts/ep1.mp3', 'Shows/Podcasts/EP1.mp3'];
+
+    test('keeps the paths containing the text, in a folder or a file name, ignoring case', () => {
+        expect(searchPaths(paths, 'podcasts')).toEqual(['Podcasts/ep1.mp3', 'Shows/Podcasts/EP1.mp3']);
+        expect(searchPaths(paths, 'Ep1')).toEqual(['Podcasts/ep1.mp3', 'Shows/Podcasts/EP1.mp3']);
+        expect(searchPaths(paths, 'live/b')).toEqual(['Artist/Live/b.mp3']);
+    });
+
+    test('ignores the spaces around the text', () => {
+        expect(searchPaths(paths, '  live ')).toEqual(['Artist/Live/b.mp3']);
+    });
+
+    test('keeps every path for a blank search', () => {
+        expect(searchPaths(paths, '')).toBe(paths);
+        expect(searchPaths(paths, '   ')).toBe(paths);
+    });
+
+    test('returns nothing when no path contains the text', () => {
+        expect(searchPaths(paths, 'missing')).toEqual([]);
+    });
+});
+
+describe('splitRules', () => {
+    test('splits a text into one rule per line', () => {
+        expect(splitRules('*.tmp\nPodcasts/\n**/Live/*.mp3')).toEqual(['*.tmp', 'Podcasts/', '**/Live/*.mp3']);
+        expect(splitRules('*.tmp\r\nPodcasts/\rInbox')).toEqual(['*.tmp', 'Podcasts/', 'Inbox']);
+    });
+
+    test('trims the rules and drops the blank lines', () => {
+        expect(splitRules('  *.tmp \n\n   \nPodcasts/\n')).toEqual(['*.tmp', 'Podcasts/']);
+    });
+
+    test('keeps the spaces inside a rule', () => {
+        expect(splitRules('Song [Live].mp3')).toEqual(['Song [Live].mp3']);
+    });
+
+    test('returns nothing for a blank text', () => {
+        expect(splitRules('')).toEqual([]);
+        expect(splitRules(' \n ')).toEqual([]);
+    });
 });
