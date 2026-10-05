@@ -226,6 +226,12 @@ The module has no instrumented test. Its output must match the shared checksum v
 `MyMusic.Common.Tests/Services/ChecksumServiceSpecs.cs`; to check it on a device, touch the modification time of a
 synced file without changing its content and sync: the record must be `UpdateTimestamp`, not `Conflict`.
 
+## Error Screen
+
+`ErrorDisplay` (`components/ui/ErrorDisplay.tsx`) shows an error and has a Copy button that puts it on the clipboard
+as text. The text comes from `formatErrorDetails` (`services/errorDetails.ts`), which is written apart from the
+component: a field added to `ErrorDetails` must be added both to the component and to `formatErrorDetails`.
+
 ## Key Features
 
 1. **Configuration**: Set server URL, username, device name, device type, and repository path

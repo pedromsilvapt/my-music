@@ -1,18 +1,11 @@
-import React from 'react';
+import React, {useEffect, useRef, useState} from 'react';
+import * as Clipboard from 'expo-clipboard';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 import {useTheme} from '../../hooks/useTheme';
+import {type ErrorDetails, formatErrorDetails, formatJson} from '../../services/errorDetails';
 import {Button} from './Button';
 
-export interface ErrorDetails {
-    title?: string;
-    status?: number;
-    message: string;
-    url?: string;
-    responseBody?: string;
-    stack?: string;
-    cause?: string;
-    validationErrors?: Record<string, string[]>;
-}
+export type {ErrorDetails};
 
 interface ErrorDisplayProps {
     error: ErrorDetails;
@@ -28,14 +21,18 @@ export function ErrorDisplay({error, onRetry, onDismiss}: ErrorDisplayProps) {
         return value;
     };
 
-    const formatJson = (value: string | undefined): string => {
-        if (!value) return 'N/A';
-        try {
-            const parsed = JSON.parse(value);
-            return JSON.stringify(parsed, null, 2);
-        } catch {
-            return value;
-        }
+    const [copied, setCopied] = useState(false);
+    const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => () => {
+        if (copiedTimer.current) clearTimeout(copiedTimer.current);
+    }, []);
+
+    const copyDetails = async () => {
+        await Clipboard.setStringAsync(formatErrorDetails(error));
+        setCopied(true);
+        if (copiedTimer.current) clearTimeout(copiedTimer.current);
+        copiedTimer.current = setTimeout(() => setCopied(false), 2000);
     };
 
     const isSuccessStatus = error.status !== undefined && error.status >= 200 && error.status < 300;
@@ -313,6 +310,7 @@ export function ErrorDisplay({error, onRetry, onDismiss}: ErrorDisplayProps) {
                 {onRetry && (
                     <Button title="Retry" onPress={onRetry} variant="outline" size="small"/>
                 )}
+                <Button title={copied ? 'Copied' : 'Copy'} onPress={copyDetails} variant="outline" size="small"/>
                 {onDismiss && (
                     <Button title="OK" onPress={onDismiss} size="small"/>
                 )}

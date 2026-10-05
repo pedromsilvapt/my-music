@@ -6,6 +6,7 @@ import type {SyncSessionItem} from '../../src/api/types';
 import {pruneSessions} from '../../src/api/sync';
 import {ErrorDisplay, SessionCounters} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
+import {formatErrorDetails} from '../../src/services/errorDetails';
 import {useTheme} from '../../src/hooks/useTheme';
 import {fetchSyncHistory} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
@@ -94,24 +95,6 @@ export default function HistoryListScreen() {
         } finally {
             setPruning(false);
         }
-    };
-
-    const formatErrorDetails = (err: ErrorDetails): string => {
-        let details = '';
-        if (err.status) details += `Status: ${err.status}\n`;
-        if (err.message) details += `Message: ${err.message}\n`;
-        if (err.url) details += `URL: ${err.url}\n`;
-        if (err.validationErrors && Object.keys(err.validationErrors).length > 0) {
-            details += 'Validation Errors:\n';
-            for (const [field, messages] of Object.entries(err.validationErrors)) {
-                for (const msg of messages) {
-                    details += `  ${field}: ${msg}\n`;
-                }
-            }
-        }
-        if (err.responseBody) details += `Response: ${err.responseBody}\n`;
-        if (err.stack) details += `Stack: ${err.stack}\n`;
-        return details || 'No details available';
     };
 
     const calculateSessionsToPrune = () => {
