@@ -123,6 +123,37 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
         };
     }
 
+    // A POST, so a selection of any size fits: the ids go in the body
+    [HttpPost("usage", Name = "GetAlbumsUsage")]
+    public async Task<GetAlbumsUsageResponse> GetUsage([FromBody] GetAlbumsUsageRequest request,
+        MusicDbContext context, CancellationToken cancellationToken) =>
+        new()
+        {
+            SongsCount = await AlbumArtistSongsQuery.OfAlbums(context, currentUser.Id, request.AlbumIds)
+                .CountAsync(cancellationToken),
+        };
+
+    [HttpDelete(Name = "DeleteAlbums")]
+    public async Task<IActionResult> Delete([FromBody] DeleteAlbumsRequest request,
+        [FromServices] IAlbumRemoveService albumRemoveService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await albumRemoveService.RemoveAsync(currentUser.Id, request.AlbumIds, cancellationToken);
+
+            return NoContent();
+        }
+        catch (AlbumNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Album not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict,
+                title: "Albums cannot be deleted");
+        }
+    }
+
     [HttpGet("filter-metadata", Name = "GetAlbumFilterMetadata")]
     public FilterMetadataResponse GetFilterMetadata() =>
         new()

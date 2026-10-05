@@ -209,6 +209,28 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
+    /// Selects the rows containing each of the specified texts in the given column: clicks the first one, and
+    /// ctrl-clicks the others. The clicks land on the <paramref name="clickColumnName"/> cell, which should hold
+    /// plain text: anchors and icons suppress row selection.
+    /// </summary>
+    public async Task SelectRowsByCellTextAsync(string columnName, string clickColumnName, params string[] cellTexts)
+    {
+        foreach (var (cellText, index) in cellTexts.Select((text, index) => (text, index)))
+        {
+            // The filter is resolved inside each row, so the cell locator cannot be rooted at the collection
+            var cell = Root.Page.Locator($"td[data-testid^='collection-cell-{columnName}-']")
+                .Filter(new() { HasTextRegex = new Regex($@"^\s*{Regex.Escape(cellText)}\s*$") });
+            var row = Rows.Filter(new() { Has = cell }).First;
+            var safeCell = row.Locator($"td[data-testid^='collection-cell-{clickColumnName}-']");
+
+            await safeCell.ClickAsync(new()
+            {
+                Modifiers = index == 0 ? [] : [KeyboardModifier.Control],
+            });
+        }
+    }
+
+    /// <summary>
     /// Right-clicks on a row at the given index to open the context menu.
     /// </summary>
     public async Task RightClickRowByIndexAsync(int rowIndex)
@@ -222,12 +244,21 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     /// </summary>
     public async Task RightClickRowByCellTextAsync(string columnName, string cellText)
     {
-        var cell = Root.Locator($"td[data-testid^='collection-cell-{columnName}-']")
-            .Filter(new LocatorFilterOptions { HasText = cellText })
-            .First;
+        var cell = Root.Page.Locator($"td[data-testid^='collection-cell-{columnName}-']")
+            .Filter(new LocatorFilterOptions { HasText = cellText });
 
-        var row = cell.Locator("ancestor::tr").First;
+        var row = Rows.Filter(new() { Has = cell }).First;
         await row.ClickAsync(new() { Button = MouseButton.Right });
+    }
+
+    /// <summary>
+    /// Right-clicks the row containing the specified text in the given column, and clicks the action with
+    /// the given name in the row's context menu.
+    /// </summary>
+    public async Task ClickRowActionAsync(string columnName, string cellText, string actionName)
+    {
+        await RightClickRowByCellTextAsync(columnName, cellText);
+        await Root.Page.GetByRole(AriaRole.Menuitem, new() { Name = actionName, Exact = true }).ClickAsync();
     }
 
     /// <summary>

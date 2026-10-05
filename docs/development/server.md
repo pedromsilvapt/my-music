@@ -373,6 +373,8 @@ await transaction.CommitAsync(cancellationToken);
 - **Album by id**: `new AlbumRef { Id = ... }` moves a song to that exact album (owner-checked) instead of finding-or-creating one by name. It is server-side only, and is not read from API requests.
 - **`SongUpdateOptions.KeepAlbumIds` / `KeepArtistIds`** exclude rows from the unused album/artist cleanup, for rows the operation still needs while songs are moving.
 
+`AlbumRemoveService` and `ArtistRemoveService` (the `DELETE /albums` and `DELETE /artists` endpoints, which take a list of ids) are built this way: they move the affected songs to the placeholder album/artist, then delete the rows. A list is one operation: every album/artist in it is deleted, or none is. They are not to be confused with `IAlbumDeleteService` / `IArtistDeleteService`, the low-level row deleters they end with, which do no song work at all. A placeholder (`Album.PlaceholderName`, `Artist.PlaceholderName`) cannot be removed while it still has songs, or while the others being removed send their songs to it: those songs would have nowhere to go.
+
 ### Transactional file operations
 
 Song imports and song edits change files in the music repository inside a database transaction. `IFileTransactionService.Begin(db)` binds an `IFileTransaction` to the context's current transaction, so the file changes are undone when that transaction is rolled back, fails to commit, or is disposed without committing (via `FileTransactionInterceptor`, which must be registered on the context). A commit keeps the changes. Declare it with `await using` right after the database transaction.

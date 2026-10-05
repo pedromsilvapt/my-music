@@ -80,6 +80,8 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISongDeleteService, SongDeleteService>();
         builder.Services.AddScoped<IAlbumCreateService, AlbumCreateService>();
         builder.Services.AddScoped<IArtistCreateService, ArtistCreateService>();
+        builder.Services.AddScoped<IAlbumRemoveService, AlbumRemoveService>();
+        builder.Services.AddScoped<IArtistRemoveService, ArtistRemoveService>();
         builder.Services.AddScoped<IAlbumDeleteService, AlbumDeleteService>();
         builder.Services.AddScoped<IArtistDeleteService, ArtistDeleteService>();
         builder.Services.AddScoped<IGenreDeleteService, GenreDeleteService>();

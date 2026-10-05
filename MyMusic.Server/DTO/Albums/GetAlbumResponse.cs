@@ -18,6 +18,10 @@ public record GetAlbumResponseAlbum
     public required string ArtistName { get; set; }
     public required int SongsCount { get; set; }
     public required DateTime CreatedAt { get; set; }
+
+    /// <summary>The album belongs to another user, who shared some of its songs: it is read-only.</summary>
+    public required bool IsShared { get; set; }
+
     public required List<GetAlbumSongItem> Songs { get; set; }
 
     public static GetAlbumResponseAlbum FromEntity(Entities.Album album, long currentUserId)
@@ -32,6 +36,7 @@ public record GetAlbumResponseAlbum
             ArtistName = album.Artist.Name,
             SongsCount = album.SongsCount,
             CreatedAt = album.CreatedAt,
+            IsShared = album.OwnerId != currentUserId,
             Songs = album.Songs.Select(s => GetAlbumSongItem.FromEntity(s, currentUserId)).ToList(),
         };
     }

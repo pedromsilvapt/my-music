@@ -5,6 +5,7 @@ using MyMusic.Common.Entities;
 using MyMusic.Common.Extensions;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Albums;
 using MyMusic.Common.Services.Artists;
 using MyMusic.Server.DTO.Artists;
 using MyMusic.Server.DTO.Filters;
@@ -116,6 +117,37 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
         {
             Artist = GetArtistResponseArtist.FromEntity(artist, songFilter, currentUser.Id),
         };
+    }
+
+    // A POST, so a selection of any size fits: the ids go in the body
+    [HttpPost("usage", Name = "GetArtistsUsage")]
+    public async Task<GetArtistsUsageResponse> GetUsage([FromBody] GetArtistsUsageRequest request,
+        MusicDbContext context, CancellationToken cancellationToken) =>
+        new()
+        {
+            SongsCount = await AlbumArtistSongsQuery.OfArtists(context, currentUser.Id, request.ArtistIds)
+                .CountAsync(cancellationToken),
+        };
+
+    [HttpDelete(Name = "DeleteArtists")]
+    public async Task<IActionResult> Delete([FromBody] DeleteArtistsRequest request,
+        [FromServices] IArtistRemoveService artistRemoveService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await artistRemoveService.RemoveAsync(currentUser.Id, request.ArtistIds, cancellationToken);
+
+            return NoContent();
+        }
+        catch (ArtistNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Artist not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict,
+                title: "Artists cannot be deleted");
+        }
     }
 
     [HttpGet("filter-metadata", Name = "GetArtistFilterMetadata")]

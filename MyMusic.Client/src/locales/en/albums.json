@@ -13,6 +13,18 @@
         "create": "Create",
         "createFailed": "Failed to create the album"
     },
+    "delete": {
+        "titleSingle": "Delete Album",
+        "titlePlural": "Delete {{count}} Albums",
+        "confirmSingle": "Are you sure you want to delete the album \"{{name}}\"? This action cannot be undone.",
+        "confirmPlural": "Are you sure you want to delete {{count}} albums? This action cannot be undone.",
+        "songsWarningSingle_one": "{{count}} song still references this album. It will be moved to \"(No Album)\".",
+        "songsWarningSingle_other": "{{count}} songs still reference this album. They will be moved to \"(No Album)\".",
+        "songsWarningPlural_one": "{{count}} song still references these albums. It will be moved to \"(No Album)\".",
+        "songsWarningPlural_other": "{{count}} songs still reference these albums. They will be moved to \"(No Album)\".",
+        "failedSingle": "Failed to delete the album \"{{name}}\"",
+        "failedPlural": "Failed to delete {{count}} albums"
+    },
     "detail": {
         "fetchFailed": "Failed to fetch album",
         "loading": "Loading...",

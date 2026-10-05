@@ -39,6 +39,7 @@ public class ArtistsControllerGetSpecs
 
         // Assert — owned artist resolves normally
         response.Artist.Id.ShouldBe(artistId);
+        response.Artist.IsShared.ShouldBeFalse();
         response.Artist.Name.ShouldBe("My Song Artist");
     }
 
@@ -60,6 +61,7 @@ public class ArtistsControllerGetSpecs
 
         // Assert — recipient can open the artist via direct link (shared-access gate)
         response.Artist.Id.ShouldBe(artistId);
+        response.Artist.IsShared.ShouldBeTrue();
         response.Artist.Name.ShouldBe("Shared Song Artist");
     }
 

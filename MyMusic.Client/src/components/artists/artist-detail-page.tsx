@@ -1,5 +1,5 @@
-import {Box, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
-import {IconArrowBack, IconUser} from "@tabler/icons-react";
+import {Box, Button, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
+import {IconArrowBack, IconTrash, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -11,6 +11,7 @@ import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 import {useMemo} from "react";
 import {useTranslation} from "react-i18next";
+import {useConfirmDeleteArtists} from "./use-confirm-delete-artists.tsx";
 
 export default function ArtistDetailPage() {
     const {t} = useTranslation(["artists", "common"]);
@@ -26,7 +27,8 @@ export default function ArtistDetailPage() {
     const artistResponse = useQueryData(artistQuery, t("artists:detail.fetchFailed"));
     const artist = artistResponse?.data.artist ?? null;
 
-    const albumsSchema = useAlbumsSchema();
+    const albumsSchema = useAlbumsSchema({readOnly: artist?.isShared ?? true});
+    const confirmDeleteArtists = useConfirmDeleteArtists();
 
     const queueContext = useMemo(() => ({
         type: 'artist' as const,
@@ -63,6 +65,19 @@ export default function ArtistDetailPage() {
                         <Text size="sm" c="dimmed" data-testid="artist-albums-count" data-count={artist.albumsCount}>{t("artists:detail.albumsCount", {count: artist.albumsCount})}</Text>
                         <Text size="sm" c="dimmed" data-testid="artist-songs-count" data-count={artist.songsCount}>{t("artists:detail.songsCount", {count: artist.songsCount})}</Text>
                     </Group>
+                    {!artist.isShared && (
+                        <Group gap="xs" mt="md">
+                            <Button
+                                leftSection={<IconTrash/>}
+                                variant="default"
+                                color="red"
+                                onClick={() => confirmDeleteArtists([artist], () => navigate({to: '/artists'}))}
+                                data-testid="artist-delete"
+                            >
+                                {t("common:actions.delete")}
+                            </Button>
+                        </Group>
+                    )}
                 </Stack>
             </Flex>
 

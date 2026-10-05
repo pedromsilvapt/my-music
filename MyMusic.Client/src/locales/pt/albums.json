@@ -13,6 +13,18 @@
         "create": "Criar",
         "createFailed": "Falha ao criar o álbum"
     },
+    "delete": {
+        "titleSingle": "Eliminar Álbum",
+        "titlePlural": "Eliminar {{count}} Álbuns",
+        "confirmSingle": "Tem a certeza que pretende eliminar o álbum \"{{name}}\"? Esta ação não pode ser desfeita.",
+        "confirmPlural": "Tem a certeza que pretende eliminar {{count}} álbuns? Esta ação não pode ser desfeita.",
+        "songsWarningSingle_one": "{{count}} música ainda referencia este álbum. Será movida para \"(No Album)\".",
+        "songsWarningSingle_other": "{{count}} músicas ainda referenciam este álbum. Serão movidas para \"(No Album)\".",
+        "songsWarningPlural_one": "{{count}} música ainda referencia estes álbuns. Será movida para \"(No Album)\".",
+        "songsWarningPlural_other": "{{count}} músicas ainda referenciam estes álbuns. Serão movidas para \"(No Album)\".",
+        "failedSingle": "Não foi possível eliminar o álbum \"{{name}}\"",
+        "failedPlural": "Não foi possível eliminar {{count}} álbuns"
+    },
     "detail": {
         "fetchFailed": "Falha ao obter o álbum",
         "loading": "A carregar...",

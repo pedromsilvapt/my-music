@@ -26,5 +26,6 @@ export interface GetAlbumResponseAlbum {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   songsCount: number;
   createdAt: string;
+  isShared: boolean;
   songs: GetAlbumSongItem[];
 }

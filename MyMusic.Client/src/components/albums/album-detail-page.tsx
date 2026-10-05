@@ -1,6 +1,6 @@
-import {Anchor, Box, Flex, Group, Stack, Text} from "@mantine/core";
-import {IconArrowBack, IconDisc} from "@tabler/icons-react";
-import {Link, useParams} from "@tanstack/react-router";
+import {Anchor, Box, Button, Flex, Group, Stack, Text} from "@mantine/core";
+import {IconArrowBack, IconDisc, IconTrash} from "@tabler/icons-react";
+import {Link, useNavigate, useParams} from "@tanstack/react-router";
 import {useGetAlbum} from "../../client/albums.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListSongItem} from "../../model";
@@ -9,6 +9,7 @@ import Collection from "../common/collection/collection.tsx";
 import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 import {useMemo} from "react";
 import {useTranslation} from "react-i18next";
+import {useConfirmDeleteAlbums} from "./use-confirm-delete-albums.tsx";
 
 export default function AlbumDetailPage() {
     const {t} = useTranslation(["albums", "common"]);
@@ -23,6 +24,9 @@ export default function AlbumDetailPage() {
     }), [album?.name]);
 
     const songsSchema = useSongsSchema(false, {queueContext});
+
+    const navigate = useNavigate();
+    const confirmDeleteAlbums = useConfirmDeleteAlbums();
 
     if (!album) {
         return <Box p="md" data-testid="album-detail" data-loading="true">{t("albums:detail.loading")}</Box>;
@@ -52,6 +56,19 @@ export default function AlbumDetailPage() {
                         {album.year && <Text size="sm" c="dimmed">{album.year}</Text>}
                         <Text size="sm" c="dimmed" data-testid="album-songs-count" data-count={album.songsCount}>{t("albums:detail.songsCount", {count: album.songsCount})}</Text>
                     </Group>
+                    {!album.isShared && (
+                        <Group gap="xs" mt="md">
+                            <Button
+                                leftSection={<IconTrash/>}
+                                variant="default"
+                                color="red"
+                                onClick={() => confirmDeleteAlbums([album], () => navigate({to: '/albums'}))}
+                                data-testid="album-delete"
+                            >
+                                {t("common:actions.delete")}
+                            </Button>
+                        </Group>
+                    )}
                 </Stack>
             </Flex>
 

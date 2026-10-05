@@ -1,5 +1,5 @@
 import {Anchor, Tooltip} from "@mantine/core";
-import {IconUserFilled} from "@tabler/icons-react";
+import {IconTrash, IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import {useTranslation} from "react-i18next";
@@ -8,10 +8,12 @@ import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
+import {useConfirmDeleteArtists} from "./use-confirm-delete-artists.tsx";
 
 
 export function useArtistsSchema() {
     const {t} = useTranslation(["artists", "common"]);
+    const confirmDeleteArtists = useConfirmDeleteArtists();
     const {data: filterMetadata} = useFilterMetadata('artists');
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
@@ -78,8 +80,21 @@ export function useArtistsSchema() {
             }
         ],
 
-        actions: () => {
-            return [];
+        actions: (elems) => {
+            if (elems.length === 0) {
+                return [];
+            }
+
+            return [
+                {
+                    name: "delete",
+                    renderIcon: () => <IconTrash/>,
+                    renderLabel: () => elems.length === 1
+                        ? t("artists:delete.titleSingle")
+                        : t("artists:delete.titlePlural", {count: elems.length}),
+                    onClick: (artists: ListArtistItem[]) => confirmDeleteArtists(artists),
+                },
+            ];
         },
 
         estimateListRowHeight: () => 84,
@@ -92,5 +107,5 @@ export function useArtistsSchema() {
             <Anchor component={Link} to={`/artists/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => t("artists:schema.albumsCount", {count: row.albumsCount}),
-    }) as CollectionSchema<ListArtistItem>, [filterMetadata, fetchFilterValues, t]);
+    }) as CollectionSchema<ListArtistItem>, [filterMetadata, fetchFilterValues, t, confirmDeleteArtists]);
 }

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Pages.Components;
 
@@ -29,5 +30,38 @@ public class AlbumsPage(IPage page) : BasePage(page, "albums")
         var modal = new CreateAlbumModalComponent(Page.GetByRole(AriaRole.Dialog, new() { Name = "New Album" }));
         await modal.WaitForVisibleAsync();
         return modal;
+    }
+
+    /// <summary>
+    /// Opens the deletion dialog of an album from its row's context menu, once the dialog knows which songs the
+    /// deletion affects.
+    /// </summary>
+    public async Task<EntityDeleteDialogComponent> OpenDeleteAlbumAsync(string albumName)
+    {
+        await Collection.ClickRowActionAsync("name", albumName, "Delete Album");
+
+        // The modal is rendered in a portal, outside the page root
+        var dialog = new EntityDeleteDialogComponent(
+            Page.GetByRole(AriaRole.Dialog, new() { Name = "Delete Album" }), "album");
+        await dialog.WaitForLoadedAsync();
+        return dialog;
+    }
+
+    /// <summary>
+    /// Selects several albums and opens their deletion dialog from the selection's Actions menu, once the dialog
+    /// knows which songs the deletion affects.
+    /// </summary>
+    public async Task<EntityDeleteDialogComponent> OpenDeleteAlbumsAsync(params string[] albumNames)
+    {
+        await Collection.SelectRowsByCellTextAsync("name", "songsCount", albumNames);
+
+        var menu = await Collection.OpenFloatingActionsMenuAsync();
+        await menu.ClickItemAsync(new Regex(@"^Delete \d+ Albums$"));
+
+        // The modal is rendered in a portal, outside the page root
+        var dialog = new EntityDeleteDialogComponent(
+            Page.GetByRole(AriaRole.Dialog, new() { NameRegex = new Regex(@"^Delete \d+ Albums$") }), "album");
+        await dialog.WaitForLoadedAsync();
+        return dialog;
     }
 }

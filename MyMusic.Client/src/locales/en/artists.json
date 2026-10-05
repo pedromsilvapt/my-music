@@ -11,6 +11,18 @@
         "create": "Create",
         "createFailed": "Failed to create the artist"
     },
+    "delete": {
+        "titleSingle": "Delete Artist",
+        "titlePlural": "Delete {{count}} Artists",
+        "confirmSingle": "Are you sure you want to delete the artist \"{{name}}\" and all of its albums? This action cannot be undone.",
+        "confirmPlural": "Are you sure you want to delete {{count}} artists and all of their albums? This action cannot be undone.",
+        "songsWarningSingle_one": "{{count}} song still references this artist. The artist will be removed from it, and if it is in one of the artist's albums it will be moved to \"(No Album)\".",
+        "songsWarningSingle_other": "{{count}} songs still reference this artist. The artist will be removed from them, and those in the artist's albums will be moved to \"(No Album)\".",
+        "songsWarningPlural_one": "{{count}} song still references these artists. They will be removed from it, and if it is in one of their albums it will be moved to \"(No Album)\".",
+        "songsWarningPlural_other": "{{count}} songs still reference these artists. They will be removed from them, and those in their albums will be moved to \"(No Album)\".",
+        "failedSingle": "Failed to delete the artist \"{{name}}\"",
+        "failedPlural": "Failed to delete {{count}} artists"
+    },
     "select": {
         "placeholder": "Search artists...",
         "empty": "No artists found"

@@ -23,6 +23,10 @@ public record GetArtistResponseArtist
     public required int AlbumsCount { get; set; }
     public required int SongsCount { get; set; }
     public required DateTime CreatedAt { get; set; }
+
+    /// <summary>The artist belongs to another user, who shared some of its songs: it is read-only.</summary>
+    public required bool IsShared { get; set; }
+
     public required List<GetArtistResponseAlbum> Albums { get; set; }
     public required List<GetArtistSongItem> Songs { get; set; }
 
@@ -43,6 +47,7 @@ public record GetArtistResponseArtist
             AlbumsCount = artist.AlbumsCount,
             SongsCount = artist.SongsCount,
             CreatedAt = artist.CreatedAt,
+            IsShared = artist.OwnerId != currentUserId,
             Albums = artist.Albums.Select(GetArtistResponseAlbum.FromEntity).ToList(),
             Songs = songs.Select(sa => GetArtistSongItem.FromEntity(sa, currentUserId)).ToList(),
         };

@@ -1,5 +1,5 @@
 import {Anchor, Tooltip} from "@mantine/core";
-import {IconUserFilled} from "@tabler/icons-react";
+import {IconTrash, IconUserFilled} from "@tabler/icons-react";
 import {Link} from "@tanstack/react-router";
 import {useCallback, useMemo} from "react";
 import {useTranslation} from "react-i18next";
@@ -8,9 +8,16 @@ import {TEXT_COLOR} from "../../utils/colors.ts";
 import Artwork from "../common/artwork.tsx";
 import {type CollectionSchema} from "../common/collection/collection.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
+import {useConfirmDeleteAlbums} from "./use-confirm-delete-albums.tsx";
 
-export function useAlbumsSchema() {
+export interface AlbumsSchemaOptions {
+    /** Albums of another user (a shared view) cannot be changed: their actions are hidden. */
+    readOnly?: boolean;
+}
+
+export function useAlbumsSchema({readOnly = false}: AlbumsSchemaOptions = {}) {
     const {t} = useTranslation(["albums", "common"]);
+    const confirmDeleteAlbums = useConfirmDeleteAlbums();
     const {data: filterMetadata} = useFilterMetadata('albums');
 
     const fetchFilterValues = useCallback(async (field: string, searchTerm: string) => {
@@ -77,8 +84,21 @@ export function useAlbumsSchema() {
             }
         ],
 
-        actions: () => {
-            return [];
+        actions: (elems) => {
+            if (readOnly || elems.length === 0) {
+                return [];
+            }
+
+            return [
+                {
+                    name: "delete",
+                    renderIcon: () => <IconTrash/>,
+                    renderLabel: () => elems.length === 1
+                        ? t("albums:delete.titleSingle")
+                        : t("albums:delete.titlePlural", {count: elems.length}),
+                    onClick: (albums: ListAlbumItem[]) => confirmDeleteAlbums(albums),
+                },
+            ];
         },
 
         estimateListRowHeight: () => 84,
@@ -91,5 +111,5 @@ export function useAlbumsSchema() {
             <Anchor component={Link} to={`/albums/${row.id}`} c={TEXT_COLOR}>{row.name}</Anchor>
         </Tooltip>,
         renderListSubTitle: (row) => t("albums:schema.songsCount", {count: row.songsCount}),
-    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues, t]);
+    }) as CollectionSchema<ListAlbumItem>, [filterMetadata, fetchFilterValues, t, readOnly, confirmDeleteAlbums]);
 }

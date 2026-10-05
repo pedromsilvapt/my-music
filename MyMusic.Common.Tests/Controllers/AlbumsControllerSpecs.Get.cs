@@ -38,6 +38,7 @@ public class AlbumsControllerGetSpecs
 
         // Assert — owned album resolves normally
         response.Album.Id.ShouldBe(albumId);
+        response.Album.IsShared.ShouldBeFalse();
         response.Album.Name.ShouldBe("My Song Album");
     }
 
@@ -59,6 +60,7 @@ public class AlbumsControllerGetSpecs
 
         // Assert — recipient can open the album via direct link (shared-access gate)
         response.Album.Id.ShouldBe(albumId);
+        response.Album.IsShared.ShouldBeTrue();
         response.Album.Name.ShouldBe("Shared Song Album");
     }
 

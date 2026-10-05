@@ -11,8 +11,8 @@ export interface ConfirmDeleteOptions {
     onConfirm: () => Promise<unknown>;
     /** Runs after the dialog closes following a successful deletion. */
     onSuccess?: () => void;
-    /** Notification message shown when the deletion fails. */
-    errorMessage: string;
+    /** Notification message shown when the deletion fails; a function receives what the deletion rejected with. */
+    errorMessage: string | ((error: unknown) => string);
 }
 
 /**
@@ -45,7 +45,11 @@ export function useConfirmDelete() {
                     await onConfirm();
                 } catch (error) {
                     setPending(false);
-                    notifications.show({title: t("common:status.error"), message: errorMessage, color: 'red'});
+                    notifications.show({
+                        title: t("common:status.error"),
+                        message: typeof errorMessage === 'function' ? errorMessage(error) : errorMessage,
+                        color: 'red',
+                    });
                     console.error('Failed to delete:', error);
                     return;
                 }

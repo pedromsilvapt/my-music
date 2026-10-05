@@ -11,6 +11,18 @@
         "create": "Criar",
         "createFailed": "Falha ao criar o artista"
     },
+    "delete": {
+        "titleSingle": "Eliminar Artista",
+        "titlePlural": "Eliminar {{count}} Artistas",
+        "confirmSingle": "Tem a certeza que pretende eliminar o artista \"{{name}}\" e todos os seus álbuns? Esta ação não pode ser desfeita.",
+        "confirmPlural": "Tem a certeza que pretende eliminar {{count}} artistas e todos os seus álbuns? Esta ação não pode ser desfeita.",
+        "songsWarningSingle_one": "{{count}} música ainda referencia este artista. O artista será removido dela e, se estiver num dos álbuns do artista, será movida para \"(No Album)\".",
+        "songsWarningSingle_other": "{{count}} músicas ainda referenciam este artista. O artista será removido delas, e as que estiverem nos álbuns do artista serão movidas para \"(No Album)\".",
+        "songsWarningPlural_one": "{{count}} música ainda referencia estes artistas. Serão removidos dela e, se estiver num dos seus álbuns, será movida para \"(No Album)\".",
+        "songsWarningPlural_other": "{{count}} músicas ainda referenciam estes artistas. Serão removidos delas, e as que estiverem nos seus álbuns serão movidas para \"(No Album)\".",
+        "failedSingle": "Não foi possível eliminar o artista \"{{name}}\"",
+        "failedPlural": "Não foi possível eliminar {{count}} artistas"
+    },
     "select": {
         "placeholder": "Pesquisar artistas...",
         "empty": "Nenhum artista encontrado"
