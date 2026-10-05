@@ -25,7 +25,7 @@ public class InitCommand : Command<InitCommand.Settings>
     public override int Execute(CommandContext context, Settings settings)
     {
         using var activity = CliActivitySource.Instance.StartActivity("init");
-        
+
         var configPath = GetConfigPath();
         EnsureConfigDirectory(configPath);
 
@@ -237,7 +237,7 @@ public class InitCommand : Command<InitCommand.Settings>
             {
                 DefaultValue = defaultAnswer,
             });
-        
+
         return answer;
     }
 

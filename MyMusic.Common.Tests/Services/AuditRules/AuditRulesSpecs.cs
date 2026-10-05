@@ -1110,7 +1110,7 @@ public class AuditRulesSpecs
     {
         // Arrange
         var fileSystem = new MockFileSystem();
-        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()),[], NullLogger<AudioIntegrityService>.Instance);
+        var integrityService = new AudioIntegrityService(Options.Create(new AudioIntegrityConfig()), [], NullLogger<AudioIntegrityService>.Instance);
         var config = new AudioIntegrityConfig();
         var rule = new FileIntegrityAuditRule(integrityService, Options.Create(config), NullLogger<FileIntegrityAuditRule>.Instance);
 

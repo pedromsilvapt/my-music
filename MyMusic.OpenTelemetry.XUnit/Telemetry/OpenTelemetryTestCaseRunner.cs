@@ -20,9 +20,9 @@ public class OpenTelemetryTestCaseRunner :
     {
         await using var ctxt = new OpenTelemetryTestCaseRunnerContext<Xunit.v3.IXunitTestCase, Xunit.v3.IXunitTest>(
             testCase, tests, messageBus, aggregator, cancellationTokenSource, displayName, skipReason, explicitOption, constructorArguments);
-        
+
         await ctxt.InitializeAsync();
-        
+
         return await Run(ctxt);
     }
 

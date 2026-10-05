@@ -24,7 +24,7 @@ public class ReferencesDiff<T, K>
         {
             // Prevent double enumeration
             oldReferences = oldReferences.ToList();
-            
+
             var oldReferenceKeys = new HashSet<K>();
 
             var newReferenceKeys = new HashSet<K>();

@@ -380,7 +380,7 @@ public class MobileCliApplication : ISyncApplication
         {
             return envPath;
         }
-        
+
         // Fallback to solution root discovery (for local development)
         var dir = AppContext.BaseDirectory;
         while (dir != null)

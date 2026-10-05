@@ -127,36 +127,36 @@ public class MetadataFetchController(
         });
     }
 
-/// <summary>
-/// Gets metadata for a specific song via one of two modes:
-/// 
-/// Prefetch mode (no sourceId/sourceSongId): reads the most recent pending auto-fetched metadata
-/// from the AutoFetchedMetadata database table. Includes preSelectedFields derived from the song's
-/// audit non-conformities. Used when the Song Edit Modal opens from an audit rule page.
-/// 
-/// Manual mode (sourceId + sourceSongId provided): fetches metadata directly from the specified
-/// source at request time. Does not include audit-rule-driven preSelectedFields.
-/// Used when the user selects a specific search result in the Metadata Search Modal.
-/// </summary>
-/// <param name="db">Database context</param>
-/// <param name="currentUser">Current authenticated user</param>
-/// <param name="fieldMapper">Audit rule field mapper</param>
-/// <param name="sourcesService">Sources service for getting source clients</param>
-/// <param name="songId">Song ID</param>
-/// <param name="sourceId">Optional source ID to fetch from directly</param>
-/// <param name="sourceSongId">Optional source song ID when fetching directly</param>
-/// <param name="cancellationToken">Cancellation token</param>
-/// <returns>Auto-fetched metadata if available</returns>
-[HttpGet("song/{songId:long}")]
-public async Task<ActionResult<AutoFetchedMetadataResponse>> GetAutoFetchedMetadata(
-    [FromServices] MusicDbContext db,
-    [FromServices] ICurrentUser currentUser,
-    [FromServices] IAuditRuleFieldMapper fieldMapper,
-    [FromServices] ISourcesService sourcesService,
-    [FromRoute] long songId,
-    [FromQuery] long? sourceId,
-    [FromQuery] string? sourceSongId,
-    CancellationToken cancellationToken)
+    /// <summary>
+    /// Gets metadata for a specific song via one of two modes:
+    /// 
+    /// Prefetch mode (no sourceId/sourceSongId): reads the most recent pending auto-fetched metadata
+    /// from the AutoFetchedMetadata database table. Includes preSelectedFields derived from the song's
+    /// audit non-conformities. Used when the Song Edit Modal opens from an audit rule page.
+    /// 
+    /// Manual mode (sourceId + sourceSongId provided): fetches metadata directly from the specified
+    /// source at request time. Does not include audit-rule-driven preSelectedFields.
+    /// Used when the user selects a specific search result in the Metadata Search Modal.
+    /// </summary>
+    /// <param name="db">Database context</param>
+    /// <param name="currentUser">Current authenticated user</param>
+    /// <param name="fieldMapper">Audit rule field mapper</param>
+    /// <param name="sourcesService">Sources service for getting source clients</param>
+    /// <param name="songId">Song ID</param>
+    /// <param name="sourceId">Optional source ID to fetch from directly</param>
+    /// <param name="sourceSongId">Optional source song ID when fetching directly</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Auto-fetched metadata if available</returns>
+    [HttpGet("song/{songId:long}")]
+    public async Task<ActionResult<AutoFetchedMetadataResponse>> GetAutoFetchedMetadata(
+        [FromServices] MusicDbContext db,
+        [FromServices] ICurrentUser currentUser,
+        [FromServices] IAuditRuleFieldMapper fieldMapper,
+        [FromServices] ISourcesService sourcesService,
+        [FromRoute] long songId,
+        [FromQuery] long? sourceId,
+        [FromQuery] string? sourceSongId,
+        CancellationToken cancellationToken)
     {
         // Load song with all related entities needed for diff construction
         var song = await db.Songs
@@ -218,7 +218,7 @@ public async Task<ActionResult<AutoFetchedMetadataResponse>> GetAutoFetchedMetad
                 // Build diff at runtime using the shared builder
                 var diffModel = await metadataDiffBuilder.CreateDiffAsync(song, sourceSong, cancellationToken);
                 diff = MetadataDiffMapper.ToSongMetadataDiff(diffModel);
-                
+
                 // Apply thumbnail proxy to the new cover URL (same as manual fetch)
                 if (diff?.Cover is not null)
                 {

@@ -20,9 +20,9 @@ public class AuditService(
         CancellationToken cancellationToken = default)
     {
         var rule = GetRule(ruleId) ?? throw new Exception($"Audit rule not found with id {ruleId}");
-        
+
         var count = 0;
-        
+
         await foreach (var nc in rule.Scan(db, currentUser.Id, cancellationToken))
         {
             if (rule.CustomPage == null && nc.SongId == null)
@@ -32,7 +32,7 @@ public class AuditService(
                     rule.Id, rule.Name);
                 continue;
             }
-            
+
             db.AuditNonConformities.Add(nc);
             await db.SaveChangesAsync(cancellationToken);
             count++;

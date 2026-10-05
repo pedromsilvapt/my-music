@@ -299,7 +299,10 @@ public class SongChecksumHistorySpecs
         var song = scenario.CreateSong("Song", checksum: "same");
         scenario.DbContext.SongChecksums.Add(new SongChecksum
         {
-            SongId = song.Id, Checksum = "same", ChecksumAlgorithm = "OtherAlgorithm", CreatedAt = DateTime.UtcNow,
+            SongId = song.Id,
+            Checksum = "same",
+            ChecksumAlgorithm = "OtherAlgorithm",
+            CreatedAt = DateTime.UtcNow,
         });
         scenario.DbContext.SaveChanges();
 

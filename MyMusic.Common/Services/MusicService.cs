@@ -688,7 +688,9 @@ public class MusicService(
             {
                 songAlbumArtist = new Artist
                 {
-                    Name = effectiveAlbumArtistName, OwnerId = userId, CreatedAt = DateTime.UtcNow,
+                    Name = effectiveAlbumArtistName,
+                    OwnerId = userId,
+                    CreatedAt = DateTime.UtcNow,
                 };
 
                 await db.AddAsync(songAlbumArtist, cancellationToken);
@@ -696,7 +698,9 @@ public class MusicService(
 
             songAlbum = new Album
             {
-                Name = effectiveAlbumName, Artist = songAlbumArtist, OwnerId = userId,
+                Name = effectiveAlbumName,
+                Artist = songAlbumArtist,
+                OwnerId = userId,
                 CreatedAt = DateTime.UtcNow,
             };
             await db.AddAsync(songAlbum, cancellationToken);
@@ -721,7 +725,9 @@ public class MusicService(
                 {
                     songArtist = new Artist
                     {
-                        Name = artist.Name, OwnerId = userId, CreatedAt = DateTime.UtcNow,
+                        Name = artist.Name,
+                        OwnerId = userId,
+                        CreatedAt = DateTime.UtcNow,
                     };
 
                     await db.AddAsync(songArtist, cancellationToken);
@@ -749,7 +755,9 @@ public class MusicService(
             {
                 albumArtist = new Artist
                 {
-                    Name = effectiveAlbumArtistName, OwnerId = userId, CreatedAt = DateTime.UtcNow,
+                    Name = effectiveAlbumArtistName,
+                    OwnerId = userId,
+                    CreatedAt = DateTime.UtcNow,
                 };
 
                 await db.AddAsync(albumArtist, cancellationToken);

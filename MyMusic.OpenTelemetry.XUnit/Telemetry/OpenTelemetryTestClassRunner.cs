@@ -19,9 +19,9 @@ public class OpenTelemetryTestClassRunner :
     {
         await using var ctxt = new OpenTelemetryTestClassRunnerContext<Xunit.v3.IXunitTestClass, Xunit.v3.IXunitTestCase>(
             testClass, testCases, explicitOption, messageBus, testCaseOrderer, aggregator, cancellationTokenSource, collectionFixtureMappings);
-        
+
         await ctxt.InitializeAsync();
-        
+
         return await ctxt.Aggregator.RunAsync(() => Run(ctxt), default);
     }
 

@@ -38,19 +38,19 @@ public static class DynamicFilterBuilder
             switch (rule)
             {
                 case FilterConditionRule condition:
-                {
-                    var fieldKey = StripQuantifiers(condition.Field);
-                    if (!fieldMappings.TryGetValue(fieldKey, out var entityPath))
                     {
-                        continue;
-                    }
+                        var fieldKey = StripQuantifiers(condition.Field);
+                        if (!fieldMappings.TryGetValue(fieldKey, out var entityPath))
+                        {
+                            continue;
+                        }
 
-                    var quantifiers = ExtractQuantifiersWithPositions(condition.Field);
-                    condition.EntityPath = quantifiers.Count > 0
-                        ? ApplyQuantifiersToEntityPath(entityPath, quantifiers)
-                        : entityPath;
-                    break;
-                }
+                        var quantifiers = ExtractQuantifiersWithPositions(condition.Field);
+                        condition.EntityPath = quantifiers.Count > 0
+                            ? ApplyQuantifiersToEntityPath(entityPath, quantifiers)
+                            : entityPath;
+                        break;
+                    }
                 case FilterGroupRule group:
                     ResolveEntityPathsInRules(group.Rules, fieldMappings);
                     break;

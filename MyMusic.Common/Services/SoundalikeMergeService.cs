@@ -108,7 +108,7 @@ public class SoundalikeMergeService(ILogger<SoundalikeMergeService> logger) : IS
 
         db.Update(primary);
         await db.SaveChangesAsync(cancellationToken);
-        
+
         logger.LogDebug("Metadata merge complete for primary song {PrimaryId}", primary.Id);
     }
 }

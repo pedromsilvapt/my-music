@@ -28,8 +28,11 @@ public class EditAlbumsBulkFlow(Dictionary<string, EditAlbumOptions> changes) : 
 
         // The dialog closes once the edit succeeds, but the list refetch may still be in flight
         foreach (var (albumName, albumChanges) in changes)
+        {
             await Assertions.Expect(albumsPage.Collection.GetCellsByExactText("name", albumChanges.Name ?? albumName).First)
                 .ToBeVisibleAsync();
+        }
+
         await albumsPage.Collection.WaitForLoadedAsync();
     }
 }

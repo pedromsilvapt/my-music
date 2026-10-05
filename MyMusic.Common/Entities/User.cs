@@ -21,6 +21,6 @@ public class User
     public bool AutoDownloadOnPurchase { get; set; } = false;
 
     public long? CurrentQueueId { get; set; }
-    
+
     public Playlist? CurrentQueue { get; set; }
 }

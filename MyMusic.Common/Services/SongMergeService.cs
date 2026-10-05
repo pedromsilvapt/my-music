@@ -39,8 +39,8 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             keepSongId, keepSong.Title, keepSong.Album?.Name ?? "(null)", mergeFromSongId, mergeFromSong.Title, mergeFromSong.Album?.Name ?? "(null)");
 
         var hasExistingTransaction = db.Database.CurrentTransaction != null;
-        var transaction = hasExistingTransaction 
-            ? null 
+        var transaction = hasExistingTransaction
+            ? null
             : await db.Database.BeginTransactionAsync(cancellationToken);
 
         try
@@ -76,7 +76,7 @@ public class SongMergeService(ILogger<SongMergeService> logger) : ISongMergeServ
             db.Songs.Remove(mergeFromSong);
 
             await db.SaveChangesAsync(cancellationToken);
-            
+
             if (transaction != null)
             {
                 await transaction.CommitAsync(cancellationToken);

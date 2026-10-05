@@ -23,12 +23,12 @@ public class AlbumMetadata
 
     public AlbumMetadata Clone(bool artist = false, bool songs = false)
     {
-        var artistCloned = artist 
-            ? Artist?.Clone() 
+        var artistCloned = artist
+            ? Artist?.Clone()
             : Artist;
 
-        var songsCloned = songs 
-            ? Songs?.Select(s => s.Clone(artists: true, genres: true))?.ToList() 
+        var songsCloned = songs
+            ? Songs?.Select(s => s.Clone(artists: true, genres: true))?.ToList()
             : Songs;
 
         return new AlbumMetadata(Id, Name, CoverArt.Clone(), artistCloned, songsCloned);

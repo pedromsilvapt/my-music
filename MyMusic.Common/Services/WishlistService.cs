@@ -54,11 +54,11 @@ public class WishlistService(
         var concatenated = string.Join(",", sortedIds);
         var bytes = Encoding.UTF8.GetBytes(concatenated);
         var hash = Convert.ToHexString(SHA256.HashData(bytes));
-        
+
         logger.LogInformation(
             "Creating wishlist item - UserId: {UserId}, SourceId: {SourceId}, Query: {Query}, Filter: {Filter}, Count: {Count}, Hash: {Hash}",
             userId, sourceId, query, filter ?? "(none)", songIds.Count, hash);
-        
+
         var now = DateTime.UtcNow;
 
         var item = new WishlistItem
@@ -195,8 +195,8 @@ public class WishlistService(
                 logger.LogWarning(ex, "Failed to check updates for wishlist item {ItemId} (Query: {Query}, Filter: {Filter})",
                     item.Id, item.Query, item.Filter ?? "(none)");
                 item.ContinuousFailedCount++;
-                item.LastErrorMessage = ex.Message.Length > 1024 
-                    ? ex.Message[..1024] 
+                item.LastErrorMessage = ex.Message.Length > 1024
+                    ? ex.Message[..1024]
                     : ex.Message;
             }
         }

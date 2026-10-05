@@ -95,7 +95,8 @@ public class SongMetadata
     ///   - The returned artists are always distinct
     /// </summary>
     /// <returns></returns>
-    public IEnumerable<ArtistMetadata> GetArtistsNormalized() {
+    public IEnumerable<ArtistMetadata> GetArtistsNormalized()
+    {
         var artistNames = new HashSet<string>();
 
         if (Album?.Artist is not null)
@@ -120,13 +121,13 @@ public class SongMetadata
     public SongMetadata Clone(bool album = false, bool artists = false, bool genres = false)
     {
         // TODO Decide if we remove the != null or if we mark this property as nullable
-        AlbumMetadata? albumMetadata = (album && this.Album != null) 
-            ? this.Album.Clone() 
+        AlbumMetadata? albumMetadata = (album && this.Album != null)
+            ? this.Album.Clone()
             : this.Album;
 
         // TODO Decide if we remove the != null or if we mark this property as nullable
-        List<ArtistMetadata>? artistsMetadata = (artists && this.Artists != null) 
-            ? this.Artists.Select(a => a.Clone()).ToList() 
+        List<ArtistMetadata>? artistsMetadata = (artists && this.Artists != null)
+            ? this.Artists.Select(a => a.Clone()).ToList()
             : this.Artists;
 
         var genresMetadata = genres && this.Genres != null ? this.Genres.Select(a => a).ToList() : this.Genres;

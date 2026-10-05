@@ -42,3 +42,17 @@ jobs:
           fi
         env:
           BEFORE_SHA: ${{ github.event.before }}
+
+  format:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Verify formatting
+        run: make format-check

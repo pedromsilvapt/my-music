@@ -360,7 +360,9 @@ public class UserDeleteServiceSpecs
             new SongMerge { KeptSongId = song.Id, MergedSongId = 1001, OwnerId = user.Id, MergedAt = DateTime.UtcNow },
             new SongMerge
             {
-                KeptSongId = otherSong.Id, MergedSongId = 1002, OwnerId = scenario.AdminUser.Id,
+                KeptSongId = otherSong.Id,
+                MergedSongId = 1002,
+                OwnerId = scenario.AdminUser.Id,
                 MergedAt = DateTime.UtcNow,
             });
         scenario.DbContext.SaveChanges();

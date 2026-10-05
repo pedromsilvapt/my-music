@@ -375,7 +375,7 @@ public class FuzzySearchSpecs
         public string Text { get; set; } = "";
     }
 
-    private static (MusicDbContext Context, User Owner, List<Song> Songs) 
+    private static (MusicDbContext Context, User Owner, List<Song> Songs)
         SetupSongsWithSpecialChars()
     {
         var context = Scenario.CreateDbContext();

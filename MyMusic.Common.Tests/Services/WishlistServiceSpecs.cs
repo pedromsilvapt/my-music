@@ -24,12 +24,12 @@ public class WishlistServiceSpecs
             MusicRepositoryPath = "/data",
             WishlistMaxResultsToHash = 50
         });
-        
+
         // Mock the search service to return song IDs for initial hash computation
         var songIds = new List<string> { "song1", "song2", "song3" };
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(songIds));
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
 
         // Act
@@ -47,16 +47,16 @@ public class WishlistServiceSpecs
         item.Filter.ShouldBeNull();
         item.Status.ShouldBe(WishlistItemStatus.Active);
         item.Hash.ShouldNotBeNullOrEmpty();
-        
+
         var savedItem = await scenario.DbContext.WishlistItems.FindAsync(item.Id);
         savedItem.ShouldNotBeNull();
         savedItem.Hash.ShouldBe(item.Hash);
-        
+
         // Verify the search service was called to compute the initial hash
         await purchasesSearchService.Received().SearchForHashAsync(
-            source.Id, 
-            "test query", 
-            null, 
+            source.Id,
+            "test query",
+            null,
             Arg.Any<CancellationToken>());
     }
 
@@ -70,9 +70,9 @@ public class WishlistServiceSpecs
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data" });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         // Mock the search service to return song IDs for both creations
         var songIds = new List<string> { "song1", "song2" };
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
@@ -96,7 +96,7 @@ public class WishlistServiceSpecs
 
         // Assert
         item2.Id.ShouldBe(item1.Id);
-        
+
         var count = await scenario.DbContext.WishlistItems.CountAsync();
         count.ShouldBe(1);
     }
@@ -107,10 +107,10 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
-        
+
         // Setup mock to return different values on consecutive calls:
         // First call (creation): initial song IDs
         // Second call (check): different song IDs to trigger update
@@ -123,12 +123,12 @@ public class WishlistServiceSpecs
                 callCount++;
                 return Task.FromResult(callCount == 1 ? initialSongIds : updatedSongIds);
             });
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         // Create initial item
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
@@ -152,20 +152,20 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var songIds = new List<string> { "song-1", "song-2" };
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
         // Mock returning the same song IDs as what was stored
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(songIds));
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         // Create item with same song IDs as mock will return
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
@@ -189,10 +189,10 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
-        
+
         // Setup mock to return different values on consecutive calls:
         // First call (creation): initial song IDs
         // Subsequent calls: different song IDs for update
@@ -205,12 +205,12 @@ public class WishlistServiceSpecs
                 callCount++;
                 return Task.FromResult(callCount == 1 ? initialSongIds : updatedSongIds);
             });
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         // Create item and mark as Updated
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
@@ -218,7 +218,7 @@ public class WishlistServiceSpecs
             "test query",
             null, // no filter
             CancellationToken.None);
-        
+
         var originalHash = item.Hash;
         item.Status = WishlistItemStatus.Updated;
         await scenario.DbContext.SaveChangesAsync();
@@ -241,9 +241,9 @@ public class WishlistServiceSpecs
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data" });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
             source.Id,
@@ -265,10 +265,10 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
-        
+
         // First call (creation) succeeds, subsequent calls fail
         var callCount = 0;
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
@@ -279,12 +279,12 @@ public class WishlistServiceSpecs
                     return Task.FromResult(new List<string> { "song1" });
                 return Task.FromException<List<string>>(new Exception("Source not found"));
             });
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
             source.Id,
@@ -312,10 +312,10 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
-        
+
         // First call (creation) succeeds, subsequent calls fail
         var callCount = 0;
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
@@ -326,12 +326,12 @@ public class WishlistServiceSpecs
                     return Task.FromResult(new List<string> { "song1" });
                 return Task.FromException<List<string>>(new Exception("Connection timeout"));
             });
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
             source.Id,
@@ -341,7 +341,7 @@ public class WishlistServiceSpecs
 
         // Act - First failure
         await wishlistService.CheckForUpdatesAsync(CancellationToken.None);
-        
+
         // Act - Second failure
         await wishlistService.CheckForUpdatesAsync(CancellationToken.None);
 
@@ -358,20 +358,20 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var songIds = new List<string> { "song-1", "song-2" };
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
         // Mock successful search returning the same song IDs
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(songIds));
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
             source.Id,
@@ -401,11 +401,11 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var longErrorMessage = new string('A', 2000);
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
-        
+
         // First call (creation) succeeds, subsequent calls fail
         var callCount = 0;
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", null, Arg.Any<CancellationToken>())
@@ -416,12 +416,12 @@ public class WishlistServiceSpecs
                     return Task.FromResult(new List<string> { "song1" });
                 return Task.FromException<List<string>>(new Exception(longErrorMessage));
             });
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
             source.Id,
@@ -454,13 +454,13 @@ public class WishlistServiceSpecs
             MusicRepositoryPath = "/data",
             WishlistMaxResultsToHash = 50
         });
-        
+
         var filter = "genre:Pop year:>2020";
-        
+
         // Mock search to return song IDs for the filtered query
         purchasesSearchService.SearchForHashAsync(source.Id, "test query", filter, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new List<string> { "song1", "song2" }));
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
 
         // Act
@@ -474,16 +474,16 @@ public class WishlistServiceSpecs
         // Assert
         item.ShouldNotBeNull();
         item.Filter.ShouldBe(filter);
-        
+
         var savedItem = await scenario.DbContext.WishlistItems.FindAsync(item.Id);
         savedItem.ShouldNotBeNull();
         savedItem.Filter.ShouldBe(filter);
-        
+
         // Verify the search service was called with the correct filter
         await purchasesSearchService.Received().SearchForHashAsync(
-            source.Id, 
-            "test query", 
-            filter, 
+            source.Id,
+            "test query",
+            filter,
             Arg.Any<CancellationToken>());
     }
 
@@ -493,12 +493,12 @@ public class WishlistServiceSpecs
         // Arrange
         var scenario = new Scenario();
         var source = CreateSource(scenario.DbContext);
-        
+
         var sourcesService = Substitute.For<ISourcesService>();
         var purchasesSearchService = Substitute.For<IPurchasesSearchService>();
-        
+
         var filter = "genre:Pop";
-        
+
         // Setup mock to return different values on consecutive calls:
         // First call (creation): initial song IDs
         // Second call (check): different song IDs to trigger update
@@ -511,12 +511,12 @@ public class WishlistServiceSpecs
                 callCount++;
                 return Task.FromResult(callCount == 1 ? initialSongIds : updatedSongIds);
             });
-        
+
         var logger = Substitute.For<ILogger<WishlistService>>();
         var config = Options.Create(new Config { MusicRepositoryPath = "/data", WishlistMaxResultsToHash = 50 });
-        
+
         var wishlistService = new WishlistService(scenario.DbContext, sourcesService, purchasesSearchService, config, logger);
-        
+
         // Create item with filter
         var item = await wishlistService.CreateAsync(
             scenario.AdminUser.Id,
@@ -535,12 +535,12 @@ public class WishlistServiceSpecs
         var updatedItem = await scenario.DbContext.WishlistItems.FindAsync(item.Id);
         updatedItem.ShouldNotBeNull();
         updatedItem.Status.ShouldBe(WishlistItemStatus.Updated);
-        
+
         // Verify the search was called with the correct filter
         await purchasesSearchService.Received().SearchForHashAsync(
-            source.Id, 
-            "test query", 
-            filter, 
+            source.Id,
+            "test query",
+            filter,
             Arg.Any<CancellationToken>());
     }
 
@@ -553,10 +553,10 @@ public class WishlistServiceSpecs
             Address = "http://test.com",
             IsPaid = false
         };
-        
+
         db.Sources.Add(source);
         db.SaveChanges();
-        
+
         return source;
     }
 }

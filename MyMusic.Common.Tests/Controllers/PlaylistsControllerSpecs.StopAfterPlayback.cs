@@ -29,7 +29,7 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var playlist = scenario.CreatePlaylist("Test Playlist");
         scenario.AddSongToPlaylist(playlist, song, 1);
 
@@ -51,7 +51,7 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var playlist = scenario.CreatePlaylist("Test Playlist");
         scenario.AddSongToPlaylist(playlist, song, 1, stopAfterPlayback: true);
 
@@ -73,7 +73,7 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var playlist = scenario.CreatePlaylist("Test Playlist");
 
         // Act & Assert
@@ -90,7 +90,7 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var otherPlaylist = scenario.CreatePlaylist("Other Playlist", ownerId: otherUser.Id);
         scenario.AddSongToPlaylist(otherPlaylist, song, 1);
 
@@ -114,9 +114,9 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song1 = scenario.CreateSong( "Song 1");
-        var song2 = scenario.CreateSong( "Song 2");
-        var song3 = scenario.CreateSong( "Song 3");
+        var song1 = scenario.CreateSong("Song 1");
+        var song2 = scenario.CreateSong("Song 2");
+        var song3 = scenario.CreateSong("Song 3");
         var playlist = scenario.CreatePlaylist("Test Playlist");
         scenario.AddSongToPlaylist(playlist, song1, 1);
         scenario.AddSongToPlaylist(playlist, song2, 2);
@@ -144,8 +144,8 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song1 = scenario.CreateSong( "Song 1");
-        var song2 = scenario.CreateSong( "Song 2");
+        var song1 = scenario.CreateSong("Song 1");
+        var song2 = scenario.CreateSong("Song 2");
         var playlist = scenario.CreatePlaylist("Test Playlist");
         scenario.AddSongToPlaylist(playlist, song1, 1, stopAfterPlayback: true);
         scenario.AddSongToPlaylist(playlist, song2, 2, stopAfterPlayback: true);
@@ -171,7 +171,7 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var otherUser = scenario.CreateUser("Other", "other");
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var otherPlaylist = scenario.CreatePlaylist("Other Playlist", ownerId: otherUser.Id);
         scenario.AddSongToPlaylist(otherPlaylist, song, 1);
 
@@ -214,8 +214,8 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         // Arrange
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song1 = scenario.CreateSong( "Song 1");
-        var song2 = scenario.CreateSong( "Song 2");
+        var song1 = scenario.CreateSong("Song 1");
+        var song2 = scenario.CreateSong("Song 2");
         var playlist = scenario.CreatePlaylist("Test Playlist");
         scenario.AddSongToPlaylist(playlist, song1, 1);
         scenario.AddSongToPlaylist(playlist, song2, 2);

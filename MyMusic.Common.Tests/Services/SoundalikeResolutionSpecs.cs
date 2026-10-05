@@ -43,8 +43,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist = scenario.CreatePlaylist("Playlist");
         scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
@@ -74,8 +74,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist = scenario.CreatePlaylist("Playlist");
         scenario.AddSongToPlaylist(playlist, primary, order: 0);
         scenario.AddSongToPlaylist(playlist, secondary, order: 1);
@@ -104,8 +104,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist1 = scenario.CreatePlaylist("Playlist1");
         var playlist2 = scenario.CreatePlaylist("Playlist2");
         scenario.AddSongToPlaylist(playlist1, secondary, order: 1);
@@ -136,8 +136,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist1 = scenario.CreatePlaylist("Playlist1");
         var playlist2 = scenario.CreatePlaylist("Playlist2");
         scenario.AddSongToPlaylist(playlist1, primary, order: 0);
@@ -169,8 +169,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist = scenario.CreatePlaylist("Playlist", currentSongId: secondary.Id);
         scenario.AddSongToPlaylist(playlist, primary, order: 0);
         scenario.AddSongToPlaylist(playlist, secondary, order: 1);
@@ -196,9 +196,9 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var sec1 = scenario.CreateSong( "Secondary1");
-        var sec2 = scenario.CreateSong( "Secondary2");
+        var primary = scenario.CreateSong("Primary");
+        var sec1 = scenario.CreateSong("Secondary1");
+        var sec2 = scenario.CreateSong("Secondary2");
         var playlist = scenario.CreatePlaylist("Playlist");
         scenario.AddSongToPlaylist(playlist, sec1, order: 1);
         scenario.AddSongToPlaylist(playlist, sec2, order: 3);
@@ -233,8 +233,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var device = scenario.CreateDevice("Phone");
         scenario.CreateSongDevice(device, secondary, "/music/Secondary.mp3");
 
@@ -268,8 +268,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var device = scenario.CreateDevice("Phone");
         scenario.CreateSongDevice(device, primary, "/music/Primary.mp3");
         scenario.CreateSongDevice(device, secondary, "/music/Secondary.mp3");
@@ -303,8 +303,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var device1 = scenario.CreateDevice("Phone");
         var device2 = scenario.CreateDevice("Tablet");
         scenario.CreateSongDevice(device1, secondary, "/music/Secondary.mp3");
@@ -334,8 +334,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist = scenario.CreatePlaylist("Playlist");
         var device = scenario.CreateDevice("Phone");
         scenario.AddSongToPlaylist(playlist, secondary, order: 1);
@@ -370,8 +370,8 @@ public class SoundalikeResolutionSpecs
         var scenario = new Scenario();
         var mergeService = Substitute.For<ISoundalikeMergeService>();
         var service = CreateService(mergeService);
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist = scenario.CreatePlaylist("Playlist");
         scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
@@ -404,8 +404,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var playlist = scenario.CreatePlaylist("Playlist");
         scenario.AddSongToPlaylist(playlist, secondary, order: 1);
 
@@ -435,8 +435,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
 
         var resolution = new GroupResolutionInput
         {
@@ -459,8 +459,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var nc = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
 
         var resolution = new GroupResolutionInput
@@ -541,10 +541,10 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var p1 = scenario.CreateSong( "Primary1");
-        var s1 = scenario.CreateSong( "Sec1");
-        var p2 = scenario.CreateSong( "Primary2");
-        var s2 = scenario.CreateSong( "Sec2");
+        var p1 = scenario.CreateSong("Primary1");
+        var s1 = scenario.CreateSong("Sec1");
+        var p2 = scenario.CreateSong("Primary2");
+        var s2 = scenario.CreateSong("Sec2");
         var nc1 = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
         var nc2 = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
 
@@ -573,8 +573,8 @@ public class SoundalikeResolutionSpecs
         // Arrange
         var scenario = new Scenario();
         var service = CreateService();
-        var primary = scenario.CreateSong( "Primary");
-        var secondary = scenario.CreateSong( "Secondary");
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
         var device1 = scenario.CreateDevice("Phone");
         var device2 = scenario.CreateDevice("Tablet");
         scenario.CreateSongDevice(device1, primary, "/music/Primary.mp3");

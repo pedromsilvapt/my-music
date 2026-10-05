@@ -29,8 +29,14 @@ public record ListDeviceItem
     public static ListDeviceItem FromEntity(Entities.Device device, int songCount, List<DeviceSongRef>? songs) =>
         new()
         {
-            Id = device.Id, Name = device.Name, Icon = device.Icon, Color = device.Color,
-            NamingTemplate = device.NamingTemplate, SongCount = songCount, Songs = songs,
-            ImportOnPurchase = device.ImportOnPurchase, LastSyncAt = device.LastSyncAt,
+            Id = device.Id,
+            Name = device.Name,
+            Icon = device.Icon,
+            Color = device.Color,
+            NamingTemplate = device.NamingTemplate,
+            SongCount = songCount,
+            Songs = songs,
+            ImportOnPurchase = device.ImportOnPurchase,
+            LastSyncAt = device.LastSyncAt,
         };
 }

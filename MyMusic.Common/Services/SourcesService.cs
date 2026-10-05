@@ -9,7 +9,7 @@ public class SourcesService(MusicDbContext db, ILogger<SourcesService> logger) :
     public async Task<ISource> GetSourceClientAsync(long id, CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Creating source client for source {SourceId}", id);
-        
+
         var sourceConfig = await db.Sources.FindAsync([id], cancellationToken);
 
         if (sourceConfig is null)
@@ -19,7 +19,7 @@ public class SourcesService(MusicDbContext db, ILogger<SourcesService> logger) :
         }
 
         var source = RestService.For<ISource>(sourceConfig.Address);
-        
+
         logger.LogDebug("Successfully created source client for {SourceId} at {Address}", id, sourceConfig.Address);
 
         return source;

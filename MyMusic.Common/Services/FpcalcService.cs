@@ -36,7 +36,7 @@ public class FpcalcService(ILogger<FpcalcService> logger) : IFpcalcService
             : "fpcalc";
 
         var paths = Environment.GetEnvironmentVariable("PATH")?.Split(Path.PathSeparator) ?? [];
-        
+
         foreach (var path in paths)
         {
             var fullPath = Path.Combine(path.Trim(), exeName);
@@ -56,7 +56,7 @@ public class FpcalcService(ILogger<FpcalcService> logger) : IFpcalcService
         CancellationToken cancellationToken = default)
     {
         logger.LogDebug("FingerprintAsync called for {FilePath}, fpcalc path: {FpcalcPath}", filePath, _cachedPath ?? "(null)");
-        
+
         if (_cachedPath == null)
         {
             logger.LogWarning("fpcalc not available in PATH");

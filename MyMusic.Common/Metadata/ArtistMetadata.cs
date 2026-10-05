@@ -17,8 +17,8 @@ public class ArtistMetadata
 
     public ArtistMetadata Clone(bool albums = false)
     {
-        var albumsCloned = albums 
-            ? Albums?.Select(album => album.Clone())?.ToList() 
+        var albumsCloned = albums
+            ? Albums?.Select(album => album.Clone())?.ToList()
             : Albums;
 
         return new ArtistMetadata(Id, Name, albumsCloned);

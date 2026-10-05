@@ -600,7 +600,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
         else
         {
             var songsByOrder = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
-            
+
             if (!playlist.CurrentSongId.HasValue || songsByOrder.Count == 0)
             {
                 insertOrder = 1000.0;
@@ -610,9 +610,9 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
                 var currentSongOrder = existingBySongId.TryGetValue(playlist.CurrentSongId.Value, out var existingPs)
                     ? existingPs.Order
                     : playlist.PlaylistSongs.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId.Value)?.Order ?? 0;
-                
+
                 var currentIndex = songsByOrder.FindIndex(ps => ps.SongId == playlist.CurrentSongId.Value);
-                
+
                 if (currentIndex < 0 || currentIndex >= songsByOrder.Count - 1)
                 {
                     insertOrder = currentSongOrder + 1000.0;
@@ -645,7 +645,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
             {
                 remainingSongs[i].Order = rebalancedOrders[i];
             }
-            
+
             var currentSong = playlist.CurrentSongId.HasValue
                 ? remainingSongs.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId.Value)
                 : null;
@@ -701,7 +701,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     private static bool NeedsRebalance(IReadOnlyList<double> orders)
     {
         if (orders.Count < 2) return false;
-        
+
         var sortedOrders = orders.Order().ToList();
         for (var i = 1; i < sortedOrders.Count; i++)
         {
@@ -711,7 +711,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
                 return true;
             }
         }
-        
+
         return false;
     }
 
@@ -726,12 +726,12 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
     {
         var songs = playlist.PlaylistSongs.OrderBy(ps => ps.Order).ToList();
         var rebalancedOrders = RebalanceOrders(songs.Count);
-        
+
         for (var i = 0; i < songs.Count; i++)
         {
             songs[i].Order = rebalancedOrders[i];
         }
-        
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
@@ -758,11 +758,11 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
             {
                 var removedSong = songsToRemove.FirstOrDefault(ps => ps.SongId == playlist.CurrentSongId);
                 var removedOrder = removedSong?.Order ?? 0;
-                
+
                 var nextSong = playlist.PlaylistSongs
                     .OrderBy(ps => ps.Order)
                     .FirstOrDefault(ps => ps.Order > removedOrder);
-                    
+
                 playlist.CurrentSongId = nextSong?.SongId ?? playlist.PlaylistSongs.OrderBy(ps => ps.Order).FirstOrDefault()?.SongId;
             }
 
@@ -811,10 +811,10 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
                 {
                     lowerIndex = reorder.ToIndex;
                 }
-                
+
                 var prevIndex = reorder.ToIndex > reorder.FromIndex ? reorder.ToIndex : Math.Max(0, reorder.ToIndex - 1);
                 var nextIndex = reorder.ToIndex > reorder.FromIndex ? Math.Min(songsByOrder.Count - 1, reorder.ToIndex) : reorder.ToIndex;
-                
+
                 if (reorder.FromIndex < reorder.ToIndex)
                 {
                     prevIndex = reorder.ToIndex;
@@ -828,7 +828,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
 
                 var prevOrder = songsByOrder[prevIndex].Order;
                 var nextOrder = songsByOrder[nextIndex].Order;
-                
+
                 newOrder = (prevOrder + nextOrder) / 2.0;
             }
 
@@ -1086,7 +1086,7 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
                 .Where(p => p.OwnerId == currentUser.Id && p.Type == PlaylistType.Queue && p.Id != queue.Id)
                 .OrderByDescending(p => p.CreatedAt)
                 .FirstOrDefaultAsync(cancellationToken);
-            
+
             if (nextQueue != null)
             {
                 user.CurrentQueueId = nextQueue.Id;
@@ -1102,10 +1102,10 @@ public class PlaylistsController(ICurrentUser currentUser, IPlaylistSongSkipServ
                     ModifiedAt = DateTime.UtcNow,
                     PlaylistSongs = [],
                 };
-                
+
                 context.Playlists.Add(replacementQueue);
                 await context.SaveChangesAsync(cancellationToken);
-                
+
                 user.CurrentQueueId = replacementQueue.Id;
             }
         }

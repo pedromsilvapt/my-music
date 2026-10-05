@@ -331,36 +331,36 @@ public class SyncUploadService(
                 return [await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken)];
 
             case SyncUploadActionType.LinkWithSongIdAndUpdateLocal:
-            {
-                var linkRecord = await syncActions.ActionLink(
-                    path, decision.SongId!.Value, modifiedAt,
-                    decision.Checksum, decision.ChecksumAlgorithm,
-                    decision.Reason, isPreviousVersion: true, cancellationToken);
-                var updateLocalRecord = await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken);
+                {
+                    var linkRecord = await syncActions.ActionLink(
+                        path, decision.SongId!.Value, modifiedAt,
+                        decision.Checksum, decision.ChecksumAlgorithm,
+                        decision.Reason, isPreviousVersion: true, cancellationToken);
+                    var updateLocalRecord = await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken);
 
-                return [linkRecord, updateLocalRecord];
-            }
+                    return [linkRecord, updateLocalRecord];
+                }
 
             case SyncUploadActionType.SoundalikeLink:
-            {
-                var linkRecord = await syncActions.ActionSoundalikeLink(
-                    path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!, decision.LocalChecksum!,
-                    modifiedAt, decision.Reason, cancellationToken);
+                {
+                    var linkRecord = await syncActions.ActionSoundalikeLink(
+                        path, decision.SongId, decision.Checksum!, decision.ChecksumAlgorithm!, decision.LocalChecksum!,
+                        modifiedAt, decision.Reason, cancellationToken);
 
-                // The song of a session upload only exists after the commit, so the device copies the
-                // uploaded file it sounds like, instead of downloading the song
-                var updateLocalRecord = decision.SongId.HasValue
-                    ? await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken)
-                    : direction == SyncDirection.Up
-                        ? await syncActions.ActionSkipped(path,
-                            reason: "File sounds like a file uploaded in this session, not replaced (direction up)",
-                            cancellationToken: cancellationToken)
-                        : await syncActions.ActionUpdateLocalFromLocalFile(path, decision.LocalSourcePath!,
-                            $"File sounds like '{decision.LocalSourcePath}' uploaded in this session, replaced by it",
-                            cancellationToken);
+                    // The song of a session upload only exists after the commit, so the device copies the
+                    // uploaded file it sounds like, instead of downloading the song
+                    var updateLocalRecord = decision.SongId.HasValue
+                        ? await ActionUpdateLocalOrSkippedAsync(decision, syncActions, path, direction, cancellationToken)
+                        : direction == SyncDirection.Up
+                            ? await syncActions.ActionSkipped(path,
+                                reason: "File sounds like a file uploaded in this session, not replaced (direction up)",
+                                cancellationToken: cancellationToken)
+                            : await syncActions.ActionUpdateLocalFromLocalFile(path, decision.LocalSourcePath!,
+                                $"File sounds like '{decision.LocalSourcePath}' uploaded in this session, replaced by it",
+                                cancellationToken);
 
-                return [linkRecord, updateLocalRecord];
-            }
+                    return [linkRecord, updateLocalRecord];
+                }
 
             default:
                 throw new InvalidOperationException($"Unknown upload action type: {decision.ActionType}");

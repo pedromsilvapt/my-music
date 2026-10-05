@@ -171,7 +171,7 @@ public class Mp3IntegrityValidator(
             id3v2Size = ((span[6] & 0x7F) << 21)
                       | ((span[7] & 0x7F) << 14)
                       | ((span[8] & 0x7F) << 7)
-                      |  (span[9] & 0x7F);
+                      | (span[9] & 0x7F);
             audioOffset = 10 + id3v2Size;
         }
 
@@ -258,7 +258,7 @@ public class Mp3IntegrityValidator(
                     var tagSize = ((span[offset + 6] & 0x7F) << 21)
                                 | ((span[offset + 7] & 0x7F) << 14)
                                 | ((span[offset + 8] & 0x7F) << 7)
-                                |  (span[offset + 9] & 0x7F);
+                                | (span[offset + 9] & 0x7F);
                     offset += 10 + tagSize;
                     continue;
                 }

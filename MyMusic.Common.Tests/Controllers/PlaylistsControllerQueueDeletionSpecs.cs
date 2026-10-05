@@ -30,7 +30,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var controller = CreateController(scenario);
         var queue1 = scenario.CreatePlaylist("Queue 1", type: PlaylistType.Queue);
         var queue2 = scenario.CreatePlaylist("Queue 2", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue1.Id;
         scenario.DbContext.SaveChanges();
 
@@ -54,11 +54,11 @@ public class PlaylistsControllerQueueDeletionSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var queue1 = scenario.CreatePlaylist("Queue 1", type: PlaylistType.Queue);
         var queue2 = scenario.CreatePlaylist("Queue 2", type: PlaylistType.Queue);
-        scenario.AddSongToPlaylist(queue2, song, 1000);;
-        
+        scenario.AddSongToPlaylist(queue2, song, 1000); ;
+
         scenario.AdminUser.CurrentQueueId = queue1.Id;
         scenario.DbContext.SaveChanges();
 
@@ -67,7 +67,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var playlistSongs = await scenario.DbContext.PlaylistSongs
             .Where(ps => ps.PlaylistId == queue2.Id)
             .ToListAsync();
-        
+
         playlistSongs.ShouldBeEmpty();
     }
 
@@ -82,7 +82,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var controller = CreateController(scenario);
         var queue1 = scenario.CreatePlaylist("Queue 1", type: PlaylistType.Queue);
         var queue2 = scenario.CreatePlaylist("Queue 2", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue1.Id;
         scenario.DbContext.SaveChanges();
 
@@ -106,7 +106,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var queue2 = scenario.CreatePlaylist("Queue 2", type: PlaylistType.Queue);
         await Task.Delay(100);
         var queue3 = scenario.CreatePlaylist("Queue 3", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue3.Id;
         scenario.DbContext.SaveChanges();
 
@@ -127,7 +127,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var queue = scenario.CreatePlaylist("Only Queue", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
 
@@ -147,10 +147,10 @@ public class PlaylistsControllerQueueDeletionSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
         var queue = scenario.CreatePlaylist("Only Queue", type: PlaylistType.Queue);
-        scenario.AddSongToPlaylist(queue, song, 1000);;
-        
+        scenario.AddSongToPlaylist(queue, song, 1000); ;
+
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
 
@@ -163,7 +163,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var newQueue = await scenario.DbContext.Playlists
             .Include(p => p.PlaylistSongs)
             .FirstAsync(p => p.Id == user.CurrentQueueId.Value);
-        
+
         newQueue.PlaylistSongs.ShouldBeEmpty();
     }
 
@@ -173,7 +173,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var queue = scenario.CreatePlaylist("Only Queue", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
 
@@ -195,7 +195,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var queue = scenario.CreatePlaylist("Only Queue", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
 
@@ -214,7 +214,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var queue = scenario.CreatePlaylist("Only Queue", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
 
@@ -234,7 +234,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var scenario = new Scenario();
         var controller = CreateController(scenario);
 
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             controller.DeleteQueue(99999, scenario.DbContext, CancellationToken.None));
     }
 
@@ -246,7 +246,7 @@ public class PlaylistsControllerQueueDeletionSpecs
         var controller = CreateController(scenario);
         var otherQueue = scenario.CreatePlaylist("Other's Queue", ownerId: otherUser.Id, type: PlaylistType.Queue);
 
-        await Assert.ThrowsAsync<Exception>(() => 
+        await Assert.ThrowsAsync<Exception>(() =>
             controller.DeleteQueue(otherQueue.Id, scenario.DbContext, CancellationToken.None));
     }
 

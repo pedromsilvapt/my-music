@@ -322,7 +322,7 @@ public class AuditsController(
                 continue;
 
             var key = $"{aId}-{bId}";
-            if (data.PairwiseScores.ContainsKey(key) || 
+            if (data.PairwiseScores.ContainsKey(key) ||
                 (data.SongIds.Contains(aId) && data.SongIds.Contains(bId)))
             {
                 db.AuditNonConformities.Remove(nc);

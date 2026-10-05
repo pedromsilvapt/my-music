@@ -20,7 +20,7 @@ public class HistoryPruneCommand(
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         using var activity = CliActivitySource.Instance.StartActivity("history prune");
-        
+
         try
         {
             var deviceId = await GetDeviceIdAsync();

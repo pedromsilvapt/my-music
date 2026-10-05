@@ -11,10 +11,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 1000.0005, 2000.0 };
-        
+
         // Act
         var result = NeedsRebalance(orders);
-        
+
         // Assert
         result.ShouldBeTrue();
     }
@@ -24,10 +24,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 2000.0, 3000.0 };
-        
+
         // Act
         var result = NeedsRebalance(orders);
-        
+
         // Assert
         result.ShouldBeFalse();
     }
@@ -37,10 +37,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0 };
-        
+
         // Act
         var result = NeedsRebalance(orders);
-        
+
         // Assert
         result.ShouldBeFalse();
     }
@@ -50,10 +50,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double>();
-        
+
         // Act
         var result = NeedsRebalance(orders);
-        
+
         // Assert
         result.ShouldBeFalse();
     }
@@ -63,7 +63,7 @@ public class QueueOrderingSpecs
     {
         // Act
         var result = RebalanceOrders(5);
-        
+
         // Assert
         result.ShouldBe([1000.0, 2000.0, 3000.0, 4000.0, 5000.0]);
     }
@@ -78,10 +78,10 @@ public class QueueOrderingSpecs
         // Arrange
         var currentSongOrder = (double?)null;
         var allOrders = new List<double>();
-        
+
         // Act
         var insertOrder = CalculatePlayNextOrder(currentSongOrder, allOrders);
-        
+
         // Assert
         insertOrder.ShouldBe(1000.0);
     }
@@ -92,10 +92,10 @@ public class QueueOrderingSpecs
         // Arrange
         var currentSongOrder = 2000.0;
         var allOrders = new List<double> { 1000.0, 2000.0 };
-        
+
         // Act
         var insertOrder = CalculatePlayNextOrder(currentSongOrder, allOrders);
-        
+
         // Assert
         insertOrder.ShouldBe(3000.0);
     }
@@ -106,10 +106,10 @@ public class QueueOrderingSpecs
         // Arrange
         var currentSongOrder = 1000.0;
         var allOrders = new List<double> { 1000.0, 2000.0, 3000.0 };
-        
+
         // Act
         var insertOrder = CalculatePlayNextOrder(currentSongOrder, allOrders);
-        
+
         // Assert
         insertOrder.ShouldBe(1500.0);
     }
@@ -120,10 +120,10 @@ public class QueueOrderingSpecs
         // Arrange
         var currentSongOrder = 5000.0;
         var allOrders = new List<double> { 1000.0, 3000.0, 5000.0, 7000.0, 9000.0 };
-        
+
         // Act
         var insertOrder = CalculatePlayNextOrder(currentSongOrder, allOrders);
-        
+
         // Assert
         insertOrder.ShouldBe(6000.0);
     }
@@ -137,10 +137,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var maxOrder = 0.0;
-        
+
         // Act
         var insertOrder = CalculatePlayLastOrder(maxOrder);
-        
+
         // Assert
         insertOrder.ShouldBe(1000.0);
     }
@@ -150,10 +150,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var maxOrder = 5000.0;
-        
+
         // Act
         var insertOrder = CalculatePlayLastOrder(maxOrder);
-        
+
         // Assert
         insertOrder.ShouldBe(6000.0);
     }
@@ -169,10 +169,10 @@ public class QueueOrderingSpecs
         var orders = new List<double> { 1000.0, 2000.0, 3000.0, 4000.0, 5000.0 };
         var fromIndex = 0;
         var toIndex = 2;
-        
+
         // Act
         var newOrder = CalculateReorderPosition(fromIndex, toIndex, orders);
-        
+
         // Assert
         newOrder.ShouldBe(3500.0);
     }
@@ -184,10 +184,10 @@ public class QueueOrderingSpecs
         var orders = new List<double> { 1000.0, 2000.0, 3000.0, 4000.0, 5000.0 };
         var fromIndex = 4;
         var toIndex = 1;
-        
+
         // Act
         var newOrder = CalculateReorderPosition(fromIndex, toIndex, orders);
-        
+
         // Assert
         newOrder.ShouldBe(1500.0);
     }
@@ -199,10 +199,10 @@ public class QueueOrderingSpecs
         var orders = new List<double> { 1000.0, 2000.0, 3000.0 };
         var fromIndex = 2;
         var toIndex = 0;
-        
+
         // Act
         var newOrder = CalculateReorderPosition(fromIndex, toIndex, orders);
-        
+
         // Assert
         newOrder.ShouldBe(0.0);
     }
@@ -214,10 +214,10 @@ public class QueueOrderingSpecs
         var orders = new List<double> { 1000.0, 2000.0, 3000.0 };
         var fromIndex = 0;
         var toIndex = 2;
-        
+
         // Act
         var newOrder = CalculateReorderPosition(fromIndex, toIndex, orders);
-        
+
         // Assert
         newOrder.ShouldBe(4000.0);
     }
@@ -232,16 +232,16 @@ public class QueueOrderingSpecs
         // Arrange
         var orders = new List<double> { 1000.0, 2000.0 };
         var currentSongOrder = 1000.0;
-        
+
         // Act
         var firstInsert = CalculatePlayNextOrder(currentSongOrder, orders);
         orders.Add(firstInsert);
         orders.Sort();
-        
+
         var secondInsert = CalculatePlayNextOrder(firstInsert, orders);
         orders.Add(secondInsert);
         orders.Sort();
-        
+
         // Assert
         orders.ShouldBe([1000.0, 1500.0, 1750.0, 2000.0]);
     }
@@ -252,7 +252,7 @@ public class QueueOrderingSpecs
         // Arrange
         var orders = new List<double> { 1000.0 };
         var currentOrder = 1000.0;
-        
+
         // Act
         for (int i = 0; i < 20; i++)
         {
@@ -261,9 +261,9 @@ public class QueueOrderingSpecs
             orders.Sort();
             currentOrder = insertOrder;
         }
-        
+
         var needsRebalance = NeedsRebalance(orders);
-        
+
         // Assert
         needsRebalance.ShouldBeTrue();
     }
@@ -278,10 +278,10 @@ public class QueueOrderingSpecs
             orders.Add(1000.0 + (i + 1) * 0.001);
         }
         orders.Sort();
-        
+
         // Act
         var rebalancedOrders = RebalanceOrders(orders.Count);
-        
+
         // Assert
         rebalancedOrders.ShouldBe([1000.0, 2000.0, 3000.0, 4000.0, 5000.0, 6000.0]);
     }
@@ -296,10 +296,10 @@ public class QueueOrderingSpecs
         // Arrange
         var internalOrders = new List<double> { 1000.0, 1500.0, 3000.0, 50000.0 };
         var sortedSongs = internalOrders.Order().ToList();
-        
+
         // Act
         var displayOrders = sortedSongs.Select((_, index) => index + 1).ToList();
-        
+
         // Assert
         displayOrders.ShouldBe([1, 2, 3, 4]);
     }
@@ -309,10 +309,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 1500.0, 2000.0 };
-        
+
         // Act
         var displayOrders = orders.Order().Select((_, index) => index + 1).ToList();
-        
+
         // Assert
         displayOrders.ShouldBe([1, 2, 3]);
     }
@@ -326,10 +326,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 2000.0, 3000.0 };
-        
+
         // Act
         orders.Remove(2000.0);
-        
+
         // Assert
         orders.ShouldBe([1000.0, 3000.0]);
     }
@@ -339,10 +339,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 1500.0, 2000.0, 3000.0 };
-        
+
         // Act
         orders.Remove(1500.0);
-        
+
         // Assert
         orders.ShouldBe([1000.0, 2000.0, 3000.0]);
     }
@@ -356,10 +356,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 1000.0000001, 2000.0 };
-        
+
         // Act
         var result = NeedsRebalance(orders);
-        
+
         // Assert
         result.ShouldBeTrue();
     }
@@ -369,10 +369,10 @@ public class QueueOrderingSpecs
     {
         // Arrange
         var orders = new List<double> { 1000.0, 1000.0, 2000.0 };
-        
+
         // Act
         var result = NeedsRebalance(orders);
-        
+
         // Assert
         result.ShouldBeTrue();
     }
@@ -382,7 +382,7 @@ public class QueueOrderingSpecs
     {
         // Act
         var result = RebalanceOrders(1);
-        
+
         // Assert
         result.ShouldBe([1000.0]);
     }
@@ -392,7 +392,7 @@ public class QueueOrderingSpecs
     {
         // Act
         var result = RebalanceOrders(0);
-        
+
         // Assert
         result.ShouldBeEmpty();
     }

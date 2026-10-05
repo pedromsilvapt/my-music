@@ -39,12 +39,20 @@ dotnet test --collect:"XPlat Code Coverage"
 
 # Run test project as standalone executable (xUnit v3 feature)
 dotnet run --project MyMusic.Common.Tests
+
+# Format the code (dotnet format whitespace + style on the whole solution)
+make format
+
+# Verify the code is formatted without changing it (what the Quality Gate pipeline runs)
+make format-check
 ```
 
 **Note:** Test projects use xUnit v3 and are standalone executables (`<OutputType>Exe</OutputType>`). They can be run via `dotnet test` (standard) or `dotnet run` (executable mode).
 
 ## Git Commands
 **CRITICAL** Do not, under any circunstance, execute git write commands (commit, stash, reset, checkout, etc..) without the user's explicit instruction.
+
+Run `make format` before committing: the Quality Gate pipeline runs `make format-check` and fails on unformatted code.
 
 Commit messages are linted (commitlint): conventional commits `type(scope): subject`, scope optional, single or comma-separated from `ui`, `server`, `mobile`, `cli`; lower-case subject, no trailing period; every line <= 100 chars; empty line between subject and body.
 

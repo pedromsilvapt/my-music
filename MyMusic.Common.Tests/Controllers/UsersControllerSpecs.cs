@@ -43,7 +43,7 @@ public partial class UsersControllerSpecs
 
         var queue = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Queue && p.Owner.Username == "testuser");
-        
+
         queue.ShouldNotBeNull();
         queue.Name.ShouldStartWith("Queue (");
     }
@@ -67,7 +67,7 @@ public partial class UsersControllerSpecs
 
         var favorites = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Favorites && p.Owner.Username == "testuser");
-        
+
         favorites.ShouldNotBeNull();
         favorites.Name.ShouldBe("Favorites");
     }
@@ -91,13 +91,13 @@ public partial class UsersControllerSpecs
 
         var user = await scenario.DbContext.Users
             .FirstOrDefaultAsync(u => u.Username == "testuser");
-        
+
         user.ShouldNotBeNull();
         user.CurrentQueueId.ShouldNotBeNull();
-        
+
         var queue = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Id == user.CurrentQueueId.Value);
-        
+
         queue.ShouldNotBeNull();
         queue.Type.ShouldBe(PlaylistType.Queue);
     }
@@ -122,14 +122,14 @@ public partial class UsersControllerSpecs
         var queue = await scenario.DbContext.Playlists
             .Include(p => p.PlaylistSongs)
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Queue && p.Owner.Username == "testuser");
-        
+
         queue.ShouldNotBeNull();
         queue.PlaylistSongs.ShouldBeEmpty();
 
         var favorites = await scenario.DbContext.Playlists
             .Include(p => p.PlaylistSongs)
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Favorites && p.Owner.Username == "testuser");
-        
+
         favorites.ShouldNotBeNull();
         favorites.PlaylistSongs.ShouldBeEmpty();
     }
@@ -154,13 +154,13 @@ public partial class UsersControllerSpecs
 
         var queue = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Queue && p.OwnerId == userId);
-        
+
         queue.ShouldNotBeNull();
         queue.OwnerId.ShouldBe(userId);
 
         var favorites = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Favorites && p.OwnerId == userId);
-        
+
         favorites.ShouldNotBeNull();
         favorites.OwnerId.ShouldBe(userId);
     }
@@ -185,7 +185,7 @@ public partial class UsersControllerSpecs
 
         var queue = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Queue && p.Owner.Username == "testuser");
-        
+
         queue.ShouldNotBeNull();
         queue.Name.ShouldBe($"Queue ({now:MMM d, yyyy})");
     }

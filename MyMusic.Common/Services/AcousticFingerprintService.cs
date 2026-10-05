@@ -30,12 +30,12 @@ public class AcousticFingerprintService(
         }
 
         var existing = await db.SongAcousticFingerprints
-            .FirstOrDefaultAsync(f => 
-                f.Checksum == song.Checksum && 
+            .FirstOrDefaultAsync(f =>
+                f.Checksum == song.Checksum &&
                 f.ChecksumAlgorithm == song.ChecksumAlgorithm &&
                 f.OwnerId == song.OwnerId, ct);
 
-        if (existing != null && 
+        if (existing != null &&
             Math.Abs(existing.FingerprintLength - lengthSeconds) < 0.001 &&
             existing.FingerprintAlgorithm == algorithm)
         {
@@ -82,7 +82,7 @@ public class AcousticFingerprintService(
         CancellationToken ct = default)
     {
         logger.LogDebug("FindDuplicatesAsync called for owner {OwnerId}, fpcalc available: {IsAvailable}", ownerId, fpcalc.IsAvailable());
-        
+
         var songs = await db.Songs
             .Where(s => s.OwnerId == ownerId)
             .ToListAsync(ct);
@@ -97,8 +97,8 @@ public class AcousticFingerprintService(
         var excludedSet = new HashSet<(long, long)>();
         foreach (var pair in excludedPairs)
         {
-            var key = pair.SongAId < pair.SongBId 
-                ? (pair.SongAId, pair.SongBId) 
+            var key = pair.SongAId < pair.SongBId
+                ? (pair.SongAId, pair.SongBId)
                 : (pair.SongBId, pair.SongAId);
             excludedSet.Add(key);
         }
@@ -182,18 +182,18 @@ public class AcousticFingerprintService(
     }
 
     public async Task ExcludePairAsync(
-        long songAId, 
-        long songBId, 
-        long ownerId, 
-        string? reason = null, 
+        long songAId,
+        long songBId,
+        long ownerId,
+        string? reason = null,
         CancellationToken ct = default)
     {
         var (aId, bId) = songAId < songBId ? (songAId, songBId) : (songBId, songAId);
 
         var existing = await db.ExcludedDuplicatePairs
-            .FirstOrDefaultAsync(p => 
-                p.SongAId == aId && 
-                p.SongBId == bId && 
+            .FirstOrDefaultAsync(p =>
+                p.SongAId == aId &&
+                p.SongBId == bId &&
                 p.OwnerId == ownerId, ct);
 
         if (existing != null)
@@ -214,21 +214,21 @@ public class AcousticFingerprintService(
     }
 
     public async Task<bool> IsExcludedPairAsync(
-        long songAId, 
-        long songBId, 
-        long ownerId, 
+        long songAId,
+        long songBId,
+        long ownerId,
         CancellationToken ct = default)
     {
         var (aId, bId) = songAId < songBId ? (songAId, songBId) : (songBId, songAId);
         return await db.ExcludedDuplicatePairs
-            .AnyAsync(p => 
-                p.SongAId == aId && 
-                p.SongBId == bId && 
+            .AnyAsync(p =>
+                p.SongAId == aId &&
+                p.SongBId == bId &&
                 p.OwnerId == ownerId, ct);
     }
 
     public async Task<List<ExcludedDuplicatePair>> GetExcludedPairsAsync(
-        long ownerId, 
+        long ownerId,
         CancellationToken ct = default)
     {
         return await db.ExcludedDuplicatePairs
@@ -240,8 +240,8 @@ public class AcousticFingerprintService(
     }
 
     public (double Score, int OffsetA, int OffsetB) CompareFingerprints(
-        uint[] a, 
-        uint[] b, 
+        uint[] a,
+        uint[] b,
         bool minLength) => FingerprintIndex<long>.Compare(a, b, minLength);
 
     private static List<HashSet<long>> FindConnectedComponents(ConcurrentDictionary<long, List<long>> edges)

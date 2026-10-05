@@ -19,7 +19,11 @@ public record CreateDeviceItem
     public static CreateDeviceItem FromEntity(Entities.Device device) =>
         new()
         {
-            Id = device.Id, Name = device.Name, Icon = device.Icon, Color = device.Color,
-            NamingTemplate = device.NamingTemplate, ImportOnPurchase = device.ImportOnPurchase,
+            Id = device.Id,
+            Name = device.Name,
+            Icon = device.Icon,
+            Color = device.Color,
+            NamingTemplate = device.NamingTemplate,
+            ImportOnPurchase = device.ImportOnPurchase,
         };
 }

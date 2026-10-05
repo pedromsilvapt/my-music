@@ -13,14 +13,14 @@ public static class MockMusicFile
     {
         var assembly = Assembly.GetExecutingAssembly();
         const string resourceName = "MyMusic.Common.Tests.Resources.251progressie.mp3";
-        
+
         using var stream = assembly.GetManifestResourceStream(resourceName);
 
         if (stream == null)
         {
             throw new Exception("Missing test audio file resource. The tests project is misconfigured.");
         }
-        
+
         using var ms = new MemoryStream();
         stream.CopyTo(ms);
         return ms.ToArray();
@@ -38,11 +38,11 @@ public static class MockMusicFile
         result[content.Length + 3] = (byte)((variant >> 24) & 0xFF);
         return result;
     }
-    
+
     public static void Create(IFileSystem fs, string filePath, string title, string album, string[] artists, string[] genres, int? year = null)
     {
         fs.Directory.CreateDirectory(fs.Path.GetDirectoryName(filePath)!);
-        
+
         Create(fs, filePath, new SongMetadata(null, title)
         {
             Album = new AlbumMetadata(null, album, new CoverArtMetadata(), new ArtistMetadata(null, artists.First())),
@@ -64,14 +64,14 @@ public static class MockMusicFile
             Year = year,
         }, useVariantContent: true);
     }
-    
+
     public static void Create(IFileSystem fs, string filePath, SongMetadata metadata, bool useVariantContent = false)
     {
         var content = useVariantContent ? GetVariantMusicFile() : GetTestMusicFile();
         fs.File.WriteAllBytes(filePath, content);
-        
+
         var fileInfo = new FileSystemFileAbstraction(fs.FileInfo.New(filePath));
-        
+
         using var tfile = TagLib.File.Create(fileInfo);
 
         TagConverter.FromSong(metadata, tfile.Tag).GetAwaiter().GetResult();

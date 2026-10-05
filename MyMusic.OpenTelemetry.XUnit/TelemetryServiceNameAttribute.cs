@@ -11,14 +11,14 @@ public class TelemetryServiceNameAttribute : Attribute
     {
         if (string.IsNullOrWhiteSpace(serviceName))
             throw new ArgumentException("Service name cannot be null or whitespace.", nameof(serviceName));
-        
+
         ServiceName = serviceName;
     }
 
     internal static string? GetServiceName(Assembly? assembly)
     {
         if (assembly == null) return null;
-        
+
         var attribute = assembly.GetCustomAttribute<TelemetryServiceNameAttribute>();
         return attribute?.ServiceName;
     }

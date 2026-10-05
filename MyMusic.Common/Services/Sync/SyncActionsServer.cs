@@ -81,7 +81,10 @@ public class SyncActionsServer(
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData
         {
-            SongId = songId, ModifiedAt = modifiedAt, Checksum = checksum, Algorithm = algorithm,
+            SongId = songId,
+            ModifiedAt = modifiedAt,
+            Checksum = checksum,
+            Algorithm = algorithm,
             IsPreviousVersion = isPreviousVersion ? true : null,
         });
         var record = CreateRecord(filePath, SyncRecordAction.Link, data, songId, reason: reason);
@@ -109,8 +112,12 @@ public class SyncActionsServer(
     {
         var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData
         {
-            SongId = songId, ModifiedAt = modifiedAt, Checksum = checksum, Algorithm = algorithm,
-            IsSoundalike = true, LocalChecksum = localChecksum,
+            SongId = songId,
+            ModifiedAt = modifiedAt,
+            Checksum = checksum,
+            Algorithm = algorithm,
+            IsSoundalike = true,
+            LocalChecksum = localChecksum,
         });
         var record = CreateRecord(filePath, SyncRecordAction.Link, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);

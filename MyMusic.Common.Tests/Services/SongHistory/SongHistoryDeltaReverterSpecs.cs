@@ -9,7 +9,11 @@ public class SongHistoryDeltaReverterSpecs
 {
     private static readonly SongSnapshotCover CurrentCover = new()
     {
-        Id = 2, MimeType = "image/jpeg", Width = 10, Height = 10, Data = "current",
+        Id = 2,
+        MimeType = "image/jpeg",
+        Width = 10,
+        Height = 10,
+        Data = "current",
     };
 
     private static readonly SongSnapshot Current = new()
@@ -37,11 +41,13 @@ public class SongHistoryDeltaReverterSpecs
             Year = new FieldChange<int?> { Old = null, New = 2024 },
             Album = new FieldChange<SongSnapshotAlbum?>
             {
-                Old = new SongSnapshotAlbum { Id = 1, Title = "Old Album" }, New = Current.Album,
+                Old = new SongSnapshotAlbum { Id = 1, Title = "Old Album" },
+                New = Current.Album,
             },
             Artists = new FieldChange<List<SongSnapshotArtist>>
             {
-                Old = [new SongSnapshotArtist { Id = 1, Name = "Old Artist" }], New = Current.Artists,
+                Old = [new SongSnapshotArtist { Id = 1, Name = "Old Artist" }],
+                New = Current.Artists,
             },
         };
 

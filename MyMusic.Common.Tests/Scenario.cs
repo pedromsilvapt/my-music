@@ -22,7 +22,7 @@ public class Scenario
         FileSystem = CreateFileSystem();
         FileTransactions = new FileTransactionService(FileSystem, Options.Create(new Config { MusicRepositoryPath = "/data" }),
             AdvisoryLocks, Substitute.For<ILogger<FileTransactionService>>());
-        var options = CreateDbContextOptions([new FileTransactionInterceptor(FileTransactions), ..interceptors]);
+        var options = CreateDbContextOptions([new FileTransactionInterceptor(FileTransactions), .. interceptors]);
         DbContextFactory = new TestDbContextFactory(options);
         DbContext = CreateDbContext(options);
         AdminUser = CreateUser("Administrator", "admin");
@@ -420,8 +420,8 @@ public class Scenario
     }
 
     public SeedService CreateSeedService(string? seedPath = null) =>
-        new(FileSystem, DbContext, Options.Create(new Config 
-        { 
+        new(FileSystem, DbContext, Options.Create(new Config
+        {
             MusicRepositoryPath = "/data",
             SeedPath = seedPath,
         }), Substitute.For<ILogger<SeedService>>());

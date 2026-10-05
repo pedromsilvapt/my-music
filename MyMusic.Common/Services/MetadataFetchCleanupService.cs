@@ -53,7 +53,7 @@ public class MetadataFetchCleanupService(
             try
             {
                 await Task.Delay(_cleanupInterval, stoppingToken);
-                
+
                 if (!stoppingToken.IsCancellationRequested)
                 {
                     await PerformCleanupAsync(stoppingToken);

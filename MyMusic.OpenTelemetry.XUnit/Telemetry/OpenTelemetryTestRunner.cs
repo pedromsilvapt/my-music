@@ -23,17 +23,17 @@ public class OpenTelemetryTestRunner :
     {
         await using var ctxt = new OpenTelemetryTestRunnerContext(
             test, messageBus, explicitOption, aggregator, cancellationTokenSource, beforeAfterAttributes, constructorArguments);
-        
+
         await ctxt.InitializeAsync();
-        
+
         using var activity = ActivitySource.StartActivity(test.TestDisplayName);
         ctxt.Activity = activity;
-        
+
         activity?.SetTag("test.framework", "xunit");
         activity?.SetTag("test.class", test.TestCase.TestClass.Class.Name);
         activity?.SetTag("test.method", test.TestCase.TestMethod.Method.Name);
         activity?.SetTag("test.display_name", test.TestDisplayName);
-        
+
         return await Run(ctxt);
     }
 

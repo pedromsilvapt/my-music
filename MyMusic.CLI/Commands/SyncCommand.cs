@@ -15,7 +15,7 @@ public class SyncCommand(ISyncService syncService, ITerminal terminal, ILogger<S
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         using var activity = CliActivitySource.Instance.StartActivity("sync");
-        
+
         AnsiConsole.MarkupLine("[bold cyan]MyMusic Sync[/]");
         if (settings.DryRun)
         {

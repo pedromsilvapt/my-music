@@ -31,10 +31,10 @@ public record NamingMetadata
     {
         var lastSlash = path.LastIndexOf('/');
         var lastDot = path.LastIndexOf('.');
-        
+
         var start = lastSlash >= 0 ? lastSlash + 1 : 0;
         var end = lastDot > lastSlash ? lastDot : path.Length;
-        
+
         return path[start..end];
     }
 }

@@ -1093,7 +1093,11 @@ public class SyncCommitServiceSpecs
     private static JsonElement CreateSoundalikeLinkData(long? songId, string checksum, string localChecksum, DateTime modifiedAt) =>
         JsonSerializer.SerializeToElement(new
         {
-            songId, checksum, algorithm = "XxHash128", localChecksum, isSoundalike = true,
+            songId,
+            checksum,
+            algorithm = "XxHash128",
+            localChecksum,
+            isSoundalike = true,
             modifiedAt = modifiedAt.ToString("O"),
         });
 

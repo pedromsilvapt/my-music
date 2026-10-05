@@ -152,7 +152,7 @@ public class MusicDbContext : DbContext
         modelBuilder.Entity<SongAcousticFingerprint>(entity =>
         {
             entity.HasKey(e => new { e.Checksum, e.ChecksumAlgorithm, e.OwnerId });
-            
+
             entity.HasOne(e => e.Owner)
                 .WithMany()
                 .HasForeignKey(e => e.OwnerId);

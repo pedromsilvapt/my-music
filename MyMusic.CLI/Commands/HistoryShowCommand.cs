@@ -20,7 +20,7 @@ public class HistoryShowCommand(
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         using var activity = CliActivitySource.Instance.StartActivity("history show");
-        
+
         try
         {
             var deviceId = await GetDeviceIdAsync();

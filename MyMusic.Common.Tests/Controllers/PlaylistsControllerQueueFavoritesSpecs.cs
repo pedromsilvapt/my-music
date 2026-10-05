@@ -30,7 +30,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
         var scenario = new Scenario();
         var controller = CreateController(scenario);
         var queue = scenario.CreatePlaylist("Test Queue", type: PlaylistType.Queue);
-        
+
         scenario.AdminUser.CurrentQueueId = queue.Id;
         scenario.DbContext.SaveChanges();
 
@@ -46,7 +46,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        
+
         scenario.AdminUser.CurrentQueueId = null;
         scenario.DbContext.SaveChanges();
 
@@ -61,7 +61,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        
+
         scenario.AdminUser.CurrentQueueId = null;
         scenario.DbContext.SaveChanges();
 
@@ -110,8 +110,8 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
-        
+        var song = scenario.CreateSong("Test Song");
+
         scenario.AdminUser.CurrentQueueId = null;
         scenario.DbContext.SaveChanges();
 
@@ -141,8 +141,8 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
-        
+        var song = scenario.CreateSong("Test Song");
+
         scenario.AdminUser.CurrentQueueId = null;
         scenario.DbContext.SaveChanges();
 
@@ -171,7 +171,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
     {
         var scenario = new Scenario();
         var controller = CreateController(scenario);
-        var song = scenario.CreateSong( "Test Song");
+        var song = scenario.CreateSong("Test Song");
 
         var request = new AddSongsToPlaylistRequest
         {
@@ -182,7 +182,7 @@ public class PlaylistsControllerQueueFavoritesSpecs
 
         var favorites = await scenario.DbContext.Playlists
             .FirstOrDefaultAsync(p => p.Type == PlaylistType.Favorites && p.OwnerId == scenario.AdminUser.Id);
-        
+
         favorites.ShouldNotBeNull();
         favorites.Name.ShouldBe("Favorites");
     }
