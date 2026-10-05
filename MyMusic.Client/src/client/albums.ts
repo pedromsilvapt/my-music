@@ -37,7 +37,8 @@ import type {
   GetAlbumsUsageRequest,
   GetAlbumsUsageResponse,
   ListAlbumsParams,
-  ListAlbumsResponse
+  ListAlbumsResponse,
+  UpdateAlbumsRequest
 } from '../model';
 
 import {
@@ -292,6 +293,88 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       > => {
       const backupQueryClient = useQueryClient();
       return useMutation(getCreateAlbumMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
+    }
+    export type updateAlbumsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type updateAlbumsResponseSuccess = (updateAlbumsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type updateAlbumsResponse = (updateAlbumsResponseSuccess)
+
+export const getUpdateAlbumsUrl = () => {
+
+
+
+
+  return `/api/albums`
+}
+
+export const updateAlbums = async (updateAlbumsRequest: UpdateAlbumsRequest, options?: RequestInit): Promise<updateAlbumsResponse> => {
+
+  const res = await fetch(getUpdateAlbumsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateAlbumsRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateAlbumsResponse['data'] = body ? JSON.parse(body) : undefined
+  return { data, status: res.status, headers: res.headers } as updateAlbumsResponse
+}
+
+
+
+
+export const getUpdateAlbumsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAlbums>>, TError,{data: UpdateAlbumsRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAlbums>>, TError,{data: UpdateAlbumsRequest}, TContext> => {
+
+const mutationKey = ['updateAlbums'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAlbums>>, {data: UpdateAlbumsRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateAlbums(data,fetchOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAlbumsMutationResult = NonNullable<Awaited<ReturnType<typeof updateAlbums>>>
+    export type UpdateAlbumsMutationBody = UpdateAlbumsRequest
+    export type UpdateAlbumsMutationError = unknown
+
+    export const useUpdateAlbums = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAlbums>>, TError,{data: UpdateAlbumsRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateAlbums>>,
+        TError,
+        {data: UpdateAlbumsRequest},
+        TContext
+      > => {
+      return useMutation(getUpdateAlbumsMutationOptions(options), queryClient);
     }
     export type deleteAlbumsResponse200 = {
   data: void
@@ -906,6 +989,16 @@ export const getCreateAlbumMockHandler = (overrideResponse?: CreateAlbumResponse
   }, options)
 }
 
+export const getUpdateAlbumsMockHandler = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
+  return http.put('*/albums', async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+  if (typeof overrideResponse === 'function') {await overrideResponse(info); }
+
+    return new HttpResponse(null,
+      { status: 200
+      })
+  }, options)
+}
+
 export const getDeleteAlbumsMockHandler = (overrideResponse?: void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void), options?: RequestHandlerOptions) => {
   return http.delete('*/albums', async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
   if (typeof overrideResponse === 'function') {await overrideResponse(info); }
@@ -966,6 +1059,7 @@ export const getGetAlbumFilterValuesMockHandler = (overrideResponse?: FilterValu
 export const getAlbumsMock = () => [
   getListAlbumsMockHandler(),
   getCreateAlbumMockHandler(),
+  getUpdateAlbumsMockHandler(),
   getDeleteAlbumsMockHandler(),
   getGetAlbumMockHandler(),
   getGetAlbumsUsageMockHandler(),

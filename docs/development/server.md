@@ -375,6 +375,8 @@ await transaction.CommitAsync(cancellationToken);
 
 `AlbumRemoveService` and `ArtistRemoveService` (the `DELETE /albums` and `DELETE /artists` endpoints, which take a list of ids) are built this way: they move the affected songs to the placeholder album/artist, then delete the rows. A list is one operation: every album/artist in it is deleted, or none is. They are not to be confused with `IAlbumDeleteService` / `IArtistDeleteService`, the low-level row deleters they end with, which do no song work at all. A placeholder (`Album.PlaceholderName`, `Artist.PlaceholderName`) cannot be removed while it still has songs, or while the others being removed send their songs to it: those songs would have nowhere to go.
 
+`AlbumEditService` and `ArtistEditService` (the `PUT /albums` and `PUT /artists` endpoints, which take a list of albums/artists with their new state) rename the row in place, then push its songs through `UpdateSongsAsync` with empty models, keeping the row with `KeepAlbumIds` / `KeepArtistIds`. A list is again one operation. Only a changed name costs any song work: an album whose year alone changes is just saved. An album cannot take the name of another album of its artist (`AlbumAlreadyExistsException`, 409): those are to be merged. Artist names are not unique, so renaming an artist to another artist's name leaves two artists. Placeholders cannot be renamed.
+
 ### Transactional file operations
 
 Song imports and song edits change files in the music repository inside a database transaction. `IFileTransactionService.Begin(db)` binds an `IFileTransaction` to the context's current transaction, so the file changes are undone when that transaction is rolled back, fails to commit, or is disposed without committing (via `FileTransactionInterceptor`, which must be registered on the context). A commit keeps the changes. Declare it with `await using` right after the database transaction.
@@ -393,6 +395,8 @@ Song imports and song edits change files in the music repository inside a databa
 ### Song history
 
 PostgreSQL triggers queue a snapshot of a song (built by the `song_history_build_snapshot` SQL function) before every change to it, and `SongHistoryWorker` turns each transaction's queued snapshots into one `song_histories` revision holding the fields that changed. A field only shows up in the history if that function reads it.
+
+The triggers run **before** the change (`BEFORE UPDATE` / `INSERT` / `DELETE`), so the snapshot they queue is the song as it was. This includes the ones on `albums`, `artists` and `genres`, which snapshot every song of a row being renamed: a trigger that ran after the rename would queue the new name as the old state, and the rename would be missing from the history.
 
 #### Merged songs
 

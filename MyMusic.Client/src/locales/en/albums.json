@@ -13,6 +13,18 @@
         "create": "Create",
         "createFailed": "Failed to create the album"
     },
+    "editModal": {
+        "titleSingle": "Edit Album",
+        "titlePlural": "Edit {{count}} Albums",
+        "nameLabel": "Name",
+        "namePlaceholder": "Album name",
+        "yearLabel": "Year",
+        "placeholderHint": "\"(No Album)\" holds the songs that have no album, and cannot be renamed.",
+        "previous": "Previous album",
+        "next": "Next album",
+        "saveFailed_one": "Failed to save the album",
+        "saveFailed_other": "Failed to save the albums"
+    },
     "delete": {
         "titleSingle": "Delete Album",
         "titlePlural": "Delete {{count}} Albums",

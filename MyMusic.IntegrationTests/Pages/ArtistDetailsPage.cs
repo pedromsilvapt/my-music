@@ -11,6 +11,8 @@ public class ArtistDetailsPage(IPage page) : BasePage(page, "artist-detail")
 
     public ILocator AlbumsCount => Root.GetByTestId("artist-albums-count");
 
+    public ILocator Name => Root.GetByTestId("artist-name");
+
     /// <summary>
     /// The Songs collection on the artist detail page. The Albums collection (if present) renders
     /// as a grid without song title cells, so the Songs collection is the one containing song rows.
@@ -32,6 +34,24 @@ public class ArtistDetailsPage(IPage page) : BasePage(page, "artist-detail")
     {
         await Root.WaitForAsync(new() { Timeout = 10000 });
         await Assertions.Expect(Root).ToHaveAttributeAsync("data-loading", "false", new() { Timeout = 10000 });
+    }
+
+    /// <summary>
+    /// The Edit button; absent when the artist belongs to another user (a shared view).
+    /// </summary>
+    public ILocator EditButton => Root.GetByTestId("artist-edit");
+
+    /// <summary>
+    /// Opens the editor of the artist.
+    /// </summary>
+    public async Task<ArtistEditorModalComponent> OpenEditAsync()
+    {
+        await EditButton.ClickAsync();
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new ArtistEditorModalComponent(Page.GetByRole(AriaRole.Dialog, new() { Name = "Edit Artist" }));
+        await modal.WaitForVisibleAsync();
+        return modal;
     }
 
     /// <summary>

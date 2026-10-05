@@ -33,6 +33,36 @@ public class AlbumsPage(IPage page) : BasePage(page, "albums")
     }
 
     /// <summary>
+    /// Opens the editor of an album from its row's context menu.
+    /// </summary>
+    public async Task<AlbumEditorModalComponent> OpenEditAlbumAsync(string albumName)
+    {
+        await Collection.ClickRowActionAsync("name", albumName, "Edit Album");
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new AlbumEditorModalComponent(Page.GetByRole(AriaRole.Dialog, new() { Name = "Edit Album" }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
+
+    /// <summary>
+    /// Selects several albums and opens their editor from the selection's Actions menu.
+    /// </summary>
+    public async Task<AlbumEditorModalComponent> OpenEditAlbumsAsync(params string[] albumNames)
+    {
+        await Collection.SelectRowsByCellTextAsync("name", "songsCount", albumNames);
+
+        var menu = await Collection.OpenFloatingActionsMenuAsync();
+        await menu.ClickItemAsync(new Regex(@"^Edit \d+ Albums$"));
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new AlbumEditorModalComponent(
+            Page.GetByRole(AriaRole.Dialog, new() { NameRegex = new Regex(@"^Edit \d+ Albums$") }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
+
+    /// <summary>
     /// Opens the deletion dialog of an album from its row's context menu, once the dialog knows which songs the
     /// deletion affects.
     /// </summary>

@@ -1,5 +1,5 @@
 import {Box, Button, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
-import {IconArrowBack, IconTrash, IconUser} from "@tabler/icons-react";
+import {IconArrowBack, IconEdit, IconTrash, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -12,6 +12,7 @@ import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 import {useMemo} from "react";
 import {useTranslation} from "react-i18next";
 import {useConfirmDeleteArtists} from "./use-confirm-delete-artists.tsx";
+import {useEditArtists} from "./use-edit-artists.ts";
 
 export default function ArtistDetailPage() {
     const {t} = useTranslation(["artists", "common"]);
@@ -29,6 +30,7 @@ export default function ArtistDetailPage() {
 
     const albumsSchema = useAlbumsSchema({readOnly: artist?.isShared ?? true});
     const confirmDeleteArtists = useConfirmDeleteArtists();
+    const editArtists = useEditArtists();
 
     const queueContext = useMemo(() => ({
         type: 'artist' as const,
@@ -60,13 +62,21 @@ export default function ArtistDetailPage() {
                     placeholderIcon={<IconUser size={80}/>}
                 />
                 <Stack gap="xs">
-                    <Text size="xl" fw={700}>{artist.name}</Text>
+                    <Text size="xl" fw={700} data-testid="artist-name">{artist.name}</Text>
                     <Group gap="md">
                         <Text size="sm" c="dimmed" data-testid="artist-albums-count" data-count={artist.albumsCount}>{t("artists:detail.albumsCount", {count: artist.albumsCount})}</Text>
                         <Text size="sm" c="dimmed" data-testid="artist-songs-count" data-count={artist.songsCount}>{t("artists:detail.songsCount", {count: artist.songsCount})}</Text>
                     </Group>
                     {!artist.isShared && (
                         <Group gap="xs" mt="md">
+                            <Button
+                                leftSection={<IconEdit/>}
+                                variant="default"
+                                onClick={() => editArtists([artist])}
+                                data-testid="artist-edit"
+                            >
+                                {t("common:actions.edit")}
+                            </Button>
                             <Button
                                 leftSection={<IconTrash/>}
                                 variant="default"

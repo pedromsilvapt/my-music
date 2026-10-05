@@ -129,6 +129,31 @@ public class ArtistsController(ILogger<ArtistsController> logger, ICurrentUser c
                 .CountAsync(cancellationToken),
         };
 
+    [HttpPut(Name = "UpdateArtists")]
+    public async Task<IActionResult> Update([FromBody] UpdateArtistsRequest request,
+        [FromServices] IArtistEditService artistEditService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await artistEditService.EditAsync(currentUser.Id,
+                request.Artists
+                    .Select(artist => new ArtistEditInput { ArtistId = artist.Id, Name = artist.Name })
+                    .ToList(),
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (ArtistNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Artist not found");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Artists cannot be updated");
+        }
+    }
+
     [HttpDelete(Name = "DeleteArtists")]
     public async Task<IActionResult> Delete([FromBody] DeleteArtistsRequest request,
         [FromServices] IArtistRemoveService artistRemoveService, CancellationToken cancellationToken)

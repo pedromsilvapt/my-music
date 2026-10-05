@@ -1,5 +1,5 @@
 import {Anchor, Box, Button, Flex, Group, Stack, Text} from "@mantine/core";
-import {IconArrowBack, IconDisc, IconTrash} from "@tabler/icons-react";
+import {IconArrowBack, IconDisc, IconEdit, IconTrash} from "@tabler/icons-react";
 import {Link, useNavigate, useParams} from "@tanstack/react-router";
 import {useGetAlbum} from "../../client/albums.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -10,6 +10,7 @@ import {useSongsSchema} from "../songs/useSongsSchema.tsx";
 import {useMemo} from "react";
 import {useTranslation} from "react-i18next";
 import {useConfirmDeleteAlbums} from "./use-confirm-delete-albums.tsx";
+import {useEditAlbums} from "./use-edit-albums.ts";
 
 export default function AlbumDetailPage() {
     const {t} = useTranslation(["albums", "common"]);
@@ -27,6 +28,7 @@ export default function AlbumDetailPage() {
 
     const navigate = useNavigate();
     const confirmDeleteAlbums = useConfirmDeleteAlbums();
+    const editAlbums = useEditAlbums();
 
     if (!album) {
         return <Box p="md" data-testid="album-detail" data-loading="true">{t("albums:detail.loading")}</Box>;
@@ -50,14 +52,22 @@ export default function AlbumDetailPage() {
                     placeholderIcon={<IconDisc size={80}/>}
                 />
                 <Stack gap="xs">
-                    <Text size="xl" fw={700}>{album.name}</Text>
+                    <Text size="xl" fw={700} data-testid="album-name">{album.name}</Text>
                     <Anchor component={Link} to={`/artists/${album.artistId}`} size="sm" data-testid="album-artist">{album.artistName}</Anchor>
                     <Group gap="md">
-                        {album.year && <Text size="sm" c="dimmed">{album.year}</Text>}
+                        {album.year && <Text size="sm" c="dimmed" data-testid="album-year">{album.year}</Text>}
                         <Text size="sm" c="dimmed" data-testid="album-songs-count" data-count={album.songsCount}>{t("albums:detail.songsCount", {count: album.songsCount})}</Text>
                     </Group>
                     {!album.isShared && (
                         <Group gap="xs" mt="md">
+                            <Button
+                                leftSection={<IconEdit/>}
+                                variant="default"
+                                onClick={() => editAlbums([album])}
+                                data-testid="album-edit"
+                            >
+                                {t("common:actions.edit")}
+                            </Button>
                             <Button
                                 leftSection={<IconTrash/>}
                                 variant="default"

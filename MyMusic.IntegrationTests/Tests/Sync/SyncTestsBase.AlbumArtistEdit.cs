@@ -1,0 +1,73 @@
+using MyMusic.IntegrationTests.Extensions;
+using MyMusic.IntegrationTests.Fixtures;
+using MyMusic.IntegrationTests.Flows;
+using Shouldly;
+
+namespace MyMusic.IntegrationTests.Tests.Sync;
+
+public abstract partial class SyncTestsBase
+{
+    // Scenario: Renaming an album on the server updates the files of its songs on the device
+    //   Given a song on the server was downloaded to the device
+    //   When the song's album is renamed on the server and the CLI sync runs
+    //   Then the local file is downloaded again, naming the renamed album
+    //   And it moves to the folder of the renamed album
+    [Fact]
+    public async Task Sync_ShouldDownloadSongAgainAfterItsAlbumIsRenamed()
+    {
+        // Seed a song on the server associated with this device, and download it
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[2] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        var originalDevicePath = "Freya Ridings/Wicker Woman/Wicker Woman - Freya Ridings.mp3";
+        App.FileExists(originalDevicePath).ShouldBeTrue();
+
+        // Rename the song's album on the server: the song's file should be rewritten and moved
+        await new EditAlbumFlow("Wicker Woman", new(Name: "Wicker Woman (Deluxe)"), fromDetailsPage: true).ExecuteAsync(Page);
+
+        // Run CLI sync again: the rewritten file should be downloaded to its new path
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(updateLocal: 1, rename: 1);
+
+        // Verify: the old file is gone, and the new one names the renamed album
+        var newDevicePath = "Freya Ridings/Wicker Woman (Deluxe)/Wicker Woman - Freya Ridings.mp3";
+        App.FileExists(originalDevicePath).ShouldBeFalse("Old file should be removed");
+        App.FileExists(newDevicePath).ShouldBeTrue("New file should exist");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(newDevicePath),
+            title: "Wicker Woman", album: "Wicker Woman (Deluxe)", artists: ["Freya Ridings"]);
+    }
+
+    // Scenario: Renaming an artist on the server updates the files of the songs it is featured in
+    //   Given a song by two artists on the server was downloaded to the device
+    //   When the featured artist is renamed on the server and the CLI sync runs
+    //   Then the local file is downloaded again, naming the renamed artist
+    //   And it is renamed to mention the artist's new name
+    [Fact]
+    public async Task Sync_ShouldDownloadSongAgainAfterOneOfItsArtistsIsRenamed()
+    {
+        // Seed a song by two artists on the server associated with this device, and download it
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [SongsFixture.DefaultSongs[6] with { DeviceIds = [App.DeviceId] }]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+
+        var originalDevicePath = "Faithless/New Religion/New Religion - Faithless, Bebe Rexha.mp3";
+        App.FileExists(originalDevicePath).ShouldBeTrue();
+
+        // Rename the featured artist on the server: the song's file should be rewritten and renamed
+        await new EditArtistFlow("Bebe Rexha", "Bebe").ExecuteAsync(Page);
+
+        // Run CLI sync again: the rewritten file should be downloaded to its new path
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(updateLocal: 1, rename: 1);
+
+        // Verify: the old file is gone, and the new one names the renamed artist
+        var newDevicePath = "Faithless/New Religion/New Religion - Faithless, Bebe.mp3";
+        App.FileExists(originalDevicePath).ShouldBeFalse("Old file should be removed");
+        App.FileExists(newDevicePath).ShouldBeTrue("New file should exist");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(newDevicePath),
+            title: "New Religion", album: "New Religion", artists: ["Faithless", "Bebe"]);
+    }
+}

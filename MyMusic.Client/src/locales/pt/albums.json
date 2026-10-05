@@ -13,6 +13,18 @@
         "create": "Criar",
         "createFailed": "Falha ao criar o álbum"
     },
+    "editModal": {
+        "titleSingle": "Editar Álbum",
+        "titlePlural": "Editar {{count}} Álbuns",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Nome do álbum",
+        "yearLabel": "Ano",
+        "placeholderHint": "\"(No Album)\" reúne as músicas que não têm álbum, e não pode ser renomeado.",
+        "previous": "Álbum anterior",
+        "next": "Álbum seguinte",
+        "saveFailed_one": "Falha ao guardar o álbum",
+        "saveFailed_other": "Falha ao guardar os álbuns"
+    },
     "delete": {
         "titleSingle": "Eliminar Álbum",
         "titlePlural": "Eliminar {{count}} Álbuns",

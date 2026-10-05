@@ -11,6 +11,17 @@
         "create": "Criar",
         "createFailed": "Falha ao criar o artista"
     },
+    "editModal": {
+        "titleSingle": "Editar Artista",
+        "titlePlural": "Editar {{count}} Artistas",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Nome do artista",
+        "placeholderHint": "\"(No Artist)\" reúne as músicas que não têm artista, e não pode ser renomeado.",
+        "previous": "Artista anterior",
+        "next": "Artista seguinte",
+        "saveFailed_one": "Falha ao guardar o artista",
+        "saveFailed_other": "Falha ao guardar os artistas"
+    },
     "delete": {
         "titleSingle": "Eliminar Artista",
         "titlePlural": "Eliminar {{count}} Artistas",

@@ -133,6 +133,35 @@ public class AlbumsController(ILogger<AlbumsController> logger, ICurrentUser cur
                 .CountAsync(cancellationToken),
         };
 
+    [HttpPut(Name = "UpdateAlbums")]
+    public async Task<IActionResult> Update([FromBody] UpdateAlbumsRequest request,
+        [FromServices] IAlbumEditService albumEditService, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await albumEditService.EditAsync(currentUser.Id,
+                request.Albums
+                    .Select(album => new AlbumEditInput { AlbumId = album.Id, Name = album.Name, Year = album.Year })
+                    .ToList(),
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (AlbumNotFoundException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status404NotFound, title: "Album not found");
+        }
+        catch (AlbumAlreadyExistsException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Album already exists");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Albums cannot be updated");
+        }
+    }
+
     [HttpDelete(Name = "DeleteAlbums")]
     public async Task<IActionResult> Delete([FromBody] DeleteAlbumsRequest request,
         [FromServices] IAlbumRemoveService albumRemoveService, CancellationToken cancellationToken)

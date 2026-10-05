@@ -41,3 +41,10 @@ export const SONG_VERSION_MODAL_SIZE = "xl";
  * `.highlighted` animations (1.5s); the extra time only keeps the highlight state around after the pulse ends.
  */
 export const COLLECTION_HIGHLIGHT_MS = 3000;
+
+/**
+ * Names of the album and the artist that stand in for a missing one (the server's `Album.PlaceholderName`
+ * and `Artist.PlaceholderName`). They hold the songs without an album or artist, and cannot be renamed.
+ */
+export const ALBUM_PLACEHOLDER_NAME = "(No Album)";
+export const ARTIST_PLACEHOLDER_NAME = "(No Artist)";

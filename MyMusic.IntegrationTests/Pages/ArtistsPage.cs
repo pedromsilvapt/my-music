@@ -33,6 +33,36 @@ public class ArtistsPage(IPage page) : BasePage(page, "artists")
     }
 
     /// <summary>
+    /// Opens the editor of an artist from its row's context menu.
+    /// </summary>
+    public async Task<ArtistEditorModalComponent> OpenEditArtistAsync(string artistName)
+    {
+        await Collection.ClickRowActionAsync("name", artistName, "Edit Artist");
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new ArtistEditorModalComponent(Page.GetByRole(AriaRole.Dialog, new() { Name = "Edit Artist" }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
+
+    /// <summary>
+    /// Selects several artists and opens their editor from the selection's Actions menu.
+    /// </summary>
+    public async Task<ArtistEditorModalComponent> OpenEditArtistsAsync(params string[] artistNames)
+    {
+        await Collection.SelectRowsByCellTextAsync("name", "songsCount", artistNames);
+
+        var menu = await Collection.OpenFloatingActionsMenuAsync();
+        await menu.ClickItemAsync(new Regex(@"^Edit \d+ Artists$"));
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new ArtistEditorModalComponent(
+            Page.GetByRole(AriaRole.Dialog, new() { NameRegex = new Regex(@"^Edit \d+ Artists$") }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
+
+    /// <summary>
     /// Opens the deletion dialog of an artist from its row's context menu, once the dialog knows which songs the
     /// deletion affects.
     /// </summary>
