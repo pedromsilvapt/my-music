@@ -9,7 +9,6 @@ using Xunit;
 namespace MyMusic.IntegrationTests.Tests.Songs;
 
 // TODO: Missing tests for editing other fields:
-// - SongsEdit_ChangeToAlbumFromOtherArtist_ShouldBeForbidden
 // - SongsEdit_ChangeYear
 // - SongsEdit_ChangeExplicit
 // - SongsEdit_ChangeGenres
@@ -113,23 +112,128 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
             AlbumArtist: "Different Artist"))
             .ExecuteAsync(Page);
 
-        // Validate Song A has the album and artist
+        // Song A should be on an album of its own album artist, despite the shared name
         await new ValidateSongDetailsFlow(songA.Title, new(
             Album: "Existing Album",
-            Artists: ["Different Artist"]))
+            Artists: ["Different Artist"],
+            AlbumArtist: "Different Artist"))
             .ExecuteAsync(Page);
 
-        // Validate the album exists
-        await new ShouldAlbumExistFlow("Existing Album").ExecuteAsync(Page);
+        // Both artists should now have an album with that name
+        await new ValidateAlbumsNamedFlow("Existing Album", count: 2).ExecuteAsync(Page);
 
         // Validate the different artist exists
         await new ShouldArtistExistFlow("Different Artist").ExecuteAsync(Page);
 
-        // Validate Song B is unchanged
+        // Song B should still be on the existing artist's album
         await new ValidateSongDetailsFlow(songB.Title, new(
             Album: "Existing Album",
+            Artists: ["Existing Artist"],
+            AlbumArtist: "Existing Artist"))
+            .ExecuteAsync(Page);
+    }
+
+    [Fact]
+    public async Task EditSong_PickAlbumOfAnotherArtistThenChangeAlbumArtist_CreatesAlbumForThatArtist()
+    {
+        // Seed a device
+        var device = await _devices.SeedAsync(RequestContext, UserId, DevicesFixture.DefaultDevices[0]);
+
+        // Seed Song A on Artist A's album
+        var songA = await _songs.SeedAsync(RequestContext, UserId,
+            new SampleSong(Title: "Song A", Album: "Album A", Artists: ["Artist A"], AlbumArtist: "Artist A", DeviceIds: [device.Id]));
+
+        // Seed Song B on Artist B's own album
+        var songB = await _songs.SeedAsync(RequestContext, UserId,
+            new SampleSong(Title: "Song B", Album: "Album B", Artists: ["Artist B"], AlbumArtist: "Artist B", DeviceIds: [device.Id]));
+
+        // Edit Song B: pick Artist A's album among the suggestions, which fills in Artist A as the album artist,
+        // then set the album artist back to Artist B
+        await new EditSongFlow(songB.Title, new(
+            Album: "Album A",
+            AlbumSuggestionOf: "Artist A",
+            AlbumArtist: "Artist B"))
+            .ExecuteAsync(Page);
+
+        // Song B should be on an "Album A" of Artist B, not on Artist A's album
+        await new ValidateSongDetailsFlow(songB.Title, new(
+            Album: "Album A",
+            Artists: ["Artist B"],
+            AlbumArtist: "Artist B"))
+            .ExecuteAsync(Page);
+
+        // Song A should still be on Artist A's album
+        await new ValidateSongDetailsFlow(songA.Title, new(
+            Album: "Album A",
+            Artists: ["Artist A"],
+            AlbumArtist: "Artist A"))
+            .ExecuteAsync(Page);
+
+        // Each artist should have its own "Album A", and the album Song B left empty should be gone
+        await new ValidateAlbumsNamedFlow("Album A", count: 2).ExecuteAsync(Page);
+        await new ShouldAlbumExistFlow("Album B", shouldExist: false).ExecuteAsync(Page);
+    }
+
+    [Fact]
+    public async Task EditSong_PickAlbumSuggestion_FillsInItsAlbumArtist()
+    {
+        // Seed a device
+        var device = await _devices.SeedAsync(RequestContext, UserId, DevicesFixture.DefaultDevices[0]);
+
+        // Seed Song A with no album
+        var songA = await _songs.SeedAsync(RequestContext, UserId,
+            new SampleSong(Title: "Song A", Artists: null, Album: null, DeviceIds: [device.Id]));
+
+        // Seed Song B with album and artist
+        await _songs.SeedAsync(RequestContext, UserId,
+            new SampleSong(Title: "Song B", Album: "Existing Album", Artists: ["Existing Artist"], AlbumArtist: "Existing Artist", DeviceIds: [device.Id]));
+
+        // Edit Song A: pick the existing album among the suggestions, without touching the album artist
+        await new EditSongFlow(songA.Title, new(
+            Album: "Existing Album",
+            AlbumSuggestionOf: "Existing Artist",
             Artists: ["Existing Artist"]))
             .ExecuteAsync(Page);
+
+        // Song A should have joined the existing album, whose artist was filled in by the suggestion
+        await new ValidateSongDetailsFlow(songA.Title, new(
+            Album: "Existing Album",
+            Artists: ["Existing Artist"],
+            AlbumArtist: "Existing Artist"))
+            .ExecuteAsync(Page);
+
+        // No second album should have been created
+        await new ValidateAlbumsNamedFlow("Existing Album", count: 1).ExecuteAsync(Page);
+    }
+
+    [Fact]
+    public async Task EditSong_ChangeAlbumArtistOnly_MovesSongToThatArtistsAlbum()
+    {
+        // Seed a device
+        var device = await _devices.SeedAsync(RequestContext, UserId, DevicesFixture.DefaultDevices[0]);
+
+        // Seed two songs on Artist A's album, one of them featuring Artist B
+        var songA = await _songs.SeedAsync(RequestContext, UserId,
+            new SampleSong(Title: "Song A", Album: "Shared Album", Artists: ["Artist A"], AlbumArtist: "Artist A", DeviceIds: [device.Id]));
+        var songB = await _songs.SeedAsync(RequestContext, UserId,
+            new SampleSong(Title: "Song B", Album: "Shared Album", Artists: ["Artist A", "Artist B"], AlbumArtist: "Artist A", DeviceIds: [device.Id]));
+
+        // Edit Song B: change nothing but the album artist
+        await new EditSongFlow(songB.Title, new(AlbumArtist: "Artist B")).ExecuteAsync(Page);
+
+        // Song B should have moved to an album of the same name by Artist B
+        await new ValidateSongDetailsFlow(songB.Title, new(
+            Album: "Shared Album",
+            AlbumArtist: "Artist B"))
+            .ExecuteAsync(Page);
+
+        // Song A should have stayed on Artist A's album
+        await new ValidateSongDetailsFlow(songA.Title, new(
+            Album: "Shared Album",
+            AlbumArtist: "Artist A"))
+            .ExecuteAsync(Page);
+
+        await new ValidateAlbumsNamedFlow("Shared Album", count: 2).ExecuteAsync(Page);
     }
 
     [Fact]
@@ -146,11 +250,6 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         var songB = await _songs.SeedAsync(RequestContext, UserId,
             new SampleSong(Title: "Song B", Album: "Shared Album", Artists: ["Shared Artist"], AlbumArtist: "Shared Artist", DeviceIds: [device.Id]));
 
-        // Navigate to albums page and capture current row count
-        var home = new HomePage(Page);
-        var albumsPage = await home.Navbar.GoToAlbumsAsync();
-        var albumCountBefore = await albumsPage.Collection.GetRowCountAsync();
-
         // Edit Song A: set same album and same artists as Song B
         await new EditSongFlow(songA.Title, new(
             Album: "Shared Album",
@@ -161,7 +260,8 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         // Validate Song A has the shared album and artist
         await new ValidateSongDetailsFlow(songA.Title, new(
             Album: "Shared Album",
-            Artists: ["Shared Artist"]))
+            Artists: ["Shared Artist"],
+            AlbumArtist: "Shared Artist"))
             .ExecuteAsync(Page);
 
         // Validate Song B is unchanged
@@ -170,10 +270,8 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
             Artists: ["Shared Artist"]))
             .ExecuteAsync(Page);
 
-        // Navigate to albums page and verify no new album was created (row count same)
-        albumsPage = await new HomePage(Page).Navbar.GoToAlbumsAsync();
-        var albumCountAfter = await albumsPage.Collection.GetRowCountAsync();
-        albumCountAfter.ShouldBe(albumCountBefore, "No new album should be created when reusing an existing album");
+        // The existing album should have been reused, not duplicated
+        await new ValidateAlbumsNamedFlow("Shared Album", count: 1).ExecuteAsync(Page);
 
         // Validate the shared artist exists (no duplicate created)
         await new ShouldArtistExistFlow("Shared Artist").ExecuteAsync(Page);
@@ -234,11 +332,12 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         var songBDetails = await new OpenSongDetailsFlow(songB.Title).ExecuteAsync(Page);
         var songBPath = await songBDetails.GetRepositoryPathAsync();
 
-        // Edit Song A to match Song B's title, album, and artist
+        // Edit Song A to match Song B's title, album, artist and album artist
         await new EditSongFlow(songA.Title, new(
             Title: "Wicker Woman",
             Album: "Wicker Woman",
-            Artists: ["Freya Ridings"]))
+            Artists: ["Freya Ridings"],
+            AlbumArtist: "Freya Ridings"))
             .ExecuteAsync(Page);
 
         // Navigate to Song A's details using row index (both songs now have same title)

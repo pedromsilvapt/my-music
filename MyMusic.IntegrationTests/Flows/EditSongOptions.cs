@@ -8,4 +8,6 @@ public record EditSongOptions(
     bool? Explicit = null,
     string? Album = null,
     string[]? Artists = null,
-    string? AlbumArtist = null);
+    string? AlbumArtist = null,
+    // Picks the suggested Album of this album artist, instead of just typing the album's name
+    string? AlbumSuggestionOf = null);

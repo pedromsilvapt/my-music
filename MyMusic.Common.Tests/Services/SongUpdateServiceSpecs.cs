@@ -20,6 +20,11 @@ public class SongUpdateServiceSpecs
         return new SongUpdateService(
             new SongFileUpdateService(scenario.FileSystem, config),
             scenario.FileTransactions,
+            scenario.AdvisoryLocks,
+            new AlbumUpsertService(),
+            new AlbumDeleteService(scenario.DbContext, Substitute.For<ILogger<AlbumDeleteService>>()),
+            new ArtistDeleteService(scenario.DbContext, Substitute.For<ILogger<ArtistDeleteService>>()),
+            new ArtworkDeleteService(scenario.DbContext, Substitute.For<ILogger<ArtworkDeleteService>>()),
             Substitute.For<ILogger<SongUpdateService>>());
     }
 
@@ -463,7 +468,355 @@ public class SongUpdateServiceSpecs
         scenario.DbContext.Database.CurrentTransaction.ShouldBeNull();
     }
 
+    #region Album & Album Artist
+
+    [Fact]
+    public async Task UpdateSong_SameAlbumNameDifferentAlbumArtist_CreatesAlbumForThatArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var artistA = scenario.CreateArtist("Artist A");
+        var albumA = scenario.CreateAlbum("Shared Name", artistA);
+        var otherSong = CreateSongWithFile(scenario, "Other Song", albumA);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var artistB = scenario.CreateArtist("Artist B");
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("Shared Name", new ArtistRef(artistB.Id))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(artistB.Id)]),
+        };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Album.Name.ShouldBe("Shared Name");
+        result.Album.Id.ShouldNotBe(albumA.Id);
+        result.Album.Artist!.Id.ShouldBe(artistB.Id);
+
+        var albums = scenario.DbContext.Albums.AsNoTracking().Where(a => a.Name == "Shared Name").ToList();
+        albums.Select(a => a.ArtistId).ShouldBe([artistA.Id, artistB.Id], ignoreOrder: true);
+        scenario.DbContext.Songs.AsNoTracking().First(s => s.Id == otherSong.Id).AlbumId.ShouldBe(albumA.Id);
+    }
+
+    [Fact]
+    public async Task UpdateSong_SameAlbumNameSameAlbumArtist_ReusesAlbum()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var artistA = scenario.CreateArtist("Artist A");
+        var albumA = scenario.CreateAlbum("Shared Name", artistA);
+        CreateSongWithFile(scenario, "Other Song", albumA);
+        var song = CreateSongWithFile(scenario, "My Song");
+
+        // The album artist is referenced by name, as when it is typed rather than picked
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("Shared Name", new ArtistRef(Name: "Artist A"))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(artistA.Id)]),
+        };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Album.Id.ShouldBe(albumA.Id);
+        scenario.DbContext.Albums.Count(a => a.Name == "Shared Name").ShouldBe(1);
+        scenario.DbContext.Artists.Count(a => a.Name == "Artist A").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task UpdateSong_OnlyAlbumArtistChanges_MovesSongToThatArtistsAlbum()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var artistA = scenario.CreateArtist("Artist A");
+        var artistB = scenario.CreateArtist("Artist B");
+        var albumA = scenario.CreateAlbum("Album", artistA);
+        CreateSongWithFile(scenario, "Other Song", albumA);
+        var song = CreateSongWithFile(scenario, "My Song", albumA, [artistA, artistB]);
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("Album", new ArtistRef(artistB.Id))),
+        };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Album.Id.ShouldNotBe(albumA.Id);
+        result.Album.Name.ShouldBe("Album");
+        result.Album.Artist!.Id.ShouldBe(artistB.Id);
+        scenario.DbContext.Albums.Any(a => a.Id == albumA.Id).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateSong_AlbumWithoutAlbumArtist_KeepsCurrentAlbumArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var albumArtistId = song.Album.ArtistId;
+
+        var update = new SongUpdateModel { Album = new ValueUpdate<AlbumRef>(new AlbumRef("Renamed Album")) };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Album.Name.ShouldBe("Renamed Album");
+        result.Album.Artist!.Id.ShouldBe(albumArtistId);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    public async Task UpdateSong_EmptyAlbumName_UsesPlaceholderAlbum(string? albumName)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var albumArtistId = song.Album.ArtistId;
+
+        var update = new SongUpdateModel { Album = new ValueUpdate<AlbumRef>(new AlbumRef(albumName)) };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Album.Name.ShouldBe(Album.PlaceholderName);
+        result.Album.Artist!.Id.ShouldBe(albumArtistId);
+    }
+
+    [Fact]
+    public async Task UpdateSong_NewNameAsAlbumArtistAndSongArtist_CreatesOneArtist()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(Name: "New Artist"))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(Name: "New Artist")]),
+        };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        scenario.DbContext.Artists.Count(a => a.Name == "New Artist").ShouldBe(1);
+        result.Artists.ShouldHaveSingleItem().Id.ShouldBe(result.Album.Artist!.Id);
+    }
+
+    [Fact]
+    public async Task UpdateSong_ArtistNameSharedByTwoArtists_ResolvesToTheOneReferencedById()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        scenario.CreateArtist("Homonym");
+        var secondHomonym = scenario.CreateArtist("Homonym");
+        var song = CreateSongWithFile(scenario, "My Song");
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(secondHomonym.Id))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(Name: "Homonym")]),
+        };
+
+        // Act
+        var result = await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Artists.ShouldHaveSingleItem().Id.ShouldBe(secondHomonym.Id);
+        result.Album.Artist!.Id.ShouldBe(secondHomonym.Id);
+    }
+
+    [Fact]
+    public async Task UpdateSong_AlbumArtistNotInNewArtists_Throws()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var otherArtist = scenario.CreateArtist("Other Artist");
+
+        var update = new SongUpdateModel
+        {
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(otherArtist.Id)]),
+        };
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<ValidationException>(
+            () => service.UpdateSong(scenario.DbContext, song.Id, update));
+        exception.Message.ShouldContain("My Song Artist");
+    }
+
+    [Fact]
+    public async Task UpdateSong_NewAlbumArtistNotInArtists_Throws()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var otherArtist = scenario.CreateArtist("Other Artist");
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(otherArtist.Id))),
+        };
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(() => service.UpdateSong(scenario.DbContext, song.Id, update));
+        scenario.DbContext.ChangeTracker.Clear();
+        scenario.DbContext.Albums.Any(a => a.Name == "New Album").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateSong_LeavesAlbumAndArtistUnused_DeletesThem()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var oldAlbumId = song.AlbumId;
+        var oldArtistId = song.Album.ArtistId;
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(Name: "New Artist"))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(Name: "New Artist")]),
+        };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        scenario.DbContext.Albums.Any(a => a.Id == oldAlbumId).ShouldBeFalse();
+        scenario.DbContext.Artists.Any(a => a.Id == oldArtistId).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateSong_LeavesAlbumAndArtistUsedByOtherSongs_KeepsThem()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var artistA = scenario.CreateArtist("Artist A");
+        var albumA = scenario.CreateAlbum("Album A", artistA);
+        CreateSongWithFile(scenario, "Other Song", albumA);
+        var song = CreateSongWithFile(scenario, "My Song", albumA);
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(Name: "New Artist"))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(Name: "New Artist")]),
+        };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        scenario.DbContext.Albums.Any(a => a.Id == albumA.Id).ShouldBeTrue();
+        scenario.DbContext.Artists.Any(a => a.Id == artistA.Id).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateSong_ChangingAlbum_TakesTheAlbumAndArtistLocksOfAnImport()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var ownerId = scenario.AdminUser.Id;
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(Name: "New Artist"))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(Name: "New Artist")]),
+        };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        var acquired = scenario.AdvisoryLocks.Acquisitions.SelectMany(keys => keys).ToList();
+        acquired.ShouldContain(AdvisoryLockKey.Create(AdvisoryLockScope.Album, ownerId, "New Artist", "New Album"));
+        acquired.ShouldContain(AdvisoryLockKey.Create(AdvisoryLockScope.Artist, ownerId, "New Artist"));
+    }
+
+    [Fact]
+    public async Task BatchUpdateSong_SameAlbumNameDifferentAlbumArtist_CreatesAlbumAndDeletesUnusedOne()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var artistA = scenario.CreateArtist("Artist A");
+        var albumA = scenario.CreateAlbum("Shared Name", artistA);
+        CreateSongWithFile(scenario, "Other Song", albumA);
+        var song = CreateSongWithFile(scenario, "My Song");
+        var oldAlbumId = song.AlbumId;
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("Shared Name", new ArtistRef(Name: "Artist B"))),
+            Artists = new ValueUpdate<List<ArtistRef>>([new ArtistRef(Name: "Artist B")]),
+        };
+
+        // Act
+        var result = await service.BatchUpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Success.ShouldBeTrue(result.Error);
+        result.Song!.Album.Id.ShouldNotBe(albumA.Id);
+        result.Song.Album.Artist!.Name.ShouldBe("Artist B");
+        scenario.DbContext.Albums.Count(a => a.Name == "Shared Name").ShouldBe(2);
+        scenario.DbContext.Albums.Any(a => a.Id == oldAlbumId).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task BatchUpdateSong_AlbumArtistNotInArtists_Fails()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+
+        var update = new SongUpdateModel
+        {
+            Album = new ValueUpdate<AlbumRef>(new AlbumRef("New Album", new ArtistRef(Name: "Other Artist"))),
+        };
+
+        // Act
+        var result = await service.BatchUpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        result.Success.ShouldBeFalse();
+        result.Error!.ShouldContain("Other Artist");
+    }
+
+    #endregion Album & Album Artist
+
     #region Helpers
+
+    /// <summary>A song whose file exists in the repository, so its metadata can be written.</summary>
+    private Song CreateSongWithFile(Scenario scenario, string title, Album? album = null, List<Artist>? artists = null)
+    {
+        var path = $"/data/{title}.mp3";
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, path, scenario.AdminUser.Username);
+
+        return scenario.CreateSong(title, checksum: checksum, checksumAlgorithm: algo, repositoryPath: path,
+            album: album, artists: artists);
+    }
 
     private void AddSongToDevice(MusicDbContext db, Song song, Device device, string path,
         SongSyncAction? syncAction = null, DateTime? lastSyncedModifiedAt = null)

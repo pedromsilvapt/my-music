@@ -44,10 +44,12 @@ import MetadataSearchModal from "./metadata-search-modal.tsx";
 import SongToolsMenu from "./song-tools-menu.tsx";
 import TagsAutocompleteField, {type TagsAutocompleteItem} from "./tags-autocomplete-field.tsx";
 import {
+    buildAlbumUpdate,
     checkboxesFromMetadata,
     createInitialCheckboxes,
     formStateFromMetadata,
     formStateFromSong,
+    getAlbumArtistMismatch,
     hasChangesToSave,
     shouldSaveField,
     type FormState,
@@ -156,24 +158,18 @@ export default function SongEditorContextModal({
     const currentState = currentIndex < songs.length ? editStates.get(songs[currentIndex]?.id) : null;
 
     const albumArtistMismatch = useMemo(() => {
-        if (!currentState) return null;
-        
-        const songArtists = currentState.form.artists;
-        const albumArtist = currentState.form.albumArtist;
-        
-        if (!albumArtist?.name) return null;
-        if (songArtists.length === 0) return null;
-        
-        let isMatch: boolean;
-        
-        if (albumArtist.id > 0) {
-            isMatch = songArtists.some(a => a.id === albumArtist.id && a.id > 0);
-        } else {
-            isMatch = songArtists.some(a => a.id <= 0 && a.name === albumArtist.name);
-        }
-        
-        return isMatch ? null : albumArtist.name;
+        return currentState ? getAlbumArtistMismatch(currentState.form) : null;
     }, [currentState]);
+
+    // The server rejects an album artist that is not one of the song's artists, whenever either of them is saved
+    const isSaveBlockedByAlbumArtist = useMemo(() => {
+        if (!currentState || !albumArtistMismatch) return false;
+
+        const {form, song, metadata, checkboxes} = currentState;
+
+        return buildAlbumUpdate(form, song, metadata, checkboxes) !== undefined
+            || shouldSaveField(form, song, metadata, checkboxes.artists, "artists");
+    }, [currentState, albumArtistMismatch]);
 
     const modifiedSongIds = useMemo(() => {
         const modified = new Set<number>();
@@ -496,14 +492,9 @@ export default function SongEditorContextModal({
             if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover")) {
                 update.cover = { newValue: form.cover };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.album, "album") && form.album) {
-                update.album = {
-                    newValue: {
-                        id: form.album.id > 0 ? form.album.id : null,
-                        name: form.album.id < 0 ? form.album.name : null,
-                        artistName: form.album.id < 0 ? form.albumArtist?.name : null,
-                    },
-                };
+            const albumUpdate = buildAlbumUpdate(form, songData, metadata, checkboxes);
+            if (albumUpdate) {
+                update.album = albumUpdate;
             }
             if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists")) {
                 update.artists = {
@@ -555,14 +546,9 @@ export default function SongEditorContextModal({
         if (shouldSaveField(form, song, metadata, checkboxes.cover, "cover")) {
             update.cover = { newValue: form.cover };
         }
-        if (shouldSaveField(form, song, metadata, checkboxes.album, "album") && form.album) {
-            update.album = {
-                newValue: {
-                    id: form.album.id > 0 ? form.album.id : null,
-                    name: form.album.id < 0 ? form.album.name : null,
-                    artistName: form.album.id < 0 ? form.albumArtist?.name : null,
-                },
-            };
+        const albumUpdate = buildAlbumUpdate(form, song, metadata, checkboxes);
+        if (albumUpdate) {
+            update.album = albumUpdate;
         }
         if (shouldSaveField(form, song, metadata, checkboxes.artists, "artists")) {
             update.artists = {
@@ -622,14 +608,9 @@ export default function SongEditorContextModal({
             if (shouldSaveField(form, songData, metadata, checkboxes.cover, "cover")) {
                 update.cover = { newValue: form.cover };
             }
-            if (shouldSaveField(form, songData, metadata, checkboxes.album, "album") && form.album) {
-                update.album = {
-                    newValue: {
-                        id: form.album.id > 0 ? form.album.id : null,
-                        name: form.album.id < 0 ? form.album.name : null,
-                        artistName: form.album.id < 0 ? form.albumArtist?.name : null,
-                    },
-                };
+            const albumUpdate = buildAlbumUpdate(form, songData, metadata, checkboxes);
+            if (albumUpdate) {
+                update.album = albumUpdate;
             }
             if (shouldSaveField(form, songData, metadata, checkboxes.artists, "artists")) {
                 update.artists = {
@@ -723,22 +704,16 @@ export default function SongEditorContextModal({
 
     const handleAlbumChange = useCallback((item: AutocompleteItem | string | null) => {
         if (item && typeof item !== 'string') {
-            const albumUpdate = {
-                id: item.id,
-                name: item.name,
-                artistId: item.artistId,
-                artistName: item.artistName,
-                coverId: item.coverId
-            };
+            // Picking a suggestion also fills in its album artist, which stays editable; typed text is just a name
             const albumArtistUpdate = item.artistId && item.artistName
                 ? {id: item.artistId, name: item.artistName}
                 : undefined;
             handleFormChange({
-                album: albumUpdate,
+                album: item.name,
                 ...(albumArtistUpdate !== undefined && {albumArtist: albumArtistUpdate})
             });
         } else {
-            handleFormChange({album: {id: 0, name: ""}});
+            handleFormChange({album: item ?? ""});
         }
     }, [handleFormChange]);
 
@@ -747,16 +722,7 @@ export default function SongEditorContextModal({
     const isAlbumArtistDisabled = useMemo(() => {
         if (!currentState) return true;
         
-        if (hasMetadata && !!currentState.metadata?.albumArtist && !currentState.checkboxes.albumArtist) {
-            return true;
-        }
-        
-        const albumId = currentState.form.album?.id;
-        if (albumId && albumId > 0) {
-            return true;
-        }
-        
-        return false;
+        return hasMetadata && !!currentState.metadata?.albumArtist && !currentState.checkboxes.albumArtist;
     }, [hasMetadata, currentState]);
     
     const metadataFieldCount = useMemo(() => {
@@ -981,14 +947,15 @@ export default function SongEditorContextModal({
                             <AutocompleteField
                                 label={t("songs:editModal.fields.album")}
                                 placeholder={t("songs:editModal.placeholders.album")}
-                                value={currentState.form.album?.name ? {id: currentState.form.album.id, name: currentState.form.album.name} : null}
+                                value={currentState.form.album ? {id: 0, name: currentState.form.album} : null}
                                 onChange={handleAlbumChange}
                                 onSearch={searchAlbums}
+                                freeText
                                 showArtwork
                                 testId="edit-song-album"
                                 disabled={hasMetadata && !!currentState.metadata?.album && !currentState.checkboxes.album}
                                 diffMode={hasMetadata && !!currentState.metadata?.album}
-                                originalValue={currentState.song.album ? { id: currentState.song.album.id, name: currentState.song.album.name } : null}
+                                originalValue={currentState.song.album ? { id: 0, name: currentState.song.album.name } : null}
                                 isChecked={currentState.checkboxes.album}
                                 onCheckChange={(checked) => handleCheckboxChange("album", checked)}
                                 originalDisplayValue={currentState.metadata?.album?.old?.name}
@@ -1250,12 +1217,12 @@ export default function SongEditorContextModal({
                                 }
                             }} 
                             loading={batchMultiUpdateSongs.isPending} 
-                            disabled={isLoading || modifiedCountUpToCurrent === 0}
+                            disabled={isLoading || modifiedCountUpToCurrent === 0 || isSaveBlockedByAlbumArtist}
                         >
                             {t("songs:editModal.saveModified", {count: modifiedCountUpToCurrent})}
                         </Button>
                     )}
-                    <Button onClick={isMultiSong ? handleSaveAll : () => handleSaveCurrent(true)} loading={isLoading} disabled={isMultiSong ? false : modifiedCountUpToCurrent === 0}>
+                    <Button onClick={isMultiSong ? handleSaveAll : () => handleSaveCurrent(true)} loading={isLoading} disabled={isSaveBlockedByAlbumArtist || (isMultiSong ? false : modifiedCountUpToCurrent === 0)}>
                         {isMultiSong ? t("songs:editModal.saveAll") : t("common:actions.save")}
                     </Button>
                 </Group>

@@ -73,8 +73,8 @@ public class DenormalizedCountsTests(ITestOutputHelper output) : IntegrationTest
         // Remove the featured artist again
         await new EditSongFlow("Burn With Me", new(Artists: ["Amaranthe"])).ExecuteAsync(Page);
 
-        // The removed artist should no longer count the song
-        await new ValidateArtistCountsFlow("Elize Ryd", songsCount: 0, albumsCount: 0).ExecuteAsync(Page);
+        // The removed artist, left without songs or albums, should be gone
+        await new ShouldArtistExistFlow("Elize Ryd", shouldExist: false).ExecuteAsync(Page);
         await new ValidateArtistCountsFlow("Amaranthe", songsCount: 1, albumsCount: 1).ExecuteAsync(Page);
     }
 

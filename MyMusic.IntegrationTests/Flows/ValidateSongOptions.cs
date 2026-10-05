@@ -8,4 +8,5 @@ public record ValidateSongOptions(
     bool? Explicit = null,
     string[]? Genres = null,
     string? RepositoryPath = null,
-    long? SongId = null);
+    long? SongId = null,
+    string? AlbumArtist = null);

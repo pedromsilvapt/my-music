@@ -41,6 +41,8 @@ interface AutocompleteFieldProps {
     originalDisplayValue?: string;
     leftSection?: React.ReactNode;
     testId?: string;
+    /** The value is the typed text itself: on blur it is never resolved to a suggestion with the same name. */
+    freeText?: boolean;
 }
 
 export default function AutocompleteField({
@@ -59,6 +61,7 @@ export default function AutocompleteField({
                                                 originalDisplayValue,
                                                  leftSection,
                                                  testId,
+                                                 freeText = false,
                                              }: AutocompleteFieldProps) {
     const {t} = useTranslation(["songs", "common"]);
     const [query, setQuery] = useState(value?.name || "");
@@ -109,7 +112,7 @@ export default function AutocompleteField({
         if (query === "") {
             onChange(null);
         } else if (value?.name !== query) {
-            const existingItem = items.find(item => item.name === query);
+            const existingItem = freeText ? undefined : items.find(item => item.name === query);
             if (existingItem) {
                 onChange(existingItem);
             } else {

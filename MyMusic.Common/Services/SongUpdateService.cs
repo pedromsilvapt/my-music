@@ -24,12 +24,19 @@ public interface ISongUpdateService
 public class SongUpdateService(
     ISongFileUpdateService songFileUpdate,
     IFileTransactionService fileTransactions,
+    IAdvisoryLockService advisoryLocks,
+    IAlbumUpsertService albumUpsert,
+    IAlbumDeleteService albumDelete,
+    IArtistDeleteService artistDelete,
+    IArtworkDeleteService artworkDelete,
     ILogger<SongUpdateService> logger) : ISongUpdateService
 {
 
     public async Task<SongUpdateResult> UpdateSong(MusicDbContext db, long songId, SongUpdateModel update,
         CancellationToken cancellationToken = default)
     {
+        // Declared first, so the locks are only released once the transaction has ended
+        await using var locks = new SongUpdateLocks();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await using var files = fileTransactions.Begin(db);
 
@@ -44,9 +51,11 @@ public class SongUpdateService(
         var oldChecksum = song.Checksum;
         var oldAlbumId = song.AlbumId;
         var oldArtistNames = song.Artists?.Select(a => a.Artist?.Name).ToList();
+        var oldArtistIds = GetAlbumAndSongArtistIds(song);
 
-        await ApplyUpdatesAsync(db, song, update, cancellationToken);
+        await ApplyUpdatesAsync(db, song, update, locks, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        await DeleteUnusedAlbumAndArtistsAsync(db, song, oldAlbumId, oldArtistIds, cancellationToken);
 
         // Reload the song to ensure navigation properties are correctly loaded after updates
         // This is necessary because EF Core might not preserve navigation properties after SaveChanges
@@ -93,6 +102,8 @@ public class SongUpdateService(
             };
         }
 
+        // Declared first, so the locks are only released once the transaction has ended
+        await using var locks = new SongUpdateLocks();
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await using var files = fileTransactions.Begin(db);
         try
@@ -101,9 +112,11 @@ public class SongUpdateService(
             var oldTitle = song.Title;
             var oldAlbumId = song.AlbumId;
             var oldArtistNames = song.Artists?.Select(a => a.Artist?.Name).ToList();
+            var oldArtistIds = GetAlbumAndSongArtistIds(song);
 
-            await ApplyUpdatesAsync(db, song, update, cancellationToken);
+            await ApplyUpdatesAsync(db, song, update, locks, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
+            await DeleteUnusedAlbumAndArtistsAsync(db, song, oldAlbumId, oldArtistIds, cancellationToken);
 
             var fileUpdate = await songFileUpdate.UpdateAsync(db, files, song,
                 () => BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames),
@@ -148,7 +161,7 @@ public class SongUpdateService(
     }
 
     private async Task ApplyUpdatesAsync(MusicDbContext db, Song song, SongUpdateModel update,
-        CancellationToken cancellationToken)
+        SongUpdateLocks locks, CancellationToken cancellationToken)
     {
         if (update.Title is not null)
         {
@@ -213,19 +226,9 @@ public class SongUpdateService(
             }
         }
 
-        if (update.Album is not null)
+        if (update.Album is not null || update.Artists is not null)
         {
-            await UpdateAlbumAsync(db, song, update.Album.NewValue, cancellationToken);
-        }
-
-        if (update.Artists is not null)
-        {
-            var artists = update.Artists.NewValue ?? [];
-            if (artists.Count == 0)
-            {
-                throw new ValidationException("Song must have at least one artist");
-            }
-            await UpdateArtistsAsync(db, song, artists, cancellationToken);
+            await UpdateAlbumAndArtistsAsync(db, song, update, locks, cancellationToken);
         }
 
         if (update.Genres is not null)
@@ -291,124 +294,218 @@ public class SongUpdateService(
         }
     }
 
-    private async Task UpdateAlbumAsync(MusicDbContext db, Song song, AlbumRef? albumRef, CancellationToken cancellationToken)
+    /// <summary>
+    ///     Applies the album and artists updates together, since they constrain each other: the album is found, or
+    ///     created, among the albums of its album artist, who must be one of the song's artists.
+    /// </summary>
+    private async Task UpdateAlbumAndArtistsAsync(MusicDbContext db, Song song, SongUpdateModel update,
+        SongUpdateLocks locks, CancellationToken cancellationToken)
     {
-        if (albumRef is null)
+        var artistRefs = update.Artists?.NewValue;
+        if (update.Artists is not null && artistRefs is not { Count: > 0 })
         {
-            throw new ValidationException("Song must belong to an album");
+            throw new ValidationException("Song must have at least one artist");
         }
 
-        Album? album = null;
+        var albumRef = update.Album is null ? null : update.Album.NewValue ?? new AlbumRef();
+        var albumArtistRef = IsEmpty(albumRef?.Artist) ? null : albumRef!.Artist;
 
-        if (albumRef.Id.HasValue)
+        // Artists referenced by id are loaded first: their names are part of the lock keys
+        var artistsById = new Dictionary<long, Artist>();
+        foreach (var artistRef in (artistRefs ?? []).Append(albumArtistRef))
         {
-            album = await db.Albums.FindAsync([albumRef.Id.Value], cancellationToken);
-            if (album is null)
+            if (artistRef?.Id is { } artistId && !artistsById.ContainsKey(artistId)
+                && await db.Artists.FindAsync([artistId], cancellationToken) is { } artist)
             {
-                throw new ValidationException($"Album with ID {albumRef.Id.Value} not found");
+                artistsById[artistId] = artist;
             }
         }
-        else if (!string.IsNullOrEmpty(albumRef.Name))
+
+        if (albumArtistRef?.Id is { } albumArtistId && !artistsById.ContainsKey(albumArtistId))
         {
-            album = await db.Albums
-                .FirstOrDefaultAsync(a => a.Name == albumRef.Name && a.OwnerId == song.OwnerId, cancellationToken);
+            throw new ValidationException($"Album artist with ID {albumArtistId} not found");
+        }
 
-            if (album == null)
+        string? NameOf(ArtistRef artistRef) =>
+            artistRef.Id is { } id ? artistsById.GetValueOrDefault(id)?.Name : artistRef.Name;
+
+        var albumName = albumRef is null
+            ? song.Album.Name
+            : string.IsNullOrEmpty(albumRef.Name) ? Album.PlaceholderName : albumRef.Name;
+        var albumArtistName = albumArtistRef is null ? song.Album.Artist.Name : NameOf(albumArtistRef)!;
+
+        // The same keys a song import takes, so neither can find-or-create the same artist or album concurrently
+        var lockKeys = (artistRefs ?? [])
+            .Select(NameOf)
+            .Where(name => !string.IsNullOrEmpty(name))
+            .Append(albumArtistName)
+            .Distinct()
+            .Select(name => AdvisoryLockKey.Create(AdvisoryLockScope.Artist, song.OwnerId, name!))
+            .Append(AdvisoryLockKey.Create(AdvisoryLockScope.Album, song.OwnerId, albumArtistName, albumName));
+
+        locks.Handle = await advisoryLocks.AcquireTransactionLocksAsync(db, lockKeys, cancellationToken);
+
+        // Artist names are not unique: a name resolves to the same artist everywhere in this update, preferring an
+        // artist the update also references by id
+        var artistsByName = new Dictionary<string, Artist>();
+        foreach (var artist in artistsById.Values)
+        {
+            artistsByName.TryAdd(artist.Name, artist);
+        }
+
+        async Task<Artist?> ResolveAsync(ArtistRef artistRef)
+        {
+            if (artistRef.Id is { } id)
             {
-                Artist? albumArtist = null;
+                return artistsById.GetValueOrDefault(id);
+            }
 
-                if (!string.IsNullOrEmpty(albumRef.ArtistName))
-                {
-                    albumArtist = await GetOrCreateArtistAsync(db, albumRef.ArtistName, song.OwnerId, cancellationToken);
-                }
-                else if (song.Album.Artist != null)
-                {
-                    albumArtist = song.Album.Artist;
-                }
-                else
-                {
-                    var firstArtist = song.Artists.FirstOrDefault()?.Artist;
-                    if (firstArtist != null)
-                    {
-                        albumArtist = firstArtist;
-                    }
-                    else
-                    {
-                        albumArtist = await GetOrCreateArtistAsync(db, "Unknown Artist", song.OwnerId, cancellationToken);
-                    }
-                }
+            if (string.IsNullOrEmpty(artistRef.Name))
+            {
+                return null;
+            }
 
-                album = new Album
+            if (!artistsByName.TryGetValue(artistRef.Name, out var artist))
+            {
+                artist = await GetOrCreateArtistAsync(db, artistRef.Name, song.OwnerId, cancellationToken);
+                artistsByName[artistRef.Name] = artist;
+            }
+
+            return artist;
+        }
+
+        var artists = song.Artists.Select(sa => sa.Artist).ToList();
+        if (artistRefs is not null)
+        {
+            artists = [];
+            foreach (var artistRef in artistRefs)
+            {
+                if (await ResolveAsync(artistRef) is { } artist && !artists.Contains(artist))
                 {
-                    Name = albumRef.Name,
-                    Artist = albumArtist!,
-                    ArtistId = albumArtist!.Id,
-                    OwnerId = song.OwnerId,
-                    Owner = song.Owner,
-                    CreatedAt = DateTime.UtcNow,
-                };
-                await db.AddAsync(album, cancellationToken);
+                    artists.Add(artist);
+                }
+            }
+
+            if (artists.Count == 0)
+            {
+                throw new ValidationException("Song must have at least one valid artist");
             }
         }
-        else
+
+        var albumArtist = albumArtistRef is null ? song.Album.Artist : (await ResolveAsync(albumArtistRef))!;
+
+        if (!artists.Contains(albumArtist))
         {
-            throw new ValidationException("Album reference must have either Id or Name");
+            throw new ValidationException(
+                $"The album artist '{albumArtist.Name}' must be one of the song's artists.");
         }
 
+        if (artistRefs is not null)
+        {
+            db.SongArtists.RemoveRange(song.Artists);
+
+            song.Artists = artists.Select(a => new SongArtist
+            {
+                Song = song,
+                SongId = song.Id,
+                Artist = a,
+                ArtistId = a.Id,
+            }).ToList();
+        }
+
+        var album = await albumUpsert.UpsertAsync(db, song.OwnerId, albumName, albumArtist, cancellationToken);
         song.Album = album;
         song.AlbumId = album.Id;
     }
 
-    private async Task UpdateArtistsAsync(MusicDbContext db, Song song, List<ArtistRef> artistRefs,
+    private static bool IsEmpty(ArtistRef? artistRef) =>
+        artistRef is null || (artistRef.Id is null && string.IsNullOrEmpty(artistRef.Name));
+
+    private static async Task<Artist> GetOrCreateArtistAsync(MusicDbContext db, string name, long ownerId,
         CancellationToken cancellationToken)
     {
-        var artists = new List<Artist>();
+        var artist = await db.Artists
+            .OrderBy(a => a.Id)
+            .FirstOrDefaultAsync(a => a.Name == name && a.OwnerId == ownerId, cancellationToken);
 
-        foreach (var artistRef in artistRefs)
+        if (artist != null)
         {
-            Artist? artist = null;
-
-            if (artistRef.Id.HasValue)
-            {
-                artist = await db.Artists.FindAsync([artistRef.Id.Value], cancellationToken);
-            }
-            else if (!string.IsNullOrEmpty(artistRef.Name))
-            {
-                artist = await GetOrCreateArtistAsync(db, artistRef.Name, song.OwnerId, cancellationToken);
-            }
-
-            if (artist is not null && !artists.Any(a => a.Id == artist.Id))
-            {
-                artists.Add(artist);
-            }
+            return artist;
         }
 
-        if (artists.Count == 0)
+        artist = new Artist
         {
-            throw new ValidationException("Song must have at least one valid artist");
+            Name = name,
+            OwnerId = ownerId,
+            CreatedAt = DateTime.UtcNow,
+        };
+        await db.AddAsync(artist, cancellationToken);
+
+        return artist;
+    }
+
+    private static long[] GetAlbumAndSongArtistIds(Song song) =>
+        song.Artists.Select(sa => sa.ArtistId).Append(song.Album.ArtistId).Distinct().ToArray();
+
+    /// <summary>
+    ///     Deletes the album and the artists the saved <paramref name="song"/> moved away from, when nothing else uses
+    ///     them anymore, along with their artworks.
+    /// </summary>
+    private async Task DeleteUnusedAlbumAndArtistsAsync(MusicDbContext db, Song song, long oldAlbumId,
+        long[] oldArtistIds, CancellationToken cancellationToken)
+    {
+        long[] albumIds = oldAlbumId != song.AlbumId ? [oldAlbumId] : [];
+        var artistIds = oldArtistIds.Except(GetAlbumAndSongArtistIds(song)).ToArray();
+
+        if (albumIds.Length == 0 && artistIds.Length == 0)
+        {
+            return;
         }
 
-        // Validate that the album artist remains in the song's artist list
-        if (song.Album?.Artist != null)
+        var albumArtworkIds = await db.Albums
+            .Where(a => albumIds.Contains(a.Id) && a.CoverId != null)
+            .Select(a => a.CoverId!.Value)
+            .ToListAsync(cancellationToken);
+        var artistArtworks = await db.Artists
+            .Where(a => artistIds.Contains(a.Id) && (a.PhotoId != null || a.BackgroundId != null))
+            .Select(a => new { a.PhotoId, a.BackgroundId })
+            .ToListAsync(cancellationToken);
+
+        // Albums first: an artist is only unused once it has no albums left
+        var deletedAlbumIds = await albumDelete.DeleteIfUnusedAsync(albumIds, cancellationToken);
+        var deletedArtistIds = await artistDelete.DeleteIfUnusedAsync(artistIds, cancellationToken);
+
+        if (deletedAlbumIds.Length == 0 && deletedArtistIds.Length == 0)
         {
-            var albumArtistInNewList = artists.Any(a => a.Id == song.Album.Artist.Id);
-            if (!albumArtistInNewList)
-            {
-                throw new ValidationException(
-                    $"Cannot remove the album artist '{song.Album.Artist.Name}' from the song's artist list. " +
-                    "The album artist must remain as one of the song's artists.");
-            }
+            return;
         }
 
-        db.SongArtists.RemoveRange(song.Artists);
+        var artworkIds = artistArtworks
+            .SelectMany(a => new[] { a.PhotoId, a.BackgroundId })
+            .OfType<long>()
+            .Concat(albumArtworkIds)
+            .Distinct()
+            .ToArray();
+        await artworkDelete.DeleteIfUnusedAsync(artworkIds, cancellationToken);
 
-        song.Artists = artists.Select(a => new SongArtist
+        // They were deleted directly in the database: stop tracking them, so later updates on this context cannot
+        // pick them up again
+        var deletedEntries = db.ChangeTracker.Entries()
+            .Where(entry => entry.Entity is Album album && deletedAlbumIds.Contains(album.Id)
+                            || entry.Entity is Artist artist && deletedArtistIds.Contains(artist.Id))
+            .ToList();
+        foreach (var entry in deletedEntries)
         {
-            Song = song,
-            SongId = song.Id,
-            Artist = a,
-            ArtistId = a.Id,
-        }).ToList();
+            entry.State = EntityState.Detached;
+        }
+    }
+
+    /// <summary>Holds the advisory locks of an update until its transaction has ended.</summary>
+    private sealed class SongUpdateLocks : IAsyncDisposable
+    {
+        public IAsyncDisposable? Handle { get; set; }
+
+        public ValueTask DisposeAsync() => Handle?.DisposeAsync() ?? ValueTask.CompletedTask;
     }
 
     private async Task UpdateGenresAsync(MusicDbContext db, Song song, List<GenreRef> genreRefs,
@@ -444,28 +541,6 @@ public class SongUpdateService(
             Genre = g,
             GenreId = g.Id,
         }).ToList();
-    }
-
-    private async Task<Artist> GetOrCreateArtistAsync(MusicDbContext db, string name, long ownerId,
-        CancellationToken cancellationToken)
-    {
-        var artist = await db.Artists
-            .FirstOrDefaultAsync(a => a.Name == name && a.OwnerId == ownerId, cancellationToken);
-
-        if (artist != null)
-        {
-            return artist;
-        }
-
-        artist = new Artist
-        {
-            Name = name,
-            OwnerId = ownerId,
-            CreatedAt = DateTime.UtcNow,
-        };
-        await db.AddAsync(artist, cancellationToken);
-
-        return artist;
     }
 
     private async Task<Genre> GetOrCreateGenreAsync(MusicDbContext db, string name, long ownerId,

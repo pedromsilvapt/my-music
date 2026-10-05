@@ -3,6 +3,7 @@ import type { ArtworkRef } from "../../model/artworkRef";
 import type {
     SongMetadataDiff,
 } from "../../model/songMetadataDiff";
+import type { ValueUpdateOfAlbumRef } from "../../model/valueUpdateOfAlbumRef";
 import type { AutocompleteItem } from "./autocomplete-field";
 import type { TagsAutocompleteItem } from "./tags-autocomplete-field";
 
@@ -43,7 +44,8 @@ export interface FormState {
     cover: ArtworkRef | null;
     coverUrl?: string;
     coverDimensions: { width: number; height: number } | null;
-    album: AutocompleteItem | null;
+    /** An album is edited by name only: on save, it is found or created among the albums of the album artist. */
+    album: string;
     albumArtist: AutocompleteItem | null;
     artists: TagsAutocompleteItem[];
     genres: TagsAutocompleteItem[];
@@ -65,7 +67,7 @@ export function createInitialFormState(): FormState {
         explicit: false,
         cover: null,
         coverDimensions: null,
-        album: null,
+        album: "",
         albumArtist: null,
         artists: [],
         genres: [],
@@ -98,7 +100,7 @@ export function formStateFromSong(song: GetSongResponseSong): FormState {
         coverDimensions: song.coverDetails
             ? { width: song.coverDetails.width, height: song.coverDetails.height }
             : null,
-        album: song.album ? { id: song.album.id, name: song.album.name } : null,
+        album: song.album?.name ?? "",
         albumArtist: song.album?.artist
             ? { id: song.album.artist.id, name: song.album.artist.name }
             : null,
@@ -139,10 +141,7 @@ export function formStateFromMetadata(
         }
     }
     if (metadata.album) {
-        form.album = {
-            id: -1,
-            name: metadata.album.new?.name ?? "",
-        };
+        form.album = metadata.album.new?.name ?? "";
         if (metadata.album.new?.artistName) {
             form.albumArtist = {
                 id: -1,
@@ -232,14 +231,8 @@ export function isFieldDifferentFromSong(
             if (form.cover === null && song.cover == null) return false;
             if (form.cover?.id != null && form.cover.id === song.cover) return false;
             return true;
-        case "album": {
-            if (!form.album && !song.album) return false;
-            if (!form.album || !song.album) return true;
-            if (form.album.id > 0) {
-                return form.album.id !== song.album.id;
-            }
-            return form.album.name !== song.album.name;
-        }
+        case "album":
+            return form.album !== (song.album?.name ?? "");
         case "albumArtist": {
             const songAlbumArtist = song.album?.artist;
             if (!form.albumArtist && !songAlbumArtist) return false;
@@ -277,6 +270,53 @@ export function shouldSaveField(
         return checkbox;
     }
     return isFieldDifferentFromSong(form, song, field as keyof FormState);
+}
+
+/**
+ * The album and its album artist are saved together, since the album is looked up among the albums of that artist.
+ * A half that is not being saved keeps the song's current value.
+ */
+export function buildAlbumUpdate(
+    form: FormState,
+    song: GetSongResponseSong,
+    metadata: SongMetadataDiff | null,
+    checkboxes: FieldCheckboxes
+): ValueUpdateOfAlbumRef | undefined {
+    const saveAlbum = shouldSaveField(form, song, metadata, checkboxes.album, "album");
+    const saveAlbumArtist = shouldSaveField(form, song, metadata, checkboxes.albumArtist, "albumArtist");
+
+    if (!saveAlbum && !saveAlbumArtist) {
+        return undefined;
+    }
+
+    const albumArtist = saveAlbumArtist ? form.albumArtist : song.album?.artist;
+
+    return {
+        newValue: {
+            name: saveAlbum ? form.album : song.album?.name ?? "",
+            artist: albumArtist?.name
+                ? (albumArtist.id > 0 ? { id: albumArtist.id } : { name: albumArtist.name })
+                : null,
+        },
+    };
+}
+
+/**
+ * The name of the form's album artist when it is not one of the form's artists, which the server rejects.
+ */
+export function getAlbumArtistMismatch(form: FormState): string | null {
+    const albumArtist = form.albumArtist;
+
+    if (!albumArtist?.name || form.artists.length === 0) {
+        return null;
+    }
+
+    // Typed (not picked) artists have no id yet, and are matched by name on save
+    const isMatch = form.artists.some(artist =>
+        artist.id > 0 && albumArtist.id > 0 ? artist.id === albumArtist.id : artist.name === albumArtist.name
+    );
+
+    return isMatch ? null : albumArtist.name;
 }
 
 export function hasChangesToSave(

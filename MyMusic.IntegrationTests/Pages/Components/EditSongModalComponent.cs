@@ -46,6 +46,21 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         await albumInput.BlurAsync();
     }
 
+    /// <summary>
+    /// Types the album's name and picks, among the suggestions, the album of the given album artist.
+    /// </summary>
+    public async Task PickAlbumAsync(string album, string albumArtist)
+    {
+        var albumInput = Root.GetByTestId("edit-song-album");
+        await albumInput.ClearAsync();
+        await albumInput.FillAsync(album);
+
+        await Root.GetByRole(AriaRole.Option)
+            .Filter(new() { HasText = album })
+            .Filter(new() { HasText = albumArtist })
+            .ClickAsync();
+    }
+
     public async Task SetAlbumArtistAsync(string albumArtist)
     {
         var albumArtistInput = Root.GetByTestId("edit-song-album-artist");

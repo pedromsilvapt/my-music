@@ -74,5 +74,12 @@ public class ValidateSongDetailsFlow : IFlow
             var songId = await songDetails.GetIdAsync();
             songId.ShouldBe(_expected.SongId.Value, "Song id should match the expected value");
         }
+
+        // Checked last: the album artist is only shown on the album's own page
+        if (_expected.AlbumArtist is not null)
+        {
+            var albumDetails = await songDetails.ClickAlbumLinkAsync();
+            await Assertions.Expect(albumDetails.Artist).ToHaveTextAsync(_expected.AlbumArtist);
+        }
     }
 }

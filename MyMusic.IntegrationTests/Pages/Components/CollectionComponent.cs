@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 
 namespace MyMusic.IntegrationTests.Pages.Components;
@@ -228,6 +229,13 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         var row = cell.Locator("ancestor::tr").First;
         await row.ClickAsync(new() { Button = MouseButton.Right });
     }
+
+    /// <summary>
+    /// The cells of a column whose text is exactly the specified text.
+    /// </summary>
+    public ILocator GetCellsByExactText(string columnName, string cellText) =>
+        Root.Locator($"td[data-testid^='collection-cell-{columnName}-']")
+            .Filter(new() { HasTextRegex = new Regex($@"^\s*{Regex.Escape(cellText)}\s*$") });
 
     /// <summary>
     /// Checks if any cell in the collection contains the specified text.

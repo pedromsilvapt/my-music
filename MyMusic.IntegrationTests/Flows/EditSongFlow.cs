@@ -53,7 +53,11 @@ public class EditSongFlow : IFlow
             await editModal.SetExplicitAsync(_edit.Explicit.Value);
         }
 
-        if (_edit.Album is not null)
+        if (_edit.Album is not null && _edit.AlbumSuggestionOf is not null)
+        {
+            await editModal.PickAlbumAsync(_edit.Album, _edit.AlbumSuggestionOf);
+        }
+        else if (_edit.Album is not null)
         {
             await editModal.SetAlbumAsync(_edit.Album);
         }

@@ -347,9 +347,9 @@ public class MyTests : IntegrationTestBase
 - **Genres**: lock-free. `UserMusicService.UpsertGenre` uses `INSERT ... ON CONFLICT DO NOTHING` on the unique `(owner_id, name)` index. Upsert them in a stable (sorted) order.
 - **Artists and albums**: their names cannot be unique, so no constraint can protect them. The import takes **advisory locks** (`IAdvisoryLockService`, `pg_advisory_xact_lock`) on the song's artist names, album, checksum, repository path and (when updating) song id, before touching the database. Songs that share none of these keys import in parallel.
 - **Per-user cap**: `IUserImportThrottle` limits concurrent song imports per user (`MyMusic:MaxConcurrentImportsPerUser`, default 16). This bounds DB connections and I/O; correctness does not depend on it.
-- **Retries**: a song failing with a deadlock, serialization failure or unique violation (e.g. against writers that don't take the locks, such as song edits) is rolled back and retried up to 3 times. The rolled-back attempt's tracked entities are discarded, and its file changes undone (see [Transactional file operations](#transactional-file-operations)).
+- **Retries**: a song failing with a deadlock, serialization failure or unique violation (e.g. against writers that don't take the locks) is rolled back and retried up to 3 times. The rolled-back attempt's tracked entities are discarded, and its file changes undone (see [Transactional file operations](#transactional-file-operations)).
 
-New code that finds-or-creates artists or albums should take the same `AdvisoryLockKey`s. Unit tests run on SQLite, which has no advisory locks, so they use `InProcessAdvisoryLockService` (in `MyMusic.Common.Tests/Utilities`) instead.
+New code that finds-or-creates artists or albums should take the same `AdvisoryLockKey`s. Song edits (`SongUpdateService`) do: an edit references its album by name and album artist, never by id, and finds-or-creates it among that artist's albums through `IAlbumUpsertService`. The album artist must be one of the song's artists, and the album and artists an edit leaves unused are deleted. Unit tests run on SQLite, which has no advisory locks, so they use `InProcessAdvisoryLockService` (in `MyMusic.Common.Tests/Utilities`) instead.
 
 ### Transactional file operations
 

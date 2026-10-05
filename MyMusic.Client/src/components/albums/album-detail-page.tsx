@@ -47,7 +47,7 @@ export default function AlbumDetailPage() {
                 />
                 <Stack gap="xs">
                     <Text size="xl" fw={700}>{album.name}</Text>
-                    <Anchor component={Link} to={`/artists/${album.artistId}`} size="sm">{album.artistName}</Anchor>
+                    <Anchor component={Link} to={`/artists/${album.artistId}`} size="sm" data-testid="album-artist">{album.artistName}</Anchor>
                     <Group gap="md">
                         {album.year && <Text size="sm" c="dimmed">{album.year}</Text>}
                         <Text size="sm" c="dimmed" data-testid="album-songs-count" data-count={album.songsCount}>{t("albums:detail.songsCount", {count: album.songsCount})}</Text>

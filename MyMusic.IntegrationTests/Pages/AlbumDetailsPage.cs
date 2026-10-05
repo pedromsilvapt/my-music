@@ -9,6 +9,8 @@ public class AlbumDetailsPage(IPage page) : BasePage(page, "album-detail")
 
     public ILocator SongsCount => Root.GetByTestId("album-songs-count");
 
+    public ILocator Artist => Root.GetByTestId("album-artist");
+
     public async Task WaitForLoadedAsync()
     {
         await Root.WaitForAsync(new() { Timeout = 10000 });
