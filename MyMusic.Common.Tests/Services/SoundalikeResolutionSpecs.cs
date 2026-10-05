@@ -908,6 +908,39 @@ public class SoundalikeResolutionSpecs
         scenario.DbContext.Songs.First(s => s.Id == primary.Id).FileModifiedAt.ShouldBe(Utc(2020));
     }
 
+    [Fact]
+    public async Task Resolve_WithoutNonConformity_MergesTheSongsAndLeavesNonConformitiesAlone()
+    {
+        // Arrange: songs picked by the user rather than detected, next to an unrelated soundalike group
+        var scenario = new Scenario();
+        var mergeService = Substitute.For<ISoundalikeMergeService>();
+        var service = CreateService(mergeService);
+        var primary = scenario.CreateSong("Primary");
+        var secondary = scenario.CreateSong("Secondary");
+        var unrelated = CreateNonConformity(scenario.DbContext, scenario.AdminUser.Id);
+
+        var resolution = new GroupResolutionInput
+        {
+            NonConformityId = null,
+            PrimarySongId = primary.Id,
+            SecondaryActions = [new SecondarySongActionInput { SongId = secondary.Id, Action = SecondaryAction.Merge }]
+        };
+
+        // Act
+        var resolved = await service.ResolveAsync(scenario.DbContext, scenario.AdminUser.Id, [resolution]);
+
+        // Assert: the secondary is merged away like a detected soundalike would be
+        resolved.ShouldBe(1);
+        await mergeService.Received(1).MergeMetadataAsync(
+            scenario.DbContext,
+            Arg.Is<Song>(s => s.Id == primary.Id),
+            Arg.Is<List<Song>>(l => l.Any(s => s.Id == secondary.Id)),
+            Arg.Any<CancellationToken>());
+        scenario.DbContext.Songs.Select(s => s.Id).ToList().ShouldBe([primary.Id]);
+        scenario.DbContext.SongMerges.ShouldHaveSingleItem().Kind.ShouldBe(SongMergeKind.SoundalikeMerge);
+        scenario.DbContext.AuditNonConformities.Select(nc => nc.Id).ToList().ShouldBe([unrelated.Id]);
+    }
+
     #region Helper Methods
 
     private static DateTime Utc(int year) => new(year, 1, 1, 0, 0, 0, DateTimeKind.Utc);

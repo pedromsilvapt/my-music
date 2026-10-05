@@ -66,6 +66,18 @@ public record SoundalikeSongItem
     }
 }
 
+public record MatchSoundalikesRequest
+{
+    public required List<long> SongIds { get; init; }
+}
+
+public record MatchSoundalikesResponse
+{
+    /// <summary>The lowest score between any two of the songs, or null when it could not be computed.</summary>
+    public required double? MatchScore { get; init; }
+    public required List<SoundalikeSongItem> Songs { get; init; }
+}
+
 public record SecondarySongAction
 {
     public required long SongId { get; init; }
@@ -79,7 +91,8 @@ public record ResolveSoundalikesRequest
 
 public record GroupResolution
 {
-    public required long NonConformityId { get; init; }
+    /// <summary>The soundalike non-conformity being resolved, or null when the songs were picked by the user.</summary>
+    public long? NonConformityId { get; init; }
     public required long PrimarySongId { get; init; }
     public required List<SecondarySongAction> SecondaryActions { get; init; }
 }

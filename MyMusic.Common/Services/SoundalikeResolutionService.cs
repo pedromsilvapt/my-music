@@ -205,12 +205,15 @@ public class SoundalikeResolutionService(
             var secondaries = songs.Where(s => secondaryIds.Contains(s.Id)).ToList();
             db.Songs.RemoveRange(secondaries);
 
-            var nonConformity = await db.AuditNonConformities
-                .FirstOrDefaultAsync(nc => nc.Id == resolution.NonConformityId && nc.OwnerId == ownerId,
-                    cancellationToken);
-            if (nonConformity != null)
+            if (resolution.NonConformityId is { } nonConformityId)
             {
-                db.AuditNonConformities.Remove(nonConformity);
+                var nonConformity = await db.AuditNonConformities
+                    .FirstOrDefaultAsync(nc => nc.Id == nonConformityId && nc.OwnerId == ownerId,
+                        cancellationToken);
+                if (nonConformity != null)
+                {
+                    db.AuditNonConformities.Remove(nonConformity);
+                }
             }
 
             if (mergeActions.Count > 0)

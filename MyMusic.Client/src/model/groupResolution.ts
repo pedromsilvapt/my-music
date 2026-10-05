@@ -7,8 +7,11 @@ OpenAPI spec version: 1.0.0
 */import type { SecondarySongAction } from './secondarySongAction';
 
 export interface GroupResolution {
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  nonConformityId: number;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  nonConformityId?: number | null;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   primarySongId: number;
   secondaryActions: SecondarySongAction[];

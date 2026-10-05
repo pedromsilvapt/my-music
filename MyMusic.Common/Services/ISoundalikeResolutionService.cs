@@ -9,7 +9,8 @@ public interface ISoundalikeResolutionService
 
 public record GroupResolutionInput
 {
-    public required long NonConformityId { get; init; }
+    /// <summary>The soundalike non-conformity being resolved, or null when the songs were picked by the user.</summary>
+    public long? NonConformityId { get; init; }
     public required long PrimarySongId { get; init; }
     public required List<SecondarySongActionInput> SecondaryActions { get; init; }
 }

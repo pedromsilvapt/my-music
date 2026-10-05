@@ -207,6 +207,8 @@ export * from './listWishlistResponse';
 export * from './managePlaylistSharesRequest';
 export * from './managePlaylistSharesResponse';
 export * from './managePlaylistSongsRequest';
+export * from './matchSoundalikesRequest';
+export * from './matchSoundalikesResponse';
 export * from './metadataFetchFailureReason';
 export * from './metadataQueueStatusResponse';
 export * from './playlistAction';

@@ -43,6 +43,7 @@
         "instructions": "Clique numa música para a marcar como a que é mantida, na qual as outras são fundidas. Depois escolha uma ação para cada música restante: eliminar, fundir metadados e eliminar, ou ignorar (fica intacta e deixa de ser reportada como duplicada da música mantida).",
         "noDuplicates": "Sem músicas duplicadas detetadas",
         "matchScore": "Pontuação de Correspondência: {{score}}%",
+        "matchScoreUnavailable": "Pontuação de Correspondência: indisponível",
         "unknownAlbum": "Álbum Desconhecido",
         "lyrics": "Letra",
         "resolveGroup": "Resolver este grupo",

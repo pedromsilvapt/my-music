@@ -299,36 +299,49 @@ public class AcousticFingerprintService(
 
         foreach (var group in groups)
         {
-            var pairwiseScores = new Dictionary<string, double>();
-            var fingerprints = new Dictionary<long, uint[]>();
-
-            foreach (var song in group)
-            {
-                var fp = await GetOrCreateFingerprintAsync(song, ct: ct);
-                if (fp != null)
-                {
-                    fingerprints[song.Id] = FingerprintEncoding.FromBytes(fp.Fingerprint);
-                }
-            }
-
-            for (var i = 0; i < group.Count; i++)
-            {
-                for (var j = i + 1; j < group.Count; j++)
-                {
-                    var songA = group[i];
-                    var songB = group[j];
-
-                    if (fingerprints.TryGetValue(songA.Id, out var fpA) &&
-                        fingerprints.TryGetValue(songB.Id, out var fpB))
-                    {
-                        var (score, _, _) = CompareFingerprints(fpA, fpB, false);
-                        var key = $"{Math.Min(songA.Id, songB.Id)}-{Math.Max(songA.Id, songB.Id)}";
-                        pairwiseScores[key] = score;
-                    }
-                }
-            }
+            var pairwiseScores = await ComputePairwiseScoresAsync(group, ct);
 
             yield return (group, pairwiseScores);
         }
+    }
+
+    /// <summary>
+    /// Compares every pair of the given songs by their acoustic fingerprints. The scores are keyed by
+    /// <c>"{lowerSongId}-{higherSongId}"</c>; pairs with a song that cannot be fingerprinted are left out.
+    /// </summary>
+    public async Task<Dictionary<string, double>> ComputePairwiseScoresAsync(
+        IReadOnlyList<Song> group,
+        CancellationToken ct = default)
+    {
+        var pairwiseScores = new Dictionary<string, double>();
+        var fingerprints = new Dictionary<long, uint[]>();
+
+        foreach (var song in group)
+        {
+            var fp = await GetOrCreateFingerprintAsync(song, ct: ct);
+            if (fp != null)
+            {
+                fingerprints[song.Id] = FingerprintEncoding.FromBytes(fp.Fingerprint);
+            }
+        }
+
+        for (var i = 0; i < group.Count; i++)
+        {
+            for (var j = i + 1; j < group.Count; j++)
+            {
+                var songA = group[i];
+                var songB = group[j];
+
+                if (fingerprints.TryGetValue(songA.Id, out var fpA) &&
+                    fingerprints.TryGetValue(songB.Id, out var fpB))
+                {
+                    var (score, _, _) = CompareFingerprints(fpA, fpB, false);
+                    var key = $"{Math.Min(songA.Id, songB.Id)}-{Math.Max(songA.Id, songB.Id)}";
+                    pairwiseScores[key] = score;
+                }
+            }
+        }
+
+        return pairwiseScores;
     }
 }

@@ -132,6 +132,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IImageComparisonService, ImageComparisonService>();
         builder.Services.AddScoped<ISoundalikeMergeService, SoundalikeMergeService>();
         builder.Services.AddScoped<ISoundalikeResolutionService, SoundalikeResolutionService>();
+        builder.Services.AddScoped<ISoundalikeMatchService, SoundalikeMatchService>();
         builder.Services.AddScoped<MetadataDiffBuilder>();
 
         // Audit services

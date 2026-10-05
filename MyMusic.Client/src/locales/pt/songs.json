@@ -139,6 +139,7 @@
         "editSingle": "Editar Música",
         "editPlural": "Editar {{count}} Músicas",
         "editTitle": "Editar Música",
+        "merge": "Fundir {{count}} Músicas",
         "goToDetails": "Ver Detalhes",
         "manageGroup": "Gerir",
         "queueGroup": "Fila",
@@ -165,5 +166,13 @@
             "createdAt": "Criado A",
             "addedAt": "Adicionado A"
         }
+    },
+    "merge": {
+        "title": "Fundir Músicas",
+        "instructions": "Clique na música a manter. As outras músicas são fundidas nela e removidas, a menos que escolha outra ação para elas.",
+        "confirm": "Fundir",
+        "success": "As músicas foram fundidas",
+        "failed": "Falha ao fundir as músicas: {{error}}",
+        "fetchFailed": "Falha ao comparar as músicas"
     }
 }

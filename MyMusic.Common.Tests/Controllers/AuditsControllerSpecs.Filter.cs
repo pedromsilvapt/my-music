@@ -196,7 +196,8 @@ public class AuditsControllerFilterSpecs
         var fingerprintService = new AcousticFingerprintService(db, fpcalcService, Substitute.For<ILogger<AcousticFingerprintService>>());
         var resolutionService = Substitute.For<ISoundalikeResolutionService>();
 
-        var controller = new AuditsController(currentUser, auditService, fingerprintService, resolutionService);
+        var controller = new AuditsController(currentUser, auditService, fingerprintService, resolutionService,
+            Substitute.For<ISoundalikeMatchService>());
         return (controller, db, user);
     }
 

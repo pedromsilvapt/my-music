@@ -1,18 +1,43 @@
+using System.Text.RegularExpressions;
 using Microsoft.Playwright;
 using MyMusic.IntegrationTests.Fixtures.Models;
 
 namespace MyMusic.IntegrationTests.Pages.Components;
 
 /// <summary>
-/// A group of soundalike songs in the soundalike audit page: one song is picked as the one to keep, and each of the
-/// others gets an action (delete by default).
+/// A group of soundalike songs, in the soundalike audit page or in the merge songs dialog: one song is picked as the
+/// one to keep, and each of the others gets an action.
 /// </summary>
 public class SoundalikeGroupComponent(ILocator root) : BaseComponent(root)
 {
     private ILocator Song(string title) => Root.GetByTestId("soundalike-song").Filter(new() { HasText = title });
 
     /// <summary>
-    /// Picks the song to keep. Every other song of the group is then set to be deleted.
+    /// The match score shown for the group, as a percentage, or null when it is shown as unavailable.
+    /// </summary>
+    public async Task<int?> GetMatchScoreAsync()
+    {
+        var match = Regex.Match(await Root.GetByTestId("soundalike-match-score").InnerTextAsync(), @"(\d+)%");
+        return match.Success ? int.Parse(match.Groups[1].Value) : null;
+    }
+
+    /// <summary>
+    /// The action currently chosen for a song that is not kept, or null when it has none.
+    /// </summary>
+    public async Task<SoundalikeAction?> GetActionAsync(string title)
+    {
+        foreach (var action in Enum.GetValues<SoundalikeAction>())
+        {
+            var badge = Song(title).GetByTestId($"soundalike-action-{action.ToString().ToLowerInvariant()}");
+            if (await badge.GetAttributeAsync("data-active") == "true")
+                return action;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Picks the song to keep. Every other song of the group then gets the default action.
     /// </summary>
     public async Task SelectPrimaryAsync(string title)
     {

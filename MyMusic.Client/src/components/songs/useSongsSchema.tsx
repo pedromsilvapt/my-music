@@ -1,6 +1,7 @@
 import {Anchor, Text} from "@mantine/core";
 import {
     IconArrowForward,
+    IconArrowMerge,
     IconArrowRightDashed,
     IconArrowsShuffle,
     IconDevicesCog,
@@ -307,6 +308,19 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                         });
                     },
                 },
+                ...(elems.length >= 2 && sharedSongs.length === 0 ? [{
+                    name: "merge",
+                    renderIcon: () => <IconArrowMerge/>,
+                    renderLabel: () => t("songs:schema.merge", {count: elems.length}),
+                    onClick: (songs: ListSongItem[]) => {
+                        modals.openContextModal({
+                            modal: 'song-merge',
+                            title: t("songs:merge.title"),
+                            size: 'lg',
+                            innerProps: { songIds: songs.map(s => s.id) },
+                        });
+                    },
+                }] : []),
                 {
                     name: "delete",
                     renderIcon: () => <IconTrash/>,

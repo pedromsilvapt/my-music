@@ -139,6 +139,7 @@
         "editSingle": "Edit Song",
         "editPlural": "Edit {{count}} Songs",
         "editTitle": "Edit Song",
+        "merge": "Merge {{count}} Songs",
         "goToDetails": "Go to Details",
         "manageGroup": "Manage",
         "queueGroup": "Queue",
@@ -165,5 +166,13 @@
             "createdAt": "Created At",
             "addedAt": "Added At"
         }
+    },
+    "merge": {
+        "title": "Merge Songs",
+        "instructions": "Click the song to keep. The other songs are merged into it and removed, unless you choose another action for them.",
+        "confirm": "Merge",
+        "success": "The songs were merged",
+        "failed": "Failed to merge the songs: {{error}}",
+        "fetchFailed": "Failed to compare the songs"
     }
 }

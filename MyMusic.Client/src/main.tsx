@@ -16,6 +16,7 @@ import {ArtworkLightboxProvider} from "./contexts/artwork-lightbox-context.tsx";
 import VolumeInitializer from "./components/volume-initializer.tsx";
 import QueueInitializer from "./components/queue-initializer.tsx";
 import SongEditorContextModal from "./components/songs/song-editor-context-modal.tsx";
+import SongMergeModal from "./components/songs/song-merge-modal.tsx";
 import SongVersionModal from "./components/songs/song-version-modal.tsx";
 import RenameQueueModal from "./components/queue/rename-queue-modal.tsx";
 import DeleteQueueModal from "./components/queue/delete-queue-modal.tsx";
@@ -52,6 +53,7 @@ createRoot(document.getElementById('root')!).render(
                             modals={{
                                 'song-editor': SongEditorContextModal,
                                 'song-version': SongVersionModal,
+                                'song-merge': SongMergeModal,
                                 'rename-queue': RenameQueueModal,
                                 'delete-queue': DeleteQueueModal,
                             }}>

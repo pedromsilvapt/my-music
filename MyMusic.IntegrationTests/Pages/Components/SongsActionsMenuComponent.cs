@@ -20,6 +20,11 @@ public class SongsActionsMenuComponent(ILocator root) : BaseComponent(root)
     public static Regex DeleteSongs { get; } = new(@"^Delete \d+ Songs$");
 
     /// <summary>
+    /// Matches the "Merge N Songs" menu item for any count via <c>\d+</c>.
+    /// </summary>
+    public static Regex MergeSongs { get; } = new(@"^Merge \d+ Songs$");
+
+    /// <summary>
     /// Matches the "Stop After This Song" menu item.
     /// </summary>
     public static Regex StopAfterThisSong { get; } = new("^Stop After This Song$");
@@ -69,6 +74,18 @@ public class SongsActionsMenuComponent(ILocator root) : BaseComponent(root)
     /// </summary>
     public Task DeleteAsync() =>
         ClickItemAsync(DeleteSongs);
+
+    /// <summary>
+    /// Clicks the "Merge N Songs" menu item, which opens the merge songs dialog.
+    /// </summary>
+    public async Task<SongMergeModalComponent> MergeAsync()
+    {
+        await ClickItemAsync(MergeSongs);
+
+        var modal = new SongMergeModalComponent(Root.Page.GetByRole(AriaRole.Dialog));
+        await modal.WaitForLoadedAsync();
+        return modal;
+    }
 
     /// <summary>
     /// Closes the menu by pressing Escape.

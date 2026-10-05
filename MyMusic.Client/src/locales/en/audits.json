@@ -43,6 +43,7 @@
         "instructions": "Click a song to mark it as the one to keep, which the others are merged into. Then choose an action for each remaining song: delete, merge metadata then delete, or ignore (left untouched, and no longer reported as a duplicate of the kept song).",
         "noDuplicates": "No duplicate songs detected",
         "matchScore": "Match Score: {{score}}%",
+        "matchScoreUnavailable": "Match Score: unavailable",
         "unknownAlbum": "Unknown Album",
         "lyrics": "Lyrics",
         "resolveGroup": "Resolve this group",

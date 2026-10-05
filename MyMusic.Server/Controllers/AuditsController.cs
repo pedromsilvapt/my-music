@@ -19,7 +19,8 @@ public class AuditsController(
     ICurrentUser currentUser,
     IAuditService auditService,
     AcousticFingerprintService fingerprintService,
-    ISoundalikeResolutionService resolutionService) : ControllerBase
+    ISoundalikeResolutionService resolutionService,
+    ISoundalikeMatchService matchService) : ControllerBase
 {
     [HttpGet("rules", Name = "ListAuditRules")]
     public async Task<ListAuditRulesResponse> ListRules(
@@ -222,6 +223,31 @@ public class AuditsController(
         }
 
         return Ok(new GetSoundalikeDuplicatesResponse { Groups = groups });
+    }
+
+    [HttpPost("soundalike/match", Name = "MatchSoundalikes")]
+    public async Task<ActionResult<MatchSoundalikesResponse>> MatchSoundalikes(
+        [FromBody] MatchSoundalikesRequest request,
+        MusicDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (request.SongIds.Distinct().Count() < 2)
+            return BadRequest("At least two songs are required");
+
+        try
+        {
+            var match = await matchService.MatchAsync(db, currentUser.Id, request.SongIds, cancellationToken);
+
+            return Ok(new MatchSoundalikesResponse
+            {
+                MatchScore = match.MatchScore,
+                Songs = match.Songs.Select(SoundalikeSongItem.FromEntity).ToList(),
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
     }
 
     [HttpPatch("soundalike/{nonConformityId:long}/selection", Name = "UpdateSoundalikeSelection")]

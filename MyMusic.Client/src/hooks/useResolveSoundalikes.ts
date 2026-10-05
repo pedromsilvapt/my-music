@@ -1,38 +1,29 @@
-import {useMutation, useQueryClient} from "@tanstack/react-query";
-import {
-    getResolveSoundalikesUrl,
-    getGetSoundalikeDuplicatesQueryKey,
-    getListAuditRulesQueryKey,
-} from "../client/audits.ts";
-import type {ResolveSoundalikesRequest} from "../model/resolveSoundalikesRequest.ts";
-import type {ResolveSoundalikesResponse} from "../model/resolveSoundalikesResponse.ts";
+import {useQueryClient} from "@tanstack/react-query";
+import {useResolveSoundalikes as useResolveSoundalikesMutation} from "../client/audits.ts";
+import {getListAlbumsQueryKey} from "../client/albums.ts";
+import {getListArtistsQueryKey} from "../client/artists.ts";
+import {getListPlaylistsQueryKey} from "../client/playlists.ts";
+import {getListSongsQueryKey} from "../client/songs.ts";
 
-async function resolveSoundalikes(
-    request: ResolveSoundalikesRequest,
-): Promise<ResolveSoundalikesResponse> {
-    const res = await fetch(getResolveSoundalikesUrl(), {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(request),
-    });
-
-    if (!res.ok) {
-        throw new Error(`Failed to resolve duplicates (${res.status})`);
-    }
-
-    const body = [204, 205, 304].includes(res.status) ? null : await res.text();
-    return body ? JSON.parse(body) : {resolvedCount: 0};
-}
-
+/**
+ * Resolves groups of soundalikes. On top of the audit queries the generated mutation refreshes, the songs merged
+ * away are gone from every songs, albums, artists and playlists query.
+ */
 export function useResolveSoundalikes() {
     const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: (request: ResolveSoundalikesRequest) =>
-            resolveSoundalikes(request),
-        onSuccess: () => {
-            queryClient.invalidateQueries({queryKey: getGetSoundalikeDuplicatesQueryKey()});
-            queryClient.invalidateQueries({queryKey: getListAuditRulesQueryKey()});
+    return useResolveSoundalikesMutation({
+        mutation: {
+            onSuccess: (response) => {
+                if (response.status >= 400) {
+                    throw new Error(`Failed to resolve duplicates (${response.status})`);
+                }
+
+                queryClient.invalidateQueries({queryKey: getListSongsQueryKey()});
+                queryClient.invalidateQueries({queryKey: getListAlbumsQueryKey()});
+                queryClient.invalidateQueries({queryKey: getListArtistsQueryKey()});
+                queryClient.invalidateQueries({queryKey: getListPlaylistsQueryKey()});
+            },
         },
     });
 }
