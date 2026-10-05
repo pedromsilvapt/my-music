@@ -13,6 +13,21 @@ public record SongUpdateModel
     public ValueUpdate<List<GenreRef>>? Genres { get; set; }
 }
 
+/// <summary>Options of <see cref="ISongUpdateService.UpdateSongsAsync"/>.</summary>
+public record SongUpdateOptions
+{
+    public static readonly SongUpdateOptions Default = new();
+
+    /// <summary>
+    ///     Albums that are not deleted when the updates leave them without songs, e.g. the album a larger operation is
+    ///     still working on.
+    /// </summary>
+    public IReadOnlyCollection<long> KeepAlbumIds { get; init; } = [];
+
+    /// <summary>Artists that are not deleted when the updates leave them without songs and albums.</summary>
+    public IReadOnlyCollection<long> KeepArtistIds { get; init; } = [];
+}
+
 public record SongUpdateResult
 {
     public required long Id { get; set; }

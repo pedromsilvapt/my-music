@@ -349,7 +349,29 @@ public class MyTests : IntegrationTestBase
 - **Per-user cap**: `IUserImportThrottle` limits concurrent song imports per user (`MyMusic:MaxConcurrentImportsPerUser`, default 16). This bounds DB connections and I/O; correctness does not depend on it.
 - **Retries**: a song failing with a deadlock, serialization failure or unique violation (e.g. against writers that don't take the locks) is rolled back and retried up to 3 times. The rolled-back attempt's tracked entities are discarded, and its file changes undone (see [Transactional file operations](#transactional-file-operations)).
 
-New code that finds-or-creates artists or albums should take the same `AdvisoryLockKey`s. Song edits (`SongUpdateService`) do: an edit references its album by name and album artist, never by id, and finds-or-creates it among that artist's albums through `IAlbumUpsertService`. The album artist must be one of the song's artists, and the album and artists an edit leaves unused are deleted. Unit tests run on SQLite, which has no advisory locks, so they use `InProcessAdvisoryLockService` (in `MyMusic.Common.Tests/Utilities`) instead.
+New code that finds-or-creates artists or albums should take the same `AdvisoryLockKey`s (build them with `AlbumArtistLockKeys.Create`). Song edits (`SongUpdateService`) do: an API edit references its album by name and album artist, never by id, and finds-or-creates it among that artist's albums through `IAlbumUpsertService`. The album artist must be one of the song's artists, and the album and artists an edit leaves unused are deleted. Unit tests run on SQLite, which has no advisory locks, so they use `InProcessAdvisoryLockService` (in `MyMusic.Common.Tests/Utilities`) instead.
+
+### Updating many songs in one transaction
+
+Operations that change what many songs say about themselves (renaming, merging or deleting an album or artist) must not rewrite tags, checksums, device marks, labels or paths themselves. They change the album/artist rows and push every affected song (`AlbumArtistSongsQuery.OfAlbum` / `OfArtist`) through `ISongUpdateService.UpdateSongsAsync`, which runs the same per-song update as a song edit, inside the caller's transaction:
+
+```csharp
+await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+await using var files = fileTransactions.Begin(db);
+
+// The handle must be disposed only after the transaction has ended (see SongUpdateService.SongUpdateLocks)
+var locks = await advisoryLocks.AcquireTransactionLocksAsync(db,
+    AlbumArtistLockKeys.Create(ownerId, artistNames, albums), cancellationToken);
+// ... change the album/artist rows ...
+await songUpdate.UpdateSongsAsync(db, files, updates, options, cancellationToken);
+await transaction.CommitAsync(cancellationToken);
+```
+
+- **All or nothing**: `UpdateSongsAsync` never commits and throws on the first failing song. Letting the transaction roll back restores every song's rows and files.
+- **Locks once, up front**: `UpdateSongsAsync` takes no artist/album locks. The caller acquires, in a single `AcquireTransactionLocksAsync` call (which orders them canonically), the keys of every artist name and (album artist name, album name) involved: old names, new names and placeholders. Acquiring them song by song could deadlock against imports.
+- **An empty `SongUpdateModel`** re-applies the song's current rows to its file: use it after renaming an album/artist row in place.
+- **Album by id**: `new AlbumRef { Id = ... }` moves a song to that exact album (owner-checked) instead of finding-or-creating one by name. It is server-side only, and is not read from API requests.
+- **`SongUpdateOptions.KeepAlbumIds` / `KeepArtistIds`** exclude rows from the unused album/artist cleanup, for rows the operation still needs while songs are moving.
 
 ### Transactional file operations
 

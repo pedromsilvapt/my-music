@@ -1,6 +1,5 @@
 using System.IO.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
@@ -18,6 +17,20 @@ public interface ISongUpdateService
         CancellationToken cancellationToken = default);
 
     Task<BatchUpdateResult> BatchUpdateSong(MusicDbContext db, long songId, SongUpdateModel update,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Updates several songs inside the transaction the caller already began on <paramref name="db"/>, with the
+    ///     file changes going to the caller's <paramref name="files"/>. Nothing is committed here, and the first
+    ///     failing song throws: the caller rolls back, undoing every song's rows and files.
+    /// </summary>
+    /// <remarks>
+    ///     No artist or album advisory locks are taken. The caller must already hold, from a single
+    ///     <see cref="IAdvisoryLockService.AcquireTransactionLocksAsync"/> call, the
+    ///     <see cref="AlbumArtistLockKeys"/> of every artist and album name the updates involve.
+    /// </remarks>
+    Task UpdateSongsAsync(MusicDbContext db, IFileTransaction files,
+        IEnumerable<(long SongId, SongUpdateModel Update)> updates, SongUpdateOptions? options = null,
         CancellationToken cancellationToken = default);
 }
 
@@ -40,6 +53,85 @@ public class SongUpdateService(
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         await using var files = fileTransactions.Begin(db);
 
+        var song = await UpdateSongCoreAsync(db, files, songId, update, locks, SongUpdateOptions.Default,
+            cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+
+        return MapToResult(song);
+    }
+
+    public async Task<BatchUpdateResult> BatchUpdateSong(MusicDbContext db, long songId, SongUpdateModel update,
+        CancellationToken cancellationToken = default)
+    {
+        if (!await db.Songs.AnyAsync(s => s.Id == songId, cancellationToken))
+        {
+            return new BatchUpdateResult
+            {
+                Id = songId,
+                Success = false,
+                Error = $"Song not found with id {songId}",
+            };
+        }
+
+        // Declared first, so the locks are only released once the transaction has ended
+        await using var locks = new SongUpdateLocks();
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await using var files = fileTransactions.Begin(db);
+        try
+        {
+            var song = await UpdateSongCoreAsync(db, files, songId, update, locks, SongUpdateOptions.Default,
+                cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+
+            return new BatchUpdateResult
+            {
+                Id = songId,
+                Success = true,
+                Song = MapToResult(song),
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to update song {SongId}", songId);
+            return new BatchUpdateResult
+            {
+                Id = songId,
+                Success = false,
+                Error = ex.Message,
+            };
+        }
+    }
+
+    public async Task UpdateSongsAsync(MusicDbContext db, IFileTransaction files,
+        IEnumerable<(long SongId, SongUpdateModel Update)> updates, SongUpdateOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (db.Database.CurrentTransaction is null)
+        {
+            throw new InvalidOperationException(
+                "Updating songs in an ambient transaction requires the caller to have begun one.");
+        }
+
+        foreach (var (songId, update) in updates)
+        {
+            await UpdateSongCoreAsync(db, files, songId, update, locks: null, options ?? SongUpdateOptions.Default,
+                cancellationToken);
+        }
+    }
+
+    /// <summary>
+    ///     Updates one song inside the current transaction of <paramref name="db"/>, without committing it: applies
+    ///     the update, deletes the album and artists it left unused, rewrites the file and moves it to its new path.
+    /// </summary>
+    /// <param name="locks">
+    ///     Receives the artist and album locks the update takes; <c>null</c> when the caller already holds them.
+    /// </param>
+    private async Task<Song> UpdateSongCoreAsync(MusicDbContext db, IFileTransaction files, long songId,
+        SongUpdateModel update, SongUpdateLocks? locks, SongUpdateOptions options,
+        CancellationToken cancellationToken)
+    {
         var song = await LoadSongAsync(db, songId, cancellationToken);
 
         if (song == null)
@@ -55,12 +147,12 @@ public class SongUpdateService(
 
         await ApplyUpdatesAsync(db, song, update, locks, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        await DeleteUnusedAlbumAndArtistsAsync(db, song, oldAlbumId, oldArtistIds, cancellationToken);
+        await DeleteUnusedAlbumAndArtistsAsync(db, song, oldAlbumId, oldArtistIds, options, cancellationToken);
 
         // Reload the song to ensure navigation properties are correctly loaded after updates
         // This is necessary because EF Core might not preserve navigation properties after SaveChanges
         db.Entry(song).State = EntityState.Detached;
-        song = await LoadSongAsync(db, songId, cancellationToken);
+        song = (await LoadSongAsync(db, songId, cancellationToken))!;
 
         var previousChecksum = song.Checksum;
         var fileUpdate = await songFileUpdate.UpdateAsync(db, files, song,
@@ -82,67 +174,14 @@ public class SongUpdateService(
         await db.SaveChangesAsync(cancellationToken);
         logger.LogInformation("Saved changes for song {SongId}", songId);
 
-        await CommitMovingFileAsync(transaction, files, fileUpdate.PreviousPath, song.RepositoryPath, cancellationToken);
-
-        return MapToResult(song);
-    }
-
-    public async Task<BatchUpdateResult> BatchUpdateSong(MusicDbContext db, long songId, SongUpdateModel update,
-        CancellationToken cancellationToken = default)
-    {
-        var song = await LoadSongAsync(db, songId, cancellationToken);
-
-        if (song == null)
+        // The file only moves once the (owner, path) unique index lets the song claim its new path, and moves back
+        // if the transaction does not commit, so it always stays where the database says it is
+        if (fileUpdate.PreviousPath is not null)
         {
-            return new BatchUpdateResult
-            {
-                Id = songId,
-                Success = false,
-                Error = $"Song not found with id {songId}",
-            };
+            await files.MoveAsync(fileUpdate.PreviousPath, song.RepositoryPath, cancellationToken);
         }
 
-        // Declared first, so the locks are only released once the transaction has ended
-        await using var locks = new SongUpdateLocks();
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        await using var files = fileTransactions.Begin(db);
-        try
-        {
-            var oldChecksum = song.Checksum;
-            var oldTitle = song.Title;
-            var oldAlbumId = song.AlbumId;
-            var oldArtistNames = song.Artists?.Select(a => a.Artist?.Name).ToList();
-            var oldArtistIds = GetAlbumAndSongArtistIds(song);
-
-            await ApplyUpdatesAsync(db, song, update, locks, cancellationToken);
-            await db.SaveChangesAsync(cancellationToken);
-            await DeleteUnusedAlbumAndArtistsAsync(db, song, oldAlbumId, oldArtistIds, cancellationToken);
-
-            var fileUpdate = await songFileUpdate.UpdateAsync(db, files, song,
-                () => BuildSongUpdateReason(song, update, oldChecksum, oldTitle, oldAlbumId, oldArtistNames),
-                cancellationToken);
-
-            await db.SaveChangesAsync(cancellationToken);
-
-            await CommitMovingFileAsync(transaction, files, fileUpdate.PreviousPath, song.RepositoryPath, cancellationToken);
-
-            return new BatchUpdateResult
-            {
-                Id = songId,
-                Success = true,
-                Song = MapToResult(song),
-            };
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to update song {SongId}", songId);
-            return new BatchUpdateResult
-            {
-                Id = songId,
-                Success = false,
-                Error = ex.Message,
-            };
-        }
+        return song;
     }
 
     private async Task<Song?> LoadSongAsync(MusicDbContext db, long songId, CancellationToken cancellationToken)
@@ -161,7 +200,7 @@ public class SongUpdateService(
     }
 
     private async Task ApplyUpdatesAsync(MusicDbContext db, Song song, SongUpdateModel update,
-        SongUpdateLocks locks, CancellationToken cancellationToken)
+        SongUpdateLocks? locks, CancellationToken cancellationToken)
     {
         if (update.Title is not null)
         {
@@ -299,7 +338,7 @@ public class SongUpdateService(
     ///     created, among the albums of its album artist, who must be one of the song's artists.
     /// </summary>
     private async Task UpdateAlbumAndArtistsAsync(MusicDbContext db, Song song, SongUpdateModel update,
-        SongUpdateLocks locks, CancellationToken cancellationToken)
+        SongUpdateLocks? locks, CancellationToken cancellationToken)
     {
         var artistRefs = update.Artists?.NewValue;
         if (update.Artists is not null && artistRefs is not { Count: > 0 })
@@ -308,6 +347,18 @@ public class SongUpdateService(
         }
 
         var albumRef = update.Album is null ? null : update.Album.NewValue ?? new AlbumRef();
+
+        // An album referenced by id is that exact album, along with its own album artist
+        Album? albumById = null;
+        if (albumRef?.Id is { } albumId)
+        {
+            albumById = await db.Albums
+                .Include(a => a.Artist)
+                .FirstOrDefaultAsync(a => a.Id == albumId && a.OwnerId == song.OwnerId, cancellationToken)
+                ?? throw new ValidationException($"Album with ID {albumId} not found");
+            albumRef = new AlbumRef(albumById.Name, new ArtistRef(albumById.ArtistId));
+        }
+
         var albumArtistRef = IsEmpty(albumRef?.Artist) ? null : albumRef!.Artist;
 
         // Artists referenced by id are loaded first: their names are part of the lock keys
@@ -334,16 +385,15 @@ public class SongUpdateService(
             : string.IsNullOrEmpty(albumRef.Name) ? Album.PlaceholderName : albumRef.Name;
         var albumArtistName = albumArtistRef is null ? song.Album.Artist.Name : NameOf(albumArtistRef)!;
 
-        // The same keys a song import takes, so neither can find-or-create the same artist or album concurrently
-        var lockKeys = (artistRefs ?? [])
-            .Select(NameOf)
-            .Where(name => !string.IsNullOrEmpty(name))
-            .Append(albumArtistName)
-            .Distinct()
-            .Select(name => AdvisoryLockKey.Create(AdvisoryLockScope.Artist, song.OwnerId, name!))
-            .Append(AdvisoryLockKey.Create(AdvisoryLockScope.Album, song.OwnerId, albumArtistName, albumName));
+        if (locks is not null)
+        {
+            // The same keys a song import takes, so neither can find-or-create the same artist or album concurrently
+            var lockKeys = AlbumArtistLockKeys.Create(song.OwnerId,
+                (artistRefs ?? []).Select(NameOf).Where(name => !string.IsNullOrEmpty(name))!,
+                [(albumArtistName, albumName)]);
 
-        locks.Handle = await advisoryLocks.AcquireTransactionLocksAsync(db, lockKeys, cancellationToken);
+            locks.Handle = await advisoryLocks.AcquireTransactionLocksAsync(db, lockKeys, cancellationToken);
+        }
 
         // Artist names are not unique: a name resolves to the same artist everywhere in this update, preferring an
         // artist the update also references by id
@@ -413,7 +463,8 @@ public class SongUpdateService(
             }).ToList();
         }
 
-        var album = await albumUpsert.UpsertAsync(db, song.OwnerId, albumName, albumArtist, cancellationToken);
+        var album = albumById
+                    ?? await albumUpsert.UpsertAsync(db, song.OwnerId, albumName, albumArtist, cancellationToken);
         song.Album = album;
         song.AlbumId = album.Id;
     }
@@ -449,13 +500,18 @@ public class SongUpdateService(
 
     /// <summary>
     ///     Deletes the album and the artists the saved <paramref name="song"/> moved away from, when nothing else uses
-    ///     them anymore, along with their artworks.
+    ///     them anymore, along with their artworks. The albums and artists <paramref name="options"/> keeps survive.
     /// </summary>
     private async Task DeleteUnusedAlbumAndArtistsAsync(MusicDbContext db, Song song, long oldAlbumId,
-        long[] oldArtistIds, CancellationToken cancellationToken)
+        long[] oldArtistIds, SongUpdateOptions options, CancellationToken cancellationToken)
     {
-        long[] albumIds = oldAlbumId != song.AlbumId ? [oldAlbumId] : [];
-        var artistIds = oldArtistIds.Except(GetAlbumAndSongArtistIds(song)).ToArray();
+        long[] albumIds = oldAlbumId != song.AlbumId && !options.KeepAlbumIds.Contains(oldAlbumId)
+            ? [oldAlbumId]
+            : [];
+        var artistIds = oldArtistIds
+            .Except(GetAlbumAndSongArtistIds(song))
+            .Except(options.KeepArtistIds)
+            .ToArray();
 
         if (albumIds.Length == 0 && artistIds.Length == 0)
         {
@@ -562,22 +618,6 @@ public class SongUpdateService(
         await db.AddAsync(genre, cancellationToken);
 
         return genre;
-    }
-
-    /// <summary>
-    ///     Moves the song's file to the path already saved in <paramref name="transaction"/>, then commits it. The file
-    ///     only moves once the (owner, path) unique index lets the song claim its new path, and moves back if the
-    ///     commit fails, so it always stays where the database says it is.
-    /// </summary>
-    private static async Task CommitMovingFileAsync(IDbContextTransaction transaction, IFileTransaction files,
-        string? previousPath, string newPath, CancellationToken cancellationToken)
-    {
-        if (previousPath is not null)
-        {
-            await files.MoveAsync(previousPath, newPath, cancellationToken);
-        }
-
-        await transaction.CommitAsync(cancellationToken);
     }
 
     private static SongUpdateResult MapToResult(Song song)
