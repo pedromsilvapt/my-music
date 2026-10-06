@@ -197,6 +197,66 @@ public class SongsControllerSpecs
         response.Songs.Select(s => s.Title).ShouldBe(["Shared Song"]);
     }
 
+    [Theory]
+    [InlineData(@"device.path startsWith ""Dup/""", new[] { "Twice On Phone" })]
+    [InlineData("device.copies > 1", new[] { "Twice On Phone", "Twice On Tablet" })]
+    [InlineData(@"device.name = ""Phone"" and device.copies > 1", new[] { "Twice On Phone", "Twice On Tablet" })]
+    [InlineData(@"device(name = ""Phone"" and copies > 1)", new[] { "Twice On Phone" })]
+    [InlineData(@"device(name = ""Tablet"" and (copies > 1 or path startsWith ""Solo/""))", new[] { "Twice On Tablet" })]
+    [InlineData("device[all](copies = 1)", new[] { "Nowhere", "Once On Phone" })]
+    public async Task List_FilterByDevicePathAndCopies_ReturnsMatchingSongs(string filter, string[] expectedTitles)
+    {
+        // Arrange — one song is twice on the Phone, another is once on the Phone and twice on the Tablet
+        var scenario = new Scenario();
+        var phone = scenario.CreateDevice("Phone");
+        var tablet = scenario.CreateDevice("Tablet");
+
+        var twiceOnPhone = scenario.CreateSong("Twice On Phone");
+        scenario.CreateSongDevice(phone, twiceOnPhone, "Music/Twice On Phone.mp3");
+        scenario.CreateSongDevice(phone, twiceOnPhone, "Dup/Twice On Phone.mp3");
+
+        var twiceOnTablet = scenario.CreateSong("Twice On Tablet");
+        scenario.CreateSongDevice(phone, twiceOnTablet, "Music/Twice On Tablet.mp3");
+        scenario.CreateSongDevice(tablet, twiceOnTablet, "Music/Twice On Tablet.mp3");
+        scenario.CreateSongDevice(tablet, twiceOnTablet, "Copies/Twice On Tablet.mp3");
+
+        var onceOnPhone = scenario.CreateSong("Once On Phone");
+        scenario.CreateSongDevice(phone, onceOnPhone, "Solo/Once On Phone.mp3");
+
+        scenario.CreateSong("Nowhere");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None, filter: filter);
+
+        // Assert
+        response.Songs.Select(s => s.Title).ShouldBe(expectedTitles);
+    }
+
+    [Fact]
+    public async Task List_FilterByDeviceCopies_IgnoresCopiesMarkedForRemoval()
+    {
+        // Arrange — the song is twice on the Phone, but one of the copies is to be removed by the next sync
+        var scenario = new Scenario();
+        var phone = scenario.CreateDevice("Phone");
+        var song = scenario.CreateSong("Removed Copy");
+        scenario.CreateSongDevice(phone, song, "Music/Removed Copy.mp3");
+        scenario.CreateSongDevice(phone, song, "Dup/Removed Copy.mp3", syncAction: SongSyncAction.Remove);
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var duplicated = await controller.List(scenario.DbContext, CancellationToken.None,
+            filter: @"device(name = ""Phone"" and copies > 1)");
+        var single = await controller.List(scenario.DbContext, CancellationToken.None,
+            filter: "device[all](copies = 1)");
+
+        // Assert
+        duplicated.Songs.ShouldBeEmpty();
+        single.Songs.Select(s => s.Title).ShouldBe(["Removed Copy"]);
+    }
+
     [Fact]
     public async Task List_SearchMatchesOnlyLyrics_SearchLyricsFalse_ReturnsNoSongs()
     {

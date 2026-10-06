@@ -32,7 +32,8 @@
         "keywords": {
             "and": "E lógico",
             "or": "OU lógico",
-            "group": "Agrupar expressões"
+            "group": "Agrupar expressões",
+            "scope": "Condições que têm de corresponder ao mesmo elemento de {{name}}"
         },
         "quantifiers": {
             "any": "Pelo menos um elemento corresponde (predefinição para operadores positivos)",

@@ -14,6 +14,8 @@ public class DynamicFilterBuilderSpecs
         ["artist.name"] = "Artists.Artist.Name",
         ["genre.name"] = "Genres.Genre.Name",
         ["device.name"] = "Devices.Device.Name",
+        ["device.path"] = "Devices.DevicePath",
+        ["device.copies"] = "Devices.Copies",
         ["playlist.name"] = "PlaylistSongs.Playlist.Name",
         ["sharing.name"] = "PlaylistSongs.Playlist.PlaylistSharings.User.Name",
     };
@@ -2137,6 +2139,172 @@ public class DynamicFilterBuilderSpecs
         // Assert
         oldResults.Count.ShouldBe(newResults.Count);
         oldResults.Select(s => s.Id).ShouldBe(newResults.Select(s => s.Id));
+    }
+
+    #endregion
+
+    #region Device Path, Device Copies and Scopes
+
+    /// <summary>
+    /// Places songs on two devices: "Echoes" (1) twice on the Phone and once on the Tablet, "Comfortably Numb" (2)
+    /// once on each, "Come Together" (3) once on the Phone and twice on the Tablet, "Bohemian Rhapsody" (4) once
+    /// on the Phone. The other songs are on no device.
+    /// </summary>
+    private static (MusicDbContext DbContext, List<Song> Songs) SetupDeviceTestData()
+    {
+        var (context, owner, songs, _, _, _) = SetupTestData();
+
+        var phone = new Device { Name = "Phone", Owner = owner, OwnerId = owner.Id };
+        var tablet = new Device { Name = "Tablet", Owner = owner, OwnerId = owner.Id };
+        context.Devices.AddRange(phone, tablet);
+        context.SaveChanges();
+
+        PlaceOnDevice(songs[0], phone, "Music/Echoes.mp3");
+        PlaceOnDevice(songs[0], phone, "Dup/Echoes.mp3");
+        PlaceOnDevice(songs[0], tablet, "Music/Echoes.mp3");
+        PlaceOnDevice(songs[1], phone, "Music/Comfortably Numb.mp3");
+        PlaceOnDevice(songs[1], tablet, "Music/Comfortably Numb.mp3");
+        PlaceOnDevice(songs[2], phone, "Music/Come Together.mp3");
+        PlaceOnDevice(songs[2], tablet, "Music/Come Together.mp3");
+        PlaceOnDevice(songs[2], tablet, "Dup/Come Together.mp3");
+        PlaceOnDevice(songs[3], phone, "Music/Bohemian Rhapsody.mp3");
+        context.SaveChanges();
+
+        return (context, songs);
+    }
+
+    private static void PlaceOnDevice(Song song, Device device, string path) =>
+        song.Devices.Add(new SongDevice
+        {
+            Song = song,
+            Device = device,
+            DeviceId = device.Id,
+            DevicePath = path,
+            AddedAt = DateTime.UtcNow,
+        });
+
+    [Theory]
+    // Independent fields: each condition may be satisfied by a different device entry
+    [InlineData(@"device.path startsWith ""Dup/""", new long[] { 1, 3 })]
+    [InlineData(@"device.path = ""Music/Bohemian Rhapsody.mp3""", new long[] { 4 })]
+    [InlineData("device.copies > 1", new long[] { 1, 3 })]
+    [InlineData("device.copies = 1", new long[] { 1, 2, 3, 4 })]
+    [InlineData(@"device.name = ""Phone"" and device.copies > 1", new long[] { 1, 3 })]
+    // Scopes: every condition must hold for the same device entry
+    [InlineData(@"device(name = ""Phone"" and copies > 1)", new long[] { 1 })]
+    [InlineData(@"device(name = ""Tablet"" and copies > 1)", new long[] { 3 })]
+    [InlineData(@"device(name = ""Phone"" and path startsWith ""Dup/"")", new long[] { 1 })]
+    [InlineData(@"device(name = ""Tablet"" and path startsWith ""Dup/"" and copies = 1)", new long[] { })]
+    [InlineData(@"device(name != ""Phone"")", new long[] { 1, 2, 3 })]
+    [InlineData("device[all](copies = 1)", new long[] { 2, 4, 5, 6, 7, 8, 9, 10 })]
+    [InlineData(@"device[any](name = ""Phone"" and copies > 1)", new long[] { 1 })]
+    // Nesting: groups inside scopes, scopes inside groups
+    [InlineData(@"device(name = ""Tablet"" and (copies > 1 or path contains ""Numb""))", new long[] { 2, 3 })]
+    [InlineData(@"(device(name = ""Phone"" and copies > 1) or year = 1975) and isFavorite = true", new long[] { 1, 4 })]
+    [InlineData(@"device(name = ""Phone"" and copies > 1) or device(name = ""Tablet"" and copies > 1)", new long[] { 1, 3 })]
+    [InlineData(@"artist(name = ""Pink Floyd"") and device(copies > 1)", new long[] { 1 })]
+    public void Devices_FilterByPathCopiesAndScope(string filter, long[] expectedIds)
+    {
+        // Arrange
+        var (context, songs) = SetupDeviceTestData();
+
+        // Act
+        var sqliteResults = ExecuteFilterOnSqlite(context, filter);
+        var memoryResults = ExecuteFilterOnMemory(songs, filter);
+
+        // Assert
+        AssertResultsMatch(sqliteResults, memoryResults, expectedIds);
+    }
+
+    [Fact]
+    public void Scope_WithoutMappings_UsesEntityProperties()
+    {
+        // Arrange
+        var (context, _) = SetupDeviceTestData();
+
+        // Act
+        var filter = DynamicFilterBuilder.BuildFilterFromDsl<Song>(
+            @"Devices(DevicePath startsWith ""Dup/"" and Device.Name = ""Tablet"")");
+        var results = context.Songs.Where(filter).Select(s => s.Id).ToList();
+
+        // Assert
+        results.ShouldBe([3]);
+    }
+
+    [Fact]
+    public void Scope_NestedInAnotherScope_BindsEachCollection()
+    {
+        // Arrange — only "Echoes" is twice on a device with one of the copies under "Dup/" on the Phone
+        var (context, _) = SetupDeviceTestData();
+
+        // Act
+        var filter = DynamicFilterBuilder.BuildFilterFromDsl<Album>(
+            @"Songs(Year < 1975 and Devices(Device.Name = ""Phone"" and DevicePath startsWith ""Dup/""))");
+        var results = context.Albums.Where(filter).Select(a => a.Name).ToList();
+
+        // Assert
+        results.ShouldBe(["The Dark Side of the Moon"]);
+    }
+
+    private static readonly Dictionary<string, string> SongDeviceFieldMappings = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["song"] = "Song.SearchableText",
+        ["song.title"] = "Song.Title",
+        ["song.artist.name"] = "Song.Artists.Artist.Name",
+    };
+
+    [Theory]
+    // "Comfortably Numb", by Pink Floyd and David Gilmour, is once on each device
+    [InlineData(@"song.artist.name = ""Pink Floyd"" and song.artist.name = ""David Gilmour""", 2)]
+    [InlineData(@"song.artist(name = ""David Gilmour"")", 2)]
+    [InlineData(@"song.artist(name = ""Pink Floyd"" and name = ""David Gilmour"")", 0)]
+    public void Scope_NamedByMappedPrefix_BindsToThatCollection(string filter, int expectedCount)
+    {
+        // Arrange
+        var (context, _) = SetupDeviceTestData();
+
+        // Act
+        var expression = DynamicFilterBuilder.BuildFilterFromDsl<SongDevice>(filter, SongDeviceFieldMappings);
+        var count = context.SongDevices.Count(expression);
+
+        // Assert
+        count.ShouldBe(expectedCount);
+    }
+
+    [Theory]
+    // "song" is not a collection, even though some of its fields go through one
+    [InlineData(@"song(artist.name = ""Pink Floyd"" and artist.name = ""David Gilmour"")")]
+    [InlineData(@"song(artist.name = ""Pink Floyd"" and title = ""Echoes"")")]
+    [InlineData(@"song(title = ""Echoes"" and artist.name = ""Pink Floyd"")")]
+    [InlineData(@"song(artist(name = ""Pink Floyd""))")]
+    public void Scope_NamedByNonCollectionPrefix_ThrowsWhateverItsConditions(string filter)
+    {
+        var exception = Should.Throw<FormatException>(() =>
+            DynamicFilterBuilder.BuildFilterFromDsl<SongDevice>(filter, SongDeviceFieldMappings));
+
+        exception.Message.ShouldBe("Scope 'song' is not a collection");
+    }
+
+    [Fact]
+    public void Scope_OverNonCollection_Throws()
+    {
+        Should.Throw<FormatException>(() =>
+            DynamicFilterBuilder.BuildFilterFromDsl<Song>(@"Album(Name = ""Abbey Road"")"));
+    }
+
+    [Fact]
+    public void Scope_FieldMappedOutsideTheScope_Throws()
+    {
+        // Arrange — inside a scope bound to Song.Devices, "device.title" resolves to a path outside of it
+        var mappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["device.name"] = "Devices.Device.Name",
+            ["device.title"] = "Title",
+        };
+
+        // Act & Assert
+        Should.Throw<FormatException>(() =>
+            DynamicFilterBuilder.BuildFilterFromDsl<Song>(@"device(name = ""Phone"" and title = ""Echoes"")", mappings));
     }
 
     #endregion

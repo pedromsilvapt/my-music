@@ -67,3 +67,42 @@ export const extractStringContext = (textBeforeCursor: string): StringContext | 
     }
     return null;
 };
+
+// Like the server's FilterDslParser: the quantifier is glued to the name, whitespace may precede the parenthesis
+const SCOPE_NAME_REGEX = /([a-zA-Z_][\w.]*)(?:\[\s*(?:any|all)\s*\])?\s*$/i;
+// Words that can come right before a plain group: combinators, value-less operators and literal values
+const NOT_A_SCOPE_NAME_REGEX = /^(?:and|or|isNull|isNotNull|isTrue|isFalse|true|false|null)$/i;
+
+/**
+ * Returns the qualified name of the scopes the cursor is inside of (`device(name = "a" and (` → `device`,
+ * `songs(devices(` → `songs.devices`), or `null` when it is not inside any. Plain groups do not count.
+ */
+export const extractScopePrefix = (textBeforeCursor: string): string | null => {
+    const openParentheses: (string | null)[] = [];
+    let quote: string | null = null;
+
+    for (let i = 0; i < textBeforeCursor.length; i++) {
+        const char = textBeforeCursor[i];
+
+        if (quote) {
+            if (char === '\\') i++;
+            else if (char === quote) quote = null;
+        } else if (char === '"' || char === "'") {
+            quote = char;
+        } else if (char === '(') {
+            const name = textBeforeCursor.substring(0, i).match(SCOPE_NAME_REGEX)?.[1] ?? null;
+            openParentheses.push(name && !NOT_A_SCOPE_NAME_REGEX.test(name) ? name : null);
+        } else if (char === ')') {
+            openParentheses.pop();
+        }
+    }
+
+    const scopes = openParentheses.filter(name => name !== null);
+    return scopes.length > 0 ? scopes.join('.') : null;
+};
+
+/**
+ * Turns a field typed inside a scope into the name it has in the filter metadata (`name` in `device(` → `device.name`).
+ */
+export const qualifyField = (scopePrefix: string | null, field: string): string =>
+    scopePrefix ? `${scopePrefix}.${field}` : field;

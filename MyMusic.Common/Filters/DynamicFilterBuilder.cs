@@ -31,7 +31,8 @@ public static class DynamicFilterBuilder
         ResolveEntityPathsInRules(request.Rules, fieldMappings);
     }
 
-    private static void ResolveEntityPathsInRules(List<FilterRule> rules, Dictionary<string, string> fieldMappings)
+    private static void ResolveEntityPathsInRules(List<FilterRule> rules, Dictionary<string, string> fieldMappings,
+        string? scopeField = null)
     {
         foreach (var rule in rules)
         {
@@ -39,24 +40,64 @@ public static class DynamicFilterBuilder
             {
                 case FilterConditionRule condition:
                     {
-                        var fieldKey = StripQuantifiers(condition.Field);
+                        // Inside a scope the field is relative to it: "copies" in "device(...)" is "device.copies"
+                        var field = QualifyField(scopeField, condition.Field);
+                        var fieldKey = StripQuantifiers(field);
                         if (!fieldMappings.TryGetValue(fieldKey, out var entityPath))
                         {
                             continue;
                         }
 
-                        var quantifiers = ExtractQuantifiersWithPositions(condition.Field);
+                        var quantifiers = ExtractQuantifiersWithPositions(field);
                         condition.EntityPath = quantifiers.Count > 0
                             ? ApplyQuantifiersToEntityPath(entityPath, quantifiers)
                             : entityPath;
                         break;
                     }
                 case FilterGroupRule group:
-                    ResolveEntityPathsInRules(group.Rules, fieldMappings);
+                    ResolveEntityPathsInRules(group.Rules, fieldMappings, scopeField);
                     break;
+                case FilterScopeRule scope:
+                    {
+                        var field = QualifyField(scopeField, scope.Field);
+                        scope.EntityPath = FindScopeEntityPath(field, fieldMappings);
+                        ResolveEntityPathsInRules(scope.Rules, fieldMappings, field);
+                        break;
+                    }
             }
         }
     }
+
+    /// <summary>
+    /// Finds where the fields of a scope live: the leading part shared by the entity paths of every mapped field
+    /// under it ("device" → "Devices", from "Devices.Device.Name", "Devices.DevicePath", ...).
+    /// </summary>
+    private static string? FindScopeEntityPath(string scopeField, Dictionary<string, string> fieldMappings)
+    {
+        string[]? sharedSegments = null;
+
+        foreach (var (field, entityPath) in fieldMappings)
+        {
+            if (!field.StartsWith($"{scopeField}.", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var segments = entityPath.Split('.');
+            sharedSegments = sharedSegments == null
+                ? segments
+                : sharedSegments
+                    .TakeWhile((segment, index) => index < segments.Length &&
+                                                   string.Equals(segment, segments[index],
+                                                       StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+        }
+
+        return sharedSegments == null ? null : string.Join(".", sharedSegments);
+    }
+
+    private static string QualifyField(string? scopeField, string field) =>
+        scopeField == null ? field : $"{scopeField}.{field}";
 
     private static string StripQuantifiers(string field) => Regex.Replace(field, @"\[(any|all)\]", "");
 
@@ -101,12 +142,13 @@ public static class DynamicFilterBuilder
         }
 
         var parameter = Expression.Parameter(typeof(T), "x");
-        var expression = BuildGroupExpression(parameter, request.Rules, request.Combinator);
+        var expression = BuildGroupExpression(new BuildScope(parameter, [], null), request.Rules,
+            request.Combinator);
 
         return Expression.Lambda<Func<T, bool>>(expression, parameter);
     }
 
-    private static Expression BuildGroupExpression(ParameterExpression parameter, List<FilterRule> rules,
+    private static Expression BuildGroupExpression(BuildScope buildScope, List<FilterRule> rules,
         FilterCombinator combinator)
     {
         if (rules.Count == 0)
@@ -114,35 +156,131 @@ public static class DynamicFilterBuilder
             return Expression.Constant(true);
         }
 
-        var expressions = rules.Select(rule => BuildRuleExpression(parameter, rule)).ToList();
+        var expressions = rules.Select(rule => BuildRuleExpression(buildScope, rule)).ToList();
 
         return combinator == FilterCombinator.And
             ? expressions.Aggregate(Expression.AndAlso)
             : expressions.Aggregate(Expression.OrElse);
     }
 
-    private static Expression BuildRuleExpression(ParameterExpression parameter, FilterRule rule)
+    private static Expression BuildRuleExpression(BuildScope buildScope, FilterRule rule)
     {
         if (rule is FilterConditionRule condition)
         {
-            return BuildConditionExpression(parameter, condition);
+            return BuildConditionExpression(buildScope, condition);
         }
 
         if (rule is FilterGroupRule group)
         {
-            return BuildGroupExpression(parameter, group.Rules, group.Combinator);
+            return BuildGroupExpression(buildScope, group.Rules, group.Combinator);
+        }
+
+        if (rule is FilterScopeRule scope)
+        {
+            return BuildScopeExpression(buildScope, scope);
         }
 
         throw new InvalidOperationException($"Unknown rule type: {rule.GetType().Name}");
     }
 
-    private static Expression BuildConditionExpression(ParameterExpression parameter, FilterConditionRule condition)
+    private static Expression BuildConditionExpression(BuildScope buildScope, FilterConditionRule condition)
     {
-        var path = condition.EntityPath ?? condition.Field;
-        var pathSegments = ParsePathWithQuantifiers(path);
-        var expression = BuildPropertyPathExpression(parameter, pathSegments, condition);
+        var path = condition.EntityPath ?? QualifyField(buildScope.Field, condition.Field);
+        var pathSegments = SkipScopeSegments(buildScope, ParsePathWithQuantifiers(path), condition.Field);
+        if (pathSegments.Count == 0)
+        {
+            throw new FormatException($"Field '{condition.Field}' cannot be compared inside scope '{buildScope.Field}'");
+        }
 
-        return expression;
+        return BuildPropertyPathExpression(buildScope.Element, pathSegments, condition);
+    }
+
+    /// <summary>
+    /// Builds a scope: every rule inside it is evaluated against the same element of the collection the scope names.
+    /// A mapped scope is bound to the last collection on the path its fields share; an unmapped one is a property
+    /// path that must end in a collection. Collections crossed on the way there match when any element does.
+    /// </summary>
+    private static Expression BuildScopeExpression(BuildScope buildScope, FilterScopeRule scope)
+    {
+        var scopeField = QualifyField(buildScope.Field, scope.Field);
+        var pathSegments = SkipScopeSegments(buildScope, ParsePathWithQuantifiers(scope.EntityPath ?? scopeField),
+            scope.Field);
+
+        var collectionIndex = -1;
+        var currentType = buildScope.Element.Type;
+        for (var i = 0; i < pathSegments.Count; i++)
+        {
+            var property = currentType.GetProperty(pathSegments[i].PropertyName,
+                               BindingFlags.IgnoreCase | BindingFlags.Public | BindingFlags.Instance)
+                           ?? throw new FormatException($"Unknown scope '{scope.Field}'");
+
+            if (IsCollectionType(property.PropertyType, out var elementType))
+            {
+                collectionIndex = i;
+                currentType = elementType!;
+            }
+            else
+            {
+                currentType = property.PropertyType;
+            }
+        }
+
+        var isMapped = scope.EntityPath != null;
+        if (collectionIndex < 0 || (!isMapped && collectionIndex != pathSegments.Count - 1))
+        {
+            throw new FormatException($"Scope '{scope.Field}' is not a collection");
+        }
+
+        var consumedSegments = buildScope.ConsumedSegments.ToList();
+
+        return BuildScopePath(buildScope.Element, 0);
+
+        Expression BuildScopePath(Expression current, int index)
+        {
+            Expression property = Expression.Property(current,
+                MapPropertyName(pathSegments[index].PropertyName, current.Type));
+            consumedSegments.Add(pathSegments[index].PropertyName);
+
+            if (!IsCollectionType(property.Type, out var elementType))
+            {
+                return BuildScopePath(property, index + 1);
+            }
+
+            var elementParam = Expression.Parameter(elementType!, "item");
+            if (index < collectionIndex)
+            {
+                var inner = BuildScopePath(elementParam, index + 1);
+                return BuildQuantifierCall(property, elementType!, Expression.Lambda(inner, elementParam),
+                    FilterQuantifier.Any);
+            }
+
+            var body = BuildGroupExpression(new BuildScope(elementParam, consumedSegments, scopeField),
+                scope.Rules, scope.Combinator);
+
+            return BuildQuantifierCall(property, elementType!, Expression.Lambda(body, elementParam),
+                scope.Quantifier ?? FilterQuantifier.Any);
+        }
+    }
+
+    /// <summary>
+    /// Makes a path relative to the element of the scope it is used in, removing the part that led to that element.
+    /// </summary>
+    private static List<PathSegment> SkipScopeSegments(BuildScope buildScope, List<PathSegment> pathSegments,
+        string field)
+    {
+        var consumedSegments = buildScope.ConsumedSegments;
+        var isInsideScope = pathSegments.Count >= consumedSegments.Count &&
+                            consumedSegments
+                                .Select((name, index) => string.Equals(name, pathSegments[index].PropertyName,
+                                    StringComparison.OrdinalIgnoreCase))
+                                .All(matches => matches);
+
+        if (!isInsideScope)
+        {
+            throw new FormatException($"Field '{field}' is not part of scope '{buildScope.Field}'");
+        }
+
+        return pathSegments.Skip(consumedSegments.Count).ToList();
     }
 
     private static List<PathSegment> ParsePathWithQuantifiers(string path)
@@ -173,11 +311,11 @@ public static class DynamicFilterBuilder
     }
 
     private static Expression BuildPropertyPathExpression(
-        ParameterExpression parameter,
+        Expression parameter,
         List<PathSegment> segments,
         FilterConditionRule condition)
     {
-        Expression current = parameter;
+        var current = parameter;
         var i = 0;
 
         while (i < segments.Count)
@@ -229,6 +367,12 @@ public static class DynamicFilterBuilder
 
         var lambda = Expression.Lambda(innerExpression, elementParam);
 
+        return BuildQuantifierCall(collectionProperty, elementType, lambda, quantifier);
+    }
+
+    private static Expression BuildQuantifierCall(Expression collection, Type elementType, LambdaExpression predicate,
+        FilterQuantifier quantifier)
+    {
         var methodName = quantifier == FilterQuantifier.All ? "All" : "Any";
         var enumerableMethods = typeof(Enumerable).GetMethods()
             .Where(m => m.Name == methodName && m.GetParameters().Length == 2)
@@ -236,7 +380,7 @@ public static class DynamicFilterBuilder
 
         var genericMethod = enumerableMethods.MakeGenericMethod(elementType);
 
-        return Expression.Call(genericMethod, collectionProperty, lambda);
+        return Expression.Call(genericMethod, collection, predicate);
     }
 
     private static Expression BuildFinalExpression(Expression property, FilterConditionRule condition)
@@ -544,4 +688,10 @@ public static class DynamicFilterBuilder
     }
 
     private record PathSegment(string PropertyName, FilterQuantifier? Quantifier);
+
+    /// <summary>
+    /// Where rules are being built: the element they are evaluated against, the path segments that led to it
+    /// (from the root entity) and the qualified field of the enclosing scope, if any.
+    /// </summary>
+    private record BuildScope(Expression Element, IReadOnlyList<string> ConsumedSegments, string? Field);
 }

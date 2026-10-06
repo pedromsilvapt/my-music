@@ -32,7 +32,8 @@
         "keywords": {
             "and": "Logical AND",
             "or": "Logical OR",
-            "group": "Group expressions"
+            "group": "Group expressions",
+            "scope": "Conditions that must all match the same {{name}}"
         },
         "quantifiers": {
             "any": "At least one element matches (default for positive operators)",

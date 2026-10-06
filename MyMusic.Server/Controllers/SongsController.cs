@@ -456,6 +456,11 @@ public class SongsController(
                 .Where(d => d.OwnerId == currentUser.Id)
                 .Select(d => d.Name)
                 .Distinct(),
+            "device.path" => context.SongDevices
+                // Entries left behind by a deleted song belong to no song, so no song can match their path
+                .Where(sd => sd.Device.OwnerId == currentUser.Id && sd.SongId != null)
+                .Select(sd => sd.DevicePath)
+                .Distinct(),
             "playlist.name" => context.Playlists
                 .Where(p => p.OwnerId == currentUser.Id)
                 .Select(p => p.Name)
@@ -795,6 +800,26 @@ public class SongsController(
             IsCollection = true,
             SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
             SupportsDynamicValues = true,
+        },
+        new()
+        {
+            Name = "device.path",
+            EntityPath = "Devices.DevicePath",
+            Type = "string",
+            Description = "Path of the song file on a device",
+            IsCollection = true,
+            SupportedOperators = ["eq", "neq", "contains", "startsWith", "endsWith"],
+            SupportsDynamicValues = true,
+        },
+        new()
+        {
+            Name = "device.copies",
+            EntityPath = "Devices.Copies",
+            Type = "number",
+            Description = "Number of times the song is placed on the same device",
+            IsCollection = true,
+            IsComputed = true,
+            SupportedOperators = ["eq", "neq", "gt", "gte", "lt", "lte", "between"],
         },
         new()
         {

@@ -1,7 +1,7 @@
 import {ActionIcon, Button, Group, Popover, Stack, Text, TextInput, Tooltip} from "@mantine/core";
 import {useElementSize} from "@mantine/hooks";
 import {IconCode, IconFilter, IconSearch, IconX} from "@tabler/icons-react";
-import {forwardRef, useEffect, useImperativeHandle, useRef, useState} from "react";
+import {forwardRef, useEffect, useId, useImperativeHandle, useRef, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {FilterCodeEditor} from "../../filters/filter-code-editor.tsx";
 import type {FilterMetadataResponse} from "../../filters/use-filter-metadata.ts";
@@ -53,6 +53,8 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
         }), []);
 
         const [showAdvanced, setShowAdvanced] = useState(false);
+        // Ties the toggle to its popover, which is rendered in a portal, away from the filter bar
+        const popoverId = useId();
 
         // Local state for immediate input (controlled by parent prop, synced on prop changes)
         const [localSearch, setLocalSearch] = useState(searchValue);
@@ -162,6 +164,10 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                             <Popover.Target>
                                 <Tooltip label={showAdvanced ? t("collection:filterBar.hideAdvanced") : t("collection:filterBar.showAdvanced")}>
                                     <Button
+                                        data-testid="collection-filter-toggle"
+                                        data-popover-id={popoverId}
+                                        data-filter={filterValue}
+                                        aria-expanded={showAdvanced}
                                         variant={hasFilter ? "light" : "subtle"}
                                         leftSection={hasFilter ? <IconFilter size={16}/> : <IconCode size={16}/>}
                                         onClick={() => setShowAdvanced(!showAdvanced)}
@@ -173,7 +179,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                 </Tooltip>
                             </Popover.Target>
 
-                            <Popover.Dropdown>
+                            <Popover.Dropdown data-testid="collection-filter-popover" data-popover-id={popoverId}>
                                 <Stack gap="xs">
                                     <Group justify="space-between" align="center">
                                         <Text size="sm" fw={500} c="dimmed">
@@ -191,6 +197,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                         height={100}
                                         metadata={filterMetadata}
                                         fetchFilterValues={fetchFilterValues}
+                                        scopes={filterMode === 'server'}
                                     />
 
                                     <Text size="xs" c="dimmed">
@@ -207,6 +214,7 @@ export const CollectionFilterBar = forwardRef<CollectionFilterBarRef, Collection
                                             {t("collection:filterBar.clear")}
                                         </Button>
                                         <Button
+                                            data-testid="collection-filter-apply"
                                             size="xs"
                                             onClick={handleApply}
                                             disabled={localFilter === filterValue}

@@ -162,4 +162,32 @@ public class SongsControllerFilterValuesSpecs
         // Assert — no recipients to surface
         response.Values.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task GetFilterValues_DevicePath_ReturnsPathsOnOwnDevices()
+    {
+        // Arrange — my song is on my phone at two paths, next to the leftover of a deleted song; Bob's device
+        // holds another path
+        var scenario = new Scenario();
+        var bob = scenario.CreateUser("Bob", "bob");
+        var song = scenario.CreateSong("My Song");
+        var phone = scenario.CreateDevice("Phone");
+        var bobPhone = scenario.CreateDevice("Bob Phone", ownerId: bob.Id);
+        scenario.CreateSongDevice(phone, song, "Music/My Song.mp3");
+        scenario.CreateSongDevice(phone, song, "Dup/My Song.mp3");
+        scenario.CreateSongDevice(phone, null, "Music/Deleted Song.mp3", syncAction: SongSyncAction.Remove);
+        var bobSong = scenario.CreateSong("Bob Song", ownerId: bob.Id);
+        scenario.CreateSongDevice(bobPhone, bobSong, "Music/Bob Song.mp3");
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var all = await controller.GetFilterValues("device.path", scenario.DbContext, CancellationToken.None);
+        var searched = await controller.GetFilterValues(
+            "device.path", scenario.DbContext, CancellationToken.None, search: "dup");
+
+        // Assert
+        all.Values.ShouldBe(["Dup/My Song.mp3", "Music/My Song.mp3"]);
+        searched.Values.ShouldBe(["Dup/My Song.mp3"]);
+    }
 }

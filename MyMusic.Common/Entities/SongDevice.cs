@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EntityFrameworkCore.Projectables;
 using Microsoft.EntityFrameworkCore;
 
 namespace MyMusic.Common.Entities;
@@ -30,6 +31,13 @@ public class SongDevice
     public DateTime AddedAt { get; set; }
 
     public DateTime? LastSyncedModifiedAt { get; set; }
+
+    /// <summary>
+    /// How many times the song is placed on this device (a song can sit at several paths of the same device).
+    /// Copies waiting to be removed by the next sync do not count.
+    /// </summary>
+    [Projectable]
+    public int Copies => Song!.Devices.Count(d => d.DeviceId == DeviceId && d.SyncAction != SongSyncAction.Remove);
 }
 
 public enum SongSyncAction

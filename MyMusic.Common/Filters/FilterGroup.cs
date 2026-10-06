@@ -43,3 +43,24 @@ public class FilterGroupRule : FilterRule
 
     [JsonPropertyName("rules")] public List<FilterRule> Rules { get; set; } = [];
 }
+
+/// <summary>
+/// Conditions bound to the same element of a collection, e.g. <c>device(name = "Phone" and copies > 1)</c>.
+/// Fields inside are relative to <see cref="Field"/>, and scopes can be nested.
+/// </summary>
+public class FilterScopeRule : FilterRule
+{
+    [JsonPropertyName("field")] public required string Field { get; set; }
+
+    [JsonIgnore] public string? EntityPath { get; set; }
+
+    [JsonPropertyName("quantifier")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public FilterQuantifier? Quantifier { get; set; }
+
+    [JsonPropertyName("combinator")]
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public FilterCombinator Combinator { get; set; } = FilterCombinator.And;
+
+    [JsonPropertyName("rules")] public List<FilterRule> Rules { get; set; } = [];
+}

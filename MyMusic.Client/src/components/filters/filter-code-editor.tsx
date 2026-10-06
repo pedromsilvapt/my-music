@@ -4,9 +4,11 @@ import {i18n} from "../../locales";
 import {
     extractFieldName,
     extractListContext,
+    extractScopePrefix,
     extractStringContext,
     isAfterField,
-    isAfterOperator
+    isAfterOperator,
+    qualifyField
 } from "./filter-completion-context.ts";
 import type {FilterFieldMetadata, FilterMetadataResponse} from "./use-filter-metadata.ts";
 
@@ -17,6 +19,8 @@ interface FilterCodeEditorProps {
     height?: number;
     metadata?: FilterMetadataResponse;
     fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
+    /** Whether scopes (`device(name = "a" and copies > 1)`) can be used: only filters evaluated by the server do. */
+    scopes?: boolean;
 }
 
 interface CompletionItem {
@@ -34,20 +38,53 @@ interface EditorContext {
     metadata?: FilterMetadataResponse;
     fetchFilterValues?: (field: string, searchTerm: string) => Promise<string[]>;
     onApply?: () => void;
+    scopes?: boolean;
 }
 
 const editorContexts = new Map<string, EditorContext>();
 let isProviderRegistered = false;
 
-const getFieldCompletions = (range: unknown, fields: FilterFieldMetadata[]): CompletionItem[] => {
-    return fields.map((field) => ({
-        label: field.name,
+const getFieldCompletions = (
+    range: unknown,
+    fields: FilterFieldMetadata[],
+    scopePrefix: string | null = null,
+    scopes = false
+): CompletionItem[] => {
+    // Inside a scope only its fields make sense, named relative to it ("device.name" is "name" in "device(")
+    const scopedFields = scopePrefix === null
+        ? fields.map(field => ({field, name: field.name}))
+        : fields
+            .filter(field => field.name.startsWith(`${scopePrefix}.`))
+            .map(field => ({field, name: field.name.substring(scopePrefix.length + 1)}));
+
+    const fieldCompletions: CompletionItem[] = scopedFields.map(({field, name}) => ({
+        label: name,
         kind: 10,
-        insertText: field.name,
+        insertText: name,
         documentation: `${field.description}${field.isComputed ? ` ${i18n.t("filters:codeEditor.computed")}` : ""}`,
         range,
         detail: field.type,
     }));
+
+    if (!scopes) return fieldCompletions;
+
+    const scopeNames = new Set(
+        scopedFields
+            .filter(({field, name}) => field.isCollection && name.includes("."))
+            // The scope is the collection the field belongs to: "song.artist" for "song.artist.name"
+            .map(({name}) => name.substring(0, name.lastIndexOf(".")))
+    );
+    const scopeCompletions: CompletionItem[] = [...scopeNames].map(name => ({
+        label: `${name}(…)`,
+        kind: 15,
+        insertText: `${name}($1)`,
+        documentation: i18n.t("filters:codeEditor.keywords.scope", {name}),
+        range,
+        insertTextRules: 4,
+        filterText: name,
+    }));
+
+    return [...fieldCompletions, ...scopeCompletions];
 };
 
 const getOperatorCompletions = (range: unknown): CompletionItem[] => {
@@ -169,8 +206,20 @@ const getKeywordCompletions = (range: unknown): CompletionItem[] => {
     ];
 };
 
-const getQuantifierCompletions = (range: unknown): CompletionItem[] => {
+const getQuantifierCompletions = (range: unknown, scopes = false): CompletionItem[] => {
+    // A quantified scope has its parenthesis right after the quantifier: "device[all](...)"
+    const scopeCompletions: CompletionItem[] = !scopes ? [] : ["any", "all"].map(quantifier => ({
+        label: `${quantifier}](…)`,
+        kind: 15,
+        insertText: `${quantifier}]($1)`,
+        documentation: i18n.t(`filters:codeEditor.quantifiers.${quantifier}`),
+        range,
+        insertTextRules: 4,
+        filterText: quantifier,
+    }));
+
     return [
+        ...scopeCompletions,
         {
             label: "any",
             kind: 14,
@@ -248,6 +297,17 @@ function ensureProviderRegistered(monaco: Monaco) {
 
             const suggestions: CompletionItem[] = [];
 
+            // A scope can be opened on a previous line, so look at everything typed before the cursor
+            const scopePrefix = context.scopes
+                ? extractScopePrefix(model.getValueInRange({
+                    startLineNumber: 1,
+                    startColumn: 1,
+                    endLineNumber: position.lineNumber,
+                    endColumn: position.column,
+                }))
+                : null;
+            const scopes = context.scopes ?? false;
+
             const stringContext = extractStringContext(textBeforeCursor);
             if (stringContext) {
                 const fetchFn = context.fetchFilterValues;
@@ -263,7 +323,7 @@ function ensureProviderRegistered(monaco: Monaco) {
                     const hasClosingQuote = textAfterCursor.startsWith('"');
                     const dynamicSuggestions = await getDynamicValueCompletions(
                         stringRange,
-                        stringContext.field,
+                        qualifyField(scopePrefix, stringContext.field),
                         stringContext.partialValue,
                         fields,
                         fetchFn,
@@ -276,22 +336,23 @@ function ensureProviderRegistered(monaco: Monaco) {
 
             const listContext = extractListContext(textBeforeCursor);
             if (listContext) {
-                suggestions.push(...getValueCompletions(range, fields, listContext.field));
+                suggestions.push(...getValueCompletions(range, fields, qualifyField(scopePrefix, listContext.field)));
                 return {suggestions};
             }
 
             const isAfterQuantifierBracket = /\[\s*$/i.test(textBeforeCursor);
             if (isAfterQuantifierBracket) {
-                suggestions.push(...getQuantifierCompletions(range));
+                suggestions.push(...getQuantifierCompletions(range, scopes));
                 return {suggestions};
             }
 
             const isAfterLogicalOperator = /\b(?:and|or)\s*$/i.test(textBeforeWord);
             const isAfterClosingValue = /"\s*$/i.test(textBeforeWord);
+            const isAfterOpeningParenthesis = /\(\s*$/.test(textBeforeWord);
 
-            if (isAfterLogicalOperator) {
+            if (isAfterLogicalOperator || isAfterOpeningParenthesis) {
                 suggestions.push(
-                    ...getFieldCompletions(range, fields),
+                    ...getFieldCompletions(range, fields, scopePrefix, scopes),
                     ...getKeywordCompletions(range)
                 );
             } else if (isAfterClosingValue) {
@@ -299,10 +360,13 @@ function ensureProviderRegistered(monaco: Monaco) {
             } else if (isAfterField(textBeforeWord)) {
                 suggestions.push(...getOperatorCompletions(range));
             } else if (isAfterOperator(textBeforeWord)) {
-                suggestions.push(...getValueCompletions(range, fields, extractFieldName(textBeforeWord)));
+                const fieldName = extractFieldName(textBeforeWord);
+                suggestions.push(
+                    ...getValueCompletions(range, fields, fieldName && qualifyField(scopePrefix, fieldName))
+                );
             } else {
                 suggestions.push(
-                    ...getFieldCompletions(range, fields),
+                    ...getFieldCompletions(range, fields, scopePrefix, scopes),
                     ...getKeywordCompletions(range)
                 );
             }
@@ -320,7 +384,8 @@ export function FilterCodeEditor({
                                      onApply,
                                      height = 120,
                                      metadata,
-                                     fetchFilterValues
+                                     fetchFilterValues,
+                                     scopes
                                  }: FilterCodeEditorProps) {
     const editorRef = useRef<unknown>(null);
     const modelUriRef = useRef<string | null>(null);
@@ -353,6 +418,15 @@ export function FilterCodeEditor({
     }, [fetchFilterValues]);
 
     useEffect(() => {
+        if (modelUriRef.current) {
+            const context = editorContexts.get(modelUriRef.current);
+            if (context) {
+                context.scopes = scopes;
+            }
+        }
+    }, [scopes]);
+
+    useEffect(() => {
         return () => {
             if (modelUriRef.current) {
                 editorContexts.delete(modelUriRef.current);
@@ -373,6 +447,7 @@ export function FilterCodeEditor({
                 metadata,
                 fetchFilterValues,
                 onApply,
+                scopes,
             });
         }
 
@@ -412,6 +487,7 @@ export function FilterCodeEditor({
             onChange={handleChange}
             onMount={handleEditorMount}
             theme="filter-dsl-theme"
+            wrapperProps={{"data-testid": "filter-code-editor"}}
             options={{
                 minimap: {enabled: false},
                 lineNumbers: "off",

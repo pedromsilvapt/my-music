@@ -350,4 +350,16 @@ public class FilterDslParserMalformedInputSpecs
         // Act & Assert
         AssertParseCompletesWithinTimeout("title = \"test\\");
     }
+
+    [Theory]
+    [InlineData("device(")]
+    [InlineData("device(name = \"a\" and ")]
+    [InlineData("device(name = \"a\" and (copies > 1")]
+    [InlineData("device(device(device(")]
+    [InlineData("device[all](")]
+    public void Scope_Unterminated_Completes(string input)
+    {
+        // Act & Assert
+        AssertParseCompletesWithinTimeout(input);
+    }
 }

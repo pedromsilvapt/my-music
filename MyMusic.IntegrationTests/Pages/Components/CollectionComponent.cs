@@ -21,6 +21,50 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
         await SearchInput.FillAsync(text);
     }
 
+    public ILocator FilterToggle => Root.GetByTestId("collection-filter-toggle");
+
+    /// <summary>
+    /// Opens the advanced filter, if it isn't open yet, and returns its popover. The popover is rendered outside
+    /// of the collection's root, so it is found through the id it shares with this collection's toggle.
+    /// </summary>
+    public async Task<ILocator> OpenFilterPopoverAsync()
+    {
+        await Assertions.Expect(FilterToggle).ToBeVisibleAsync();
+        if (await FilterToggle.GetAttributeAsync("aria-expanded") != "true")
+        {
+            await FilterToggle.ClickAsync();
+        }
+
+        await Assertions.Expect(FilterToggle).ToHaveAttributeAsync("aria-expanded", "true");
+
+        var popoverId = await FilterToggle.GetAttributeAsync("data-popover-id");
+        var popover = Root.Page.Locator(
+            $"[data-testid='collection-filter-popover'][data-popover-id='{popoverId}']");
+        await Assertions.Expect(popover).ToBeVisibleAsync();
+
+        return popover;
+    }
+
+    /// <summary>
+    /// Replaces the advanced filter with the given expression, applies it and waits for the collection to load
+    /// the filtered items.
+    /// </summary>
+    public async Task ApplyFilterAsync(string filter)
+    {
+        var popover = await OpenFilterPopoverAsync();
+
+        // Insert the text in one go, so the editor's auto-closing brackets and suggestions don't change it
+        await popover.GetByTestId("filter-code-editor").Locator(".monaco-editor").ClickAsync();
+        await Root.Page.Keyboard.PressAsync("ControlOrMeta+A");
+        await Root.Page.Keyboard.InsertTextAsync(filter);
+
+        await popover.GetByTestId("collection-filter-apply").ClickAsync();
+
+        // The toggle reports the filter in use: once it is the new one, its items are loaded or being loaded
+        await Assertions.Expect(FilterToggle).ToHaveAttributeAsync("data-filter", filter);
+        await WaitForLoadedAsync();
+    }
+
     public ILocator ColumnHeaders => Root.GetByRole(AriaRole.Columnheader);
 
     private ILocator TableScrollArea => Root.GetByTestId("collection-table-scroll");

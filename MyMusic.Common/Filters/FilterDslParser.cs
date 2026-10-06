@@ -1,10 +1,13 @@
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MyMusic.Common.Filters;
 
 public class FilterDslParser
 {
+    private static readonly Regex ScopeQuantifierRegex = new(@"\[\s*(any|all)\s*\]$", RegexOptions.IgnoreCase);
+
     private readonly string _input;
     private int _position;
 
@@ -109,6 +112,17 @@ public class FilterDslParser
 
     private FilterGroupRule ParseGroup()
     {
+        var (rules, combinator) = ParseGroupBody();
+
+        return new FilterGroupRule
+        {
+            Combinator = combinator,
+            Rules = rules,
+        };
+    }
+
+    private (List<FilterRule> rules, FilterCombinator combinator) ParseGroupBody()
+    {
         Expect('(');
         var rules = new List<FilterRule>();
         var combinator = FilterCombinator.And;
@@ -116,7 +130,7 @@ public class FilterDslParser
         while (_position < _input.Length && CurrentChar != ')')
         {
             SkipWhitespace();
-            if (CurrentChar == ')')
+            if (_position >= _input.Length || CurrentChar == ')')
             {
                 break;
             }
@@ -144,14 +158,49 @@ public class FilterDslParser
 
         Expect(')');
 
-        return new FilterGroupRule
+        return (rules, combinator);
+    }
+
+    /// <summary>
+    /// Parses the body of a scope such as <c>device[all](name = "Phone" and copies > 1)</c>, whose name was
+    /// already consumed.
+    /// </summary>
+    private FilterScopeRule ParseScope(string field)
+    {
+        FilterQuantifier? quantifier = null;
+        var name = field;
+
+        var quantifierMatch = ScopeQuantifierRegex.Match(field);
+        if (quantifierMatch.Success)
         {
+            name = field[..quantifierMatch.Index];
+            quantifier = quantifierMatch.Groups[1].Value.Equals("all", StringComparison.OrdinalIgnoreCase)
+                ? FilterQuantifier.All
+                : FilterQuantifier.Any;
+        }
+
+        if (name.Contains('['))
+        {
+            throw new FormatException(
+                $"A scope can only have a quantifier right before its '(' at position {_position}: {GetContext()}");
+        }
+
+        var (rules, combinator) = ParseGroupBody();
+        if (rules.Count == 0)
+        {
+            throw new FormatException($"Scope '{name}' has no conditions at position {_position}: {GetContext()}");
+        }
+
+        return new FilterScopeRule
+        {
+            Field = name,
+            Quantifier = quantifier,
             Combinator = combinator,
             Rules = rules,
         };
     }
 
-    private FilterConditionRule? ParseCondition()
+    private FilterRule? ParseCondition()
     {
         SkipWhitespace();
 
@@ -171,6 +220,11 @@ public class FilterDslParser
         if (_position >= _input.Length)
         {
             throw new FormatException($"Expected operator after field '{field}' at position {_position}");
+        }
+
+        if (CurrentChar == '(')
+        {
+            return ParseScope(field);
         }
 
         var op = ParseOperator();

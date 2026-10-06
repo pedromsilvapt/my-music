@@ -1,5 +1,11 @@
 import {describe, expect, it} from 'vitest';
-import {extractFieldName, extractListContext, extractStringContext} from './filter-completion-context';
+import {
+    extractFieldName,
+    extractListContext,
+    extractScopePrefix,
+    extractStringContext,
+    qualifyField
+} from './filter-completion-context';
 
 describe('extractStringContext', () => {
     it.each([
@@ -91,5 +97,49 @@ describe('extractFieldName', () => {
 
     it('returns null when the text does not end in an operator', () => {
         expect(extractFieldName('title = "a" and ')).toBeNull();
+    });
+});
+
+describe('extractScopePrefix', () => {
+    it.each([
+        ['device(', 'device'],
+        ['device(name = "a" and ', 'device'],
+        ['device(name = "a" and (copies > 1 or ', 'device'],
+        ['title = "a" and device(na', 'device'],
+        ['(year = 2000 or device(', 'device'],
+        ['device[all](', 'device'],
+        ['device[ any ] (', 'device'],
+        ['device(name = "a" and\n    ', 'device'],
+        ['isFavorite isTrue device(', 'device'],
+        ['songs(devices(', 'songs.devices'],
+        ['songs(year > 2000 and devices(copies > 1) and devices(', 'songs.devices'],
+        ['device(name = "a (b" and ', 'device'],
+        ['device(name = "a \\" (b" and path = "', 'device'],
+    ])('detects the enclosing scope in %s', (text, prefix) => {
+        expect(extractScopePrefix(text)).toBe(prefix);
+    });
+
+    it.each([
+        '',
+        'title = "a" and ',
+        '(year = 2000 or ',
+        'title = "a" and (',
+        'device [ any ] (',
+        'isFavorite isTrue (',
+        'rating isNotNull (',
+        'isFavorite = true (',
+        'device(copies > 1) and ',
+        'device(copies > 1) and (',
+        'title = "device(" and ',
+        'songs(devices(copies > 1)) or ',
+    ])('returns null outside of a scope in %s', (text) => {
+        expect(extractScopePrefix(text)).toBeNull();
+    });
+});
+
+describe('qualifyField', () => {
+    it('prefixes the field with the scope it is in', () => {
+        expect(qualifyField('device', 'name')).toBe('device.name');
+        expect(qualifyField(null, 'device.name')).toBe('device.name');
     });
 });

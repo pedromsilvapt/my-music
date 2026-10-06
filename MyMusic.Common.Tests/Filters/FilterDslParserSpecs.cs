@@ -329,4 +329,73 @@ public class FilterDslParserSpecs
         condition.ShouldNotBeNull();
         condition.Field.ShouldBe("song[any].genre[all].name");
     }
+
+    [Fact]
+    public void Parse_Scope_ParsesNameAndInnerRules()
+    {
+        var result = FilterDslParser.Parse("device(name = \"Phone\" and copies > 1)");
+
+        result.Rules.Count.ShouldBe(1);
+        var scope = result.Rules[0] as FilterScopeRule;
+        scope.ShouldNotBeNull();
+        scope.Field.ShouldBe("device");
+        scope.Quantifier.ShouldBeNull();
+        scope.Combinator.ShouldBe(FilterCombinator.And);
+        scope.Rules.Count.ShouldBe(2);
+        (scope.Rules[0] as FilterConditionRule)!.Field.ShouldBe("name");
+        (scope.Rules[1] as FilterConditionRule)!.Field.ShouldBe("copies");
+    }
+
+    [Theory]
+    [InlineData("device[all](copies = 1)", FilterQuantifier.All)]
+    [InlineData("device[any] (copies = 1)", FilterQuantifier.Any)]
+    [InlineData("device[ ALL ](copies = 1)", FilterQuantifier.All)]
+    public void Parse_ScopeWithQuantifier_ParsesQuantifier(string dsl, FilterQuantifier expected)
+    {
+        var result = FilterDslParser.Parse(dsl);
+
+        var scope = result.Rules[0] as FilterScopeRule;
+        scope.ShouldNotBeNull();
+        scope.Field.ShouldBe("device");
+        scope.Quantifier.ShouldBe(expected);
+    }
+
+    [Fact]
+    public void Parse_ScopeWithNestedGroupAndScope_ParsesTree()
+    {
+        var result = FilterDslParser.Parse(
+            "title ~ \"love\" or songs(year > 2000 and (devices(copies > 1) or rating isNull))");
+
+        result.Combinator.ShouldBe(FilterCombinator.Or);
+        result.Rules.Count.ShouldBe(2);
+        result.Rules[0].ShouldBeOfType<FilterConditionRule>();
+
+        var scope = result.Rules[1].ShouldBeOfType<FilterScopeRule>();
+        scope.Field.ShouldBe("songs");
+        scope.Rules.Count.ShouldBe(2);
+
+        var group = scope.Rules[1].ShouldBeOfType<FilterGroupRule>();
+        group.Combinator.ShouldBe(FilterCombinator.Or);
+        group.Rules[0].ShouldBeOfType<FilterScopeRule>().Field.ShouldBe("devices");
+        group.Rules[1].ShouldBeOfType<FilterConditionRule>().Operator.ShouldBe(FilterOperator.IsNull);
+    }
+
+    [Fact]
+    public void Parse_ScopeInsideGroup_ParsesCorrectly()
+    {
+        var result = FilterDslParser.Parse("(device(copies > 1) or year = 2000) and isFavorite isTrue");
+
+        var group = result.Rules[0].ShouldBeOfType<FilterGroupRule>();
+        group.Rules[0].ShouldBeOfType<FilterScopeRule>();
+        result.Rules[1].ShouldBeOfType<FilterConditionRule>();
+    }
+
+    [Theory]
+    [InlineData("device()")]
+    [InlineData("device(copies > 1")]
+    [InlineData("device[any].songs(copies > 1)")]
+    public void Parse_InvalidScope_Throws(string dsl)
+    {
+        Should.Throw<FormatException>(() => FilterDslParser.Parse(dsl));
+    }
 }
