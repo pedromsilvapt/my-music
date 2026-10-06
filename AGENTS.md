@@ -126,6 +126,28 @@ Integration tests should use comments with these characteristics: (example based
 
 The pattern follows a typical test structure: **Setup → Action → Assert → Mutate → Action → Assert**, with each phase commented.
 
+#### Scenario Comment
+
+Every integration test must have a Gherkin-style `Scenario` comment right above its `[Fact]`/`[Theory]` attribute, describing the behavior in user terms (example shortened from `Sync_ShouldUseManuallyEditedDevicePath_UntilSongChanges` in [SyncTestsBase.NamingStrategy.cs](./MyMusic.IntegrationTests/Tests/Sync/SyncTestsBase.NamingStrategy.cs)):
+
+```csharp
+// Scenario: A path typed for a song on a device is used as is, until the song changes
+//   Given a naming template that keeps the folder a file is in
+//   And a song exists on the server without any device association
+//   When the user adds the song to the device, typing its path
+//   And the CLI sync runs
+//   Then the song is downloaded to the typed path
+//   When the song is edited on the server
+//   And the CLI sync runs
+//   Then the file gets the template's name, staying in the typed folder
+[Fact]
+```
+
+- `Scenario:` is a one-line summary of the behavior under test; steps are indented by two spaces and start with `Given`, `When`, `Then` or `And`
+- Steps describe user-observable behavior, not implementation (no flow, fixture, page object or method names)
+- Repeat `When`/`Then` groups for multi-phase tests, in the same order as the test body
+- Keep the scenario in sync with the test body whenever the test changes; the in-body comments above are still required
+
 ### Debugging with Otelite
 
 When OpenTelemetry is enabled (`OpenTelemetry__Enabled=true`), integration tests emit traces and logs to Otelite. Use these commands to debug failed tests:
