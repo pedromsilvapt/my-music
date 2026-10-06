@@ -30,6 +30,30 @@ public class ArtistDetailsPage(IPage page) : BasePage(page, "artist-detail")
         }
     }
 
+    /// <summary>
+    /// The albums of the artist with the given name, as listed in the Albums collection (the first one of the page).
+    /// </summary>
+    public ILocator GetAlbums(string albumName) =>
+        Collections.First.Locator("[data-index]").Filter(new() { HasText = albumName });
+
+    /// <summary>
+    /// The "New album" button; absent when the artist belongs to another user (a shared view).
+    /// </summary>
+    public ILocator CreateAlbumButton => Root.GetByTestId("create-album");
+
+    /// <summary>
+    /// Opens the "New album" dialog, which starts with this artist picked.
+    /// </summary>
+    public async Task<CreateAlbumModalComponent> OpenCreateAlbumAsync()
+    {
+        await CreateAlbumButton.ClickAsync();
+
+        // The modal is rendered in a portal, outside the page root
+        var modal = new CreateAlbumModalComponent(Page.GetByRole(AriaRole.Dialog, new() { Name = "New Album" }));
+        await modal.WaitForVisibleAsync();
+        return modal;
+    }
+
     public async Task WaitForLoadedAsync()
     {
         await Root.WaitForAsync(new() { Timeout = 10000 });

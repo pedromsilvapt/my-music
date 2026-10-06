@@ -25,6 +25,11 @@ public class VirtualSelectComponent(ILocator root) : BaseComponent(root)
     public Task<string> GetValueAsync() => Root.InputValueAsync();
 
     /// <summary>
+    /// Waits for the input to show the given option as the one picked.
+    /// </summary>
+    public Task WaitForValueAsync(string text) => Assertions.Expect(Root).ToHaveValueAsync(text);
+
+    /// <summary>
     /// Searches for the option and picks it; the input shows it afterwards.
     /// </summary>
     public async Task SelectAsync(string text)

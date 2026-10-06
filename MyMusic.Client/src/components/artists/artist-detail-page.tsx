@@ -1,10 +1,12 @@
-import {Box, Button, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
-import {IconArrowBack, IconEdit, IconTrash, IconUser} from "@tabler/icons-react";
+import {ActionIcon, Box, Button, Flex, Group, SegmentedControl, Stack, Text} from "@mantine/core";
+import {useDisclosure} from "@mantine/hooks";
+import {IconArrowBack, IconEdit, IconPlus, IconTrash, IconUser} from "@tabler/icons-react";
 import {Link, useNavigate, useParams, useSearch} from "@tanstack/react-router";
 import {useGetArtist} from "../../client/artists.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import type {ListAlbumItem, ListSongItem} from "../../model";
 import {ArtistSongFilter} from "../../model";
+import CreateAlbumModal from "../albums/create-album-modal.tsx";
 import {useAlbumsSchema} from "../albums/useAlbumsSchema.tsx";
 import Artwork from "../common/artwork.tsx";
 import Collection from "../common/collection/collection.tsx";
@@ -15,7 +17,7 @@ import {useConfirmDeleteArtists} from "./use-confirm-delete-artists.tsx";
 import {useEditArtists} from "./use-edit-artists.ts";
 
 export default function ArtistDetailPage() {
-    const {t} = useTranslation(["artists", "common"]);
+    const {t} = useTranslation(["artists", "albums", "common"]);
     const {artistId} = useParams({from: '/artists/$artistId'});
     const search = useSearch({from: '/artists/$artistId'});
     const navigate = useNavigate({from: '/artists/$artistId'});
@@ -31,6 +33,7 @@ export default function ArtistDetailPage() {
     const albumsSchema = useAlbumsSchema({readOnly: artist?.isShared ?? true});
     const confirmDeleteArtists = useConfirmDeleteArtists();
     const editArtists = useEditArtists();
+    const [createAlbumOpened, {open: openCreateAlbum, close: closeCreateAlbum}] = useDisclosure(false);
 
     const queueContext = useMemo(() => ({
         type: 'artist' as const,
@@ -92,7 +95,21 @@ export default function ArtistDetailPage() {
             </Flex>
 
             <Box>
-                <Text size="lg" fw={600} mb="sm">{t("artists:detail.albums")}</Text>
+                <Group justify="space-between" mb="sm">
+                    <Text size="lg" fw={600}>{t("artists:detail.albums")}</Text>
+                    {!artist.isShared && (
+                        <ActionIcon
+                            variant="default"
+                            size="lg"
+                            aria-label={t("albums:page.createAlbum")}
+                            title={t("albums:page.createAlbum")}
+                            onClick={openCreateAlbum}
+                            data-testid="create-album"
+                        >
+                            <IconPlus/>
+                        </ActionIcon>
+                    )}
+                </Group>
                 <Collection
                     initialView="grid"
                     stateKey="artist-albums"
@@ -125,6 +142,8 @@ export default function ArtistDetailPage() {
                     autoHeight
                 />
             </Box>
+
+            <CreateAlbumModal opened={createAlbumOpened} onClose={closeCreateAlbum} initialArtist={artist}/>
         </Stack>
     );
 }

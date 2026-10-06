@@ -9,18 +9,22 @@ import ArtistSelect from "../artists/artist-select.tsx";
 interface CreateAlbumModalProps {
     opened: boolean;
     onClose: () => void;
+    /** The artist the picker starts with; the user can still pick another one. */
+    initialArtist?: ListArtistItem | null;
 }
 
-export default function CreateAlbumModal({opened, onClose}: CreateAlbumModalProps) {
+export default function CreateAlbumModal({opened, onClose, initialArtist}: CreateAlbumModalProps) {
     const {t} = useTranslation(["albums", "common"]);
     const [name, setName] = useState("");
-    const [artist, setArtist] = useState<ListArtistItem | null>(null);
+    const [pickedArtist, setPickedArtist] = useState<ListArtistItem | null>(null);
     const [year, setYear] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const artist = pickedArtist ?? initialArtist ?? null;
+
     const handleClose = () => {
         setName("");
-        setArtist(null);
+        setPickedArtist(null);
         setYear(null);
         setError(null);
         onClose();
@@ -73,7 +77,7 @@ export default function CreateAlbumModal({opened, onClose}: CreateAlbumModalProp
                 <ArtistSelect
                     label={t("albums:createModal.artistLabel")}
                     value={artist}
-                    onChange={setArtist}
+                    onChange={setPickedArtist}
                     enabled={opened}
                     testId="create-album-artist"
                 />

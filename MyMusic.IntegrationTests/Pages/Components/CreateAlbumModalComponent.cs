@@ -3,7 +3,7 @@ using Microsoft.Playwright;
 namespace MyMusic.IntegrationTests.Pages.Components;
 
 /// <summary>
-/// The "New album" dialog, opened from the albums page toolbar.
+/// The "New album" dialog, opened from the albums page toolbar or from an artist's detail page.
 /// </summary>
 public class CreateAlbumModalComponent(ILocator root) : BaseComponent(root)
 {
@@ -25,10 +25,17 @@ public class CreateAlbumModalComponent(ILocator root) : BaseComponent(root)
         await Root.WaitForAsync(new() { State = WaitForSelectorState.Visible });
     }
 
-    public async Task FillAsync(string name, string artistName, int? year = null)
+    /// <summary>
+    /// Fills the dialog; without an artist name, the artist the dialog opened with is kept.
+    /// </summary>
+    public async Task FillAsync(string name, string? artistName = null, int? year = null)
     {
         await NameInput.FillAsync(name);
-        await Artist.SelectAsync(artistName);
+
+        if (artistName is not null)
+        {
+            await Artist.SelectAsync(artistName);
+        }
 
         if (year is not null)
         {
