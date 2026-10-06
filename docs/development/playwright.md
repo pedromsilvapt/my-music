@@ -86,7 +86,7 @@ The Playwright version used by the integration test Docker image must stay in sy
 
 ### Files to Keep in Sync
 
-1. **Earthfile** (`Earthfile` line 112):
+1. **Earthfile** (`+docker-integration-tests-base` target):
    ```dockerfile
    RUN pnpm install -g playwright@^1.59 && \
    ```
@@ -99,6 +99,9 @@ The Playwright version used by the integration test Docker image must stay in sy
 ### Rule
 
 When updating the Playwright .NET package in `Directory.Packages.props`, **always** update the `pnpm install` version in the `Earthfile` to match. Mismatched versions can cause browser binary incompatibilities and test failures in the Docker environment.
+
+The browsers are part of a prebuilt base image in CI: after changing the version, run the **Base Images** workflow to
+republish it (see [Prebuilt Base Images](../../README.md#prebuilt-base-images)), otherwise the pipelines keep using the old browsers.
 
 ---
 

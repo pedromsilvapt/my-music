@@ -3,10 +3,30 @@ VERSION 0.8
 ARG --global ANDROID_SDK_VERSION=11076708
 ARG --global NODE_VERSION=24
 ARG --global JAVA_VERSION=21
+# Optional repository of the prebuilt base images, see the root Earthfile
+ARG --global BASE_IMAGES
 
 FROM node:${NODE_VERSION}-trixie
 
-builder:
+# Starts the calling target from its base image: the prebuilt `${BASE_IMAGES}:mobile-<name>` when the arg is set, the
+# local `+<name>-base` target otherwise. The arg has to be handed over explicitly, functions do not see globals:
+#   DO +BASE --name=build --BASE_IMAGES=$BASE_IMAGES
+BASE:
+    FUNCTION
+
+    ARG --required name
+    ARG BASE_IMAGES
+
+    IF [ -n "$BASE_IMAGES" ]
+        FROM ${BASE_IMAGES}:mobile-$name
+    ELSE
+        FROM +$name-base
+    END
+
+# Builds the APK: JDK, Android SDK and Expo
+build-base:
+    FROM node:${NODE_VERSION}-trixie
+
     RUN apt-get update && apt-get install -y --no-install-recommends \
         wget \
         unzip \
@@ -34,7 +54,7 @@ builder:
     RUN npm install -g expo-cli
 
 build:
-    FROM +builder
+    DO +BASE --name=build --BASE_IMAGES=$BASE_IMAGES
 
     ARG BUILD_TYPE=release
     ARG APK_ABI=both

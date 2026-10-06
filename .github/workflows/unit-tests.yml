@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_COLOR: 1
+      # Repository of the prebuilt base images (see base-images.yml); when empty, everything is built from scratch
+      BASE_IMAGES: ${{ vars.BASE_IMAGES }}
     steps:
       - uses: earthly/actions/setup-earthly@v1
         with:
@@ -25,7 +27,7 @@ jobs:
         run: echo "VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Build UnitTests image
-        run: earthly --ci --output +docker-unit-tests --TAG="$VERSION"
+        run: earthly --ci --output +docker-unit-tests --TAG="$VERSION" --BASE_IMAGES="$BASE_IMAGES"
 
       - name: Run unit tests
         run: docker run --rm gitea.home/silvas/my-music-unit-tests:$VERSION

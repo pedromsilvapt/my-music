@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_COLOR: 1
+      # Repository of the prebuilt base images (see base-images.yml); when empty, everything is built from scratch
+      BASE_IMAGES: ${{ vars.BASE_IMAGES }}
     steps:
       - uses: earthly/actions/setup-earthly@v1
         with:
@@ -25,13 +27,13 @@ jobs:
         run: echo "VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Build Server image
-        run: earthly --ci --output +docker --TAG="$VERSION"
+        run: earthly --ci --output +docker --TAG="$VERSION" --BASE_IMAGES="$BASE_IMAGES"
 
       - name: Build Client image
         run: earthly --ci --output ./MyMusic.Client+docker --TAG="$VERSION"
 
       - name: Build IntegrationTests image
-        run: earthly --ci --output +docker-integration-tests --TAG="$VERSION"
+        run: earthly --ci --output +docker-integration-tests --TAG="$VERSION" --BASE_IMAGES="$BASE_IMAGES"
 
       - name: Run integration tests
         run: docker compose -f compose.integration.yaml --profile otelite up --pull missing --no-attach otelite --no-attach client --exit-code-from integration-tests

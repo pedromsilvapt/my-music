@@ -5,8 +5,47 @@ WORKDIR /app/MyMusic
 
 ARG --global projects = "MyMusic.CLI"
 ARG --global VERSION = "0.0.0"
+# Optional repository of the prebuilt base images, see the root Earthfile
+ARG --global BASE_IMAGES
+
+# Starts the calling target from its base image: the prebuilt `${BASE_IMAGES}:cli-<name>` when the arg is set, the
+# local `+<name>-base` target otherwise. The arg has to be handed over explicitly, functions do not see globals:
+#   DO +BASE --name=install --BASE_IMAGES=$BASE_IMAGES
+BASE:
+    FUNCTION
+
+    ARG --required name
+    ARG BASE_IMAGES
+
+    IF [ -n "$BASE_IMAGES" ]
+        FROM ${BASE_IMAGES}:cli-$name
+    ELSE
+        FROM +$name-base
+    END
+
+# Compiles the CLI, including the Native AOT toolchain (clang, zlib)
+install-base:
+    FROM mcr.microsoft.com/dotnet/sdk:10.0
+
+    RUN apt-get update && apt-get install -y --no-install-recommends clang zlib1g-dev && \
+        rm -rf /var/lib/apt/lists/*
+
+    # Warm up the NuGet cache, including the runtime specific packages of the Native AOT publish (ILCompiler)
+    WORKDIR /tmp/nuget-warmup
+
+    COPY ../+packages-props/Directory.Packages.props ./
+    COPY ./MyMusic.CLI.csproj ./MyMusic.CLI/
+
+    RUN dotnet restore ./MyMusic.CLI/MyMusic.CLI.csproj && \
+        dotnet restore ./MyMusic.CLI/MyMusic.CLI.csproj -r linux-x64
+
+    RUN rm -rf /tmp/nuget-warmup
+
+    WORKDIR /app/MyMusic
 
 install:
+    DO +BASE --name=install --BASE_IMAGES=$BASE_IMAGES
+
     COPY ../+packages-props/Directory.Packages.props ./
 
     FOR proj IN $projects
@@ -30,9 +69,6 @@ sources:
 # (Ubuntu 24.04, 2.39), so it won't run on older distros (e.g. Debian 12); use +build-jit for those
 build-aot:
     FROM +sources
-
-    RUN apt-get update && apt-get install -y --no-install-recommends clang zlib1g-dev && \
-        rm -rf /var/lib/apt/lists/*
 
     ARG configuration='Release'
 
@@ -65,14 +101,22 @@ build-jit:
 
     SAVE ARTIFACT publish publish
 
-package:
-    # Which build to package: aot or jit
-    ARG variant='aot'
+# Packages the CLI as a .deb (fpm)
+package-base:
+    FROM mcr.microsoft.com/dotnet/sdk:10.0
 
     RUN apt-get update && apt-get install -y ruby ruby-dev build-essential && \
         rm -rf /var/lib/apt/lists/*
 
     RUN gem install fpm
+
+package:
+    # Which build to package: aot or jit
+    ARG variant='aot'
+
+    DO +BASE --name=package --BASE_IMAGES=$BASE_IMAGES
+
+    WORKDIR /app/MyMusic
 
     RUN mkdir -p /app/.pkgroot/usr/local/bin /app/.pkgroot/usr/share/my-music
 

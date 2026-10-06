@@ -1,0 +1,38 @@
+name: Base Images
+
+# Rebuilds and republishes the prebuilt base images (the `*-base` targets of the Earthfile) to Docker Hub.
+# The other workflows use them when the repository variable BASE_IMAGES is set to the repository printed
+# in this run's summary; run this again whenever a `*-base` target changes.
+# Needs the repository variable DOCKERHUB_USERNAME and the secret DOCKERHUB_TOKEN (access token with write permission).
+on:
+  workflow_dispatch:
+
+jobs:
+  base-images:
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+      PREFIX: ${{ vars.DOCKERHUB_USERNAME }}/my-music-base
+    steps:
+      - uses: earthly/actions/setup-earthly@v1
+        with:
+          version: v0.8.16
+
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        run: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push base images
+        run: earthly --ci --push +base-images-all --PREFIX="$PREFIX"
+
+      - name: Summary
+        run: |
+          {
+            echo "Published the base images as \`$PREFIX:<name>\`."
+            echo
+            echo "To use them, set the repository variable \`BASE_IMAGES\` to \`$PREFIX\`."
+          } >> "$GITHUB_STEP_SUMMARY"

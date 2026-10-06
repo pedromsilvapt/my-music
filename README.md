@@ -45,6 +45,30 @@ dotnet run --project MyMusic.CLI -- init -s http://localhost:5000/api -u myuser 
 dotnet run --project MyMusic.CLI -- sync
 ```
 
+## CI Pipelines
+
+The GitHub Actions workflows live in `.github/workflows/`. They read the following settings, defined in the GitHub repository under **Settings → Secrets and variables → Actions** (they cannot be declared in the repository itself):
+
+| Name | Kind | Used by | Description |
+|---|---|---|---|
+| `BASE_IMAGES` | Variable | Unit Tests, Integration Tests, Deploy Mobile APK | Optional. Repository of the prebuilt base images, e.g. `<dockerhub-user>/my-music-base`. When unset, the pipelines build everything from scratch. The Docker Hub repository must be public, since the pipelines pull without logging in |
+| `DOCKERHUB_USERNAME` | Variable | Base Images | Docker Hub user that owns the `my-music-base` repository the base images are pushed to |
+| `DOCKERHUB_TOKEN` | Secret | Base Images | Docker Hub access token of that user, with write permission |
+
+`GITHUB_TOKEN` is provided automatically by GitHub and needs no setup.
+
+### Prebuilt Base Images
+
+The slow, rarely changing parts of the builds (system packages, toolchains, Playwright browsers, NuGet cache) are the `+<target>-base` targets of the Earthfiles. To avoid rebuilding them on every pipeline run:
+
+1. Set `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`
+2. Run the **Base Images** workflow manually; it pushes one tag per base image, `<dockerhub-user>/my-music-base:<name>`
+3. Set `BASE_IMAGES` to the repository printed in that run's summary
+
+Run the **Base Images** workflow again whenever a `*-base` target changes, otherwise the pipelines keep using the old images.
+
+The same works locally: `earth +docker --BASE_IMAGES=<dockerhub-user>/my-music-base`.
+
 ## Configuration
 
 ### Environment Variables
