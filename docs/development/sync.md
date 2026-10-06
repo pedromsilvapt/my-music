@@ -65,7 +65,10 @@ During a sync session, we create a list of `DeviceSyncSessionRecord`. Each recor
    - Downloaded and renamed files follow the device's naming template; a name collision gets a ` (2)`, ` (3)`, … suffix
       - A collision is only with *another* path of the device: a SongDevice never collides with its own path, so a path that already has a suffix is kept while the name without it is still taken
       - A path given to a file stays taken for the rest of the session, across all its requests: device paths only change at commit, so the paths taken and freed so far are read from the session's records (once per request)
-      - A Rename frees the path the file is renamed from, and a DeleteLocal frees the path of the deleted file: a later file of the session can be given that path
+      - A Rename frees the path the file is renamed from: a later file of the session can be given that path
+      - The path of a file the session deletes (its SongDevice is marked for removal) is free from the start of the session, whether or not its DeleteLocal was created yet: which file gets a path does not depend on the order the device reports its files. A song kept by a merge takes the file name of the song merged into it this way
+         - So a Rename or CreateLocal can come before the DeleteLocal of the file at its path: the device performs the DeleteLocal records first, and the commit processes them first
+         - In direction `up` nothing is deleted from the device, so those paths stay taken
       - A device never replaces an existing file when it renames: if the target is still there (its own rename or deletion failed), the Rename should result in an Error
       - The file is always put at the path the server holds for it. When that path changes before the first download, the CreateLocal carries the new path and the commit saves it in the SongDevice
    - Content present in the server library only once: duplicate local files (same Checksum) link to one Song and are never imported twice

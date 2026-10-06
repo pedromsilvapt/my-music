@@ -376,7 +376,11 @@ public class Phases(
         // Every client-action record must be processed (and acknowledged), regardless of direction,
         // otherwise the commit rejects the session. In `down` the server is the source of truth, so
         // its deletions and renames are applied just like downloads.
-        var recordsToProcess = ctx.PendingServerRecords;
+        // The deletions go first: the server gives the path of a file it deletes to another file of the same
+        // session, whose record may come before the DeleteLocal.
+        var recordsToProcess = ctx.PendingServerRecords
+            .OrderBy(r => r.Action != SyncRecordAction.DeleteLocal)
+            .ToList();
         logger.LogInformation("Processing {Count} pending actions", recordsToProcess.Count);
 
         var serverTotal = recordsToProcess.Count;

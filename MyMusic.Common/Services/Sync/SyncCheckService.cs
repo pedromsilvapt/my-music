@@ -95,7 +95,6 @@ public class SyncCheckService(
                 logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> DELETE_LOCAL (marked for removal or song deleted)", clientFile.Path, existingSongDevice.SongId);
                 var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal or deleted on server", cancellationToken);
                 allRecords.Add(record);
-                _usedPaths?.Free(existingSongDevice.DevicePath);
             }
             else if (input.Force)
             {
@@ -265,7 +264,6 @@ public class SyncCheckService(
             {
                 var record = await syncActions.ActionDeleteLocal(existingSongDevice.DevicePath, existingSongDevice.SongId, "Song marked for removal", cancellationToken);
                 allRecords.Add(record);
-                _usedPaths?.Free(existingSongDevice.DevicePath);
             }
             else if (existingSongDevice.LastSyncedModifiedAt != null)
             {
@@ -290,8 +288,7 @@ public class SyncCheckService(
             else
             {
                 // Lazy-load the used paths of the device, which are only needed for naming-collision
-                // detection on CreateLocal. Cached across iterations in _usedPaths; a path deleted before
-                // the load is freed by the load itself, which reads the session's records.
+                // detection on CreateLocal. Cached across iterations in _usedPaths.
                 _usedPaths ??= await usedPathsService.GetAsync(db, deviceId, sessionId, cancellationToken);
 
                 var pendingAction = _usedPaths.Take(pathResolver, existingSongDevice, namingStrategy);

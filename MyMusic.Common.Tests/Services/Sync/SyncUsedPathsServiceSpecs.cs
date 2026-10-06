@@ -79,21 +79,59 @@ public class SyncUsedPathsServiceSpecs
         usedPaths.Contains("Created.mp3").ShouldBeTrue();
     }
 
-    [Fact]
-    public async Task GetAsync_DeleteLocalRecord_FreesItsPath()
+    [Theory]
+    [InlineData(SyncDirection.Both)]
+    [InlineData(SyncDirection.Down)]
+    public async Task GetAsync_SongDeviceMarkedForRemoval_ItsPathIsFree(SyncDirection direction)
     {
-        // Arrange
+        // Arrange: the session will delete the file, whether or not its DeleteLocal record exists yet
         var scenario = new Scenario();
         var device = scenario.CreateDevice();
-        var session = scenario.CreateSession(device);
-        scenario.CreateSongDevice(device, scenario.CreateSong("Song"), "Deleted.mp3");
-        scenario.AddRecord(session.Id, "Deleted.mp3", SyncRecordAction.DeleteLocal);
+        var session = scenario.CreateSession(device, direction: direction);
+        scenario.CreateSongDevice(device, scenario.CreateSong("Song"), "Removed.mp3", syncAction: SongSyncAction.Remove);
 
         // Act
         var usedPaths = await new SyncUsedPathsService().GetAsync(scenario.DbContext, device.Id, session.Id, CancellationToken.None);
 
         // Assert
-        usedPaths.Contains("Deleted.mp3").ShouldBeFalse();
+        usedPaths.Contains("Removed.mp3").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task GetAsync_SongDeviceMarkedForRemoval_DirectionUp_ItsPathIsTaken()
+    {
+        // Arrange: in `up` nothing is deleted from the device
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, direction: SyncDirection.Up);
+        scenario.CreateSongDevice(device, scenario.CreateSong("Song"), "Removed.mp3", syncAction: SongSyncAction.Remove);
+
+        // Act
+        var usedPaths = await new SyncUsedPathsService().GetAsync(scenario.DbContext, device.Id, session.Id, CancellationToken.None);
+
+        // Assert
+        usedPaths.Contains("Removed.mp3").ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task GetAsync_DeleteLocalRecordAfterARenameToItsPath_ThePathStaysTaken()
+    {
+        // Arrange: the path of the removed file was given to another file before its DeleteLocal was created
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device);
+        var song = scenario.CreateSong("Song");
+        scenario.CreateSongDevice(device, null, "Removed.mp3", syncAction: SongSyncAction.Remove);
+        scenario.CreateSongDevice(device, song, "Kept.mp3");
+        AddRename(scenario, session.Id, "Kept.mp3", "Removed.mp3");
+        scenario.AddRecord(session.Id, "Removed.mp3", SyncRecordAction.DeleteLocal);
+
+        // Act
+        var usedPaths = await new SyncUsedPathsService().GetAsync(scenario.DbContext, device.Id, session.Id, CancellationToken.None);
+
+        // Assert
+        usedPaths.Contains("Removed.mp3").ShouldBeTrue();
+        usedPaths.Contains("Kept.mp3").ShouldBeFalse();
     }
 
     [Fact]

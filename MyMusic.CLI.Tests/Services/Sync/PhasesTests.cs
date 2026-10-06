@@ -96,6 +96,33 @@ public class PhasesTests
     }
 
     [Fact]
+    public async Task ServerActionsPhase_RenameToThePathOfADeletedFile_DeletesTheFileFirst()
+    {
+        // The server gave the path of a file it deletes to another file, in a record created before the DeleteLocal
+        var renameRecord = CreateRecord("song.mp3", SyncRecordAction.Rename) with
+        {
+            Data = JsonSerializer.SerializeToElement(new { previousPath = "old.mp3", newPath = "song.mp3" })
+        };
+        var deleteRecord = CreateRecord("song.mp3", SyncRecordAction.DeleteLocal);
+        SetupPendingActions(renameRecord, deleteRecord);
+        _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new AcknowledgeActionResult { Success = true });
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { AutoConfirm = true });
+
+        await phases.ServerActionsPhaseAsync(ctx, null);
+
+        // The path should be free by the time the other file is moved to it
+        Received.InOrder(() =>
+        {
+            _fileOps.DeleteFileAsync(Arg.Is<string>(path => path.EndsWith("song.mp3")), Arg.Any<CancellationToken>());
+            _fileOps.MoveFileAsync(Arg.Is<string>(path => path.EndsWith("old.mp3")), Arg.Is<string>(path => path.EndsWith("song.mp3")), Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
     public async Task ServerActionsPhase_CountsRecordsWhenCreated_NotWhenAcknowledged()
     {
         // The server marks a song for removal, and counts the record in the response that creates it

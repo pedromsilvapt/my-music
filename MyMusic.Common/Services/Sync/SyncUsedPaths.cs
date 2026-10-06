@@ -22,7 +22,7 @@ public class SyncUsedPaths(IEnumerable<string> paths)
     public void Reserve(string path) => _paths.Add(path);
 
     /// <summary>
-    /// Marks <paramref name="path"/> as no longer taken: its file is deleted from the device.
+    /// Marks <paramref name="path"/> as no longer taken.
     /// </summary>
     public void Free(string path) => _paths.Remove(path);
 

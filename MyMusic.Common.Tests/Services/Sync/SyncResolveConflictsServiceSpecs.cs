@@ -555,6 +555,42 @@ public class SyncResolveConflictsServiceSpecs
         renameRecords[0].FilePath.ShouldBe(expectedPath);
     }
 
+    [Fact]
+    public async Task ResolveAsync_PotentialUpdate_TemplatePathOfASongDeviceMarkedForRemoval_IsUsedWithoutASuffix()
+    {
+        // Arrange: the file at the template path is to be deleted, but the device has not reported it yet,
+        // so the session has no DeleteLocal record for it
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var service = CreateService(scenario);
+
+        var serverContent = new byte[] { 1, 2, 3, 4, 5 };
+        var clientContent = new byte[] { 9, 8, 7, 6, 5 };
+        var song = scenario.CreateSong("Song", checksum: ComputeChecksum(serverContent));
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, "OldName.mp3");
+        scenario.CreateSongDevice(device, null, expectedPath, syncAction: SongSyncAction.Remove);
+
+        var input = InputFor(potentialUpdates:
+        [
+            new SyncResolvePotentialUpdateItem
+            {
+                Path = "OldName.mp3",
+                SongId = song.Id,
+                FileContentBase64 = Convert.ToBase64String(clientContent),
+                LocalModifiedAt = DateTime.UtcNow,
+                LastSyncedAt = DateTime.UtcNow.AddHours(-2),
+            }
+        ]);
+
+        // Act
+        var result = await service.ResolveAsync(device.Id, session.Id, scenario.AdminUser.Id, input, CancellationToken.None);
+
+        // Assert
+        result!.Records.Single(r => r.Action == SyncRecordAction.Rename).FilePath.ShouldBe(expectedPath);
+    }
+
     [Theory]
     [InlineData("session/{{ simple_label }}{{ extension }}", "session/")]
     // Sessions started before the template was recorded on them have none

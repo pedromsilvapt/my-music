@@ -426,4 +426,49 @@ public class SyncPendingActionsServiceSpecs
         // Assert
         result!.Records.Single(r => r.Action == SyncRecordAction.Rename).FilePath.ShouldBe(expectedPath);
     }
+
+    [Fact]
+    public async Task CreateAsync_TemplatePathOfASongDeviceMarkedForRemoval_IsUsedWithoutASuffix()
+    {
+        // Arrange: the file at the template path is to be deleted, and has no DeleteLocal record yet
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var expectedPath = ComputeExpectedPath(song);
+        scenario.CreateSongDevice(device, song, "Copy.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Download);
+        scenario.CreateSongDevice(device, null, expectedPath, syncAction: SongSyncAction.Remove);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert: whichever SongDevice is handled first, the removed file's path goes to the renamed one
+        result!.Records.Single(r => r.Action == SyncRecordAction.Rename).FilePath.ShouldBe(expectedPath);
+        result.Records.Single(r => r.Action == SyncRecordAction.DeleteLocal).FilePath.ShouldBe(expectedPath);
+    }
+
+    [Theory]
+    [InlineData(SyncRecordAction.Rename)]
+    [InlineData(SyncRecordAction.CreateLocal)]
+    public async Task CreateAsync_RemovedSongDevicePathGivenToAnotherFile_StillCreatesDeleteLocalRecord(SyncRecordAction otherAction)
+    {
+        // Arrange: an earlier request of the session gave the path of the removed file to another song's file
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        scenario.CreateSongDevice(device, null, "Removed.mp3", syncAction: SongSyncAction.Remove);
+        scenario.AddRecord(session.Id, "Removed.mp3", otherAction,
+            data: SyncActionDataSerializer.Serialize(new RenameData { PreviousPath = "Kept.mp3", NewPath = "Removed.mp3" }),
+            songId: song.Id);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result!.Records.ShouldHaveSingleItem().Action.ShouldBe(SyncRecordAction.DeleteLocal);
+        result.Records[0].FilePath.ShouldBe("Removed.mp3");
+    }
 }

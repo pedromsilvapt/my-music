@@ -287,7 +287,12 @@ export async function serverActionsPhase (
     ctx.result = addDeltaToResult(ctx.result, pendingActionsResponse.counts ?? EMPTY_COUNTS);
     ctx.pendingActions = mergePendingActions(ctx.pendingActions ?? [], pendingActionsResponse.records);
 
-    const pendingActions = ctx.pendingActions;
+    // The deletions go first: the server gives the path of a file it deletes to another file of the same
+    // session, whose record may come before the DeleteLocal.
+    const pendingActions = [
+        ...ctx.pendingActions.filter(record => record.action === 'DeleteLocal'),
+        ...ctx.pendingActions.filter(record => record.action !== 'DeleteLocal'),
+    ];
     const serverResults: ActionResult[] = [];
 
     // Resets the progress left by the upload phase before the first action finishes

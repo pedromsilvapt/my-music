@@ -663,6 +663,27 @@ public class SyncCommitServiceSpecs
     #region Rename
 
     [Fact]
+    public async Task Rename_ToThePathOfAFileDeletedByALaterRecord_KeepsTheRenamedSongDevice()
+    {
+        // The path of a removed file is free from the start of the session, so the Rename that takes it
+        // can be created before the DeleteLocal of that file
+        var ctx = SetupWithSong();
+        var kept = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", syncAction: SongSyncAction.Download);
+        var removed = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/new.mp3", syncAction: SongSyncAction.Remove);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename,
+            data: CreateRenameData("/music/old.mp3", "/music/new.mp3"), songId: ctx.Song!.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.DeleteLocal, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        ctx.Db.ChangeTracker.Clear();
+        ctx.Db.SongDevices.Any(sd => sd.Id == removed.Id).ShouldBeFalse();
+        var renamed = ctx.Db.SongDevices.Single(sd => sd.Id == kept.Id);
+        renamed.DevicePath.ShouldBe("/music/new.mp3");
+        renamed.SongId.ShouldBe(ctx.Song.Id);
+    }
+
+    [Fact]
     public async Task Rename_UpdatesDevicePathAndClearsSyncAction()
     {
         var ctx = SetupWithSong();

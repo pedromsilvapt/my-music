@@ -69,7 +69,9 @@ public class SyncCommitService(
             .OfType<long>()
             .ToHashSet();
 
-        foreach (var record in records)
+        // The deletions go first: the path of a deleted file is free from the start of the session, so a
+        // record created before the DeleteLocal may have given that path to another file
+        foreach (var record in records.OrderBy(r => r.Action != SyncRecordAction.DeleteLocal))
         {
             if (failedRecordIds.Contains(record.Id))
                 continue;

@@ -56,13 +56,16 @@ public class SyncPendingActionsService(
 
         // A SongDevice is skipped only when the session already has a record at its path. Records of the same
         // song at other paths must not hide its pending action; a Link at another path turns a pending download
-        // into an Unlink below
+        // into an Unlink below. The path of a SongDevice marked for removal is free, so a Rename or CreateLocal
+        // at it belongs to another file that was given the path, and must not hide the removal
         var songDevices = await db.SongDevices
             .IncludeSongMetadata("Song")
             .Where(sd => sd.DeviceId == deviceId
                 && sd.SyncAction != null
                 && sd.SyncAction != SongSyncAction.Upload
-                && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath))
+                && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath
+                    && !(sd.SyncAction == SongSyncAction.Remove
+                        && (r.Action == SyncRecordAction.Rename || r.Action == SyncRecordAction.CreateLocal))))
             .ToListAsync(cancellationToken);
 
         // Songs linked by checksum to a local file in this session: the device already holds their content
@@ -86,7 +89,6 @@ public class SyncPendingActionsService(
             {
                 var record = DeviceSyncSessionRecordForAction(sessionId, SyncRecordAction.DeleteLocal, sd.DevicePath, sd.SongId, sd.SyncActionReason);
                 createdRecords.Add(record);
-                usedPaths.Free(sd.DevicePath);
             }
             else if (sd.SyncAction == SongSyncAction.Download)
             {

@@ -1348,6 +1348,37 @@ describe('serverActionsPhase - Rename action', () => {
     });
 });
 
+describe('serverActionsPhase - order', () => {
+    const mockedActionRename = actionRename as jest.MockedFunction<typeof actionRename>;
+    const mockedActionDelete = actionDeleteLocal as jest.MockedFunction<typeof actionDeleteLocal>;
+    const record = (id: number, filePath: string, action: SyncRecordItem['action'], data: SyncRecordItem['data'] = null): SyncRecordItem =>
+        ({ id, filePath, action, songId: 1, data, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedActionRename.mockResolvedValue({ action: 'Rename', filePath: '', source: 'Server' });
+        mockedActionDelete.mockResolvedValue({ action: 'DeleteLocal', filePath: '', source: 'Server' });
+    });
+
+    test('a rename to the path of a deleted file runs after the deletion', async () => {
+        // The server gave the path of a file it deletes to another file, in a record created before the DeleteLocal
+        const deps = createMockDeps();
+        const ctx = createContext({
+            pendingActions: [
+                record(5, 'song.mp3', 'Rename', { previousPath: 'old.mp3', newPath: 'song.mp3' }),
+                record(6, 'song.mp3', 'DeleteLocal'),
+            ],
+        });
+
+        await serverActionsPhase(deps, ctx, jest.fn());
+
+        // The path should be free by the time the other file is moved to it
+        expect(mockedActionDelete).toHaveBeenCalledTimes(1);
+        expect(mockedActionRename).toHaveBeenCalledTimes(1);
+        expect(mockedActionDelete.mock.invocationCallOrder[0]).toBeLessThan(mockedActionRename.mock.invocationCallOrder[0]);
+    });
+});
+
 describe('serverActionsPhase - createPendingActions call', () => {
     const mockedActionDelete = actionDeleteLocal as jest.MockedFunction<typeof actionDeleteLocal>;
 
