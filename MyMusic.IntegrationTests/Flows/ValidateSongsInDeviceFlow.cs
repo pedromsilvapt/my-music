@@ -50,7 +50,7 @@ public class ValidateSongsInDeviceFlow : IFlow
 
         var manageDevicesDialog = new ManageDevicesDialogComponent(dialog);
         await manageDevicesDialog.ExpandDeviceAsync(_deviceName);
-        await manageDevicesDialog.ValidateSongsAsync(_validations);
+        await manageDevicesDialog.ValidateSongsAsync(_deviceName, _validations);
 
         await manageDevicesDialog.CancelAsync();
     }

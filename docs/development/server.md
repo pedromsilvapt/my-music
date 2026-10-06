@@ -339,6 +339,7 @@ public class MyTests : IntegrationTestBase
 - Use **AsSplitQuery()** for complex queries with includes
 - Follow existing migration pattern in `MyMusic.Common/Migrations/`
 - **SongDevice Records:** When deleting songs that have been synced to devices, always mark SongDevice records for removal (set SongId = null, SyncAction = Remove) instead of deleting them. This allows the sync system to track and remove files from devices during the next sync operation. See AuditsController.ResolveSoundalikes for example.
+- **SongDevice paths:** `DevicePath` is where the device holds (and reports) the file, so it only changes when a sync commits a `CreateLocal` or `Rename`. A path typed by the user (`PUT /songs/devices`, `ISongDevicesUpdateService`) goes to `RequestedPath` instead: `SyncPathResolver` uses it as is, in place of the naming template, for the SongDevice's next `CreateLocal`/`Rename`, and the commit clears it. An unchanged song gets a standalone `Rename` from `SyncPendingActionsService` (never in direction `up`). Once applied it is a path like any other: the next song change applies the naming template again, which keeps the typed folder only if it uses `original_folder`.
 
 ### Concurrent Song Imports
 

@@ -3,6 +3,7 @@ using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Sources;
 using MyMusic.Server;
 using MyMusic.Server.Controllers;
@@ -34,6 +35,8 @@ public class SongsControllerFilterValuesSpecs
             serverConfig,
             Substitute.For<ISongUpdateService>(),
             Substitute.For<ISongDeleteService>(),
+            Substitute.For<ISongDevicesUpdateService>(),
+            Substitute.For<ISongDevicePathPreviewService>(),
             Substitute.For<IMusicService>(),
             scenario.FileSystem,
             Substitute.For<ILogger<MusicImportJob>>(),

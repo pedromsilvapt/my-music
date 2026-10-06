@@ -39,6 +39,12 @@ public class SyncPendingActionsService(
 
         var records = await CreatePendingActionsForDevice(deviceId, session?.NamingTemplate ?? device.NamingTemplate, sessionId, cancellationToken);
 
+        // In `up` the device never processes server actions, so the requested paths stay pending
+        if (session != null && session.Direction != SyncDirection.Up)
+        {
+            records.AddRange(await CreateRequestedRenamesForDevice(deviceId, session.NamingTemplate ?? device.NamingTemplate, sessionId, cancellationToken));
+        }
+
         logger.LogInformation("Created {Count} pending action records for device {DeviceId}", records.Count, deviceId);
 
         return new SyncPendingActionsResult { Records = records };
@@ -149,6 +155,79 @@ public class SyncPendingActionsService(
                     "CreatePendingActionsForDevice: SongId={SongId}, Title='{Title}', DevicePath='{DevicePath}', newPath='{NewPath}', Action={Action}, SamePath={SamePath}",
                     sd.SongId, sd.Song?.Title, sd.DevicePath, path, action, path == sd.DevicePath);
             }
+        }
+
+        if (createdRecords.Count > 0)
+        {
+            db.DeviceSyncSessionRecords.AddRange(createdRecords);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return createdRecords;
+    }
+
+    /// <summary>
+    /// Creates the <c>Rename</c> records that move the files of unchanged songs to the paths the user typed
+    /// for them (<see cref="SongDevice.RequestedPath"/>). Only files the device reported in this session
+    /// and that were left untouched (<c>Skipped</c>) are renamed: a SongDevice with a pending action takes
+    /// its requested path through that action instead.
+    /// </summary>
+    private async Task<List<DeviceSyncSessionRecord>> CreateRequestedRenamesForDevice(
+        long deviceId,
+        string? namingTemplate,
+        long sessionId,
+        CancellationToken cancellationToken)
+    {
+        var songDevices = await db.SongDevices
+            .IncludeSongMetadata("Song")
+            .Where(sd => sd.DeviceId == deviceId
+                && sd.SongId != null
+                && sd.SyncAction == null
+                && sd.RequestedPath != null
+                && sd.RequestedPath != sd.DevicePath
+                && db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath
+                    && r.Action == SyncRecordAction.Skipped)
+                && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath
+                    && r.Action != SyncRecordAction.Skipped)
+                && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.SongId == sd.SongId
+                    && r.Action == SyncRecordAction.Rename))
+            .OrderBy(sd => sd.Id)
+            .ToListAsync(cancellationToken);
+
+        var createdRecords = new List<DeviceSyncSessionRecord>();
+        if (songDevices.Count == 0)
+        {
+            return createdRecords;
+        }
+
+        var namingStrategy = new TemplateNamingStrategy(
+            namingTemplate ?? config.Value.DefaultNamingTemplate);
+        var usedPaths = await usedPathsService.GetAsync(db, deviceId, sessionId, cancellationToken);
+
+        foreach (var sd in songDevices)
+        {
+            var (path, previousPath) = usedPaths.Take(pathResolver, sd, namingStrategy);
+            if (previousPath == null)
+            {
+                continue;
+            }
+
+            createdRecords.Add(new DeviceSyncSessionRecord
+            {
+                SessionId = sessionId,
+                FilePath = path,
+                Action = SyncRecordAction.Rename,
+                Data = SyncActionDataSerializer.Serialize(new RenameData
+                {
+                    PreviousPath = previousPath,
+                    NewPath = path,
+                }),
+                SongId = sd.SongId,
+                Reason = "Path edited manually",
+                Acknowledged = false,
+                ProcessedAt = DateTime.UtcNow,
+            });
+            usedPaths.Rename(previousPath, path);
         }
 
         if (createdRecords.Count > 0)

@@ -11,6 +11,9 @@ public record DeviceSongRef
 {
     public required long Id { get; init; }
     public required string Path { get; init; }
+
+    /// <summary>The path the user typed for the song, which the next sync applies on the device.</summary>
+    public string? RequestedPath { get; init; }
     public string? SyncAction { get; init; }
 }
 

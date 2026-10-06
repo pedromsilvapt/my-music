@@ -46,5 +46,6 @@ public record DeviceListSongRef
 {
     public required long SongId { get; init; }
     public required string DevicePath { get; init; }
+    public string? RequestedPath { get; init; }
     public SongSyncAction? SyncAction { get; init; }
 }

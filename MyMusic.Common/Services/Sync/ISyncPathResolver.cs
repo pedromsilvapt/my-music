@@ -12,7 +12,8 @@ public interface ISyncPathResolver
 {
     /// <summary>
     /// Computes the target device path (and previous path, if a rename is required) for the
-    /// pending action against <paramref name="sd"/>, using <paramref name="namingStrategy"/> and
+    /// pending action against <paramref name="sd"/>, using its <see cref="SongDevice.RequestedPath"/> or,
+    /// when it has none, <paramref name="namingStrategy"/>, and
     /// consulting <paramref name="usedPaths"/> to avoid collisions with the device's other paths. The
     /// current path of <paramref name="sd"/> is never a collision, so a path with a collision counter is kept.
     /// </summary>

@@ -14,9 +14,9 @@ public class SyncPathResolver : ISyncPathResolver
     {
         if (sd.Song != null)
         {
-            var metadata = EntityConverter.ToSong(sd.Song);
-            var naming = NamingMetadata.FromPath(sd.DevicePath);
-            var basePath = namingStrategy.Generate(metadata, naming);
+            // A path typed by the user is used as is, once: it is cleared when the device applies it
+            var basePath = sd.RequestedPath
+                ?? namingStrategy.Generate(EntityConverter.ToSong(sd.Song), NamingMetadata.FromPath(sd.DevicePath));
 
             // usedPaths holds the SongDevice's own path too, which must not count as a collision: a path
             // that carries a collision counter would otherwise get the next counter instead of being kept

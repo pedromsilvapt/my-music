@@ -197,4 +197,63 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist(expectedPath, "Song should be downloaded with year-based path");
         await FileValidator.AssertMetadataAsync(App.GetSongPath(expectedPath), title: songData.Title);
     }
+
+    // Scenario: A path typed for a song on a device is used as is, until the song changes
+    //   Given a naming template that keeps the folder a file is in
+    //   And a song exists on the server without any device association
+    //   When the user adds the song to the device, typing its path
+    //   And the CLI sync runs
+    //   Then the song is downloaded to the typed path
+    //   When the user types another path for the song
+    //   And the CLI sync runs
+    //   Then the file is renamed to the typed path without being downloaded again
+    //   When the song is edited on the server
+    //   And the CLI sync runs
+    //   Then the file gets the template's name, staying in the typed folder
+    [Fact]
+    public async Task Sync_ShouldUseManuallyEditedDevicePath_UntilSongChanges()
+    {
+        // A template that keeps the folder a file is in, so a folder typed by the user survives song changes
+        var namingTemplate = "{{ original_folder ?? year }}/{{ title }}{{ extension }}";
+        await App.SetNamingTemplateAsync(namingTemplate);
+
+        // Seed song on server WITHOUT device association
+        var songA = SongsFixture.DefaultSongs[1]; // The Alibi, year 2024
+        var songsData = await ServerSongs.SeedAsync(RequestContext, UserId, [songA]);
+        var songData = songsData[0];
+
+        // Add the song to the device, typing its path over the template's preview
+        var typedPath = "Custom/Typed name.mp3";
+        await new ManageSongDevicesFlow(songData.Title, App.DeviceName, "Add", path: typedPath).ExecuteAsync(Page);
+
+        // First sync should download the song to the typed path as is, not to the template's
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+        App.FileShouldExist(typedPath, "Song should be downloaded to the typed path");
+
+        // Type another path for the song, which the device already holds
+        var movedPath = "Moved/Typed name.mp3";
+        await new ManageSongDevicesFlow(songData.Title, App.DeviceName, action: null, path: movedPath).ExecuteAsync(Page);
+
+        // The dialog should show the typed path while the rename is pending
+        await new ValidateSongsInDeviceFlow(songData.Title, App.DeviceName, expectedPath: movedPath).ExecuteAsync(Page);
+
+        // Second sync should only rename the file: the song did not change, so nothing is downloaded
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(rename: 1, skipped: 1);
+        App.FileShouldExist(movedPath, "File should be renamed to the typed path");
+        App.FileShouldNotExist(typedPath, "File should no longer be at its previous path");
+
+        // Edit year on server: the song changes, so the template is applied again
+        await new EditSongFlow(songData.Title, new(Year: 2025)).ExecuteAsync(Page);
+
+        // Third sync should give the file the template's name, keeping it in the typed folder
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(updateLocal: 1, rename: 1);
+
+        var templatePath = $"Moved/{songA.Title}.mp3";
+        App.FileShouldExist(templatePath, "File should stay in the typed folder after the song changed");
+        App.FileShouldNotExist(movedPath, "File should have been given the template's name");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(templatePath), year: 2025);
+    }
 }

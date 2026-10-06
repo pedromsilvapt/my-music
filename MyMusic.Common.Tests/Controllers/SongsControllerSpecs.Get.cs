@@ -37,6 +37,8 @@ public class SongsControllerGetSpecs
             serverConfig,
             Substitute.For<ISongUpdateService>(),
             Substitute.For<ISongDeleteService>(),
+            Substitute.For<ISongDevicesUpdateService>(),
+            Substitute.For<ISongDevicePathPreviewService>(),
             Substitute.For<IMusicService>(),
             scenario.FileSystem,
             Substitute.For<ILogger<MusicImportJob>>(),

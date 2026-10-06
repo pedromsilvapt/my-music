@@ -8,7 +8,9 @@
         "fetchSongsFailed": "Failed to fetch songs",
         "managing_one": "Managing {{count}} song",
         "managing_other": "Managing {{count}} songs",
-        "updateFailedFallback": "Failed to update devices. Please try again."
+        "updateFailedFallback": "Failed to update devices. Please try again.",
+        "pathLabel": "Path on the device",
+        "pendingRename": "Now at {{path}}. Renamed on the next sync."
     },
     "sessionsPage": {
         "fetchFailed": "Failed to fetch device sessions",

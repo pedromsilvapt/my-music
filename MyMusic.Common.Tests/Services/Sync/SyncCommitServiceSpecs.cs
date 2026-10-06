@@ -700,6 +700,42 @@ public class SyncCommitServiceSpecs
     }
 
     [Fact]
+    public async Task Rename_ClearsRequestedPath()
+    {
+        var ctx = SetupWithSong();
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/old.mp3", lastSyncedModifiedAt: DateTime.UtcNow);
+        sd.RequestedPath = "/music/new.mp3";
+        ctx.Db.SaveChanges();
+        var data = CreateRenameData("/music/old.mp3", "/music/new.mp3");
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/new.mp3", SyncRecordAction.Rename, data: data, songId: ctx.Song!.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/old.mp3", SyncRecordAction.Skipped, songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var updated = GetSongDevice(ctx.Db, sd.Id);
+        updated.DevicePath.ShouldBe("/music/new.mp3");
+        updated.RequestedPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task CreateLocal_ClearsRequestedPath()
+    {
+        var ctx = SetupWithSong();
+        var sd = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song, "/music/typed.mp3", syncAction: SongSyncAction.Download);
+        sd.RequestedPath = "/music/typed.mp3";
+        ctx.Db.SaveChanges();
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/typed.mp3", SyncRecordAction.CreateLocal,
+            data: CreateLocalUpdateData(ctx.Song!.Id, DateTime.UtcNow), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        var updated = GetSongDevice(ctx.Db, sd.Id);
+        updated.DevicePath.ShouldBe("/music/typed.mp3");
+        updated.RequestedPath.ShouldBeNull();
+        updated.SyncAction.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task Rename_WithNewPathInFilePath_UsesPreviousPathForLookup()
     {
         var ctx = SetupWithSong();

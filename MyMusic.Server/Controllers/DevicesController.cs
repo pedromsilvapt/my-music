@@ -50,7 +50,7 @@ public class DevicesController(
             Devices = result.Devices.Select(entry =>
             {
                 var songs = entry.SongRefs?
-                    .Select(sr => new DeviceSongRef { Id = sr.SongId, Path = sr.DevicePath, SyncAction = sr.SyncAction?.ToString() })
+                    .Select(sr => new DeviceSongRef { Id = sr.SongId, Path = sr.DevicePath, RequestedPath = sr.RequestedPath, SyncAction = sr.SyncAction?.ToString() })
                     .ToList();
                 return ListDeviceItem.FromEntity(entry.Device, entry.SongCount, songs);
             }).ToList(),

@@ -12,5 +12,8 @@ public record SongDeviceItem
     public string? DeviceIcon { get; init; }
     public string? DeviceColor { get; init; }
     public string? Path { get; init; }
+
+    /// <summary>The path the user typed for the song, which the next sync applies on the device.</summary>
+    public string? RequestedPath { get; init; }
     public string? SyncAction { get; init; }
 }

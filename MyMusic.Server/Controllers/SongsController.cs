@@ -29,6 +29,8 @@ public class SongsController(
     IOptions<ServerConfig> serverConfig,
     ISongUpdateService songUpdateService,
     ISongDeleteService songDeleteService,
+    ISongDevicesUpdateService songDevicesUpdateService,
+    ISongDevicePathPreviewService songDevicePathPreviewService,
     IMusicService musicService,
     IFileSystem fileSystem,
     ILogger<MusicImportJob> importJobLogger,
@@ -350,6 +352,7 @@ public class SongsController(
                 DeviceIcon = d.Icon,
                 DeviceColor = d.Color,
                 Path = sd?.DevicePath,
+                RequestedPath = sd?.RequestedPath,
                 SyncAction = sd?.SyncAction?.ToString(),
             };
         }).ToList();
@@ -359,101 +362,51 @@ public class SongsController(
 
     // Owner-only by design — sharing is read-only. Recipients cannot change the owner's device mapping.
     [HttpPut("devices", Name = "UpdateSongDevices")]
-    public async Task<UpdateSongDevicesResponse> UpdateDevices(
+    public async Task<ActionResult<UpdateSongDevicesResponse>> UpdateDevices(
         [FromBody] UpdateSongDevicesRequest request,
-        MusicDbContext context,
         CancellationToken cancellationToken)
     {
-        var songs = await context.Songs
-            .Where(s => request.SongIds.Contains(s.Id) && s.OwnerId == currentUser.Id)
-            .Include(s => s.Album)
-            .ThenInclude(a => a!.Artist)
-            .Include(s => s.Artists)
-            .ThenInclude(a => a.Artist)
-            .Include(s => s.Genres)
-            .ThenInclude(g => g.Genre)
-            .ToListAsync(cancellationToken);
-
-        if (songs.Count == 0)
+        try
         {
-            throw new Exception("No songs found");
+            await songDevicesUpdateService.UpdateAsync(currentUser.Id, new SongDevicesUpdateInput
+            {
+                SongIds = request.SongIds,
+                Updates = request.Updates
+                    .Select(u => new SongDeviceMembershipInput { DeviceId = u.DeviceId, Include = u.Include })
+                    .ToList(),
+                Paths = (request.Paths ?? [])
+                    .Select(p => new SongDevicePathInput { SongId = p.SongId, DeviceId = p.DeviceId, Path = p.Path })
+                    .ToList(),
+            }, cancellationToken);
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Song devices cannot be updated");
         }
 
-        var deviceIds = request.Updates.Select(u => u.DeviceId).Distinct().ToList();
-        var devices = await context.Devices
-            .Where(d => deviceIds.Contains(d.Id) && d.OwnerId == currentUser.Id)
-            .ToDictionaryAsync(d => d.Id, cancellationToken);
-
-        foreach (var update in request.Updates)
-        {
-            if (!devices.TryGetValue(update.DeviceId, out var device))
-            {
-                continue;
-            }
-
-            var namingStrategy = new TemplateNamingStrategy(
-                device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
-
-            var existingSongDevices = await context.SongDevices
-                .Where(sd => sd.SongId != null && request.SongIds.Contains(sd.SongId.Value) && sd.DeviceId == update.DeviceId)
-                .ToListAsync(cancellationToken);
-
-            var existingDict = existingSongDevices.Where(sd => sd.SongId.HasValue).ToDictionary(sd => sd.SongId!.Value);
-
-            var allExistingPaths = await context.SongDevices
-                .Where(sd => sd.DeviceId == update.DeviceId)
-                .Select(sd => sd.DevicePath)
-                .ToHashSetAsync(cancellationToken);
-
-            var newPathsInBatch = new Dictionary<string, int>();
-
-            foreach (var song in songs)
-            {
-                var existing = existingDict.GetValueOrDefault(song.Id);
-
-                if (update.Include && existing is null)
-                {
-                    var metadata = EntityConverter.ToSong(song);
-                    var naming = new NamingMetadata { Extension = Path.GetExtension(song.RepositoryPath) };
-                    var basePath = namingStrategy.Generate(metadata, naming);
-                    var devicePath = GetUniquePath(basePath, allExistingPaths, newPathsInBatch);
-
-                    newPathsInBatch[devicePath] = newPathsInBatch.GetValueOrDefault(devicePath, 0) + 1;
-                    allExistingPaths.Add(devicePath);
-
-                    var newSongDevice = new SongDevice
-                    {
-                        SongId = song.Id,
-                        DeviceId = update.DeviceId,
-                        DevicePath = devicePath,
-                        SyncAction = SongSyncAction.Download,
-                        SyncActionReason = "Song included on device",
-                        AddedAt = DateTime.UtcNow,
-                    };
-                    context.SongDevices.Add(newSongDevice);
-                }
-                else if (!update.Include && existing is not null)
-                {
-                    if (existing is { SyncAction: SongSyncAction.Download, LastSyncedModifiedAt: null })
-                    {
-                        context.SongDevices.Remove(existing);
-                    }
-                    else
-                    {
-                        existing.SyncAction = SongSyncAction.Remove;
-                        existing.SyncActionReason = "Song excluded from device";
-                    }
-                }
-                else if (update.Include && existing is { SyncAction: SongSyncAction.Remove })
-                {
-                    existing.SyncAction = null;
-                    existing.SyncActionReason = null;
-                }
-            }
-        }
-
-        await context.SaveChangesAsync(cancellationToken);
         return new UpdateSongDevicesResponse { Success = true };
+    }
+
+    // Owner-only, like UpdateDevices: previews what adding the songs to the user's devices would do.
+    [HttpGet("devices/path-previews", Name = "PreviewSongDevicePaths")]
+    public async Task<PreviewSongDevicePathsResponse> PreviewDevicePaths(
+        [FromQuery] string songIds,
+        CancellationToken cancellationToken)
+    {
+        // Comma-separated, as the generated clients serialize arrays in the query string
+        var ids = songIds
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(id => long.Parse(id, CultureInfo.InvariantCulture))
+            .ToList();
+
+        var previews = await songDevicePathPreviewService.PreviewAsync(currentUser.Id, ids, cancellationToken);
+
+        return new PreviewSongDevicePathsResponse
+        {
+            Items = previews
+                .Select(p => new SongDevicePathPreviewItem { SongId = p.SongId, DeviceId = p.DeviceId, Path = p.Path })
+                .ToList(),
+        };
     }
 
     [HttpGet("filter-metadata", Name = "GetSongFilterMetadata")]
@@ -1227,26 +1180,4 @@ public class SongsController(
         8 => song.Cover != null && song.Cover.Width != song.Cover.Height,
         _ => true
     };
-
-    private static string GetUniquePath(string basePath, HashSet<string> existingPaths, Dictionary<string, int> pathsInBatch)
-    {
-        if (!existingPaths.Contains(basePath) && !pathsInBatch.ContainsKey(basePath))
-        {
-            return basePath;
-        }
-
-        var directory = Path.GetDirectoryName(basePath) ?? "";
-        var fileNameWithoutExt = Path.GetFileNameWithoutExtension(basePath);
-        var extension = Path.GetExtension(basePath);
-
-        var counter = 2;
-        string newPath;
-        do
-        {
-            newPath = Path.Combine(directory, $"{fileNameWithoutExt} ({counter}){extension}");
-            counter++;
-        } while (existingPaths.Contains(newPath) || pathsInBatch.ContainsKey(newPath));
-
-        return newPath;
-    }
 }

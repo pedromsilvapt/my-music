@@ -70,6 +70,8 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IAlbumUpsertService, AlbumUpsertService>();
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISongChecksumRecalculateService, SongChecksumRecalculateService>();
+        builder.Services.AddScoped<ISongDevicesUpdateService, SongDevicesUpdateService>();
+        builder.Services.AddScoped<ISongDevicePathPreviewService, SongDevicePathPreviewService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();
         builder.Services.AddScoped<IWishlistService, WishlistService>();
         builder.Services.AddScoped<IPurchasesSearchService, PurchasesSearchService>();

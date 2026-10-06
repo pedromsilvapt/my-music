@@ -190,5 +190,36 @@ public class SyncPathResolverSpecs
         used.ShouldBe(snapshot, "ComputePendingActionPath must not mutate usedPaths (callers add the result)");
     }
 
+    [Fact]
+    public void ComputePendingActionPath_RequestedPath_IsUsedInsteadOfTheTemplate()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var sd = scenario.CreateSongDevice(device, song, "Old/Song.mp3");
+        sd.RequestedPath = "Custom/Typed name.mp3";
+
+        var (path, previousPath) = _resolver.ComputePendingActionPath(sd, Strategy(), new HashSet<string> { sd.DevicePath });
+
+        path.ShouldBe("Custom/Typed name.mp3");
+        previousPath.ShouldBe("Old/Song.mp3");
+    }
+
+    [Fact]
+    public void ComputePendingActionPath_RequestedPathTakenByAnotherFile_ReturnsUniqueVariant()
+    {
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var sd = scenario.CreateSongDevice(device, song, "Old/Song.mp3");
+        sd.RequestedPath = "Custom/Song.mp3";
+
+        var (path, previousPath) = _resolver.ComputePendingActionPath(sd, Strategy(),
+            new HashSet<string> { sd.DevicePath, "Custom/Song.mp3" });
+
+        path.ShouldBe("Custom/Song (2).mp3");
+        previousPath.ShouldBe("Old/Song.mp3");
+    }
+
     #endregion
 }

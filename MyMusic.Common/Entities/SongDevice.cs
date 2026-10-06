@@ -16,6 +16,12 @@ public class SongDevice
 
     [MaxLength(1024)] public required string DevicePath { get; set; }
 
+    /// <summary>
+    /// A path the user typed for the song on the device, not yet applied there. The next sync creates the
+    /// file at (or renames it to) this path instead of the naming template's, and clears it.
+    /// </summary>
+    [MaxLength(1024)] public string? RequestedPath { get; set; }
+
     public SongSyncAction? SyncAction { get; set; }
 
     [MaxLength(2048)]

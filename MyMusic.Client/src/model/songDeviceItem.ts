@@ -16,5 +16,7 @@ export interface SongDeviceItem {
   /** @nullable */
   path?: string | null;
   /** @nullable */
+  requestedPath?: string | null;
+  /** @nullable */
   syncAction?: string | null;
 }

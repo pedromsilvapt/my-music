@@ -8,7 +8,9 @@
         "fetchSongsFailed": "Falha ao obter as músicas",
         "managing_one": "A gerir {{count}} música",
         "managing_other": "A gerir {{count}} músicas",
-        "updateFailedFallback": "Falha ao atualizar os dispositivos. Tente novamente."
+        "updateFailedFallback": "Falha ao atualizar os dispositivos. Tente novamente.",
+        "pathLabel": "Caminho no dispositivo",
+        "pendingRename": "Agora em {{path}}. Será renomeado na próxima sincronização."
     },
     "sessionsPage": {
         "fetchFailed": "Falha ao obter as sessões do dispositivo",

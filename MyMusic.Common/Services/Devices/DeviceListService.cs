@@ -56,6 +56,7 @@ public class DeviceListService(MusicDbContext db) : IDeviceListService
                 {
                     SongId = sd.SongId!.Value,
                     DevicePath = sd.DevicePath,
+                    RequestedPath = sd.RequestedPath,
                     SyncAction = sd.SyncAction,
                 }).ToList() ?? [])
                 : null;
