@@ -10,5 +10,10 @@ export interface SongDevicePathItem {
   songId: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   deviceId: number;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  songDeviceId?: number | null;
   path: string;
 }

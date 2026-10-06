@@ -22,6 +22,51 @@ public class ManageDevicesDialogComponent(ILocator locator) : BaseComponent(loca
             DeviceRow(deviceName).Locator("[data-testid^='manage-song-item-']").Filter(new() { Has = title }));
     }
 
+    /// <summary>
+    /// The items of a managed song under a device: one per copy of the song on it. The device must be expanded.
+    /// </summary>
+    private ILocator SongItems(string deviceName, string songTitle)
+    {
+        var title = Root.Page.Locator("[data-testid='song-title']",
+            new() { HasTextRegex = new Regex($"^{Regex.Escape(songTitle)}$") });
+
+        return DeviceRow(deviceName).Locator("[data-testid^='manage-song-item-']").Filter(new() { Has = title });
+    }
+
+    private ILocator SongCopy(string deviceName, string songTitle, string path) =>
+        SongItems(deviceName, songTitle).And(Root.Page.Locator($"[data-path='{path}']"));
+
+    /// <summary>
+    /// The item of the copy of a managed song at a path of a device. The device must be expanded.
+    /// </summary>
+    public ManageSongItemComponent GetSongCopy(string deviceName, string songTitle, string path) =>
+        new(SongCopy(deviceName, songTitle, path));
+
+    /// <summary>
+    /// Waits for the copies of a managed song under a device to be at exactly the given paths. The device
+    /// must be expanded.
+    /// </summary>
+    public async Task ValidateSongCopiesAsync(string deviceName, string songTitle, IReadOnlyList<string> expectedPaths)
+    {
+        var items = SongItems(deviceName, songTitle);
+        await Assertions.Expect(items).ToHaveCountAsync(expectedPaths.Count);
+
+        foreach (var path in expectedPaths)
+        {
+            await Assertions.Expect(SongCopy(deviceName, songTitle, path)).ToBeVisibleAsync();
+        }
+    }
+
+    /// <summary>
+    /// Removes the copy of a managed song at a path of a device, leaving its other copies there. The device
+    /// is expanded to show its songs.
+    /// </summary>
+    public async Task RemoveSongCopyAsync(string deviceName, string songTitle, string path)
+    {
+        await ExpandDeviceAsync(deviceName);
+        await GetSongCopy(deviceName, songTitle, path).ToggleRemoveAsync();
+    }
+
     public async Task SelectDeviceAsync(string deviceName, string action)
     {
         var actionLabel = DeviceRow(deviceName).Locator($"label:has-text('{action}')");

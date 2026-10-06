@@ -22,18 +22,35 @@ public class SongDevicesUpdateServiceSpecs
         }));
 
     private Task UpdateAsync(IEnumerable<Song> songs, IEnumerable<(Device Device, bool Include)>? updates = null,
-        IEnumerable<(Song Song, Device Device, string Path)>? paths = null) =>
+        IEnumerable<(Song Song, Device Device, string Path)>? paths = null,
+        IEnumerable<(SongDevice Copy, string Path)>? copyPaths = null,
+        IEnumerable<(SongDevice Copy, bool Include)>? copies = null) =>
         CreateService().UpdateAsync(_scenario.AdminUser.Id, new SongDevicesUpdateInput
         {
             SongIds = songs.Select(s => s.Id).ToList(),
             Updates = (updates ?? []).Select(u => new SongDeviceMembershipInput { DeviceId = u.Device.Id, Include = u.Include }).ToList(),
-            Paths = (paths ?? []).Select(p => new SongDevicePathInput { SongId = p.Song.Id, DeviceId = p.Device.Id, Path = p.Path }).ToList(),
+            Paths = (paths ?? []).Select(p => new SongDevicePathInput { SongId = p.Song.Id, DeviceId = p.Device.Id, Path = p.Path })
+                .Concat((copyPaths ?? []).Select(p => new SongDevicePathInput
+                {
+                    SongId = p.Copy.SongId!.Value,
+                    DeviceId = p.Copy.DeviceId,
+                    SongDeviceId = p.Copy.Id,
+                    Path = p.Path,
+                }))
+                .ToList(),
+            Copies = (copies ?? []).Select(c => new SongDeviceCopyInput { SongDeviceId = c.Copy.Id, Include = c.Include }).ToList(),
         }, CancellationToken.None);
 
     private SongDevice? FindSongDevice(Song song, Device device)
     {
         _scenario.DbContext.ChangeTracker.Clear();
         return _scenario.DbContext.SongDevices.SingleOrDefault(sd => sd.SongId == song.Id && sd.DeviceId == device.Id);
+    }
+
+    private SongDevice FindCopy(SongDevice copy)
+    {
+        _scenario.DbContext.ChangeTracker.Clear();
+        return _scenario.DbContext.SongDevices.Single(sd => sd.Id == copy.Id);
     }
 
     private SongDevice CreateSyncedSongDevice(Device device, Song song, string path) =>
@@ -348,6 +365,206 @@ public class SongDevicesUpdateServiceSpecs
 
         await Should.ThrowAsync<ValidationException>(() =>
             UpdateAsync([song], paths: [(song, otherDevice, "Custom/Song.mp3")]));
+    }
+
+    #endregion
+
+    #region Copies
+
+    [Fact]
+    public async Task UpdateAsync_ExcludeSongWithTwoCopies_RemovesBothCopies()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var synced = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var neverDownloaded = _scenario.CreateSongDevice(device, song, "Copies/Song.mp3", syncAction: SongSyncAction.Download);
+
+        await UpdateAsync([song], [(device, false)]);
+
+        // The synced copy is left for the next sync to remove, the other one was never on the device
+        _scenario.DbContext.ChangeTracker.Clear();
+        var remaining = _scenario.DbContext.SongDevices.Where(sd => sd.SongId == song.Id).ToList();
+        remaining.ShouldHaveSingleItem().Id.ShouldBe(synced.Id);
+        remaining[0].SyncAction.ShouldBe(SongSyncAction.Remove);
+        remaining.ShouldNotContain(sd => sd.Id == neverDownloaded.Id);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeSongWithAllCopiesMarkedForRemoval_RestoresThem()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var first = _scenario.CreateSongDevice(device, song, "Music/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var second = _scenario.CreateSongDevice(device, song, "Copies/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+
+        await UpdateAsync([song], [(device, true)]);
+
+        FindCopy(first).SyncAction.ShouldBeNull();
+        FindCopy(second).SyncAction.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeSongWithACopyStaying_LeavesTheRemovedCopyRemoved()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song", year: 2024);
+        var staying = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var removed = _scenario.CreateSongDevice(device, song, "Copies/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+
+        await UpdateAsync([song], [(device, true)]);
+
+        FindCopy(staying).SyncAction.ShouldBeNull();
+        FindCopy(removed).SyncAction.ShouldBe(SongSyncAction.Remove);
+        _scenario.DbContext.SongDevices.Count(sd => sd.SongId == song.Id).ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathOfACopy_ChangesOnlyThatCopy()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var first = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var second = CreateSyncedSongDevice(device, song, "Copies/Song.mp3");
+
+        await UpdateAsync([song], copyPaths: [(second, "Moved/Song.mp3")]);
+
+        FindCopy(first).RequestedPath.ShouldBeNull();
+        var moved = FindCopy(second);
+        moved.DevicePath.ShouldBe("Copies/Song.mp3");
+        moved.RequestedPath.ShouldBe("Moved/Song.mp3");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathWithoutCopyOfSongWithTwoCopies_Throws()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var first = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        CreateSyncedSongDevice(device, song, "Copies/Song.mp3");
+
+        var exception = await Should.ThrowAsync<ValidationException>(() =>
+            UpdateAsync([song], paths: [(song, device, "Moved/Song.mp3")]));
+
+        exception.Message.ShouldContain("more than once");
+        FindCopy(first).RequestedPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathOfACopyOfAnotherSong_Throws()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var other = _scenario.CreateSong("Other");
+        CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var otherCopy = CreateSyncedSongDevice(device, other, "Music/Other.mp3");
+
+        await Should.ThrowAsync<ValidationException>(() => UpdateAsync([song], paths:
+            [], copyPaths: [(otherCopy, "Moved/Other.mp3")]));
+
+        FindCopy(otherCopy).RequestedPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ExcludeOneCopy_LeavesTheOtherCopy()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var kept = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var removed = CreateSyncedSongDevice(device, song, "Copies/Song.mp3");
+
+        await UpdateAsync([song], copies: [(removed, false)]);
+
+        FindCopy(kept).SyncAction.ShouldBeNull();
+        var removedCopy = FindCopy(removed);
+        removedCopy.SyncAction.ShouldBe(SongSyncAction.Remove);
+        removedCopy.SyncActionReason.ShouldBe("Song excluded from device");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ExcludeOneNeverDownloadedCopy_DeletesIt()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var kept = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var removed = _scenario.CreateSongDevice(device, song, "Copies/Song.mp3", syncAction: SongSyncAction.Download);
+
+        await UpdateAsync([song], copies: [(removed, false)]);
+
+        _scenario.DbContext.ChangeTracker.Clear();
+        _scenario.DbContext.SongDevices.Where(sd => sd.SongId == song.Id).ShouldHaveSingleItem().Id.ShouldBe(kept.Id);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeOneCopyMarkedForRemoval_RestoresOnlyThatCopy()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var restored = _scenario.CreateSongDevice(device, song, "Music/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var removed = _scenario.CreateSongDevice(device, song, "Copies/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+
+        await UpdateAsync([song], copies: [(restored, true)]);
+
+        var restoredCopy = FindCopy(restored);
+        restoredCopy.SyncAction.ShouldBeNull();
+        restoredCopy.SyncActionReason.ShouldBeNull();
+        FindCopy(removed).SyncAction.ShouldBe(SongSyncAction.Remove);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathOfACopyBeingRemoved_ThrowsAndSavesNothing()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var removed = CreateSyncedSongDevice(device, song, "Copies/Song.mp3");
+
+        await Should.ThrowAsync<ValidationException>(() =>
+            UpdateAsync([song], copyPaths: [(removed, "Moved/Song.mp3")], copies: [(removed, false)]));
+
+        var copy = FindCopy(removed);
+        copy.SyncAction.ShouldBeNull();
+        copy.RequestedPath.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeOneCopyOfSongBeingRemovedFromDevice_ThrowsAndSavesNothing()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var staying = CreateSyncedSongDevice(device, song, "Music/Song.mp3");
+        var removed = _scenario.CreateSongDevice(device, song, "Copies/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+
+        await Should.ThrowAsync<ValidationException>(() =>
+            UpdateAsync([song], [(device, false)], copies: [(removed, true)]));
+
+        FindCopy(staying).SyncAction.ShouldBeNull();
+        FindCopy(removed).SyncAction.ShouldBe(SongSyncAction.Remove);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CopyOfSongNotBeingUpdated_Throws()
+    {
+        var device = _scenario.CreateDevice();
+        var song = _scenario.CreateSong("Song");
+        var other = _scenario.CreateSong("Other");
+        var otherCopy = CreateSyncedSongDevice(device, other, "Music/Other.mp3");
+
+        await Should.ThrowAsync<ValidationException>(() => UpdateAsync([song], copies: [(otherCopy, false)]));
+
+        FindCopy(otherCopy).SyncAction.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_CopyOnOtherUsersDevice_Throws()
+    {
+        var otherUser = _scenario.CreateUser("Other", "other");
+        var otherDevice = _scenario.CreateDevice("OtherPhone", ownerId: otherUser.Id);
+        var song = _scenario.CreateSong("Song");
+        var otherCopy = CreateSyncedSongDevice(otherDevice, song, "Music/Song.mp3");
+
+        await Should.ThrowAsync<ValidationException>(() => UpdateAsync([song], copies: [(otherCopy, false)]));
+
+        FindCopy(otherCopy).SyncAction.ShouldBeNull();
     }
 
     #endregion

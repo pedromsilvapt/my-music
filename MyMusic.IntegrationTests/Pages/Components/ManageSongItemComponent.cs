@@ -36,6 +36,14 @@ public class ManageSongItemComponent(ILocator locator) : BaseComponent(locator)
         await PathInput.FillAsync(path);
     }
 
+    /// <summary>
+    /// Presses the button that removes the song's copy from the device, or keeps it there when it is being removed.
+    /// </summary>
+    public async Task ToggleRemoveAsync()
+    {
+        await Root.GetByTestId("toggle-remove").ClickAsync();
+    }
+
     public async Task<string?> GetSyncActionAsync()
     {
         var actionElement = Root.Locator("[data-testid='sync-action']");

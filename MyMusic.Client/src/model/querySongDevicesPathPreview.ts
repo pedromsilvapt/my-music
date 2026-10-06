@@ -5,10 +5,8 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface SongDevicePathPreviewItem {
+export interface QuerySongDevicesPathPreview {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   songId: number;
-  /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  deviceId: number;
   path: string;
 }

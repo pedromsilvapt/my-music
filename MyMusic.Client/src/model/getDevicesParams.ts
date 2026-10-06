@@ -8,5 +8,4 @@ OpenAPI spec version: 1.0.0
 export type GetDevicesParams = {
 search?: string;
 filter?: string;
-includeSongs?: boolean;
 };

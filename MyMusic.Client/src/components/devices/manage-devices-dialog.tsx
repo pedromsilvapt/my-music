@@ -4,42 +4,93 @@ import {useQueryClient} from "@tanstack/react-query";
 import {useMemo, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {IconChevronDown, IconChevronUp} from "@tabler/icons-react";
-import {useGetDevices} from "../../client/devices.ts";
-import {getPreviewSongDevicePathsQueryKey, useListSongs, usePreviewSongDevicePaths, useUpdateSongDevices} from "../../client/songs.ts";
+import {useUpdateSongDevices} from "../../client/songs.ts";
 import {ZINDEX_MODAL} from "../../consts.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
-import type {DeviceSongRef, ListDeviceItem, ListSongItem, SongDevicePathItem} from "../../model";
+import {songDevicesQueryKey, useSongDevicesQuery} from "../../hooks/use-song-devices-query.ts";
+import type {
+    QuerySongDevicesCopy,
+    QuerySongDevicesDevice,
+    QuerySongDevicesSong,
+    SongDeviceCopyItem,
+    SongDevicePathItem
+} from "../../model";
 import DeviceBadge from "./device-badge.tsx";
 import ManageSongItem from "../common/manage-song-item.tsx";
 
 type DeviceSelection = "none" | "add" | "remove";
 
-/** The paths typed in the dialog, by device and then by song. */
-type PathEdits = Map<number, Map<number, string>>;
+/** The paths typed in the dialog, by device and then by row (see {@link SongRow.key}). */
+type PathEdits = Map<number, Map<string, string>>;
 
-interface SongPath {
+/**
+ * A song under a device: one row per copy of the song on the device (a song can be at several of its
+ * paths), or a single row for a song that is not on it.
+ */
+interface SongRow {
+    key: string;
+    song: QuerySongDevicesSong;
+    /** The copy the row is for. Undefined for a song that is not on the device. */
+    copy?: QuerySongDevicesCopy;
     /** The path of the song on the device: the one it has, the one typed for it before, or the one adding it would give. */
     path: string | null;
     /** Where the device currently holds the file, when the next sync is going to rename it. */
     renamedFrom: string | null;
-    /** Whether a path can be typed, given what is selected for the device. */
+    /** Whether a path can be typed, given what is selected for the device and the copy. */
     editable: boolean;
+    /** Whether the copy is (or stays) waiting to be removed from the device. */
+    removing: boolean;
+    /** Whether what is selected for the device decides alone what happens to the copy. */
+    removalLocked: boolean;
 }
 
-function getSongPath(deviceSong: DeviceSongRef | undefined, selection: DeviceSelection, previewPath: string | undefined): SongPath {
-    if (!deviceSong) {
-        return {path: previewPath ?? null, renamedFrom: null, editable: selection === "add" && previewPath !== undefined};
-    }
+function getSongRows(
+    device: QuerySongDevicesDevice,
+    songs: QuerySongDevicesSong[],
+    selection: DeviceSelection,
+    toggledCopies: Set<number>,
+): SongRow[] {
+    const previewPaths = new Map(device.pathPreviews.map(p => [p.songId, p.path]));
 
-    const renamed = !!deviceSong.requestedPath && deviceSong.requestedPath !== deviceSong.path;
-    // A song marked for removal only keeps a path when it is added back
-    const staysOnDevice = deviceSong.syncAction === "Remove" ? selection === "add" : selection !== "remove";
+    return songs.flatMap((song): SongRow[] => {
+        const copies = device.copies.filter(c => c.songId === song.id);
 
-    return {
-        path: deviceSong.requestedPath ?? deviceSong.path,
-        renamedFrom: renamed ? deviceSong.path : null,
-        editable: staysOnDevice,
-    };
+        if (copies.length === 0) {
+            const previewPath = previewPaths.get(song.id);
+            return [{
+                key: `song-${song.id}`,
+                song,
+                path: previewPath ?? null,
+                renamedFrom: null,
+                editable: selection === "add" && previewPath !== undefined,
+                removing: false,
+                removalLocked: false,
+            }];
+        }
+
+        // Adding a song that is on the device only brings its copies back when none of them is staying
+        const restoresAll = selection === "add" && copies.every(c => c.syncAction === "Remove");
+
+        return copies.map(copy => {
+            const markedForRemoval = copy.syncAction === "Remove";
+            const toggled = toggledCopies.has(copy.songDeviceId);
+            const removalLocked = selection === "remove" || (markedForRemoval && restoresAll);
+            const removing = selection === "remove"
+                || (markedForRemoval ? !(toggled || restoresAll) : toggled);
+            const renamed = !!copy.requestedPath && copy.requestedPath !== copy.path;
+
+            return {
+                key: `copy-${copy.songDeviceId}`,
+                song,
+                copy,
+                path: copy.requestedPath ?? copy.path,
+                renamedFrom: renamed ? copy.path : null,
+                editable: !removing,
+                removing,
+                removalLocked,
+            };
+        });
+    });
 }
 
 interface ManageDevicesDialogProps {
@@ -56,44 +107,23 @@ export default function ManageDevicesDialog({
                                                onSuccess
                                            }: ManageDevicesDialogProps) {
     const {t} = useTranslation(["devices", "common"]);
-    const devicesQuery = useGetDevices({ includeSongs: true }, {query: {enabled: opened}});
-    const devicesResponse = useQueryData(devicesQuery, t("devices:page.fetchFailed")) ?? {data: {devices: []}};
-    const devices = devicesResponse.data.devices ?? [];
-
-    const songsQuery = useListSongs(
-        songIds.length > 0 ? {filter: `id in [${songIds.join(',')}]`} : undefined,
-        {query: {enabled: opened && songIds.length > 0}}
-    );
-    const songsResponse = useQueryData(songsQuery, t("devices:manageDialog.fetchSongsFailed")) ?? {data: {songs: []}};
-    const managedSongs = songsResponse?.data?.songs ?? [];
-
-    const previewsQuery = usePreviewSongDevicePaths(
-        {songIds: songIds.join(',')},
-        {query: {enabled: opened && songIds.length > 0}}
-    );
-    const previewPaths = useMemo(() => {
-        const paths = new Map<number, Map<number, string>>();
-        const response = previewsQuery.data;
-        if (response && response.status < 400) {
-            for (const item of response.data.items ?? []) {
-                if (!paths.has(item.deviceId)) {
-                    paths.set(item.deviceId, new Map());
-                }
-                paths.get(item.deviceId)!.set(item.songId, item.path);
-            }
-        }
-        return paths;
-    }, [previewsQuery.data]);
+    const songDevicesQuery = useSongDevicesQuery(songIds, opened);
+    const songDevices = useQueryData(songDevicesQuery, t("devices:manageDialog.fetchSongsFailed"));
+    const devices = useMemo(() => songDevices?.devices ?? [], [songDevices]);
+    const managedSongs = useMemo(() => songDevices?.songs ?? [], [songDevices]);
 
     const queryClient = useQueryClient();
     const [selections, setSelections] = useState<Map<number, DeviceSelection>>(new Map());
     const [expandedDevices, setExpandedDevices] = useState<Set<number>>(new Set());
     const [pathEdits, setPathEdits] = useState<PathEdits>(new Map());
+    // The copies whose remove button was pressed: removed, or restored when they were waiting to be removed
+    const [toggledCopies, setToggledCopies] = useState<Set<number>>(new Set());
 
     const resetState = () => {
         setSelections(new Map());
         setExpandedDevices(new Set());
         setPathEdits(new Map());
+        setToggledCopies(new Set());
     };
 
     const showUpdateError = (message?: string) => {
@@ -117,7 +147,7 @@ export default function ManageDevicesDialog({
                     queryClient.invalidateQueries({queryKey: ['api', 'songs', id]});
                 });
                 queryClient.invalidateQueries({queryKey: ['api', 'devices']});
-                queryClient.invalidateQueries({queryKey: getPreviewSongDevicePathsQueryKey()});
+                queryClient.invalidateQueries({queryKey: songDevicesQueryKey});
                 resetState();
                 onClose();
                 onSuccess?.();
@@ -130,10 +160,22 @@ export default function ManageDevicesDialog({
         }
     });
 
-    const handlePathChange = (deviceId: number, songId: number, path: string) => {
+    const handlePathChange = (deviceId: number, rowKey: string, path: string) => {
         setPathEdits(prev => {
             const next = new Map(prev);
-            next.set(deviceId, new Map(prev.get(deviceId)).set(songId, path));
+            next.set(deviceId, new Map(prev.get(deviceId)).set(rowKey, path));
+            return next;
+        });
+    };
+
+    const handleToggleCopy = (songDeviceId: number) => {
+        setToggledCopies(prev => {
+            const next = new Set(prev);
+            if (next.has(songDeviceId)) {
+                next.delete(songDeviceId);
+            } else {
+                next.add(songDeviceId);
+            }
             return next;
         });
     };
@@ -176,23 +218,32 @@ export default function ManageDevicesDialog({
 
         // Only the paths that were changed, of songs that are (or are being put) on the device
         const paths: SongDevicePathItem[] = [];
+        // Only the copies removed or restored one by one: the others follow what is selected for their device
+        const copies: SongDeviceCopyItem[] = [];
 
         for (const device of devices) {
             const selection = selections.get(device.id) ?? "none";
 
-            pathEdits.get(device.id)?.forEach((typedPath, songId) => {
-                const deviceSong = device.songs?.find(s => s.id === songId);
-                const songPath = getSongPath(deviceSong, selection, previewPaths.get(device.id)?.get(songId));
-
-                if (songPath.editable && typedPath.trim() !== songPath.path) {
-                    paths.push({deviceId: device.id, songId, path: typedPath.trim()});
+            for (const row of getSongRows(device, managedSongs, selection, toggledCopies)) {
+                if (row.copy && !row.removalLocked && toggledCopies.has(row.copy.songDeviceId)) {
+                    copies.push({songDeviceId: row.copy.songDeviceId, include: !row.removing});
                 }
-            });
+
+                const typedPath = pathEdits.get(device.id)?.get(row.key)?.trim();
+                if (row.editable && typedPath !== undefined && typedPath !== row.path) {
+                    paths.push({
+                        deviceId: device.id,
+                        songId: row.song.id,
+                        songDeviceId: row.copy?.songDeviceId,
+                        path: typedPath,
+                    });
+                }
+            }
         }
 
-        if (updates.length > 0 || paths.length > 0) {
+        if (updates.length > 0 || paths.length > 0 || copies.length > 0) {
             updateDevices.mutate({
-                data: {songIds, updates, paths}
+                data: {songIds, updates, paths, copies}
             });
         } else {
             resetState();
@@ -208,7 +259,7 @@ export default function ManageDevicesDialog({
     return (
         <Modal opened={opened} onClose={handleCancel} size="lg" title={t("devices:manageDialog.title")} centered
                zIndex={ZINDEX_MODAL}>
-            <Stack>
+            <Stack data-testid="manage-devices" data-loading={songDevicesQuery.isFetching ? "true" : "false"}>
                 <Text size="sm" c="dimmed">
                     {t("devices:manageDialog.managing", {count: songIds.length})}
                 </Text>
@@ -220,9 +271,10 @@ export default function ManageDevicesDialog({
                                 key={device.id}
                                 device={device}
                                 managedSongs={managedSongs}
-                                previewPaths={previewPaths.get(device.id)}
+                                toggledCopies={toggledCopies}
+                                onToggleCopy={handleToggleCopy}
                                 pathEdits={pathEdits.get(device.id)}
-                                onPathChange={(songId, path) => handlePathChange(device.id, songId, path)}
+                                onPathChange={(rowKey, path) => handlePathChange(device.id, rowKey, path)}
                                 value={selections.get(device.id) ?? "none"}
                                 expanded={expandedDevices.has(device.id)}
                                 onToggleExpand={() => handleToggleExpand(device.id)}
@@ -246,22 +298,24 @@ export default function ManageDevicesDialog({
 }
 
 interface DeviceRowProps {
-    device: ListDeviceItem;
-    managedSongs: ListSongItem[];
-    previewPaths?: Map<number, string>;
-    pathEdits?: Map<number, string>;
-    onPathChange: (songId: number, path: string) => void;
+    device: QuerySongDevicesDevice;
+    managedSongs: QuerySongDevicesSong[];
+    toggledCopies: Set<number>;
+    onToggleCopy: (songDeviceId: number) => void;
+    pathEdits?: Map<string, string>;
+    onPathChange: (rowKey: string, path: string) => void;
     value: DeviceSelection;
     expanded: boolean;
     onToggleExpand: () => void;
     onChange: (value: DeviceSelection) => void;
 }
 
-function DeviceRow({device, managedSongs, previewPaths, pathEdits, onPathChange, value, expanded, onToggleExpand, onChange}: DeviceRowProps) {
+function DeviceRow({device, managedSongs, toggledCopies, onToggleCopy, pathEdits, onPathChange, value, expanded, onToggleExpand, onChange}: DeviceRowProps) {
     const {t} = useTranslation(["devices", "common"]);
-    // We can assume `device.songs` is never null only because in the query above, `includeSongs` is hardcoded to true
-    const deviceSongs = new Map(device.songs!.map(s => [s.id, s]));
-    const matchingCount = managedSongs.filter(s => deviceSongs.has(s.id)).length;
+    const songIdsOnDevice = new Set(device.copies.map(c => c.songId));
+    const matchingCount = managedSongs.filter(s => songIdsOnDevice.has(s.id)).length;
+    // The rows are only shown when the device is expanded
+    const rows = expanded ? getSongRows(device, managedSongs, value, toggledCopies) : [];
 
     return (
         <Box data-testid={`device-row-${device.id}`}>
@@ -302,24 +356,28 @@ function DeviceRow({device, managedSongs, previewPaths, pathEdits, onPathChange,
             </Group>
             <Collapse in={expanded}>
                 <Stack gap="xs" pl="sm" pt="xs">
-                    {managedSongs.map(song => {
-                        const deviceSong = deviceSongs.get(song.id);
-                        const songPath = getSongPath(deviceSong, value, previewPaths?.get(song.id));
-                        return (
-                            <ManageSongItem
-                                key={song.id}
-                                song={song}
-                                isIncluded={!!deviceSong}
-                                path={songPath.editable ? (pathEdits?.get(song.id) ?? songPath.path) : songPath.path}
-                                syncAction={deviceSong?.syncAction}
-                                onPathChange={songPath.editable ? (path) => onPathChange(song.id, path) : undefined}
-                                pathLabel={t("devices:manageDialog.pathLabel")}
-                                pathHint={songPath.renamedFrom
-                                    ? t("devices:manageDialog.pendingRename", {path: songPath.renamedFrom})
-                                    : null}
-                            />
-                        );
-                    })}
+                    {rows.map(row => (
+                        <ManageSongItem
+                            key={row.key}
+                            song={row.song}
+                            copyId={row.copy?.songDeviceId}
+                            isIncluded={!!row.copy}
+                            path={row.editable ? (pathEdits?.get(row.key) ?? row.path) : row.path}
+                            syncAction={row.copy?.syncAction}
+                            onPathChange={row.editable ? (path) => onPathChange(row.key, path) : undefined}
+                            pathLabel={t("devices:manageDialog.pathLabel")}
+                            pathHint={row.renamedFrom
+                                ? t("devices:manageDialog.pendingRename", {path: row.renamedFrom})
+                                : null}
+                            removal={row.copy && {
+                                removing: row.removing,
+                                onToggle: () => onToggleCopy(row.copy!.songDeviceId),
+                                removeLabel: t("devices:manageDialog.removeCopy"),
+                                restoreLabel: t("devices:manageDialog.restoreCopy"),
+                                disabled: row.removalLocked,
+                            }}
+                        />
+                    ))}
                 </Stack>
             </Collapse>
         </Box>

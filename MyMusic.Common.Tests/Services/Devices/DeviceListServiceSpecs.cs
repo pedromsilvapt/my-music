@@ -18,7 +18,7 @@ public class DeviceListServiceSpecs
         var d2 = scenario.CreateDevice("Tablet");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, CancellationToken.None);
 
         // Assert
         result.Devices.Count.ShouldBe(2);
@@ -36,7 +36,7 @@ public class DeviceListServiceSpecs
         scenario.CreateDevice("OtherPhone", ownerId: otherUser.Id);
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, CancellationToken.None);
 
         // Assert
         result.Devices.Count.ShouldBe(1);
@@ -52,7 +52,7 @@ public class DeviceListServiceSpecs
         scenario.CreateDevice("iPad Tablet");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, "galaxy", null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, "galaxy", null, CancellationToken.None);
 
         // Assert
         result.Devices.Count.ShouldBe(1);
@@ -68,48 +68,11 @@ public class DeviceListServiceSpecs
         scenario.CreateDevice("Tablet");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, "name = \"Phone\"", includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, "name = \"Phone\"", CancellationToken.None);
 
         // Assert
         result.Devices.Count.ShouldBe(1);
         result.Devices[0].Device.Name.ShouldBe("Phone");
-    }
-
-    [Fact]
-    public async Task List_ExcludeSongs_SongRefsAreNull()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var device = scenario.CreateDevice("Phone");
-        var song = scenario.CreateSong("Song A");
-        scenario.CreateSongDevice(device, song, "/music/a.mp3");
-
-        // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
-
-        // Assert
-        var entry = result.Devices.Single(e => e.Device.Id == device.Id);
-        entry.SongRefs.ShouldBeNull();
-    }
-
-    [Fact]
-    public async Task List_IncludeSongs_ReturnsSongRefs()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var device = scenario.CreateDevice("Phone");
-        var song = scenario.CreateSong("Song A");
-        scenario.CreateSongDevice(device, song, "/music/a.mp3");
-
-        // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: true, CancellationToken.None);
-
-        // Assert
-        var entry = result.Devices.Single(e => e.Device.Id == device.Id);
-        entry.SongRefs.ShouldNotBeNull();
-        entry.SongRefs.Count.ShouldBe(1);
-        entry.SongRefs[0].SongId.ShouldBe(song.Id);
-        entry.SongRefs[0].DevicePath.ShouldBe("/music/a.mp3");
     }
 
     [Fact]
@@ -124,7 +87,7 @@ public class DeviceListServiceSpecs
         scenario.CreateSongDevice(device, song2, "/music/b.mp3");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, CancellationToken.None);
 
         // Assert
         var entry = result.Devices.Single(e => e.Device.Id == device.Id);
@@ -143,7 +106,7 @@ public class DeviceListServiceSpecs
         scenario.CreateSongDevice(device, null, "/music/removed.mp3");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, CancellationToken.None);
 
         // Assert
         var entry = result.Devices.Single(e => e.Device.Id == device.Id);
@@ -158,7 +121,7 @@ public class DeviceListServiceSpecs
         scenario.CreateDevice("Empty");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, CancellationToken.None);
 
         // Assert
         result.Devices[0].SongCount.ShouldBe(0);
@@ -176,45 +139,10 @@ public class DeviceListServiceSpecs
         scenario.CreateSongDevice(d2, song, "/music/a.mp3");
 
         // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: false, CancellationToken.None);
+        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, CancellationToken.None);
 
         // Assert
         result.Devices.Single(e => e.Device.Id == d1.Id).SongCount.ShouldBe(1);
         result.Devices.Single(e => e.Device.Id == d2.Id).SongCount.ShouldBe(1);
-    }
-
-    [Fact]
-    public async Task List_IncludeSongs_EmptyDevice_ReturnsEmptySongRefs()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        scenario.CreateDevice("Empty");
-
-        // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: true, CancellationToken.None);
-
-        // Assert: when includeSongs=true, SongRefs MUST be a non-null empty list,
-        // never null, so clients can treat it as always-present.
-        var entry = result.Devices.Single();
-        entry.SongRefs.ShouldNotBeNull();
-        entry.SongRefs.Count.ShouldBe(0);
-    }
-
-    [Fact]
-    public async Task List_IncludeSongs_ReflectsSyncAction()
-    {
-        // Arrange
-        var scenario = new Scenario();
-        var device = scenario.CreateDevice("Phone");
-        var song = scenario.CreateSong("Song A");
-        scenario.CreateSongDevice(device, song, "/music/a.mp3", syncAction: SongSyncAction.Download);
-
-        // Act
-        var result = await CreateService(scenario).ListAsync(scenario.AdminUser.Id, null, null, includeSongs: true, CancellationToken.None);
-
-        // Assert
-        var entry = result.Devices.Single(e => e.Device.Id == device.Id);
-        entry.SongRefs.ShouldNotBeNull();
-        entry.SongRefs[0].SyncAction.ShouldBe(SongSyncAction.Download);
     }
 }

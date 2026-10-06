@@ -5,16 +5,12 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export interface SongDeviceItem {
+export interface QuerySongDevicesCopy {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
-  deviceId: number;
-  deviceName: string;
-  /** @nullable */
-  deviceIcon?: string | null;
-  /** @nullable */
-  deviceColor?: string | null;
-  /** @nullable */
-  path?: string | null;
+  songDeviceId: number;
+  /** @pattern ^-?(?:0|[1-9]\d*)$ */
+  songId: number;
+  path: string;
   /** @nullable */
   requestedPath?: string | null;
   /** @nullable */

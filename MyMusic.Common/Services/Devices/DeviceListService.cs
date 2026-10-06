@@ -15,7 +15,6 @@ public class DeviceListService(MusicDbContext db) : IDeviceListService
         long ownerId,
         string? search,
         string? filter,
-        bool includeSongs,
         CancellationToken cancellationToken)
     {
         var query = db.Devices
@@ -35,38 +34,15 @@ public class DeviceListService(MusicDbContext db) : IDeviceListService
         var devices = await query.ToListAsync(cancellationToken);
         var deviceIds = devices.Select(d => d.Id).ToList();
 
-        var songDeviceGroups = await db.SongDevices
+        var songCounts = await db.SongDevices
             .Where(sd => sd.SongId != null && deviceIds.Contains(sd.DeviceId))
             .GroupBy(sd => sd.DeviceId)
-            .Select(g => new
-            {
-                DeviceId = g.Key,
-                Count = g.Count(),
-                SongRefs = includeSongs ? g.ToList() : null,
-            })
-            .ToDictionaryAsync(x => x.DeviceId, x => x, cancellationToken);
+            .Select(g => new { DeviceId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.DeviceId, x => x.Count, cancellationToken);
 
-        var entries = devices.Select(d =>
-        {
-            var group = songDeviceGroups.GetValueOrDefault(d.Id);
-            // When includeSongs is true, SongRefs MUST be a non-null list (empty when
-            // the device has no songs) so clients can always treat it as present.
-            var songRefs = includeSongs
-                ? (group?.SongRefs?.Select(sd => new DeviceListSongRef
-                {
-                    SongId = sd.SongId!.Value,
-                    DevicePath = sd.DevicePath,
-                    RequestedPath = sd.RequestedPath,
-                    SyncAction = sd.SyncAction,
-                }).ToList() ?? [])
-                : null;
-            return new DeviceListEntry
-            {
-                Device = d,
-                SongCount = group?.Count ?? 0,
-                SongRefs = songRefs,
-            };
-        }).ToList();
+        var entries = devices
+            .Select(d => new DeviceListEntry { Device = d, SongCount = songCounts.GetValueOrDefault(d.Id) })
+            .ToList();
 
         return new DeviceListResult { Devices = entries };
     }

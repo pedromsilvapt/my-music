@@ -7,16 +7,6 @@ public record ListDevicesResponse
     public required List<ListDeviceItem> Devices { get; init; }
 }
 
-public record DeviceSongRef
-{
-    public required long Id { get; init; }
-    public required string Path { get; init; }
-
-    /// <summary>The path the user typed for the song, which the next sync applies on the device.</summary>
-    public string? RequestedPath { get; init; }
-    public string? SyncAction { get; init; }
-}
-
 public record ListDeviceItem
 {
     public required long Id { get; init; }
@@ -25,11 +15,10 @@ public record ListDeviceItem
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }
     public required int SongCount { get; init; }
-    public List<DeviceSongRef>? Songs { get; init; }
     public bool ImportOnPurchase { get; init; }
     public DateTime? LastSyncAt { get; init; }
 
-    public static ListDeviceItem FromEntity(Entities.Device device, int songCount, List<DeviceSongRef>? songs) =>
+    public static ListDeviceItem FromEntity(Entities.Device device, int songCount) =>
         new()
         {
             Id = device.Id,
@@ -38,7 +27,6 @@ public record ListDeviceItem
             Color = device.Color,
             NamingTemplate = device.NamingTemplate,
             SongCount = songCount,
-            Songs = songs,
             ImportOnPurchase = device.ImportOnPurchase,
             LastSyncAt = device.LastSyncAt,
         };

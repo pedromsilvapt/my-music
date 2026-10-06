@@ -30,7 +30,7 @@ public class SongsController(
     ISongUpdateService songUpdateService,
     ISongDeleteService songDeleteService,
     ISongDevicesUpdateService songDevicesUpdateService,
-    ISongDevicePathPreviewService songDevicePathPreviewService,
+    ISongDevicesGetService songDevicesGetService,
     IMusicService musicService,
     IFileSystem fileSystem,
     ILogger<MusicImportJob> importJobLogger,
@@ -316,50 +316,6 @@ public class SongsController(
         };
     }
 
-    [HttpGet("{id:long}/devices", Name = "GetSongDevices")]
-    public async Task<GetSongDevicesResponse> GetDevices(long id, MusicDbContext context,
-        CancellationToken cancellationToken)
-    {
-        // Read-only devices view — shared recipients can view which of *their* devices
-        // (if any) hold this song. Write access (UpdateDevices) stays owner-only.
-        var songAccessible = await context.Songs
-            .Where(s => s.Id == id)
-            .WhereAccessibleBy(currentUser.Id)
-            .AnyAsync(cancellationToken);
-
-        if (!songAccessible)
-        {
-            throw new Exception($"Song not found with id {id}");
-        }
-
-        var devices = await context.Devices
-            .Where(d => d.OwnerId == currentUser.Id)
-            .ToListAsync(cancellationToken);
-
-        var songDevices = await context.SongDevices
-            .Where(sd => sd.SongId == id && sd.Device.OwnerId == currentUser.Id)
-            .ToListAsync(cancellationToken);
-
-        var songDeviceDict = songDevices.ToDictionary(sd => sd.DeviceId);
-
-        var items = devices.Select(d =>
-        {
-            songDeviceDict.TryGetValue(d.Id, out var sd);
-            return new SongDeviceItem
-            {
-                DeviceId = d.Id,
-                DeviceName = d.Name,
-                DeviceIcon = d.Icon,
-                DeviceColor = d.Color,
-                Path = sd?.DevicePath,
-                RequestedPath = sd?.RequestedPath,
-                SyncAction = sd?.SyncAction?.ToString(),
-            };
-        }).ToList();
-
-        return new GetSongDevicesResponse { Devices = items };
-    }
-
     // Owner-only by design — sharing is read-only. Recipients cannot change the owner's device mapping.
     [HttpPut("devices", Name = "UpdateSongDevices")]
     public async Task<ActionResult<UpdateSongDevicesResponse>> UpdateDevices(
@@ -375,7 +331,10 @@ public class SongsController(
                     .Select(u => new SongDeviceMembershipInput { DeviceId = u.DeviceId, Include = u.Include })
                     .ToList(),
                 Paths = (request.Paths ?? [])
-                    .Select(p => new SongDevicePathInput { SongId = p.SongId, DeviceId = p.DeviceId, Path = p.Path })
+                    .Select(p => new SongDevicePathInput { SongId = p.SongId, DeviceId = p.DeviceId, SongDeviceId = p.SongDeviceId, Path = p.Path })
+                    .ToList(),
+                Copies = (request.Copies ?? [])
+                    .Select(c => new SongDeviceCopyInput { SongDeviceId = c.SongDeviceId, Include = c.Include })
                     .ToList(),
             }, cancellationToken);
         }
@@ -387,26 +346,15 @@ public class SongsController(
         return new UpdateSongDevicesResponse { Success = true };
     }
 
-    // Owner-only, like UpdateDevices: previews what adding the songs to the user's devices would do.
-    [HttpGet("devices/path-previews", Name = "PreviewSongDevicePaths")]
-    public async Task<PreviewSongDevicePathsResponse> PreviewDevicePaths(
-        [FromQuery] string songIds,
+    // Owner-only, like UpdateDevices. A POST, so that a selection of any size fits in the body.
+    [HttpPost("devices/query", Name = "QuerySongDevices")]
+    public async Task<QuerySongDevicesResponse> QueryDevices(
+        [FromBody] QuerySongDevicesRequest request,
         CancellationToken cancellationToken)
     {
-        // Comma-separated, as the generated clients serialize arrays in the query string
-        var ids = songIds
-            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(id => long.Parse(id, CultureInfo.InvariantCulture))
-            .ToList();
+        var result = await songDevicesGetService.GetAsync(currentUser.Id, request.SongIds, cancellationToken);
 
-        var previews = await songDevicePathPreviewService.PreviewAsync(currentUser.Id, ids, cancellationToken);
-
-        return new PreviewSongDevicePathsResponse
-        {
-            Items = previews
-                .Select(p => new SongDevicePathPreviewItem { SongId = p.SongId, DeviceId = p.DeviceId, Path = p.Path })
-                .ToList(),
-        };
+        return QuerySongDevicesResponse.FromResult(result);
     }
 
     [HttpGet("filter-metadata", Name = "GetSongFilterMetadata")]

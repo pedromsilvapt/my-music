@@ -39,21 +39,14 @@ public class DevicesController(
     public async Task<ListDevicesResponse> List(
         CancellationToken cancellationToken,
         [FromQuery] string? search = null,
-        [FromQuery] string? filter = null,
-        [FromQuery] bool includeSongs = false)
+        [FromQuery] string? filter = null)
     {
         // Owner-only by design — sharing applies to song metadata, not personal collections.
-        var result = await deviceListService.ListAsync(currentUser.Id, search, filter, includeSongs, cancellationToken);
+        var result = await deviceListService.ListAsync(currentUser.Id, search, filter, cancellationToken);
 
         return new ListDevicesResponse
         {
-            Devices = result.Devices.Select(entry =>
-            {
-                var songs = entry.SongRefs?
-                    .Select(sr => new DeviceSongRef { Id = sr.SongId, Path = sr.DevicePath, RequestedPath = sr.RequestedPath, SyncAction = sr.SyncAction?.ToString() })
-                    .ToList();
-                return ListDeviceItem.FromEntity(entry.Device, entry.SongCount, songs);
-            }).ToList(),
+            Devices = result.Devices.Select(entry => ListDeviceItem.FromEntity(entry.Device, entry.SongCount)).ToList(),
         };
     }
 

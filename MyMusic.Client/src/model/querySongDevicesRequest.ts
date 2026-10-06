@@ -5,6 +5,6 @@ Do not edit manually.
 MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */
-export type PreviewSongDevicePathsParams = {
-songIds?: string;
-};
+export interface QuerySongDevicesRequest {
+  songIds: number[];
+}

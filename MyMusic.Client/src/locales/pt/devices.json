@@ -10,7 +10,9 @@
         "managing_other": "A gerir {{count}} músicas",
         "updateFailedFallback": "Falha ao atualizar os dispositivos. Tente novamente.",
         "pathLabel": "Caminho no dispositivo",
-        "pendingRename": "Agora em {{path}}. Será renomeado na próxima sincronização."
+        "pendingRename": "Agora em {{path}}. Será renomeado na próxima sincronização.",
+        "removeCopy": "Remover esta cópia do dispositivo",
+        "restoreCopy": "Manter esta cópia no dispositivo"
     },
     "sessionsPage": {
         "fetchFailed": "Falha ao obter as sessões do dispositivo",
