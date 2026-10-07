@@ -48,7 +48,8 @@ public abstract partial class SyncTestsBase
     //   Given a local song file with a title and an artist, but no album tag
     //   When the CLI sync runs
     //   Then the song is uploaded to the server
-    //   And the server shows it in the "(No Album)" album, listing "(No Artist)" next to its own artist
+    //   And the server shows it in the "(No Album)" album, with only its own artist
+    //   And the "(No Album)" album belongs to the song's artist
     //   And the song's artist and the "(No Album)" album exist on the server
     //   And the local file stays at its original path
     [Fact]
@@ -64,14 +65,16 @@ public abstract partial class SyncTestsBase
         result.ShouldBe(createRemote: 1);
 
         // Verify: DB uses "(No Album)" placeholder for album name
-        // Album artist falls back to first performer, no (No Artist) placeholder needed
+        // The file has no album artist tag either: the server should fall back to the first performer
+        // ("Taylor Swift") as the album's artist, so no (No Artist) placeholder is needed
         await new ValidateSongDetailsFlow(song.Title!, new ValidateSongOptions(
             Title: song.Title,
-            Artists: ["(No Artist)", .. song.Artists!],
-            Album: "(No Album)"))
+            Artists: song.Artists!,
+            Album: "(No Album)",
+            AlbumArtist: "Taylor Swift"))
             .ExecuteAsync(Page);
 
-        // Verify: The album's artist is "Taylor Swift" (derived from performers)
+        // Verify: The song's artist and the placeholder album exist on the server
         await new ShouldArtistExistFlow("Taylor Swift").ExecuteAsync(Page);
         await new ShouldAlbumExistFlow("(No Album)").ExecuteAsync(Page);
 
@@ -124,7 +127,7 @@ public abstract partial class SyncTestsBase
     {
         // Create a song with album name but no album artist
         // "New Religion" by Faithless & Bebe Rexha — naturally has no AlbumArtist,
-        // so the first performer becomes the album artist
+        // so the file's album artist tag is written with the first performer
         var song = SongsFixture.DefaultSongs[6];
         await App.CreateSongAsync(song);
 

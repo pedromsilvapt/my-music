@@ -78,4 +78,20 @@ public static class MockMusicFile
         FileTarget.RebuildTags(tfile);
         tfile.Save();
     }
+
+    /// <summary>
+    ///     Creates a music file whose album artist tag is missing. <see cref="TagConverter.FromSong" /> always fills
+    ///     that tag in (with the first artist, when the album has none), so it is cleared after the tags are written.
+    /// </summary>
+    public static void CreateWithoutAlbumArtist(IFileSystem fs, string filePath, SongMetadata metadata)
+    {
+        Create(fs, filePath, metadata);
+
+        var fileInfo = new FileSystemFileAbstraction(fs.FileInfo.New(filePath));
+
+        using var tfile = TagLib.File.Create(fileInfo);
+
+        tfile.Tag.AlbumArtists = [];
+        tfile.Save();
+    }
 }

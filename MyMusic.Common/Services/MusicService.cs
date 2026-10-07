@@ -367,9 +367,11 @@ public class MusicService(
             ? Album.PlaceholderName
             : metadata.Album.Name;
 
-        var effectiveAlbumArtistName = metadata.Album?.Artist is null || string.IsNullOrEmpty(metadata.Album!.Artist!.Name)
-            ? Artist.PlaceholderName
-            : metadata.Album.Artist.Name;
+        // A missing album artist is the song's first artist; the placeholder is only for songs without any artist
+        var effectiveAlbumArtistName = !string.IsNullOrEmpty(metadata.Album?.Artist?.Name)
+            ? metadata.Album.Artist.Name
+            : metadata.Artists?.FirstOrDefault(artist => !string.IsNullOrEmpty(artist.Name))?.Name
+              ?? Artist.PlaceholderName;
 
         #endregion
 

@@ -322,6 +322,56 @@ public class MusicServiceSpecs
         song.Label.ShouldBe($"Some Untagged Song - {Artist.PlaceholderName}");
     }
 
+    [Fact]
+    public async Task ImportMusic_FileWithoutAlbumArtist_UsesFirstPerformerAsAlbumArtist()
+    {
+        // A file with artists but no album artist tag gets its first artist as the album's artist: the placeholder
+        // artist is only for songs without any artist
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        scenario.FileSystem.Directory.CreateDirectory("/music");
+        MockMusicFile.CreateWithoutAlbumArtist(scenario.FileSystem, "/music/Title A.mp3", new SongMetadata(null, "Title A")
+        {
+            Album = new AlbumMetadata(null, "Album A", new CoverArtMetadata()),
+            Artists = [new ArtistMetadata(null, "Artist A"), new ArtistMetadata(null, "Artist B")],
+        });
+
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        job.Exceptions.ShouldBeEmpty();
+        var song = LoadSongs(scenario.DbContext).Single();
+        song.Album.Name.ShouldBe("Album A");
+        song.Album.Artist.Name.ShouldBe("Artist A");
+        song.Artists.Select(sa => sa.Artist.Name).ShouldBe(["Artist A", "Artist B"], ignoreOrder: true);
+        scenario.DbContext.Artists.Select(a => a.Name).ToList().ShouldNotContain(Artist.PlaceholderName);
+    }
+
+    [Fact]
+    public async Task ImportMusic_FileWithoutAlbumOrAlbumArtist_PutsPlaceholderAlbumUnderFirstPerformer()
+    {
+        // Without an album tag either, the placeholder album is the first artist's, not the placeholder artist's
+        var scenario = new Scenario();
+        var musicService = scenario.CreateMusicService();
+        var job = new MusicImportJob(Substitute.For<ILogger<MusicImportJob>>());
+
+        scenario.FileSystem.Directory.CreateDirectory("/music");
+        MockMusicFile.CreateWithoutAlbumArtist(scenario.FileSystem, "/music/Title A.mp3", new SongMetadata(null, "Title A")
+        {
+            Artists = [new ArtistMetadata(null, "Artist A"), new ArtistMetadata(null, "Artist B")],
+        });
+
+        await musicService.ImportRepositorySongs(scenario.DbContext, job, scenario.AdminUser.Id, "/music");
+
+        job.Exceptions.ShouldBeEmpty();
+        var song = LoadSongs(scenario.DbContext).Single();
+        song.Album.Name.ShouldBe(Album.PlaceholderName);
+        song.Album.Artist.Name.ShouldBe("Artist A");
+        song.Artists.Select(sa => sa.Artist.Name).ShouldBe(["Artist A", "Artist B"], ignoreOrder: true);
+        scenario.DbContext.Artists.Select(a => a.Name).ToList().ShouldNotContain(Artist.PlaceholderName);
+    }
+
     /// <summary>
     ///     Loads the songs as saved in the database: imports save through contexts of their own, so what the scenario's
     ///     context already tracks may be stale.
