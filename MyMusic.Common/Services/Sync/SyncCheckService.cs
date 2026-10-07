@@ -84,7 +84,7 @@ public class SyncCheckService(
             else if (isDirectionUp && existingSongDevice.Song == null)
             {
                 logger.LogDebug("CheckSync: Path='{Path}' -> SKIPPED (song deleted on server, direction up)", clientFile.Path);
-                var record = await syncActions.ActionSkipped(clientFile.Path, existingSongDevice.SongId, reason: "Song deleted on server; local file kept (direction up)", cancellationToken: cancellationToken);
+                var record = syncActions.ActionSkippedDeferred(clientFile.Path, existingSongDevice.SongId, reason: "Song deleted on server; local file kept (direction up)");
                 allRecords.Add(record);
             }
             // When a Song is deleted, the deletion services always null SongId and set SyncAction = Remove,
@@ -116,6 +116,9 @@ public class SyncCheckService(
                 await ProcessServerMaybeNewerAsync(activeSession.Id, deviceId, clientFile, existingSongDevice, isDirectionUp, syncActions, namingStrategy, allRecords, cancellationToken);
             }
         }
+
+        // Skipped records are only added in the loop; saving them here costs one round-trip per chunk
+        await db.SaveChangesAsync(cancellationToken);
 
         logger.LogInformation(
             "Sync check for device {DeviceId}: {TotalRecords} total records ({CreateRemote} create remote, {UpdateRemote} update remote, {Conflict} conflicts, {UpdateLocal} update local, {Skipped} skipped, {Link} link, {Unlink} unlink)",
@@ -252,7 +255,7 @@ public class SyncCheckService(
         if (isDirectionUp && comparisonHelper.IsNewerThan(songFileModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
         {
             logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> SKIPPED (server newer, direction up)", clientFile.Path, existingSongDevice.SongId);
-            var record = await syncActions.ActionSkipped(clientFile.Path, existingSongDevice.SongId, reason: $"Server modified at {songFileModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}, not downloaded (direction up)", cancellationToken: cancellationToken);
+            var record = syncActions.ActionSkippedDeferred(clientFile.Path, existingSongDevice.SongId, reason: $"Server modified at {songFileModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}, not downloaded (direction up)");
             allRecords.Add(record);
         }
         else if (comparisonHelper.IsNewerThan(songFileModifiedAt, existingSongDevice.LastSyncedModifiedAt!.Value))
@@ -301,7 +304,7 @@ public class SyncCheckService(
         else
         {
             logger.LogDebug("CheckSync: Path='{Path}' SongId={SongId} -> SKIPPED (unchanged)", clientFile.Path, existingSongDevice.SongId);
-            var record = await syncActions.ActionSkipped(clientFile.Path, existingSongDevice.SongId, reason: "File unchanged since last sync", cancellationToken: cancellationToken);
+            var record = syncActions.ActionSkippedDeferred(clientFile.Path, existingSongDevice.SongId, reason: "File unchanged since last sync");
             allRecords.Add(record);
         }
     }

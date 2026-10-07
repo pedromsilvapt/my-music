@@ -29,6 +29,7 @@ interface CliArgs {
     autoConfirm: boolean;
     direction: SyncDirection;
     deduplicate: boolean;
+    recordSkipped: boolean;
     conflicts: ConflictResolution;
     verbose: boolean;
 }
@@ -42,6 +43,7 @@ function parseArgs(argv: string[]): CliArgs {
         autoConfirm: false,
         direction: 'Both',
         deduplicate: false,
+        recordSkipped: false,
         conflicts: 'skip',
         verbose: false,
     };
@@ -58,6 +60,9 @@ function parseArgs(argv: string[]): CliArgs {
                 break;
             case '--deduplicate':
                 result.deduplicate = true;
+                break;
+            case '--record-skipped':
+                result.recordSkipped = true;
                 break;
             case '--yes':
             case '-y':
@@ -127,7 +132,7 @@ async function main(): Promise<number> {
 
     if (args.command !== 'sync') {
         console.error(`Unknown command: ${args.command}`);
-        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--deduplicate] [--yes] [--direction up|down|both] [--conflicts upload|download|skip]');
+        console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--deduplicate] [--record-skipped] [--yes] [--direction up|down|both] [--conflicts upload|download|skip]');
         return 1;
     }
 
@@ -151,6 +156,7 @@ async function main(): Promise<number> {
             scannerType: 'fileSystem' as const,
             direction: args.direction,
             deduplicate: args.deduplicate,
+            recordSkipped: args.recordSkipped,
         },
     };
 

@@ -1,7 +1,7 @@
 import type {SyncSessionItem} from '../../api/types';
 
 export type SessionCountField = {
-    [K in keyof SyncSessionItem]: K extends `${string}Count` ? K : never
+    [K in keyof SyncSessionItem]-?: K extends `${string}Count` ? K : never
 }[keyof SyncSessionItem];
 
 export type SessionCounterColorKey = 'success' | 'info' | 'warning' | 'error' | 'textMuted' | 'syncDownload' | 'syncUpload';

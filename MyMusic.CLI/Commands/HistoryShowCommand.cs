@@ -149,7 +149,17 @@ public class HistoryShowCommand(
 
         if (requestedActions.Contains(SyncRecordAction.Skipped))
         {
-            PrintRecordGroup(SyncRecordAction.Skipped, grouped, "grey");
+            // A completed session only keeps its Skipped records when synced with --record-skipped
+            if (session is { Status: SyncSessionStatus.Completed, RecordSkipped: false, SkippedCount: > 0 })
+            {
+                AnsiConsole.MarkupLine($"[grey]Skipped ({session.SkippedCount}):[/]");
+                AnsiConsole.MarkupLine("  [grey](not recorded; sync with --record-skipped to keep them)[/]");
+                AnsiConsole.WriteLine();
+            }
+            else
+            {
+                PrintRecordGroup(SyncRecordAction.Skipped, grouped, "grey");
+            }
         }
 
         if (requestedActions.Contains(SyncRecordAction.Conflict))

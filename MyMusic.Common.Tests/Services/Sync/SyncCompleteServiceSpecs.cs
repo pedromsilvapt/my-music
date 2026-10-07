@@ -164,6 +164,66 @@ public class SyncCompleteServiceSpecs
         result.ErrorCount.ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CompleteAsync_ByDefault_DeletesSkippedRecordsAndKeepsTheirCount(bool isDryRun)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
+        session.IsDryRun = isDryRun;
+        scenario.AddRecord(session.Id, "/a.mp3", SyncRecordAction.CreateRemote);
+        scenario.AddRecord(session.Id, "/b.mp3", SyncRecordAction.Skipped);
+        scenario.AddRecord(session.Id, "/c.mp3", SyncRecordAction.Skipped);
+        scenario.DbContext.SaveChanges();
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CompleteAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert: the response still counts the skipped files, but only the other records stay stored
+        result.ShouldNotBeNull();
+        result.SkippedCount.ShouldBe(2);
+        result.CreateRemoteCount.ShouldBe(1);
+
+        var stored = await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking()
+            .Where(r => r.SessionId == session.Id)
+            .ToListAsync();
+        stored.Select(r => r.Action).ShouldBe([SyncRecordAction.CreateRemote]);
+
+        var updatedSession = await scenario.DbContext.DeviceSyncSessions.AsNoTracking().FirstAsync(s => s.Id == session.Id);
+        updatedSession.DeletedSkippedCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_RecordSkipped_KeepsSkippedRecords()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Committed);
+        session.RecordSkipped = true;
+        scenario.AddRecord(session.Id, "/a.mp3", SyncRecordAction.Skipped);
+        scenario.DbContext.SaveChanges();
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CompleteAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.SkippedCount.ShouldBe(1);
+
+        var stored = await scenario.DbContext.DeviceSyncSessionRecords.AsNoTracking()
+            .CountAsync(r => r.SessionId == session.Id && r.Action == SyncRecordAction.Skipped);
+        stored.ShouldBe(1);
+
+        var updatedSession = await scenario.DbContext.DeviceSyncSessions.AsNoTracking().FirstAsync(s => s.Id == session.Id);
+        updatedSession.DeletedSkippedCount.ShouldBe(0);
+    }
+
     [Fact]
     public async Task CompleteAsync_CountsOnlyUnresolvedConflicts()
     {

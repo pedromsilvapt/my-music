@@ -88,7 +88,7 @@ export class NodeApiClient implements ISyncApiClient {
 
     async startSync(
         deviceId: number,
-        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; scanErrors?: Array<{ path: string; error: string }>; deviceOptions?: { namingTemplate: string | null } }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; recordSkipped?: boolean; scanErrors?: Array<{ path: string; error: string }>; deviceOptions?: { namingTemplate: string | null } }
     ): Promise<{ sessionId: number }> {
         return this._post(`/devices/${deviceId}/sync/start`, request);
     }

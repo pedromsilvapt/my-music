@@ -112,6 +112,7 @@ public class DesktopCliApplication : ISyncApplication
         if (options.Force) args.Add("--force");
         if (options.DryRun) args.Add("--dry-run");
         if (options.Deduplicate) args.Add("--deduplicate");
+        if (options.RecordSkipped) args.Add("--record-skipped");
         if (options.Direction is not null && options.Direction != SyncDirection.Both)
         {
             args.Add("--direction");
@@ -194,7 +195,7 @@ public class DesktopCliApplication : ISyncApplication
         var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
             _api, _fixture.DeviceId, result.SessionId);
 
-        return result with { ApiRecordCounts = apiRecordCounts };
+        return result with { ApiRecordCounts = apiRecordCounts, RecordSkipped = options.RecordSkipped };
     }
 
     public bool SupportsSyncDirection() => true;

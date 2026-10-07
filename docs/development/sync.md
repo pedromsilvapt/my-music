@@ -197,6 +197,14 @@ Sync is split into two distinct phases: **record** and **commit**. During the re
 
 The list of `DeviceSyncSessionRecord` entries is the single source of truth for what a sync session will do. Every action — import, download, delete, link, rename, skip — is represented as a record. The commit phase is purely mechanical: it reads the records and performs the corresponding operations. Nothing happens during commit that wasn't already decided during the record phase (except for orphan detection, which adds `Unlink` records for files that disappeared from the device, and error reporting, which may add `Error` records when staged files or other resources are unexpectedly unavailable, or when importing an uploaded file fails). A commit-time `Error` record names the record it failed in `Data.FailedRecordId`, and that record's bookkeeping is skipped: a failed `CreateRemote` links nothing to the device, and a failed `UpdateRemote` does not mark the device's change as synced, so the next sync retries it.
 
+### Skipped Records
+
+Most files of a typical sync are unchanged, so `Skipped` records are by far the most numerous and the least useful once the sync is over. They are still written during the session, because the server relies on them while it runs (orphan detection, pending actions and requested-path renames all look for a record at a path), and the check saves a whole chunk's `Skipped` records at once.
+
+When a session **completes** (dry-run or not), its `Skipped` records are deleted and only their number is kept (`DeviceSyncSession.DeletedSkippedCount`), so the session's skipped counter stays correct. Sessions that fail, are cancelled or are abandoned keep their records.
+
+To keep them, e.g. when debugging a sync, the client starts the session with `RecordSkipped` (`--record-skipped` in the CLI, "Record Skipped Files" in the mobile sync options). Sessions report it as `recordSkipped`, so the history views can tell a session with skipped files but no records to list.
+
 ### Unified Record Responses
 
 Every sync endpoint returns records as a single flat list of `DeviceSyncSessionRecord` entries, each carrying its `Action` type. The client iterates the list and dispatches per-record based on that action. This is the natural consequence of the record list being the contract: if the record list is the single source of truth, then the API response should simply *be* that list — not a partitioned view of it.

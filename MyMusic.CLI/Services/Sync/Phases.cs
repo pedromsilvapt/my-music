@@ -58,6 +58,7 @@ public class Phases(
             Direction = ctx.Options.Direction,
             RepositoryPath = ctx.RepositoryPath,
             Deduplicate = ctx.Options.Deduplicate,
+            RecordSkipped = ctx.Options.RecordSkipped,
             ScanErrors = scanErrors,
             // A dry run doesn't save the device options, so the session previews the local ones
             DeviceOptions = ctx.Options.DryRun

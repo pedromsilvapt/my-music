@@ -34,7 +34,8 @@
         "records": "Records",
         "searchPlaceholder": "Search file paths...",
         "fetchSessionFailed": "Failed to fetch session",
-        "actionPillsLabel": "Filter by action"
+        "actionPillsLabel": "Filter by action",
+        "skippedNotRecorded": "Skipped records were not kept for this session. Sync with the record skipped option to keep them."
     },
     "schema": {
         "manageGroup": "Manage",

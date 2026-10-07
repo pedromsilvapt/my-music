@@ -34,7 +34,8 @@
         "records": "Registos",
         "searchPlaceholder": "Pesquisar caminhos de ficheiros...",
         "fetchSessionFailed": "Falha ao obter a sessão",
-        "actionPillsLabel": "Filtrar por ação"
+        "actionPillsLabel": "Filtrar por ação",
+        "skippedNotRecorded": "Os registos ignorados não foram guardados nesta sessão. Sincronize com a opção de registar ignorados para os manter."
     },
     "schema": {
         "manageGroup": "Gerir",

@@ -64,6 +64,19 @@ public class SyncCompleteService(
             records.Count(r => r.Action == SyncRecordAction.DeleteLocal || r.Action == SyncRecordAction.Unlink),
             records.Count(r => r.Action == SyncRecordAction.Error));
 
+        // Skipped records are only needed while the session runs (orphan detection, pending actions).
+        // Most files of a sync are unchanged, so unless asked to keep them only their count survives.
+        // Done after the session is saved as completed: a failure here leaves the records in place.
+        if (!session.RecordSkipped)
+        {
+            var deleted = await db.DeviceSyncSessionRecords
+                .Where(r => r.SessionId == sessionId && r.Action == SyncRecordAction.Skipped)
+                .ExecuteDeleteAsync(cancellationToken);
+
+            session.DeletedSkippedCount += deleted;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         return new SyncCompleteResult
         {
             CreateRemoteCount = records.Count(r => r.Action == SyncRecordAction.CreateRemote),

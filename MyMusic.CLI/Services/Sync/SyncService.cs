@@ -6,7 +6,7 @@ using MyMusic.CLI.Services.Sync.Types;
 public class SyncService(IServiceProvider serviceProvider) : ISyncService
 {
     public async Task<SyncResult> SyncAsync(bool force, bool dryRun, bool autoConfirm,
-        SyncDirection direction, bool deduplicate, ConflictResolution? conflicts = null,
+        SyncDirection direction, bool deduplicate, bool recordSkipped, ConflictResolution? conflicts = null,
         IProgress<SyncProgress>? progress = null, CancellationToken ct = default)
     {
         var options = new SyncOptions
@@ -16,6 +16,7 @@ public class SyncService(IServiceProvider serviceProvider) : ISyncService
             AutoConfirm = autoConfirm,
             Direction = direction,
             Deduplicate = deduplicate,
+            RecordSkipped = recordSkipped,
             Conflicts = conflicts,
         };
 

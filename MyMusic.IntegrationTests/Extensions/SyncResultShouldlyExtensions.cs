@@ -65,8 +65,10 @@ public static class SyncResultShouldlyExtensions
 
         if (apiRecordCounts is not null)
         {
+            // Skipped records are deleted when the sync completes, unless it was asked to keep them
+            var expectedApiCount = actionName == nameof(result.Skipped) && !result.RecordSkipped ? 0 : expectedValue;
             var apiCount = apiRecordCounts.GetValueOrDefault(actionName, 0);
-            apiCount.ShouldBe(expectedValue, $"API record count for {actionName} should be {expectedValue} but was {apiCount}");
+            apiCount.ShouldBe(expectedApiCount, $"API record count for {actionName} should be {expectedApiCount} but was {apiCount}");
         }
     }
 }

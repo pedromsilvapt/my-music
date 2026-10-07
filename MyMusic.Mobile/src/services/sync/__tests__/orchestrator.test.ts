@@ -74,7 +74,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         get isCancelled() { return false; },
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false, recordSkipped: false,
         },
     };
 

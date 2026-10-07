@@ -14,6 +14,7 @@ public record SyncSessionItem
     public DateTime? CompletedAt { get; init; }
     public required SyncSessionStatus Status { get; init; }
     public required bool IsDryRun { get; init; }
+    public bool RecordSkipped { get; init; }
     public required int CreateRemoteCount { get; init; }
     public required int UpdateRemoteCount { get; init; }
     public required int SkippedCount { get; init; }

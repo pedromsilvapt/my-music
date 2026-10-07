@@ -21,6 +21,11 @@ public record SyncResult
     public Dictionary<string, int>? ApiRecordCounts { get; init; }
 
     /// <summary>
+    /// Whether the sync kept its Skipped records. When false they are counted but not stored.
+    /// </summary>
+    public bool RecordSkipped { get; init; } = true;
+
+    /// <summary>
     /// Value of a counter that could not be found in the CLI's standard output.
     /// </summary>
     public const int MissingCounter = -1;

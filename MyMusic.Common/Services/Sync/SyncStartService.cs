@@ -55,6 +55,7 @@ public class SyncStartService(
             Direction = input.Direction,
             RepositoryPath = input.RepositoryPath,
             Deduplicate = input.Deduplicate,
+            RecordSkipped = input.RecordSkipped,
             NamingTemplate = namingTemplate ?? config.Value.DefaultNamingTemplate,
         };
 

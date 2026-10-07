@@ -137,6 +137,28 @@ public class DeviceSyncSessionsControllerListSessionsSpecs
     }
 
     [Fact]
+    public async Task ListSessions_SkippedCountIncludesRecordsDeletedOnCompletion()
+    {
+        // Arrange: a completed session that kept one Skipped record and had 5 deleted
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var device = scenario.CreateDevice("Phone");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.Completed);
+        session.DeletedSkippedCount = 5;
+        scenario.AddRecord(session.Id, "/a.mp3", SyncRecordAction.Skipped);
+        scenario.DbContext.SaveChanges();
+
+        // Act
+        var result = await controller.ListSessions(device.Id);
+
+        // Assert
+        result.Value.ShouldNotBeNull();
+        var dto = result.Value.Sessions.Single(s => s.Id == session.Id);
+        dto.SkippedCount.ShouldBe(6);
+        dto.RecordSkipped.ShouldBeFalse();
+    }
+
+    [Fact]
     public async Task ListSessions_NoSessions_ReturnsEmptyList()
     {
         // Arrange

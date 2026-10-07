@@ -42,6 +42,19 @@ public class DeviceSyncSession
     [MaxLength(512)]
     public string? NamingTemplate { get; set; }
 
+    /// <summary>
+    /// When set, the session's <c>Skipped</c> records are kept after it completes. By default they are
+    /// deleted on completion (most files of a sync are unchanged) and only counted in
+    /// <see cref="DeletedSkippedCount"/>. See docs/development/sync.md, "Skipped Records".
+    /// </summary>
+    public bool RecordSkipped { get; set; }
+
+    /// <summary>
+    /// Number of <c>Skipped</c> records deleted when the session completed. The session's skipped total
+    /// is this plus the <c>Skipped</c> records still stored.
+    /// </summary>
+    public int DeletedSkippedCount { get; set; }
+
     public List<DeviceSyncSessionRecord> Records { get; set; } = [];
 }
 

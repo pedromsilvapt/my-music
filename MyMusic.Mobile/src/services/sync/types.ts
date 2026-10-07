@@ -24,6 +24,7 @@ export interface SyncContext {
         scannerType: ScannerType;
         direction: SyncDirection;
         deduplicate: boolean;
+        recordSkipped: boolean;
     };
     result: SyncResult;
     /** Scanned files already checked, resolved or uploaded: the progress of the upload phase. */
@@ -160,7 +161,7 @@ export interface ISyncApiClient {
 
     startSync: (
         deviceId: number,
-        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; scanErrors?: Array<{ path: string; error: string }>; deviceOptions?: { namingTemplate: string | null } }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; recordSkipped?: boolean; scanErrors?: Array<{ path: string; error: string }>; deviceOptions?: { namingTemplate: string | null } }
     ) => Promise<{ sessionId: number }>;
 
     prepareDeduplicate: (
@@ -310,6 +311,7 @@ export interface ISyncState {
         scannerType: ScannerType;
         direction: SyncDirection;
         deduplicate: boolean;
+        recordSkipped: boolean;
     };
 }
 

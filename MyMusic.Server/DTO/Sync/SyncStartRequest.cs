@@ -19,6 +19,12 @@ public record SyncStartRequest
     /// </summary>
     public bool Deduplicate { get; init; }
 
+    /// <summary>
+    /// Keep the session's <c>Skipped</c> records after it completes. By default they are deleted on
+    /// completion and only their count is kept.
+    /// </summary>
+    public bool RecordSkipped { get; init; }
+
     public List<SyncScanErrorItem>? ScanErrors { get; init; }
 
     /// <summary>

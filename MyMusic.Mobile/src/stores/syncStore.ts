@@ -42,6 +42,7 @@ interface SyncState {
         scannerType: ScannerType;
         direction: SyncDirection;
         deduplicate: boolean;
+        recordSkipped: boolean;
     };
 
     startSync: (options: Partial<SyncState['options']>) => void;
@@ -88,6 +89,7 @@ const initialState = {
         scannerType: 'fileSystem' as ScannerType,
         direction: 'Both' as SyncDirection,
         deduplicate: false,
+        recordSkipped: false,
     },
 };
 

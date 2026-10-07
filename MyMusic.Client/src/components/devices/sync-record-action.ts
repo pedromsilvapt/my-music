@@ -53,11 +53,23 @@ export function getActionCount(session: SyncSessionItem, action: SyncRecordActio
 }
 
 /**
+ * Whether the action is `Skipped` and the session counted its skipped files without keeping their
+ * records: a completed session only keeps them when it was started with the record skipped option.
+ */
+export function areSkippedRecordsDeleted(session: SyncSessionItem, action: SyncRecordAction): boolean {
+    return action === SyncRecordAction.Skipped
+        && session.status === 'Completed'
+        && !session.recordSkipped
+        && session.skippedCount > 0;
+}
+
+/**
  * Whether filtering the session's records by the given action can return any.
  * The conflict count only covers the unresolved conflicts, while the resolved `Conflict` records
  * are kept, so a session can have them even when the count is zero.
  */
 export function isActionFilterable(session: SyncSessionItem, action: SyncRecordAction): boolean {
+    if (areSkippedRecordsDeleted(session, action)) return false;
     return action === SyncRecordAction.Conflict || getActionCount(session, action) > 0;
 }
 

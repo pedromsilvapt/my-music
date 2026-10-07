@@ -6,6 +6,7 @@ public record SyncStartRequest
     public string? Direction { get; init; }
     public string? RepositoryPath { get; init; }
     public bool Deduplicate { get; init; }
+    public bool RecordSkipped { get; init; }
     public List<SyncScanErrorItem>? ScanErrors { get; init; }
     public SyncStartDeviceOptions? DeviceOptions { get; init; }
 }

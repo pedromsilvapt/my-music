@@ -67,6 +67,7 @@ my-music sync [OPTIONS]
 | `--force`   | `-f`     | Force full sync                                  |
 | `--dry-run` |          | Show what would be synced without making changes |
 | `--yes`     | `-y`     | Auto-confirm prompts                             |
+| `--record-skipped` |   | Keep the records of skipped (unchanged) files in the sync history; by default only their count is kept |
 
 ---
 

@@ -22,7 +22,7 @@ export default function SyncProgressScreen() {
 
     useEffect(() => {
         return () => {
-            setOptions({force: false, dryRun: false, autoConfirm: false, treatConflictsAsErrors: false, deduplicate: false});
+            setOptions({force: false, dryRun: false, autoConfirm: false, treatConflictsAsErrors: false, deduplicate: false, recordSkipped: false});
         };
     }, []);
 

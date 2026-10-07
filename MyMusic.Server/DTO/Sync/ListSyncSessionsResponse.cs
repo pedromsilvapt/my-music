@@ -16,6 +16,12 @@ public record SyncSessionItem
     public required SyncSessionStatus Status { get; init; }
     public required bool IsDryRun { get; init; }
     public bool Deduplicate { get; init; }
+
+    /// <summary>
+    /// Whether the session keeps its <c>Skipped</c> records after completing. When <c>false</c>, a
+    /// completed session still reports them in <see cref="SkippedCount"/> but has none to list.
+    /// </summary>
+    public bool RecordSkipped { get; init; }
     public required int CreateRemoteCount { get; init; }
     public required int UpdateRemoteCount { get; init; }
     public required int SkippedCount { get; init; }
@@ -42,7 +48,8 @@ public record SyncSessionItem
             Deduplicate = session.Deduplicate,
             CreateRemoteCount = session.Records.Count(r => r.Action == SyncRecordAction.CreateRemote),
             UpdateRemoteCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateRemote),
-            SkippedCount = session.Records.Count(r => r.Action == SyncRecordAction.Skipped),
+            RecordSkipped = session.RecordSkipped,
+            SkippedCount = session.Records.Count(r => r.Action == SyncRecordAction.Skipped) + session.DeletedSkippedCount,
             CreateLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.CreateLocal),
             UpdateLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.UpdateLocal),
             DeleteLocalCount = session.Records.Count(r => r.Action == SyncRecordAction.DeleteLocal),

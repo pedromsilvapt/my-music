@@ -39,6 +39,23 @@ public class SyncStartServiceSpecs
         scenario.DbContext.DeviceSyncSessions.Single(s => s.Id == result!.SessionId).Deduplicate.ShouldBeTrue();
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartAsync_RecordSkipped_StoresItOnTheSession(bool recordSkipped)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.StartAsync(device.Id, scenario.AdminUser.Id, new SyncStartInput { RecordSkipped = recordSkipped }, CancellationToken.None);
+
+        // Assert
+        scenario.DbContext.DeviceSyncSessions.Single(s => s.Id == result!.SessionId).RecordSkipped.ShouldBe(recordSkipped);
+    }
+
     [Fact]
     public async Task StartAsync_DeduplicateWithoutFpcalc_FailsWithoutCreatingSession()
     {

@@ -232,6 +232,7 @@ public class MobileCliApplication : ISyncApplication
         if (options.Force) args.Add("--force");
         if (options.DryRun) args.Add("--dry-run");
         if (options.Deduplicate) args.Add("--deduplicate");
+        if (options.RecordSkipped) args.Add("--record-skipped");
         if (options.AutoConfirm) args.Add("--yes");
         if (options.Direction is not null)
         {
@@ -316,7 +317,7 @@ public class MobileCliApplication : ISyncApplication
         var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
             _api, DeviceId, result.SessionId);
 
-        return result with { ApiRecordCounts = apiRecordCounts };
+        return result with { ApiRecordCounts = apiRecordCounts, RecordSkipped = options.RecordSkipped };
     }
 
     public bool SupportsSyncDirection() => true;

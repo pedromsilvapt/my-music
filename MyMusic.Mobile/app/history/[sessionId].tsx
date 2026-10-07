@@ -277,7 +277,7 @@ export default function SessionDetailScreen() {
         return new Date(dateStr).toLocaleString();
     };
 
-    const filters: { key: FilterType; label: string }[] = [
+    const filters = ([
         {key: 'all', label: 'All'},
         {key: 'CreateRemote', label: 'Created'},
         {key: 'UpdateRemote', label: 'Updated'},
@@ -291,7 +291,9 @@ export default function SessionDetailScreen() {
         {key: 'Conflict', label: 'Conflict'},
         {key: 'UpdateTimestamp', label: 'TS Upd'},
         {key: 'Error', label: 'Errors'},
-    ];
+    ] as { key: FilterType; label: string }[])
+        // A completed session only keeps its Skipped records when synced with "Record Skipped Files"
+        .filter(f => f.key !== 'Skipped' || session?.status !== 'Completed' || session.recordSkipped === true);
 
     // Build flat list data for FlashList
     const flatListData = useMemo((): FlatListItem[] => {

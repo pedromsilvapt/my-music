@@ -123,6 +123,7 @@ export async function startSessionPhase (
         direction: ctx.options.direction,
         repositoryPath: ctx.repositoryPath,
         deduplicate: ctx.options.deduplicate,
+        recordSkipped: ctx.options.recordSkipped,
         scanErrors: scanErrors.map(e => ({ path: e.path, error: e.error })),
         // A dry run doesn't save the device options, so the session previews the local ones
         deviceOptions: ctx.options.dryRun

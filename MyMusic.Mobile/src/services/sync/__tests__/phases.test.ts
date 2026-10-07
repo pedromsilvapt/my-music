@@ -69,7 +69,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         get isCancelled () { return false; },
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false, recordSkipped: false,
         },
     };
 
@@ -128,7 +128,7 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
         sessionId: 1,
         options: {
             force: false, dryRun: false, autoConfirm: false,
-            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
+            treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false, recordSkipped: false,
         },
         result,
         processedFiles: 0,
@@ -205,6 +205,15 @@ describe('sync direction', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    test.each([false, true])('startSessionPhase sends recordSkipped %s', async (recordSkipped) => {
+        const deps = createMockDeps();
+        const ctx = createContext({ options: { ...defaultOptions, recordSkipped } });
+
+        await startSessionPhase(deps, ctx, [], jest.fn());
+
+        expect(deps.apiClient.startSync).toHaveBeenCalledWith(1, expect.objectContaining({ recordSkipped }));
     });
 
     test.each(['Both', 'Up', 'Down'] as const)('startSessionPhase sends direction %s', async (direction) => {
@@ -1204,7 +1213,7 @@ describe('serverActionsPhase - Unlink actions for non-uploaded paths', () => {
         const ctx = createContext({
             options: {
                 force: false, dryRun: true, autoConfirm: false,
-                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false,
+                treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false, recordSkipped: false,
             },
             uploadedPaths: new Set<string>(['just-uploaded.mp3']),
             pendingActions: [

@@ -159,6 +159,13 @@ public class SyncActionsServer(
         return await SaveRecord(record, cancellationToken);
     }
 
+    public DeviceSyncSessionRecord ActionSkippedDeferred(string filePath, long? songId = null, string? reason = null)
+    {
+        var record = CreateRecord(filePath, SyncRecordAction.Skipped, data: null, songId, reason: reason);
+        db.DeviceSyncSessionRecords.Add(record);
+        return record;
+    }
+
     public async Task<DeviceSyncSessionRecord> ActionConflict(
         string filePath, DateTime localModifiedAt, DateTime serverModifiedAt, long? songId = null,
         string? reason = null, string? localChecksum = null, string? serverChecksum = null,

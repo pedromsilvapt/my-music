@@ -18,6 +18,9 @@ public record SyncStartInput
     /// <summary>Match new uploads against the library by acoustic fingerprint (soundalike).</summary>
     public bool Deduplicate { get; init; }
 
+    /// <summary>Keep the session's <c>Skipped</c> records after it completes.</summary>
+    public bool RecordSkipped { get; init; }
+
     public List<SyncStartScanError>? ScanErrors { get; init; }
 
     /// <summary>

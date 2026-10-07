@@ -161,6 +161,22 @@ public class PhasesTests
         await _apiClient.Received(1).StartSyncAsync(1, Arg.Is<StartSyncRequest>(r => r.Direction == direction), Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task StartSession_SendsRecordSkipped(bool recordSkipped)
+    {
+        var phases = CreatePhases();
+        var ctx = CreateContext(options: new SyncOptions { RecordSkipped = recordSkipped });
+
+        _apiClient.StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new StartSyncResult { SessionId = 1 }));
+
+        await phases.StartSessionAsync(ctx, [], default);
+
+        await _apiClient.Received(1).StartSyncAsync(1, Arg.Is<StartSyncRequest>(r => r.RecordSkipped == recordSkipped), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task StartSession_DryRun_SendsLocalNamingTemplateAsDeviceOptions()
     {

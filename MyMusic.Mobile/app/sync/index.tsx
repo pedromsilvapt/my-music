@@ -133,6 +133,23 @@ export default function SyncOptionsScreen() {
                 <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
                     <View style={styles.optionRow}>
                         <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
+                            <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Record Skipped Files</Text>
+                            <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
+                                Keep the records of unchanged files in the sync history. By default only their count is kept
+                            </Text>
+                        </View>
+                        <Switch
+                            value={options.recordSkipped}
+                            onValueChange={(value) => setOptions({recordSkipped: value})}
+                            trackColor={{false: colors.borderSecondary, true: colors.primary}}
+                            thumbColor={colors.onPrimary}
+                        />
+                    </View>
+                </View>
+
+                <View style={[styles.optionCard, {backgroundColor: colors.card, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.md}]}>
+                    <View style={styles.optionRow}>
+                        <View style={[styles.optionInfo, {marginRight: spacing.md}]}>
                             <Text style={[styles.optionTitle, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Auto Confirm Deletions</Text>
                             <Text style={[styles.optionDescription, {fontSize: fontSize.sm, color: colors.cardTextSecondary, marginTop: spacing.xs}]}>
                                 Delete files without asking for confirmation

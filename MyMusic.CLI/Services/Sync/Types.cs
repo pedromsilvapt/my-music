@@ -46,6 +46,10 @@ public record SyncOptions
     public SyncDirection Direction { get; init; } = SyncDirection.Both;
     public bool Deduplicate { get; init; }
     /// <summary>
+    /// Keep the session's Skipped records after it completes. By default the server deletes them.
+    /// </summary>
+    public bool RecordSkipped { get; init; }
+    /// <summary>
     /// How real conflicts are resolved without asking. When null, the user is asked for each one.
     /// </summary>
     public ConflictResolution? Conflicts { get; init; }
@@ -225,6 +229,7 @@ public record StartSyncRequest
     public SyncDirection Direction { get; init; } = SyncDirection.Both;
     public string? RepositoryPath { get; init; }
     public bool Deduplicate { get; init; }
+    public bool RecordSkipped { get; init; }
     public List<ScanError>? ScanErrors { get; init; }
 
     /// <summary>

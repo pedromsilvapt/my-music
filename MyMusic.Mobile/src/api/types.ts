@@ -23,6 +23,7 @@ export const SyncStartRequestSchema = z.object({
     direction: z.enum(['Both', 'Up', 'Down']).optional(),
     repositoryPath: z.string().optional(),
     deduplicate: z.boolean().optional(),
+    recordSkipped: z.boolean().optional(),
     scanErrors: z.array(z.object({
         path: z.string(),
         error: z.string(),
@@ -384,6 +385,8 @@ export const SyncSessionItemSchema = z.object({
     completedAt: z.string().nullable(),
     status: z.string(),
     isDryRun: z.boolean(),
+    // Whether the session keeps its Skipped records after completing; otherwise only their count is kept
+    recordSkipped: z.boolean().optional(),
     createRemoteCount: z.number(),
     updateRemoteCount: z.number(),
     skippedCount: z.number(),

@@ -111,6 +111,12 @@ A file changed differently on the device and on the server is a real conflict (s
 
 The option applies to a `--dry-run` as well, which then records what the real sync would do without doing it.
 
+## Skipped Records
+
+`my-music sync --record-skipped` keeps the session's `Skipped` records; by default the server deletes them when the
+session completes and only their count is kept (see [sync.md](sync.md), "Skipped Records"). For such a session
+`my-music history show` prints the skipped count with a note instead of the records.
+
 ## Prompts and Progress
 
 A live progress redraws itself several times a second, so anything else written to the console meanwhile is painted

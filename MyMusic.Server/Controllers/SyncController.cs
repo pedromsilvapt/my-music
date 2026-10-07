@@ -55,6 +55,7 @@ public class SyncController(
                     Direction = request?.Direction ?? SyncDirection.Both,
                     RepositoryPath = request?.RepositoryPath,
                     Deduplicate = request?.Deduplicate ?? false,
+                    RecordSkipped = request?.RecordSkipped ?? false,
                     ScanErrors = request?.ScanErrors?
                         .Select(e => new SyncStartScanError { FilePath = e.FilePath, ErrorMessage = e.ErrorMessage })
                         .ToList(),

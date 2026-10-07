@@ -56,6 +56,13 @@ describe('isActionFilterable', () => {
         expect(isActionFilterable(session, 'Skipped')).toBe(false);
     });
 
+    it('is false for Skipped when a completed session did not keep its skipped records', () => {
+        const completed = {status: 'Completed', skippedCount: 3, recordSkipped: false} as SyncSessionItem;
+        expect(isActionFilterable(completed, 'Skipped')).toBe(false);
+        expect(isActionFilterable({...completed, recordSkipped: true}, 'Skipped')).toBe(true);
+        expect(isActionFilterable({...completed, status: 'Committed'}, 'Skipped')).toBe(true);
+    });
+
     it('is true for Conflict with a zero count, as resolved conflicts are not counted', () => {
         expect(isActionFilterable(session, 'Conflict')).toBe(true);
     });

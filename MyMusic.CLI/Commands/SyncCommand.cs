@@ -42,7 +42,7 @@ public class SyncCommand(ISyncService syncService, ITerminal terminal, ILogger<S
                 });
 
                 var result = await syncService.SyncAsync(settings.Force, settings.DryRun,
-                    settings.AutoConfirm, settings.Direction, settings.Deduplicate, settings.ConflictChoice, progress);
+                    settings.AutoConfirm, settings.Direction, settings.Deduplicate, settings.RecordSkipped, settings.ConflictChoice, progress);
 
                 elapsed = display.Elapsed;
                 return result;
@@ -186,6 +186,10 @@ public class SyncCommand(ISyncService syncService, ITerminal terminal, ILogger<S
         [CommandOption("--deduplicate")]
         [Description("Link new files that sound like a song already on the server (or like another new file) instead of uploading them")]
         public bool Deduplicate { get; set; }
+
+        [CommandOption("--record-skipped")]
+        [Description("Keep the records of skipped (unchanged) files in the sync history. By default only their count is kept")]
+        public bool RecordSkipped { get; set; }
 
         [CommandOption("-y|--yes")] public bool AutoConfirm { get; set; }
 

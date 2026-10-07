@@ -101,6 +101,36 @@ public abstract partial class SyncTestsBase
         result2.ShouldBe(skipped: 1);
     }
 
+    // Scenario: Skipped files are counted but only listed in the sync history when asked for
+    //   Given a song on the device was uploaded to the server
+    //   When the CLI sync runs again without recording skipped files
+    //   Then the song is reported as skipped
+    //   And the sync history has no skipped record for it
+    //   And the song stays associated with the device
+    //   When the CLI sync runs again recording skipped files
+    //   Then the song is reported as skipped
+    //   And the sync history lists the skipped record
+    [Fact]
+    public async Task Sync_ShouldOnlyKeepSkippedRecordsWhenAskedTo()
+    {
+        // Upload a local song, so the next syncs find it unchanged
+        await App.CreateSongAsync(SongsFixture.DefaultSongs[11]);
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createRemote: 1);
+
+        // Sync the way the applications do by default: should count the skipped file without keeping its record
+        var result2 = await App.SyncAsync(new SyncOptions { RecordSkipped = false });
+        result2.ShouldBe(skipped: 1);
+
+        // Should not have unlinked the song, even with no record left for its path
+        await new ShouldSongExistInDeviceFlow("Girl across the street", App.DeviceName, shouldExist: true)
+            .ExecuteAsync(Page);
+
+        // Sync recording skipped files: should count the skipped file and keep its record
+        var result3 = await App.SyncAsync(new SyncOptions { RecordSkipped = true });
+        result3.ShouldBe(skipped: 1);
+    }
+
     // Scenario: Sync downloads a server song once and skips it on subsequent syncs
     //   Given a song exists on the server associated with this device
     //   When the CLI sync runs

@@ -41,4 +41,7 @@ export interface SyncSessionItem {
   errorCount: number;
   /** @nullable */
   repositoryPath?: string | null;
+  /** Whether the session keeps its `Skipped` records after completing. When `false`, a
+  completed session still reports them in int SyncSessionItem.SkippedCount but has none to list. */
+  recordSkipped?: boolean;
 }

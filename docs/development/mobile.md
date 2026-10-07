@@ -156,6 +156,10 @@ A slot shows an icon and value, each in its own color, for every action that has
 has. Every sync record action must belong to a slot (a test enforces it), so a session with records never shows only
 zeros.
 
+The Skipped slot counts files whose records the server deleted when the session completed (the default, see
+[sync.md](sync.md), "Skipped Records"). The "Record Skipped Files" sync option keeps them; without it, the session
+details hide the Skipped filter of a completed session, as there is nothing to list.
+
 ## Conflict Prompt
 
 When a sync finds a real conflict (see "Resolving a Real Conflict" in [sync.md](sync.md)), `createDefaultUserPrompt`
