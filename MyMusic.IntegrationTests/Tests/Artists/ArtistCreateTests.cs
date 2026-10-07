@@ -12,6 +12,11 @@ public class ArtistCreateTests(ITestOutputHelper output) : IntegrationTestBase(o
 {
     private readonly ArtistsFixture _artists = new();
 
+    // Scenario: An artist created from the artists page is listed right away, without songs or albums
+    //   Given a library without any artists
+    //   When the user creates an artist from the artists page
+    //   Then the new artist is listed, without reloading the page
+    //   And the artist's detail page shows no songs and no albums
     [Fact]
     public async Task CreateArtist_FromArtistsPage_ShouldListAnArtistWithoutSongsOrAlbums()
     {
@@ -25,6 +30,10 @@ public class ArtistCreateTests(ITestOutputHelper output) : IntegrationTestBase(o
         await new ValidateArtistCountsFlow("Portishead", songsCount: 0, albumsCount: 0).ExecuteAsync(Page);
     }
 
+    // Scenario: Creating an artist with the name of an existing one creates a second artist with that name
+    //   Given an artist already exists
+    //   When the user creates another artist with the same name
+    //   Then two artists with that name are listed
     [Fact]
     public async Task CreateArtist_WithTheNameOfAnExistingArtist_ShouldCreateASecondArtist()
     {

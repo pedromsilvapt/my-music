@@ -21,6 +21,12 @@ public class SongsMergeTests(ITestOutputHelper output) : IntegrationTestBase(out
         _songs = new SongsFixture();
     }
 
+    // Scenario: Songs picked by the user can be merged into one of them
+    //   Given two songs by different artists, never detected as soundalikes
+    //   When the user selects both and merges them, keeping the first
+    //   Then the merge dialog shows how alike they sound, and proposes to merge the other song
+    //   And only the kept song is left in the library
+    //   And it gained the artist of the merged song
     [Fact]
     public async Task MergeSongs_FromSelection_ShouldMergeTheOtherSongIntoTheKeptOne()
     {
@@ -44,6 +50,10 @@ public class SongsMergeTests(ITestOutputHelper output) : IntegrationTestBase(out
         )).ExecuteAsync(Page);
     }
 
+    // Scenario: Merging is not offered for a single song
+    //   Given two songs exist in the library
+    //   When the user opens the actions menu with only one of them selected
+    //   Then the menu does not offer to merge songs
     [Fact]
     public async Task MergeAction_WithSingleSongSelected_ShouldNotBeOffered()
     {

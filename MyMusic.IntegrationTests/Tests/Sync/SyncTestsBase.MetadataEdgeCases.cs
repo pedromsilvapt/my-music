@@ -7,6 +7,12 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: Moving a song to another album on the server moves its file on the device
+    //   Given a song on the server was downloaded to the device
+    //   When the song's album is changed on the server
+    //   And the CLI sync runs
+    //   Then the local file is updated and moved to the folder of the new album
+    //   And the file in the old album's folder is gone
     [Fact]
     public async Task Sync_ShouldRenameFileWhenAlbumChanges()
     {
@@ -37,6 +43,12 @@ public abstract partial class SyncTestsBase
         App.FileExists(newPath).ShouldBeTrue();
     }
 
+    // Scenario: Adding an artist to a song on the server renames its file on the device
+    //   Given a song on the server was downloaded to the device
+    //   When another artist is added to the song on the server
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed to mention both artists
+    //   And it stays in the folder of its album artist
     [Fact]
     public async Task Sync_ShouldRenameFileWhenArtistChanges()
     {

@@ -15,6 +15,16 @@ public class QueueSwitchTests(ITestOutputHelper output) : IntegrationTestBase(ou
     private readonly SongsFixture _songs = new();
     private readonly QueuesFixture _queues = new();
 
+    // Scenario: Playing a song from another queue never flashes the previously playing queue
+    //   Given a playing queue with two songs
+    //   And another queue with only one of those songs
+    //   When the user opens the now playing page
+    //   Then the song that is only in the playing queue is listed
+    //   When the user views the other queue, without playing it
+    //   Then the song that is only in the playing queue is no longer listed
+    //   When the user plays a song from the viewed queue
+    //   Then the player loads that song
+    //   And the list stays on the viewed queue, never showing the song that is only in the previous one
     [Fact]
     public async Task PlaySongFromOtherQueue_ShouldNeverShowPreviousQueue()
     {

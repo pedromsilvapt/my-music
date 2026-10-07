@@ -8,6 +8,10 @@ public class AllDataFixtureTests(ITestOutputHelper output) : IntegrationTestBase
 {
     protected override bool NavigateOnInitialize => false;
 
+    // Scenario: Seeding all the sample data creates every sample item of each kind
+    //   Given a new user with an empty library
+    //   When all the sample data is seeded
+    //   Then 3 devices, 3 playlists, 147 songs, 102 artists, 132 albums and 12 genres are created
     [Fact]
     public async Task SeedAsync_CreatesAllEntities()
     {
@@ -24,6 +28,10 @@ public class AllDataFixtureTests(ITestOutputHelper output) : IntegrationTestBase
         fixture.GenresData.Count.ShouldBe(12);
     }
 
+    // Scenario: Seeding all the sample data leaves no kind of item empty
+    //   Given a new user with an empty library
+    //   When all the sample data is seeded
+    //   Then there are devices, playlists, songs, artists, albums and genres
     [Fact]
     public async Task AllFixtures_AreSeeded()
     {

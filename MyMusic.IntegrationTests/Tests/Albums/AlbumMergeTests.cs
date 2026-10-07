@@ -15,6 +15,12 @@ public class AlbumMergeTests(ITestOutputHelper output) : IntegrationTestBase(out
     private readonly AlbumsFixture _albums = new();
     private readonly SongsFixture _songs = new();
 
+    // Scenario: Merging albums of the same artist moves their songs to the kept album
+    //   Given three albums of one artist, with one song each
+    //   When the user selects the three albums and merges the other two into one of them
+    //   Then the confirmation says two songs will be moved and the other two albums deleted
+    //   And only the kept album remains, with the three songs
+    //   And a moved song's history records the change of album
     [Fact]
     public async Task MergeAlbums_OfTheSameArtist_ShouldMoveTheirSongsToTheKeptAlbumAndRecordItInTheirHistory()
     {
@@ -49,6 +55,13 @@ public class AlbumMergeTests(ITestOutputHelper output) : IntegrationTestBase(out
             .ExecuteAsync(Page);
     }
 
+    // Scenario: Merging albums of different artists adds the kept album's artist to the moved songs
+    //   Given an album of one artist
+    //   And an album of another artist, with a song the first artist does not perform
+    //   When the user selects both albums and merges the second one into the first
+    //   Then the confirmation warns that the moved song gains the kept album's artist
+    //   And the moved song is in the kept album, performed by its own artist and the album's
+    //   And the artist that lost its album still performs its songs
     [Fact]
     public async Task MergeAlbums_OfDifferentArtists_ShouldWarnAndAddTheKeptAlbumsArtistToTheSongsLackingIt()
     {
@@ -77,6 +90,11 @@ public class AlbumMergeTests(ITestOutputHelper output) : IntegrationTestBase(out
         await new ValidateArtistCountsFlow("Elton John", songsCount: 2, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: "(No Album)" cannot be merged into another album
+    //   Given an artist with a regular album and "(No Album)", which holds the songs that have no album
+    //   When the user selects both albums and chooses to keep the regular one
+    //   Then the merge dialog explains why "(No Album)" cannot be merged, and cannot be confirmed
+    //   And both albums still exist
     [Fact]
     public async Task MergeAlbums_NoAlbumIntoAnotherAlbum_ShouldBeRejectedBeforeItIsConfirmed()
     {

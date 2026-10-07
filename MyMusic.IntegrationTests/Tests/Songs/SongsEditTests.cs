@@ -26,6 +26,11 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         _devices = new DevicesFixture();
     }
 
+    // Scenario: Changing a song's artists marks it for download on its devices
+    //   Given a song that is on a device
+    //   When the user changes the song's artists to ones that do not exist yet
+    //   Then the song shows the new artists
+    //   And the song is marked for download on the device
     [Fact]
     public async Task SongsEdit_AddNewArtist()
     {
@@ -59,6 +64,12 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
             .ExecuteAsync(Page);
     }
 
+    // Scenario: Filling in a song that has no metadata creates its album and artist
+    //   Given a song with only a title, without album, artists or album artist
+    //   When the user sets its title, album, album artist and artist
+    //   Then the song shows the new title, album and artist
+    //   And the album exists
+    //   And the artist exists
     [Fact]
     public async Task EditSong_CreateAllEntitiesFromNoMetadata()
     {
@@ -91,6 +102,14 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ShouldArtistExistFlow("Brand New Artist").ExecuteAsync(Page);
     }
 
+    // Scenario: Using an existing album's name with a different album artist creates a new album
+    //   Given a song without an album
+    //   And another song on an existing artist's album
+    //   When the user sets the first song's album to that album's name, with a different artist and album artist
+    //   Then the first song is on an album of its own album artist
+    //   And there are two albums with that name
+    //   And the different artist exists
+    //   And the other song is still on the existing artist's album
     [Fact]
     public async Task EditSong_SameAlbumDifferentArtistCreatesNewAlbum()
     {
@@ -133,6 +152,15 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
             .ExecuteAsync(Page);
     }
 
+    // Scenario: Picking another artist's album and then changing the album artist creates an album for that artist
+    //   Given a song on an album of one artist
+    //   And another song on an album of its own, by a second artist
+    //   When the user edits the second song, picking the first artist's album among the suggestions
+    //   And sets the album artist back to the second artist
+    //   Then the second song is on an album with that name by the second artist
+    //   And the first song is still on the first artist's album
+    //   And each artist has its own album with that name
+    //   And the album the second song left empty no longer exists
     [Fact]
     public async Task EditSong_PickAlbumOfAnotherArtistThenChangeAlbumArtist_CreatesAlbumForThatArtist()
     {
@@ -174,6 +202,13 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ShouldAlbumExistFlow("Album B", shouldExist: false).ExecuteAsync(Page);
     }
 
+    // Scenario: Picking an album among the suggestions fills in its album artist
+    //   Given a song without an album
+    //   And another song on an existing artist's album
+    //   When the user edits the first song, picking the existing album among the suggestions
+    //   And sets its artist, without touching the album artist
+    //   Then the first song is on the existing album, with that album's artist as its album artist
+    //   And there is still only one album with that name
     [Fact]
     public async Task EditSong_PickAlbumSuggestion_FillsInItsAlbumArtist()
     {
@@ -206,6 +241,13 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ValidateAlbumsNamedFlow("Existing Album", count: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Changing only a song's album artist moves it to that artist's album of the same name
+    //   Given two songs on the same album of one artist
+    //   And one of them features a second artist
+    //   When the user changes the album artist of the featuring song to the second artist
+    //   Then that song is on an album of the same name by the second artist
+    //   And the other song is still on the first artist's album
+    //   And there are two albums with that name
     [Fact]
     public async Task EditSong_ChangeAlbumArtistOnly_MovesSongToThatArtistsAlbum()
     {
@@ -236,6 +278,14 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ValidateAlbumsNamedFlow("Shared Album", count: 2).ExecuteAsync(Page);
     }
 
+    // Scenario: Using an existing album's name and album artist reuses that album
+    //   Given a song without an album
+    //   And another song on an existing artist's album
+    //   When the user sets the first song's album, artist and album artist to the same as the other song's
+    //   Then the first song is on that album, by that artist
+    //   And the other song is unchanged
+    //   And there is still only one album with that name
+    //   And the artist exists
     [Fact]
     public async Task EditSong_SameAlbumAndArtistReusesExistingAlbum()
     {
@@ -277,6 +327,14 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ShouldArtistExistFlow("Shared Artist").ExecuteAsync(Page);
     }
 
+    // Scenario: Using a new album name with an existing artist creates a new album
+    //   Given a song without an album
+    //   And another song on an existing artist's album
+    //   When the user sets the first song's album to a new name, with the existing artist as artist and album artist
+    //   Then the first song is on the new album, by the existing artist
+    //   And the new album exists
+    //   And the existing album still exists
+    //   And the existing artist exists
     [Fact]
     public async Task EditSong_SameArtistDifferentAlbumCreatesNewAlbum()
     {
@@ -314,6 +372,12 @@ public class SongsEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ShouldArtistExistFlow("Existing Artist").ExecuteAsync(Page);
     }
 
+    // Scenario: Editing a song to match another song's title, album and artist gives its file a numbered name
+    //   Given a song without an album
+    //   And another song with a title, album and artist
+    //   When the user sets the first song's title, album, artist and album artist to the same as the other song's
+    //   Then the first song shows the same title, album and artist as the other song
+    //   And its file path is the other song's path with " (2)" before the extension
     [Fact]
     public async Task EditSong_DuplicateTitleAlbumArtistRenamesFilePath()
     {

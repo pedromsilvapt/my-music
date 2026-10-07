@@ -9,6 +9,10 @@ public class AlbumsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(
 {
     protected override bool NavigateOnInitialize => false;
 
+    // Scenario: Seeding the sample albums creates every one of them
+    //   Given a new user with the sample artists, and without any albums
+    //   When the sample albums are seeded
+    //   Then all 132 sample albums are created, each with an id and a name
     [Fact]
     public async Task SeedAsync_CreatesAlbums()
     {
@@ -28,6 +32,10 @@ public class AlbumsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(
         }
     }
 
+    // Scenario: The seeded sample albums contain their well-known ones
+    //   Given a new user with the sample artists, and without any albums
+    //   When the sample albums are seeded
+    //   Then the created albums include "Echoes, Silence, Patience & Grace", "The Fame Monster" and "Century Child"
     [Fact]
     public async Task SeedAsync_ReturnsAlbumsWithExpectedNames()
     {

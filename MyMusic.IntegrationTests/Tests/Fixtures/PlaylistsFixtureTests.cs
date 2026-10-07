@@ -9,6 +9,10 @@ public class PlaylistsFixtureTests(ITestOutputHelper output) : IntegrationTestBa
 {
     protected override bool NavigateOnInitialize => false;
 
+    // Scenario: Seeding the sample playlists creates every one of them
+    //   Given a new user without any playlists
+    //   When the sample playlists are seeded
+    //   Then all 3 sample playlists are created, each with an id and a name
     [Fact]
     public async Task SeedAsync_CreatesPlaylists()
     {
@@ -25,6 +29,10 @@ public class PlaylistsFixtureTests(ITestOutputHelper output) : IntegrationTestBa
         }
     }
 
+    // Scenario: The seeded sample playlists have their well-known names
+    //   Given a new user without any playlists
+    //   When the sample playlists are seeded
+    //   Then the created playlists include "Test Playlist 1", "Test Playlist 2" and "Test Playlist 3"
     [Fact]
     public async Task SeedAsync_ReturnsPlaylistsWithExpectedNames()
     {

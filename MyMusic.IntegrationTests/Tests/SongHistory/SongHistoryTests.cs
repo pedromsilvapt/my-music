@@ -22,6 +22,11 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         _soundalikes = new SoundalikesFixture();
     }
 
+    // Scenario: Renaming a song records a new version showing the title change
+    //   Given a song exists with only its initial version
+    //   When the user changes the song's title
+    //   Then the song has a second version
+    //   And that version shows the title going from the old value to the new one
     [Fact]
     public async Task EditTitle_ShouldRecordTitleChangeAsNewVersion()
     {
@@ -38,6 +43,11 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
             .ExecuteAsync(Page);
     }
 
+    // Scenario: A freshly uploaded song has a first version holding its full state
+    //   Given a song was uploaded and never edited
+    //   When the user opens the song's only version
+    //   Then it is shown as the first revision, with the song's title and artists
+    //   And there are no previous values to compare against
     [Fact]
     public async Task Upload_ShouldRecordFullStateAsCreatedBaseline()
     {
@@ -56,6 +66,11 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
             .ExecuteAsync(Page);
     }
 
+    // Scenario: The versions menu picks up a new version without reloading the page
+    //   Given a song exists with only its initial version
+    //   When the user changes the song's title
+    //   And stays on the song's page
+    //   Then the versions menu ends up listing two versions
     [Fact]
     public async Task EditTitle_ShouldUpdateVersionsMenuWithoutReload()
     {
@@ -70,6 +85,11 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new SongDetailsPage(Page).WaitForVersionsCountAsync(2);
     }
 
+    // Scenario: Adding an artist to a song records a new version showing the artists change
+    //   Given a song with a single artist exists with only its initial version
+    //   When the user adds a second artist to the song
+    //   Then the song has a second version
+    //   And that version shows the artists list gaining the new artist
     [Fact]
     public async Task EditArtists_ShouldRecordArtistsChangeAsNewVersion()
     {
@@ -86,6 +106,12 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
             .ExecuteAsync(Page);
     }
 
+    // Scenario: Merging a soundalike into a song records a new version of the kept song
+    //   Given two songs with the same audio are detected as soundalikes
+    //   And the song to keep has only its initial version
+    //   When the user resolves the group, merging the other song into the kept one
+    //   Then the kept song has a second version
+    //   And that version shows the song gaining the merged song, and how it was merged
     [Fact]
     public async Task ResolveSoundalikes_ShouldRecordMergedSongAsNewVersion()
     {
@@ -107,6 +133,11 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
             .ExecuteAsync(Page);
     }
 
+    // Scenario: Playing a song does not record a new version
+    //   Given a song exists with only its initial version
+    //   When the user plays the song through to the end
+    //   Then the play shows up in the listening history
+    //   And the song still has only its initial version
     [Fact]
     public async Task PlaySong_ShouldNotRecordNewVersion()
     {
@@ -126,6 +157,18 @@ public class SongHistoryTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await songDetails.ShouldHaveSettledVersionsCountAsync(1);
     }
 
+    // Scenario: The user can step back and forth between a song's versions
+    //   Given a song exists with three versions
+    //   When the user opens the newest version
+    //   Then the third revision is shown, compared against the previous one
+    //   And only older revisions can be reached
+    //   When the user steps back twice
+    //   Then the first revision is shown, with nothing to compare against
+    //   And only newer revisions can be reached
+    //   When the user steps forward once
+    //   Then the second revision is shown, with both directions reachable
+    //   When the user closes the version
+    //   Then it is dismissed
     [Fact]
     public async Task VersionModal_ShouldNavigateBetweenRevisions()
     {

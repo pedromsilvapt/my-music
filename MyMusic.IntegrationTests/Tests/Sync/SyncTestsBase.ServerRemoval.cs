@@ -7,6 +7,14 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: A song marked for removal from a device is deleted from it on the next sync
+    //   Given a server song is assigned to the device
+    //   When the sync runs
+    //   Then the song is downloaded to the device
+    //   When the song is marked for removal from the device on the server
+    //   And the sync runs
+    //   Then the local file is deleted
+    //   And the song is no longer listed as being on the device
     [Fact]
     public async Task Sync_ShouldDeleteLocalFileWhenServerMarksForRemoval()
     {
@@ -37,6 +45,13 @@ public abstract partial class SyncTestsBase
             .ExecuteAsync(Page);
     }
 
+    // Scenario: A song the user removes from a device is deleted from it on the next sync
+    //   Given a server song is assigned to the device
+    //   When the sync runs
+    //   Then the song is downloaded to the device
+    //   When the user removes the device from the song's devices
+    //   And the sync runs
+    //   Then the local file is deleted
     [Fact]
     public async Task Sync_ShouldRemoveLocalFileWhenServerSongDeleted()
     {
@@ -63,6 +78,13 @@ public abstract partial class SyncTestsBase
         App.FileExists(expectedPath).ShouldBeFalse();
     }
 
+    // Scenario: A song deleted on the server is deleted from its devices on the next sync
+    //   Given a server song is assigned to the device
+    //   When the sync runs
+    //   Then the song is downloaded to the device
+    //   When the user deletes the song on the server
+    //   And the sync runs
+    //   Then the local file is deleted
     [Fact]
     public async Task Sync_ShouldDeleteLocalFileWhenSongHardDeletedOnServer()
     {

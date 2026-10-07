@@ -16,6 +16,10 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
     // Last of the default songs, far enough down the list to be off screen initially
     private const string FarDownSongTitle = "Two Faced";
 
+    // Scenario: The songs page lists the user's songs
+    //   Given the user has songs in their library
+    //   When the user opens the songs page from the navigation bar
+    //   Then the songs list shows at least one song
     [Fact]
     public async Task SongsPage_ShouldDisplayCollection()
     {
@@ -32,6 +36,15 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         rowCount.ShouldBeGreaterThan(0, "Songs collection should have at least one row");
     }
 
+    // Scenario: Searching songs only looks into their lyrics while the "Lyrics" toggle is on
+    //   Given a song that has some words only in its lyrics
+    //   And another song that has the same words in its title
+    //   When the user searches for those words with the "Lyrics" toggle off
+    //   Then only the song with the words in its title is listed
+    //   When the user turns the "Lyrics" toggle on
+    //   Then both songs are listed
+    //   When the user turns the "Lyrics" toggle back off
+    //   Then only the song with the words in its title is listed again
     [Fact]
     public async Task Search_WithLyricsToggle_ShouldFindSongByLyrics()
     {
@@ -56,6 +69,10 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(collection.Rows).ToHaveCountAsync(1);
     }
 
+    // Scenario: Going to a song scrolls the songs list to it
+    //   Given the user has more songs than fit on the screen
+    //   When the user picks a song far down the list in the "Go to item" modal
+    //   Then the list scrolls until that song is visible
     [Fact]
     public async Task GoTo_ShouldScrollToSelectedSong()
     {
@@ -69,6 +86,12 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(collection.GetRowByTitle(FarDownSongTitle)).ToBeInViewportAsync();
     }
 
+    // Scenario: Going to a song briefly highlights it
+    //   Given the user has more songs than fit on the screen
+    //   When the user picks a song far down the list in the "Go to item" modal
+    //   Then the list scrolls until that song is visible
+    //   And the song is highlighted
+    //   And the highlight goes away shortly after
     [Fact]
     public async Task GoTo_ShouldHighlightTargetThenClear()
     {
@@ -84,6 +107,12 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(row).Not.ToHaveAttributeAsync("data-highlighted", "true");
     }
 
+    // Scenario: Changing the sort order after going to a song does not follow that song
+    //   Given the user has more songs than fit on the screen
+    //   And the user went to a song far down the list, and its highlight has ended
+    //   When the user sorts the list by title, descending, moving the song out of view
+    //   Then the list does not scroll to the song
+    //   And no song is highlighted
     [Fact]
     public async Task GoTo_ChangingSortShouldNotScrollBack()
     {
@@ -101,6 +130,14 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(collection.HighlightedRows).ToHaveCountAsync(0);
     }
 
+    // Scenario: The "Go to item" modal reports when nothing matches, and starts clean when reopened
+    //   Given the user has songs in their library
+    //   When the user opens the "Go to item" modal and searches for a title no song has
+    //   Then a message says that nothing was found
+    //   When the user closes and reopens the modal
+    //   Then the search is focused and empty, with no options showing
+    //   When the user clicks the search
+    //   Then the options show up below the search, without covering it
     [Fact]
     public async Task GoTo_ShouldShowEmptyStateAndResetOnClose()
     {
@@ -128,6 +165,11 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         (await goTo.IsDropdownBelowInputAsync()).ShouldBeTrue("The options dropdown should not cover the search input");
     }
 
+    // Scenario: Pressing Enter in the "Go to item" modal goes to the first match
+    //   Given the user has more songs than fit on the screen
+    //   When the user types the title of a song far down the list in the "Go to item" modal
+    //   And presses Enter without using the arrow keys
+    //   Then the list scrolls until that song is visible
     [Fact]
     public async Task GoTo_ShouldJumpWithEnterKey()
     {
@@ -140,6 +182,14 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(collection.GetRowByTitle(FarDownSongTitle)).ToBeInViewportAsync();
     }
 
+    // Scenario: Hovering an option in the "Go to item" modal selects it
+    //   Given the user has several songs by the same artist
+    //   When the user searches for that artist in the "Go to item" modal
+    //   Then the first match is selected
+    //   When the user hovers another match
+    //   Then that match becomes the only selected one
+    //   When the user clicks it
+    //   Then the list scrolls until that song is visible
     [Fact]
     public async Task GoTo_HoverShouldSelectOption()
     {
@@ -162,6 +212,13 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(songsPage.Collection.GetRowByTitle(FarDownSongTitle)).ToBeInViewportAsync();
     }
 
+    // Scenario: Options in the "Go to item" modal select a song instead of acting as links
+    //   Given the user has songs, whose details are shown as links in the songs list
+    //   When the user searches for a song in the "Go to item" modal
+    //   Then the song's option shows up without any link that can be followed
+    //   When the user clicks the option
+    //   Then the user stays on the songs page
+    //   And the list scrolls until that song is visible
     [Fact]
     public async Task GoTo_OptionsShouldNotContainLinks()
     {
@@ -184,6 +241,14 @@ public class SongsPageTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await Assertions.Expect(songsPage.Collection.GetRowByTitle(FarDownSongTitle)).ToBeInViewportAsync();
     }
 
+    // Scenario: Every song can be reached in the "Go to item" modal, which only renders the options in view
+    //   Given the user has more songs than fit in the modal's options
+    //   When the user opens the options without searching
+    //   Then only part of the songs are rendered as options
+    //   When the user presses the up arrow on the first option
+    //   Then the selection wraps around to the very last song, which scrolls into view
+    //   When the user presses Enter
+    //   Then the songs list scrolls until that last song is visible
     [Fact]
     public async Task GoTo_ShouldReachEveryOptionWhileRenderingOnlyVisibleOnes()
     {

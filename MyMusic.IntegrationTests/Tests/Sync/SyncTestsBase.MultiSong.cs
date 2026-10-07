@@ -7,6 +7,11 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: Several new local songs are uploaded in a single sync
+    //   Given three songs exist on the device that are not on the server
+    //   When the CLI sync runs
+    //   Then the three songs are uploaded
+    //   And the songs page lists the three songs
     [Fact]
     public async Task Sync_ShouldHandleMultipleSimultaneousUploads()
     {
@@ -24,6 +29,13 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(3);
     }
 
+    // Scenario: A single sync both downloads and uploads songs
+    //   Given a song exists on the server, added to the device but not yet downloaded
+    //   And another song exists on the device that is not on the server
+    //   When the CLI sync runs
+    //   Then the server song is downloaded to the device
+    //   And the local song is uploaded
+    //   And the songs page lists both songs
     [Fact]
     public async Task Sync_ShouldHandleMixedOperationsInOneSync()
     {
@@ -48,6 +60,10 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
     }
 
+    // Scenario: Several server songs are downloaded in a single sync
+    //   Given three songs exist on the server, added to the device but not yet downloaded
+    //   When the CLI sync runs
+    //   Then the three songs are downloaded to the device
     [Fact]
     public async Task Sync_ShouldHandleMultipleServerDownloadsInOneSync()
     {
@@ -69,6 +85,13 @@ public abstract partial class SyncTestsBase
         App.FileExists("Faithless/New Religion/New Religion - Faithless, Bebe Rexha.mp3").ShouldBeTrue();
     }
 
+    // Scenario: Several songs removed from the device on the server are deleted in a single sync
+    //   Given three songs exist on the server, added to the device
+    //   When the CLI sync runs
+    //   Then the three songs are downloaded to the device
+    //   When the three songs are marked for removal from the device on the server
+    //   And the CLI sync runs
+    //   Then the three files are deleted from the device
     [Fact]
     public async Task Sync_ShouldHandleMultipleServerRemovesInOneSync()
     {

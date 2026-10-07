@@ -9,6 +9,10 @@ public class DevicesFixtureTests(ITestOutputHelper output) : IntegrationTestBase
 {
     protected override bool NavigateOnInitialize => false;
 
+    // Scenario: Seeding the sample devices creates every one of them
+    //   Given a new user without any devices
+    //   When the sample devices are seeded
+    //   Then all 3 sample devices are created, each with an id and a name
     [Fact]
     public async Task SeedAsync_CreatesDevices()
     {
@@ -25,6 +29,10 @@ public class DevicesFixtureTests(ITestOutputHelper output) : IntegrationTestBase
         }
     }
 
+    // Scenario: The seeded sample devices have their expected names
+    //   Given a new user without any devices
+    //   When the sample devices are seeded
+    //   Then the created devices include "Test Device 1", "Test Device 2" and "Test Device 3"
     [Fact]
     public async Task SeedAsync_ReturnsDevicesWithExpectedNames()
     {

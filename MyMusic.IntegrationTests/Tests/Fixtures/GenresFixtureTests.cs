@@ -9,6 +9,10 @@ public class GenresFixtureTests(ITestOutputHelper output) : IntegrationTestBase(
 {
     protected override bool NavigateOnInitialize => false;
 
+    // Scenario: Seeding the sample genres creates every one of them
+    //   Given a new user without any genres
+    //   When the sample genres are seeded
+    //   Then all 12 sample genres are created, each with an id and a name
     [Fact]
     public async Task SeedAsync_CreatesGenres()
     {
@@ -25,6 +29,10 @@ public class GenresFixtureTests(ITestOutputHelper output) : IntegrationTestBase(
         }
     }
 
+    // Scenario: The seeded sample genres contain their well-known ones
+    //   Given a new user without any genres
+    //   When the sample genres are seeded
+    //   Then the created genres include "Rock", "Pop" and "Metal"
     [Fact]
     public async Task SeedAsync_ReturnsGenresWithExpectedNames()
     {

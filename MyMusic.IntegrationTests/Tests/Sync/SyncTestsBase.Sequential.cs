@@ -7,6 +7,14 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: Each title change made on the server reaches the device on the following sync
+    //   Given a song on the server was downloaded to the device
+    //   When the song's title is changed on the server
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed after the new title
+    //   When the song's title is changed on the server again
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed after the latest title
     [Fact]
     public async Task Sync_ShouldHandleSuccessiveTitleChangesAcrossSyncs()
     {
@@ -49,6 +57,16 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(App.GetSongPath(pathB), title: "Title B");
     }
 
+    // Scenario: A song uploaded from the device keeps syncing in both directions afterwards
+    //   Given a new song exists only on the device
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   When the local file's title is changed
+    //   And the CLI sync runs
+    //   Then the change is uploaded to the server
+    //   When the song's title is changed on the server
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed after the server's title
     [Fact]
     public async Task Sync_ShouldUploadAndUpdateAndThenDownloadInSuccessiveSyncs()
     {

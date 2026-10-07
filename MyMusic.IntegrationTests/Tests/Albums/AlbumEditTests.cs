@@ -15,6 +15,13 @@ public class AlbumEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
     private readonly AlbumsFixture _albums = new();
     private readonly SongsFixture _songs = new();
 
+    // Scenario: Renaming an album renames it in its songs, and is recorded in their history
+    //   Given an album with two songs, one of which has its initial version recorded
+    //   When the user renames the album from its detail page
+    //   Then the album has the new name, keeping both songs
+    //   And it is still its artist's only album
+    //   And its songs name the renamed album
+    //   And the history of the song records the rename as a second version
     [Fact]
     public async Task EditAlbum_RenamedFromItsDetailsPage_ShouldRenameItInItsSongsAndRecordItInTheirHistory()
     {
@@ -41,6 +48,12 @@ public class AlbumEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
             .ExecuteAsync(Page);
     }
 
+    // Scenario: An album's name and year edited from the albums list show up right away
+    //   Given an artist with two empty albums
+    //   When the user changes the name and the year of one of the albums, from the albums list
+    //   Then the list shows the album with its new name and year, without a reload
+    //   And the other album is unchanged
+    //   And the artist still has two albums
     [Fact]
     public async Task EditAlbum_NameAndYearChangedFromItsRow_ShouldShowBothWithoutAReload()
     {
@@ -58,6 +71,12 @@ public class AlbumEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ValidateArtistCountsFlow("Queen", songsCount: 0, albumsCount: 2).ExecuteAsync(Page);
     }
 
+    // Scenario: An album cannot be renamed to the name of another album of its artist
+    //   Given an artist with two albums
+    //   When the user tries to give one of the albums the name of the other
+    //   Then the editor stays open with an error suggesting to merge the two albums instead
+    //   When the user reloads the page
+    //   Then both albums are as they were
     [Fact]
     public async Task EditAlbum_RenamedToANameItsArtistAlreadyHas_ShouldBeRejectedPointingToMerge()
     {
@@ -77,6 +96,13 @@ public class AlbumEditTests(ITestOutputHelper output) : IntegrationTestBase(outp
         await new ValidateAlbumsNamedFlow("Innuendo", count: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Albums selected together are edited in a single editor and saved at once
+    //   Given three albums with one song each
+    //   When the user selects two of the albums in the albums list
+    //   And edits them one after the other in a single editor, renaming both and changing the year of one
+    //   Then both albums carry their changes
+    //   And the album left out is unchanged
+    //   And the songs of both albums name them as renamed
     [Fact]
     public async Task EditAlbums_SelectedTogether_ShouldSaveThemAllAtOnce()
     {

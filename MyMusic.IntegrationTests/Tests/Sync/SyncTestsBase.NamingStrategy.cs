@@ -7,6 +7,14 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: A song is moved to the folder its naming template gives it when its metadata changes
+    //   Given a naming template that places songs in a folder named after their year
+    //   And a song exists on the device in an arbitrary folder
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   When the song's year is edited on the server
+    //   And the CLI sync runs
+    //   Then the file is moved to the folder of the new year
     [Fact]
     public async Task Sync_WithCustomNamingTemplate_ShouldPlaceFileInCorrectFolder()
     {
@@ -34,6 +42,17 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist(expectedPath);
     }
 
+    // Scenario: A dry run previews a changed naming template without saving it
+    //   Given a naming template saved for the device
+    //   And a song from the device was synced to the server
+    //   And the song's title is edited on the server
+    //   When the user changes the naming template on the device
+    //   And the CLI sync runs as a dry run
+    //   Then the rename is previewed with the changed template
+    //   And the server keeps the saved template, and the file stays where it is
+    //   When the CLI sync runs
+    //   Then the changed template is saved on the server
+    //   And the file is moved to the path the changed template gives it
     [Fact]
     public async Task Sync_DryRun_ShouldPreviewChangedNamingTemplateWithoutSavingIt()
     {
@@ -77,6 +96,18 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist(expectedPath);
     }
 
+    // Scenario: Songs stay in the folder they were found in when their metadata changes
+    //   Given a naming template that keeps the folder a file is in, falling back to the song's year
+    //   And four songs exist on the device, each in a year folder
+    //   When the CLI sync runs
+    //   Then the four songs are uploaded to the server, and their files stay where they are
+    //   When the year of one song and the title of another are edited on the server
+    //   And a new song is added to the device on the server
+    //   And the CLI sync runs
+    //   Then the song whose year changed stays in its folder
+    //   And the song whose title changed is renamed inside its folder
+    //   And the songs that did not change stay where they are
+    //   And the new song is downloaded to the folder named after its year
     [Fact]
     public async Task Sync_ShouldPreserveOriginalFolderOnMetadataChange()
     {
@@ -135,6 +166,15 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist(expectedPathE, "New server song E should be downloaded with year-based path");
     }
 
+    // Scenario: A song stays in its folder when its year changes, while its file gets the new year
+    //   Given a naming template that keeps the folder a file is in, falling back to the song's year
+    //   And a song exists on the device in the folder named after its year
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server, and its file stays where it is
+    //   When the song's year is edited on the server
+    //   And the CLI sync runs
+    //   Then the file stays in its original folder
+    //   And the file's metadata has the new year
     [Fact]
     public async Task Sync_ShouldPreserveFolderOnYearChange_SingleSong()
     {
@@ -173,6 +213,13 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(fullPath, year: 2025);
     }
 
+    // Scenario: A song added to a device from the server is downloaded to the folder named after its year
+    //   Given a naming template that keeps the folder a file is in, falling back to the song's year
+    //   And a song exists on the server without any device association
+    //   When the user adds the song to the device
+    //   And the CLI sync runs
+    //   Then the song is downloaded to the folder named after its year
+    //   And the file's metadata has the song's title
     [Fact]
     public async Task Sync_ShouldDownloadWithYearPath_WhenSongAddedToDeviceAfterServerCreation()
     {

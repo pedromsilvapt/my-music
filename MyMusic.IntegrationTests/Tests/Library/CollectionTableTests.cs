@@ -13,6 +13,11 @@ public class CollectionTableTests(ITestOutputHelper output) : IntegrationTestBas
 {
     private readonly SongsFixture _songs = new();
 
+    // Scenario: The columns of a collection table keep their widths while the list is scrolled
+    //   Given a library with many songs, whose titles and albums have very different lengths
+    //   When the user opens the songs table
+    //   And scrolls to the bottom of the list, so that different rows are shown
+    //   Then every column has the same width it had at the top of the list
     [Fact]
     public async Task Table_ColumnWidths_ShouldStayStableWhileScrolling()
     {

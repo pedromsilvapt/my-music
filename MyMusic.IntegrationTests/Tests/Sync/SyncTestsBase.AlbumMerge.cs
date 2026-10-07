@@ -8,6 +8,16 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: Songs that become identical on the device are merged into one on the server
+    //   Given two files of the same song on the device, with titles that differ only in casing
+    //   When the CLI sync runs
+    //   Then two separate songs are created on the server
+    //   When the user adds each song to a different playlist
+    //   And the title of the second file is fixed on the device to match the first
+    //   And the CLI sync runs
+    //   Then only one song exists on the server, with the properly cased details
+    //   And the song is still on the device
+    //   And the song is in both playlists
     [Fact(Skip = "Re-enable after the sync process is turned more interactive. Whether this song is merged, just unlinked and re-linked, or unlinked and deleted, should be a choice made by the user.")]
     public async Task Sync_ShouldMergeSongsWhenChecksumsMatch()
     {

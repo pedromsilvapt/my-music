@@ -13,6 +13,13 @@ public class ArtistMergeTests(ITestOutputHelper output) : IntegrationTestBase(ou
     private readonly ArtistsFixture _artists = new();
     private readonly SongsFixture _songs = new();
 
+    // Scenario: Merging an artist that has an album gives the album and its songs to the kept artist
+    //   Given a song by two artists, in an album of the first one
+    //   And a song by the second artist alone
+    //   When the user selects both artists and merges the first one into the second
+    //   Then the confirmation says one song will be updated and the other artist deleted
+    //   And only the kept artist remains, with both songs and both albums
+    //   And the song both artists performed names the kept artist only once
     [Fact]
     public async Task MergeArtists_WithAnAlbumOfItsOwn_ShouldGiveTheAlbumAndItsSongsToTheKeptArtist()
     {
@@ -39,6 +46,12 @@ public class ArtistMergeTests(ITestOutputHelper output) : IntegrationTestBase(ou
             new(Artists: ["Sam Fender"], Album: "Talk to You", AlbumArtist: "Sam Fender")).ExecuteAsync(Page);
     }
 
+    // Scenario: Merging artists that have an album with the same name merges those albums too
+    //   Given an album split between an artist and a misspelled duplicate of that artist
+    //   When the user selects both artists and merges the misspelled one into the right one
+    //   Then the confirmation warns that the album with the same name is merged as well
+    //   And a single artist with a single album remains, holding both songs
+    //   And the history of the misspelled artist's song records the change of album artist
     [Fact]
     public async Task MergeArtists_SharingAnAlbumName_ShouldMergeThoseAlbumsAndRecordItInTheSongsHistory()
     {
@@ -73,6 +86,11 @@ public class ArtistMergeTests(ITestOutputHelper output) : IntegrationTestBase(ou
             .ExecuteAsync(Page);
     }
 
+    // Scenario: "(No Artist)" cannot be merged into another artist
+    //   Given a regular artist and "(No Artist)", which holds the songs that have no artist
+    //   When the user selects both artists and chooses to keep the regular one
+    //   Then the merge dialog explains why "(No Artist)" cannot be merged, and cannot be confirmed
+    //   And both artists still exist
     [Fact]
     public async Task MergeArtists_NoArtistIntoAnotherArtist_ShouldBeRejectedBeforeItIsConfirmed()
     {

@@ -22,6 +22,11 @@ public class SoundalikesTests(ITestOutputHelper output) : IntegrationTestBase(ou
         _soundalikes = new SoundalikesFixture();
     }
 
+    // Scenario: Resolving a group of soundalikes from its own button deletes the songs that are not kept
+    //   Given two songs with the same audio under different tags, reported as a group of soundalikes
+    //   When the user resolves the group from its own button, keeping one of the songs
+    //   Then the kept song is still in the library
+    //   And the other song is deleted
     [Fact]
     public async Task ResolveGroup_FromItsOwnButton_ShouldDeleteTheOtherSongs()
     {
@@ -39,6 +44,13 @@ public class SoundalikesTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ShouldSongExistFlow(deleted.Title, shouldExist: false).ExecuteAsync(Page);
     }
 
+    // Scenario: A song ignored when resolving a group of soundalikes is kept, and is not reported again
+    //   Given three songs with the same audio under different tags, reported as a single group of soundalikes
+    //   When the user resolves the group, keeping one of the songs and ignoring another
+    //   Then the kept and the ignored songs are still in the library
+    //   And the remaining song is deleted
+    //   When the library is scanned for soundalikes again
+    //   Then no group of soundalikes is reported
     [Fact]
     public async Task ResolveGroup_WithIgnoredSong_ShouldKeepItAndNotReportItAgain()
     {

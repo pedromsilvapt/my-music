@@ -16,6 +16,13 @@ public class DenormalizedCountsTests(ITestOutputHelper output) : IntegrationTest
     private readonly ArtistsFixture _artists = new();
     private readonly AlbumsFixture _albums = new();
 
+    // Scenario: Album and artist counts reflect the songs imported into the library
+    //   Given an empty library
+    //   When three songs by the same artist are imported, two of them on the same album
+    //   And a song with a featured artist is imported
+    //   Then the shared album shows two songs
+    //   And the artist shows three songs and two albums
+    //   And the featured artist shows one song and no albums
     [Fact]
     public async Task ImportSongs_CountsReflectImportedSongs()
     {
@@ -35,6 +42,12 @@ public class DenormalizedCountsTests(ITestOutputHelper output) : IntegrationTest
         await new ValidateArtistCountsFlow("Bebe Rexha", songsCount: 1, albumsCount: 0).ExecuteAsync(Page);
     }
 
+    // Scenario: Moving a song to another album moves its count between the albums
+    //   Given two songs by the same artist on the same album
+    //   When the user edits one of the songs, moving it to a new album by the same artist
+    //   Then the original album shows one song
+    //   And the new album shows one song
+    //   And the artist still shows two songs, now across two albums
     [Fact]
     public async Task EditSongAlbum_MovesCountBetweenAlbums()
     {
@@ -57,6 +70,14 @@ public class DenormalizedCountsTests(ITestOutputHelper output) : IntegrationTest
         await new ValidateArtistCountsFlow("Amaranthe", songsCount: 2, albumsCount: 2).ExecuteAsync(Page);
     }
 
+    // Scenario: Adding and removing a song's artists updates each artist's song count
+    //   Given a song with a single artist
+    //   When the user edits the song, adding a featured artist
+    //   Then the featured artist shows one song and no albums
+    //   And the original artist still shows one song and one album
+    //   When the user edits the song again, removing the featured artist
+    //   Then the featured artist no longer exists
+    //   And the original artist still shows one song and one album
     [Fact]
     public async Task EditSongArtists_UpdatesArtistSongCounts()
     {
@@ -78,6 +99,11 @@ public class DenormalizedCountsTests(ITestOutputHelper output) : IntegrationTest
         await new ValidateArtistCountsFlow("Amaranthe", songsCount: 1, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting a song lowers the counts of its album and artist
+    //   Given two songs by the same artist on the same album
+    //   When the user deletes one of the songs
+    //   Then the album shows one song
+    //   And the artist shows one song and one album
     [Fact]
     public async Task DeleteSong_DecrementsAlbumAndArtistCounts()
     {
@@ -93,6 +119,11 @@ public class DenormalizedCountsTests(ITestOutputHelper output) : IntegrationTest
         await new ValidateArtistCountsFlow("Amaranthe", songsCount: 1, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: An album without songs still counts towards its artist's albums
+    //   Given an artist without any songs or albums
+    //   When an album is created for the artist
+    //   Then the album shows no songs
+    //   And the artist shows no songs and one album
     [Fact]
     public async Task CreateAlbum_IncrementsArtistAlbumsCount()
     {

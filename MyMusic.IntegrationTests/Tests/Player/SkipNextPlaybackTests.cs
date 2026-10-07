@@ -19,6 +19,14 @@ public class SkipNextPlaybackTests(ITestOutputHelper output) : IntegrationTestBa
         _songs = new SongsFixture();
     }
 
+    // Scenario: Playback stops when the only song left in the queue is flagged to be skipped
+    //   Given two songs in the library
+    //   When the user plays the first song, queueing both
+    //   And flags the last song of the queue to be skipped, on the now playing page
+    //   Then the last song shows the skip indicator
+    //   When the first song plays until the end
+    //   Then playback stops, with the player still showing the first song
+    //   And the skipped song is never loaded into the player
     [Fact]
     public async Task SkippedLastSong_ShouldStopPlaybackInsteadOfPlayingIt()
     {

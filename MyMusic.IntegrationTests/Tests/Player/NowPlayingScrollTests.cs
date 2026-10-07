@@ -17,6 +17,11 @@ public class NowPlayingScrollTests(ITestOutputHelper output) : IntegrationTestBa
     // Last of the default songs, far enough down the queue to be off screen initially
     private const string FarDownSongTitle = "Two Faced";
 
+    // Scenario: The now playing page follows the track after the user jumped elsewhere in the queue
+    //   Given a queue long enough to overflow the screen is playing
+    //   And the user jumped to a song far down the queue, leaving the current song off screen
+    //   When the user skips to the next song
+    //   Then the page scrolls back to the new current song and highlights it
     [Fact]
     public async Task GoTo_ThenTrackChange_ShouldScrollToNewCurrentSong()
     {
@@ -36,6 +41,12 @@ public class NowPlayingScrollTests(ITestOutputHelper output) : IntegrationTestBa
         await Assertions.Expect(nextRow).ToHaveAttributeAsync("data-highlighted", "true");
     }
 
+    // Scenario: Going back to the current song highlights it alone
+    //   Given a queue long enough to overflow the screen is playing
+    //   And the user jumped to a song far down the queue, leaving the current song off screen
+    //   When the user clicks the playing song in the footer player
+    //   Then the page scrolls to the current song and highlights it
+    //   And the song jumped to earlier is not highlighted again
     [Fact]
     public async Task GoTo_ThenScrollToCurrent_ShouldFlashOnlyCurrentSong()
     {

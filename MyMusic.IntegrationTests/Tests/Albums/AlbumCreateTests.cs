@@ -15,6 +15,12 @@ public class AlbumCreateTests(ITestOutputHelper output) : IntegrationTestBase(ou
     private readonly ArtistsFixture _artists = new();
     private readonly AlbumsFixture _albums = new();
 
+    // Scenario: An album created from the albums page is listed as an empty album of the picked artist
+    //   Given a library with many artists
+    //   When the user creates an album from the albums page, searching for its artist in the artist picker
+    //   Then the albums list shows the new album right away
+    //   And the album has no songs
+    //   And the album belongs to the picked artist
     [Fact]
     public async Task CreateAlbum_FromAlbumsPage_ShouldListAnEmptyAlbumOfThePickedArtist()
     {
@@ -56,6 +62,12 @@ public class AlbumCreateTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ValidateAlbumArtistFlow("Innuendo", "Queen").ExecuteAsync(Page);
     }
 
+    // Scenario: An artist cannot have two albums with the same name
+    //   Given an artist with an album
+    //   When the user tries to create another album with the same name for that artist
+    //   Then the dialog stays open with an error saying the artist already has an album with that name
+    //   When the user reloads the page
+    //   Then there is still only one album with that name
     [Fact]
     public async Task CreateAlbum_WithANameTheArtistAlreadyHas_ShouldBeRejectedWithAnError()
     {
@@ -74,6 +86,11 @@ public class AlbumCreateTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ValidateAlbumsNamedFlow("Jazz", count: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Two artists can each have an album with the same name
+    //   Given two artists, one of which has an album
+    //   When the user creates an album with the same name for the other artist
+    //   Then the albums list shows both albums with that name
+    //   And the new album counts as one of its artist's albums
     [Fact]
     public async Task CreateAlbum_WithANameOnlyAnotherArtistHas_ShouldCreateASecondAlbum()
     {

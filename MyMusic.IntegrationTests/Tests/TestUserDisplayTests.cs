@@ -7,6 +7,10 @@ namespace MyMusic.IntegrationTests.Tests;
 
 public class TestUserDisplayTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
+    // Scenario: The signed-in user's name is shown in the top bar
+    //   Given a signed-in user
+    //   When the user opens the application
+    //   Then the user's name is visible in the top bar
     [Fact]
     public async Task Username_ShouldAppearInTopbar()
     {

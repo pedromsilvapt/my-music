@@ -10,6 +10,13 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: A song without any tags is imported using its file name as the title
+    //   Given a local song file without title, album or artist tags
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the server shows it titled after its file name, under "(No Artist)" and "(No Album)"
+    //   And the local file stays at its original path
+    //   And the local file's title and album tags are still empty
     [Fact]
     public async Task Sync_ShouldImportSongWithNoMetadata_UsingFilenameAsTitle()
     {
@@ -37,6 +44,13 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(filePath, title: "", album: "");
     }
 
+    // Scenario: A song without an album tag is imported into the "(No Album)" album
+    //   Given a local song file with a title and an artist, but no album tag
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the server shows it in the "(No Album)" album, listing "(No Artist)" next to its own artist
+    //   And the song's artist and the "(No Album)" album exist on the server
+    //   And the local file stays at its original path
     [Fact]
     public async Task Sync_ShouldImportSongWithNullAlbum_UsingNoAlbumPlaceholder()
     {
@@ -65,6 +79,13 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist($"{song.Title}.mp3");
     }
 
+    // Scenario: A song with an empty album tag is imported into the "(No Album)" album
+    //   Given a local song file with a title, an artist and an album artist, but an empty album name
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the server shows it in the "(No Album)" album, with only its own artist
+    //   And the "(No Album)" album exists on the server
+    //   And the local file stays at its original path
     [Fact]
     public async Task Sync_ShouldImportSongWithEmptyAlbumName_UsingNoAlbumPlaceholder()
     {
@@ -91,6 +112,13 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist($"{song.Title}.mp3");
     }
 
+    // Scenario: A song without an album artist tag gets its first artist as the album's artist
+    //   Given a local song file with a title, an album and two artists, but no album artist tag
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the server shows it with its own album and artists, without the "(No Artist)" placeholder
+    //   And the song's first artist exists on the server
+    //   And the local file stays at its original path
     [Fact]
     public async Task Sync_ShouldImportSongWithNullAlbumArtist_UsingNoArtistPlaceholder()
     {
@@ -118,6 +146,13 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist($"{song.Title}.mp3");
     }
 
+    // Scenario: A song without any artist tags is imported under the "(No Artist)" artist
+    //   Given a local song file with a title and an album, but no artist or album artist tags
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the server shows it in its own album, with "(No Artist)" as its only artist
+    //   And the "(No Artist)" artist exists on the server
+    //   And the local file stays at its original path
     [Fact]
     public async Task Sync_ShouldImportSongWithEmptyAlbumArtistName_UsingNoArtistPlaceholder()
     {
@@ -146,6 +181,12 @@ public abstract partial class SyncTestsBase
         App.FileShouldExist($"{song.Title}.mp3");
     }
 
+    // Scenario: Uploading a song without tags does not write the server's placeholders into the file
+    //   Given a local song file without title, album or artist tags
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the device still has a single file
+    //   And the file's title and album tags are still empty
     [Fact]
     public async Task Sync_ShouldNotWritePlaceholdersBackToLocalFile()
     {
@@ -170,6 +211,16 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(filePath, title: "", album: "");
     }
 
+    // Scenario: A song uploaded without tags receives the metadata later added on the server
+    //   Given a local song file without title, album or artist tags
+    //   When the CLI sync runs
+    //   Then the song is uploaded to the server
+    //   And the server shows it titled after its file name, under "(No Artist)" and "(No Album)"
+    //   When the user edits the song on the server, giving it a title, album, artist and album artist
+    //   And the CLI sync runs
+    //   Then the local file is updated and renamed
+    //   And the file is at the artist/album/title path of its new metadata
+    //   And the file's tags have the new title and album
     [Fact]
     public async Task Sync_ShouldUploadNoMetadataSong_ThenDownloadEdits()
     {
@@ -213,6 +264,14 @@ public abstract partial class SyncTestsBase
             album: "Chapter One");
     }
 
+    // Scenario: Several songs without tags are imported as distinct songs sharing the placeholders
+    //   Given two different local song files without title, album or artist tags
+    //   When the CLI sync runs
+    //   Then both songs are uploaded to the server
+    //   And the songs list shows two songs
+    //   And each song is titled after its own file name, under "(No Artist)" and "(No Album)"
+    //   And the "(No Album)" album and the "(No Artist)" artist exist on the server
+    //   And the device still has two files
     [Fact]
     public async Task Sync_ShouldImportMultipleNoMetadataSongsDistinctly()
     {

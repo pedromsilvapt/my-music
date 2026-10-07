@@ -10,6 +10,13 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: The same file in two folders becomes a single song that is on the device twice
+    //   Given two identical copies of a song file in different folders on the device
+    //   When the device syncs
+    //   Then one song is created on the server and the other copy is linked to it
+    //   And the server lists a single song
+    //   And the song shows the device once per copy
+    //   And the song's server file has no collision counter in its name
     [Fact]
     public async Task Sync_SameFileInTwoFolders_ShouldCreateOneSongWithTwoDevicePaths()
     {
@@ -38,6 +45,16 @@ public abstract partial class SyncTestsBase
         repositoryPath.ShouldBe($"{ServerRepositoryBase}/CollisionArtist/CollisionAlbum/CollisionTest - CollisionArtist.mp3");
     }
 
+    // Scenario: Copying an already synced file to another folder adds a second copy to the same song
+    //   Given a song file on the device
+    //   When the device syncs
+    //   Then the song is created on the server
+    //   When the file is copied to a second folder on the device
+    //   And the device syncs
+    //   Then the copy is linked to the existing song, and the original file is left untouched
+    //   And the server still lists a single song
+    //   And the song shows the device once per copy
+    //   And the song's server file has no collision counter in its name
     [Fact]
     public async Task Sync_SameFileCopiedAfterFirstSync_ShouldAddSecondDevicePath()
     {
@@ -70,6 +87,14 @@ public abstract partial class SyncTestsBase
         repositoryPath.ShouldBe($"{ServerRepositoryBase}/CollisionArtist/CollisionAlbum/CollisionIncremental - CollisionArtist.mp3");
     }
 
+    // Scenario: Identical files with different names in three folders become a single song
+    //   Given three identical copies of a song file on the device, each in its own folder with its own file name
+    //   When the device syncs
+    //   Then one song is created on the server and the other two copies are linked to it
+    //   And the server lists a single song
+    //   And the song shows the device once per copy
+    //   When the device syncs again
+    //   Then all three files are found up to date
     [Fact]
     public async Task Sync_SameFileInThreeFoldersWithDifferentNames_ShouldCreateOneRemoteAndTwoLinks()
     {
@@ -99,6 +124,18 @@ public abstract partial class SyncTestsBase
         result2.ShouldBe(skipped: 3);
     }
 
+    // Scenario: Different files with the same tags become separate songs, with numbered server files
+    //   Given a song file on the device
+    //   When the device syncs
+    //   Then the song is created on the server, and its server file has no collision counter in its name
+    //   When a second file with the same tags but different content is added to the device
+    //   And the device syncs
+    //   Then a second song is created on the server, and the first file is left untouched
+    //   And the second song's server file name ends with the counter "(2)"
+    //   When a third file with the same tags but yet different content is added to the device
+    //   And the device syncs
+    //   Then a third song is created on the server, and the first two files are left untouched
+    //   And the third song's server file name ends with the counter "(3)"
     [Fact]
     public async Task Sync_DifferentFilesSameMetadata_ShouldCreateDistinctSongsWithCollisionResolution()
     {

@@ -12,6 +12,14 @@ public class ArtistEditTests(ITestOutputHelper output) : IntegrationTestBase(out
     private readonly ArtistsFixture _artists = new();
     private readonly SongsFixture _songs = new();
 
+    // Scenario: Renaming an artist from its detail page renames it in its songs and records it in their history
+    //   Given an artist with two songs in one album
+    //   And one of the songs already has its initial version in its history
+    //   When the user renames the artist from its detail page
+    //   Then no artist has the old name anymore
+    //   And the renamed artist still has its album and both songs
+    //   And the song names the renamed artist, as its artist and as its album artist
+    //   And the song's history has a second version, recording the rename
     [Fact]
     public async Task EditArtist_RenamedFromItsDetailsPage_ShouldRenameItInItsSongsAndRecordItInTheirHistory()
     {
@@ -37,6 +45,12 @@ public class ArtistEditTests(ITestOutputHelper output) : IntegrationTestBase(out
             .ExecuteAsync(Page);
     }
 
+    // Scenario: Renaming an artist featured in another artist's song only changes that artist's name in the song
+    //   Given a song by two artists, in an album of the first one
+    //   When the user renames the second artist from its row in the artists list
+    //   Then the song names the first artist and the renamed one
+    //   And the song keeps its album and its album artist
+    //   And the first artist still has its song and its album
     [Fact]
     public async Task EditArtist_FeaturedInAnotherArtistsSongRenamedFromItsRow_ShouldOnlyRenameItInTheSong()
     {
@@ -52,6 +66,12 @@ public class ArtistEditTests(ITestOutputHelper output) : IntegrationTestBase(out
         await new ValidateArtistCountsFlow("Faithless", songsCount: 1, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Renaming an artist to the name of another artist keeps them as two separate artists
+    //   Given an artist with a song
+    //   And another artist without any songs
+    //   When the user renames the artist without songs to the name of the other one
+    //   Then two artists share that name
+    //   And the song still belongs to only one of them, keeping its album and album artist
     [Fact]
     public async Task EditArtist_RenamedToTheNameOfAnotherArtist_ShouldKeepBothArtists()
     {
@@ -68,6 +88,14 @@ public class ArtistEditTests(ITestOutputHelper output) : IntegrationTestBase(out
             new(Artists: ["Amaranthe"], Album: "The Nexus", AlbumArtist: "Amaranthe")).ExecuteAsync(Page);
     }
 
+    // Scenario: Artists selected together are all renamed in a single edit
+    //   Given a song by two artists, in an album of the first one
+    //   And a song by a third artist
+    //   When the user selects the first two artists in the artists list
+    //   And renames each of them in the same editor
+    //   Then no artist has either of the old names anymore
+    //   And the third artist still has its song and its album
+    //   And the song they share names both artists as renamed, the first one also as its album artist
     [Fact]
     public async Task EditArtists_SelectedTogether_ShouldRenameThemAllAtOnce()
     {

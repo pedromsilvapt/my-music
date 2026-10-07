@@ -8,6 +8,13 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: An upload-only sync uploads local songs without downloading the server's ones
+    //   Given a song exists only on the device
+    //   And a different song exists on the server, assigned to the device
+    //   When the sync runs in the upload-only direction
+    //   Then the local song is uploaded
+    //   And the server's song is not downloaded, being unlinked from the device instead
+    //   And both songs are listed on the server
     [Fact]
     public async Task Sync_WithDirectionUp_ShouldUploadWithoutDownloading()
     {
@@ -32,6 +39,13 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(2);
     }
 
+    // Scenario: An upload-only sync keeps a local file whose song is pending removal on the server
+    //   Given a song assigned to the device was already downloaded by a sync
+    //   And the song is marked for removal from the device on the server
+    //   When the sync runs in the upload-only direction, either as a dry run or for real
+    //   Then the unchanged file is reported as skipped, and no deletion is reported
+    //   And the local file is kept
+    //   And the real run clears the pending removal, while the dry run leaves it pending
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -66,6 +80,13 @@ public abstract partial class SyncTestsBase
             .ExecuteAsync(Page);
     }
 
+    // Scenario: A download-only sync downloads the server's songs without uploading local ones
+    //   Given a song exists on the server, assigned to the device
+    //   And a different song exists only on the device
+    //   When the sync runs in the download-only direction
+    //   Then the server's song is downloaded
+    //   And the local song is not uploaded
+    //   And the downloaded file exists on the device
     [Fact]
     public async Task Sync_WithDirectionDown_ShouldDownloadWithoutUploading()
     {
@@ -90,6 +111,13 @@ public abstract partial class SyncTestsBase
         App.FileExists(expectedPath).ShouldBeTrue();
     }
 
+    // Scenario: A download-only sync deletes a local file whose song is pending removal on the server
+    //   Given a song assigned to the device was already downloaded by a sync
+    //   And the song is marked for removal from the device on the server
+    //   When the sync runs in the download-only direction, either as a dry run or for real
+    //   Then the file is reported as deleted
+    //   And the real run deletes the local file and removes the song from the device
+    //   And the dry run keeps the local file and leaves the removal pending
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -122,6 +150,13 @@ public abstract partial class SyncTestsBase
             .ExecuteAsync(Page);
     }
 
+    // Scenario: A download-only sync renames a local file when its song's title changes on the server
+    //   Given a song assigned to the device was already downloaded by a sync
+    //   And the song's title is changed on the server
+    //   When the sync runs in the download-only direction, either as a dry run or for real
+    //   Then the file is reported as updated and renamed
+    //   And the real run moves the file to the path matching the new title
+    //   And the dry run leaves the file at its original path
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

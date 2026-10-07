@@ -8,6 +8,11 @@ namespace MyMusic.IntegrationTests.Tests.Settings;
 
 public class SettingsLanguageTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
+    // Scenario: The chosen language is remembered across page reloads
+    //   Given a new user is on the settings page
+    //   When the user changes the language to Portuguese
+    //   And the page is reloaded
+    //   Then the language setting still shows Portuguese
     [Fact]
     public async Task ChangeLanguage_PersistsAfterReload()
     {
@@ -30,6 +35,10 @@ public class SettingsLanguageTests(ITestOutputHelper output) : IntegrationTestBa
         value.ShouldBe("pt", "Language select should show 'pt' after reload");
     }
 
+    // Scenario: A new user gets the application in English
+    //   Given a new user who never chose a language
+    //   When the user opens the settings page
+    //   Then the language setting shows English
     [Fact]
     public async Task DefaultLanguage_IsEnglish()
     {
@@ -42,6 +51,10 @@ public class SettingsLanguageTests(ITestOutputHelper output) : IntegrationTestBa
         value.ShouldBe("en", "New users should default to English");
     }
 
+    // Scenario: Changing the language translates the application right away
+    //   Given a new user is on the settings page
+    //   When the user changes the language to Portuguese
+    //   Then the navigation's settings link is shown in Portuguese, without reloading
     [Fact]
     public async Task ChangeLanguage_UpdatesTranslatedString()
     {

@@ -21,6 +21,12 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
 
     protected override int UserCount => 2;
 
+    // Scenario: Songs of a shared playlist show up in the sharer's shared view
+    //   Given a user owns a playlist with a song
+    //   And the playlist is shared with another user
+    //   When the recipient opens the sharer's shared songs
+    //   Then the song is listed there
+    //   And the song is not part of the recipient's own library
     [Fact]
     public async Task Recipient_ShouldSeeSongsOfSharedPlaylistInSharedView()
     {
@@ -36,6 +42,12 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         await new ShouldSongExistFlow(song.Title, shouldExist: false).ExecuteAsync(Page);
     }
 
+    // Scenario: Only the songs in a shared playlist are shared with the recipient
+    //   Given a user owns two songs
+    //   And only one of them is in a playlist shared with another user
+    //   When the recipient opens the sharer's shared songs
+    //   Then the song in the shared playlist is listed
+    //   And the other song is not
     [Fact]
     public async Task Recipient_ShouldNotSeeSongsOutsideSharedPlaylists()
     {
@@ -51,6 +63,14 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         await new ValidateSharedViewFlow(Users[0].Id, shown: [shared.Title], hidden: [unshared.Title]).ExecuteAsync(Page);
     }
 
+    // Scenario: A playlist shared with a user is listed for them, marked as shared with them
+    //   Given a user owns a playlist with a song
+    //   And the playlist is shared with another user
+    //   When the recipient opens their playlists
+    //   Then the playlist is listed, marked as shared with them
+    //   When the recipient opens the playlist
+    //   Then it credits the sharer and lists the song
+    //   And it cannot be edited
     [Fact]
     public async Task Recipient_ShouldSeeSharedPlaylistMarkedAsSharedWithThem()
     {
@@ -67,6 +87,13 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         await new ValidateSharedPlaylistDetailsFlow(PlaylistName, Users[0].UserName, song.Title).ExecuteAsync(Page);
     }
 
+    // Scenario: The owner sees which of their playlists are shared with others
+    //   Given a user owns two playlists with the same song
+    //   And only one of the playlists is shared with another user
+    //   When the owner opens their playlists
+    //   Then only the shared playlist is marked as shared by them
+    //   When the owner manages the playlists of the song
+    //   Then only the shared playlist is marked as shared by them
     [Fact]
     public async Task Owner_ShouldSeeSharedPlaylistMarkedAsSharedByThem()
     {
@@ -86,6 +113,12 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
             (PrivatePlaylistName, null)).ExecuteAsync(Page);
     }
 
+    // Scenario: A recipient can import a song shared with them into their own library
+    //   Given a user owns a playlist with a song
+    //   And the playlist is shared with another user
+    //   When the recipient imports the song from the sharer's shared songs
+    //   Then the song is part of the recipient's own library
+    //   And it is a separate copy from the sharer's song
     [Fact]
     public async Task Recipient_CanImportSongFromSharedPlaylist()
     {
@@ -103,6 +136,12 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         (await details.GetIdAsync()).ShouldNotBe(song.Id, "Imported song should have a distinct id from the sharer's song");
     }
 
+    // Scenario: A sharer's songs menu entry only shows up once a playlist is shared
+    //   Given a user owns a playlist with a song, not shared with anyone
+    //   When another user looks at their songs menu
+    //   Then it has no entries for other users' songs
+    //   When the owner shares the playlist with that user
+    //   Then the recipient's songs menu has an entry for the sharer's songs
     [Fact]
     public async Task SharersSubMenu_ShouldAppearOnlyWhenAPlaylistIsShared()
     {
@@ -123,6 +162,12 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         await new ShouldSharerSubMenuExistFlow(shouldExist: true, Users[0].Id).ExecuteAsync(Page);
     }
 
+    // Scenario: Revoking a playlist share takes the playlist away from the recipient
+    //   Given a user owns a playlist with a song
+    //   And the owner shared the playlist with another user
+    //   When the owner stops sharing the playlist with that user
+    //   Then the recipient's songs menu has no entries for other users' songs
+    //   And the playlist is not listed in the recipient's playlists
     [Fact]
     public async Task Owner_CanRevokePlaylistShare()
     {
@@ -140,6 +185,13 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         await new ShouldPlaylistExistFlow(PlaylistName, shouldExist: false).ExecuteAsync(Page);
     }
 
+    // Scenario: A song removed from a shared playlist is no longer shared
+    //   Given a user owns a playlist with two songs
+    //   And the playlist is shared with another user
+    //   When the owner removes one of the songs from the playlist
+    //   And the recipient opens the sharer's shared songs
+    //   Then the song still in the playlist is listed
+    //   And the removed song is not
     [Fact]
     public async Task RemovingSongFromSharedPlaylist_ShouldStopSharingIt()
     {
@@ -156,6 +208,13 @@ public class PlaylistSharingTests(ITestOutputHelper output) : IntegrationTestBas
         await new ValidateSharedViewFlow(Users[0].Id, shown: [kept.Title], hidden: [removed.Title]).ExecuteAsync(Page);
     }
 
+    // Scenario: A shared song's album and artist pages can be reached through its links
+    //   Given a user owns a playlist with a song
+    //   And the playlist is shared with another user
+    //   When the recipient follows the shared song's album link
+    //   Then the album page lists the song
+    //   When the recipient follows the shared song's artist link
+    //   Then the artist page lists the song
     [Fact]
     public async Task AlbumAndArtistPages_ShouldBeAccessibleByLinkForSharedSongs()
     {

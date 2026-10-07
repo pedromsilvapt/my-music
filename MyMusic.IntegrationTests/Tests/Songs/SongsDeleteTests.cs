@@ -21,6 +21,13 @@ public class SongsDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
         _songs = new SongsFixture();
     }
 
+    // Scenario: Deleting a song removes its artist and album when no other song uses them
+    //   Given two songs exist, each with its own artist and album
+    //   When the user deletes the first song
+    //   Then the deleted song is no longer listed
+    //   And the other song is still listed with its artist and album
+    //   And the deleted song's artist and album are gone
+    //   And the other song's artist and album still exist
     [Fact]
     public async Task DeleteSong_RemovesOrphanedArtistAndAlbum()
     {
@@ -48,6 +55,12 @@ public class SongsDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ShouldAlbumExistFlow("Wicker Woman", shouldExist: true).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting a song keeps its artist and album when another song still uses them
+    //   Given two songs exist with the same artist and album
+    //   When the user deletes the first song
+    //   Then the deleted song is no longer listed
+    //   And the other song is still listed with its artist and album
+    //   And the shared artist and album still exist
     [Fact]
     public async Task DeleteSong_KeepsSharedArtistAndAlbum()
     {
@@ -73,6 +86,14 @@ public class SongsDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ShouldAlbumExistFlow("The Nexus", shouldExist: true).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting a song keeps the artist another song uses, but removes its own album
+    //   Given two songs exist with the same artist, each on its own album
+    //   When the user deletes the first song
+    //   Then the deleted song is no longer listed
+    //   And the other song is still listed with its artist and album
+    //   And the shared artist still exists
+    //   And the deleted song's album is gone
+    //   And the other song's album still exists
     [Fact]
     public async Task DeleteSong_KeepsSharedArtist_RemovesOrphanedAlbum()
     {
@@ -101,6 +122,13 @@ public class SongsDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ShouldAlbumExistFlow("God give me a car", shouldExist: true).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting several songs at once removes every artist and album left without songs
+    //   Given four songs exist, each with its own artist and album
+    //   When the user selects two of the songs and deletes them together
+    //   Then the deleted songs are no longer listed
+    //   And the other two songs are still listed
+    //   And the deleted songs' artists and albums are gone
+    //   And the other songs' artists and albums still exist
     [Fact]
     public async Task DeleteMultipleSongs_RemovesAllOrphanedEntities()
     {

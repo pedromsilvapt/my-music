@@ -15,6 +15,11 @@ public class AlbumDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
     private readonly AlbumsFixture _albums = new();
     private readonly SongsFixture _songs = new();
 
+    // Scenario: An album without songs is deleted without a warning
+    //   Given an artist with two empty albums
+    //   When the user deletes one of them from the albums list
+    //   Then the confirmation does not warn about any songs
+    //   And only that album is gone, the artist keeping the other one
     [Fact]
     public async Task DeleteAlbum_WithoutSongs_ShouldDeleteItWithoutAWarning()
     {
@@ -33,6 +38,12 @@ public class AlbumDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
         await new ValidateArtistCountsFlow("Queen", songsCount: 0, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting an album with songs moves them to "(No Album)"
+    //   Given an album with two songs
+    //   When the user deletes the album from its details page
+    //   Then the confirmation warns that its two songs will be moved to "(No Album)"
+    //   And the album is gone, the "(No Album)" of its artist holding both songs
+    //   And the songs keep their artist
     [Fact]
     public async Task DeleteAlbum_WithSongs_ShouldWarnAndMoveItsSongsToNoAlbum()
     {
@@ -56,6 +67,12 @@ public class AlbumDeleteTests(ITestOutputHelper output) : IntegrationTestBase(ou
             new(Artists: ["Amaranthe"], Album: "(No Album)", AlbumArtist: "Amaranthe")).ExecuteAsync(Page);
     }
 
+    // Scenario: Albums selected together are deleted at once, with a single warning
+    //   Given two albums with one song each, an empty album, and another album with a song
+    //   When the user selects the first three albums and deletes them together
+    //   Then a single confirmation warns about the songs of all the selected albums
+    //   And the selected albums are gone, the one left out keeping its song
+    //   And the songs of the deleted albums share the "(No Album)" of their artist
     [Fact]
     public async Task DeleteAlbums_SelectedTogether_ShouldWarnOnceAndDeleteThemAll()
     {

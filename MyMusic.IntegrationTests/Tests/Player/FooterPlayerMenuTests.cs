@@ -20,6 +20,12 @@ public class FooterPlayerMenuTests(ITestOutputHelper output) : IntegrationTestBa
         _songs = new SongsFixture();
     }
 
+    // Scenario: Playback can be set to stop after the playing song, from the footer player
+    //   Given a song is playing
+    //   When the user chooses to stop after this song, in the footer player's menu
+    //   Then the queue shows the song as the one playback stops after
+    //   When the user chooses it again
+    //   Then the queue no longer shows the song as stopping playback
     [Fact]
     public async Task StopAfterThisSong_ShouldToggleFlagOnCurrentSong()
     {
@@ -36,6 +42,10 @@ public class FooterPlayerMenuTests(ITestOutputHelper output) : IntegrationTestBa
         await new ShouldSongStopAfterPlaybackFlow(song.Title, shouldStop: false).ExecuteAsync(Page);
     }
 
+    // Scenario: The playing song's details can be opened from the footer player
+    //   Given a song is playing
+    //   When the user chooses to go to its details, in the footer player's menu
+    //   Then the details page of the playing song is shown
     [Fact]
     public async Task GoToDetails_ShouldOpenSongDetailsPage()
     {
@@ -48,6 +58,11 @@ public class FooterPlayerMenuTests(ITestOutputHelper output) : IntegrationTestBa
         (await songDetails.GetTitleAsync()).ShouldBe(song.Title);
     }
 
+    // Scenario: The footer player's menu only offers the actions that apply to the playing song
+    //   Given a song is playing
+    //   When the user opens the footer player's menu
+    //   Then it offers going to the song's details and stopping after the song
+    //   And it does not offer the actions that only apply to queued songs
     [Fact]
     public async Task FooterMenu_ShouldOnlyShowActionsForCurrentSong()
     {

@@ -10,6 +10,10 @@ public class SongsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(o
 {
     protected override bool NavigateOnInitialize => false;
 
+    // Scenario: Seeding the sample library uploads every sample song
+    //   Given a new user with an empty library
+    //   When the whole sample library is seeded
+    //   Then all 147 sample songs are created, each with an id and a title
     [Fact]
     public async Task SeedAsync_UploadsSong()
     {
@@ -26,6 +30,10 @@ public class SongsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(o
         }
     }
 
+    // Scenario: The seeded sample library contains its well-known songs
+    //   Given a new user with an empty library
+    //   When the whole sample library is seeded
+    //   Then the created songs include "Bad Romance", "The Pretender" and "Heaven Knows"
     [Fact]
     public async Task Data_ContainsSeededSongs()
     {
@@ -38,6 +46,10 @@ public class SongsFixtureTests(ITestOutputHelper output) : IntegrationTestBase(o
         songTitles.ShouldContain("Heaven Knows");
     }
 
+    // Scenario: The seeded sample library can be listed from the server
+    //   Given a new user with an empty library
+    //   When the whole sample library is seeded
+    //   Then the server lists the user's songs successfully
     [Fact]
     public async Task SeedAsync_CreatesArtistsAndAlbums()
     {

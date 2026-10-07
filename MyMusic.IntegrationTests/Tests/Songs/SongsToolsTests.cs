@@ -17,6 +17,10 @@ public class SongsToolsTests(ITestOutputHelper output) : IntegrationTestBase(out
         _songs = new SongsFixture();
     }
 
+    // Scenario: Recalculating the checksum of an untouched song reports that nothing changed
+    //   Given a freshly uploaded song, whose file was not modified since
+    //   When the user recalculates its checksum from the tools menu of the edit song dialog
+    //   Then a message says the checksum was already up to date
     [Fact]
     public async Task RecalculateChecksum_UnmodifiedFile_ShouldReportChecksumUnchanged()
     {

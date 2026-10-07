@@ -7,6 +7,12 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: The same edit made on the server and on the device is not a conflict
+    //   Given a song on the server was downloaded to the device
+    //   When the song is given the same new title on the server and on the device
+    //   And the CLI sync runs
+    //   Then no conflict is reported
+    //   And the local file keeps its path, holding the new title
     [Fact]
     public async Task Sync_ConflictResolution_ShouldAutoResolveWhenContentIdentical()
     {
@@ -39,6 +45,11 @@ public abstract partial class SyncTestsBase
             title: "Updated Sand");
     }
 
+    // Scenario: A song edited differently on the server and on the device is reported as a conflict
+    //   Given a song on the server was downloaded to the device
+    //   When the song is edited differently on the server and on the device
+    //   And the CLI sync runs
+    //   Then the song is reported as a conflict
     [Fact]
     public async Task Sync_ConflictResolution_ShouldReportTrueConflictWhenContentDiffers()
     {

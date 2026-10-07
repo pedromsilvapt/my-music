@@ -15,6 +15,12 @@ public class ArtistDeleteTests(ITestOutputHelper output) : IntegrationTestBase(o
     private readonly AlbumsFixture _albums = new();
     private readonly SongsFixture _songs = new();
 
+    // Scenario: An artist without songs is deleted along with its albums, without a warning
+    //   Given two artists, each with an empty album
+    //   When the user deletes one of the artists from the artists list
+    //   Then the confirmation does not warn about any song
+    //   And the artist and its album are gone
+    //   And the other artist keeps its album
     [Fact]
     public async Task DeleteArtist_WithoutSongs_ShouldDeleteItAndItsAlbumsWithoutAWarning()
     {
@@ -36,6 +42,12 @@ public class ArtistDeleteTests(ITestOutputHelper output) : IntegrationTestBase(o
         await new ValidateArtistCountsFlow("Blur", songsCount: 0, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting an artist featured in another artist's song takes it out of the song
+    //   Given a song by two artists, in an album of the first one
+    //   When the user deletes the featured artist from its detail page
+    //   Then the confirmation warns that one song still references the artist
+    //   And the artist is gone
+    //   And the song keeps its album, with only its other artist
     [Fact]
     public async Task DeleteArtist_FeaturedInAnotherArtistsSong_ShouldWarnAndTakeItOutOfTheSong()
     {
@@ -55,6 +67,12 @@ public class ArtistDeleteTests(ITestOutputHelper output) : IntegrationTestBase(o
         await new ValidateArtistCountsFlow("Faithless", songsCount: 1, albumsCount: 1).ExecuteAsync(Page);
     }
 
+    // Scenario: Deleting the only artist of some songs leaves them without an artist and an album
+    //   Given an artist with two songs in one album, and no other artist in them
+    //   When the user deletes the artist from the artists list
+    //   Then the confirmation warns that two songs still reference the artist
+    //   And the artist and its album are gone
+    //   And both songs belong to "(No Artist)", in its "(No Album)"
     [Fact]
     public async Task DeleteArtist_SoleArtistOfItsSongs_ShouldWarnAndMoveThemToNoArtistAndNoAlbum()
     {
@@ -78,6 +96,13 @@ public class ArtistDeleteTests(ITestOutputHelper output) : IntegrationTestBase(o
             new(Artists: ["(No Artist)"], Album: "(No Album)", AlbumArtist: "(No Artist)")).ExecuteAsync(Page);
     }
 
+    // Scenario: Artists selected together are deleted at once, with a single warning
+    //   Given a song by two artists, a song by a third artist, and an artist without songs
+    //   When the user selects both artists of the first song and the one without songs, and deletes them
+    //   Then a single confirmation warns about the shared song, counting it only once
+    //   And the selected artists and their album are gone
+    //   And the artist left out keeps its song and album
+    //   And the song left without artists belongs to "(No Artist)", in its "(No Album)"
     [Fact]
     public async Task DeleteArtists_SelectedTogether_ShouldWarnOnceAndDeleteThemAll()
     {

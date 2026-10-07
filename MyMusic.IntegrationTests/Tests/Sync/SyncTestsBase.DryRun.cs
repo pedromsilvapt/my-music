@@ -8,6 +8,15 @@ namespace MyMusic.IntegrationTests.Tests.Sync;
 
 public abstract partial class SyncTestsBase
 {
+    // Scenario: A dry run reports a new local song without uploading it
+    //   Given a song exists only on the device
+    //   When the CLI sync runs in dry-run mode
+    //   Then the song is reported as to be uploaded
+    //   And the device's last sync date does not change
+    //   And the song does not appear on the server
+    //   When the CLI sync runs for real
+    //   Then the song is uploaded
+    //   And the song appears on the server
     [Fact]
     public async Task Sync_DryRun_ShouldReportCreationWithoutUploading()
     {
@@ -41,6 +50,13 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(1);
     }
 
+    // Scenario: A file that cannot be read is reported as an error, in a dry run or a real run
+    //   Given a valid song exists only on the device
+    //   And a music file whose metadata cannot be read exists on the device
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the sync fails, reporting the unreadable file as an error
+    //   And the valid song is reported as to be uploaded
+    //   And the valid song appears on the server only after a real run
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -60,7 +76,13 @@ public abstract partial class SyncTestsBase
         (await songs.Collection.GetRowCountAsync()).ShouldBe(dryRun ? 0 : 1);
     }
 
-    [Fact(Skip = "This test is wrong. Since EditSongFlow sets SyncAction=Download, it should still be set after a dry-run. We need to find a way to unset that flag before the dry-run, so we can make this validation.")]
+    // Scenario: A dry run leaves no pending sync action on a song edited on the server
+    //   Given a song on the device was uploaded to the server
+    //   And the song's title is edited on the server
+    //   When the CLI sync runs in dry-run mode
+    //   Then the sync succeeds
+    //   And the song is still on the device, with no pending sync action
+    [Fact(Skip ="This test is wrong. Since EditSongFlow sets SyncAction=Download, it should still be set after a dry-run. We need to find a way to unset that flag before the dry-run, so we can make this validation.")]
     public async Task Sync_DryRun_ShouldNotPersistSyncActionWhenServerSongEdited()
     {
         // Create a local song and sync to upload it to the server
@@ -83,6 +105,13 @@ public abstract partial class SyncTestsBase
             shouldExist: true, shouldHaveNoSyncAction: true).ExecuteAsync(Page);
     }
 
+    // Scenario: A dry run reports a song to download without downloading it
+    //   Given a song exists on the server, assigned to the device
+    //   When the CLI sync runs in dry-run mode
+    //   Then the song is reported as to be downloaded
+    //   And the file does not exist on the device
+    //   When the CLI sync runs for real
+    //   Then the song is downloaded to the device
     [Fact]
     public async Task Sync_DryRun_ShouldReportDownloadWithoutDownloading()
     {
@@ -104,6 +133,14 @@ public abstract partial class SyncTestsBase
         App.FileExists(expectedPath).ShouldBeTrue();
     }
 
+    // Scenario: A song edited differently on both sides is a conflict, in a dry run or a real run
+    //   Given two songs exist on the server, assigned to the device
+    //   And the CLI sync has downloaded them
+    //   And one song's title is edited on the device
+    //   And the same song's title is edited differently on the server
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the edited song is reported as a conflict
+    //   And the other song is skipped
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -133,6 +170,14 @@ public abstract partial class SyncTestsBase
         dryResult.ShouldBe(conflict: 1, skipped: 1);
     }
 
+    // Scenario: Resolving a conflict by downloading only replaces the local file in a real run
+    //   Given a song exists on the server, assigned to the device
+    //   And the CLI sync has downloaded it
+    //   And the song's title is edited differently on the device and on the server
+    //   When the CLI sync runs resolving conflicts by downloading, in dry-run mode or for real
+    //   Then the song is reported as updated and renamed on the device
+    //   And a dry run keeps the local file as edited, leaving the conflict for the next sync
+    //   And a real run replaces the local file with the server's version, under its new name
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -169,6 +214,14 @@ public abstract partial class SyncTestsBase
         }
     }
 
+    // Scenario: A song edited the same way on both sides resolves itself, in a dry run or a real run
+    //   Given two songs exist on the server, assigned to the device
+    //   And the CLI sync has downloaded them
+    //   And one song's title is edited on the device
+    //   And the same edit is made to the song on the server
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the edited song only has its timestamp updated, with no conflict
+    //   And the other song is skipped
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -198,6 +251,15 @@ public abstract partial class SyncTestsBase
         dryResult.ShouldBe(updateTimestamp: 1, skipped: 1);
     }
 
+    // Scenario: A song created differently on both sides is kept as two songs, in a dry run or a real run
+    //   Given two songs exist on the server, assigned to the device
+    //   And the CLI sync has downloaded them
+    //   And a new song is created on the device
+    //   And the same song is created on the server with a different year, assigned to the device
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the device's song is reported as to be uploaded
+    //   And the server's song is reported as to be downloaded
+    //   And the other two songs are skipped
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -226,6 +288,15 @@ public abstract partial class SyncTestsBase
         dryResult.ShouldBe(createRemote: 1, createLocal: 1, skipped: 2);
     }
 
+    // Scenario: A song created identically on both sides is linked, in a dry run or a real run
+    //   Given two songs exist on the server, assigned to the device
+    //   And the CLI sync has downloaded them
+    //   And a new song is created on the device
+    //   And the same song is created on the server with the same metadata, assigned to the device
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the local file is linked to the server's song
+    //   And the song's pending download is unlinked
+    //   And the other two songs are skipped
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -256,6 +327,16 @@ public abstract partial class SyncTestsBase
         dryResult.ShouldBe(link: 1, unlink: 1, skipped: 2);
     }
 
+    // Scenario: A manually renamed file is linked to its song when the song is pending download
+    //   Given a song exists on the server, assigned to the device
+    //   And the CLI sync has downloaded it
+    //   And the file is renamed on the device
+    //   And the song's year is edited on the server
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the renamed file is linked to the song, and the old path is unlinked
+    //   And the file is reported as updated on the device
+    //   And the song only exists at the renamed path
+    //   And the file's year is only updated in a real run
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -289,6 +370,16 @@ public abstract partial class SyncTestsBase
         await FileValidator.AssertMetadataAsync(App.GetSongPath(renamedPath), year: expectedYear);
     }
 
+    // Scenario: A song renamed by a server edit is not unlinked when the same sync uploads another song
+    //   Given a song exists on the server, assigned to the device
+    //   And the CLI sync has downloaded it
+    //   And the song's title is edited on the server, changing its file's path
+    //   And a new song is created on the device
+    //   When the CLI sync runs, in dry-run mode or for real
+    //   Then the edited song is reported as updated and renamed on the device
+    //   And the new song is reported as uploaded
+    //   And no song is unlinked
+    //   And after a real run, the renamed song is still on the device
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
