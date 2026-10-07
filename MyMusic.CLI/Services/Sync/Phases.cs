@@ -1,5 +1,6 @@
 namespace MyMusic.CLI.Services.Sync;
 
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using MyMusic.CLI.Services.Sync.Types;
@@ -119,23 +120,25 @@ public class Phases(
         // Resets the progress left by the previous phase (fingerprinting) before the first check returns
         progress?.Report(SyncProgress.FromResult(ctx.Result, "upload", files.Count, 0));
 
-        var chunkSize = config.GetChunkSize();
-        var chunks = files.Chunk(chunkSize).ToList();
-        logger.LogInformation("Processing {ChunkCount} chunks", chunks.Count);
+        var chunkTuning = config.GetChunkTuning();
+        var chunkSize = new AdaptiveChunkSize(chunkTuning.Check, chunkTuning);
 
         var processedCount = 0;
+        var chunkNumber = 0;
 
-        for (var i = 0; i < chunks.Count; i++)
+        while (processedCount < files.Count)
         {
             if (ct.IsCancellationRequested)
             {
                 break;
             }
 
-            var chunk = chunks[i];
-            var chunkNumber = i + 1;
+            var chunk = files.GetRange(processedCount, Math.Min(chunkSize.Current, files.Count - processedCount));
+            chunkNumber++;
             var chunkProcessedCount = 0;
-            logger.LogInformation("Processing chunk {ChunkNumber}/{TotalChunks}", chunkNumber, chunks.Count);
+            logger.LogInformation(
+                "Processing chunk {ChunkNumber}: {ChunkFiles} files ({CheckedFiles}/{TotalFiles} checked)",
+                chunkNumber, chunk.Count, processedCount, files.Count);
 
             var syncFiles = chunk
                 .Select(f => new SyncFileInfo
@@ -152,7 +155,9 @@ public class Phases(
             };
 
             // A failed check aborts the sync: its records would be lost, and the commit rejects unacknowledged ones
+            var checkStartedAt = Stopwatch.GetTimestamp();
             var syncResponse = await apiClient.CheckSyncAsync(ctx.DeviceId, ctx.SessionId, syncRequest, ct);
+            chunkSize.Report(chunk.Count, Stopwatch.GetElapsedTime(checkStartedAt));
 
             ctx.Result = ctx.Result.AddDelta(syncResponse.Counts);
 
@@ -259,7 +264,7 @@ public class Phases(
                     updateRecord.FilePath, result.Action == "Error" ? result.ErrorMessage : null));
             }
 
-            processedCount += chunk.Length;
+            processedCount += chunk.Count;
             progress?.Report(SyncProgress.FromResult(
                 ctx.Result, "upload", files.Count, processedCount));
         }

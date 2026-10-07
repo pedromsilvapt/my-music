@@ -33,7 +33,7 @@ The system SHALL define `ISyncApiClient` interface in `MyMusic.Common/Services/S
 - **AND** the API call is made to `/devices/{deviceId}/sync/acknowledge`
 
 ### Requirement: ISyncConfig interface for configuration access
-The system SHALL define an `ISyncConfig` interface that abstracts access to sync-relevant configuration. The interface SHALL expose: `getDeviceId`, `getRepositoryPath`, `getMusicExtensions`, `getExcludePatterns`, `getChunkSize`, `getLastScanTotal`, `setLastScanTotal`, `setLastSyncAt`. The production implementation SHALL delegate to `configService` (Mobile) or `IOptions<MyMusicOptions>` (CLI).
+The system SHALL define an `ISyncConfig` interface that abstracts access to sync-relevant configuration. The interface SHALL expose: `getDeviceId`, `getRepositoryPath`, `getMusicExtensions`, `getExcludePatterns`, `getChunkTuning`, `getLastScanTotal`, `setLastScanTotal`, `setLastSyncAt`. The production implementation SHALL delegate to `configService` (Mobile) or `IOptions<MyMusicOptions>` (CLI).
 
 #### Scenario: ISyncConfig methods match configService signatures
 - **WHEN** the ISyncConfig interface is defined

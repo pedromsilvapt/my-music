@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import {DEFAULT_DEVICE_TYPE} from '../constants/deviceIcons';
+import {DEFAULT_CHUNK_TUNING} from '../services/sync/adaptive-chunk-size';
+import type {SyncChunkTuning} from '../services/sync/types';
 
 /** The exclusion rules of a new installation (see "Exclusion Rules" in docs/development/sync.md). */
 export const DEFAULT_EXCLUDE_PATTERNS = ['**/.*', '**/Thumbs.db', '**/*.tmp', '**/desktop.ini'];
@@ -16,6 +18,7 @@ interface ConfigState {
     repositoryPath: string;
     namingTemplate: string;
     excludePatterns: string[];
+    chunkTuning: SyncChunkTuning;
     isConfigured: boolean;
     lastSyncAt: string | null;
     userId: number | null;
@@ -29,6 +32,7 @@ interface ConfigState {
     setRepositoryPath: (path: string) => void;
     setNamingTemplate: (template: string) => void;
     setExcludePatterns: (patterns: string[]) => void;
+    setChunkTuning: (tuning: SyncChunkTuning) => void;
     setIsConfigured: (configured: boolean) => void;
     setLastSyncAt: (date: string | null) => void;
     setUserId: (id: number | null) => void;
@@ -47,6 +51,7 @@ export const useConfigStore = create<ConfigState>()(
             repositoryPath: '',
             namingTemplate: '',
             excludePatterns: DEFAULT_EXCLUDE_PATTERNS,
+            chunkTuning: DEFAULT_CHUNK_TUNING,
             isConfigured: false,
             lastSyncAt: null,
             userId: null,
@@ -60,6 +65,7 @@ export const useConfigStore = create<ConfigState>()(
             setRepositoryPath: (repositoryPath) => set({repositoryPath}),
             setNamingTemplate: (namingTemplate) => set({namingTemplate}),
             setExcludePatterns: (excludePatterns) => set({excludePatterns}),
+            setChunkTuning: (chunkTuning) => set({chunkTuning}),
             setIsConfigured: (isConfigured) => set({isConfigured}),
             setLastSyncAt: (lastSyncAt) => set({lastSyncAt}),
             setUserId: (userId) => set({userId}),
@@ -77,6 +83,7 @@ export const useConfigStore = create<ConfigState>()(
                 repositoryPath: state.repositoryPath,
                 namingTemplate: state.namingTemplate,
                 excludePatterns: state.excludePatterns,
+                chunkTuning: state.chunkTuning,
                 isConfigured: state.isConfigured,
                 lastSyncAt: state.lastSyncAt,
                 userId: state.userId,

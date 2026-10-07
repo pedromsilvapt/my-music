@@ -1,5 +1,6 @@
 namespace MyMusic.CLI.Services.Sync;
 
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,13 @@ public class SyncActionsDevice(
 {
     // The paths the exclusion rules keep out of the sync: they are not scanned, and no action touches them
     private readonly Lazy<ExclusionMatcher> _exclusions = new(() => new ExclusionMatcher(config.GetExcludePatterns()));
+
+    // The size of the resolve requests, kept for the whole sync so what one request teaches serves the next
+    private readonly Lazy<AdaptiveChunkSize> _resolveChunkSize = new(() =>
+    {
+        var chunkTuning = config.GetChunkTuning();
+        return new AdaptiveChunkSize(chunkTuning.Resolve, chunkTuning);
+    });
 
     // The answers the user gave for every remaining question of this sync, so they are not asked again
     private bool? _deletionForAll;
@@ -444,12 +452,6 @@ public class SyncActionsDevice(
         return new ActionResult("Error", relativePath, Source: "Server", ErrorMessage: errorMessage, Reason: reason, SongId: songId, RecordId: recordId, Counts: counts);
     }
 
-    /// <summary>
-    /// Maximum number of items sent per resolve-conflicts request. Each item only carries a
-    /// checksum, so the limit just keeps a single request (one server transaction) bounded.
-    /// </summary>
-    internal const int MaxItemsPerResolveChunk = 200;
-
     public async Task<ResolveConflictsActionResult> ActionConflictAsync(
         long deviceId,
         long sessionId,
@@ -522,10 +524,10 @@ public class SyncActionsDevice(
             return new ResolveConflictsActionResult(Records: [], Counts: SyncActionCounts.Empty);
         }
 
-        var chunks = BuildResolveChunks(resolveItems, potentialUpdateItems);
+        var pendingItems = InterleaveResolveItems(resolveItems, potentialUpdateItems);
         logger.LogInformation(
-            "Resolving {ConflictCount} conflicts and {PotentialUpdateCount} potential updates in {ChunkCount} chunk(s)",
-            resolveItems.Count, potentialUpdateItems.Count, chunks.Count);
+            "Resolving {ConflictCount} conflicts and {PotentialUpdateCount} potential updates",
+            resolveItems.Count, potentialUpdateItems.Count);
 
         var allRecords = new List<SyncRecordItem>();
         var aggregatedCounts = SyncActionCounts.Empty;
@@ -533,13 +535,21 @@ public class SyncActionsDevice(
 
         try
         {
-            foreach (var chunk in chunks)
+            var chunkSize = _resolveChunkSize.Value;
+
+            for (var offset = 0; offset < pendingItems.Count;)
             {
+                var chunk = TakeResolveChunk(pendingItems, offset, chunkSize.Current);
+                var chunkItemCount = chunk.Conflicts.Count + chunk.PotentialUpdates.Count;
+                offset += chunkItemCount;
+
+                var resolveStartedAt = Stopwatch.GetTimestamp();
                 var resolveResponse = await apiClient.ResolveConflictsAsync(deviceId, sessionId, new ResolveConflictsRequest
                 {
                     Conflicts = chunk.Conflicts,
                     PotentialUpdates = chunk.PotentialUpdates
                 }, ct);
+                chunkSize.Report(chunkItemCount, Stopwatch.GetElapsedTime(resolveStartedAt));
 
                 allRecords.AddRange(resolveResponse.Records);
                 aggregatedCounts = aggregatedCounts.Add(resolveResponse.Counts);
@@ -592,7 +602,7 @@ public class SyncActionsDevice(
                 }
 
                 // Report the files this request settled
-                onFilesResolved?.Invoke(chunk.Conflicts.Count + chunk.PotentialUpdates.Count);
+                onFilesResolved?.Invoke(chunkItemCount);
             }
 
             return new ResolveConflictsActionResult(
@@ -715,16 +725,14 @@ public class SyncActionsDevice(
     }
 
     /// <summary>
-    /// Splits the combined conflict + potential-update items into request chunks of at most
-    /// <see cref="MaxItemsPerResolveChunk"/> items. Items are interleaved so neither list is
-    /// starved when one is much larger than the other.
+    /// Orders the conflict + potential-update items for their requests. Items are interleaved so neither
+    /// list is starved when one is much larger than the other.
     /// </summary>
-    private static List<ResolveChunk> BuildResolveChunks(
+    private static List<ResolveItem> InterleaveResolveItems(
         List<ConflictResolveItem> conflicts,
         List<PotentialUpdateResolveItem> potentialUpdates)
     {
-        var chunks = new List<ResolveChunk>();
-        var current = new ResolveChunk();
+        var items = new List<ResolveItem>(conflicts.Count + potentialUpdates.Count);
 
         // Interleave by index so a long conflict list doesn't defer all potential updates
         var maxIndex = Math.Max(conflicts.Count, potentialUpdates.Count);
@@ -732,34 +740,39 @@ public class SyncActionsDevice(
         {
             if (i < conflicts.Count)
             {
-                current = StartNewChunkIfFull(chunks, current);
-                current.Conflicts.Add(conflicts[i]);
+                items.Add(new ResolveItem(conflicts[i], null));
             }
 
             if (i < potentialUpdates.Count)
             {
-                current = StartNewChunkIfFull(chunks, current);
-                current.PotentialUpdates.Add(potentialUpdates[i]);
+                items.Add(new ResolveItem(null, potentialUpdates[i]));
             }
         }
 
-        if (current.Conflicts.Count > 0 || current.PotentialUpdates.Count > 0)
-        {
-            chunks.Add(current);
-        }
-
-        return chunks;
+        return items;
     }
 
-    private static ResolveChunk StartNewChunkIfFull(List<ResolveChunk> chunks, ResolveChunk current)
+    /// <summary>
+    /// The next request chunk: at most <paramref name="size"/> of the items from <paramref name="offset"/> on.
+    /// Each item only carries a checksum, so the size just keeps a single request (one server transaction) bounded.
+    /// </summary>
+    private static ResolveChunk TakeResolveChunk(List<ResolveItem> items, int offset, int size)
     {
-        if (current.Conflicts.Count + current.PotentialUpdates.Count < MaxItemsPerResolveChunk)
+        var chunk = new ResolveChunk();
+
+        foreach (var item in items.Skip(offset).Take(size))
         {
-            return current;
+            if (item.Conflict != null)
+            {
+                chunk.Conflicts.Add(item.Conflict);
+            }
+            else
+            {
+                chunk.PotentialUpdates.Add(item.PotentialUpdate!);
+            }
         }
 
-        chunks.Add(current);
-        return new ResolveChunk();
+        return chunk;
     }
 
     /// <summary>
@@ -770,6 +783,9 @@ public class SyncActionsDevice(
         Conflict,
         PotentialUpdate
     }
+
+    /// <summary>An item of a resolve request: either a conflict or a potential update.</summary>
+    private sealed record ResolveItem(ConflictResolveItem? Conflict, PotentialUpdateResolveItem? PotentialUpdate);
 
     private sealed class ResolveChunk
     {

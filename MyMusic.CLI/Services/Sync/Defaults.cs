@@ -185,7 +185,18 @@ public class CliSyncConfig(
     public string GetRepositoryPath() => options.Value.Repository.Path;
     public string[] GetMusicExtensions() => options.Value.Repository.MusicExtensions.ToArray();
     public string[] GetExcludePatterns() => options.Value.Repository.ExcludePatterns.ToArray();
-    public int GetChunkSize() => options.Value.Sync.ChunkSize;
+    public SyncChunkTuning GetChunkTuning()
+    {
+        var sync = options.Value.Sync;
+        return new SyncChunkTuning
+        {
+            Adaptive = sync.AdaptiveChunks,
+            TargetRequestDuration = TimeSpan.FromSeconds(sync.TargetRequestSeconds),
+            Check = new ChunkSizeRange(sync.CheckChunk.Size, sync.CheckChunk.Min, sync.CheckChunk.Max),
+            Resolve = new ChunkSizeRange(sync.ResolveChunk.Size, sync.ResolveChunk.Min, sync.ResolveChunk.Max)
+        };
+    }
+
     public Task<int?> GetLastScanTotalAsync(CancellationToken ct = default) => Task.FromResult<int?>(null);
     public Task SetLastScanTotalAsync(int count, CancellationToken ct = default) => Task.CompletedTask;
     public Task SetLastSyncAtAsync(DateTime date, CancellationToken ct = default) => Task.CompletedTask;

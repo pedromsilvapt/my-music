@@ -1,4 +1,5 @@
-import type { DeviceOptions, ISyncConfig } from '../src/services/sync/types';
+import { DEFAULT_CHUNK_TUNING } from '../src/services/sync/adaptive-chunk-size';
+import type { ChunkSizeRange, DeviceOptions, ISyncConfig, SyncChunkTuning } from '../src/services/sync/types';
 
 interface NodeSyncConfigJson {
     deviceId: number;
@@ -11,7 +12,8 @@ interface NodeSyncConfigJson {
     userName: string;
     musicExtensions: string[];
     excludePatterns: string[];
-    chunkSize: number;
+    /** Any part left out keeps its default. */
+    chunkTuning?: Partial<Omit<SyncChunkTuning, 'check' | 'resolve'>> & { check?: Partial<ChunkSizeRange>; resolve?: Partial<ChunkSizeRange> };
     lastScanTotal?: number;
     lastSyncAt?: string;
 }
@@ -49,8 +51,15 @@ export class NodeSyncConfig implements ISyncConfig {
         return this._config.excludePatterns ?? ['**/.*', '**/Thumbs.db'];
     }
 
-    getChunkSize(): number {
-        return this._config.chunkSize ?? 50;
+    getChunkTuning(): SyncChunkTuning {
+        const defaults = DEFAULT_CHUNK_TUNING;
+        const tuning = this._config.chunkTuning ?? {};
+        return {
+            adaptive: tuning.adaptive ?? defaults.adaptive,
+            targetRequestMs: tuning.targetRequestMs ?? defaults.targetRequestMs,
+            check: { ...defaults.check, ...tuning.check },
+            resolve: { ...defaults.resolve, ...tuning.resolve },
+        };
     }
 
     async getLastScanTotal(): Promise<number | null> {

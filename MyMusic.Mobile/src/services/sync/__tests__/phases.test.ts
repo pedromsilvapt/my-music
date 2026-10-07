@@ -1,4 +1,6 @@
 import { resolveConflictsPhase, completePhase, uploadPhase, serverActionsPhase, startSessionPhase, saveDeviceOptionsPhase, prepareDeduplicatePhase } from '../phases';
+import { adaptiveChunkTuning, fixedChunkTuning } from './chunk-tunings';
+import { AdaptiveChunkSize } from '../adaptive-chunk-size';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure } from '../sync-actions-device';
 import type { SyncDeps, SyncContext, SyncResult, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt, SyncRecordItem } from '../types';
 import type { RenameData } from '../../../api/types';
@@ -59,7 +61,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         getRepositoryPath: jest.fn().mockReturnValue('/music'),
         getMusicExtensions: jest.fn().mockReturnValue(['.mp3']),
         getExcludePatterns: jest.fn().mockReturnValue([]),
-        getChunkSize: jest.fn().mockReturnValue(10),
+        getChunkTuning: jest.fn().mockReturnValue(fixedChunkTuning(10)),
         getLastScanTotal: jest.fn().mockResolvedValue(null),
         setLastScanTotal: jest.fn().mockResolvedValue(undefined),
         setLastSyncAt: jest.fn().mockResolvedValue(undefined),
@@ -134,6 +136,7 @@ function createContext (overrides: Partial<SyncContext> = {}): SyncContext {
         processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
+        resolveChunkSize: new AdaptiveChunkSize(fixedChunkTuning().resolve, fixedChunkTuning()),
         rememberedAnswers: {},
         ...overrides,
     };
@@ -562,7 +565,7 @@ describe('uploadPhase - progress', () => {
     test('advances as files are checked, resolved and uploaded, returning to the upload phase after resolving', async () => {
         // 4 files in chunks of 2: the first chunk has a potential update and an unchanged file, the second two uploads
         const deps = createMockDeps();
-        (deps.config.getChunkSize as jest.Mock).mockReturnValue(2);
+        (deps.config.getChunkTuning as jest.Mock).mockReturnValue(fixedChunkTuning(2));
         (deps.apiClient.checkSync as jest.Mock)
             .mockResolvedValueOnce({ records: [record(1, 'a.mp3', 'UpdateLocal')] })
             .mockResolvedValueOnce({ records: [record(2, 'c.mp3', 'CreateRemote'), record(3, 'd.mp3', 'CreateRemote')] });
@@ -586,10 +589,47 @@ describe('uploadPhase - progress', () => {
         ]);
     });
 
+    test('adaptive chunks grow while the server answers quickly', async () => {
+        // 20 files, checks start at 2 files and may grow up to 8. The server answers at once.
+        const deps = createMockDeps();
+        (deps.config.getChunkTuning as jest.Mock).mockReturnValue(adaptiveChunkTuning({ size: 2, min: 1, max: 8 }));
+        (deps.apiClient.checkSync as jest.Mock).mockResolvedValue({ records: [] });
+        const files = Array.from({ length: 20 }, (_, i) => scanned(`song${i}.mp3`));
+
+        await uploadPhase(deps, createContext(), files, jest.fn());
+
+        // Each quick check doubles the next one, up to the maximum; every file is checked once, in order
+        const checkedChunks = (deps.apiClient.checkSync as jest.Mock).mock.calls.map(([, , request]) => request.files.map((f: { path: string }) => f.path));
+        expect(checkedChunks.map(c => c.length)).toEqual([2, 4, 8, 6]);
+        expect(checkedChunks.flat()).toEqual(files.map(f => f.relativePath));
+    });
+
+    test('adaptive chunks shrink when the server is slow', async () => {
+        // Checks start at 8 files and should take 2 seconds; the server takes a minute
+        jest.useFakeTimers();
+        try {
+            const deps = createMockDeps();
+            (deps.config.getChunkTuning as jest.Mock).mockReturnValue(adaptiveChunkTuning({ size: 8, min: 2, max: 8 }));
+            (deps.apiClient.checkSync as jest.Mock).mockImplementation(async () => {
+                jest.advanceTimersByTime(60_000);
+                return { records: [] };
+            });
+            const files = Array.from({ length: 16 }, (_, i) => scanned(`song${i}.mp3`));
+
+            await uploadPhase(deps, createContext(), files, jest.fn());
+
+            // Each slow check halves the next one, down to the minimum
+            const checkedCounts = (deps.apiClient.checkSync as jest.Mock).mock.calls.map(([, , request]) => request.files.length);
+            expect(checkedCounts).toEqual([8, 4, 2, 2]);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
+
     test('a failed check aborts the phase, without checking the remaining chunks', async () => {
         // The records of a failed check are lost, so going on would leave them unacknowledged at the commit
         const deps = createMockDeps();
-        (deps.config.getChunkSize as jest.Mock).mockReturnValue(2);
+        (deps.config.getChunkTuning as jest.Mock).mockReturnValue(fixedChunkTuning(2));
         (deps.apiClient.checkSync as jest.Mock)
             .mockRejectedValueOnce(new Error('boom'))
             .mockResolvedValueOnce({ records: [] });
@@ -922,7 +962,7 @@ describe('uploadPhase - conflicted songs across chunks', () => {
             .mockResolvedValueOnce({ records: [record(11, 'conflict.mp3', 'Conflict', 1)], counts: undefined })
             .mockResolvedValueOnce({ records: [record(12, 'changed.mp3', 'UpdateLocal', 2)], counts: undefined });
         const deps = createMockDeps();
-        (deps.config.getChunkSize as jest.Mock).mockReturnValue(1);
+        (deps.config.getChunkTuning as jest.Mock).mockReturnValue(fixedChunkTuning(1));
         (deps.apiClient.checkSync as jest.Mock)
             .mockResolvedValueOnce({ records: [record(1, 'conflict.mp3', 'Conflict', 1)] })
             .mockResolvedValueOnce({ records: [record(2, 'changed.mp3', 'UpdateLocal', 2)] });

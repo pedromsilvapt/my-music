@@ -34,7 +34,28 @@ public class RepositoryOptions
 
 public class SyncOptions
 {
-    public int ChunkSize { get; set; } = 50;
+    /// <summary>
+    /// Whether the chunk sizes follow the server's response times, between their minimum and maximum.
+    /// When false, every request has the configured size.
+    /// </summary>
+    public bool AdaptiveChunks { get; set; } = true;
+
+    /// <summary>How long a chunked request should take when the chunks are adaptive.</summary>
+    public double TargetRequestSeconds { get; set; } = 0.5;
+
+    /// <summary>Files per check request.</summary>
+    public ChunkOptions CheckChunk { get; set; } = new() { Size = 50, Min = 10, Max = 1000 };
+
+    /// <summary>Files per conflict resolution request.</summary>
+    public ChunkOptions ResolveChunk { get; set; } = new() { Size = 200, Min = 25, Max = 1000 };
+}
+
+public class ChunkOptions
+{
+    /// <summary>The size the sync starts at, and keeps when the chunks are not adaptive.</summary>
+    public int Size { get; set; }
+    public int Min { get; set; }
+    public int Max { get; set; }
 }
 
 public class LoggingOptions

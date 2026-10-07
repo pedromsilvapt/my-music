@@ -94,9 +94,6 @@ public class InitCommandTests
                     ".mp3"
                   ]
                 },
-                "Sync": {
-                  "ChunkSize": 50
-                },
                 "Logging": {
                   "EnableFileLogging": false,
                   "FilePath": "mymusic-cli.log"

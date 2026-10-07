@@ -271,10 +271,6 @@ public class InitCommand : Command<InitCommand.Settings>
                     ["ExcludePatterns"] = new JsonArray("**/.*", "**/Thumbs.db", "**/*.tmp", "**/desktop.ini"),
                     ["MusicExtensions"] = new JsonArray(".mp3"),
                 },
-                ["Sync"] = new JsonObject
-                {
-                    ["ChunkSize"] = 50,
-                },
                 ["Logging"] = new JsonObject
                 {
                     ["EnableFileLogging"] = false,

@@ -4,6 +4,7 @@ import type { SyncPhase, SyncProgress } from '../../stores/syncStore';
 import type { ScannerType } from '../../services/scannerRegistry';
 import type {SyncRecordAction, SyncRecordItem} from '../../api/types';
 import type {ExclusionMatcher} from './exclusions';
+import type {AdaptiveChunkSize} from './adaptive-chunk-size';
 
 export type {SyncRecordAction, SyncRecordItem};
 
@@ -31,6 +32,8 @@ export interface SyncContext {
     processedFiles: number;
     uploadedPaths: Set<string>;
     conflictedPaths: Set<string>;
+    /** The size of the resolve requests, kept for the whole sync so what one request teaches serves the next. */
+    resolveChunkSize: AdaptiveChunkSize;
     /** The answers the user gave for every remaining question of this sync, so they are not asked again. */
     rememberedAnswers: {
         deletion?: boolean;
@@ -294,13 +297,35 @@ export interface ISyncApiClient {
     reportSyncError: (deviceId: number, sessionId: number, request: { filePath: string; errorMessage: string; songId?: number | null; recordId?: number | null }) => Promise<{ counts: SyncActionCounts }>;
 }
 
+/**
+ * The size of the request chunks of one step of the sync: the sync starts at `size` and, when the sizes
+ * are adaptive, stays between `min` and `max`.
+ */
+export interface ChunkSizeRange {
+    size: number;
+    min: number;
+    max: number;
+}
+
+/** How the sync sizes its chunked requests (see "Request Chunks" in docs/development/sync.md). */
+export interface SyncChunkTuning {
+    /** Whether the sizes follow the server's response times. When false, they stay at their configured size. */
+    adaptive: boolean;
+    /** How long a chunked request should take: the sizes grow or shrink towards it. */
+    targetRequestMs: number;
+    /** Files per check request. */
+    check: ChunkSizeRange;
+    /** Files per conflict resolution request. */
+    resolve: ChunkSizeRange;
+}
+
 export interface ISyncConfig {
     getDeviceId: () => number | null;
     getDeviceOptions: () => DeviceOptions;
     getRepositoryPath: () => string;
     getMusicExtensions: () => string[];
     getExcludePatterns: () => string[];
-    getChunkSize: () => number;
+    getChunkTuning: () => SyncChunkTuning;
     getLastScanTotal: () => Promise<number | null>;
     setLastScanTotal: (count: number) => Promise<void>;
     setLastSyncAt: (date: string) => Promise<void>;

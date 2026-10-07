@@ -47,6 +47,30 @@ public record PromptAnswer<T>(T Value, bool ApplyToAll = false)
     public static implicit operator PromptAnswer<T>(T value) => new(value);
 }
 
+/// <summary>
+/// The size of the request chunks of one step of the sync: the sync starts at <paramref name="Size"/> and,
+/// when the sizes are adaptive, stays between <paramref name="Min"/> and <paramref name="Max"/>.
+/// </summary>
+public record ChunkSizeRange(int Size, int Min, int Max);
+
+/// <summary>
+/// How the sync sizes its chunked requests (see "Request Chunks" in docs/development/sync.md).
+/// </summary>
+public record SyncChunkTuning
+{
+    /// <summary>Whether the sizes follow the server's response times. When false, they stay at their configured size.</summary>
+    public bool Adaptive { get; init; } = true;
+
+    /// <summary>How long a chunked request should take: the sizes grow or shrink towards it.</summary>
+    public TimeSpan TargetRequestDuration { get; init; } = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Files per check request.</summary>
+    public ChunkSizeRange Check { get; init; } = new(Size: 50, Min: 10, Max: 1000);
+
+    /// <summary>Files per conflict resolution request.</summary>
+    public ChunkSizeRange Resolve { get; init; } = new(Size: 200, Min: 25, Max: 1000);
+}
+
 public record SyncOptions
 {
     public bool Force { get; init; }

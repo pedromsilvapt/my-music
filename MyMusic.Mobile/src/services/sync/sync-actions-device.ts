@@ -461,12 +461,6 @@ export async function reportFailure(
     };
 }
 
-/**
- * Maximum number of items sent per resolve-conflicts request. Each item only carries a checksum, so
- * the limit just keeps a single request (one server transaction) bounded. Same limit as the CLI.
- */
-export const MAX_RESOLVE_ITEMS_PER_REQUEST = 200;
-
 /** The kind of item sent for conflict resolution, used in log messages. */
 const ResolveItemKind = {
     Conflict: 'Conflict',
@@ -551,15 +545,23 @@ export async function actionConflict(
         return { records: [], counts: undefined };
     }
 
-    const chunks = buildResolveChunks(resolveItems, potentialUpdateItems);
-    console.log(`Resolving ${resolveItems.length} conflicts and ${potentialUpdateItems.length} potential updates in ${chunks.length} chunk(s)`);
+    const pendingItems = interleaveResolveItems(resolveItems, potentialUpdateItems);
+    console.log(`Resolving ${resolveItems.length} conflicts and ${potentialUpdateItems.length} potential updates`);
 
     const allRecords: SyncRecordItem[] = [];
     let aggregatedCounts: SyncActionCounts | undefined;
 
     try {
-        for (const chunk of chunks) {
+        const chunkSize = ctx.resolveChunkSize;
+
+        for (let offset = 0; offset < pendingItems.length;) {
+            const chunk = takeResolveChunk(pendingItems, offset, chunkSize.current);
+            const chunkItemCount = chunk.conflicts.length + chunk.potentialUpdates.length;
+            offset += chunkItemCount;
+
+            const resolveStartedAt = Date.now();
             const resolveResponse = await apiClient.resolveConflicts(ctx.deviceId, ctx.sessionId!, chunk);
+            chunkSize.report(chunkItemCount, Date.now() - resolveStartedAt);
 
             allRecords.push(...resolveResponse.records);
             aggregatedCounts = addCounts(aggregatedCounts, resolveResponse.counts);
@@ -608,7 +610,7 @@ export async function actionConflict(
             }
 
             // Report the files this request settled
-            ctx.processedFiles += chunk.conflicts.length + chunk.potentialUpdates.length;
+            ctx.processedFiles += chunkItemCount;
             onProgress({ phase: 'resolving', processedFiles: ctx.processedFiles });
         }
     } catch (e) {
@@ -727,42 +729,50 @@ interface ResolveChunk {
     potentialUpdates: SyncPotentialUpdateResolveItem[];
 }
 
+/** An item of a resolve request: either a conflict or a potential update. */
+type ResolveItem =
+    | { conflict: SyncConflictResolveItem; potentialUpdate?: undefined }
+    | { conflict?: undefined; potentialUpdate: SyncPotentialUpdateResolveItem };
+
 /**
- * Splits the combined conflict + potential-update items into request chunks of at most
- * {@link MAX_RESOLVE_ITEMS_PER_REQUEST} items. Items are interleaved so neither list is starved
- * when one is much larger than the other. Mirrors the CLI's BuildResolveChunks.
+ * Orders the conflict + potential-update items for their requests. Items are interleaved so neither list
+ * is starved when one is much larger than the other. Mirrors the CLI's InterleaveResolveItems.
  */
-function buildResolveChunks(
+function interleaveResolveItems(
     conflicts: SyncConflictResolveItem[],
     potentialUpdates: SyncPotentialUpdateResolveItem[]
-): ResolveChunk[] {
-    const chunks: ResolveChunk[] = [];
-    let current: ResolveChunk = { conflicts: [], potentialUpdates: [] };
-
-    const startNewChunkIfFull = () => {
-        if (current.conflicts.length + current.potentialUpdates.length >= MAX_RESOLVE_ITEMS_PER_REQUEST) {
-            chunks.push(current);
-            current = { conflicts: [], potentialUpdates: [] };
-        }
-    };
+): ResolveItem[] {
+    const items: ResolveItem[] = [];
 
     // Interleave by index so a long conflict list doesn't defer all potential updates
     const maxIndex = Math.max(conflicts.length, potentialUpdates.length);
     for (let i = 0; i < maxIndex; i++) {
         if (i < conflicts.length) {
-            startNewChunkIfFull();
-            current.conflicts.push(conflicts[i]);
+            items.push({ conflict: conflicts[i] });
         }
 
         if (i < potentialUpdates.length) {
-            startNewChunkIfFull();
-            current.potentialUpdates.push(potentialUpdates[i]);
+            items.push({ potentialUpdate: potentialUpdates[i] });
         }
     }
 
-    if (current.conflicts.length > 0 || current.potentialUpdates.length > 0) {
-        chunks.push(current);
+    return items;
+}
+
+/**
+ * The next request chunk: at most `size` of the items from `offset` on. Each item only carries a checksum,
+ * so the size just keeps a single request (one server transaction) bounded.
+ */
+function takeResolveChunk(items: ResolveItem[], offset: number, size: number): ResolveChunk {
+    const chunk: ResolveChunk = { conflicts: [], potentialUpdates: [] };
+
+    for (const item of items.slice(offset, offset + size)) {
+        if (item.conflict) {
+            chunk.conflicts.push(item.conflict);
+        } else {
+            chunk.potentialUpdates.push(item.potentialUpdate);
+        }
     }
 
-    return chunks;
+    return chunk;
 }

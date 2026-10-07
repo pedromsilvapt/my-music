@@ -35,6 +35,7 @@ public class PhasesTests
             .Returns(ConflictResolution.Skip);
         _fileSystem = Substitute.For<System.IO.Abstractions.IFileSystem>();
         _config = Substitute.For<ISyncConfig>();
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed());
         _scanner = Substitute.For<IFileSystemScanner>();
         _logger = Substitute.For<ILogger<Phases>>();
 
@@ -280,7 +281,7 @@ public class PhasesTests
     public async Task UploadPhase_ReportsProgressPerChunkDuringCheck_AllSkipped()
     {
         // Setup: 5 files, chunk size 2 -> 3 chunks (2,2,1). All files skipped by server.
-        _config.GetChunkSize().Returns(2);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(2));
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult
             {
@@ -307,10 +308,55 @@ public class PhasesTests
     }
 
     [Fact]
+    public async Task UploadPhase_AdaptiveChunks_GrowWhileTheServerAnswersQuickly()
+    {
+        // Setup: 20 files, checks start at 2 files and may grow up to 8. The server answers at once.
+        _config.GetChunkTuning().Returns(ChunkTunings.Adaptive(new ChunkSizeRange(Size: 2, Min: 1, Max: 8)));
+        var checkedChunks = new List<List<string>>();
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Do<CheckSyncRequest>(r => checkedChunks.Add(r.Files.Select(f => f.Path).ToList())), Arg.Any<CancellationToken>())
+            .Returns(new CheckSyncResult { Records = [], Counts = SyncActionCounts.Empty });
+
+        var phases = CreatePhases();
+        var files = Enumerable.Range(1, 20).Select(i => CreateScannedFile($"song{i}.mp3")).ToList();
+
+        await phases.UploadPhaseAsync(CreateContext(), files, null);
+
+        // Each quick check doubles the next one, up to the maximum; every file is checked once, in order
+        checkedChunks.Select(c => c.Count).ShouldBe([2, 4, 8, 6]);
+        checkedChunks.SelectMany(c => c).ShouldBe(files.Select(f => f.RelativePath));
+    }
+
+    [Fact]
+    public async Task UploadPhase_AdaptiveChunks_ShrinkWhenTheServerIsSlow()
+    {
+        // Setup: checks start at 8 files and should take 20 ms; the server takes far longer than that
+        _config.GetChunkTuning().Returns(ChunkTunings.Adaptive(new ChunkSizeRange(Size: 8, Min: 2, Max: 8)) with
+        {
+            TargetRequestDuration = TimeSpan.FromMilliseconds(20)
+        });
+        var checkedCounts = new List<int>();
+        _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
+            .Returns(async call =>
+            {
+                checkedCounts.Add(call.Arg<CheckSyncRequest>().Files.Count);
+                await Task.Delay(200);
+                return new CheckSyncResult { Records = [], Counts = SyncActionCounts.Empty };
+            });
+
+        var phases = CreatePhases();
+        var files = Enumerable.Range(1, 16).Select(i => CreateScannedFile($"song{i}.mp3")).ToList();
+
+        await phases.UploadPhaseAsync(CreateContext(), files, null);
+
+        // Each slow check halves the next one, down to the minimum
+        checkedCounts.ShouldBe([8, 4, 2, 2]);
+    }
+
+    [Fact]
     public async Task UploadPhase_ReportsPerFileProgressThenEndOfChunkTopsUp()
     {
         // Setup: 3 files, chunk size 3 -> 1 chunk. Server requests CreateRemote for 2 of them.
-        _config.GetChunkSize().Returns(3);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(3));
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult
             {
@@ -360,7 +406,7 @@ public class PhasesTests
     {
         // The server asks for the changed local file, which turns out to be a previous version of its song:
         // the upload answers with an UpdateLocal, so the device downloads the current version this session
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult
             {
@@ -394,7 +440,7 @@ public class PhasesTests
     {
         // Setup: 4 files, chunk size 2 -> 2 chunks. First chunk: 1 CreateRemote, 1 Skipped.
         // Second chunk: 2 UpdateRemote.
-        _config.GetChunkSize().Returns(2);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(2));
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(
                 new CheckSyncResult
@@ -454,7 +500,7 @@ public class PhasesTests
     {
         // Setup: 3 files, chunk size 2 -> 2 chunks. First chunk fails, second would succeed (all skipped).
         // The records of a failed check are lost, so going on would leave them unacknowledged at the commit.
-        _config.GetChunkSize().Returns(2);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(2));
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(
                 _ => throw new Exception("network error"),
@@ -480,7 +526,7 @@ public class PhasesTests
     public async Task UploadPhase_ConflictFromEarlierChunk_StaysMarkedAfterLaterChunkIsResolved()
     {
         // Chunk 1 holds a real conflict; chunk 2 holds a file the server changed, which resolves to an UpdateLocal
-        _config.GetChunkSize().Returns(1);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(1));
         SetupLocalFilesExist();
         var conflict = CreateRecord("conflict.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
         var potentialUpdate = CreateRecord("changed.mp3", SyncRecordAction.UpdateLocal) with { SongId = 2 };
@@ -504,7 +550,7 @@ public class PhasesTests
     public async Task UploadPhase_ConflictResolvedToUpdateLocal_IsNotMarkedAndIsQueued()
     {
         // The local file is a previous version of the song, so the server version wins
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         SetupLocalFilesExist();
         var conflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
         var updateLocal = CreateRecord("song.mp3", SyncRecordAction.UpdateLocal) with { SongId = 1 };
@@ -527,7 +573,7 @@ public class PhasesTests
     [Fact]
     public async Task UploadPhase_UserChoosesDownload_ConflictIsNotMarkedAndDownloadIsQueued()
     {
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         SetupLocalFilesExist();
         var conflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
         var resolvedConflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { Id = 10, SongId = 1 };
@@ -554,7 +600,7 @@ public class PhasesTests
     [Fact]
     public async Task UploadPhase_UserChoosesUpload_ConflictIsNotMarkedAndPathIsUploaded()
     {
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         SetupLocalFilesExist();
         var conflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 };
         var resolvedConflict = CreateRecord("song.mp3", SyncRecordAction.Conflict) with { Id = 10, SongId = 1 };
@@ -583,7 +629,7 @@ public class PhasesTests
     public async Task UploadPhase_ConflictSettledWithoutDownload_IsNotMarked(SyncRecordAction resolvedAction)
     {
         // The contents turn out to be equal (or the server skips the file), so there is nothing to protect
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         SetupLocalFilesExist();
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult { Records = [CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 }], Counts = SyncActionCounts.Empty });
@@ -602,7 +648,7 @@ public class PhasesTests
     public async Task UploadPhase_ResolveRequestFails_ConflictStaysMarked()
     {
         // The server could not compare the contents, so the conflict was never settled
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         SetupLocalFilesExist();
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult { Records = [CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 }], Counts = SyncActionCounts.Empty });
@@ -727,7 +773,7 @@ public class PhasesTests
     public async Task UploadPhase_UnsettledConflict_MarksItsPathOnly(SyncRecordAction resolvedAction)
     {
         // The song is linked at two paths; only one of them is checked as a conflict
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
         SetupLocalFilesExist();
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult { Records = [CreateRecord("song.mp3", SyncRecordAction.Conflict) with { SongId = 1 }], Counts = SyncActionCounts.Empty });
@@ -746,7 +792,7 @@ public class PhasesTests
     public async Task UploadPhase_ReportsProgressWhileResolving_ThenUploadsContinueFromIt()
     {
         // 3 files in one chunk: a potential update to resolve, an upload and an unchanged file
-        _config.GetChunkSize().Returns(3);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(3));
         SetupLocalFilesExist();
         _apiClient.CheckSyncAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<CheckSyncRequest>(), Arg.Any<CancellationToken>())
             .Returns(new CheckSyncResult

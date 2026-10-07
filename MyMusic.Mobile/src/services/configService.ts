@@ -2,6 +2,8 @@ import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {DEFAULT_DEVICE_TYPE} from '../constants/deviceIcons';
 import {DEFAULT_EXCLUDE_PATTERNS, useConfigStore} from '../stores/configStore';
+import {DEFAULT_CHUNK_TUNING} from './sync/adaptive-chunk-size';
+import type {SyncChunkTuning} from './sync/types';
 
 const SECURE_USER_ID_KEY = 'mymusic-userId';
 const SECURE_USER_NAME_KEY = 'mymusic-userName';
@@ -94,8 +96,12 @@ export async function setExcludePatterns(patterns: string[]): Promise<void> {
     useConfigStore.getState().setExcludePatterns(patterns);
 }
 
-export function getChunkSize(): number {
-    return 50;
+export function getChunkTuning(): SyncChunkTuning {
+    return useConfigStore.getState().chunkTuning;
+}
+
+export async function setChunkTuning(tuning: SyncChunkTuning): Promise<void> {
+    useConfigStore.getState().setChunkTuning(tuning);
 }
 
 export function getIsConfigured(): boolean {
@@ -147,6 +153,7 @@ export function getAllConfig() {
         repositoryPath: state.repositoryPath,
         namingTemplate: state.namingTemplate,
         excludePatterns: state.excludePatterns,
+        chunkTuning: state.chunkTuning,
         isConfigured: state.isConfigured,
         lastSyncAt: state.lastSyncAt,
         userId: state.userId,
@@ -172,6 +179,7 @@ export async function resetConfig(): Promise<void> {
     useConfigStore.getState().setRepositoryPath('');
     useConfigStore.getState().setNamingTemplate('');
     useConfigStore.getState().setExcludePatterns(DEFAULT_EXCLUDE_PATTERNS);
+    useConfigStore.getState().setChunkTuning(DEFAULT_CHUNK_TUNING);
     useConfigStore.getState().setIsConfigured(false);
     useConfigStore.getState().setLastSyncAt(null);
     useConfigStore.getState().setUserId(null);

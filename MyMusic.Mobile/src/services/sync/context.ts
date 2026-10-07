@@ -1,5 +1,6 @@
-import type {SyncContext, ISyncState, SyncResult} from './types';
+import type {SyncContext, ISyncState, SyncResult, SyncChunkTuning} from './types';
 import {createExclusionMatcher} from './exclusions';
+import {AdaptiveChunkSize} from './adaptive-chunk-size';
 
 export function createEmptyResult(): SyncResult {
     return {
@@ -23,7 +24,8 @@ export function createSyncContext(
     repositoryPath: string,
     decodedRepoPath: string,
     state: ISyncState,
-    excludePatterns: string[]
+    excludePatterns: string[],
+    chunkTuning: SyncChunkTuning
 ): SyncContext {
     return {
         deviceId,
@@ -35,6 +37,7 @@ export function createSyncContext(
         processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
+        resolveChunkSize: new AdaptiveChunkSize(chunkTuning.resolve, chunkTuning),
         rememberedAnswers: {},
     };
 }

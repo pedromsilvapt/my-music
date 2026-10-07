@@ -1,4 +1,5 @@
 import {orchestrateSync, getPartialSyncResult} from '../orchestrator';
+import { fixedChunkTuning } from './chunk-tunings';
 import type {SyncDeps, IFileOps, ISyncApiClient, ISyncConfig, ISyncState, IFileSystemScanner, IKeepAwake, IUserPrompt} from '../types';
 
 jest.mock('../errors', () => ({
@@ -64,7 +65,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         getRepositoryPath: jest.fn().mockReturnValue('/music'),
         getMusicExtensions: jest.fn().mockReturnValue(['.mp3']),
         getExcludePatterns: jest.fn().mockReturnValue([]),
-        getChunkSize: jest.fn().mockReturnValue(10),
+        getChunkTuning: jest.fn().mockReturnValue(fixedChunkTuning(10)),
         getLastScanTotal: jest.fn().mockResolvedValue(null),
         setLastScanTotal: jest.fn().mockResolvedValue(undefined),
         setLastSyncAt: jest.fn().mockResolvedValue(undefined),

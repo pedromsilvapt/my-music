@@ -97,6 +97,40 @@ every server action on one (`ReportExcludedAsync`); both use `ExclusionMatcher`.
 in the `appsettings.json` next to the binary keeps the remaining default rules. `my-music init` writes the full
 default list for that reason.
 
+## Request Chunk Sizes
+
+The `MyMusic:Sync` configuration section sets how many files a check or a conflict resolution request carries
+("Request Chunks" in [sync.md](sync.md) has the settings, their defaults and the algorithm). `CliSyncConfig`
+turns it into the `SyncChunkTuning` of `ISyncConfig.GetChunkTuning()`:
+
+```json
+{
+  "MyMusic": {
+    "Sync": {
+      "AdaptiveChunks": true,
+      "TargetRequestSeconds": 0.5,
+      "CheckChunk": {
+        "Size": 50,
+        "Min": 10,
+        "Max": 1000
+      },
+      "ResolveChunk": {
+        "Size": 200,
+        "Min": 25,
+        "Max": 1000
+      }
+    }
+  }
+}
+```
+
+`Size` is where a sync starts; set `AdaptiveChunks` to `false` to keep every request at that size. `my-music init`
+does not write the section, so the defaults apply until it is added by hand, and running `init` again rewrites the
+file without it. The upload phase owns the size of the check requests; `SyncActionsDevice` owns the size of the
+resolve requests, as it lives for the whole sync.
+
+In tests, `ChunkTunings.Fixed(...)` gives sizes that do not depend on how fast the test runs.
+
 ## Sync Conflicts
 
 A file changed differently on the device and on the server is a real conflict (see "Resolving a Real Conflict" in

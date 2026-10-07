@@ -11,7 +11,7 @@ import {useConfigStore} from '../../src/stores/configStore';
 export default function SettingsScreen() {
     const router = useRouter();
     const {colors, fontSize, fontWeight, spacing} = useTheme();
-    const {serverUrl, deviceName, userName, deviceId, repositoryPath, isConfigured, deviceIcon} = useConfigStore();
+    const {serverUrl, deviceName, userName, deviceId, repositoryPath, isConfigured, deviceIcon, chunkTuning} = useConfigStore();
 
     const handleReset = () => {
         Alert.alert(
@@ -43,6 +43,26 @@ export default function SettingsScreen() {
                             <Text style={[styles.settingLabel, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Device Configuration</Text>
                             <Text style={[styles.settingValue, {fontSize: fontSize.sm, color: colors.cardTextSecondary}]} numberOfLines={1}>
                                 {isConfigured ? deviceName || 'Configured' : 'Not configured'}
+                            </Text>
+                        </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={colors.cardTextMuted}/>
+                </TouchableOpacity>
+            </Card>
+
+            <Card>
+                <TouchableOpacity
+                    style={styles.settingRow}
+                    onPress={() => router.push('/settings/sync')}
+                >
+                    <View style={[styles.settingInfo, {gap: spacing.md}]}>
+                        <Ionicons name="speedometer-outline" size={24} color={colors.primary}/>
+                        <View style={styles.settingText}>
+                            <Text style={[styles.settingLabel, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.cardText}]}>Sync Performance</Text>
+                            <Text style={[styles.settingValue, {fontSize: fontSize.sm, color: colors.cardTextSecondary}]} numberOfLines={1}>
+                                {chunkTuning.adaptive
+                                    ? `Automatic request sizes (${chunkTuning.check.min}-${chunkTuning.check.max} files)`
+                                    : `Fixed request sizes (${chunkTuning.check.size} files)`}
                             </Text>
                         </View>
                     </View>

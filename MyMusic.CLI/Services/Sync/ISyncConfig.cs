@@ -1,5 +1,7 @@
 namespace MyMusic.CLI.Services.Sync;
 
+using MyMusic.CLI.Services.Sync.Types;
+
 public interface ISyncConfig
 {
     /// <summary>
@@ -11,7 +13,7 @@ public interface ISyncConfig
     string GetRepositoryPath();
     string[] GetMusicExtensions();
     string[] GetExcludePatterns();
-    int GetChunkSize();
+    SyncChunkTuning GetChunkTuning();
     Task<int?> GetLastScanTotalAsync(CancellationToken ct = default);
     Task SetLastScanTotalAsync(int count, CancellationToken ct = default);
     Task SetLastSyncAtAsync(DateTime date, CancellationToken ct = default);

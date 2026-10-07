@@ -45,7 +45,7 @@ public class OrchestratorTests
         _config.GetRepositoryPath().Returns("/music");
         _config.GetMusicExtensions().Returns([".mp3"]);
         _config.GetExcludePatterns().Returns(Array.Empty<string>());
-        _config.GetChunkSize().Returns(10);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(10));
 
         _fileOps.DirectoryExists("/music").Returns(true);
         _scanner.ScanAsync(

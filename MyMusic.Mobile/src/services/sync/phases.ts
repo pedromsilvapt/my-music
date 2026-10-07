@@ -2,7 +2,8 @@ import type { SyncDeps, SyncContext, SyncFileInfo, SyncFileBase, ScanError, Prog
 import { SyncActionCounts, addDeltaToResult } from './types';
 import type { RenameData } from '../../api/types';
 import { SyncCancelledError } from './errors';
-import { safeToIsoString, chunkArray, formatFilePath } from './utils';
+import { safeToIsoString, formatFilePath } from './utils';
+import { AdaptiveChunkSize } from './adaptive-chunk-size';
 import { saveDeviceOptions } from './device-options';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure } from './sync-actions-device';
 
@@ -216,15 +217,15 @@ export async function uploadPhase (
     ctx.processedFiles = 0;
     onProgress({ phase: 'upload', totalFiles: files.length, processedFiles: 0, currentFile: '' });
 
-    const chunkSize = deps.config.getChunkSize();
-    const chunks = chunkArray(files, chunkSize);
+    const chunkTuning = deps.config.getChunkTuning();
+    const chunkSize = new AdaptiveChunkSize(chunkTuning.check, chunkTuning);
     let checkedFiles = 0;
 
-    for (let i = 0; i < chunks.length; i++) {
+    while (checkedFiles < files.length) {
         if (deps.state.isCancelled) {
             throw new SyncCancelledError();
         }
-        const chunk = chunks[i];
+        const chunk = files.slice(checkedFiles, checkedFiles + chunkSize.current);
 
         const syncFiles = chunk.map(f => ({
             path: f.relativePath,
@@ -233,10 +234,12 @@ export async function uploadPhase (
         }));
 
         // A failed check aborts the sync: its records would be lost, and the commit rejects unacknowledged ones
+        const checkStartedAt = Date.now();
         const syncResponse = await deps.apiClient.checkSync(ctx.deviceId, ctx.sessionId!, {
             files: syncFiles,
             force: ctx.options.force,
         });
+        chunkSize.report(chunk.length, Date.now() - checkStartedAt);
 
         ctx.result = addDeltaToResult(ctx.result, syncResponse.counts ?? EMPTY_COUNTS);
 

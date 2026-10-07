@@ -22,7 +22,8 @@ MyMusic.Mobile/
 │   ├── index.tsx                 # Home/Dashboard screen
 │   ├── settings/
 │   │   ├── index.tsx             # Settings main
-│   │   └── device.tsx            # Device configuration
+│   │   ├── device.tsx            # Device configuration
+│   │   └── sync.tsx              # Sync performance (request chunk sizes)
 │   ├── history/
 │   │   ├── index.tsx             # Sessions list
 │   │   └── [sessionId].tsx       # Session detail
@@ -101,6 +102,21 @@ screen is open; the refresh button of the drawer scans the folder again.
 `createExclusionMatcher` (`services/sync/exclusions.ts`) builds the matcher. The scanners skip the paths it matches,
 and the sync context carries it (`ctx.isExcluded`) so the actions in `services/sync/sync-actions-device.ts` fail
 every server action on one (`reportExcluded`).
+
+## Request Chunk Sizes
+
+The "Sync Performance" settings screen (`app/settings/sync.tsx`) sets how many files a check or a conflict
+resolution request carries ("Request Chunks" in [sync.md](sync.md) has the settings, their defaults and the
+algorithm). The values are stored in `configService` as a `SyncChunkTuning` (`getChunkTuning` / `setChunkTuning`)
+and stay on the device. `parseChunkTuningForm` (`services/chunkTuningForm.ts`) validates what was typed; with the
+automatic sizes off, only the two sizes are asked for and the ranges keep their values.
+
+The upload phase owns the size of the check requests; the sync context carries the size of the resolve requests
+(`ctx.resolveChunkSize`), as it lives for the whole sync.
+
+In tests, `fixedChunkTuning(...)` (`services/sync/__tests__/chunk-tunings.ts`) gives sizes that do not depend on
+how fast the test runs. The test CLI reads the same `SyncChunkTuning` from the `chunkTuning`
+key of its JSON configuration; any part left out keeps its default.
 
 ## Scanners
 

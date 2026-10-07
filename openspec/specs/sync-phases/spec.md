@@ -59,8 +59,8 @@ The system SHALL provide a `startSessionPhase` function that calls the API to st
 The system SHALL provide an `uploadPhase` function that processes all local files in chunks, calling checkSync per chunk, resolving conflicts, uploading new/modified files, recording results, and tracking processed paths.
 
 #### Scenario: Upload phase processes each chunk through check-resolve-upload-record
-- **WHEN** `uploadPhase` is called with files and a chunk size
-- **THEN** it splits files into chunks of chunkSize
+- **WHEN** `uploadPhase` is called with files and a chunk tuning
+- **THEN** it splits files into chunks, starting at the configured size and, when the tuning is adaptive, following the server's response times inside the configured range
 - **AND** for each chunk: calls checkSync, resolves conflicts if any, uploads toCreate and toUpdate files, records skipped files, and sends records to server
 
 #### Scenario: Skipped files are recorded

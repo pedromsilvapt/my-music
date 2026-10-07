@@ -60,6 +60,12 @@ export default function RootLayout() {
                         }}
                     />
                     <Stack.Screen
+                        name="settings/sync"
+                        options={{
+                            title: 'Sync Performance',
+                        }}
+                    />
+                    <Stack.Screen
                         name="history/index"
                         options={{
                             title: 'Sync History',

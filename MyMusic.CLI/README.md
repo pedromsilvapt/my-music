@@ -118,3 +118,30 @@ The CLI reads configuration from (in order of precedence):
 3. `appsettings.json` in current directory (local config)
 4. `appsettings.{Environment}.json` (environment-specific)
 5. Environment variables
+
+### Sync Performance
+
+The `MyMusic:Sync` section sets how many files each request of a sync carries. By default the sizes adjust
+themselves to how fast the server answers, inside a range:
+
+| Setting                              | Default         | Description                                                                  |
+|--------------------------------------|-----------------|------------------------------------------------------------------------------|
+| `AdaptiveChunks`                     | `true`          | Adjust the sizes automatically. When `false`, every request has its `Size`   |
+| `TargetRequestSeconds`               | `0.5`           | How long a request should take: sizes grow below half of it, shrink above it |
+| `CheckChunk`: `Size`, `Min`, `Max`   | `50, 10, 1000`  | Files per check request: starting size and range                             |
+| `ResolveChunk`: `Size`, `Min`, `Max` | `200, 25, 1000` | Files per conflict resolution request: starting size and range               |
+
+```json
+{
+  "MyMusic": {
+    "Sync": {
+      "AdaptiveChunks": true,
+      "TargetRequestSeconds": 0.5,
+      "CheckChunk": { "Size": 50, "Min": 10, "Max": 1000 },
+      "ResolveChunk": { "Size": 200, "Min": 25, "Max": 1000 }
+    }
+  }
+}
+```
+
+`my-music init` does not write this section: add it to the configuration file by hand to change a value.

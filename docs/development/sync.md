@@ -234,6 +234,30 @@ InProgress ──► Committed ──► Completed
 
 The commit boundary is idempotent: if commit is called on an already-committed session, the existing results are returned without reprocessing.
 
+## Request Chunks
+
+Two steps of a sync send the server a list of files, a chunk per request: the **check** (the scanned files, compared with the server's library) and the **conflict resolution** (the checksums of the files both sides may have changed). Small chunks waste time in round-trips; big ones make a single request (one server transaction) slow, and the progress jumpy.
+
+By default the clients size the chunks themselves. Each step starts at its configured size and follows how long the server takes to answer:
+
+- A full request answered in under **half the target time** doubles the size of the next one.
+- A request that takes **longer than the target time** shrinks the next one in proportion, to half at most.
+- Anything in between keeps the size, and so does a quick request that was not full (the last one of a step), as it says little about a bigger one.
+- The size never leaves the configured minimum and maximum. A starting size outside them widens the range.
+
+The size of the resolve requests is kept across the chunks of the check, so what one request teaches serves the next. Only the request itself is timed, never the uploads or the questions asked between two requests.
+
+| Setting | Default | CLI (`MyMusic:Sync`) | Mobile (Settings › Sync Performance) |
+| --- | --- | --- | --- |
+| Adaptive sizes | on | `AdaptiveChunks` | Adjust Request Sizes Automatically |
+| Target request time | 500 ms | `TargetRequestSeconds` | Target Request Time |
+| Check: starting size, minimum, maximum | 50, 10, 1000 | `CheckChunk`: `Size`, `Min`, `Max` | Check Requests |
+| Resolve: starting size, minimum, maximum | 200, 25, 1000 | `ResolveChunk`: `Size`, `Min`, `Max` | Conflict Resolution Requests |
+
+With adaptive sizes off, every request has the starting size. The chunk sizes never change what a sync does, only how many requests it takes: the records are the same whatever the sizes.
+
+The algorithm is `AdaptiveChunkSize` in both clients (`MyMusic.CLI/Services/Sync/AdaptiveChunkSize.cs`, `MyMusic.Mobile/src/services/sync/adaptive-chunk-size.ts`), and must stay the same in both.
+
 ## Orphan Detection
 
 Between sync sessions, a user may delete files from their device. Since the device doesn't notify the server of deletions, the server must infer them: if a `SongDevice` association exists for a path, but no record in the current session mentions that path, the file was likely removed from the device. These are orphans.

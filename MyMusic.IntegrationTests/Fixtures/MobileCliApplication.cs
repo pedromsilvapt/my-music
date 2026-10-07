@@ -142,7 +142,12 @@ public class MobileCliApplication : ISyncApplication
     public async Task SetChunkSizeAsync(int chunkSize)
     {
         var config = JsonNode.Parse(await File.ReadAllTextAsync(_configPath))!;
-        config["chunkSize"] = chunkSize;
+        // Tests that set a size count on it: the chunks must not follow the server's response times
+        config["chunkTuning"] = new JsonObject
+        {
+            ["adaptive"] = false,
+            ["check"] = new JsonObject { ["size"] = chunkSize },
+        };
         await File.WriteAllTextAsync(_configPath, config.ToJsonString());
     }
 
@@ -344,7 +349,6 @@ public class MobileCliApplication : ISyncApplication
             userName,
             musicExtensions = new[] { ".mp3" },
             excludePatterns = new[] { "**/.*", "**/Thumbs.db" },
-            chunkSize = 50,
         };
 
         var json = JsonSerializer.Serialize(config, new JsonSerializerOptions

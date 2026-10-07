@@ -15,7 +15,7 @@ import {
     uploadFile,
 } from '../../api/sync';
 import {
-    getChunkSize,
+    getChunkTuning,
     getDeviceId,
     getExcludePatterns,
     getLastScanTotal,
@@ -97,7 +97,7 @@ export function createDefaultConfig(): ISyncConfig {
         getRepositoryPath,
         getMusicExtensions,
         getExcludePatterns,
-        getChunkSize,
+        getChunkTuning,
         getLastScanTotal,
         setLastScanTotal,
         setLastSyncAt,

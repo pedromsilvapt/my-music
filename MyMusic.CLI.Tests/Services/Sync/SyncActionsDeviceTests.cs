@@ -10,6 +10,8 @@ using Xunit;
 
 public class SyncActionsDeviceTests
 {
+    private const int ResolveChunkSize = 200;
+
     private readonly System.IO.Abstractions.IFileSystem _fileSystem;
     private readonly ISyncApiClient _apiClient;
     private readonly IFileOps _fileOps;
@@ -27,6 +29,7 @@ public class SyncActionsDeviceTests
             .Returns(ConflictResolution.Skip);
         _config = Substitute.For<ISyncConfig>();
         _config.GetExcludePatterns().Returns([]);
+        _config.GetChunkTuning().Returns(ChunkTunings.Fixed(resolveSize: ResolveChunkSize));
         _logger = Substitute.For<ILogger<SyncActionsDevice>>();
 
         _apiClient.AcknowledgeActionAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<AcknowledgeActionRequest>(), Arg.Any<CancellationToken>())
@@ -672,11 +675,36 @@ public class SyncActionsDeviceTests
     }
 
     [Fact]
+    public async Task ActionConflictAsync_AdaptiveChunks_KeepGrowingAcrossCalls()
+    {
+        // Resolve requests start at 2 items and may grow up to 8; the server answers at once
+        _config.GetChunkTuning().Returns(ChunkTunings.Adaptive(new ChunkSizeRange(50, 10, 1000), resolve: new ChunkSizeRange(Size: 2, Min: 1, Max: 8)));
+        var device = CreateDevice();
+        SetupLocalFilesExist();
+        _fileOps.ComputeChecksumAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns("checksum");
+
+        var requestSizes = new List<int>();
+        _apiClient.ResolveConflictsAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Do<ResolveConflictsRequest>(r => requestSizes.Add(r.Conflicts.Count + r.PotentialUpdates.Count)), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(new ResolveConflictsResult { Records = [] }));
+
+        List<SyncRecordItem> Conflicts(int count) => Enumerable.Range(0, count)
+            .Select(i => CreateResolveRecord(i + 1, $"conflict{i}.mp3", SyncRecordAction.Conflict))
+            .ToList();
+
+        // The conflicts of a first check chunk, then those of a second one
+        await device.ActionConflictAsync(1, 1, "/music", Conflicts(7), []);
+        await device.ActionConflictAsync(1, 1, "/music", Conflicts(10), []);
+
+        // The size reached by the first call (2, 4, then 1 left over) is where the second one starts
+        requestSizes.ShouldBe([2, 4, 1, 8, 2]);
+    }
+
+    [Fact]
     public async Task ActionConflictAsync_ManyItems_ChunksRequestsByCountAndAggregatesResults()
     {
         var device = CreateDevice();
         // One more conflict than fits in a request, plus a few potential updates to interleave
-        const int conflictCount = SyncActionsDevice.MaxItemsPerResolveChunk + 1;
+        const int conflictCount = ResolveChunkSize + 1;
         const int potentialUpdateCount = 3;
 
         var conflicts = Enumerable.Range(0, conflictCount)
@@ -714,7 +742,7 @@ public class SyncActionsDeviceTests
 
         // Every request but the last is full, and none exceeds the limit
         chunkCalls.Select(c => c.Conflicts.Count + c.PotentialUpdates.Count)
-            .ShouldBe([SyncActionsDevice.MaxItemsPerResolveChunk, conflictCount + potentialUpdateCount - SyncActionsDevice.MaxItemsPerResolveChunk]);
+            .ShouldBe([ResolveChunkSize, conflictCount + potentialUpdateCount - ResolveChunkSize]);
         // The potential updates are interleaved into the first request instead of waiting for all conflicts
         chunkCalls[0].PotentialUpdates.Count.ShouldBe(potentialUpdateCount);
         // All records aggregated into the final result

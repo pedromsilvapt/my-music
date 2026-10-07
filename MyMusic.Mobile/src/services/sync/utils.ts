@@ -5,14 +5,6 @@ export function safeToIsoString(date: Date | undefined): string | undefined {
     return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 }
 
-export function chunkArray<T>(array: T[], size: number): T[][] {
-    const chunks: T[][] = [];
-    for (let i = 0; i < array.length; i += size) {
-        chunks.push(array.slice(i, i + size));
-    }
-    return chunks;
-}
-
 export function formatFilePath(path: string, repositoryPath: string): string {
     let formatted = path;
 

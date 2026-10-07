@@ -67,7 +67,12 @@ public class DesktopCliFixture : IAsyncDisposable
     public async Task SetChunkSizeAsync(int chunkSize)
     {
         var config = JsonNode.Parse(await File.ReadAllTextAsync(ConfigPath))!;
-        config["myMusic"]!["sync"]!["chunkSize"] = chunkSize;
+        // Tests that set a size count on it: the chunks must not follow the server's response times
+        config["myMusic"]!["sync"] = new JsonObject
+        {
+            ["adaptiveChunks"] = false,
+            ["checkChunk"] = new JsonObject { ["size"] = chunkSize },
+        };
         await File.WriteAllTextAsync(ConfigPath, config.ToJsonString());
     }
 
@@ -124,10 +129,6 @@ public class DesktopCliFixture : IAsyncDisposable
                     Path = RepositoryPath,
                     ExcludePatterns = new[] { "**/.*", "**/Thumbs.db" },
                     MusicExtensions = new[] { ".mp3" },
-                },
-                Sync = new
-                {
-                    ChunkSize = 50,
                 },
                 Logging = new
                 {
@@ -269,10 +270,6 @@ public class DesktopCliFixture : IAsyncDisposable
                     Path = RepositoryPath,
                     ExcludePatterns = new[] { "**/.*", "**/Thumbs.db" },
                     MusicExtensions = new[] { ".mp3" },
-                },
-                Sync = new
-                {
-                    ChunkSize = 50,
                 },
                 Logging = new
                 {

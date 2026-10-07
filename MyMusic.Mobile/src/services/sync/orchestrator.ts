@@ -39,7 +39,7 @@ export async function orchestrateSync(
         return {...createEmptyResult(), error: 1};
     }
 
-    const ctx = createSyncContext(deviceId, repositoryPath, decodedRepoPath, deps.state, deps.config.getExcludePatterns());
+    const ctx = createSyncContext(deviceId, repositoryPath, decodedRepoPath, deps.state, deps.config.getExcludePatterns(), deps.config.getChunkTuning());
 
     try {
         await deps.keepAwake.activate();

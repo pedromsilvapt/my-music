@@ -1,4 +1,6 @@
-import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict, MAX_RESOLVE_ITEMS_PER_REQUEST} from '../sync-actions-device';
+import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict} from '../sync-actions-device';
+import { adaptiveChunkTuning, fixedChunkTuning } from './chunk-tunings';
+import { AdaptiveChunkSize } from '../adaptive-chunk-size';
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncResult, ActionResult, SyncRecordItem} from '../types';
 import {addDeltaToResult} from '../types';
 import {createExclusionMatcher} from '../exclusions';
@@ -50,6 +52,8 @@ function createMockUserPrompt(overrides: Partial<IUserPrompt> = {}): IUserPrompt
     } as unknown as IUserPrompt;
 }
 
+const RESOLVE_CHUNK_SIZE = 200;
+
 function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
     const result: SyncResult = {
         createRemote: 0, updateRemote: 0, createLocal: 0,
@@ -77,6 +81,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
         processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
+        resolveChunkSize: new AdaptiveChunkSize(fixedChunkTuning(50, RESOLVE_CHUNK_SIZE).resolve, fixedChunkTuning()),
         rememberedAnswers: {},
         ...overrides,
     };
@@ -1302,27 +1307,43 @@ describe('actionConflict - resolve requests', () => {
     test('splits requests at the item limit and aggregates records and counts', async () => {
         const requests: ResolveRequest[] = [];
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
-        const conflictCount = MAX_RESOLVE_ITEMS_PER_REQUEST + 1;
+        const conflictCount = RESOLVE_CHUNK_SIZE + 1;
         const conflicts = Array.from({ length: conflictCount }, (_, i) => conflict(i + 1, `conflict${i}.mp3`, i + 1));
 
         const result = await actionConflict(recordingApiClient(requests), fileOps, createMockUserPrompt(), createContext(), conflicts, [], new Set(), jest.fn());
 
-        expect(requests.map(requestItemCount)).toEqual([MAX_RESOLVE_ITEMS_PER_REQUEST, 1]);
+        expect(requests.map(requestItemCount)).toEqual([RESOLVE_CHUNK_SIZE, 1]);
         expect(requests.flatMap(r => r.conflicts.map(c => c.path))).toEqual(conflicts.map(c => c.filePath));
         expect(result.records).toHaveLength(conflictCount);
         expect(result.counts?.updateTimestampCount).toBe(conflictCount);
     });
 
+    test('adaptive requests keep growing across calls', async () => {
+        // Resolve requests start at 2 items and may grow up to 8; the server answers at once
+        const requests: ResolveRequest[] = [];
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const tuning = adaptiveChunkTuning({ size: 50, min: 10, max: 1000 }, { size: 2, min: 1, max: 8 });
+        const ctx = createContext({ resolveChunkSize: new AdaptiveChunkSize(tuning.resolve, tuning) });
+        const conflicts = (count: number) => Array.from({ length: count }, (_, i) => conflict(i + 1, `conflict${i}.mp3`, i + 1));
+
+        // The conflicts of a first check chunk, then those of a second one
+        await actionConflict(recordingApiClient(requests), fileOps, createMockUserPrompt(), ctx, conflicts(7), [], new Set(), jest.fn());
+        await actionConflict(recordingApiClient(requests), fileOps, createMockUserPrompt(), ctx, conflicts(10), [], new Set(), jest.fn());
+
+        // The size reached by the first call (2, 4, then 1 left over) is where the second one starts
+        expect(requests.map(requestItemCount)).toEqual([2, 4, 1, 8, 2]);
+    });
+
     test('alternates conflicts and potential updates across requests', async () => {
         const requests: ResolveRequest[] = [];
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
-        const conflicts = Array.from({ length: MAX_RESOLVE_ITEMS_PER_REQUEST + 1 }, (_, i) => conflict(i + 1, `c${i}.mp3`, i + 1));
+        const conflicts = Array.from({ length: RESOLVE_CHUNK_SIZE + 1 }, (_, i) => conflict(i + 1, `c${i}.mp3`, i + 1));
         const potentialUpdates = [potentialUpdate(1001, 'p0.mp3', 1001), potentialUpdate(1002, 'p1.mp3', 1002)];
 
         await actionConflict(recordingApiClient(requests), fileOps, createMockUserPrompt(), createContext(), conflicts, potentialUpdates, new Set(), jest.fn());
 
         // A long conflict list must not push every potential update to the last request
-        expect(requests.map(requestItemCount)).toEqual([MAX_RESOLVE_ITEMS_PER_REQUEST, 3]);
+        expect(requests.map(requestItemCount)).toEqual([RESOLVE_CHUNK_SIZE, 3]);
         expect(requests[0].potentialUpdates.map(p => p.path)).toEqual(['p0.mp3', 'p1.mp3']);
         expect(requests[0].conflicts.slice(0, 3).map(c => c.path)).toEqual(['c0.mp3', 'c1.mp3', 'c2.mp3']);
         expect(requests[1].potentialUpdates).toEqual([]);
@@ -1334,13 +1355,13 @@ describe('actionConflict - resolve requests', () => {
             .mockRejectedValueOnce(new Error('Request failed'));
         const apiClient = createMockApiClient({ resolveConflicts });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
-        const conflicts = Array.from({ length: MAX_RESOLVE_ITEMS_PER_REQUEST + 1 }, (_, i) => conflict(i + 1, `c${i}.mp3`, i + 1));
+        const conflicts = Array.from({ length: RESOLVE_CHUNK_SIZE + 1 }, (_, i) => conflict(i + 1, `c${i}.mp3`, i + 1));
 
         const result = await actionConflict(apiClient, fileOps, createMockUserPrompt(), createContext(), conflicts, [], new Set(), jest.fn());
 
         expect(resolveConflicts).toHaveBeenCalledTimes(2);
-        expect(result.records).toHaveLength(MAX_RESOLVE_ITEMS_PER_REQUEST);
-        expect(result.counts?.updateTimestampCount).toBe(MAX_RESOLVE_ITEMS_PER_REQUEST);
+        expect(result.records).toHaveLength(RESOLVE_CHUNK_SIZE);
+        expect(result.counts?.updateTimestampCount).toBe(RESOLVE_CHUNK_SIZE);
     });
 
     test('conflicts and potential updates with no songId are skipped', async () => {
