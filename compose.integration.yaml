@@ -34,6 +34,14 @@ services:
         required: false
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # The server only starts listening after the migrations ran, so a successful ping means it is ready
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 1s
 
   client:
     image: gitea.home/silvas/my-music-ui:${VERSION:-dev}
@@ -62,6 +70,8 @@ services:
       OpenTelemetry__Endpoint: "${OTELITE_ENDPOINT:-http://otelite:4318}"
     depends_on:
       db:
+        condition: service_healthy
+      server:
         condition: service_healthy
       caddy:
         condition: service_healthy
