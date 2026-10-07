@@ -109,6 +109,10 @@ A file changed differently on the device and on the server is a real conflict (s
 | `download` | Takes the server's version: it is downloaded over the local file. |
 | `skip` | Leaves every conflict unresolved. The default with `--yes`, so unattended runs never wait for an answer. |
 
+When asked, an answer followed by `all` (`u all`, `download all`, or the short `ua`/`da`/`sa`) is taken for every
+remaining conflict of the sync, and `none` skips them all. The deletion prompt (asked without `--yes`) takes `a`/`all`
+and `o`/`none` the same way.
+
 The option applies to a `--dry-run` as well, which then records what the real sync would do without doing it.
 
 ## Skipped Records

@@ -35,5 +35,6 @@ export function createSyncContext(
         processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
+        rememberedAnswers: {},
     };
 }

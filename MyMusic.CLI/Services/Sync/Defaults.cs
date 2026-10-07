@@ -109,25 +109,49 @@ public class CliKeepAwake : IKeepAwake
 
 public class CliUserPrompt(ITerminal terminal) : IUserPrompt
 {
-    public async Task<ConflictResolution> PromptConflictResolutionAsync(string filePath, IReadOnlyList<ConflictResolution> choices, CancellationToken ct = default)
+    private const string AllSuffix = "all";
+
+    public async Task<PromptAnswer<ConflictResolution>> PromptConflictResolutionAsync(string filePath, IReadOnlyList<ConflictResolution> choices, CancellationToken ct = default)
     {
         var names = string.Join(", ", choices.Select(c => c.ToString().ToLowerInvariant()));
         var keys = string.Join("/", choices.Select(c => c.ToString().ToLowerInvariant()[0]));
-        var answer = await terminal.AskAsync($"Conflict detected for '{filePath}'. Choose one of: {names} [{keys}]: ", ct);
-        var resolution = answer?.Trim().ToLowerInvariant() switch
+        var answer = await terminal.AskAsync(
+            $"Conflict detected for '{filePath}'. Choose one of: {names} [{keys}] (add \"all\" to answer every remaining conflict, \"none\" skips them all): ", ct);
+        var response = answer?.Trim().ToLowerInvariant() ?? "";
+
+        if (response is "none")
         {
-            "u" or "upload" => ConflictResolution.Upload,
-            "d" or "download" => ConflictResolution.Download,
-            _ => ConflictResolution.Skip
+            return new PromptAnswer<ConflictResolution>(ConflictResolution.Skip, ApplyToAll: true);
+        }
+
+        // "u all", "upload all" and "ua" all answer every remaining conflict
+        var applyToAll = response.EndsWith(AllSuffix) || response is "ua" or "da" or "sa";
+        var choice = applyToAll && response.EndsWith(AllSuffix) ? response[..^AllSuffix.Length].TrimEnd() : response;
+        var resolution = choice switch
+        {
+            "u" or "ua" or "upload" => ConflictResolution.Upload,
+            "d" or "da" or "download" => ConflictResolution.Download,
+            "s" or "sa" or "skip" => ConflictResolution.Skip,
+            _ => (ConflictResolution?)null,
         };
-        return choices.Contains(resolution) ? resolution : ConflictResolution.Skip;
+
+        // An answer that is not one of the choices skips this conflict only: it is never taken for the others
+        return resolution is { } chosen && choices.Contains(chosen)
+            ? new PromptAnswer<ConflictResolution>(chosen, applyToAll)
+            : ConflictResolution.Skip;
     }
 
-    public async Task<bool> ConfirmDeletionAsync(string filePath, CancellationToken ct = default)
+    public async Task<PromptAnswer<bool>> ConfirmDeletionAsync(string filePath, CancellationToken ct = default)
     {
-        var answer = await terminal.AskAsync($"Delete '{filePath}'? [y/N]: ", ct);
-        var response = answer?.Trim().ToLowerInvariant();
-        return response == "y" || response == "yes";
+        var answer = await terminal.AskAsync($"Delete '{filePath}'? [y]es, [n]o, [a]ll, n[o]ne: ", ct);
+
+        return answer?.Trim().ToLowerInvariant() switch
+        {
+            "y" or "yes" => true,
+            "a" or "all" => new PromptAnswer<bool>(true, ApplyToAll: true),
+            "o" or "none" => new PromptAnswer<bool>(false, ApplyToAll: true),
+            _ => false,
+        };
     }
 }
 

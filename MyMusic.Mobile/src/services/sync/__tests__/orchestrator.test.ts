@@ -102,8 +102,8 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
     };
 
     const mockUserPrompt: IUserPrompt = {
-        promptConflictResolution: jest.fn().mockResolvedValue('upload'),
-        confirmDeletion: jest.fn().mockResolvedValue(true),
+        promptConflictResolution: jest.fn().mockResolvedValue({value: 'upload', applyToAll: false}),
+        confirmDeletion: jest.fn().mockResolvedValue({value: true, applyToAll: false}),
     };
 
     return {

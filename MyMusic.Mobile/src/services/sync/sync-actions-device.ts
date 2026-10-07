@@ -213,6 +213,20 @@ async function downloadAndAck(
     }
 }
 
+/** Whether the user lets a local file be deleted: the answer given for every deletion, or the one given now. */
+async function confirmDeletion(userPrompt: IUserPrompt, ctx: SyncContext, path: string): Promise<boolean> {
+    if (ctx.rememberedAnswers.deletion !== undefined) {
+        return ctx.rememberedAnswers.deletion;
+    }
+
+    const answer = await userPrompt.confirmDeletion(path);
+    if (answer.applyToAll) {
+        ctx.rememberedAnswers.deletion = answer.value;
+    }
+
+    return answer.value;
+}
+
 export async function actionDeleteLocal(
     apiClient: ISyncApiClient,
     fileOps: IFileOps,
@@ -240,7 +254,7 @@ export async function actionDeleteLocal(
     const baseReason = reason ?? 'Server-initiated removal';
 
     if (!ctx.options.autoConfirm && !ctx.options.dryRun) {
-        const confirmed = await userPrompt.confirmDeletion(path);
+        const confirmed = await confirmDeletion(userPrompt, ctx, path);
         if (!confirmed) {
             console.log('Deletion declined by user:', path);
             return reportFailure(apiClient, ctx, recordId, path, songId, 'Deletion declined by user', baseReason);
@@ -565,7 +579,7 @@ export async function actionConflict(
                             ctx.result.error++;
                             ctx.result.conflict++;
                         } else {
-                            const resolution = await userPrompt.promptConflictResolution(record.filePath, conflictChoices(ctx));
+                            const resolution = await chooseConflictResolution(userPrompt, ctx, record.filePath);
                             if (resolution === 'download') {
                                 downloadRecordIds.push(record.id);
                             } else if (resolution === 'upload') {
@@ -602,6 +616,20 @@ export async function actionConflict(
     }
 
     return { records: allRecords, counts: aggregatedCounts };
+}
+
+/** The resolution of a real conflict: the user's answer, asked once when given for every conflict. */
+async function chooseConflictResolution(userPrompt: IUserPrompt, ctx: SyncContext, filePath: string): Promise<ConflictResolution> {
+    if (ctx.rememberedAnswers.conflict !== undefined) {
+        return ctx.rememberedAnswers.conflict;
+    }
+
+    const answer = await userPrompt.promptConflictResolution(filePath, conflictChoices(ctx));
+    if (answer.applyToAll) {
+        ctx.rememberedAnswers.conflict = answer.value;
+    }
+
+    return answer.value;
 }
 
 /** The choices the user has for a real conflict: a direction that never changes one side cannot pick it. */

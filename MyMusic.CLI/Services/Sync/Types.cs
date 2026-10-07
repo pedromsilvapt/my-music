@@ -38,6 +38,15 @@ public enum ConflictResolution
     Skip
 }
 
+/// <summary>
+/// What the user answered to a question, and whether the answer also stands for every remaining question
+/// of the same kind in this sync.
+/// </summary>
+public record PromptAnswer<T>(T Value, bool ApplyToAll = false)
+{
+    public static implicit operator PromptAnswer<T>(T value) => new(value);
+}
+
 public record SyncOptions
 {
     public bool Force { get; init; }

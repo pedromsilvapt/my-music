@@ -160,6 +160,8 @@ The choice is asked in a dry run too, and creates the same records. Resolving a 
 
 How the question is asked is up to each client. The CLI prompts, or takes the answer for every conflict from `--conflicts`; the mobile app shows a dialog, unless "Treat Conflicts as Errors" is on.
 
+An answer can be given for every remaining conflict of the session, which are then not asked. The same goes for the confirmation asked before a `DeleteLocal` deletes a file: "all" deletes every remaining file, "none" keeps them all (each declined deletion is reported as an `Error`, so the next sync asks again). The client only remembers such an answer until the session ends.
+
 ### Why Checksums Are Not the Primary Signal
 
 Checksums are reliable but expensive — they require reading the entire file. We use them only when timestamps indicate a potential conflict, not as the first-line change detection mechanism. This keeps the common case (no conflict) fast while still providing correct resolution when needed.

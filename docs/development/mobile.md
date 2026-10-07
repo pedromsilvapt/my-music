@@ -160,11 +160,16 @@ The Skipped slot counts files whose records the server deleted when the session 
 [sync.md](sync.md), "Skipped Records"). The "Record Skipped Files" sync option keeps them; without it, the session
 details hide the Skipped filter of a completed session, as there is nothing to list.
 
-## Conflict Prompt
+## Conflict and Deletion Prompts
 
 When a sync finds a real conflict (see "Resolving a Real Conflict" in [sync.md](sync.md)), `createDefaultUserPrompt`
 (`services/sync/defaults.ts`) shows a dialog with the choices the sync direction allows: Upload, Download and Skip.
-The dialog is shown in a dry run as well. With "Treat Conflicts as Errors" on, nothing is asked and every conflict is
+The dialog is shown in a dry run as well.
+
+The question is put in the sync store (`pendingPrompt`) and `SyncPromptDialog`, rendered by the sync progress screen,
+answers it. The deletion confirmation (asked without "Auto Confirm Deletions") uses the same dialog. Its "Apply to
+all remaining" checkbox makes the answer stand for the rest of the sync: `ctx.rememberedAnswers` keeps it, and the
+actions stop asking. A native `Alert` is not used because Android shows at most three buttons. With "Treat Conflicts as Errors" on, nothing is asked and every conflict is
 left unresolved. `actionConflict` (`services/sync/sync-actions-device.ts`) applies the answer: downloads are sent to the
 server in one `conflict-choices` request per check chunk, uploads go through `actionUpdateRemote` with the id of the
 conflict they resolve.

@@ -1,6 +1,5 @@
 import { Directory, File } from 'expo-file-system';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { Alert } from 'react-native';
 import {
     acknowledgeAction,
     checkSync,
@@ -187,34 +186,16 @@ export function createDefaultKeepAwake(): IKeepAwake {
     };
 }
 
+/** Asks through the dialog of the sync progress screen (`SyncPromptDialog`), which answers the question in the store. */
 export function createDefaultUserPrompt(): IUserPrompt {
     return {
-        promptConflictResolution: async (filePath: string, choices: ConflictResolution[]) => {
-            return new Promise((resolve) => {
-                Alert.alert(
-                    'Conflict Detected',
-                    `The file "${filePath}" has been modified both locally and on the server. What would you like to do?`,
-                    [
-                        ...(choices.includes('upload') ? [{ text: 'Upload', onPress: () => resolve('upload') }] : []),
-                        ...(choices.includes('download') ? [{ text: 'Download', onPress: () => resolve('download') }] : []),
-                        { text: 'Skip', style: 'destructive' as const, onPress: () => resolve('skip') },
-                    ],
-                    { cancelable: false }
-                );
-            });
-        },
-        confirmDeletion: async (filePath: string) => {
-            return new Promise((resolve) => {
-                Alert.alert(
-                    'Delete File?',
-                    `Do you want to delete "${filePath}"?`,
-                    [
-                        { text: 'Skip', style: 'cancel', onPress: () => resolve(false) },
-                        { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
-                    ],
-                    { cancelable: false }
-                );
-            });
-        },
+        promptConflictResolution: (filePath: string, choices: ConflictResolution[]) =>
+            new Promise((resolve) => {
+                useSyncStore.getState().showPrompt({ kind: 'conflict', filePath, choices, answer: resolve });
+            }),
+        confirmDeletion: (filePath: string) =>
+            new Promise((resolve) => {
+                useSyncStore.getState().showPrompt({ kind: 'deletion', filePath, answer: resolve });
+            }),
     };
 }

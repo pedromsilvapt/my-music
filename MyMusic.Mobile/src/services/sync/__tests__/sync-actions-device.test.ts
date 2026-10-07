@@ -44,8 +44,8 @@ function createMockFileOps(overrides: Partial<IFileOps> = {}): IFileOps {
 
 function createMockUserPrompt(overrides: Partial<IUserPrompt> = {}): IUserPrompt {
     return {
-        promptConflictResolution: jest.fn().mockResolvedValue('upload'),
-        confirmDeletion: jest.fn().mockResolvedValue(true),
+        promptConflictResolution: jest.fn().mockResolvedValue({value: 'upload', applyToAll: false}),
+        confirmDeletion: jest.fn().mockResolvedValue({value: true, applyToAll: false}),
         ...overrides,
     } as unknown as IUserPrompt;
 }
@@ -77,6 +77,7 @@ function createContext(overrides: Partial<SyncContext> = {}): SyncContext {
         processedFiles: 0,
         uploadedPaths: new Set(),
         conflictedPaths: new Set(),
+        rememberedAnswers: {},
         ...overrides,
     };
 }
@@ -527,7 +528,7 @@ describe('actionDeleteLocal', () => {
             fileExists: jest.fn().mockReturnValue(true),
         });
         const userPrompt = createMockUserPrompt({
-            confirmDeletion: jest.fn().mockResolvedValue(true),
+            confirmDeletion: jest.fn().mockResolvedValue({value: true, applyToAll: false}),
         });
         const ctx = createContext();
 
@@ -551,7 +552,7 @@ describe('actionDeleteLocal', () => {
             fileExists: jest.fn().mockReturnValue(true),
         });
         const userPrompt = createMockUserPrompt({
-            confirmDeletion: jest.fn().mockResolvedValue(false),
+            confirmDeletion: jest.fn().mockResolvedValue({value: false, applyToAll: false}),
         });
         const ctx = createContext({sessionId: 7});
 
@@ -563,6 +564,57 @@ describe('actionDeleteLocal', () => {
         expect(fileOps.deleteFile).not.toHaveBeenCalled();
         expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 7, expect.objectContaining({recordId: 42, filePath: 'song.mp3', songId: 3}));
         expect(apiClient.acknowledgeAction).not.toHaveBeenCalled();
+    });
+
+    test.each([
+        ['all', true],
+        ['none', false],
+    ])('an answer for %s is not asked again for the next files', async (_name, confirmed) => {
+        // "All" deletes every remaining file, "none" keeps them all (each one reported as declined)
+        const apiClient = createMockApiClient({
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
+            reportSyncError: jest.fn().mockResolvedValue({counts: {...ZERO_COUNTS, errorCount: 1}}),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+        });
+        const userPrompt = createMockUserPrompt({
+            confirmDeletion: jest.fn().mockResolvedValue({value: confirmed, applyToAll: true}),
+        });
+        const ctx = createContext({sessionId: 7});
+
+        const first = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'first.mp3', '/music', 3, 41);
+        const second = await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'second.mp3', '/music', 4, 42);
+
+        expect(userPrompt.confirmDeletion).toHaveBeenCalledTimes(1);
+        expect(userPrompt.confirmDeletion).toHaveBeenCalledWith('first.mp3');
+        expect(first?.action).toBe(confirmed ? 'DeleteLocal' : 'Error');
+        expect(second?.action).toBe(confirmed ? 'DeleteLocal' : 'Error');
+        if (confirmed) {
+            expect(fileOps.deleteFile).toHaveBeenCalledWith('/music/second.mp3');
+        } else {
+            expect(fileOps.deleteFile).not.toHaveBeenCalled();
+            expect(second?.errorMessage).toBe('Deletion declined by user');
+            expect(apiClient.reportSyncError).toHaveBeenCalledWith(1, 7, expect.objectContaining({recordId: 42, filePath: 'second.mp3', songId: 4}));
+        }
+    });
+
+    test('an answer for one file is asked again for the next', async () => {
+        const apiClient = createMockApiClient({
+            acknowledgeAction: jest.fn().mockResolvedValue({success: true, counts: {...ZERO_COUNTS, deleteLocalCount: 1}}),
+        });
+        const fileOps = createMockFileOps({
+            fileExists: jest.fn().mockReturnValue(true),
+        });
+        const userPrompt = createMockUserPrompt({
+            confirmDeletion: jest.fn().mockResolvedValue({value: true, applyToAll: false}),
+        });
+        const ctx = createContext();
+
+        await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'first.mp3', '/music', 1, 1);
+        await actionDeleteLocal(apiClient, fileOps, userPrompt, ctx, 'second.mp3', '/music', 2, 2);
+
+        expect(userPrompt.confirmDeletion).toHaveBeenCalledTimes(2);
     });
 
     test('dry-run does not prompt', async () => {
@@ -950,7 +1002,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('upload'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'upload', applyToAll: false}),
         });
         const ctx = createContext();
         const modifiedAt = new Date('2024-06-01T10:00:00Z');
@@ -978,7 +1030,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('upload'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'upload', applyToAll: false}),
         });
         const ctx = createContext();
 
@@ -997,7 +1049,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('upload'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'upload', applyToAll: false}),
         });
         const ctx = createContext();
 
@@ -1007,6 +1059,27 @@ describe('actionConflict', () => {
         expect(result.counts?.errorCount).toBe(1);
         expect(ctx.result.error).toBe(0);
         expect(ctx.uploadedPaths.has('song.mp3')).toBe(false);
+    });
+
+    test('an answer for all conflicts is not asked again for the next ones', async () => {
+        const otherConflict = { ...realConflict, id: 3, filePath: 'other.mp3', songId: 43 };
+        const apiClient = createMockApiClient({
+            resolveConflicts: jest.fn().mockResolvedValue({ records: [realConflict, otherConflict], counts: {...ZERO_COUNTS, conflictCount: 2} }),
+            chooseConflicts: jest.fn().mockResolvedValue({ records: [], counts: {...ZERO_COUNTS, updateLocalCount: 2, conflictCount: -2} }),
+        });
+        const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
+        const userPrompt = createMockUserPrompt({
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'download', applyToAll: true}),
+        });
+        const ctx = createContext();
+        const conflicts = [...conflictRecords, { ...conflictRecords[0], id: 99, filePath: 'other.mp3', songId: 43 }];
+
+        await actionConflict(apiClient, fileOps, userPrompt, ctx, conflicts, [], new Set<string>(), jest.fn());
+
+        // Only the first conflict asks, and both are downloaded
+        expect(userPrompt.promptConflictResolution).toHaveBeenCalledTimes(1);
+        expect(userPrompt.promptConflictResolution).toHaveBeenCalledWith('song.mp3', ['upload', 'download', 'skip']);
+        expect(apiClient.chooseConflicts).toHaveBeenCalledWith(1, 1, { downloadRecordIds: [1, 3] });
     });
 
     test('user prompt for download asks the server for the records resolving the conflicts', async () => {
@@ -1019,7 +1092,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('download'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'download', applyToAll: false}),
         });
         const ctx = createContext();
         const conflicts = [...conflictRecords, { ...conflictRecords[0], id: 99, filePath: 'other.mp3', songId: 43 }];
@@ -1045,7 +1118,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('skip'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'skip', applyToAll: false}),
         });
         const ctx = createContext();
         ctx.options.direction = direction;
@@ -1062,7 +1135,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('download'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'download', applyToAll: false}),
         });
         const ctx = createContext();
         ctx.options.dryRun = true;
@@ -1083,7 +1156,7 @@ describe('actionConflict', () => {
         });
         const fileOps = createMockFileOps({ fileExists: jest.fn().mockReturnValue(true) });
         const userPrompt = createMockUserPrompt({
-            promptConflictResolution: jest.fn().mockResolvedValue('skip'),
+            promptConflictResolution: jest.fn().mockResolvedValue({value: 'skip', applyToAll: false}),
         });
         const ctx = createContext();
         const toUpdatePaths = new Set<string>();

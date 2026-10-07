@@ -421,6 +421,47 @@ public class SyncActionsDeviceTests
         await AssertFailureReported(recordId: 42, path: "test.mp3", songId: 3);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ActionDeleteLocalAsync_AnswerForAll_DoesNotAskForTheNextFiles(bool confirmed)
+    {
+        // "All" deletes every remaining file, "none" keeps them all (each one reported as declined)
+        var device = CreateDevice();
+
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        _userPrompt.ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new PromptAnswer<bool>(confirmed, ApplyToAll: true));
+
+        var first = await device.ActionDeleteLocalAsync(1, 7, "/music", 3, "first.mp3", dryRun: false, autoConfirm: false, recordId: 41);
+        var second = await device.ActionDeleteLocalAsync(1, 7, "/music", 4, "second.mp3", dryRun: false, autoConfirm: false, recordId: 42);
+
+        await _userPrompt.Received(1).ConfirmDeletionAsync("first.mp3", Arg.Any<CancellationToken>());
+        await _userPrompt.DidNotReceive().ConfirmDeletionAsync("second.mp3", Arg.Any<CancellationToken>());
+        first!.Action.ShouldBe(confirmed ? "DeleteLocal" : "Error");
+        second!.Action.ShouldBe(confirmed ? "DeleteLocal" : "Error");
+        await _fileOps.Received(confirmed ? 1 : 0).DeleteFileAsync("/music/second.mp3", Arg.Any<CancellationToken>());
+        if (!confirmed)
+        {
+            second.ErrorMessage.ShouldBe("Deletion declined by user");
+            await AssertFailureReported(recordId: 42, path: "second.mp3", songId: 4);
+        }
+    }
+
+    [Fact]
+    public async Task ActionDeleteLocalAsync_AnswerForOneFile_AsksAgainForTheNext()
+    {
+        var device = CreateDevice();
+
+        _fileOps.FileExists(Arg.Any<string>()).Returns(true);
+        _userPrompt.ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+
+        await device.ActionDeleteLocalAsync(1, 1, "/music", 1, "first.mp3", dryRun: false, autoConfirm: false, recordId: 1);
+        await device.ActionDeleteLocalAsync(1, 1, "/music", 2, "second.mp3", dryRun: false, autoConfirm: false, recordId: 2);
+
+        await _userPrompt.Received(2).ConfirmDeletionAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task ActionDeleteLocalAsync_DryRun_DoesNotPrompt()
     {
@@ -999,6 +1040,24 @@ public class SyncActionsDeviceTests
 
         result.Records.ShouldBe([resolvedConflict]);
         result.UploadedPaths.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ActionConflictAsync_AnswerForAll_DoesNotAskForTheNextConflicts()
+    {
+        var device = CreateDevice();
+        SetupRealConflict(CreateResolveRecord(10, "song.mp3", SyncRecordAction.Conflict));
+        _userPrompt.PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>())
+            .Returns(new PromptAnswer<ConflictResolution>(ConflictResolution.Download, ApplyToAll: true));
+        _apiClient.ChooseConflictsAsync(1, 1, Arg.Any<IReadOnlyCollection<long>>(), Arg.Any<CancellationToken>())
+            .Returns(new ResolveConflictsResult { Records = [] });
+
+        // Two rounds of conflicts in the same sync: only the first one asks
+        await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], []);
+        await device.ActionConflictAsync(1, 1, "/music", [CreateResolveRecord(1, "song.mp3", SyncRecordAction.Conflict)], []);
+
+        await _userPrompt.Received(1).PromptConflictResolutionAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<ConflictResolution>>(), Arg.Any<CancellationToken>());
+        await _apiClient.Received(2).ChooseConflictsAsync(1, 1, Arg.Is<IReadOnlyCollection<long>>(ids => ids.SequenceEqual(new long[] { 10 })), Arg.Any<CancellationToken>());
     }
 
     [Theory]

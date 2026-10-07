@@ -2,7 +2,7 @@ import {Ionicons} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
 import React, {useEffect, useState} from 'react';
 import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
-import {Button, ErrorDisplay, ProgressBar} from '../../src/components/ui';
+import {Button, ErrorDisplay, ProgressBar, SyncPromptDialog} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {useTheme} from '../../src/hooks/useTheme';
 import {saveDeviceConfig} from '../../src/services/deviceConfigService';
@@ -304,6 +304,8 @@ export default function SyncProgressScreen() {
                     <Text style={[styles.timerText, {fontSize: fontSize.md, color: colors.textMuted}]}>{formatElapsedTime()}</Text>
                 </View>
             </View>
+
+            <SyncPromptDialog/>
         </View>
     );
 }

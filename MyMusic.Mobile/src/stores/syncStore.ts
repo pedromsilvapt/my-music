@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import type {ScannerType} from '../services/scannerRegistry';
-import type {SyncDirection} from '../services/sync/types';
+import type {ConflictResolution, PromptAnswer, SyncDirection} from '../services/sync/types';
 
 export type SyncPhase = 'idle' | 'scanning' | 'fingerprinting' | 'upload' | 'resolving' | 'server' | 'committing' | 'completing' | 'completed' | 'error';
 
@@ -30,8 +30,23 @@ export interface SyncProgress {
     isCancelled?: boolean;
 }
 
+/** A question the running sync waits on, shown as a dialog over the progress screen. */
+export type SyncPrompt =
+    | {kind: 'deletion'; filePath: string; answer: (answer: PromptAnswer<boolean>) => void}
+    | {kind: 'conflict'; filePath: string; choices: ConflictResolution[]; answer: (answer: PromptAnswer<ConflictResolution>) => void};
+
+/** Answers a question nobody will answer any more, changing nothing: the file is kept, the conflict skipped. */
+function declinePrompt(prompt: SyncPrompt | null) {
+    if (prompt?.kind === 'deletion') {
+        prompt.answer({value: false, applyToAll: false});
+    } else if (prompt?.kind === 'conflict') {
+        prompt.answer({value: 'skip', applyToAll: false});
+    }
+}
+
 interface SyncState {
     progress: SyncProgress;
+    pendingPrompt: SyncPrompt | null;
     isRunning: boolean;
     isCancelled: boolean;
     options: {
@@ -53,6 +68,8 @@ interface SyncState {
     cancelSync: () => void;
     reset: () => void;
     setOptions: (options: Partial<SyncState['options']>) => void;
+    showPrompt: (prompt: SyncPrompt) => void;
+    closePrompt: () => void;
 }
 
 const initialProgress: SyncProgress = {
@@ -79,6 +96,7 @@ const initialProgress: SyncProgress = {
 
 const initialState = {
     progress: initialProgress,
+    pendingPrompt: null,
     isRunning: false,
     isCancelled: false,
     options: {
@@ -93,7 +111,7 @@ const initialState = {
     },
 };
 
-export const useSyncStore = create<SyncState>()((set) => ({
+export const useSyncStore = create<SyncState>()((set, get) => ({
     ...initialState,
 
     startSync: (options) => set((state) => ({
@@ -132,19 +150,31 @@ export const useSyncStore = create<SyncState>()((set) => ({
         },
     })),
 
-    cancelSync: () => set((state) => ({
-        isRunning: false,
-        isCancelled: true,
-        progress: {
-            ...state.progress,
-            phase: 'idle',
+    cancelSync: () => {
+        // The sync only stops once the question it waits on is answered
+        declinePrompt(get().pendingPrompt);
+        set((state) => ({
+            isRunning: false,
             isCancelled: true,
-        },
-    })),
+            pendingPrompt: null,
+            progress: {
+                ...state.progress,
+                phase: 'idle',
+                isCancelled: true,
+            },
+        }));
+    },
 
-    reset: () => set(initialState),
+    reset: () => {
+        declinePrompt(get().pendingPrompt);
+        set(initialState);
+    },
 
     setOptions: (options) => set((state) => ({
         options: {...state.options, ...options},
     })),
+
+    showPrompt: (prompt) => set({pendingPrompt: prompt}),
+
+    closePrompt: () => set({pendingPrompt: null}),
 }));

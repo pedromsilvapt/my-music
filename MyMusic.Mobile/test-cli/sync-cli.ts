@@ -16,9 +16,9 @@ const keepAwake: IKeepAwake = {
 /** Answers every prompt without asking: conflicts with the given resolution (when the direction allows it). */
 function createAutoConfirmPrompt(conflicts: ConflictResolution): IUserPrompt {
     return {
-        promptConflictResolution: async (_filePath: string, choices: ConflictResolution[]): Promise<ConflictResolution> =>
-            choices.includes(conflicts) ? conflicts : 'skip',
-        confirmDeletion: async (_filePath: string): Promise<boolean> => true,
+        promptConflictResolution: async (_filePath: string, choices: ConflictResolution[]) =>
+            ({value: choices.includes(conflicts) ? conflicts : 'skip', applyToAll: false}),
+        confirmDeletion: async (_filePath: string) => ({value: true, applyToAll: false}),
     };
 }
 

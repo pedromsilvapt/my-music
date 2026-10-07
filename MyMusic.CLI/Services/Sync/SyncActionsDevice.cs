@@ -16,6 +16,10 @@ public class SyncActionsDevice(
     // The paths the exclusion rules keep out of the sync: they are not scanned, and no action touches them
     private readonly Lazy<ExclusionMatcher> _exclusions = new(() => new ExclusionMatcher(config.GetExcludePatterns()));
 
+    // The answers the user gave for every remaining question of this sync, so they are not asked again
+    private bool? _deletionForAll;
+    private ConflictResolution? _conflictForAll;
+
     public record ActionResult(
         string Action,
         string FilePath,
@@ -272,7 +276,7 @@ public class SyncActionsDevice(
 
         if (!dryRun && !autoConfirm)
         {
-            var confirmed = await userPrompt.ConfirmDeletionAsync(relativePath, ct);
+            var confirmed = await ConfirmDeletionAsync(relativePath, ct);
             if (!confirmed)
             {
                 logger.LogInformation("Deletion declined by user: {Path}", relativePath);
@@ -604,8 +608,28 @@ public class SyncActionsDevice(
     }
 
     /// <summary>
-    /// The resolution of a real conflict: the one given in the options, or the user's answer. A direction
-    /// that never changes one side cannot pick it, so the conflict is skipped instead.
+    /// Whether the user lets a local file be deleted: the answer given for every deletion, or the one given now.
+    /// </summary>
+    private async Task<bool> ConfirmDeletionAsync(string relativePath, CancellationToken ct)
+    {
+        if (_deletionForAll is { } forAll)
+        {
+            return forAll;
+        }
+
+        var answer = await userPrompt.ConfirmDeletionAsync(relativePath, ct);
+        if (answer.ApplyToAll)
+        {
+            _deletionForAll = answer.Value;
+        }
+
+        return answer.Value;
+    }
+
+    /// <summary>
+    /// The resolution of a real conflict: the one given in the options, or the user's answer (asked once, when
+    /// given for every conflict). A direction that never changes one side cannot pick it, so the conflict is
+    /// skipped instead.
     /// </summary>
     private async Task<ConflictResolution> ChooseConflictResolutionAsync(string filePath, SyncOptions options, CancellationToken ct)
     {
@@ -616,9 +640,19 @@ public class SyncActionsDevice(
             _ => [ConflictResolution.Upload, ConflictResolution.Download, ConflictResolution.Skip],
         };
 
-        var resolution = options.Conflicts ?? await userPrompt.PromptConflictResolutionAsync(filePath, choices, ct);
+        var resolution = options.Conflicts ?? _conflictForAll;
+        if (resolution == null)
+        {
+            var answer = await userPrompt.PromptConflictResolutionAsync(filePath, choices, ct);
+            if (answer.ApplyToAll)
+            {
+                _conflictForAll = answer.Value;
+            }
 
-        return choices.Contains(resolution) ? resolution : ConflictResolution.Skip;
+            resolution = answer.Value;
+        }
+
+        return choices.Contains(resolution.Value) ? resolution.Value : ConflictResolution.Skip;
     }
 
     /// <summary>

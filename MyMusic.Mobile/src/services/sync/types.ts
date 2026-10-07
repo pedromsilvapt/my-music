@@ -31,6 +31,11 @@ export interface SyncContext {
     processedFiles: number;
     uploadedPaths: Set<string>;
     conflictedPaths: Set<string>;
+    /** The answers the user gave for every remaining question of this sync, so they are not asked again. */
+    rememberedAnswers: {
+        deletion?: boolean;
+        conflict?: ConflictResolution;
+    };
     pendingActions?: SyncRecordItem[];
 }
 
@@ -355,8 +360,21 @@ export interface IKeepAwake {
     deactivate: () => void;
 }
 
+/**
+ * What the user answered to a question, and whether the answer also stands for every remaining question
+ * of the same kind in this sync.
+ */
+export interface PromptAnswer<T> {
+    value: T;
+    applyToAll: boolean;
+}
+
 export interface IUserPrompt {
-    /** Asks what to do with a real conflict. Only the given choices can be answered. */
-    promptConflictResolution: (filePath: string, choices: ConflictResolution[]) => Promise<ConflictResolution>;
-    confirmDeletion: (filePath: string) => Promise<boolean>;
+    /**
+     * Asks what to do with a real conflict. Only the given choices can be answered. The answer can be given
+     * for every remaining conflict of the sync.
+     */
+    promptConflictResolution: (filePath: string, choices: ConflictResolution[]) => Promise<PromptAnswer<ConflictResolution>>;
+    /** Asks whether to delete a local file. The answer can be given for every remaining deletion of the sync. */
+    confirmDeletion: (filePath: string) => Promise<PromptAnswer<boolean>>;
 }
