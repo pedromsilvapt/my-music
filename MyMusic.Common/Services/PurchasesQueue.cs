@@ -8,6 +8,8 @@ using MyMusic.Common.Metadata;
 using MyMusic.Common.Models;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services.BackgroundJobs;
+using MyMusic.Common.Services.Songs;
+using MyMusic.Common.Sources;
 using MyMusic.Common.Targets;
 using MyMusic.Common.Utilities;
 
@@ -149,16 +151,23 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
         }
     }
 
-    internal class PurchasesExecutor(
+    public class PurchasesExecutor(
         MusicDbContext db,
         IMusicService musicService,
         ISourcesService sourcesService,
         IFileSystem fileSystem,
+        ISongFileReplaceService songFileReplace,
         MusicImportJob importJob)
     {
         public async Task ExecuteAsync(PurchasedSong purchase, CancellationToken cancellationToken)
         {
             var source = await sourcesService.GetSourceClientAsync(purchase.SourceId, cancellationToken);
+
+            if (purchase.ReplacesSongFile)
+            {
+                await ReplaceSongFileAsync(source, purchase, cancellationToken);
+                return;
+            }
 
             var sourceSong = await source.GetSongAsync(purchase.ExternalId, cancellationToken);
             var metadata = SourcesConverter.ToSong(sourceSong);
@@ -206,6 +215,40 @@ public class PurchasesQueue(IServiceScopeFactory serviceScopeFactory)
             finally
             {
                 File.Delete(tempTarget.FilePath);
+            }
+        }
+
+        /// <summary>
+        /// Purchases the song to use its audio only, in the place of the audio of the purchase's song. Nothing the
+        /// source knows about the purchased song is kept.
+        /// </summary>
+        private async Task ReplaceSongFileAsync(ISource source, PurchasedSong purchase,
+            CancellationToken cancellationToken)
+        {
+            if (purchase.SongId is not { } songId)
+            {
+                throw new InvalidOperationException("The song to replace the audio of no longer exists");
+            }
+
+            await using var stream = await source.PurchaseSongAsync(purchase.ExternalId, cancellationToken);
+
+            var tempDirectory = fileSystem.Path.Combine(fileSystem.Path.GetTempPath(),
+                $"mymusic_purchase_{Guid.NewGuid()}");
+            fileSystem.Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var tempTarget = new FileTarget(fileSystem)
+                {
+                    FilePath = fileSystem.Path.Combine(tempDirectory, "purchase.mp3"),
+                };
+                await tempTarget.Save(stream, cancellationToken: cancellationToken);
+
+                await songFileReplace.ReplaceAsync(purchase.UserId, songId, tempTarget.FilePath, cancellationToken);
+            }
+            finally
+            {
+                fileSystem.Directory.Delete(tempDirectory, true);
             }
         }
     }

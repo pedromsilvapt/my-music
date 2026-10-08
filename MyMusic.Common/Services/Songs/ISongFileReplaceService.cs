@@ -13,12 +13,14 @@ public interface ISongFileReplaceService
     /// audio changes. The song's devices are marked to download it again.
     /// When the new file has another format, the song's file and its copies on the devices change extension.
     /// </summary>
-    /// <param name="songId">The ID of the song, which must belong to the current user.</param>
+    /// <param name="userId">The ID of the user replacing the file.</param>
+    /// <param name="songId">The ID of the song, which must belong to the user.</param>
     /// <param name="sourceFilePath">
     /// The new file, outside the music repository. Its tags are rewritten in place, and it is left where it is.
     /// </param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The updated song.</returns>
     /// <exception cref="ValidationException">The file is not a song file that can be imported.</exception>
-    Task<Song> ReplaceAsync(long songId, string sourceFilePath, CancellationToken cancellationToken = default);
+    Task<Song> ReplaceAsync(long userId, long songId, string sourceFilePath,
+        CancellationToken cancellationToken = default);
 }

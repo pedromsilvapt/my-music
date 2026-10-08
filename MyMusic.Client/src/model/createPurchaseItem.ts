@@ -28,6 +28,7 @@ export interface CreatePurchaseItem {
      * @pattern ^-?(?:0|[1-9]\d*)$
      */
   songId?: number | null;
+  replacesSongFile: boolean;
   /** @nullable */
   errorMessage: string | null;
   createdAt: string;

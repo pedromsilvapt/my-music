@@ -1201,7 +1201,7 @@ export default function SongEditorContextModal({
                         <IconSearch/>
                     </ActionIcon>
                     {currentState && (
-                        <SongToolsMenu songId={currentState.song.id} disabled={isLoading}/>
+                        <SongToolsMenu song={currentState.song} disabled={isLoading}/>
                     )}
                 </Group>
                 <Group gap="xs">

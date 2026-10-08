@@ -14,7 +14,6 @@ namespace MyMusic.Common.Services.Songs;
 /// </summary>
 public class SongFileReplaceService(
     MusicDbContext db,
-    ICurrentUser currentUser,
     IFileSystem fileSystem,
     IAdvisoryLockService advisoryLockService,
     IFileTransactionService fileTransactions,
@@ -26,10 +25,9 @@ public class SongFileReplaceService(
     private static readonly string[] SupportedExtensions = [".mp3", ".m4a"];
 
     /// <inheritdoc />
-    public async Task<Song> ReplaceAsync(long songId, string sourceFilePath,
+    public async Task<Song> ReplaceAsync(long userId, long songId, string sourceFilePath,
         CancellationToken cancellationToken = default)
     {
-        var userId = currentUser.Id;
         var extension = fileSystem.Path.GetExtension(sourceFilePath).ToLowerInvariant();
 
         if (!SupportedExtensions.Contains(extension))

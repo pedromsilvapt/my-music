@@ -10,6 +10,7 @@ import {ZINDEX_DRAWER, ZINDEX_MODAL} from "../../consts.ts";
 import PurchasesQueue from "./purchases-queue.tsx";
 import usePurchasedSongsQuery from "./usePurchasedSongsQuery.tsx";
 import {useAutoDownload} from "./use-auto-download.ts";
+import {useReplacedSongsRefresh} from "./use-replaced-songs-refresh.ts";
 
 export type PurchasesQueueIndicatorProps = object;
 
@@ -19,6 +20,7 @@ export default function PurchasesQueueIndicator() {
     const queryClient = useQueryClient();
 
     useAutoDownload();
+    useReplacedSongsRefresh();
 
     const handleOpen = useCallback(() => {
         queryClient.invalidateQueries({queryKey: getGetCurrentUserQueryKey()});

@@ -6,6 +6,7 @@ import {
     IconLoader,
     IconMusic,
     IconRefresh,
+    IconReplace,
     IconShoppingBagX,
     IconX
 } from "@tabler/icons-react";
@@ -53,7 +54,7 @@ export function usePurchasedSongsSchema(
             {
                 name: 'status',
                 displayName: t("purchases:schema.columns.status"),
-                render: row => getStatusBadge(row.status, t),
+                render: row => <>{getStatusBadge(row.status, t)}{getReplacesAudioBadge(row, t)}</>,
                 width: '200px',
                 align: 'center',
             }
@@ -107,10 +108,22 @@ export function usePurchasedSongsSchema(
         renderListSubTitle: (row) => <>
             <Text c="gray">{row.subTitle}</Text>
             {getStatusBadge(row.status, t)}
+            {getReplacesAudioBadge(row, t)}
         </>,
     }) as CollectionSchema<ListPurchaseItem>, [onRequeue, onDownload, onClear, t]);
 }
 
+
+// Tells apart the purchases that give an existing song its audio from the ones that add a song
+const getReplacesAudioBadge = (purchase: ListPurchaseItem, t: TFunction<["purchases", "common"]>) => {
+    if (!purchase.replacesSongFile) return null;
+
+    return (
+        <Badge color="grape" variant="light" leftSection={<IconReplace size={14}/>} size="md" ml={6}>
+            {t("purchases:schema.replacesAudio")}
+        </Badge>
+    );
+};
 
 // Helper function to get status badge
 const getStatusBadge = (status: PurchasedSongStatus, t: TFunction<["purchases", "common"]>) => {

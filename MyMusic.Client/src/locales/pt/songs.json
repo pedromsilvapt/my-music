@@ -90,6 +90,17 @@
             "replace": "Substituir",
             "saved": "O áudio da música foi substituído.",
             "failed": "Falha ao substituir o áudio da música: {{error}}"
+        },
+        "purchaseSong": {
+            "label": "Comprar Música",
+            "title": "Comprar Música",
+            "searchPlaceholder": "Pesquisar nas fontes a música a comprar...",
+            "purchase": "Comprar",
+            "warning": "O áudio desta música é substituído pelo da música que comprar, e não pode ser recuperado. A música mantém os seus metadados: os da música comprada são descartados.",
+            "confirmTitle": "Comprar e substituir o áudio?",
+            "confirmMessage": "\"{{title}}\" de {{artists}} será comprada em {{source}}, e o seu áudio substituirá o de \"{{song}}\". Esta ação não pode ser anulada.",
+            "queued": "A compra foi adicionada à fila. O áudio da música é substituído quando esta terminar.",
+            "failed": "Falha ao comprar a música: {{error}}"
         }
     },
     "import": {

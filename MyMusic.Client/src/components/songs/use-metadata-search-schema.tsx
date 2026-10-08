@@ -1,4 +1,4 @@
-import {IconCheck, IconMusic} from "@tabler/icons-react";
+import {IconMusic} from "@tabler/icons-react";
 import {useMemo} from "react";
 import {useTranslation} from "react-i18next";
 import type {SearchMetadataResult} from "../../model";
@@ -9,8 +9,15 @@ import {sepBy} from "../common/sep-by";
 
 export type MetadataSearchItem = SearchMetadataResult & { id: string };
 
+/** What can be done with a song found in the sources. */
+export interface MetadataSearchAction {
+    icon: React.ReactNode;
+    label: string;
+}
+
 export function useMetadataSearchSchema(
     onApply: (result: MetadataSearchItem) => void,
+    action: MetadataSearchAction,
 ): CollectionSchema<MetadataSearchItem> {
     const {t} = useTranslation(["songs", "common"]);
     return useMemo(() => ({
@@ -92,8 +99,8 @@ export function useMetadataSearchSchema(
             {
                 name: "apply",
                 primary: true,
-                renderIcon: () => <IconCheck size={16}/>,
-                renderLabel: () => t("songs:metadataSearch.apply"),
+                renderIcon: () => action.icon,
+                renderLabel: () => action.label,
                 onClick: (items: MetadataSearchItem[]) => {
                     if (items.length > 0) {
                         onApply(items[0]!);
@@ -101,5 +108,5 @@ export function useMetadataSearchSchema(
                 },
             },
         ],
-    }), [onApply, t]);
+    }), [onApply, action, t]);
 }

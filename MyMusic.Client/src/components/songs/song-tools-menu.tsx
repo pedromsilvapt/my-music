@@ -1,13 +1,15 @@
 import {ActionIcon, Menu} from "@mantine/core";
-import {IconClock, IconHash, IconTool, IconUpload} from "@tabler/icons-react";
+import {IconClock, IconHash, IconShoppingBag, IconTool, IconUpload} from "@tabler/icons-react";
 import {useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useRecalculateSongChecksumWithNotifications} from "../../hooks/use-recalculate-song-checksum.ts";
+import type {GetSongResponseSong} from "../../model/getSongResponseSong";
 import SongFileUploadModal from "./song-file-upload-modal.tsx";
+import SongPurchaseModal from "./song-purchase-modal.tsx";
 import SongTimestampsModal from "./song-timestamps-modal.tsx";
 
 interface SongToolsMenuProps {
-    songId: number;
+    song: GetSongResponseSong;
     disabled?: boolean;
 }
 
@@ -15,11 +17,13 @@ interface SongToolsMenuProps {
  * Toolbox of maintenance commands to run on a song. Each tool reports its outcome in a notification: some run
  * in the background right away, others ask for input in a dialog first.
  */
-export default function SongToolsMenu({songId, disabled}: SongToolsMenuProps) {
+export default function SongToolsMenu({song, disabled}: SongToolsMenuProps) {
+    const songId = song.id;
     const {t} = useTranslation(["songs", "common"]);
     const {recalculate, isPending: isRecalculatePending} = useRecalculateSongChecksumWithNotifications();
     const [timestampsOpened, setTimestampsOpened] = useState(false);
     const [uploadOpened, setUploadOpened] = useState(false);
+    const [purchaseOpened, setPurchaseOpened] = useState(false);
 
     return (
         <>
@@ -58,6 +62,13 @@ export default function SongToolsMenu({songId, disabled}: SongToolsMenuProps) {
                     >
                         {t("songs:tools.uploadSong.label")}
                     </Menu.Item>
+                    <Menu.Item
+                        leftSection={<IconShoppingBag size={16}/>}
+                        onClick={() => setPurchaseOpened(true)}
+                        data-testid="song-tool-purchase-song"
+                    >
+                        {t("songs:tools.purchaseSong.label")}
+                    </Menu.Item>
                 </Menu.Dropdown>
             </Menu>
             <SongTimestampsModal
@@ -69,6 +80,11 @@ export default function SongToolsMenu({songId, disabled}: SongToolsMenuProps) {
                 opened={uploadOpened}
                 onClose={() => setUploadOpened(false)}
                 songId={songId}
+            />
+            <SongPurchaseModal
+                opened={purchaseOpened}
+                onClose={() => setPurchaseOpened(false)}
+                song={song}
             />
         </>
     );

@@ -986,7 +986,8 @@ public class SongsController(
                 await file.CopyToAsync(stream, cancellationToken);
             }
 
-            var song = await songFileReplaceService.ReplaceAsync(id, tempFilePath, cancellationToken);
+            var song = await songFileReplaceService.ReplaceAsync(currentUser.Id, id, tempFilePath,
+                cancellationToken);
 
             return ReplaceSongFileResponse.FromEntity(song);
         }

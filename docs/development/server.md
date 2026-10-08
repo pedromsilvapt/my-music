@@ -438,6 +438,12 @@ The "Upload Song" tool of the edit song modal (`POST /songs/{id}/file`, `SongFil
 - **Another format changes the extension**: the file takes the new extension in the repository, and each copy on a device gets a `RequestedPath` with it, so the pending download renames the device's file on the next sync (see [sync.md](sync.md)). Copies marked for removal are left alone.
 - **All or nothing**: the file changes go through an `IFileTransaction`, so a failure puts the original file back.
 
+The "Purchase Song" tool does the same with a song purchased from a source, in place of an uploaded file:
+
+- **A purchase that targets a song**: `POST /purchases/create/{sourceId}/{songId}?replaceSongId=` (`PurchaseCreateService`) queues a `PurchasedSong` with `ReplacesSongFile` set, and `SongId` already pointing at the song to replace the audio of (on any other purchase, `SongId` is only set once the purchased song is imported).
+- **Replaced by the purchases queue**: `PurchasesQueue.PurchasesExecutor` hands the purchased file to `SongFileReplaceService`, so nothing is imported, the source's metadata is not even fetched, and the `ImportOnPurchase` devices are left alone. A failure leaves the song as it was and the purchase `Failed`, to be requeued.
+- **No current user in the queue**: `ISongFileReplaceService.ReplaceAsync` takes the user id as a parameter, because `ICurrentUser` only knows the user of an HTTP request.
+
 ## Dependencies
 
 NuGet versions are managed centrally in the root `Directory.Packages.props`. To add or bump a package, set its `<PackageVersion>` there and reference it from the `.csproj` without a `Version` attribute.

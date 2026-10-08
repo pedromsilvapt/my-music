@@ -63,6 +63,7 @@ export * from './createPlaylistItem';
 export * from './createPlaylistRequest';
 export * from './createPlaylistResponse';
 export * from './createPurchaseItem';
+export * from './createPurchaseParams';
 export * from './createPurchaseResponse';
 export * from './createQueueRequest';
 export * from './createQueueResponse';

@@ -29,6 +29,12 @@ public record PurchasedSongDto
 
     public long? SongId { get; set; }
 
+    /// <summary>
+    /// Whether the purchased file replaces the audio of the song <see cref="SongId"/>, instead of being imported as a
+    /// new song.
+    /// </summary>
+    public required bool ReplacesSongFile { get; set; }
+
     public required string? ErrorMessage { get; set; }
 
     public required DateTime CreatedAt { get; set; }

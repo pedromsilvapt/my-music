@@ -17,19 +17,19 @@ public class SongFileReplaceServiceSpecs
     private const string M4aUploadPath = "/uploads/new.m4a";
 
     private readonly Scenario _scenario = new();
-    private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
+    private long _userId;
     private readonly Album _album;
     private readonly Device _device;
 
     public SongFileReplaceServiceSpecs()
     {
-        _currentUser.Id.Returns(_scenario.AdminUser.Id);
+        _userId = _scenario.AdminUser.Id;
         _album = _scenario.CreateAlbum("Album", _scenario.CreateArtist("Artist"));
         _device = _scenario.CreateDevice("Phone");
     }
 
     private SongFileReplaceService CreateService(ISongFileUpdateService? songFileUpdate = null) =>
-        new(_scenario.DbContext, _currentUser, _scenario.FileSystem, _scenario.AdvisoryLocks,
+        new(_scenario.DbContext, _scenario.FileSystem, _scenario.AdvisoryLocks,
             _scenario.FileTransactions, songFileUpdate ?? _scenario.CreateSongFileUpdateService(),
             new SyncPathResolver(), Substitute.For<ILogger<SongFileReplaceService>>());
 
@@ -72,7 +72,7 @@ public class SongFileReplaceServiceSpecs
         WriteUpload();
 
         // Act
-        await CreateService().ReplaceAsync(song.Id, UploadPath);
+        await CreateService().ReplaceAsync(_userId, song.Id, UploadPath);
 
         // Assert
         var reloaded = _scenario.LoadSong(song.Id);
@@ -105,7 +105,7 @@ public class SongFileReplaceServiceSpecs
         WriteUpload();
 
         // Act
-        await CreateService().ReplaceAsync(song.Id, UploadPath);
+        await CreateService().ReplaceAsync(_userId, song.Id, UploadPath);
 
         // Assert
         using var file = OpenFile(_scenario.LoadSong(song.Id).RepositoryPath);
@@ -123,7 +123,7 @@ public class SongFileReplaceServiceSpecs
         var uploadedAudio = ReadAudio(UploadPath);
 
         // Act
-        var result = await CreateService().ReplaceAsync(song.Id, UploadPath);
+        var result = await CreateService().ReplaceAsync(_userId, song.Id, UploadPath);
 
         // Assert
         var reloaded = _scenario.LoadSong(song.Id);
@@ -167,7 +167,7 @@ public class SongFileReplaceServiceSpecs
         MockMusicFile.CreateM4a(_scenario.FileSystem, M4aUploadPath);
 
         // Act
-        await CreateService().ReplaceAsync(song.Id, M4aUploadPath);
+        await CreateService().ReplaceAsync(_userId, song.Id, M4aUploadPath);
 
         // Assert
         var reloaded = _scenario.LoadSong(song.Id);
@@ -211,7 +211,7 @@ public class SongFileReplaceServiceSpecs
         MockMusicFile.CreateM4a(_scenario.FileSystem, M4aUploadPath);
 
         // Act
-        await CreateService().ReplaceAsync(song.Id, M4aUploadPath);
+        await CreateService().ReplaceAsync(_userId, song.Id, M4aUploadPath);
 
         // Assert
         _scenario.LoadSong(song.Id).Devices.ShouldHaveSingleItem().RequestedPath.ShouldBe("/music/Song (2).m4a");
@@ -227,7 +227,7 @@ public class SongFileReplaceServiceSpecs
         _scenario.FileSystem.File.Copy(UploadPath, "/uploads/new.ogg");
 
         // Act & Assert
-        await Should.ThrowAsync<ValidationException>(() => CreateService().ReplaceAsync(song.Id, "/uploads/new.ogg"));
+        await Should.ThrowAsync<ValidationException>(() => CreateService().ReplaceAsync(_userId, song.Id, "/uploads/new.ogg"));
         _scenario.ShouldHaveUnchangedSongs([song], filesBefore);
     }
 
@@ -241,7 +241,7 @@ public class SongFileReplaceServiceSpecs
         _scenario.FileSystem.File.WriteAllText(UploadPath, "This is not an audio file");
 
         // Act & Assert
-        await Should.ThrowAsync<ValidationException>(() => CreateService().ReplaceAsync(song.Id, UploadPath));
+        await Should.ThrowAsync<ValidationException>(() => CreateService().ReplaceAsync(_userId, song.Id, UploadPath));
         _scenario.ShouldHaveUnchangedSongs([song], filesBefore);
     }
 
@@ -256,7 +256,7 @@ public class SongFileReplaceServiceSpecs
             new FailingSongFileUpdateService(_scenario.CreateSongFileUpdateService(), song.Id));
 
         // Act & Assert
-        await Should.ThrowAsync<IOException>(() => service.ReplaceAsync(song.Id, UploadPath));
+        await Should.ThrowAsync<IOException>(() => service.ReplaceAsync(_userId, song.Id, UploadPath));
         _scenario.ShouldHaveUnchangedSongs([song], filesBefore);
     }
 
@@ -267,10 +267,10 @@ public class SongFileReplaceServiceSpecs
         var song = await _scenario.CreateSyncedSongAsync("Song", _album, _device);
         var filesBefore = _scenario.ReadMusicFiles();
         WriteUpload();
-        _currentUser.Id.Returns(_scenario.CreateUser("Other", "other").Id);
+        _userId = _scenario.CreateUser("Other", "other").Id;
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(() => CreateService().ReplaceAsync(song.Id, UploadPath));
+        await Should.ThrowAsync<InvalidOperationException>(() => CreateService().ReplaceAsync(_userId, song.Id, UploadPath));
         _scenario.ShouldHaveUnchangedSongs([song], filesBefore);
     }
 
@@ -281,6 +281,6 @@ public class SongFileReplaceServiceSpecs
         WriteUpload();
 
         // Act & Assert
-        await Should.ThrowAsync<InvalidOperationException>(() => CreateService().ReplaceAsync(123456, UploadPath));
+        await Should.ThrowAsync<InvalidOperationException>(() => CreateService().ReplaceAsync(_userId, 123456, UploadPath));
     }
 }

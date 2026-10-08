@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MyMusic.Common;
 using MyMusic.Common.Entities;
 using MyMusic.Common.Services;
+using MyMusic.Common.Services.Purchases;
 using MyMusic.Server.DTO.Purchases;
 
 namespace MyMusic.Server.Controllers;
@@ -11,8 +12,7 @@ namespace MyMusic.Server.Controllers;
 [Route("purchases")]
 public class PurchasesController(
     ILogger<PurchasesController> logger,
-    ICurrentUser currentUser,
-    ISourcesService sourcesService) : ControllerBase
+    ICurrentUser currentUser) : ControllerBase
 {
     private readonly ILogger<PurchasesController> _logger = logger;
 
@@ -32,41 +32,21 @@ public class PurchasesController(
     }
 
     [HttpPost("create/{sourceId}/{songId}", Name = "CreatePurchase")]
-    public async Task<CreatePurchaseResponse> Create(
-        [FromServices] MusicDbContext db,
+    public async Task<ActionResult<CreatePurchaseResponse>> Create(
+        [FromServices] IPurchaseCreateService purchaseCreateService,
         [FromServices] PurchasesQueue purchasesQueue,
         [FromRoute] long sourceId,
         [FromRoute] string songId,
-        CancellationToken cancellationToken)
+        [FromQuery] long? replaceSongId = null,
+        CancellationToken cancellationToken = default)
     {
-        await using var dbTrans = await db.Database.BeginTransactionAsync(cancellationToken);
+        var purchasedSong =
+            await purchaseCreateService.CreateAsync(sourceId, songId, replaceSongId, cancellationToken);
 
-        var source = await sourcesService.GetSourceClientAsync(sourceId, cancellationToken);
-
-        var sourceSong = await source.GetSongAsync(songId, cancellationToken);
-
-        var artists = string.Join(", ", sourceSong.Artists.Select(a => a.Name));
-        var album = sourceSong.Album.Name;
-
-        var purchasedSong = new PurchasedSong
+        if (purchasedSong == null)
         {
-            ExternalId = songId,
-            CreatedAt = DateTime.UtcNow,
-            SourceId = sourceId,
-            Cover = sourceSong.Cover?.Normal ?? sourceSong.Cover?.Smallest,
-            Title = sourceSong.Title,
-            SubTitle = sourceSong.Year != null
-                ? $"{artists} • {album} • {sourceSong.Year.Value}"
-                : $"{artists} • {album}",
-            Status = PurchasedSongStatus.Queued,
-            Progress = 0,
-            UserId = currentUser.Id,
-        };
-
-        await db.PurchasedSongs.AddAsync(purchasedSong, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-
-        await dbTrans.CommitAsync(cancellationToken);
+            return NotFound($"Song not found with id {replaceSongId}");
+        }
 
         await purchasesQueue.Scheduler.TryScheduleTasksAsync();
 

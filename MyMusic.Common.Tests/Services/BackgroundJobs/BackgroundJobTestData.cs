@@ -25,7 +25,8 @@ internal static class BackgroundJobTestData
         PurchasedSongStatus status,
         string title = "Song",
         string? errorMessage = null,
-        DateTime? createdAt = null)
+        DateTime? createdAt = null,
+        Song? replacesFileOf = null)
     {
         var purchase = new PurchasedSong
         {
@@ -38,6 +39,8 @@ internal static class BackgroundJobTestData
             Progress = status == PurchasedSongStatus.Queued ? 0 : 100,
             ErrorMessage = errorMessage,
             CreatedAt = createdAt ?? DateTime.UtcNow,
+            SongId = replacesFileOf?.Id,
+            ReplacesSongFile = replacesFileOf != null,
         };
 
         scenario.DbContext.PurchasedSongs.Add(purchase);

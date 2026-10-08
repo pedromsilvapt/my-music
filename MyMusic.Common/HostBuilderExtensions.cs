@@ -13,6 +13,7 @@ using MyMusic.Common.Services.BackgroundJobs;
 using MyMusic.Common.Services.Devices;
 using MyMusic.Common.Services.Playlists;
 using MyMusic.Common.Services.PlaylistSongs;
+using MyMusic.Common.Services.Purchases;
 using MyMusic.Common.Services.SongHistory;
 using MyMusic.Common.Services.Songs;
 using MyMusic.Common.Services.Sync;
@@ -77,6 +78,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISourcesService, SourcesService>();
         builder.Services.AddScoped<IWishlistService, WishlistService>();
         builder.Services.AddScoped<IPurchasesSearchService, PurchasesSearchService>();
+        builder.Services.AddScoped<IPurchaseCreateService, PurchaseCreateService>();
         builder.Services.AddScoped<IPlaylistSongSkipService, PlaylistSongSkipService>();
 
         // Delete services

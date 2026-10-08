@@ -23,7 +23,8 @@
             "acquiring": "A Adquirir",
             "completed": "Concluída",
             "failed": "Falhou"
-        }
+        },
+        "replacesAudio": "Substitui o áudio"
     },
     "page": {
         "fetchFailed": "Falha ao obter as compras"

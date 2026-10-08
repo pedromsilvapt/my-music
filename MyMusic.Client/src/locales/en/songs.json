@@ -90,6 +90,17 @@
             "replace": "Replace",
             "saved": "The song's audio has been replaced.",
             "failed": "Failed to replace the song's audio: {{error}}"
+        },
+        "purchaseSong": {
+            "label": "Purchase Song",
+            "title": "Purchase Song",
+            "searchPlaceholder": "Search the sources for the song to purchase...",
+            "purchase": "Purchase",
+            "warning": "The audio of this song is replaced by the one of the song you purchase, and cannot be restored. The song keeps its metadata: the one of the purchased song is discarded.",
+            "confirmTitle": "Purchase and replace the audio?",
+            "confirmMessage": "\"{{title}}\" by {{artists}} will be purchased from {{source}}, and its audio will replace the one of \"{{song}}\". This cannot be undone.",
+            "queued": "The purchase was added to the queue. The song's audio is replaced once it completes.",
+            "failed": "Failed to purchase the song: {{error}}"
         }
     },
     "import": {
