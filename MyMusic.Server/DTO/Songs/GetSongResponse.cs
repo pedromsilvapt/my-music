@@ -34,6 +34,9 @@ public record GetSongResponseSong
     public required bool IsShared { get; set; }
     public required DateTime ModifiedAt { get; init; }
 
+    /// <summary>When the song's file last changed; null when it was never recorded.</summary>
+    public DateTime? FileModifiedAt { get; init; }
+
     /// <summary>
     /// True when the song still has history changes queued for processing. Clients can
     /// subscribe to <c>GET /songs/{id}/history/events</c> to be notified when they are processed.
@@ -72,6 +75,7 @@ public record GetSongResponseSong
             Track = song.Track,
             IsShared = song.OwnerId != currentUserId,
             ModifiedAt = song.ModifiedAt,
+            FileModifiedAt = song.FileModifiedAt,
             HasPendingHistory = hasPendingHistory,
         };
 }

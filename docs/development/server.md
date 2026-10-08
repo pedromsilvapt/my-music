@@ -421,6 +421,14 @@ Resolving a soundalike group (`SoundalikeResolutionService`) gives each song oth
 - **Tree, not flattened**: rows are never updated, copied or deleted. Merging A into B, then B into C, leaves two rows (A→B, B→C); `merged_songs` of C lists only B. Walk `song_merges` recursively for the full lineage. `merged_song_id` is unique, since a song is merged away only once.
 - **Flush first in `SongMergeService`**: the worker uses the first snapshot queued in a transaction as the revision's "before" state. The merge re-points the merged song's artists, genres and devices with `UPDATE song_id`, which queues nothing, so the `SongMerge` row is saved before those steps: its insert trigger snapshots the kept song while it is still untouched, and the gained artists/genres land in the merge's revision.
 
+### Song timestamps
+
+The "Change Timestamps" tool of the edit song modal (`PUT /songs/{id}/timestamps`, `SongTimestampsUpdateService`) sets a song's `CreatedAt`, `ModifiedAt`, `AddedAt` and `FileModifiedAt` to values chosen by the user.
+
+- **Stored as given**: this is the one place where `ModifiedAt` is not set to the current time on a change, otherwise it could not be chosen. `AddedAt` and `FileModifiedAt` can be cleared (null).
+- **Nothing else changes**: the file, the checksum and the song's devices are left alone. The change is still a new revision in the song's history.
+- **`FileModifiedAt` drives sync**: sync compares it with each device's `LastSyncedModifiedAt`, so moving it forward makes the devices see the song as changed on the server (see [sync.md](sync.md)).
+
 ## Dependencies
 
 NuGet versions are managed centrally in the root `Directory.Packages.props`. To add or bump a package, set its `<PackageVersion>` there and reference it from the `.csproj` without a `Version` attribute.

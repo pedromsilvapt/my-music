@@ -59,6 +59,8 @@ import type {
   UpdateSongDevicesResponse,
   UpdateSongRequest,
   UpdateSongResponse,
+  UpdateSongTimestampsRequest,
+  UpdateSongTimestampsResponse,
   UploadSongBody,
   UploadSongResponse
 } from '../model';
@@ -2284,6 +2286,106 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       const backupQueryClient = useQueryClient();
       return useMutation(getRecalculateSongChecksumMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
     }
+    export type updateSongTimestampsResponse200TextPlain = {
+  data: UpdateSongTimestampsResponse
+  status: 200
+}
+
+export type updateSongTimestampsResponse200ApplicationJson = {
+  data: UpdateSongTimestampsResponse
+  status: 200
+}
+
+export type updateSongTimestampsResponse200TextJson = {
+  data: UpdateSongTimestampsResponse
+  status: 200
+}
+
+export type updateSongTimestampsResponseSuccess = (updateSongTimestampsResponse200TextPlain | updateSongTimestampsResponse200ApplicationJson | updateSongTimestampsResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type updateSongTimestampsResponse = (updateSongTimestampsResponseSuccess)
+
+export const getUpdateSongTimestampsUrl = (id: number,) => {
+
+
+
+
+  return `/api/songs/${id}/timestamps`
+}
+
+export const updateSongTimestamps = async (id: number,
+    updateSongTimestampsRequest: UpdateSongTimestampsRequest, options?: RequestInit): Promise<updateSongTimestampsResponse> => {
+
+  const res = await fetch(getUpdateSongTimestampsUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateSongTimestampsRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateSongTimestampsResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as updateSongTimestampsResponse
+}
+
+
+
+
+export const getUpdateSongTimestampsMutationOptions = <TError = unknown,
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSongTimestamps>>, TError,{id: number;data: UpdateSongTimestampsRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSongTimestamps>>, TError,{id: number;data: UpdateSongTimestampsRequest}, TContext> => {
+
+const mutationKey = ['updateSongTimestamps'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSongTimestamps>>, {id: number;data: UpdateSongTimestampsRequest}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSongTimestamps(id,data,fetchOptions)
+        }
+
+  const onSuccess = (data: Awaited<ReturnType<typeof updateSongTimestamps>>, variables: {id: number;data: UpdateSongTimestampsRequest}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: getListSongsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ['sources'] });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
+
+
+
+
+  return  { ...mutationOptions, mutationFn, onSuccess }}
+
+    export type UpdateSongTimestampsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSongTimestamps>>>
+    export type UpdateSongTimestampsMutationBody = UpdateSongTimestampsRequest
+    export type UpdateSongTimestampsMutationError = unknown
+
+    export const useUpdateSongTimestamps = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSongTimestamps>>, TError,{id: number;data: UpdateSongTimestampsRequest}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateSongTimestamps>>,
+        TError,
+        {id: number;data: UpdateSongTimestampsRequest},
+        TContext
+      > => {
+      const backupQueryClient = useQueryClient();
+      return useMutation(getUpdateSongTimestampsMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
+    }
     export type fetchSongMetadataResponse200TextPlain = {
   data: FetchMetadataResponse
   status: 200
@@ -2491,7 +2593,7 @@ export const getGetLocalSongResponseGetSongResponseCoverMock = (overrideResponse
 
 export const getGetLocalSongResponseGetSongResponseAlbumArtistMock = (overrideResponse: Partial<GetSongResponseAlbumArtist> = {}): GetSongResponseAlbumArtist => ({...{id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})}, ...overrideResponse});
 
-export const getGetLocalSongResponseMock = (overrideResponse: Partial<Extract<GetSongResponse, object>> = {}): GetSongResponse => (faker.helpers.arrayElement([{song: {id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), coverDetails: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseCoverMock()},]), undefined]), title: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), artist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseAlbumArtistMock()},]), undefined])}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songDeviceId: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), syncAction: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), hasLyrics: faker.datatype.boolean(), size: faker.number.int(), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.float({fractionDigits: 2}), null]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), isShared: faker.datatype.boolean(), modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', hasPendingHistory: faker.datatype.boolean()}, ...overrideResponse}, {song: {id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), coverDetails: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseCoverMock()},]), undefined]), title: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), artist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseAlbumArtistMock()},]), undefined])}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songDeviceId: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), syncAction: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), hasLyrics: faker.datatype.boolean(), size: faker.number.int(), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.float({fractionDigits: 2}), null]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), isShared: faker.datatype.boolean(), modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', hasPendingHistory: faker.datatype.boolean()}, ...overrideResponse}, {song: {id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), coverDetails: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseCoverMock()},]), undefined]), title: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), artist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseAlbumArtistMock()},]), undefined])}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songDeviceId: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), syncAction: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), hasLyrics: faker.datatype.boolean(), size: faker.number.int(), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.float({fractionDigits: 2}), null]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), isShared: faker.datatype.boolean(), modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', hasPendingHistory: faker.datatype.boolean()}, ...overrideResponse}]))
+export const getGetLocalSongResponseMock = (overrideResponse: Partial<Extract<GetSongResponse, object>> = {}): GetSongResponse => (faker.helpers.arrayElement([{song: {id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), coverDetails: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseCoverMock()},]), undefined]), title: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), artist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseAlbumArtistMock()},]), undefined])}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songDeviceId: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), syncAction: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), hasLyrics: faker.datatype.boolean(), size: faker.number.int(), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.float({fractionDigits: 2}), null]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), isShared: faker.datatype.boolean(), modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), hasPendingHistory: faker.datatype.boolean()}, ...overrideResponse}, {song: {id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), coverDetails: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseCoverMock()},]), undefined]), title: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), artist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseAlbumArtistMock()},]), undefined])}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songDeviceId: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), syncAction: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), hasLyrics: faker.datatype.boolean(), size: faker.number.int(), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.float({fractionDigits: 2}), null]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), isShared: faker.datatype.boolean(), modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), hasPendingHistory: faker.datatype.boolean()}, ...overrideResponse}, {song: {id: faker.number.int(), cover: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), coverDetails: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseCoverMock()},]), undefined]), title: faker.string.alpha({length: {min: 10, max: 20}}), label: faker.string.alpha({length: {min: 10, max: 20}}), artists: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), album: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), artist: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getGetLocalSongResponseGetSongResponseAlbumArtistMock()},]), undefined])}, genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), devices: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), songDeviceId: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), syncAction: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), year: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), null]), duration: faker.string.alpha({length: {min: 10, max: 20}}), isFavorite: faker.datatype.boolean(), isExplicit: faker.datatype.boolean(), hasLyrics: faker.datatype.boolean(), size: faker.number.int(), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), lyrics: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), rating: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.float({fractionDigits: 2}), null]), undefined]), repositoryPath: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), track: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), isShared: faker.datatype.boolean(), modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), hasPendingHistory: faker.datatype.boolean()}, ...overrideResponse}]))
 
 export const getUpdateSongResponseUpdateSongAlbumArtistMock = (overrideResponse: Partial<UpdateSongAlbumArtist> = {}): UpdateSongAlbumArtist => ({...{id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})}, ...overrideResponse});
 
@@ -2520,6 +2622,8 @@ export const getAutocompleteArtistsResponseMock = (overrideResponse: Partial<Ext
 export const getAutocompleteGenresResponseMock = (overrideResponse: Partial<Extract<AutocompleteGenresResponse, object>> = {}): AutocompleteGenresResponse => (faker.helpers.arrayElement([{genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), ...overrideResponse}, {genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), ...overrideResponse}, {genres: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}})})), ...overrideResponse}]))
 
 export const getRecalculateSongChecksumResponseMock = (overrideResponse: Partial<Extract<RecalculateSongChecksumResponse, object>> = {}): RecalculateSongChecksumResponse => (faker.helpers.arrayElement([{changed: faker.datatype.boolean(), ...overrideResponse}, {changed: faker.datatype.boolean(), ...overrideResponse}, {changed: faker.datatype.boolean(), ...overrideResponse}]))
+
+export const getUpdateSongTimestampsResponseMock = (overrideResponse: Partial<Extract<UpdateSongTimestampsResponse, object>> = {}): UpdateSongTimestampsResponse => (faker.helpers.arrayElement([{createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), ...overrideResponse}, {createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), ...overrideResponse}, {createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), ...overrideResponse}]))
 
 export const getFetchSongMetadataResponseSongMetadataFieldOfstringMock = (overrideResponse: Partial<SongMetadataFieldOfstring> = {}): SongMetadataFieldOfstring => ({...{old: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), null]), new: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), null])}, ...overrideResponse});
 
@@ -2770,6 +2874,18 @@ export const getRecalculateSongChecksumMockHandler = (overrideResponse?: Recalcu
   }, options)
 }
 
+export const getUpdateSongTimestampsMockHandler = (overrideResponse?: UpdateSongTimestampsResponse | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<UpdateSongTimestampsResponse> | UpdateSongTimestampsResponse), options?: RequestHandlerOptions) => {
+  return http.put('*/songs/:id/timestamps', async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getUpdateSongTimestampsResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
 export const getFetchSongMetadataMockHandler = (overrideResponse?: FetchMetadataResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<FetchMetadataResponse> | FetchMetadataResponse), options?: RequestHandlerOptions) => {
   return http.post('*/songs/:id/fetch-metadata', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
 
@@ -2813,6 +2929,7 @@ export const getSongsMock = () => [
   getAutocompleteArtistsMockHandler(),
   getAutocompleteGenresMockHandler(),
   getRecalculateSongChecksumMockHandler(),
+  getUpdateSongTimestampsMockHandler(),
   getFetchSongMetadataMockHandler(),
   getBatchMultiUpdateSongsMockHandler()
 ]

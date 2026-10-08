@@ -941,6 +941,25 @@ public class SongsController(
         return new RecalculateSongChecksumResponse { Changed = result.Changed };
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot run tools on the owner's song.
+    [HttpPut("{id:long}/timestamps", Name = "UpdateSongTimestamps")]
+    public async Task<UpdateSongTimestampsResponse> UpdateTimestamps(
+        long id,
+        [FromBody] UpdateSongTimestampsRequest request,
+        [FromServices] ISongTimestampsUpdateService songTimestampsUpdateService,
+        CancellationToken cancellationToken)
+    {
+        var song = await songTimestampsUpdateService.UpdateAsync(id, new SongTimestampsUpdate
+        {
+            CreatedAt = request.CreatedAt,
+            ModifiedAt = request.ModifiedAt,
+            AddedAt = request.AddedAt,
+            FileModifiedAt = request.FileModifiedAt,
+        }, cancellationToken);
+
+        return UpdateSongTimestampsResponse.FromEntity(song);
+    }
+
     // Owner-only by design — sharing is read-only. Recipients cannot trigger metadata fetch on the owner's song.
     [HttpPost("{id:long}/fetch-metadata", Name = "FetchSongMetadata")]
     public async Task<ActionResult<FetchMetadataResponse>> FetchMetadata(

@@ -95,6 +95,22 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         await Root.Page.GetByTestId("song-tool-recalculate-checksum").ClickAsync();
     }
 
+    /// <summary>
+    /// Opens the "Change Timestamps" tool from the tools menu and returns its dialog, once it shows the song's
+    /// timestamps.
+    /// </summary>
+    public async Task<SongTimestampsModalComponent> OpenChangeTimestampsAsync()
+    {
+        await Root.GetByTestId("edit-song-tools").ClickAsync();
+
+        // The menu and the tool's dialog are rendered in portals, outside the edit dialog
+        await Root.Page.GetByTestId("song-tool-change-timestamps").ClickAsync();
+
+        var timestampsModal = new SongTimestampsModalComponent(Root.Page.GetByTestId("song-timestamps-modal"));
+        await timestampsModal.WaitForLoadedAsync();
+        return timestampsModal;
+    }
+
     public async Task SaveAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();

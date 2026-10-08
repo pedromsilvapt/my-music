@@ -367,6 +367,8 @@ export * from './updateSongGenre';
 export * from './updateSongItem';
 export * from './updateSongRequest';
 export * from './updateSongResponse';
+export * from './updateSongTimestampsRequest';
+export * from './updateSongTimestampsResponse';
 export * from './updateSoundalikeSelectionRequest';
 export * from './updateSoundalikeSelectionRequestSecondaryActions';
 export * from './updateSourceData';

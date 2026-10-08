@@ -54,7 +54,7 @@ module.exports = {
                             invalidates: ['listSongs', 'getSong'],
                         },
                         {
-                            onMutations: ['updateSong', 'batchUpdateSongs', 'batchMultiUpdateSongs', 'recalculateSongChecksum'],
+                            onMutations: ['updateSong', 'batchUpdateSongs', 'batchMultiUpdateSongs', 'recalculateSongChecksum', 'updateSongTimestamps'],
                             invalidates: ['listSongs', 'getSong'],
                         },
                         {

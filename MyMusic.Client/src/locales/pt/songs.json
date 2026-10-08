@@ -67,6 +67,19 @@
             "unchanged": "Nada mudou, o checksum já estava atualizado.",
             "changed": "Alteração aplicada, o checksum foi atualizado.",
             "failed": "Falha ao recalcular o checksum: {{error}}"
+        },
+        "changeTimestamps": {
+            "label": "Alterar Datas",
+            "title": "Alterar Datas",
+            "fields": {
+                "createdAt": "Criada em",
+                "modifiedAt": "Modificada em",
+                "addedAt": "Adicionada em",
+                "fileModifiedAt": "Ficheiro modificado em"
+            },
+            "setNow": "Agora",
+            "saved": "As datas foram atualizadas.",
+            "failed": "Falha ao atualizar as datas: {{error}}"
         }
     },
     "import": {
