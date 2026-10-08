@@ -37,12 +37,23 @@ public class SyncPendingActionsService(
 
         var session = await sessionLookup.FindSessionAsync(db, sessionId, deviceId, ownerId, cancellationToken);
 
-        var records = await CreatePendingActionsForDevice(deviceId, session?.NamingTemplate ?? device.NamingTemplate, sessionId, cancellationToken);
+        var namingTemplate = session?.NamingTemplate ?? device.NamingTemplate;
 
         // In `up` the device never processes server actions, so the requested paths stay pending
-        if (session != null && session.Direction != SyncDirection.Up)
+        var renamesRequestedPaths = session != null && session.Direction != SyncDirection.Up;
+        var records = new List<DeviceSyncSessionRecord>();
+
+        // The files at a path typed for another song go first: their rename frees it for that song
+        if (renamesRequestedPaths)
         {
-            records.AddRange(await CreateRequestedRenamesForDevice(deviceId, session.NamingTemplate ?? device.NamingTemplate, sessionId, cancellationToken));
+            records.AddRange(await CreateRequestedRenamesForDevice(deviceId, namingTemplate, sessionId, vacating: true, cancellationToken));
+        }
+
+        records.AddRange(await CreatePendingActionsForDevice(deviceId, namingTemplate, sessionId, cancellationToken));
+
+        if (renamesRequestedPaths)
+        {
+            records.AddRange(await CreateRequestedRenamesForDevice(deviceId, namingTemplate, sessionId, vacating: false, cancellationToken));
         }
 
         logger.LogInformation("Created {Count} pending action records for device {DeviceId}", records.Count, deviceId);
@@ -176,12 +187,14 @@ public class SyncPendingActionsService(
     /// Creates the <c>Rename</c> records that move the files of unchanged songs to the paths the user typed
     /// for them (<see cref="SongDevice.RequestedPath"/>). Only files the device reported in this session
     /// and that were left untouched (<c>Skipped</c>) are renamed: a SongDevice with a pending action takes
-    /// its requested path through that action instead.
+    /// its requested path through that action instead. <paramref name="vacating"/> selects the files whose
+    /// current path is requested for another SongDevice of the device, or the other ones.
     /// </summary>
     private async Task<List<DeviceSyncSessionRecord>> CreateRequestedRenamesForDevice(
         long deviceId,
         string? namingTemplate,
         long sessionId,
+        bool vacating,
         CancellationToken cancellationToken)
     {
         var songDevices = await db.SongDevices
@@ -191,6 +204,8 @@ public class SyncPendingActionsService(
                 && sd.SyncAction == null
                 && sd.RequestedPath != null
                 && sd.RequestedPath != sd.DevicePath
+                && vacating == db.SongDevices.Any(other => other.DeviceId == deviceId && other.Id != sd.Id
+                    && other.RequestedPath == sd.DevicePath && other.SyncAction != SongSyncAction.Remove)
                 && db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath
                     && r.Action == SyncRecordAction.Skipped)
                 && !db.DeviceSyncSessionRecords.Any(r => r.SessionId == sessionId && r.FilePath == sd.DevicePath

@@ -303,4 +303,104 @@ public abstract partial class SyncTestsBase
         App.FileShouldNotExist(movedPath, "File should have been given the template's name");
         await FileValidator.AssertMetadataAsync(App.GetSongPath(templatePath), year: 2025);
     }
+
+    // Scenario: The path of a deleted song's file can be typed for another song before the file is removed
+    //   Given a song is on the device
+    //   And another song exists on the server without any device association
+    //   When the first song is deleted from the library
+    //   And the user adds the other song to the device, typing the path of the deleted song's file
+    //   And the CLI sync runs
+    //   Then the deleted song's file is removed
+    //   And the other song is downloaded to the typed path
+    //   When the CLI sync runs again
+    //   Then nothing changes
+    [Fact]
+    public async Task Sync_ShouldDownloadToTypedPath_WhenPathIsHeldByDeletedSongFile()
+    {
+        var namingTemplate = "{{ original_folder ?? year }}/{{ title }}{{ extension }}";
+        await App.SetNamingTemplateAsync(namingTemplate);
+
+        // Seed one song on the device and another one only on the server
+        var deletedSong = SongsFixture.DefaultSongs[2]; // Wicker Woman, year 2025
+        var otherSong = SongsFixture.DefaultSongs[1]; // The Alibi, year 2024
+        await ServerSongs.SeedAsync(RequestContext, UserId, [deletedSong with { DeviceIds = [App.DeviceId] }, otherSong]);
+
+        // First sync should download the song that is on the device
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 1);
+        var heldPath = $"{deletedSong.Year}/{deletedSong.Title}.mp3";
+        App.FileShouldExist(heldPath, "Song should be downloaded with year-based path");
+
+        // Delete the song: its file stays on the device until the next sync
+        await new DeleteSongFlow(deletedSong.Title).ExecuteAsync(Page);
+
+        // Add the other song to the device, typing the path the deleted song's file still holds
+        await new ManageSongDevicesFlow(otherSong.Title, App.DeviceName, "Add", path: heldPath).ExecuteAsync(Page);
+
+        // Second sync should remove the deleted song's file and download the other song to its path
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(deleteLocal: 1, createLocal: 1);
+        App.FileShouldExist(heldPath, "Song should be downloaded to the typed path");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(heldPath), title: otherSong.Title);
+        App.FileShouldNotExist($"{otherSong.Year}/{otherSong.Title}.mp3", "Song should not be at the template's path");
+
+        // Third sync should find the song where the server expects it
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(skipped: 1);
+    }
+
+    // Scenario: A song added back to a device is renamed when its path was typed for another song meanwhile
+    //   Given two songs are on the device
+    //   When the user removes the first song from the device
+    //   And the user types the path of the first song's file for the second song
+    //   And the user adds the first song back to the device
+    //   And the CLI sync runs
+    //   Then the first song's file is renamed with a counter
+    //   And the second song's file is renamed to the typed path
+    //   When the CLI sync runs again
+    //   Then nothing changes
+    [Fact]
+    public async Task Sync_ShouldRenameRestoredSong_WhenItsPathWasTypedForAnotherSong()
+    {
+        var namingTemplate = "{{ original_folder ?? year }}/{{ title }}{{ extension }}";
+        await App.SetNamingTemplateAsync(namingTemplate);
+
+        // Seed two songs on the device
+        var restoredSong = SongsFixture.DefaultSongs[2]; // Wicker Woman, year 2025
+        var otherSong = SongsFixture.DefaultSongs[1]; // The Alibi, year 2024
+        await ServerSongs.SeedAsync(RequestContext, UserId,
+            [restoredSong with { DeviceIds = [App.DeviceId] }, otherSong with { DeviceIds = [App.DeviceId] }]);
+
+        // First sync should download both songs
+        var result1 = await App.SyncAsync(new SyncOptions());
+        result1.ShouldBe(createLocal: 2);
+        var heldPath = $"{restoredSong.Year}/{restoredSong.Title}.mp3";
+        var otherPath = $"{otherSong.Year}/{otherSong.Title}.mp3";
+        App.FileShouldExist(heldPath, "Song should be downloaded with year-based path");
+        App.FileShouldExist(otherPath, "Song should be downloaded with year-based path");
+
+        // Remove the first song from the device: its file stays there until the next sync
+        await new ManageSongDevicesFlow(restoredSong.Title, App.DeviceName, "Remove").ExecuteAsync(Page);
+
+        // Type the path of the removed song's file for the other song
+        await new ManageSongDevicesFlow(otherSong.Title, App.DeviceName, action: null, path: heldPath).ExecuteAsync(Page);
+
+        // Add the first song back: its path was given away, so it should get the same path with a counter
+        await new ManageSongDevicesFlow(restoredSong.Title, App.DeviceName, "Add").ExecuteAsync(Page);
+        var renamedPath = $"{restoredSong.Year}/{restoredSong.Title} (2).mp3";
+        await new ValidateSongsInDeviceFlow(restoredSong.Title, App.DeviceName, expectedPath: renamedPath).ExecuteAsync(Page);
+
+        // Second sync should only rename both files: the first one frees the path the other one takes
+        var result2 = await App.SyncAsync(new SyncOptions());
+        result2.ShouldBe(rename: 2, skipped: 2);
+        App.FileShouldExist(renamedPath, "Restored song should be renamed with a counter");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(renamedPath), title: restoredSong.Title);
+        App.FileShouldExist(heldPath, "Other song should be renamed to the typed path");
+        await FileValidator.AssertMetadataAsync(App.GetSongPath(heldPath), title: otherSong.Title);
+        App.FileShouldNotExist(otherPath, "Other song should no longer be at its previous path");
+
+        // Third sync should find both songs where the server expects them
+        var result3 = await App.SyncAsync(new SyncOptions());
+        result3.ShouldBe(skipped: 2);
+    }
 }

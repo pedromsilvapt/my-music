@@ -147,6 +147,10 @@ public class SongDevicesUpdateService(
 
         var usedPaths = await SongDeviceNewPaths.LoadUsedPathsAsync(db, device.Id, cancellationToken);
 
+        // The files of the copies marked for removal are deleted by the next sync, so their paths can be typed
+        // for other songs. They stay in usedPaths: the generated paths keep avoiding them
+        var removedPaths = await SongDeviceNewPaths.LoadRemovedPathsAsync(db, device.Id, cancellationToken);
+
         // The typed paths are taken first, so the generated paths of the other songs are made unique around them
         var songsInOrder = songs.OrderByDescending(s => typedPaths.HasPathOf(s.Id)).ToList();
 
@@ -161,12 +165,15 @@ public class SongDevicesUpdateService(
             {
                 if (include == true)
                 {
-                    string devicePath;
-                    if (songPath != null)
-                    {
-                        devicePath = TakeTypedPath(songPath, song, device, usedPaths);
-                    }
-                    else
+                    // A removed file still holds its path until the next sync, which downloads the song to
+                    // the requested path: until then the song is at a generated one
+                    var typedRemovedPath = songPath != null && removedPaths.Contains(songPath);
+                    var requestedPath = songPath != null
+                        ? TakeTypedPath(songPath, song, device, usedPaths, removedPaths)
+                        : null;
+
+                    var devicePath = requestedPath;
+                    if (devicePath == null || typedRemovedPath)
                     {
                         namingStrategy ??= new TemplateNamingStrategy(
                             device.NamingTemplate ?? config.Value.DefaultNamingTemplate);
@@ -178,7 +185,7 @@ public class SongDevicesUpdateService(
                         SongId = song.Id,
                         DeviceId = device.Id,
                         DevicePath = devicePath,
-                        RequestedPath = songPath != null ? devicePath : null,
+                        RequestedPath = requestedPath,
                         SyncAction = SongSyncAction.Download,
                         SyncActionReason = "Song included on device",
                         AddedAt = DateTime.UtcNow,
@@ -239,6 +246,23 @@ public class SongDevicesUpdateService(
                 {
                     copy.SyncAction = null;
                     copy.SyncActionReason = null;
+
+                    // The path of the copy may have been typed for another song while it was marked for removal
+                    if (!removedPaths.Remove(copy.DevicePath))
+                    {
+                        if (typedPath == copy.DevicePath)
+                        {
+                            throw new ValidationException(
+                                $"Path '{typedPath}' is already used by another song on device '{device.Name}'");
+                        }
+
+                        // The next sync renames the file, unless a path was typed for it
+                        if (typedPath == null)
+                        {
+                            copy.RequestedPath = pathResolver.GetUniquePath(copy.DevicePath, usedPaths);
+                            usedPaths.Add(copy.RequestedPath);
+                        }
+                    }
                 }
 
                 if (typedPath != null)
@@ -249,7 +273,7 @@ public class SongDevicesUpdateService(
                             $"Cannot set the path of song '{song.Title}' on device '{device.Name}': the song is not on it");
                     }
 
-                    ApplyTypedPath(copy, typedPath, song, device, usedPaths);
+                    ApplyTypedPath(copy, typedPath, song, device, usedPaths, removedPaths);
                 }
             }
         }
@@ -259,7 +283,8 @@ public class SongDevicesUpdateService(
     /// Sets the typed path of a song that is on the device. A file the device already holds keeps its
     /// <see cref="SongDevice.DevicePath"/> (where the device reports it) until the next sync renames it.
     /// </summary>
-    private static void ApplyTypedPath(SongDevice songDevice, string typedPath, Song song, Device device, HashSet<string> usedPaths)
+    private static void ApplyTypedPath(
+        SongDevice songDevice, string typedPath, Song song, Device device, HashSet<string> usedPaths, HashSet<string> removedPaths)
     {
         if (typedPath == (songDevice.RequestedPath ?? songDevice.DevicePath))
         {
@@ -278,25 +303,29 @@ public class SongDevicesUpdateService(
             return;
         }
 
-        var neverDownloaded = songDevice is { SyncAction: SongSyncAction.Download, LastSyncedModifiedAt: null };
-        if (neverDownloaded)
+        // A removed file still holds its path until the next sync, so the copy cannot be moved to it yet
+        var movesNow = songDevice is { SyncAction: SongSyncAction.Download, LastSyncedModifiedAt: null }
+                       && !removedPaths.Contains(typedPath);
+        if (movesNow)
         {
             usedPaths.Remove(songDevice.DevicePath);
         }
 
-        var path = TakeTypedPath(typedPath, song, device, usedPaths);
+        var path = TakeTypedPath(typedPath, song, device, usedPaths, removedPaths);
 
         songDevice.RequestedPath = path;
-        if (neverDownloaded)
+        if (movesNow)
         {
             songDevice.DevicePath = path;
         }
     }
 
     /// <summary>
-    /// Validates a typed path and adds it to <paramref name="usedPaths"/>.
+    /// Validates a typed path and adds it to <paramref name="usedPaths"/>. A path in
+    /// <paramref name="removedPaths"/> is taken from them instead: it can be typed once.
     /// </summary>
-    private static string TakeTypedPath(string typedPath, Song song, Device device, HashSet<string> usedPaths)
+    private static string TakeTypedPath(
+        string typedPath, Song song, Device device, HashSet<string> usedPaths, HashSet<string> removedPaths)
     {
         if (typedPath.Length > MaxPathLength)
         {
@@ -315,7 +344,7 @@ public class SongDevicesUpdateService(
             throw new ValidationException($"Path '{typedPath}' must keep the extension '{extension}' of song '{song.Title}'");
         }
 
-        if (!usedPaths.Add(typedPath))
+        if (!usedPaths.Add(typedPath) && !removedPaths.Remove(typedPath))
         {
             throw new ValidationException($"Path '{typedPath}' is already used by another song on device '{device.Name}'");
         }

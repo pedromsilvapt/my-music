@@ -587,6 +587,60 @@ public class SyncPendingActionsServiceSpecs
     }
 
     [Fact]
+    public async Task CreateAsync_RequestedPathHeldByFileWithARequestedPath_NeverDownloadedSong_RenamesTheFileFirst()
+    {
+        // Arrange: the path typed for a song to download is the one of a file that was requested another path
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var holder = scenario.CreateSong("Holder");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        var songDevice = scenario.CreateSongDevice(device, song, "2024/Song.mp3", syncAction: SongSyncAction.Download);
+        songDevice.RequestedPath = "Custom/Song.mp3";
+        CreateSyncedSongDeviceWithRequestedPath(scenario, device, holder, "Custom/Song.mp3", "Custom/Song (2).mp3");
+        scenario.AddRecord(session.Id, "Custom/Song.mp3", SyncRecordAction.Skipped, songId: holder.Id, acknowledged: true);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert: the rename comes first, so the device frees the path before downloading the song to it
+        result!.Records.Count.ShouldBe(2);
+        result.Records[0].Action.ShouldBe(SyncRecordAction.Rename);
+        result.Records[0].SongId.ShouldBe(holder.Id);
+        result.Records[0].FilePath.ShouldBe("Custom/Song (2).mp3");
+        result.Records[1].Action.ShouldBe(SyncRecordAction.CreateLocal);
+        result.Records[1].FilePath.ShouldBe("Custom/Song.mp3");
+    }
+
+    [Fact]
+    public async Task CreateAsync_RequestedPathHeldByFileWithARequestedPath_UnchangedSong_RenamesTheFileFirst()
+    {
+        // Arrange: the song requesting the path of the other file is the older SongDevice
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        var holder = scenario.CreateSong("Holder");
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        CreateSyncedSongDeviceWithRequestedPath(scenario, device, song, "2024/Song.mp3", "Custom/Song.mp3");
+        CreateSyncedSongDeviceWithRequestedPath(scenario, device, holder, "Custom/Song.mp3", "Custom/Song (2).mp3");
+        scenario.AddRecord(session.Id, "2024/Song.mp3", SyncRecordAction.Skipped, songId: song.Id, acknowledged: true);
+        scenario.AddRecord(session.Id, "Custom/Song.mp3", SyncRecordAction.Skipped, songId: holder.Id, acknowledged: true);
+        var service = CreateService(scenario);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result!.Records.Count.ShouldBe(2);
+        result.Records.ShouldAllBe(r => r.Action == SyncRecordAction.Rename);
+        result.Records[0].SongId.ShouldBe(holder.Id);
+        result.Records[0].FilePath.ShouldBe("Custom/Song (2).mp3");
+        result.Records[1].SongId.ShouldBe(song.Id);
+        result.Records[1].FilePath.ShouldBe("Custom/Song.mp3");
+    }
+
+    [Fact]
     public async Task CreateAsync_RequestedPathOfNeverDownloadedSong_CreatesCreateLocalAtRequestedPath()
     {
         // Arrange

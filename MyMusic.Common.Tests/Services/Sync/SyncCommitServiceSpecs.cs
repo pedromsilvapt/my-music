@@ -566,6 +566,49 @@ public class SyncCommitServiceSpecs
     }
 
     [Fact]
+    public async Task CreateLocal_AtPathOfFileDeletedInTheSession_MovesSongDeviceToIt()
+    {
+        // The song is downloaded to the path typed for it, which a deleted song's file held until this session
+        var ctx = SetupWithSongAndRealMusicService();
+        var leftover = ctx.Scenario.CreateSongDevice(ctx.Device, null, "/music/typed.mp3", lastSyncedModifiedAt: DefaultModifiedAt, syncAction: SongSyncAction.Remove);
+        var pending = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/song.mp3", syncAction: SongSyncAction.Download);
+        pending.RequestedPath = "/music/typed.mp3";
+        ctx.Scenario.DbContext.SaveChanges();
+
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/typed.mp3", SyncRecordAction.CreateLocal,
+            data: CreateLocalUpdateData(ctx.Song!.Id, DefaultModifiedAt), songId: ctx.Song.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/typed.mp3", SyncRecordAction.DeleteLocal, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        SongDeviceExists(ctx.Db, leftover.Id).ShouldBeFalse();
+        var downloaded = GetSongDevice(ctx.Db, pending.Id);
+        downloaded.DevicePath.ShouldBe("/music/typed.mp3");
+        downloaded.RequestedPath.ShouldBeNull();
+        downloaded.SyncAction.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task CreateLocal_AtPathOfFileRenamedInTheSession_MovesSongDeviceToIt()
+    {
+        // The file that held the typed path is renamed away by the same session
+        var ctx = SetupWithSongAndRealMusicService();
+        var holderSong = ctx.Scenario.CreateSong("Holder");
+        var holder = ctx.Scenario.CreateSongDevice(ctx.Device, holderSong, "/music/typed.mp3", lastSyncedModifiedAt: DefaultModifiedAt);
+        var pending = ctx.Scenario.CreateSongDevice(ctx.Device, ctx.Song!, "/music/song.mp3", syncAction: SongSyncAction.Download);
+
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/typed (2).mp3", SyncRecordAction.Rename,
+            data: CreateRenameData("/music/typed.mp3", "/music/typed (2).mp3"), songId: holderSong.Id, acknowledged: true);
+        ctx.Scenario.AddRecord(ctx.Session.Id, "/music/typed.mp3", SyncRecordAction.CreateLocal,
+            data: CreateLocalUpdateData(ctx.Song!.Id, DefaultModifiedAt), songId: ctx.Song.Id, acknowledged: true);
+
+        await ctx.Service.CommitAsync(ctx.Db, ctx.Session.Id, ctx.Device.Id, false, cancellationToken: default);
+
+        GetSongDevice(ctx.Db, holder.Id).DevicePath.ShouldBe("/music/typed (2).mp3");
+        GetSongDevice(ctx.Db, pending.Id).DevicePath.ShouldBe("/music/typed.mp3");
+    }
+
+    [Fact]
     public async Task LinkThenUnlink_OfPendingDownloadAtAnotherPath_MovesAssociationToLinkedFile()
     {
         // A renamed local copy of the song is linked by checksum, so the pending download at the

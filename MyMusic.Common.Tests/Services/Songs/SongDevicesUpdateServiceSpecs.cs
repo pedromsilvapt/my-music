@@ -307,6 +307,155 @@ public class SongDevicesUpdateServiceSpecs
     }
 
     [Fact]
+    public async Task UpdateAsync_TypedPathOfDeletedSongFile_NeverDownloadedSong_RequestsThePathAndKeepsItsOwn()
+    {
+        var device = _scenario.CreateDevice();
+        _scenario.CreateSongDevice(device, null, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        _scenario.CreateSongDevice(device, song, "Custom/Song (2).mp3", syncAction: SongSyncAction.Download);
+
+        await UpdateAsync([song], paths: [(song, device, "Custom/Song.mp3")]);
+
+        // The deleted song's file holds the path until the next sync, which downloads the song to it
+        var songDevice = FindSongDevice(song, device).ShouldNotBeNull();
+        songDevice.DevicePath.ShouldBe("Custom/Song (2).mp3");
+        songDevice.RequestedPath.ShouldBe("Custom/Song.mp3");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathOfDeletedSongFile_SyncedSong_RequestsTheRename()
+    {
+        var device = _scenario.CreateDevice();
+        _scenario.CreateSongDevice(device, null, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "2024/Song.mp3");
+
+        await UpdateAsync([song], paths: [(song, device, "Custom/Song.mp3")]);
+
+        var songDevice = FindSongDevice(song, device).ShouldNotBeNull();
+        songDevice.DevicePath.ShouldBe("2024/Song.mp3");
+        songDevice.RequestedPath.ShouldBe("Custom/Song.mp3");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeWithTypedPathOfDeletedSongFile_AddsSongAtTemplatePathRequestingTheTypedOne()
+    {
+        var device = _scenario.CreateDevice();
+        _scenario.CreateSongDevice(device, null, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song", year: 2024);
+
+        await UpdateAsync([song], [(device, true)], [(song, device, "Custom/Song.mp3")]);
+
+        var songDevice = FindSongDevice(song, device).ShouldNotBeNull();
+        songDevice.DevicePath.ShouldBe("2024/Song.mp3");
+        songDevice.RequestedPath.ShouldBe("Custom/Song.mp3");
+        songDevice.SyncAction.ShouldBe(SongSyncAction.Download);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathOfDeletedSongFile_ForTwoSongs_Throws()
+    {
+        var device = _scenario.CreateDevice();
+        _scenario.CreateSongDevice(device, null, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var first = _scenario.CreateSong("First");
+        var firstDevice = CreateSyncedSongDevice(device, first, "2024/First.mp3");
+        firstDevice.RequestedPath = "Custom/Song.mp3";
+        _scenario.DbContext.SaveChanges();
+        var second = _scenario.CreateSong("Second");
+        CreateSyncedSongDevice(device, second, "2024/Second.mp3");
+
+        var exception = await Should.ThrowAsync<ValidationException>(() =>
+            UpdateAsync([second], paths: [(second, device, "Custom/Song.mp3")]));
+
+        exception.Message.ShouldContain("already used");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_TypedPathOfSongMarkedForRemoval_RequestsTheRename()
+    {
+        var device = _scenario.CreateDevice();
+        var removed = _scenario.CreateSong("Removed");
+        _scenario.CreateSongDevice(device, removed, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "2024/Song.mp3");
+
+        await UpdateAsync([song], paths: [(song, device, "Custom/Song.mp3")]);
+
+        FindSongDevice(song, device)!.RequestedPath.ShouldBe("Custom/Song.mp3");
+        FindSongDevice(removed, device)!.SyncAction.ShouldBe(SongSyncAction.Remove);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeSongMarkedForRemoval_PathTypedForAnotherSong_RequestsAUniquePath()
+    {
+        var device = _scenario.CreateDevice();
+        var removed = _scenario.CreateSong("Removed");
+        _scenario.CreateSongDevice(device, removed, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "2024/Song.mp3");
+        await UpdateAsync([song], paths: [(song, device, "Custom/Song.mp3")]);
+
+        await UpdateAsync([removed], [(device, true)]);
+
+        // The file is still at its path on the device: the next sync renames it, freeing the path
+        var restored = FindSongDevice(removed, device).ShouldNotBeNull();
+        restored.SyncAction.ShouldBeNull();
+        restored.DevicePath.ShouldBe("Custom/Song.mp3");
+        restored.RequestedPath.ShouldBe("Custom/Song (2).mp3");
+        FindSongDevice(song, device)!.RequestedPath.ShouldBe("Custom/Song.mp3");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeSongMarkedForRemoval_PathTypedForAnotherSong_TypedPathIsUsed()
+    {
+        var device = _scenario.CreateDevice();
+        var removed = _scenario.CreateSong("Removed");
+        _scenario.CreateSongDevice(device, removed, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "2024/Song.mp3");
+        await UpdateAsync([song], paths: [(song, device, "Custom/Song.mp3")]);
+
+        await UpdateAsync([removed], [(device, true)], [(removed, device, "Custom/Removed.mp3")]);
+
+        FindSongDevice(removed, device)!.RequestedPath.ShouldBe("Custom/Removed.mp3");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeSongMarkedForRemoval_TypingItsPathGivenToAnotherSong_Throws()
+    {
+        var device = _scenario.CreateDevice();
+        var removed = _scenario.CreateSong("Removed");
+        _scenario.CreateSongDevice(device, removed, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "2024/Song.mp3");
+        await UpdateAsync([song], paths: [(song, device, "Custom/Song.mp3")]);
+
+        var exception = await Should.ThrowAsync<ValidationException>(() =>
+            UpdateAsync([removed], [(device, true)], [(removed, device, "Custom/Song.mp3")]));
+
+        exception.Message.ShouldContain("already used");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_IncludeSongMarkedForRemoval_PathStillFree_KeepsItsPath()
+    {
+        var device = _scenario.CreateDevice();
+        var removed = _scenario.CreateSong("Removed");
+        _scenario.CreateSongDevice(device, removed, "Custom/Song.mp3", lastSyncedModifiedAt: DateTime.UtcNow, syncAction: SongSyncAction.Remove);
+        var song = _scenario.CreateSong("Song");
+        CreateSyncedSongDevice(device, song, "2024/Song.mp3");
+
+        // One operation: the restored song is on the device at its path again, which cannot be typed
+        await Should.ThrowAsync<ValidationException>(() =>
+            UpdateAsync([removed, song], [(device, true)], [(removed, device, "Custom/Song.mp3"), (song, device, "Custom/Song.mp3")]));
+        await UpdateAsync([removed], [(device, true)]);
+
+        var restored = FindSongDevice(removed, device).ShouldNotBeNull();
+        restored.SyncAction.ShouldBeNull();
+        restored.RequestedPath.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task UpdateAsync_TypedPathRequestedForAnotherSong_Throws()
     {
         var device = _scenario.CreateDevice();

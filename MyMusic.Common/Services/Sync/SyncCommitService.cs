@@ -311,11 +311,29 @@ public class SyncCommitService(
             // The device created the file at the record's path, which differs from the SongDevice's when the
             // naming template produced a new path before the first download (there is no Rename record then)
             if (songDevice.DevicePath != record.FilePath && songDevice.SongId == (data?.SongId ?? record.SongId)
-                && !await db.SongDevices.AnyAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == record.FilePath, cancellationToken))
+                && !await IsPathTakenAsync(db, deviceId, record.FilePath, cancellationToken))
             {
                 songDevice.DevicePath = record.FilePath;
             }
         }
+    }
+
+    /// <summary>
+    /// Whether a SongDevice of the device is at <paramref name="path"/>, taking into account the ones
+    /// this commit already removed or moved away, which are not saved yet.
+    /// </summary>
+    private static async Task<bool> IsPathTakenAsync(MusicDbContext db, long deviceId, string path, CancellationToken cancellationToken)
+    {
+        if (db.SongDevices.Local.Any(sd => sd.DeviceId == deviceId && sd.DevicePath == path && db.Entry(sd).State != EntityState.Deleted))
+        {
+            return true;
+        }
+
+        // The query returns the tracked SongDevice, with the state and the path this commit gave it
+        var saved = await db.SongDevices
+            .FirstOrDefaultAsync(sd => sd.DeviceId == deviceId && sd.DevicePath == path, cancellationToken);
+
+        return saved != null && db.Entry(saved).State != EntityState.Deleted && saved.DevicePath == path;
     }
 
     private async Task ProcessUpdateLocalAsync(

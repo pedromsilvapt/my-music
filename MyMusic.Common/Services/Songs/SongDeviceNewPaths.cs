@@ -29,6 +29,30 @@ internal static class SongDeviceNewPaths
     }
 
     /// <summary>
+    /// Returns the paths of the SongDevices marked for removal that a typed path can take: the next sync
+    /// deletes their files before giving their paths to other files. A path already requested for
+    /// another SongDevice is not one of them.
+    /// </summary>
+    public static async Task<HashSet<string>> LoadRemovedPathsAsync(MusicDbContext db, long deviceId, CancellationToken cancellationToken)
+    {
+        var removedPaths = await db.SongDevices
+            .Where(sd => sd.DeviceId == deviceId && sd.SyncAction == SongSyncAction.Remove)
+            .Select(sd => sd.DevicePath)
+            .ToHashSetAsync(cancellationToken);
+
+        if (removedPaths.Count > 0)
+        {
+            var requestedPaths = await db.SongDevices
+                .Where(sd => sd.DeviceId == deviceId && sd.RequestedPath != null && sd.RequestedPath != sd.DevicePath)
+                .Select(sd => sd.RequestedPath!)
+                .ToListAsync(cancellationToken);
+            removedPaths.ExceptWith(requestedPaths);
+        }
+
+        return removedPaths;
+    }
+
+    /// <summary>
     /// Generates the path of <paramref name="song"/> with <paramref name="namingStrategy"/>, makes it
     /// unique among <paramref name="usedPaths"/> and adds it to them.
     /// </summary>
