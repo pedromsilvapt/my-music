@@ -105,6 +105,7 @@ export const SongModifiedAtDataSchema = z.object({
     algorithm: z.string().nullable().optional(),
     localModifiedAt: z.string().nullable().optional(),
     serverModifiedAt: z.string().nullable().optional(),
+    serverCreatedAt: z.string().nullable().optional(),
     lastSyncedAt: z.string().nullable().optional(),
     serverChecksum: z.string().nullable().optional(),
     serverChecksumAlgorithm: z.string().nullable().optional(),

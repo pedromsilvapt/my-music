@@ -30,7 +30,7 @@ public static class SyncUpdateLocalRecords
 
         var updateFilePath = pendingAction.PreviousPath ?? pendingAction.Path;
         var songFileModifiedAt = songDevice.Song!.FileModifiedAt ?? songDevice.Song.ModifiedAt;
-        records.Add(await syncActions.ActionUpdateLocal(updateFilePath, songId, songFileModifiedAt, reason, cancellationToken));
+        records.Add(await syncActions.ActionUpdateLocal(updateFilePath, songId, songFileModifiedAt, songDevice.Song.CreatedAt, reason, cancellationToken));
 
         if (pendingAction.PreviousPath != null)
         {

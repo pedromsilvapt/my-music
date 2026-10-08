@@ -18,6 +18,7 @@ import {
     getDeviceIcon,
     getDeviceName,
     getExcludePatterns,
+    getFileModifiedAt,
     getImportOnPurchase,
     getNamingTemplate,
     getRepositoryPath,
@@ -26,6 +27,7 @@ import {
     setDeviceIcon,
     setDeviceName,
     setExcludePatterns,
+    setFileModifiedAt,
     setImportOnPurchase,
     setIsConfigured,
     setLastSyncAt,
@@ -36,6 +38,13 @@ import {
 } from '../../src/services/configService';
 import {saveDeviceConfig} from '../../src/services/deviceConfigService';
 import {splitRules} from '../../src/services/sync/exclusions';
+import {FILE_MODIFIED_AT_SOURCES, type FileModifiedAtSource} from '../../src/services/sync/types';
+
+const FILE_MODIFIED_AT_LABELS: Record<FileModifiedAtSource, {label: string; hint: string}> = {
+    Now: {label: 'Sync Date', hint: 'When the file was downloaded'},
+    ServerModifiedAt: {label: 'Song Modified', hint: "When the song's file last changed on the server"},
+    ServerCreatedAt: {label: 'Song Created', hint: 'When the song was added to the server'},
+};
 
 const configSchema = z.object({
     serverUrl: z.string().url('Invalid URL').or(z.string().startsWith('http://') || z.string().startsWith('https://')),
@@ -46,6 +55,7 @@ const configSchema = z.object({
     importOnPurchase: z.boolean(),
     repositoryPath: z.string().optional(),
     excludePatterns: z.array(z.object({value: z.string()})),
+    fileModifiedAt: z.enum(['Now', 'ServerModifiedAt', 'ServerCreatedAt']),
 });
 
 type ConfigFormData = z.infer<typeof configSchema>;
@@ -71,6 +81,7 @@ export default function DeviceConfigScreen() {
             importOnPurchase: getImportOnPurchase(),
             repositoryPath: getRepositoryPath() || '',
             excludePatterns: getExcludePatterns().map(value => ({value})),
+            fileModifiedAt: getFileModifiedAt(),
         },
     });
 
@@ -179,6 +190,7 @@ export default function DeviceConfigScreen() {
             await setImportOnPurchase(data.importOnPurchase);
             await setRepositoryPath(data.repositoryPath || '');
             await setExcludePatterns(data.excludePatterns.flatMap(p => splitRules(p.value)));
+            await setFileModifiedAt(data.fileModifiedAt);
 
             const apiServerUrl = data.serverUrl.endsWith('/api') ? data.serverUrl : `${data.serverUrl}/api`;
             await setServerUrl(apiServerUrl);
@@ -436,6 +448,42 @@ export default function DeviceConfigScreen() {
                     Tap "Browse" to select a folder from your device, or enter the path manually.
                 </Text>
 
+                <Text style={[styles.label, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.cardTextSecondary, marginTop: spacing.md, marginBottom: spacing.xs}]}>Date of Downloaded Files</Text>
+
+                <Controller
+                    control={control}
+                    name="fileModifiedAt"
+                    render={({field: {onChange, value}}) => (
+                        <View>
+                            <View style={[styles.fileModifiedAtRow, {gap: spacing.xs}]}>
+                                {FILE_MODIFIED_AT_SOURCES.map(source => (
+                                    <TouchableOpacity
+                                        key={source}
+                                        accessibilityRole="radio"
+                                        accessibilityState={{selected: value === source}}
+                                        style={[
+                                            styles.fileModifiedAtOption,
+                                            {borderRadius: borderRadius.md, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.cardBorder},
+                                            value === source && {borderColor: colors.primary, backgroundColor: withAlpha('primary', 0.08)},
+                                        ]}
+                                        onPress={() => onChange(source)}
+                                    >
+                                        <Text style={[
+                                            {fontSize: fontSize.sm, color: colors.cardTextSecondary},
+                                            value === source && {color: colors.primary, fontWeight: fontWeight.medium},
+                                        ]}>
+                                            {FILE_MODIFIED_AT_LABELS[source].label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                            <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
+                                The modified date a downloaded file gets: {FILE_MODIFIED_AT_LABELS[value].hint.toLowerCase()}.
+                            </Text>
+                        </View>
+                    )}
+                />
+
                 <Text style={[styles.label, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.cardTextSecondary, marginTop: spacing.md, marginBottom: spacing.xs}]}>Excluded Files</Text>
 
                 {excludePatternFields.fields.map((field, index) => {
@@ -602,6 +650,13 @@ const styles = StyleSheet.create({
     },
     namingTemplateContainer: {
         marginTop: 16,
+    },
+    fileModifiedAtRow: {
+        flexDirection: 'row',
+    },
+    fileModifiedAtOption: {
+        flex: 1,
+        alignItems: 'center',
     },
     excludePatternRow: {
         flexDirection: 'row',

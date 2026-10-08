@@ -1,3 +1,5 @@
+using MyMusic.CLI.Services.Sync.Types;
+
 namespace MyMusic.CLI.Configuration;
 
 public class MyMusicOptions
@@ -48,6 +50,9 @@ public class SyncOptions
 
     /// <summary>Files per conflict resolution request.</summary>
     public ChunkOptions ResolveChunk { get; set; } = new() { Size = 200, Min = 25, Max = 1000 };
+
+    /// <summary>The modified date given to the files the sync downloads.</summary>
+    public FileModifiedAtSource FileModifiedAt { get; set; } = FileModifiedAtSource.Now;
 }
 
 public class ChunkOptions

@@ -14,6 +14,8 @@ public interface ISyncConfig
     string[] GetMusicExtensions();
     string[] GetExcludePatterns();
     SyncChunkTuning GetChunkTuning();
+    /// <summary>The modified date given to the files the sync downloads.</summary>
+    FileModifiedAtSource GetFileModifiedAt();
     Task<int?> GetLastScanTotalAsync(CancellationToken ct = default);
     Task SetLastScanTotalAsync(int count, CancellationToken ct = default);
     Task SetLastSyncAtAsync(DateTime date, CancellationToken ct = default);

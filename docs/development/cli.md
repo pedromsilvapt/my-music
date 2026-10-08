@@ -131,6 +131,25 @@ resolve requests, as it lives for the whole sync.
 
 In tests, `ChunkTunings.Fixed(...)` gives sizes that do not depend on how fast the test runs.
 
+## Downloaded File Dates
+
+`MyMusic:Sync:FileModifiedAt` sets the modified date of the files a sync downloads: `Now` (the default),
+`ServerModifiedAt` or `ServerCreatedAt` ("Downloaded File Dates" in [sync.md](sync.md) has the rules).
+
+```json
+{
+  "MyMusic": {
+    "Sync": {
+      "FileModifiedAt": "ServerCreatedAt"
+    }
+  }
+}
+```
+
+`Phases.GetFileModifiedAt` picks the date out of the record, and `SyncActionsDevice` sets it through
+`IFileOps.SetModificationTimeAsync` after the download. Like the rest of the `Sync` section, `my-music init` does
+not write it.
+
 ## Sync Conflicts
 
 A file changed differently on the device and on the server is a real conflict (see "Resolving a Real Conflict" in

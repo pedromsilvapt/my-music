@@ -55,6 +55,10 @@ export class NodeFileOps implements IFileOps {
         }
     }
 
+    async setModificationTime(filePath: string, modifiedAt: Date): Promise<void> {
+        fs.utimesSync(filePath, fs.statSync(filePath).atime, modifiedAt);
+    }
+
     async moveFile(fromPath: string, toPath: string): Promise<void> {
         const dir = path.dirname(toPath);
         if (!fs.existsSync(dir)) {

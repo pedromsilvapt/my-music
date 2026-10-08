@@ -6,6 +6,7 @@ jest.mock('../../../../modules/repo-files', () => ({
     moveFile: jest.fn(),
     copyFile: jest.fn(),
     deleteFile: jest.fn(),
+    setModifiedTime: jest.fn(),
 }));
 jest.mock('../../../../modules/xxhash', () => ({hashFile: jest.fn()}));
 jest.mock('expo-file-system', () => ({File: class {}, Directory: class {}}));
@@ -39,5 +40,11 @@ describe('createDefaultFileOps', () => {
         expect(repo.moveFile).toHaveBeenCalledWith('/music/a.mp3.tmp', '/music/a.mp3');
         expect(repo.copyFile).toHaveBeenCalledWith('/music/a.mp3', '/music/b.mp3.tmp');
         expect(repo.deleteFile).toHaveBeenCalledWith('/music/a.mp3');
+    });
+
+    test('setModificationTime gives the repo-files module the time in milliseconds', async () => {
+        await fileOps.setModificationTime('/music/a.mp3', new Date('2020-01-02T03:04:05Z'));
+
+        expect(repo.setModifiedTime).toHaveBeenCalledWith('/music/a.mp3', 1577934245000);
     });
 });

@@ -83,6 +83,12 @@ public class CliFileOps(IFileSystem fileSystem) : IFileOps
         return Task.FromResult<DateTime?>(fileInfo.LastWriteTimeUtc);
     }
 
+    public Task SetModificationTimeAsync(string path, DateTime modifiedAt, CancellationToken ct = default)
+    {
+        fileSystem.File.SetLastWriteTimeUtc(path, modifiedAt.ToUniversalTime());
+        return Task.CompletedTask;
+    }
+
     public void CleanupEmptyParentDirectories(string filePath, string repositoryRoot)
     {
         var dir = Path.GetDirectoryName(filePath);
@@ -196,6 +202,8 @@ public class CliSyncConfig(
             Resolve = new ChunkSizeRange(sync.ResolveChunk.Size, sync.ResolveChunk.Min, sync.ResolveChunk.Max)
         };
     }
+
+    public FileModifiedAtSource GetFileModifiedAt() => options.Value.Sync.FileModifiedAt;
 
     public Task<int?> GetLastScanTotalAsync(CancellationToken ct = default) => Task.FromResult<int?>(null);
     public Task SetLastScanTotalAsync(int count, CancellationToken ct = default) => Task.CompletedTask;

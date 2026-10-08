@@ -3,7 +3,7 @@ import {create} from 'zustand';
 import {createJSONStorage, persist} from 'zustand/middleware';
 import {DEFAULT_DEVICE_TYPE} from '../constants/deviceIcons';
 import {DEFAULT_CHUNK_TUNING} from '../services/sync/adaptive-chunk-size';
-import type {SyncChunkTuning} from '../services/sync/types';
+import type {FileModifiedAtSource, SyncChunkTuning} from '../services/sync/types';
 
 /** The exclusion rules of a new installation (see "Exclusion Rules" in docs/development/sync.md). */
 export const DEFAULT_EXCLUDE_PATTERNS = ['**/.*', '**/Thumbs.db', '**/*.tmp', '**/desktop.ini'];
@@ -19,6 +19,7 @@ interface ConfigState {
     namingTemplate: string;
     excludePatterns: string[];
     chunkTuning: SyncChunkTuning;
+    fileModifiedAt: FileModifiedAtSource;
     isConfigured: boolean;
     lastSyncAt: string | null;
     userId: number | null;
@@ -33,6 +34,7 @@ interface ConfigState {
     setNamingTemplate: (template: string) => void;
     setExcludePatterns: (patterns: string[]) => void;
     setChunkTuning: (tuning: SyncChunkTuning) => void;
+    setFileModifiedAt: (source: FileModifiedAtSource) => void;
     setIsConfigured: (configured: boolean) => void;
     setLastSyncAt: (date: string | null) => void;
     setUserId: (id: number | null) => void;
@@ -52,6 +54,7 @@ export const useConfigStore = create<ConfigState>()(
             namingTemplate: '',
             excludePatterns: DEFAULT_EXCLUDE_PATTERNS,
             chunkTuning: DEFAULT_CHUNK_TUNING,
+            fileModifiedAt: 'Now',
             isConfigured: false,
             lastSyncAt: null,
             userId: null,
@@ -66,6 +69,7 @@ export const useConfigStore = create<ConfigState>()(
             setNamingTemplate: (namingTemplate) => set({namingTemplate}),
             setExcludePatterns: (excludePatterns) => set({excludePatterns}),
             setChunkTuning: (chunkTuning) => set({chunkTuning}),
+            setFileModifiedAt: (fileModifiedAt) => set({fileModifiedAt}),
             setIsConfigured: (isConfigured) => set({isConfigured}),
             setLastSyncAt: (lastSyncAt) => set({lastSyncAt}),
             setUserId: (userId) => set({userId}),
@@ -84,6 +88,7 @@ export const useConfigStore = create<ConfigState>()(
                 namingTemplate: state.namingTemplate,
                 excludePatterns: state.excludePatterns,
                 chunkTuning: state.chunkTuning,
+                fileModifiedAt: state.fileModifiedAt,
                 isConfigured: state.isConfigured,
                 lastSyncAt: state.lastSyncAt,
                 userId: state.userId,

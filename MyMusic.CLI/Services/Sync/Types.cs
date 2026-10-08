@@ -31,6 +31,19 @@ public enum SyncDirection
     Down = 2
 }
 
+/// <summary>
+/// The modified date a file downloaded by the sync gets (see "Downloaded File Dates" in docs/development/sync.md).
+/// </summary>
+public enum FileModifiedAtSource
+{
+    /// <summary>When the file was synced.</summary>
+    Now,
+    /// <summary>When the song's file last changed on the server.</summary>
+    ServerModifiedAt,
+    /// <summary>When the song was created on the server.</summary>
+    ServerCreatedAt,
+}
+
 public enum ConflictResolution
 {
     Upload,

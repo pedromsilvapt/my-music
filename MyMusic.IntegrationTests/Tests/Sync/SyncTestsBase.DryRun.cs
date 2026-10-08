@@ -82,7 +82,7 @@ public abstract partial class SyncTestsBase
     //   When the CLI sync runs in dry-run mode
     //   Then the sync succeeds
     //   And the song is still on the device, with no pending sync action
-    [Fact(Skip ="This test is wrong. Since EditSongFlow sets SyncAction=Download, it should still be set after a dry-run. We need to find a way to unset that flag before the dry-run, so we can make this validation.")]
+    [Fact(Skip = "This test is wrong. Since EditSongFlow sets SyncAction=Download, it should still be set after a dry-run. We need to find a way to unset that flag before the dry-run, so we can make this validation.")]
     public async Task Sync_DryRun_ShouldNotPersistSyncActionWhenServerSongEdited()
     {
         // Create a local song and sync to upload it to the server

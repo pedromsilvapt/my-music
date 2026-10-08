@@ -297,7 +297,7 @@ public class SyncCheckService(
                 var pendingAction = _usedPaths.Take(pathResolver, existingSongDevice, namingStrategy);
 
                 var reason = $"Server modified at {songFileModifiedAt:O} is newer than last synced at {existingSongDevice.LastSyncedModifiedAt:O}";
-                var record = await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, songFileModifiedAt, reason, cancellationToken);
+                var record = await syncActions.ActionCreateLocal(pendingAction.Path, existingSongDevice.SongId, songFileModifiedAt, existingSongDevice.Song.CreatedAt, reason, cancellationToken);
                 allRecords.Add(record);
             }
         }

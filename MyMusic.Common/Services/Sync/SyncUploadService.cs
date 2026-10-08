@@ -394,7 +394,7 @@ public class SyncUploadService(
         var song = await db.Songs.FirstAsync(s => s.Id == songId, cancellationToken);
         var songFileModifiedAt = song.FileModifiedAt ?? song.ModifiedAt;
 
-        return await syncActions.ActionUpdateLocal(path, song.Id, songFileModifiedAt,
+        return await syncActions.ActionUpdateLocal(path, song.Id, songFileModifiedAt, song.CreatedAt,
             isSoundalike
                 ? $"File sounds like the song, replaced by the server file (modified at {songFileModifiedAt:O})"
                 : $"File matches a previous version of the song, server modified at {songFileModifiedAt:O} wins",

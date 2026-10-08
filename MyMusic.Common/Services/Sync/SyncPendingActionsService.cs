@@ -113,7 +113,13 @@ public class SyncPendingActionsService(
 
                 var modifiedAt = sd.Song?.ModifiedAt;
                 JsonElement? data = modifiedAt.HasValue
-                    ? SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = sd.SongId, ModifiedAt = modifiedAt })
+                    ? SyncActionDataSerializer.Serialize(new SongModifiedAtData
+                    {
+                        SongId = sd.SongId,
+                        ModifiedAt = modifiedAt,
+                        ServerModifiedAt = sd.Song!.FileModifiedAt ?? modifiedAt,
+                        ServerCreatedAt = sd.Song.CreatedAt,
+                    })
                     : null;
                 var updateFilePath = (previousPath != null && action == SyncRecordAction.UpdateLocal) ? previousPath : path;
                 var record = new DeviceSyncSessionRecord

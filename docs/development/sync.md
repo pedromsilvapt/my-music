@@ -306,6 +306,37 @@ The two matchers (`ExclusionMatcher` in the CLI, `createExclusionMatcher` in the
 paths: they are pinned by the same table of test vectors (`ExclusionMatcherTests.cs` and `exclusions.test.ts`), so a
 change to the syntax changes both tables.
 
+## Downloaded File Dates
+
+A file the sync downloads (`CreateLocal`, `UpdateLocal`) is written "now". Each client can instead give it one of
+the song's dates as its modified date:
+
+| Value | The file's modified date | From the record's `Data` |
+| --- | --- | --- |
+| `Now` (default) | When the file was synced | |
+| `ServerModifiedAt` | When the song's file last changed on the server (`Song.FileModifiedAt`, or `Song.ModifiedAt` when it has none) | `serverModifiedAt` |
+| `ServerCreatedAt` | When the song was created (`Song.CreatedAt`) | `serverCreatedAt` |
+
+The setting lives on the client only (`MyMusic:Sync:FileModifiedAt` in the CLI, "Date of Downloaded Files" in the
+device settings of the mobile app): the server sends both dates with every download record and does not know
+which one, if any, the device uses.
+
+- **`SongDevice.LastSyncedModifiedAt` is not affected.** The client reads the time the file was written before it
+  changes the date, and acknowledges the record with that time, as it always did. The file's date is then never
+  later than `LastSyncedModifiedAt`, so the next sync does not take it as a local change, and
+  `LastSyncedModifiedAt` is never earlier than the song's file, so the song is not downloaded again.
+- **A date later than the time the file was written is not applied** (the clocks of the server and the device can
+  differ): such a file would look changed on the device on the next sync.
+- **A date that cannot be set is not an error.** The file is downloaded, so the record is acknowledged and the file
+  keeps the time of the sync.
+- An `UpdateLocal` that copies another file of the device (`localSourcePath`) has no song on the server yet, and
+  keeps the time of the sync. An older server sends no dates, which has the same result.
+- Only the files a sync downloads are affected: files already on the device keep their dates, and so do renamed
+  ones.
+
+The logic is `SetFileModifiedAtAsync` in `MyMusic.CLI/Services/Sync/SyncActionsDevice.cs` and `setFileModifiedAt`
+in `MyMusic.Mobile/src/services/sync/sync-actions-device.ts`, and must stay the same in both.
+
 ## Dry-Run Mode
 
 Dry-run is not a debug flag — it is a user-facing feature that answers the question "what would happen if I synced right now?" The answer is the record list: every action that would be taken, summarized by type and count.

@@ -33,6 +33,15 @@ public interface ISyncApplication : IAsyncDisposable
     /// <summary>Sets the rules that keep local paths out of the sync.</summary>
     Task SetExcludePatternsAsync(params string[] patterns);
 
+    /// <summary>
+    /// Sets the modified date the client gives to the files it downloads: <c>Now</c>, <c>ServerModifiedAt</c>
+    /// or <c>ServerCreatedAt</c>.
+    /// </summary>
+    Task SetFileModifiedDateAsync(string source);
+
+    /// <summary>The modified date of a local file, in UTC.</summary>
+    DateTime GetFileModifiedAt(string relativePath);
+
     /// <summary>Bumps a local file's modification time without changing its content.</summary>
     void TouchLocalFile(string relativePath);
 

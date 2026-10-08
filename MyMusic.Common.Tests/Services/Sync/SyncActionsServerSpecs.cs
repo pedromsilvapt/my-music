@@ -206,6 +206,45 @@ public class SyncActionsServerSpecs
         data.GetProperty("modifiedAt").GetString().ShouldBe(modifiedAt.ToString("O"));
     }
 
+    [Theory]
+    [InlineData(SyncRecordAction.CreateLocal)]
+    [InlineData(SyncRecordAction.UpdateLocal)]
+    public async Task ActionDownload_CarriesTheSongDates_AndTheAcknowledgeKeepsThem(SyncRecordAction action)
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+        var modifiedAt = new DateTime(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
+        var createdAt = new DateTime(2019, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+
+        var record = action == SyncRecordAction.CreateLocal
+            ? await server.ActionCreateLocal("/music/song.mp3", song.Id, modifiedAt, createdAt)
+            : await server.ActionUpdateLocal("/music/song.mp3", song.Id, modifiedAt, createdAt);
+
+        // The device reads the song's dates from the record
+        var data = record.Data!.Value;
+        data.GetProperty("serverModifiedAt").GetString().ShouldBe(modifiedAt.ToString("O"));
+        data.GetProperty("serverCreatedAt").GetString().ShouldBe(createdAt.ToString("O"));
+
+        // The acknowledge replaces the modified time with the device's, and nothing else
+        var deviceModifiedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        SyncCommitService.AcknowledgeRecords([record], deviceModifiedAt);
+
+        var acknowledged = record.Data!.Value;
+        acknowledged.GetProperty("modifiedAt").GetString().ShouldBe(deviceModifiedAt.ToString("O"));
+        acknowledged.GetProperty("serverModifiedAt").GetString().ShouldBe(modifiedAt.ToString("O"));
+        acknowledged.GetProperty("serverCreatedAt").GetString().ShouldBe(createdAt.ToString("O"));
+    }
+
+    [Fact]
+    public async Task ActionDeleteLocal_DoesNotCarryTheSongDates()
+    {
+        var (_, _, _, _, song, server) = SetupWithSong();
+
+        var record = await server.ActionDeleteLocal("/music/song.mp3", song.Id);
+
+        record.Data!.Value.TryGetProperty("serverModifiedAt", out _).ShouldBeFalse();
+        record.Data!.Value.TryGetProperty("serverCreatedAt", out _).ShouldBeFalse();
+    }
+
     [Fact]
     public async Task ActionCreateLocal_WithoutOptionalParams_CreatesRecordWithSerializedData()
     {

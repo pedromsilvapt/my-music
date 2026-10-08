@@ -350,6 +350,115 @@ public class SyncActionsDeviceTests
         await _apiClient.DidNotReceive().DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>());
     }
 
+    private static readonly DateTime WrittenAt = new(2026, 5, 10, 12, 0, 0, DateTimeKind.Utc);
+
+    private void SetupDownloadWrittenAt(DateTime writtenAt)
+    {
+        _fileOps.FileExists(Arg.Any<string>()).Returns(false);
+        _apiClient.DownloadSongAsync(Arg.Any<long>(), Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("test"))));
+        _fileOps.GetModificationTimeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(writtenAt);
+    }
+
+    [Fact]
+    public async Task ActionCreateLocalAsync_WithFileModifiedAt_SetsTheFileDateAndAcknowledgesTheWriteTime()
+    {
+        // The device is set to give downloaded files one of the song's dates
+        var device = CreateDevice();
+        SetupDownloadWrittenAt(WrittenAt);
+        var songDate = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+        var result = await device.ActionCreateLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: true, recordId: 1, fileModifiedAt: songDate);
+
+        // The file gets the song's date, while the server is still told when the file was written
+        result!.Action.ShouldBe("CreateLocal");
+        await _fileOps.Received(1).SetModificationTimeAsync("/music/test.mp3", songDate, Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1, Arg.Is<AcknowledgeActionRequest>(r => r.ModifiedAt == WrittenAt), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionUpdateLocalAsync_WithFileModifiedAt_SetsTheFileDate()
+    {
+        var device = CreateDevice();
+        SetupDownloadWrittenAt(WrittenAt);
+        _fileOps.FileExists(Arg.Any<string>()).Returns(call => (string)call[0] == "/music/test.mp3");
+        var songDate = WrittenAt.AddDays(-30);
+
+        var result = await device.ActionUpdateLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: true, recordId: 1, fileModifiedAt: songDate);
+
+        result!.Action.ShouldBe("UpdateLocal");
+        await _fileOps.Received(1).SetModificationTimeAsync("/music/test.mp3", songDate, Arg.Any<CancellationToken>());
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1, Arg.Is<AcknowledgeActionRequest>(r => r.ModifiedAt == WrittenAt), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionCreateLocalAsync_WithoutFileModifiedAt_LeavesTheFileDate()
+    {
+        var device = CreateDevice();
+        SetupDownloadWrittenAt(WrittenAt);
+
+        await device.ActionCreateLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: true, recordId: 1);
+
+        await _fileOps.DidNotReceive().SetModificationTimeAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionCreateLocalAsync_FileModifiedAtAfterTheWriteTime_LeavesTheFileDate()
+    {
+        // A date after the write time would make the next sync take the file as changed on the device
+        var device = CreateDevice();
+        SetupDownloadWrittenAt(WrittenAt);
+
+        var result = await device.ActionCreateLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: true, recordId: 1, fileModifiedAt: WrittenAt.AddMinutes(5));
+
+        result!.Action.ShouldBe("CreateLocal");
+        await _fileOps.DidNotReceive().SetModificationTimeAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionCreateLocalAsync_SettingTheFileDateFails_StillAcknowledges()
+    {
+        // The file is downloaded: failing to change its date is not a failed download
+        var device = CreateDevice();
+        SetupDownloadWrittenAt(WrittenAt);
+        _fileOps.SetModificationTimeAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException(new IOException("Read-only file system")));
+
+        var result = await device.ActionCreateLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: false, autoConfirm: true, recordId: 1, fileModifiedAt: WrittenAt.AddDays(-1));
+
+        result!.Action.ShouldBe("CreateLocal");
+        await _apiClient.Received(1).AcknowledgeActionAsync(1, 1, Arg.Is<AcknowledgeActionRequest>(r => r.ModifiedAt == WrittenAt), Arg.Any<CancellationToken>());
+        await _apiClient.DidNotReceive().ReportSyncErrorAsync(Arg.Any<long>(), Arg.Any<long>(), Arg.Any<ReportSyncErrorCliRequest>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionCreateLocalAsync_DryRun_DoesNotSetTheFileDate()
+    {
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(false);
+
+        await device.ActionCreateLocalAsync(1, 1, "/music", 1, "test.mp3", dryRun: true, autoConfirm: true, recordId: 1, fileModifiedAt: WrittenAt.AddDays(-1));
+
+        await _fileOps.DidNotReceive().SetModificationTimeAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ActionUpdateLocalAsync_WithLocalSource_DoesNotSetTheFileDate()
+    {
+        // A copy of another local file has no server song to take a date from
+        var device = CreateDevice();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(call => (string)call[0] is "/music/copy.mp3" or "/music/first.mp3");
+        var mockFile = Substitute.For<System.IO.Abstractions.IFile>();
+        var sourceStream = new MemoryStream(Encoding.UTF8.GetBytes("first"));
+        mockFile.OpenRead("/music/first.mp3").Returns(Substitute.For<System.IO.Abstractions.FileSystemStream>(sourceStream, "/music/first.mp3", false));
+        _fileSystem.File.Returns(mockFile);
+        _fileOps.GetModificationTimeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(WrittenAt);
+
+        await device.ActionUpdateLocalAsync(1, 1, "/music", null, "copy.mp3", dryRun: false, autoConfirm: true, recordId: 1, localSourcePath: "first.mp3", fileModifiedAt: WrittenAt.AddDays(-1));
+
+        await _fileOps.DidNotReceive().SetModificationTimeAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+    }
+
     [Fact]
     public async Task ActionUpdateLocalAsync_WithMissingLocalSource_ReportsError()
     {

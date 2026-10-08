@@ -721,6 +721,48 @@ public class PhasesTests
         await _apiClient.Received(1).DownloadSongAsync(1, Arg.Any<CancellationToken>());
     }
 
+    [Theory]
+    [InlineData(FileModifiedAtSource.Now, null)]
+    [InlineData(FileModifiedAtSource.ServerModifiedAt, "2024-03-01T10:00:00Z")]
+    [InlineData(FileModifiedAtSource.ServerCreatedAt, "2019-07-15T08:30:00Z")]
+    public async Task ServerActionsPhase_DownloadedFile_GetsTheConfiguredDate(FileModifiedAtSource source, string? expectedDate)
+    {
+        // A download whose record carries both dates of the song
+        var create = CreateRecord("new.mp3", SyncRecordAction.CreateLocal) with
+        {
+            SongId = 1,
+            Data = JsonSerializer.SerializeToElement(new { songId = 1, serverModifiedAt = "2024-03-01T10:00:00Z", serverCreatedAt = "2019-07-15T08:30:00Z" })
+        };
+        SetupPendingActions(create);
+        SetupDownloadSucceeds();
+        _fileOps.FileExists(Arg.Any<string>()).Returns(false);
+        _fileOps.GetModificationTimeAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(new DateTime(2026, 5, 10, 12, 0, 0, DateTimeKind.Utc));
+        _config.GetFileModifiedAt().Returns(source);
+
+        await CreatePhases().ServerActionsPhaseAsync(CreateContext(options: new SyncOptions { AutoConfirm = true }), null);
+
+        // The file should get the date the device is set to, or keep the time it was synced at
+        if (expectedDate == null)
+        {
+            await _fileOps.DidNotReceive().SetModificationTimeAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+        }
+        else
+        {
+            var expected = DateTime.Parse(expectedDate, null, System.Globalization.DateTimeStyles.RoundtripKind);
+            await _fileOps.Received(1).SetModificationTimeAsync("/music/new.mp3", expected, Arg.Any<CancellationToken>());
+        }
+    }
+
+    [Fact]
+    public void GetFileModifiedAt_DateMissingFromTheRecord_ReturnsNull()
+    {
+        // An older server does not send the song's dates
+        var data = JsonSerializer.SerializeToElement(new { songId = 1 });
+
+        Phases.GetFileModifiedAt(data, FileModifiedAtSource.ServerCreatedAt).ShouldBeNull();
+        Phases.GetFileModifiedAt(null, FileModifiedAtSource.ServerModifiedAt).ShouldBeNull();
+    }
+
     [Fact]
     public async Task ServerActionsPhase_RenameOfConflictedPath_IsReportedNotPerformed()
     {

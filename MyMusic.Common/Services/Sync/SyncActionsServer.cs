@@ -48,19 +48,31 @@ public class SyncActionsServer(
     }
 
     public async Task<DeviceSyncSessionRecord> ActionCreateLocal(
-        string filePath, long? songId = null, DateTime? modifiedAt = null,
+        string filePath, long? songId = null, DateTime? modifiedAt = null, DateTime? createdAt = null,
         string? reason = null, CancellationToken cancellationToken = default)
     {
-        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId, ModifiedAt = modifiedAt });
+        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData
+        {
+            SongId = songId,
+            ModifiedAt = modifiedAt,
+            ServerModifiedAt = modifiedAt,
+            ServerCreatedAt = createdAt,
+        });
         var record = CreateRecord(filePath, SyncRecordAction.CreateLocal, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }
 
     public async Task<DeviceSyncSessionRecord> ActionUpdateLocal(
-        string filePath, long? songId = null, DateTime? modifiedAt = null,
+        string filePath, long? songId = null, DateTime? modifiedAt = null, DateTime? createdAt = null,
         string? reason = null, CancellationToken cancellationToken = default)
     {
-        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData { SongId = songId, ModifiedAt = modifiedAt });
+        var data = SyncActionDataSerializer.Serialize(new SongModifiedAtData
+        {
+            SongId = songId,
+            ModifiedAt = modifiedAt,
+            ServerModifiedAt = modifiedAt,
+            ServerCreatedAt = createdAt,
+        });
         var record = CreateRecord(filePath, SyncRecordAction.UpdateLocal, data, songId, reason: reason);
         return await SaveRecord(record, cancellationToken);
     }

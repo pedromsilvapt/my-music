@@ -193,8 +193,8 @@ public class SongsFixture
             var mp3Content = TestFiles.CreateTestMusicFile(song);
             var safeFileName = string.Join("_", song.Title.Split(Path.GetInvalidFileNameChars()));
             var fileName = $"{safeFileName}.mp3";
-            var modifiedAt = DateTime.UtcNow.ToString("o");
-            var createdAt = DateTime.UtcNow.ToString("o");
+            var modifiedAt = (song.FileModifiedAt ?? DateTime.UtcNow).ToUniversalTime().ToString("o");
+            var createdAt = (song.CreatedAt ?? DateTime.UtcNow).ToUniversalTime().ToString("o");
 
             var filePayload = new FilePayload
             {

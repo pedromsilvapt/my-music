@@ -18,6 +18,7 @@ jest.mock('../sync-actions-device', () => ({
     actionUpdateLocal: jest.fn(),
     actionDeleteLocal: jest.fn(),
     actionConflict: jest.fn(),
+    getFileModifiedAt: jest.requireActual('../sync-actions-device').getFileModifiedAt,
 }));
 
 function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
@@ -66,6 +67,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         getMusicExtensions: jest.fn().mockReturnValue(['.mp3']),
         getExcludePatterns: jest.fn().mockReturnValue([]),
         getChunkTuning: jest.fn().mockReturnValue(fixedChunkTuning(10)),
+        getFileModifiedAt: jest.fn().mockReturnValue('Now'),
         getLastScanTotal: jest.fn().mockResolvedValue(null),
         setLastScanTotal: jest.fn().mockResolvedValue(undefined),
         setLastSyncAt: jest.fn().mockResolvedValue(undefined),
@@ -94,6 +96,7 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
         copyFile: jest.fn().mockResolvedValue(undefined),
         computeChecksum: jest.fn().mockResolvedValue('checksum'),
         getModificationTime: jest.fn().mockReturnValue(null),
+        setModificationTime: jest.fn().mockResolvedValue(undefined),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
     };
 

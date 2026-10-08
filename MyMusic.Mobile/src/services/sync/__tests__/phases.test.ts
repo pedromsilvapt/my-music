@@ -22,6 +22,7 @@ jest.mock('../sync-actions-device', () => ({
     actionDeleteLocal: jest.fn(),
     actionUnlink: jest.fn(),
     actionConflict: jest.fn(),
+    getFileModifiedAt: jest.requireActual('../sync-actions-device').getFileModifiedAt,
     actionRename: jest.fn(),
     reportFailure: jest.fn(),
 }));
@@ -62,6 +63,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         getMusicExtensions: jest.fn().mockReturnValue(['.mp3']),
         getExcludePatterns: jest.fn().mockReturnValue([]),
         getChunkTuning: jest.fn().mockReturnValue(fixedChunkTuning(10)),
+        getFileModifiedAt: jest.fn().mockReturnValue('Now'),
         getLastScanTotal: jest.fn().mockResolvedValue(null),
         setLastScanTotal: jest.fn().mockResolvedValue(undefined),
         setLastSyncAt: jest.fn().mockResolvedValue(undefined),
@@ -85,6 +87,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         copyFile: jest.fn().mockResolvedValue(undefined),
         computeChecksum: jest.fn().mockResolvedValue('checksum'),
         getModificationTime: jest.fn().mockReturnValue(new Date('2024-01-01')),
+        setModificationTime: jest.fn().mockResolvedValue(undefined),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -1074,8 +1077,8 @@ describe('serverActionsPhase - conflicted paths', () => {
 
         await serverActionsPhase(deps, ctx, jest.fn());
 
-        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'copy.mp3', '/music', 5, undefined, undefined);
-        expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 6, undefined);
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'copy.mp3', '/music', 5, undefined, undefined, undefined);
+        expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 6, undefined, undefined);
         expect(mockedReportFailure).not.toHaveBeenCalled();
     });
 
@@ -1116,9 +1119,31 @@ describe('serverActionsPhase - downloads', () => {
         await serverActionsPhase(deps, ctx, jest.fn());
 
         expect(mockedActionCreateLocal).toHaveBeenCalledTimes(1);
-        expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 1, 'New on server');
+        expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 1, 'New on server', undefined);
         expect(mockedActionUpdateLocal).toHaveBeenCalledTimes(1);
-        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 2, 'changed.mp3', '/music', 2, 'Changed on server', undefined);
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 2, 'changed.mp3', '/music', 2, 'Changed on server', undefined, undefined);
+    });
+
+    test.each([
+        ['Now', undefined],
+        ['ServerModifiedAt', new Date('2024-03-01T10:00:00Z')],
+        ['ServerCreatedAt', new Date('2019-07-15T08:30:00Z')],
+    ] as const)('gives the download actions the date the device is set to: %s', async (source, expected) => {
+        // Downloads whose records carry both dates of the song
+        const data = { songId: 1, serverModifiedAt: '2024-03-01T10:00:00Z', serverCreatedAt: '2019-07-15T08:30:00Z' };
+        const deps = createMockDeps();
+        (deps.config.getFileModifiedAt as jest.Mock).mockReturnValue(source);
+        const ctx = createContext({
+            pendingActions: [
+                { id: 1, filePath: 'new.mp3', action: 'CreateLocal', songId: 1, data, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem,
+                { id: 2, filePath: 'changed.mp3', action: 'UpdateLocal', songId: 1, data, reason: null, acknowledged: false, processedAt: '' } as SyncRecordItem,
+            ],
+        });
+
+        await serverActionsPhase(deps, ctx, jest.fn());
+
+        expect(mockedActionCreateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'new.mp3', '/music', 1, undefined, expected);
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, 1, 'changed.mp3', '/music', 2, undefined, undefined, expected);
     });
 
     test('passes the local source of an UpdateLocal to the update action', async () => {
@@ -1132,7 +1157,7 @@ describe('serverActionsPhase - downloads', () => {
 
         await serverActionsPhase(deps, ctx, jest.fn());
 
-        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, null, 'copy.mp3', '/music', 3, 'Soundalike', 'first.mp3');
+        expect(mockedActionUpdateLocal).toHaveBeenCalledWith(deps.apiClient, deps.fileOps, ctx, null, 'copy.mp3', '/music', 3, 'Soundalike', 'first.mp3', undefined);
     });
 });
 

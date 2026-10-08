@@ -426,7 +426,7 @@ public class Phases(
                 var result = await syncActions.ActionCreateLocalAsync(
                     ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
                     ctx.Options.DryRun, ctx.Options.AutoConfirm,
-                    record.Id, record.Reason, ct);
+                    record.Id, record.Reason, GetFileModifiedAt(record.Data, config.GetFileModifiedAt()), ct);
 
                 if (result?.Counts != null)
                 {
@@ -440,7 +440,8 @@ public class Phases(
                 var result = await syncActions.ActionUpdateLocalAsync(
                     ctx.DeviceId, ctx.SessionId, ctx.RepositoryPath, record.SongId, record.FilePath,
                     ctx.Options.DryRun, ctx.Options.AutoConfirm,
-                    record.Id, record.Reason, GetLocalSourcePath(record.Data), ct);
+                    record.Id, record.Reason, GetLocalSourcePath(record.Data),
+                    GetFileModifiedAt(record.Data, config.GetFileModifiedAt()), ct);
 
                 if (result?.Counts != null)
                 {
@@ -605,6 +606,28 @@ public class Phases(
         && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+
+    /// <summary>
+    /// The modified date a downloaded file gets, out of the song's dates in its record. Null leaves the file
+    /// with the time it was synced at: the device is set to it, or the server did not send the date.
+    /// </summary>
+    internal static DateTime? GetFileModifiedAt(JsonElement? data, FileModifiedAtSource source)
+    {
+        var property = source switch
+        {
+            FileModifiedAtSource.ServerModifiedAt => "serverModifiedAt",
+            FileModifiedAtSource.ServerCreatedAt => "serverCreatedAt",
+            _ => null,
+        };
+
+        return property != null
+               && data is { ValueKind: JsonValueKind.Object } element
+               && element.TryGetProperty(property, out var value)
+               && value.ValueKind == JsonValueKind.String
+               && value.TryGetDateTime(out var date)
+            ? date.ToUniversalTime()
+            : null;
+    }
 
     internal static RenameData? DeserializeRenameData(JsonElement? data)
     {

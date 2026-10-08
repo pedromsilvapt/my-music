@@ -1,4 +1,4 @@
-import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ConflictResolution, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem} from './types';
+import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncFileBase, ActionResult, ConflictResolution, ResolveConflictsResult, SyncActionCounts, ProgressHandler, SyncRecordItem, FileModifiedAtSource} from './types';
 import type {SyncConflictResolveItem, SyncPotentialUpdateResolveItem, RenameData, ConflictData, SongModifiedAtData} from '../../api/types';
 import {safeToIsoString} from './utils';
 import {excludedPathError} from './exclusions';
@@ -101,7 +101,8 @@ export async function actionCreateLocal(
     path: string,
     decodedRepoPath: string,
     recordId: number,
-    reason?: string
+    reason?: string,
+    fileModifiedAt?: Date
 ): Promise<ActionResult> {
     const excluded = await reportExcluded(apiClient, ctx, recordId, path, songId ?? undefined, `${reason ?? 'Server-initiated download'} failed`);
     if (excluded) {
@@ -115,7 +116,7 @@ export async function actionCreateLocal(
         return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, 'File already exists', 'Unexpected local file during create');
     }
 
-    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, false);
+    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, false, undefined, fileModifiedAt);
 }
 
 export async function actionUpdateLocal(
@@ -127,7 +128,8 @@ export async function actionUpdateLocal(
     decodedRepoPath: string,
     recordId: number,
     reason?: string,
-    localSourcePath?: string
+    localSourcePath?: string,
+    fileModifiedAt?: Date
 ): Promise<ActionResult> {
     const excluded = await reportExcluded(apiClient, ctx, recordId, path, songId ?? undefined, `${reason ?? 'Server-initiated update'} failed`);
     if (excluded) {
@@ -146,7 +148,45 @@ export async function actionUpdateLocal(
         return reportFailure(apiClient, ctx, recordId, path, songId ?? undefined, `Source file not found: ${localSourcePath}`, 'Missing local source file during update');
     }
 
-    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, true, localSourcePath);
+    return downloadAndAck(apiClient, fileOps, ctx, songId, path, decodedRepoPath, recordId, reason, true, localSourcePath, fileModifiedAt);
+}
+
+/**
+ * The modified date a downloaded file gets, out of the song's dates in its record. Undefined leaves the file
+ * with the time it was synced at: the device is set to it, or the server did not send the date.
+ */
+export function getFileModifiedAt(
+    data: { serverModifiedAt?: string | null; serverCreatedAt?: string | null } | null | undefined,
+    source: FileModifiedAtSource
+): Date | undefined {
+    const value = source === 'ServerModifiedAt' ? data?.serverModifiedAt
+        : source === 'ServerCreatedAt' ? data?.serverCreatedAt
+        : null;
+    const date = new Date(value ?? NaN);
+    return isNaN(date.getTime()) ? undefined : date;
+}
+
+/**
+ * Gives a downloaded file the date the device is configured to (see "Downloaded File Dates" in
+ * docs/development/sync.md). A date after `writtenAt` is not applied: the next sync would take the file as
+ * changed on the device. A failure is not one of the download, which is done.
+ */
+async function setFileModifiedAt(
+    fileOps: IFileOps,
+    fullPath: string,
+    path: string,
+    fileModifiedAt: Date | undefined,
+    writtenAt: Date | null
+): Promise<void> {
+    if (!fileModifiedAt || !writtenAt || fileModifiedAt.getTime() >= writtenAt.getTime()) {
+        return;
+    }
+
+    try {
+        await fileOps.setModificationTime(fullPath, fileModifiedAt);
+    } catch (error) {
+        console.warn(`Failed to set the modified date of ${path}:`, error);
+    }
 }
 
 async function downloadAndAck(
@@ -159,7 +199,8 @@ async function downloadAndAck(
     recordId: number,
     reason: string | undefined,
     isUpdate: boolean,
-    localSourcePath?: string
+    localSourcePath?: string,
+    fileModifiedAt?: Date
 ): Promise<ActionResult> {
     const action = isUpdate ? 'UpdateLocal' : 'CreateLocal';
     const baseReason = reason ?? (isUpdate ? 'Server-initiated update' : 'Server-initiated download');
@@ -186,7 +227,13 @@ async function downloadAndAck(
 
             await fileOps.moveFile(tempPath, fullPath);
 
+            // The time the file was written is what the server keeps as its last synced time, whatever
+            // date the file is given below
             modifiedAt = fileOps.getModificationTime(fullPath);
+
+            if (!localSourcePath) {
+                await setFileModifiedAt(fileOps, fullPath, path, fileModifiedAt, modifiedAt);
+            }
         }
 
         const ackResult = await apiClient.acknowledgeAction(ctx.deviceId, ctx.sessionId!, {

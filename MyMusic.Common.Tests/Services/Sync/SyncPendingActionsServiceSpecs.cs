@@ -106,6 +106,30 @@ public class SyncPendingActionsServiceSpecs
     }
 
     [Fact]
+    public async Task CreateAsync_DownloadSyncAction_RecordCarriesTheSongDates()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var song = scenario.CreateSong("Song");
+        song.CreatedAt = new DateTime(2019, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+        song.FileModifiedAt = new DateTime(2024, 3, 1, 10, 0, 0, DateTimeKind.Utc);
+        song.ModifiedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        await scenario.DbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        var session = scenario.CreateSession(device, status: SyncSessionStatus.InProgress);
+        scenario.CreateSongDevice(device, song, ComputeExpectedPath(song), syncAction: SongSyncAction.Download);
+
+        // Act
+        var result = await service.CreateAsync(device.Id, session.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert: the file's date, not the date of the last metadata edit
+        var data = result!.Records.Single().Data!.Value;
+        data.GetProperty("serverModifiedAt").GetString().ShouldBe(song.FileModifiedAt.Value.ToString("O"));
+        data.GetProperty("serverCreatedAt").GetString().ShouldBe(song.CreatedAt.ToString("O"));
+    }
+
+    [Fact]
     public async Task CreateAsync_SessionNamingTemplate_TakesPrecedenceOverDeviceTemplate()
     {
         // Arrange

@@ -123,6 +123,7 @@ public class SyncActionsDevice(
         bool autoConfirm,
         long recordId,
         string? reason = null,
+        DateTime? fileModifiedAt = null,
         CancellationToken ct = default)
     {
         var excluded = await ReportExcludedAsync(deviceId, sessionId, recordId, relativePath, songId, $"{reason ?? "Server-initiated download"} failed", ct: ct);
@@ -140,7 +141,7 @@ public class SyncActionsDevice(
             return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, "File already exists", "Unexpected local file during create", ct);
         }
 
-        return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: false, ct);
+        return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: false, ct, fileModifiedAt: fileModifiedAt);
     }
 
     public async Task<ActionResult?> ActionUpdateLocalAsync(
@@ -154,6 +155,7 @@ public class SyncActionsDevice(
         long recordId,
         string? reason = null,
         string? localSourcePath = null,
+        DateTime? fileModifiedAt = null,
         CancellationToken ct = default)
     {
         var excluded = await ReportExcludedAsync(deviceId, sessionId, recordId, relativePath, songId, $"{reason ?? "Server-initiated update"} failed", ct: ct);
@@ -177,7 +179,7 @@ public class SyncActionsDevice(
             return await ReportFailureAsync(deviceId, sessionId, recordId, relativePath, songId, $"Source file not found: {localSourcePath}", "Missing local source file during update", ct);
         }
 
-        return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: true, ct, localSourcePath);
+        return await DownloadAndAckAsync(deviceId, sessionId, repositoryPath, songId, relativePath, dryRun, recordId, reason, isUpdate: true, ct, localSourcePath, fileModifiedAt);
     }
 
     private async Task<ActionResult?> DownloadAndAckAsync(
@@ -191,7 +193,8 @@ public class SyncActionsDevice(
         string? reason,
         bool isUpdate,
         CancellationToken ct,
-        string? localSourcePath = null)
+        string? localSourcePath = null,
+        DateTime? fileModifiedAt = null)
     {
         var actionName = isUpdate ? "UpdateLocal" : "CreateLocal";
         var baseReason = reason ?? (isUpdate ? "Server-initiated update" : "Server-initiated download");
@@ -220,7 +223,14 @@ public class SyncActionsDevice(
 
                 await fileOps.MoveFileAsync(tempPath, fullPath, ct);
 
+                // The time the file was written is what the server keeps as its last synced time, whatever
+                // date the file is given below
                 modifiedAt = await fileOps.GetModificationTimeAsync(fullPath, ct);
+
+                if (localSourcePath == null)
+                {
+                    await SetFileModifiedAtAsync(fullPath, relativePath, fileModifiedAt, modifiedAt, ct);
+                }
             }
 
             var ackResult = await apiClient.AcknowledgeActionAsync(deviceId, sessionId, new AcknowledgeActionRequest
@@ -249,6 +259,28 @@ public class SyncActionsDevice(
             {
                 await fileOps.DeleteFileAsync(tempPath, ct);
             }
+        }
+    }
+
+    /// <summary>
+    /// Gives a downloaded file the date the device is configured to (see "Downloaded File Dates" in
+    /// docs/development/sync.md). A date after <paramref name="writtenAt"/> is not applied: the next sync
+    /// would take the file as changed on the device. A failure is not one of the download, which is done.
+    /// </summary>
+    private async Task SetFileModifiedAtAsync(string fullPath, string relativePath, DateTime? fileModifiedAt, DateTime? writtenAt, CancellationToken ct)
+    {
+        if (fileModifiedAt is not { } date || writtenAt is not { } written || date.ToUniversalTime() >= written.ToUniversalTime())
+        {
+            return;
+        }
+
+        try
+        {
+            await fileOps.SetModificationTimeAsync(fullPath, date, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to set the modified date of {Path}", relativePath);
         }
     }
 

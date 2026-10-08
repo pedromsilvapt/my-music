@@ -36,3 +36,21 @@ describe('NodeFileOps.computeChecksum', () => {
         await expect(new NodeFileOps().computeChecksum(path.join(directory, 'song.mp3'), 'Sha256')).rejects.toThrow('Unsupported checksum algorithm: Sha256');
     });
 });
+
+describe('NodeFileOps.setModificationTime', () => {
+    test('changes the modified time of the file', async () => {
+        const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mymusic-mtime-'));
+        const filePath = path.join(directory, 'song.mp3');
+        fs.writeFileSync(filePath, 'abc');
+        const date = new Date('2020-01-02T03:04:05Z');
+
+        try {
+            const fileOps = new NodeFileOps();
+            await fileOps.setModificationTime(filePath, date);
+
+            expect(fileOps.getModificationTime(filePath)).toEqual(date);
+        } finally {
+            fs.rmSync(directory, { recursive: true, force: true });
+        }
+    });
+});

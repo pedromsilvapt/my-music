@@ -39,4 +39,16 @@ public class CliFileOpsTests
 
         await Should.ThrowAsync<NotSupportedException>(() => fileOps.ComputeChecksumAsync("/music/song.mp3", "Sha256", TestContext.Current.CancellationToken));
     }
+
+    [Fact]
+    public async Task SetModificationTimeAsync_ChangesTheFileModifiedDate()
+    {
+        var fileSystem = new MockFileSystem(new Dictionary<string, MockFileData> { ["/music/song.mp3"] = new("abc") });
+        var fileOps = new CliFileOps(fileSystem);
+        var date = new DateTime(2020, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+        await fileOps.SetModificationTimeAsync("/music/song.mp3", date, TestContext.Current.CancellationToken);
+
+        (await fileOps.GetModificationTimeAsync("/music/song.mp3", TestContext.Current.CancellationToken)).ShouldBe(date);
+    }
 }

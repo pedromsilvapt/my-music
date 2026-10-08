@@ -39,6 +39,7 @@ interface RepoFilesNativeModule {
     moveFile(fromPath: string, toPath: string): Promise<void>;
     copyFile(fromPath: string, toPath: string): Promise<void>;
     deleteFile(path: string): Promise<void>;
+    setModifiedTime(path: string, modifiedAt: number): Promise<void>;
     listFiles(rootPath: string, extensions: string[]): Promise<ListFilesResult>;
     resolveDirectoryPath(uri: string): Promise<string | null>;
 }
@@ -79,6 +80,11 @@ export function copyFile(fromPath: string, toPath: string): Promise<void> {
 /** Deletes a file; a file that is already gone is not an error. */
 export function deleteFile(path: string): Promise<void> {
     return native().deleteFile(path);
+}
+
+/** Sets the modified time of a file, in milliseconds since the epoch. Rejects when the storage refuses it. */
+export function setModifiedTime(path: string, modifiedAt: number): Promise<void> {
+    return native().setModifiedTime(path, modifiedAt);
 }
 
 /**

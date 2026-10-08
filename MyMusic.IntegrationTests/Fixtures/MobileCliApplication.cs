@@ -158,6 +158,18 @@ public class MobileCliApplication : ISyncApplication
         await File.WriteAllTextAsync(_configPath, config.ToJsonString());
     }
 
+    public async Task SetFileModifiedDateAsync(string source)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(_configPath))!;
+        config["fileModifiedAt"] = source;
+        await File.WriteAllTextAsync(_configPath, config.ToJsonString());
+    }
+
+    public DateTime GetFileModifiedAt(string relativePath)
+    {
+        return File.GetLastWriteTimeUtc(GetSongPath(relativePath));
+    }
+
     public void TouchLocalFile(string relativePath)
     {
         File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);

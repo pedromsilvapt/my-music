@@ -16,6 +16,7 @@ import {
 } from '../../api/sync';
 import {
     getChunkTuning,
+    getFileModifiedAt,
     getDeviceId,
     getExcludePatterns,
     getLastScanTotal,
@@ -98,6 +99,7 @@ export function createDefaultConfig(): ISyncConfig {
         getMusicExtensions,
         getExcludePatterns,
         getChunkTuning,
+        getFileModifiedAt,
         getLastScanTotal,
         setLastScanTotal,
         setLastSyncAt,
@@ -153,6 +155,7 @@ export function createDefaultFileOps(): IFileOps {
             const info = new File(toFileUri(path));
             return info.modificationTime ? new Date(info.modificationTime) : null;
         },
+        setModificationTime: (path: string, modifiedAt: Date) => repoFiles.setModifiedTime(path, modifiedAt.getTime()),
         deleteEmptyDirectories: async (filePath: string, basePath: string) => {
             const file = new File(toFileUri(filePath));
             let dir = file.parentDirectory;

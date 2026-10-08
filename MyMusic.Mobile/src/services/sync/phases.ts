@@ -5,7 +5,7 @@ import { SyncCancelledError } from './errors';
 import { safeToIsoString, formatFilePath } from './utils';
 import { AdaptiveChunkSize } from './adaptive-chunk-size';
 import { saveDeviceOptions } from './device-options';
-import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure } from './sync-actions-device';
+import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure, getFileModifiedAt } from './sync-actions-device';
 
 const EMPTY_COUNTS: SyncActionCounts = {
     createRemoteCount: 0,
@@ -336,7 +336,8 @@ export async function serverActionsPhase (
                     record.filePath,
                     ctx.decodedRepoPath,
                     record.id,
-                    record.reason ?? undefined
+                    record.reason ?? undefined,
+                    getFileModifiedAt(record.data, deps.config.getFileModifiedAt())
                 )
                 : await actionUpdateLocal(
                     deps.apiClient,
@@ -347,7 +348,8 @@ export async function serverActionsPhase (
                     ctx.decodedRepoPath,
                     record.id,
                     record.reason ?? undefined,
-                    record.data?.localSourcePath ?? undefined
+                    record.data?.localSourcePath ?? undefined,
+                    getFileModifiedAt(record.data, deps.config.getFileModifiedAt())
                 );
             serverResults.push(result);
             if (result.counts) {

@@ -1,4 +1,4 @@
-import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict} from '../sync-actions-device';
+import {actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionRename, actionConflict, getFileModifiedAt} from '../sync-actions-device';
 import { adaptiveChunkTuning, fixedChunkTuning } from './chunk-tunings';
 import { AdaptiveChunkSize } from '../adaptive-chunk-size';
 import type {ISyncApiClient, IFileOps, IUserPrompt, SyncContext, SyncResult, ActionResult, SyncRecordItem} from '../types';
@@ -39,6 +39,7 @@ function createMockFileOps(overrides: Partial<IFileOps> = {}): IFileOps {
         copyFile: jest.fn().mockResolvedValue(undefined),
         computeChecksum: jest.fn().mockResolvedValue('checksum'),
         getModificationTime: jest.fn().mockReturnValue(new Date('2024-01-01T00:00:00Z')),
+        setModificationTime: jest.fn().mockResolvedValue(undefined),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
         ...overrides,
     } as unknown as IFileOps;
@@ -392,6 +393,99 @@ describe('actionCreateLocal', () => {
 
         expect(result).not.toBeNull();
         expect(result!.recordId).toBe(42);
+    });
+});
+
+describe('downloaded file dates', () => {
+    // The mocked file is written at 2024-01-01T00:00:00Z
+    const WRITTEN_AT = '2024-01-01T00:00:00.000Z';
+    const DRY_RUN = { force: false, dryRun: true, autoConfirm: false, treatConflictsAsErrors: false, scannerType: 'fileSystem', direction: 'Both', deduplicate: false, recordSkipped: false } as const;
+
+    function downloadingApiClient() {
+        return createMockApiClient({ downloadSong: jest.fn().mockResolvedValue(undefined) });
+    }
+
+    test('a created file gets the given date, and the server is told when the file was written', async () => {
+        const apiClient = downloadingApiClient();
+        const fileOps = createMockFileOps();
+        const songDate = new Date('2020-01-02T03:04:05Z');
+
+        const result = await actionCreateLocal(apiClient, fileOps, createContext(), 42, 'song.mp3', '/music', 1, undefined, songDate);
+
+        expect(result.action).toBe('CreateLocal');
+        expect(fileOps.setModificationTime).toHaveBeenCalledWith('/music/song.mp3', songDate);
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: WRITTEN_AT});
+    });
+
+    test('an updated file gets the given date', async () => {
+        const apiClient = downloadingApiClient();
+        const fileOps = createMockFileOps({ fileExists: jest.fn((path: string) => !path.endsWith('.tmp')) });
+        const songDate = new Date('2023-12-01T00:00:00Z');
+
+        const result = await actionUpdateLocal(apiClient, fileOps, createContext(), 42, 'song.mp3', '/music', 1, undefined, undefined, songDate);
+
+        expect(result.action).toBe('UpdateLocal');
+        expect(fileOps.setModificationTime).toHaveBeenCalledWith('/music/song.mp3', songDate);
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: WRITTEN_AT});
+    });
+
+    test('without a date the file keeps the time it was written at', async () => {
+        const fileOps = createMockFileOps();
+
+        await actionCreateLocal(downloadingApiClient(), fileOps, createContext(), 42, 'song.mp3', '/music', 1);
+
+        expect(fileOps.setModificationTime).not.toHaveBeenCalled();
+    });
+
+    test('a date after the write time is not applied', async () => {
+        // The next sync would take the file as changed on the device
+        const fileOps = createMockFileOps();
+
+        const result = await actionCreateLocal(downloadingApiClient(), fileOps, createContext(), 42, 'song.mp3', '/music', 1, undefined, new Date('2024-01-01T00:05:00Z'));
+
+        expect(result.action).toBe('CreateLocal');
+        expect(fileOps.setModificationTime).not.toHaveBeenCalled();
+    });
+
+    test('failing to set the date still acknowledges the download', async () => {
+        const apiClient = downloadingApiClient();
+        const fileOps = createMockFileOps({ setModificationTime: jest.fn().mockRejectedValue(new Error('refused')) });
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const result = await actionCreateLocal(apiClient, fileOps, createContext(), 42, 'song.mp3', '/music', 1, undefined, new Date('2020-01-01T00:00:00Z'));
+        warn.mockRestore();
+
+        expect(result.action).toBe('CreateLocal');
+        expect(apiClient.acknowledgeAction).toHaveBeenCalledWith(1, 1, {recordIds: [1], modifiedAt: WRITTEN_AT});
+    });
+
+    test('a dry run sets no date', async () => {
+        const fileOps = createMockFileOps();
+
+        await actionCreateLocal(downloadingApiClient(), fileOps, createContext({ options: DRY_RUN }), 42, 'song.mp3', '/music', 1, undefined, new Date('2020-01-01T00:00:00Z'));
+
+        expect(fileOps.setModificationTime).not.toHaveBeenCalled();
+    });
+
+    test('a copy of another local file gets no date', async () => {
+        // It has no server song to take a date from
+        const fileOps = createMockFileOps({ fileExists: jest.fn((path: string) => !path.endsWith('.tmp')) });
+
+        await actionUpdateLocal(downloadingApiClient(), fileOps, createContext(), null, 'copy.mp3', '/music', 1, undefined, 'first.mp3', new Date('2020-01-01T00:00:00Z'));
+
+        expect(fileOps.copyFile).toHaveBeenCalled();
+        expect(fileOps.setModificationTime).not.toHaveBeenCalled();
+    });
+
+    test('getFileModifiedAt picks the date of the setting, or none', () => {
+        const data = { serverModifiedAt: '2024-03-01T10:00:00Z', serverCreatedAt: '2019-07-15T08:30:00Z' };
+
+        expect(getFileModifiedAt(data, 'Now')).toBeUndefined();
+        expect(getFileModifiedAt(data, 'ServerModifiedAt')).toEqual(new Date('2024-03-01T10:00:00Z'));
+        expect(getFileModifiedAt(data, 'ServerCreatedAt')).toEqual(new Date('2019-07-15T08:30:00Z'));
+        // An older server does not send the song's dates
+        expect(getFileModifiedAt({}, 'ServerCreatedAt')).toBeUndefined();
+        expect(getFileModifiedAt(null, 'ServerModifiedAt')).toBeUndefined();
     });
 });
 

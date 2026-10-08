@@ -76,6 +76,14 @@ public class DesktopCliFixture : IAsyncDisposable
         await File.WriteAllTextAsync(ConfigPath, config.ToJsonString());
     }
 
+    public async Task SetFileModifiedDateAsync(string source)
+    {
+        var config = JsonNode.Parse(await File.ReadAllTextAsync(ConfigPath))!;
+        config["myMusic"]!["sync"] ??= new JsonObject();
+        config["myMusic"]!["sync"]!["fileModifiedAt"] = source;
+        await File.WriteAllTextAsync(ConfigPath, config.ToJsonString());
+    }
+
     public async Task SetExcludePatternsAsync(string[] patterns)
     {
         var config = JsonNode.Parse(await File.ReadAllTextAsync(ConfigPath))!;

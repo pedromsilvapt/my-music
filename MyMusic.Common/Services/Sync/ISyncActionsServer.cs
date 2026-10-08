@@ -6,8 +6,16 @@ public interface ISyncActionsServer
 {
     Task<DeviceSyncSessionRecord> ActionCreateRemote(string filePath, long? songId, string checksum, string algorithm, DateTime modifiedAt, string? tempFilePath = null, DateTime? createdAt = null, string? originalFilePath = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionUpdateRemote(string filePath, long? songId, string checksum, string algorithm, DateTime modifiedAt, string? tempFilePath = null, DateTime? createdAt = null, string? originalFilePath = null, string? reason = null, CancellationToken cancellationToken = default);
-    Task<DeviceSyncSessionRecord> ActionCreateLocal(string filePath, long? songId = null, DateTime? modifiedAt = null, string? reason = null, CancellationToken cancellationToken = default);
-    Task<DeviceSyncSessionRecord> ActionUpdateLocal(string filePath, long? songId = null, DateTime? modifiedAt = null, string? reason = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Records the download of a song to the device. <paramref name="modifiedAt"/> is when the song's file last
+    /// changed and <paramref name="createdAt"/> when the song was created: the device can give the file either date.
+    /// </summary>
+    Task<DeviceSyncSessionRecord> ActionCreateLocal(string filePath, long? songId = null, DateTime? modifiedAt = null, DateTime? createdAt = null, string? reason = null, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Records the download of a song to the device. <paramref name="modifiedAt"/> is when the song's file last
+    /// changed and <paramref name="createdAt"/> when the song was created: the device can give the file either date.
+    /// </summary>
+    Task<DeviceSyncSessionRecord> ActionUpdateLocal(string filePath, long? songId = null, DateTime? modifiedAt = null, DateTime? createdAt = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionDeleteLocal(string filePath, long? songId = null, string? reason = null, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionLink(string filePath, long songId, DateTime? modifiedAt = null, string? checksum = null, string? algorithm = null, string? reason = null, bool isPreviousVersion = false, CancellationToken cancellationToken = default);
     Task<DeviceSyncSessionRecord> ActionLink(string filePath, string checksum, string algorithm, DateTime modifiedAt, string? reason = null, CancellationToken cancellationToken = default);

@@ -9,4 +9,6 @@ public record SampleSong(
     string? Lyrics = null,
     string? AlbumArtist = null,
     long[]? DeviceIds = null,
-    int VersionsCount = 0);
+    int VersionsCount = 0,
+    DateTime? CreatedAt = null,
+    DateTime? FileModifiedAt = null);

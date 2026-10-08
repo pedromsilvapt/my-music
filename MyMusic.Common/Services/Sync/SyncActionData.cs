@@ -99,6 +99,24 @@ public record SongModifiedAtData
     /// </summary>
     [JsonPropertyName("localSourcePath")]
     public string? LocalSourcePath { get; init; }
+
+    /// <summary>
+    /// Set on a <c>CreateLocal</c> or <c>UpdateLocal</c> that downloads a song: when the song's file last changed
+    /// on the server. Unlike <see cref="ModifiedAt"/>, the acknowledge never replaces it, so the device can give
+    /// the downloaded file this date (see "Downloaded File Dates" in docs/development/sync.md).
+    /// </summary>
+    [JsonPropertyName("serverModifiedAt")]
+    [JsonConverter(typeof(SyncActionDateTimeJsonConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? ServerModifiedAt { get; init; }
+
+    /// <summary>
+    /// Set on a <c>CreateLocal</c> or <c>UpdateLocal</c> that downloads a song: when the song was created.
+    /// </summary>
+    [JsonPropertyName("serverCreatedAt")]
+    [JsonConverter(typeof(SyncActionDateTimeJsonConverter))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DateTime? ServerCreatedAt { get; init; }
 }
 
 public record RenameData

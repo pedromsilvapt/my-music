@@ -103,6 +103,18 @@ screen is open; the refresh button of the drawer scans the folder again.
 and the sync context carries it (`ctx.isExcluded`) so the actions in `services/sync/sync-actions-device.ts` fail
 every server action on one (`reportExcluded`).
 
+## Downloaded File Dates
+
+"Date of Downloaded Files" on the device settings screen sets the modified date of the files a sync downloads:
+the sync date (`Now`, the default), the song's modified date (`ServerModifiedAt`) or its created date
+(`ServerCreatedAt`); "Downloaded File Dates" in [sync.md](sync.md) has the rules. It is stored in `configService`
+(`getFileModifiedAt` / `setFileModifiedAt`) and stays on the device.
+
+`getFileModifiedAt` (`services/sync/sync-actions-device.ts`) picks the date out of the record, and the download
+sets it through `fileOps.setModificationTime`, which is `setModifiedTime` of the `repo-files` module:
+expo-file-system cannot change the date of a file. The test CLI reads the setting from the `fileModifiedAt` key
+of its JSON configuration.
+
 ## Request Chunk Sizes
 
 The "Sync Performance" settings screen (`app/settings/sync.tsx`) sets how many files a check or a conflict
@@ -231,7 +243,7 @@ npx expo run:android
   (`android/src/main/cpp/xxhash_jni.cpp`), exposed through `XxhashModule.kt`. Android only.
 
 - **`modules/repo-files`** — the file operations that write to the music repository: `downloadFile`, `ensureDirectory`,
-  `moveFile`, `copyFile`, `deleteFile`, plus `hasAllFilesAccess` / `requestAllFilesAccess`, `listFiles`, which
+  `moveFile`, `copyFile`, `deleteFile`, `setModifiedTime`, plus `hasAllFilesAccess` / `requestAllFilesAccess`, `listFiles`, which
   lists the music files of the repository in a single call, and `resolveDirectoryPath`, which gives the filesystem
   path of a picked folder (see "Scanners"). The repository lives in
   shared storage (e.g. `/storage/emulated/0/Music`), where expo-file-system cannot write: it decides permissions with

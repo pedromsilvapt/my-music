@@ -1,5 +1,5 @@
 import { DEFAULT_CHUNK_TUNING } from '../src/services/sync/adaptive-chunk-size';
-import type { ChunkSizeRange, DeviceOptions, ISyncConfig, SyncChunkTuning } from '../src/services/sync/types';
+import type { ChunkSizeRange, DeviceOptions, FileModifiedAtSource, ISyncConfig, SyncChunkTuning } from '../src/services/sync/types';
 
 interface NodeSyncConfigJson {
     deviceId: number;
@@ -14,6 +14,7 @@ interface NodeSyncConfigJson {
     excludePatterns: string[];
     /** Any part left out keeps its default. */
     chunkTuning?: Partial<Omit<SyncChunkTuning, 'check' | 'resolve'>> & { check?: Partial<ChunkSizeRange>; resolve?: Partial<ChunkSizeRange> };
+    fileModifiedAt?: FileModifiedAtSource;
     lastScanTotal?: number;
     lastSyncAt?: string;
 }
@@ -60,6 +61,10 @@ export class NodeSyncConfig implements ISyncConfig {
             check: { ...defaults.check, ...tuning.check },
             resolve: { ...defaults.resolve, ...tuning.resolve },
         };
+    }
+
+    getFileModifiedAt(): FileModifiedAtSource {
+        return this._config.fileModifiedAt ?? 'Now';
     }
 
     async getLastScanTotal(): Promise<number | null> {

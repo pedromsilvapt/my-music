@@ -125,6 +125,14 @@ class RepoFilesModule : Module() {
       }
     }
 
+    // The time is in milliseconds since the epoch, as a Double: a JS number
+    AsyncFunction("setModifiedTime") { path: String, modifiedAt: Double ->
+      val file = toFile(path)
+      if (!file.setLastModified(modifiedAt.toLong())) {
+        throw RepoFilesException("Unable to set the modified time of '$file'")
+      }
+    }
+
     AsyncFunction("listFiles") { rootPath: String, extensions: List<String> ->
       val root = toFile(rootPath)
       if (!root.isDirectory) {

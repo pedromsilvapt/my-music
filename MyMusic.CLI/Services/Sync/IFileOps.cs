@@ -14,5 +14,6 @@ public interface IFileOps
     /// </summary>
     Task<string> ComputeChecksumAsync(string path, string algorithm, CancellationToken ct = default);
     Task<DateTime?> GetModificationTimeAsync(string path, CancellationToken ct = default);
+    Task SetModificationTimeAsync(string path, DateTime modifiedAt, CancellationToken ct = default);
     void CleanupEmptyParentDirectories(string filePath, string repositoryRoot);
 }

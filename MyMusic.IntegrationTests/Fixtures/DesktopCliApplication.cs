@@ -83,6 +83,12 @@ public class DesktopCliApplication : ISyncApplication
     public Task SetExcludePatternsAsync(params string[] patterns)
         => _fixture.SetExcludePatternsAsync(patterns);
 
+    public Task SetFileModifiedDateAsync(string source)
+        => _fixture.SetFileModifiedDateAsync(source);
+
+    public DateTime GetFileModifiedAt(string relativePath)
+        => File.GetLastWriteTimeUtc(GetSongPath(relativePath));
+
     public void TouchLocalFile(string relativePath)
         => File.SetLastWriteTimeUtc(GetSongPath(relativePath), DateTime.UtcNow);
 

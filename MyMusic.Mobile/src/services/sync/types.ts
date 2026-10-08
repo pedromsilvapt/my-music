@@ -319,6 +319,14 @@ export interface SyncChunkTuning {
     resolve: ChunkSizeRange;
 }
 
+/**
+ * The modified date a file downloaded by the sync gets (see "Downloaded File Dates" in docs/development/sync.md):
+ * when it was synced, when the song's file last changed on the server, or when the song was created there.
+ */
+export type FileModifiedAtSource = 'Now' | 'ServerModifiedAt' | 'ServerCreatedAt';
+
+export const FILE_MODIFIED_AT_SOURCES: FileModifiedAtSource[] = ['Now', 'ServerModifiedAt', 'ServerCreatedAt'];
+
 export interface ISyncConfig {
     getDeviceId: () => number | null;
     getDeviceOptions: () => DeviceOptions;
@@ -326,6 +334,8 @@ export interface ISyncConfig {
     getMusicExtensions: () => string[];
     getExcludePatterns: () => string[];
     getChunkTuning: () => SyncChunkTuning;
+    /** The modified date given to the files the sync downloads. */
+    getFileModifiedAt: () => FileModifiedAtSource;
     getLastScanTotal: () => Promise<number | null>;
     setLastScanTotal: (count: number) => Promise<void>;
     setLastSyncAt: (date: string) => Promise<void>;
@@ -377,6 +387,7 @@ export interface IFileOps {
      */
     computeChecksum: (path: string, algorithm: string) => Promise<string>;
     getModificationTime: (path: string) => Date | null;
+    setModificationTime: (path: string, modifiedAt: Date) => Promise<void>;
     deleteEmptyDirectories: (filePath: string, basePath: string) => Promise<void>;
 }
 
