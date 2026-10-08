@@ -126,6 +126,21 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         return uploadModal;
     }
 
+    /// <summary>
+    /// Opens the "Test Naming Template" tool from the tools menu and returns its dialog, once it previews the song.
+    /// </summary>
+    public async Task<SongNamingTemplateModalComponent> OpenTestNamingTemplateAsync()
+    {
+        await Root.GetByTestId("edit-song-tools").ClickAsync();
+
+        // The menu and the tool's dialog are rendered in portals, outside the edit dialog
+        await Root.Page.GetByTestId("song-tool-test-naming-template").ClickAsync();
+
+        var namingTemplateModal = new SongNamingTemplateModalComponent(Root.Page.GetByTestId("song-naming-template-modal"));
+        await namingTemplateModal.WaitForVisibleAsync();
+        return namingTemplateModal;
+    }
+
     public async Task CancelAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();

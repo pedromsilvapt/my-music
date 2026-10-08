@@ -26,7 +26,7 @@ export default function DeviceDetailPage() {
     // Only asked for the server's default template, shown for a device that has none
     const usesDefaultTemplate = device !== null && !device.namingTemplate;
     const {preview: defaultTemplatePreview, isFetching: isFetchingDefaultTemplate} =
-        useNamingTemplatePreview(undefined, "", {enabled: usesDefaultTemplate});
+        useNamingTemplatePreview({}, "", {enabled: usesDefaultTemplate});
 
     const navigate = useNavigate();
     const confirmDelete = useConfirmDelete();

@@ -79,6 +79,7 @@
         "summary_other": "{{renamed}} of {{count}} files would be renamed",
         "changedOnly": "Changed only",
         "empty": "No files to show",
+        "songPath": "Path of the song",
         "variables": {
             "title": "Song title",
             "albumName": "Album name",

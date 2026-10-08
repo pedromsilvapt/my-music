@@ -11,6 +11,11 @@ export interface PreviewDeviceNamingTemplateRequest {
      * @pattern ^-?(?:0|[1-9]\d*)$
      */
   deviceId?: number | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)$
+     */
+  songId?: number | null;
   /** @nullable */
   namingTemplate?: string | null;
 }

@@ -9,6 +9,7 @@ public record PreviewDeviceNamingTemplateResponse
     public required int Total { get; init; }
     public required int Renamed { get; init; }
     public required List<PreviewDeviceNamingTemplateSong> Songs { get; init; }
+    public PreviewDeviceNamingTemplateSongPath? Song { get; init; }
 
     public static PreviewDeviceNamingTemplateResponse FromResult(DeviceNamingPreviewResult result) =>
         new()
@@ -38,6 +39,9 @@ public record PreviewDeviceNamingTemplateResponse
                     Error = s.Error,
                 })
                 .ToList(),
+            Song = result.Song == null
+                ? null
+                : new PreviewDeviceNamingTemplateSongPath { Path = result.Song.Path, Error = result.Song.Error },
         };
 }
 
@@ -58,5 +62,11 @@ public record PreviewDeviceNamingTemplateSong
     public required string CurrentPath { get; init; }
     public required string NewPath { get; init; }
     public required bool Changed { get; init; }
+    public string? Error { get; init; }
+}
+
+public record PreviewDeviceNamingTemplateSongPath
+{
+    public string? Path { get; init; }
     public string? Error { get; init; }
 }

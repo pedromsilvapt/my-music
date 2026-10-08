@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Entities;
+using MyMusic.Common.Metadata;
 using MyMusic.Common.NamingStrategies;
 using MyMusic.Common.Services.Sync;
 using Scriban;
@@ -20,6 +21,7 @@ public class DeviceNamingPreviewService(
     public async Task<DeviceNamingPreviewResult?> PreviewAsync(
         long ownerId,
         long? deviceId,
+        long? songId,
         string? namingTemplate,
         CancellationToken cancellationToken)
     {
@@ -28,11 +30,28 @@ public class DeviceNamingPreviewService(
             return null;
         }
 
+        Song? song = null;
+        if (songId != null)
+        {
+            song = await db.Songs
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Include(s => s.Album.Artist)
+                .Include(s => s.Artists).ThenInclude(a => a.Artist)
+                .Include(s => s.Genres).ThenInclude(g => g.Genre)
+                .FirstOrDefaultAsync(s => s.Id == songId && s.OwnerId == ownerId, cancellationToken);
+
+            if (song == null)
+            {
+                return null;
+            }
+        }
+
         var defaultNamingTemplate = config.Value.DefaultNamingTemplate;
         var template = string.IsNullOrWhiteSpace(namingTemplate) ? defaultNamingTemplate : namingTemplate;
 
         var errors = ParseErrors(template);
-        if (errors.Count > 0 || deviceId == null)
+        if (errors.Count > 0)
         {
             return new DeviceNamingPreviewResult
             {
@@ -44,7 +63,9 @@ public class DeviceNamingPreviewService(
             };
         }
 
-        var songs = await PreviewSongsAsync(deviceId.Value, template, cancellationToken);
+        var songs = deviceId != null
+            ? await PreviewSongsAsync(deviceId.Value, template, cancellationToken)
+            : [];
 
         return new DeviceNamingPreviewResult
         {
@@ -53,7 +74,29 @@ public class DeviceNamingPreviewService(
             Total = songs.Count,
             Renamed = songs.Count(s => s.Changed),
             Songs = songs,
+            Song = song != null ? PreviewSong(song, template) : null,
         };
+    }
+
+    /// <summary>
+    /// The path the template gives to a song added to a device: no device is involved, so the path has no
+    /// folder or name to keep, and is not made unique.
+    /// </summary>
+    private static DeviceNamingPreviewSongPath PreviewSong(Song song, string template)
+    {
+        try
+        {
+            var naming = new NamingMetadata { Extension = Path.GetExtension(song.RepositoryPath) };
+
+            return new DeviceNamingPreviewSongPath
+            {
+                Path = new TemplateNamingStrategy(template).Generate(EntityConverter.ToSong(song), naming),
+            };
+        }
+        catch (Exception ex) when (ex is Scriban.Syntax.ScriptRuntimeException or InvalidOperationException)
+        {
+            return new DeviceNamingPreviewSongPath { Error = ex.Message };
+        }
     }
 
     private static List<DeviceNamingPreviewError> ParseErrors(string template)

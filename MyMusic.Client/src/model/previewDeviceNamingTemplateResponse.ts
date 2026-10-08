@@ -6,6 +6,7 @@ MyMusic.Server | v1
 OpenAPI spec version: 1.0.0
 */import type { PreviewDeviceNamingTemplateError } from './previewDeviceNamingTemplateError';
 import type { PreviewDeviceNamingTemplateSong } from './previewDeviceNamingTemplateSong';
+import type { PreviewDeviceNamingTemplateSongPath } from './previewDeviceNamingTemplateSongPath';
 
 export interface PreviewDeviceNamingTemplateResponse {
   defaultNamingTemplate: string;
@@ -15,4 +16,5 @@ export interface PreviewDeviceNamingTemplateResponse {
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   renamed: number;
   songs: PreviewDeviceNamingTemplateSong[];
+  song?: null | PreviewDeviceNamingTemplateSongPath;
 }

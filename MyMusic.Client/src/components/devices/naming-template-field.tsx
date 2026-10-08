@@ -3,7 +3,7 @@ import {useVirtualizer} from "@tanstack/react-virtual";
 import {useEffect, useMemo, useRef, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useNamingTemplatePreview} from "../../hooks/use-naming-template-preview.ts";
-import type {PreviewDeviceNamingTemplateSong} from "../../model";
+import type {PreviewDeviceNamingTemplateResponse, PreviewDeviceNamingTemplateSong} from "../../model";
 import ScribanTemplateEditor from "../common/scriban-template-editor.tsx";
 import styles from "./naming-template-field.module.css";
 
@@ -32,22 +32,37 @@ const PREVIEW_ROW_HEIGHT = 44;
 export interface NamingTemplateFieldProps {
     /** The device whose songs are previewed. Without it (a device being created) the template is only validated. */
     deviceId?: number;
+    /** A song to preview the path of, as if it was added to a device with the template. */
+    songId?: number;
     /** The template; empty uses the server's default one. */
     value: string;
     onChange: (value: string) => void;
     /** Told whether the template can be saved: it has no errors, and that was checked for what is typed now. */
     onValidityChange?: (valid: boolean) => void;
+    /** Told the preview of the template each time the server answers. */
+    onPreviewChange?: (preview: PreviewDeviceNamingTemplateResponse) => void;
+    /** Replaces the description of the field, which is the one of a device's template. */
+    description?: string;
     disabled?: boolean;
 }
 
 /**
  * Edits the naming template of a device, showing its errors and the file names it would give to the songs
- * of the device as it is typed.
+ * of the device (or the path it would give to a song) as it is typed.
  */
-export default function NamingTemplateField({deviceId, value, onChange, onValidityChange, disabled}: NamingTemplateFieldProps) {
+export default function NamingTemplateField({
+    deviceId,
+    songId,
+    value,
+    onChange,
+    onValidityChange,
+    onPreviewChange,
+    description,
+    disabled,
+}: NamingTemplateFieldProps) {
     const {t} = useTranslation(["devices"]);
     const [changedOnly, setChangedOnly] = useState(false);
-    const {preview, isOutdated} = useNamingTemplatePreview(deviceId, value);
+    const {preview, isOutdated} = useNamingTemplatePreview({deviceId, songId}, value);
 
     const errors = preview?.errors;
     const valid = !isOutdated && (errors?.length ?? 0) === 0;
@@ -55,6 +70,10 @@ export default function NamingTemplateField({deviceId, value, onChange, onValidi
     useEffect(() => {
         onValidityChange?.(valid);
     }, [valid, onValidityChange]);
+
+    useEffect(() => {
+        if (preview) onPreviewChange?.(preview);
+    }, [preview, onPreviewChange]);
 
     const variables = useMemo(() => VARIABLES.map(variable => ({
         name: variable.name,
@@ -69,7 +88,7 @@ export default function NamingTemplateField({deviceId, value, onChange, onValidi
     return (
         <Input.Wrapper
             label={t("devices:namingTemplate.label")}
-            description={t("devices:namingTemplate.description")}
+            description={description ?? t("devices:namingTemplate.description")}
         >
             <Stack gap="xs" mt={4} data-testid="naming-template-field" data-loading={isOutdated ? "true" : "false"}>
                 <Box style={{border: "1px solid var(--mantine-color-default-border)", borderRadius: "var(--mantine-radius-sm)", overflow: "hidden"}}>
@@ -96,6 +115,21 @@ export default function NamingTemplateField({deviceId, value, onChange, onValidi
                             </Text>
                         ))}
                     </Alert>
+                )}
+
+                {songId !== undefined && preview?.song && preview.errors.length === 0 && (
+                    <Stack gap={2} data-testid="naming-song-preview">
+                        <Text size="sm">{t("devices:namingTemplate.songPath")}</Text>
+                        {preview.song.error ? (
+                            <Text size="sm" c="red" data-testid="naming-song-preview-error">
+                                {preview.song.error}
+                            </Text>
+                        ) : (
+                            <Text size="sm" ff="monospace" style={{wordBreak: "break-all"}} data-testid="naming-song-preview-path">
+                                {preview.song.path}
+                            </Text>
+                        )}
+                    </Stack>
                 )}
 
                 {deviceId !== undefined && preview && preview.errors.length === 0 && (

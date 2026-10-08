@@ -23,8 +23,9 @@ public class DeviceNamingPreviewServiceSpecs
             }));
 
     private static Task<DeviceNamingPreviewResult?> Preview(
-        Scenario scenario, Device? device, string? namingTemplate) =>
-        CreateService(scenario).PreviewAsync(scenario.AdminUser.Id, device?.Id, namingTemplate, CancellationToken.None);
+        Scenario scenario, Device? device, string? namingTemplate, Song? song = null) =>
+        CreateService(scenario).PreviewAsync(
+            scenario.AdminUser.Id, device?.Id, song?.Id, namingTemplate, CancellationToken.None);
 
     [Fact]
     public async Task Preview_PathAlreadyMatchesTemplate_IsUnchanged()
@@ -245,6 +246,123 @@ public class DeviceNamingPreviewServiceSpecs
 
         // Assert
         result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Preview_Song_GetsTemplatePathWithItsFileExtension()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("One", repositoryPath: "/music/Stored/file.flac");
+
+        // Act
+        var result = await Preview(scenario, null, "Songs/{{ title }}{{ extension }}", song);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Errors.ShouldBeEmpty();
+        result.Songs.ShouldBeEmpty();
+        result.Song.ShouldNotBeNull();
+        result.Song.Path.ShouldBe("Songs/One.flac");
+        result.Song.Error.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Preview_Song_HasNoOriginalFolderOrName()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("One", repositoryPath: "/music/Stored/file.mp3");
+
+        // Act
+        var result = await Preview(scenario, null, "[{{ original_folder }}][{{ original_name }}]{{ title }}", song);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Song.ShouldNotBeNull();
+        result.Song.Path.ShouldBe("[][]One");
+    }
+
+    [Fact]
+    public async Task Preview_SongWithBlankTemplate_UsesDefaultTemplate()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("One", repositoryPath: "/music/One.mp3");
+
+        // Act
+        var result = await Preview(scenario, null, null, song);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Song.ShouldNotBeNull();
+        result.Song.Path.ShouldBe("Default/One.mp3");
+    }
+
+    [Fact]
+    public async Task Preview_SongWithTemplateSyntaxError_ReturnsErrorsAndNoPath()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("One");
+
+        // Act
+        var result = await Preview(scenario, null, "{{ if year }}{{ title }}", song);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Errors.ShouldNotBeEmpty();
+        result.Song.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Preview_TemplateFailingForTheSong_ReturnsItsError()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var song = scenario.CreateSong("One");
+
+        // Act
+        var result = await Preview(scenario, null, "{{ title | math.plus 1 | string.missing }}", song);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Errors.ShouldBeEmpty();
+        result.Song.ShouldNotBeNull();
+        result.Song.Path.ShouldBeNull();
+        result.Song.Error.ShouldNotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public async Task Preview_OtherUsersSong_ReturnsNull()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var otherUser = scenario.CreateUser("Other", "other");
+        var song = scenario.CreateSong("Theirs", ownerId: otherUser.Id);
+
+        // Act
+        var result = await Preview(scenario, null, TitleTemplate, song);
+
+        // Assert
+        result.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Preview_WithoutSong_HasNoSongPath()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice();
+        scenario.CreateSongDevice(device, scenario.CreateSong("One"), "One.mp3");
+
+        // Act
+        var result = await Preview(scenario, device, TitleTemplate);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Total.ShouldBe(1);
+        result.Song.ShouldBeNull();
     }
 
     [Fact]

@@ -12,11 +12,13 @@ namespace MyMusic.IntegrationTests.Tests.Songs;
 public class SongsToolsTests(ITestOutputHelper output) : IntegrationTestBase(output)
 {
     private SongsFixture _songs = null!;
+    private DevicesFixture _devices = null!;
 
     public override async ValueTask InitializeAsync()
     {
         await base.InitializeAsync();
         _songs = new SongsFixture();
+        _devices = new DevicesFixture();
     }
 
     // Scenario: Recalculating the checksum of an untouched song reports that nothing changed
@@ -88,5 +90,61 @@ public class SongsToolsTests(ITestOutputHelper output) : IntegrationTestBase(out
 
         // Assert: the uploaded file's own metadata should have been discarded, not imported as a song
         await new ShouldSongExistFlow(other.Title!, shouldExist: false).ExecuteAsync(Page);
+    }
+
+    // Scenario: The naming template of a device can be tried on a song
+    //   Given an uploaded song
+    //   And two devices with different naming templates
+    //   When the user opens the test naming template tool from the tools menu of the edit song dialog
+    //   And picks the first device from the starter templates
+    //   Then the path that device's template gives to the song is shown
+    //   When the user picks the second device from the starter templates
+    //   Then the path the second device's template gives to the song is shown
+    [Fact]
+    public async Task TestNamingTemplate_DevicePickedAsStarter_ShouldPreviewSongPathWithItsTemplate()
+    {
+        // Setup: seed a song, and two devices that name their files differently
+        var sample = SongsFixture.DefaultSongs[1];
+        var song = await _songs.SeedAsync(RequestContext, UserId, sample);
+        var devices = await _devices.SeedAsync(RequestContext, UserId,
+        [
+            new("By Year Player", "phone", "#FF5733", "ByYear/{{ year }}/{{ title }}{{ extension }}"),
+            new("By Artist Player", "laptop", "#33FF57", "{{ artists_label }} - {{ title }}{{ extension }}"),
+        ]);
+
+        // Action: start from the template of each device, one after the other
+        var paths = await new PreviewSongNamingTemplatesFlow(song.Title,
+            new(StarterDevice: devices[0].Name),
+            new(StarterDevice: devices[1].Name)).ExecuteAsync(Page);
+
+        // Assert: each device's template should have been applied to the song
+        paths.ShouldBe(
+        [
+            $"ByYear/{sample.Year}/{sample.Title}.mp3",
+            $"{sample.Artists![0]} - {sample.Title}.mp3",
+        ]);
+    }
+
+    // Scenario: A typed naming template is previewed on a song, unless it has syntax errors
+    //   Given an uploaded song
+    //   When the user opens the test naming template tool from the tools menu of the edit song dialog
+    //   And types a naming template
+    //   Then the path that template gives to the song is shown
+    //   When the user types a naming template with a syntax error
+    //   Then the error is shown, and no path
+    [Fact]
+    public async Task TestNamingTemplate_TypedTemplate_ShouldPreviewSongPathOrItsErrors()
+    {
+        // Setup: seed a song
+        var sample = SongsFixture.DefaultSongs[1];
+        var song = await _songs.SeedAsync(RequestContext, UserId, sample);
+
+        // Action: type a template, and then one whose "if" is never closed
+        var paths = await new PreviewSongNamingTemplatesFlow(song.Title,
+            new(Template: "{{ year }}/{{ artists_label }} - {{ title }}{{ extension }}"),
+            new(Template: "{{ if year }}{{ title }}{{ extension }}")).ExecuteAsync(Page);
+
+        // Assert: the first template should give the song a path, the second one should be rejected
+        paths.ShouldBe([$"{sample.Year}/{sample.Artists![0]} - {sample.Title}.mp3", null]);
     }
 }

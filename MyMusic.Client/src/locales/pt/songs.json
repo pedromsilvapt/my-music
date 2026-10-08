@@ -101,6 +101,13 @@
             "confirmMessage": "\"{{title}}\" de {{artists}} será comprada em {{source}}, e o seu áudio substituirá o de \"{{song}}\". Esta ação não pode ser anulada.",
             "queued": "A compra foi adicionada à fila. O áudio da música é substituído quando esta terminar.",
             "failed": "Falha ao comprar a música: {{error}}"
+        },
+        "testNamingTemplate": {
+            "label": "Testar Modelo de Nomes",
+            "title": "Testar Modelo de Nomes",
+            "description": "Escreva um modelo Scriban para ver o caminho que daria a esta música ao ser adicionada a um dispositivo. Pode ocupar várias linhas: as quebras de linha são ignoradas. Deixe vazio para usar o modelo predefinido. Nada é guardado.",
+            "starters": "Modelos iniciais",
+            "noDevices": "Sem dispositivos para usar como ponto de partida"
         }
     },
     "import": {

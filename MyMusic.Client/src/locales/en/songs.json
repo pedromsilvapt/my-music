@@ -101,6 +101,13 @@
             "confirmMessage": "\"{{title}}\" by {{artists}} will be purchased from {{source}}, and its audio will replace the one of \"{{song}}\". This cannot be undone.",
             "queued": "The purchase was added to the queue. The song's audio is replaced once it completes.",
             "failed": "Failed to purchase the song: {{error}}"
+        },
+        "testNamingTemplate": {
+            "label": "Test Naming Template",
+            "title": "Test Naming Template",
+            "description": "Type a Scriban template to see the path it would give to this song when added to a device. It can span several lines: line breaks are ignored. Leave empty to use the default template. Nothing is saved.",
+            "starters": "Starter templates",
+            "noDevices": "No devices to start from"
         }
     },
     "import": {

@@ -3,8 +3,8 @@ using Microsoft.Playwright;
 namespace MyMusic.IntegrationTests.Pages.Components;
 
 /// <summary>
-/// What the naming template field of the device editor shows below its editor: the errors of the template,
-/// or the file names it would give to the songs of the device.
+/// What a naming template field shows below its editor: the errors of the template, or the file names it would
+/// give to the songs of the device (in the device editor) or to a song (in the "Test Naming Template" tool).
 /// </summary>
 public class NamingPreviewComponent(ILocator root) : BaseComponent(root)
 {
@@ -17,6 +17,11 @@ public class NamingPreviewComponent(ILocator root) : BaseComponent(root)
     /// The syntax errors of the template.
     /// </summary>
     public ILocator Errors => Root.GetByTestId("naming-template-error");
+
+    /// <summary>
+    /// The path the template would give to the song it is tested on.
+    /// </summary>
+    public ILocator SongPath => Root.GetByTestId("naming-song-preview-path");
 
     private ILocator RenamedRows => Root.Locator("[data-testid='naming-preview-row'][data-changed='true']");
 

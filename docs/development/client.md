@@ -221,6 +221,10 @@ on it: `useNamingTemplatePreview` debounces the template and asks the server
 (`POST /devices/naming-template/preview`) for its errors and for the path each song of the device would get, shown in
 a virtualized list. Validation always comes from the server; don't parse templates on the client.
 
+Given a `songId` instead, the field previews the path the template gives to that one song, as if it was added to a
+device. The "Test Naming Template" tool of the edit song modal (`src/components/songs/song-naming-template-modal.tsx`)
+uses it as a sandbox: it saves nothing, and offers the naming template of each device as a starting point.
+
 ## Translations (i18n)
 
 Translations are managed with `react-i18next`. Namespaces live under `src/locales/<lang>/<ns>.json` and are

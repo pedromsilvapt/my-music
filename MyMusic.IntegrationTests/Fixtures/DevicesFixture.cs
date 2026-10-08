@@ -29,6 +29,7 @@ public class DevicesFixture
                     name = device.Name,
                     icon = device.Icon,
                     color = device.Color,
+                    namingTemplate = device.NamingTemplate,
                 },
             });
 

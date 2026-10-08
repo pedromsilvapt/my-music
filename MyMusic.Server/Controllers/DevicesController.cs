@@ -156,7 +156,7 @@ public class DevicesController(
         CancellationToken cancellationToken)
     {
         var result = await deviceNamingPreviewService.PreviewAsync(
-            currentUser.Id, request.DeviceId, request.NamingTemplate, cancellationToken);
+            currentUser.Id, request.DeviceId, request.SongId, request.NamingTemplate, cancellationToken);
         if (result == null) return NotFound();
 
         return PreviewDeviceNamingTemplateResponse.FromResult(result);

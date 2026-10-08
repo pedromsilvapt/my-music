@@ -1,10 +1,11 @@
 import {ActionIcon, Menu} from "@mantine/core";
-import {IconClock, IconHash, IconShoppingBag, IconTool, IconUpload} from "@tabler/icons-react";
+import {IconClock, IconHash, IconShoppingBag, IconTemplate, IconTool, IconUpload} from "@tabler/icons-react";
 import {useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useRecalculateSongChecksumWithNotifications} from "../../hooks/use-recalculate-song-checksum.ts";
 import type {GetSongResponseSong} from "../../model/getSongResponseSong";
 import SongFileUploadModal from "./song-file-upload-modal.tsx";
+import SongNamingTemplateModal from "./song-naming-template-modal.tsx";
 import SongPurchaseModal from "./song-purchase-modal.tsx";
 import SongTimestampsModal from "./song-timestamps-modal.tsx";
 
@@ -24,6 +25,7 @@ export default function SongToolsMenu({song, disabled}: SongToolsMenuProps) {
     const [timestampsOpened, setTimestampsOpened] = useState(false);
     const [uploadOpened, setUploadOpened] = useState(false);
     const [purchaseOpened, setPurchaseOpened] = useState(false);
+    const [namingTemplateOpened, setNamingTemplateOpened] = useState(false);
 
     return (
         <>
@@ -69,6 +71,13 @@ export default function SongToolsMenu({song, disabled}: SongToolsMenuProps) {
                     >
                         {t("songs:tools.purchaseSong.label")}
                     </Menu.Item>
+                    <Menu.Item
+                        leftSection={<IconTemplate size={16}/>}
+                        onClick={() => setNamingTemplateOpened(true)}
+                        data-testid="song-tool-test-naming-template"
+                    >
+                        {t("songs:tools.testNamingTemplate.label")}
+                    </Menu.Item>
                 </Menu.Dropdown>
             </Menu>
             <SongTimestampsModal
@@ -85,6 +94,11 @@ export default function SongToolsMenu({song, disabled}: SongToolsMenuProps) {
                 opened={purchaseOpened}
                 onClose={() => setPurchaseOpened(false)}
                 song={song}
+            />
+            <SongNamingTemplateModal
+                opened={namingTemplateOpened}
+                onClose={() => setNamingTemplateOpened(false)}
+                songId={songId}
             />
         </>
     );

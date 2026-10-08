@@ -213,6 +213,48 @@ export default function ScribanTemplateEditor({
         })));
     }, [editor, errors]);
 
+    // The editor owns its text: Monaco is not given `value` back on each render. A render can be late (the
+    // changes of the editor are not flushed one by one), and giving the editor a value it already left behind
+    // would undo what was typed since. Only a value that was not typed in the editor is written to it.
+    const typedValuesRef = useRef<string[]>([]);
+    const isWritingValueRef = useRef(false);
+
+    useEffect(() => {
+        if (!editor) return;
+
+        const typedValues = typedValuesRef.current;
+        const typedIndex = typedValues.indexOf(value);
+        if (typedIndex >= 0) {
+            // The value is one the editor reported: the ones before it are outdated
+            typedValues.splice(0, typedIndex + 1);
+            return;
+        }
+
+        typedValues.length = 0;
+        const model = editor.getModel();
+        if (!model || editor.getValue() === value) return;
+
+        isWritingValueRef.current = true;
+        try {
+            if (editor.getOption(monacoRef.current!.editor.EditorOption.readOnly)) {
+                editor.setValue(value);
+            } else {
+                // Unlike setValue, keeps the change in the undo history
+                editor.executeEdits("", [{range: model.getFullModelRange(), text: value, forceMoveMarkers: true}]);
+                editor.pushUndoStop();
+            }
+        } finally {
+            isWritingValueRef.current = false;
+        }
+    }, [editor, value]);
+
+    const handleChange = (newValue: string | undefined) => {
+        if (isWritingValueRef.current) return;
+
+        typedValuesRef.current.push(newValue ?? "");
+        onChange(newValue ?? "");
+    };
+
     const handleEditorMount: OnMount = (editor, monaco) => {
         monacoRef.current = monaco;
         setEditor(editor);
@@ -223,8 +265,8 @@ export default function ScribanTemplateEditor({
             {overflowWidgetsNode && <Editor
                 height={height}
                 language={LANGUAGE_ID}
-                value={value}
-                onChange={value => onChange(value ?? "")}
+                defaultValue={value}
+                onChange={handleChange}
                 beforeMount={ensureLanguageRegistered}
                 onMount={handleEditorMount}
                 theme={colorScheme === "dark" ? "vs-dark" : "vs"}

@@ -232,6 +232,7 @@ export * from './previewDeviceNamingTemplateError';
 export * from './previewDeviceNamingTemplateRequest';
 export * from './previewDeviceNamingTemplateResponse';
 export * from './previewDeviceNamingTemplateSong';
+export * from './previewDeviceNamingTemplateSongPath';
 export * from './pruneSessionsRequest';
 export * from './pruneSessionsResponse';
 export * from './purchasedSongStatus';

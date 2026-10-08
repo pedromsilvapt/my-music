@@ -1,25 +1,28 @@
 namespace MyMusic.Common.Services.Devices;
 
 /// <summary>
-/// Validates a device naming template and previews the paths it gives to the songs of a device.
+/// Validates a device naming template and previews the paths it gives to the songs of a device, or to a song.
 /// </summary>
 public interface IDeviceNamingPreviewService
 {
     /// <summary>
     /// Validates <paramref name="namingTemplate"/> (blank = the server's default template) and, when
     /// <paramref name="deviceId"/> is given, computes the path each song of that device would get from it,
-    /// the same way a sync does. Nothing is saved. Returns <c>null</c> when the device is not one of
-    /// <paramref name="ownerId"/>'s.
+    /// the same way a sync does. When <paramref name="songId"/> is given, computes the path that song would
+    /// get when added to a device with that template. Nothing is saved. Returns <c>null</c> when the device
+    /// or the song is not one of <paramref name="ownerId"/>'s.
     /// </summary>
     Task<DeviceNamingPreviewResult?> PreviewAsync(
         long ownerId,
         long? deviceId,
+        long? songId,
         string? namingTemplate,
         CancellationToken cancellationToken);
 }
 
 /// <summary>
-/// Result of a naming template preview. When <see cref="Errors"/> has items, there are no songs.
+/// Result of a naming template preview. When <see cref="Errors"/> has items, there are no songs and no
+/// <see cref="Song"/>.
 /// </summary>
 public record DeviceNamingPreviewResult
 {
@@ -33,6 +36,9 @@ public record DeviceNamingPreviewResult
     /// <summary>How many of them the template gives a path other than their current one.</summary>
     public required int Renamed { get; init; }
     public required List<DeviceNamingPreviewSong> Songs { get; init; }
+
+    /// <summary>The path of the previewed song, when the preview was asked for a song.</summary>
+    public DeviceNamingPreviewSongPath? Song { get; init; }
 }
 
 /// <summary>
@@ -60,5 +66,17 @@ public record DeviceNamingPreviewSong
     public required bool Changed { get; init; }
 
     /// <summary>Why the template could not be rendered for this song, if it could not.</summary>
+    public string? Error { get; init; }
+}
+
+/// <summary>
+/// The path the previewed template gives to a song added to a device.
+/// </summary>
+public record DeviceNamingPreviewSongPath
+{
+    /// <summary>The path, unless the template could not be rendered for the song.</summary>
+    public string? Path { get; init; }
+
+    /// <summary>Why the template could not be rendered for the song, if it could not.</summary>
     public string? Error { get; init; }
 }

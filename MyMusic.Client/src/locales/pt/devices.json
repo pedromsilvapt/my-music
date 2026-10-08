@@ -79,6 +79,7 @@
         "summary_other": "{{renamed}} de {{count}} ficheiros seriam renomeados",
         "changedOnly": "Apenas alterados",
         "empty": "Sem ficheiros para mostrar",
+        "songPath": "Caminho da música",
         "variables": {
             "title": "Título da música",
             "albumName": "Nome do álbum",
