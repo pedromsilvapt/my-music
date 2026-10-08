@@ -80,6 +80,16 @@
             "setNow": "Set Now",
             "saved": "The timestamps have been updated.",
             "failed": "Failed to update the timestamps: {{error}}"
+        },
+        "uploadSong": {
+            "label": "Upload Song",
+            "title": "Upload Song",
+            "dropTitle": "Drop the new audio file here, or click to choose it",
+            "dropAnother": "Drop or choose another file to change it",
+            "warning": "The audio of this song is replaced by the one of the file, and cannot be restored. The song keeps its metadata: the one in the file is discarded.",
+            "replace": "Replace",
+            "saved": "The song's audio has been replaced.",
+            "failed": "Failed to replace the song's audio: {{error}}"
         }
     },
     "import": {

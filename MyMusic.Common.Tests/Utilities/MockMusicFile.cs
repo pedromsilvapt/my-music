@@ -26,6 +26,24 @@ public static class MockMusicFile
         return ms.ToArray();
     }
 
+    /// <summary>
+    ///     Writes a short M4A file, which has no tags, at <paramref name="filePath"/>.
+    /// </summary>
+    public static void CreateM4a(IFileSystem fs, string filePath)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        const string resourceName = "MyMusic.Common.Tests.Resources.tone.m4a";
+
+        using var stream = assembly.GetManifestResourceStream(resourceName)
+            ?? throw new Exception("Missing test M4A file resource. The tests project is misconfigured.");
+
+        using var ms = new MemoryStream();
+        stream.CopyTo(ms);
+
+        fs.Directory.CreateDirectory(fs.Path.GetDirectoryName(filePath)!);
+        fs.File.WriteAllBytes(filePath, ms.ToArray());
+    }
+
     private static byte[] GetVariantMusicFile()
     {
         var content = GetTestMusicFile();

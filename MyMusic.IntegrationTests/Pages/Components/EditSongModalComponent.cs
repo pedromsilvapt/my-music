@@ -111,6 +111,27 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         return timestampsModal;
     }
 
+    /// <summary>
+    /// Opens the "Upload Song" tool from the tools menu and returns its dialog.
+    /// </summary>
+    public async Task<SongFileUploadModalComponent> OpenUploadSongAsync()
+    {
+        await Root.GetByTestId("edit-song-tools").ClickAsync();
+
+        // The menu and the tool's dialog are rendered in portals, outside the edit dialog
+        await Root.Page.GetByTestId("song-tool-upload-song").ClickAsync();
+
+        var uploadModal = new SongFileUploadModalComponent(Root.Page.GetByTestId("song-file-upload-modal"));
+        await uploadModal.WaitForOpenedAsync();
+        return uploadModal;
+    }
+
+    public async Task CancelAsync()
+    {
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Cancel" }).ClickAsync();
+        await Root.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
+    }
+
     public async Task SaveAsync()
     {
         await Root.GetByRole(AriaRole.Button, new() { Name = "Save" }).ClickAsync();

@@ -429,6 +429,15 @@ The "Change Timestamps" tool of the edit song modal (`PUT /songs/{id}/timestamps
 - **Nothing else changes**: the file, the checksum and the song's devices are left alone. The change is still a new revision in the song's history.
 - **`FileModifiedAt` drives sync**: sync compares it with each device's `LastSyncedModifiedAt`, so moving it forward makes the devices see the song as changed on the server (see [sync.md](sync.md)).
 
+### Song file replacement
+
+The "Upload Song" tool of the edit song modal (`POST /songs/{id}/file`, `SongFileReplaceService`) replaces the audio of a song with an uploaded `.mp3` or `.m4a` file, keeping everything known about the song.
+
+- **Only the audio is taken from the upload**: its tags are stripped, the tags of the song's current file are copied over (so the ones the database does not store, like the composer or a comment, survive), and `SongFileUpdateService` then writes the song's metadata on top, as on any edit.
+- **A new file for the devices**: the checksum, `Size`, `Duration`, `Bitrate` and `FileModifiedAt` change, and the song's devices are marked to download the file again. The previous checksum stays in the song's checksum history.
+- **Another format changes the extension**: the file takes the new extension in the repository, and each copy on a device gets a `RequestedPath` with it, so the pending download renames the device's file on the next sync (see [sync.md](sync.md)). Copies marked for removal are left alone.
+- **All or nothing**: the file changes go through an `IFileTransaction`, so a failure puts the original file back.
+
 ## Dependencies
 
 NuGet versions are managed centrally in the root `Directory.Packages.props`. To add or bump a package, set its `<PackageVersion>` there and reference it from the `.csproj` without a `Version` attribute.

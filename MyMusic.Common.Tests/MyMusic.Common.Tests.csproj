@@ -32,6 +32,8 @@
     <ItemGroup>
       <None Remove="Resources\251progressie.mp3" />
       <EmbeddedResource Include="Resources\251progressie.mp3" />
+      <None Remove="Resources\tone.m4a" />
+      <EmbeddedResource Include="Resources\tone.m4a" />
     </ItemGroup>
 
 </Project>

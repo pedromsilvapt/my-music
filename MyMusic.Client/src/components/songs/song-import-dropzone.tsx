@@ -2,25 +2,18 @@ import {Dropzone} from "@mantine/dropzone";
 import {Group, Stack, Text, ThemeIcon} from "@mantine/core";
 import {IconMusic} from "@tabler/icons-react";
 import {useTranslation} from "react-i18next";
-
-const ACCEPTED_AUDIO_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/m4a'];
-const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a'];
+import {useImportDropzoneStore} from "../../stores/import-dropzone-store.ts";
+import {ACCEPTED_AUDIO_FILES, isAudioFile} from "../../utils/audio-files.ts";
 
 interface SongImportDropzoneProps {
     onFilesDropped: (files: File[]) => void;
     children: React.ReactNode;
 }
 
-function isAudioFile(file: File): boolean {
-    if (ACCEPTED_AUDIO_TYPES.includes(file.type)) {
-        return true;
-    }
-    const lowerName = file.name.toLowerCase();
-    return ACCEPTED_EXTENSIONS.some(ext => lowerName.endsWith(ext));
-}
-
 export default function SongImportDropzone({onFilesDropped, children}: SongImportDropzoneProps) {
     const {t} = useTranslation(["songs", "common"]);
+    // Switched off while a dialog takes the dropped files itself
+    const suspended = useImportDropzoneStore(state => state.suspensions > 0);
     const handleDrop = (files: File[]) => {
         const audioFiles = files.filter(isAudioFile);
         if (audioFiles.length > 0) {
@@ -33,14 +26,10 @@ export default function SongImportDropzone({onFilesDropped, children}: SongImpor
             {children}
             {/* <Portal> */}
                 <Dropzone.FullScreen
-                    active={true}
+                    active={!suspended}
                     onDrop={handleDrop}
                     activateOnDrag
-                    accept={{
-                        'audio/mpeg': ['.mp3'],
-                        'audio/mp4': ['.m4a'],
-                        'audio/x-m4a': ['.m4a'],
-                    }}
+                    accept={ACCEPTED_AUDIO_FILES}
                     // style={{
                     //     position: 'fixed',
                     //     inset: 0,

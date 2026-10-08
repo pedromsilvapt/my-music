@@ -71,6 +71,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<ISongUpdateService, SongUpdateService>();
         builder.Services.AddScoped<ISongChecksumRecalculateService, SongChecksumRecalculateService>();
         builder.Services.AddScoped<ISongTimestampsUpdateService, SongTimestampsUpdateService>();
+        builder.Services.AddScoped<ISongFileReplaceService, SongFileReplaceService>();
         builder.Services.AddScoped<ISongDevicesUpdateService, SongDevicesUpdateService>();
         builder.Services.AddScoped<ISongDevicesGetService, SongDevicesGetService>();
         builder.Services.AddScoped<ISourcesService, SourcesService>();

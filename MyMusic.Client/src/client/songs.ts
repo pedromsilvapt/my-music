@@ -52,6 +52,8 @@ import type {
   QuerySongDevicesRequest,
   QuerySongDevicesResponse,
   RecalculateSongChecksumResponse,
+  ReplaceSongFileBody,
+  ReplaceSongFileResponse,
   ToggleFavoriteResponse,
   ToggleFavoritesRequest,
   ToggleFavoritesResponse,
@@ -2386,6 +2388,110 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
       const backupQueryClient = useQueryClient();
       return useMutation(getUpdateSongTimestampsMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
     }
+    export type replaceSongFileResponse200TextPlain = {
+  data: ReplaceSongFileResponse
+  status: 200
+}
+
+export type replaceSongFileResponse200ApplicationJson = {
+  data: ReplaceSongFileResponse
+  status: 200
+}
+
+export type replaceSongFileResponse200TextJson = {
+  data: ReplaceSongFileResponse
+  status: 200
+}
+
+export type replaceSongFileResponseSuccess = (replaceSongFileResponse200TextPlain | replaceSongFileResponse200ApplicationJson | replaceSongFileResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type replaceSongFileResponse = (replaceSongFileResponseSuccess)
+
+export const getReplaceSongFileUrl = (id: number,) => {
+
+
+
+
+  return `/api/songs/${id}/file`
+}
+
+export const replaceSongFile = async (id: number,
+    replaceSongFileBody: ReplaceSongFileBody, options?: RequestInit): Promise<replaceSongFileResponse> => {
+    const formData = new FormData();
+if(replaceSongFileBody.file !== undefined) {
+ formData.append(`file`, replaceSongFileBody.file);
+ }
+
+  const res = await fetch(getReplaceSongFileUrl(id),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: replaceSongFileResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as replaceSongFileResponse
+}
+
+
+
+
+export const getReplaceSongFileMutationOptions = <TError = unknown,
+    TContext = unknown>(queryClient: QueryClient, options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceSongFile>>, TError,{id: number;data: ReplaceSongFileBody}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof replaceSongFile>>, TError,{id: number;data: ReplaceSongFileBody}, TContext> => {
+
+const mutationKey = ['replaceSongFile'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof replaceSongFile>>, {id: number;data: ReplaceSongFileBody}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  replaceSongFile(id,data,fetchOptions)
+        }
+
+  const onSuccess = (data: Awaited<ReturnType<typeof replaceSongFile>>, variables: {id: number;data: ReplaceSongFileBody}, onMutateResult: TContext, context: MutationFunctionContext) => {
+        if (!options?.skipInvalidation) {
+        queryClient.invalidateQueries({ queryKey: getListSongsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ['sources'] });
+        }
+        mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
+      };
+
+
+
+
+  return  { ...mutationOptions, mutationFn, onSuccess }}
+
+    export type ReplaceSongFileMutationResult = NonNullable<Awaited<ReturnType<typeof replaceSongFile>>>
+    export type ReplaceSongFileMutationBody = ReplaceSongFileBody
+    export type ReplaceSongFileMutationError = unknown
+
+    export const useReplaceSongFile = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof replaceSongFile>>, TError,{id: number;data: ReplaceSongFileBody}, TContext>, skipInvalidation?: boolean, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof replaceSongFile>>,
+        TError,
+        {id: number;data: ReplaceSongFileBody},
+        TContext
+      > => {
+      const backupQueryClient = useQueryClient();
+      return useMutation(getReplaceSongFileMutationOptions(queryClient ?? backupQueryClient, options), queryClient);
+    }
     export type fetchSongMetadataResponse200TextPlain = {
   data: FetchMetadataResponse
   status: 200
@@ -2624,6 +2730,8 @@ export const getAutocompleteGenresResponseMock = (overrideResponse: Partial<Extr
 export const getRecalculateSongChecksumResponseMock = (overrideResponse: Partial<Extract<RecalculateSongChecksumResponse, object>> = {}): RecalculateSongChecksumResponse => (faker.helpers.arrayElement([{changed: faker.datatype.boolean(), ...overrideResponse}, {changed: faker.datatype.boolean(), ...overrideResponse}, {changed: faker.datatype.boolean(), ...overrideResponse}]))
 
 export const getUpdateSongTimestampsResponseMock = (overrideResponse: Partial<Extract<UpdateSongTimestampsResponse, object>> = {}): UpdateSongTimestampsResponse => (faker.helpers.arrayElement([{createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), ...overrideResponse}, {createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), ...overrideResponse}, {createdAt: faker.date.past().toISOString().slice(0, 19) + 'Z', modifiedAt: faker.date.past().toISOString().slice(0, 19) + 'Z', addedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), fileModifiedAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined]), ...overrideResponse}]))
+
+export const getReplaceSongFileResponseMock = (overrideResponse: Partial<Extract<ReplaceSongFileResponse, object>> = {}): ReplaceSongFileResponse => (faker.helpers.arrayElement([{id: faker.number.int(), repositoryPath: faker.string.alpha({length: {min: 10, max: 20}}), size: faker.number.int(), duration: faker.number.float({fractionDigits: 2}), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), ...overrideResponse}, {id: faker.number.int(), repositoryPath: faker.string.alpha({length: {min: 10, max: 20}}), size: faker.number.int(), duration: faker.number.float({fractionDigits: 2}), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), ...overrideResponse}, {id: faker.number.int(), repositoryPath: faker.string.alpha({length: {min: 10, max: 20}}), size: faker.number.int(), duration: faker.number.float({fractionDigits: 2}), bitrate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), ...overrideResponse}]))
 
 export const getFetchSongMetadataResponseSongMetadataFieldOfstringMock = (overrideResponse: Partial<SongMetadataFieldOfstring> = {}): SongMetadataFieldOfstring => ({...{old: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), null]), new: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), null])}, ...overrideResponse});
 
@@ -2886,6 +2994,18 @@ export const getUpdateSongTimestampsMockHandler = (overrideResponse?: UpdateSong
   }, options)
 }
 
+export const getReplaceSongFileMockHandler = (overrideResponse?: ReplaceSongFileResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ReplaceSongFileResponse> | ReplaceSongFileResponse), options?: RequestHandlerOptions) => {
+  return http.post('*/songs/:id/file', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getReplaceSongFileResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
 export const getFetchSongMetadataMockHandler = (overrideResponse?: FetchMetadataResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<FetchMetadataResponse> | FetchMetadataResponse), options?: RequestHandlerOptions) => {
   return http.post('*/songs/:id/fetch-metadata', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
 
@@ -2930,6 +3050,7 @@ export const getSongsMock = () => [
   getAutocompleteGenresMockHandler(),
   getRecalculateSongChecksumMockHandler(),
   getUpdateSongTimestampsMockHandler(),
+  getReplaceSongFileMockHandler(),
   getFetchSongMetadataMockHandler(),
   getBatchMultiUpdateSongsMockHandler()
 ]

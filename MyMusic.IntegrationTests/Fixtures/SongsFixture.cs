@@ -289,6 +289,12 @@ public class SongsFixture
         return data;
     }
 
+    /// <summary>
+    /// Creates an M4A file to upload through the browser, whose tags say it is the given song. Nothing is seeded.
+    /// </summary>
+    public SongFile CreateM4aFile(SampleSong taggedAs) =>
+        new($"{taggedAs.Title}.m4a", TestFiles.CreateTestM4aFile(taggedAs));
+
     public async Task<SongData> SeedAsync(IAPIRequestContext api, long userId, SampleSong song, ILogger? logger = null)
     {
         var songs = await SeedAsync(api, userId, [song], logger);

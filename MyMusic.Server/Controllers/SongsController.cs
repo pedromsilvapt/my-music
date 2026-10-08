@@ -960,6 +960,50 @@ public class SongsController(
         return UpdateSongTimestampsResponse.FromEntity(song);
     }
 
+    // Owner-only by design — sharing is read-only. Recipients cannot run tools on the owner's song.
+    [HttpPost("{id:long}/file", Name = "ReplaceSongFile")]
+    [RequestSizeLimit(100_000_000)]
+    public async Task<ActionResult<ReplaceSongFileResponse>> ReplaceFile(
+        long id,
+        IFormFile file,
+        [FromServices] ISongFileReplaceService songFileReplaceService,
+        CancellationToken cancellationToken)
+    {
+        if (file == null || file.Length == 0)
+        {
+            return Problem("No file provided", statusCode: StatusCodes.Status400BadRequest,
+                title: "Song file cannot be replaced");
+        }
+
+        var tempPath = fileSystem.Path.Combine(fileSystem.Path.GetTempPath(), $"mymusic_replace_{Guid.NewGuid()}");
+        fileSystem.Directory.CreateDirectory(tempPath);
+
+        try
+        {
+            var tempFilePath = fileSystem.Path.Combine(tempPath, fileSystem.Path.GetFileName(file.FileName));
+            await using (var stream = fileSystem.FileStream.New(tempFilePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream, cancellationToken);
+            }
+
+            var song = await songFileReplaceService.ReplaceAsync(id, tempFilePath, cancellationToken);
+
+            return ReplaceSongFileResponse.FromEntity(song);
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest,
+                title: "Song file cannot be replaced");
+        }
+        finally
+        {
+            if (fileSystem.Directory.Exists(tempPath))
+            {
+                fileSystem.Directory.Delete(tempPath, true);
+            }
+        }
+    }
+
     // Owner-only by design — sharing is read-only. Recipients cannot trigger metadata fetch on the owner's song.
     [HttpPost("{id:long}/fetch-metadata", Name = "FetchSongMetadata")]
     public async Task<ActionResult<FetchMetadataResponse>> FetchMetadata(

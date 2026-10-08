@@ -1,8 +1,9 @@
 import {ActionIcon, Menu} from "@mantine/core";
-import {IconClock, IconHash, IconTool} from "@tabler/icons-react";
+import {IconClock, IconHash, IconTool, IconUpload} from "@tabler/icons-react";
 import {useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useRecalculateSongChecksumWithNotifications} from "../../hooks/use-recalculate-song-checksum.ts";
+import SongFileUploadModal from "./song-file-upload-modal.tsx";
 import SongTimestampsModal from "./song-timestamps-modal.tsx";
 
 interface SongToolsMenuProps {
@@ -18,6 +19,7 @@ export default function SongToolsMenu({songId, disabled}: SongToolsMenuProps) {
     const {t} = useTranslation(["songs", "common"]);
     const {recalculate, isPending: isRecalculatePending} = useRecalculateSongChecksumWithNotifications();
     const [timestampsOpened, setTimestampsOpened] = useState(false);
+    const [uploadOpened, setUploadOpened] = useState(false);
 
     return (
         <>
@@ -49,11 +51,23 @@ export default function SongToolsMenu({songId, disabled}: SongToolsMenuProps) {
                     >
                         {t("songs:tools.changeTimestamps.label")}
                     </Menu.Item>
+                    <Menu.Item
+                        leftSection={<IconUpload size={16}/>}
+                        onClick={() => setUploadOpened(true)}
+                        data-testid="song-tool-upload-song"
+                    >
+                        {t("songs:tools.uploadSong.label")}
+                    </Menu.Item>
                 </Menu.Dropdown>
             </Menu>
             <SongTimestampsModal
                 opened={timestampsOpened}
                 onClose={() => setTimestampsOpened(false)}
+                songId={songId}
+            />
+            <SongFileUploadModal
+                opened={uploadOpened}
+                onClose={() => setUploadOpened(false)}
                 songId={songId}
             />
         </>

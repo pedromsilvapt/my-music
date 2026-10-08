@@ -32,5 +32,6 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Fixtures\TestFiles\Resources\*.mp3" />
+    <EmbeddedResource Include="Fixtures\TestFiles\Resources\*.m4a" />
   </ItemGroup>
 </Project>

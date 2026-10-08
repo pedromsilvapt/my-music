@@ -31,6 +31,46 @@ public static class TestFiles
     public static byte[] CreateUnreadableMusicFile() =>
         System.Text.Encoding.UTF8.GetBytes("This is not an audio file");
 
+    /// <summary>
+    /// Returns the contents of a short M4A file, with other audio than the MP3 test files, tagged as the given song.
+    /// </summary>
+    public static byte[] CreateTestM4aFile(SampleSong song)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        const string resourceName = "MyMusic.IntegrationTests.Fixtures.TestFiles.Resources.tone.m4a";
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"mymusic_test_{Guid.NewGuid()}.m4a");
+
+        try
+        {
+            using (var stream = assembly.GetManifestResourceStream(resourceName)
+                ?? throw new Exception("Missing test M4A file resource. The tests project is misconfigured."))
+            using (var file = File.Create(tempPath))
+            {
+                stream.CopyTo(file);
+            }
+
+            using (var tfile = TagLib.File.Create(tempPath))
+            {
+                tfile.Tag.Title = song.Title;
+                tfile.Tag.Album = song.Album;
+                tfile.Tag.Performers = song.Artists ?? [];
+                tfile.Tag.Genres = song.Genres ?? [];
+                tfile.Tag.Year = (uint)(song.Year ?? 0);
+                tfile.Save();
+            }
+
+            return File.ReadAllBytes(tempPath);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
     public static byte[] CreateTestMusicFile(SampleSong song, int? contentVariant = null)
     {
         var baseBytes = GetBaseTestMusicFile();

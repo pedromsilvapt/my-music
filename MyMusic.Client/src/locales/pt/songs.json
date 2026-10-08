@@ -80,6 +80,16 @@
             "setNow": "Agora",
             "saved": "As datas foram atualizadas.",
             "failed": "Falha ao atualizar as datas: {{error}}"
+        },
+        "uploadSong": {
+            "label": "Enviar Música",
+            "title": "Enviar Música",
+            "dropTitle": "Largue aqui o novo ficheiro de áudio, ou clique para o escolher",
+            "dropAnother": "Largue ou escolha outro ficheiro para o trocar",
+            "warning": "O áudio desta música é substituído pelo do ficheiro, e não pode ser recuperado. A música mantém os seus metadados: os do ficheiro são descartados.",
+            "replace": "Substituir",
+            "saved": "O áudio da música foi substituído.",
+            "failed": "Falha ao substituir o áudio da música: {{error}}"
         }
     },
     "import": {

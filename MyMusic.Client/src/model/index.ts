@@ -248,6 +248,8 @@ export * from './renameQueueResponse';
 export * from './reorderQueueItem';
 export * from './reorderQueueRequest';
 export * from './replaceQueueRequest';
+export * from './replaceSongFileBody';
+export * from './replaceSongFileResponse';
 export * from './reportSyncErrorRequest';
 export * from './reportSyncErrorResponse';
 export * from './requeueFailedMetadataRequest';
