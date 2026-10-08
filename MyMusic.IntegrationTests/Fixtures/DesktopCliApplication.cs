@@ -72,7 +72,7 @@ public class DesktopCliApplication : ISyncApplication
         => _fixture.SetNamingTemplateAsync(namingTemplate);
 
     public Task SetLocalNamingTemplateAsync(string namingTemplate)
-        => _fixture.SetLocalNamingTemplateAsync(namingTemplate);
+        => throw new NotSupportedException("The application cannot preview a naming template in a dry run yet: the device options live on the server.");
 
     public Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options)
         => _fixture.UpdateLocalFileMetadataAsync(fileName, options);

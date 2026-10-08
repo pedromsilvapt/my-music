@@ -36,6 +36,8 @@ import type {
   GetDevicesParams,
   ListDevicesResponse,
   PostDevicesDeviceIdSyncSessionIdUploadBody,
+  PreviewDeviceNamingTemplateRequest,
+  PreviewDeviceNamingTemplateResponse,
   SyncUploadResponse,
   UpdateDeviceRequest,
   UpdateDeviceResponse
@@ -376,6 +378,7 @@ const {mutation: mutationOptions, fetch: fetchOptions} = options ?
   const onSuccess = (data: Awaited<ReturnType<typeof putDevicesDeviceId>>, variables: {deviceId: number;data: UpdateDeviceRequest}, onMutateResult: TContext, context: MutationFunctionContext) => {
         if (!options?.skipInvalidation) {
         queryClient.invalidateQueries({ queryKey: getGetDevicesQueryKey() });
+    queryClient.invalidateQueries({ queryKey: ['devices'] });
         }
         mutationOptions?.onSuccess?.(data, variables, onMutateResult, context);
       };
@@ -619,7 +622,99 @@ export const invalidateGetDevice = async (
 
 
 
-export type postDevicesDeviceIdSyncSessionIdUploadResponse200TextPlain = {
+export type previewDeviceNamingTemplateResponse200TextPlain = {
+  data: PreviewDeviceNamingTemplateResponse
+  status: 200
+}
+
+export type previewDeviceNamingTemplateResponse200ApplicationJson = {
+  data: PreviewDeviceNamingTemplateResponse
+  status: 200
+}
+
+export type previewDeviceNamingTemplateResponse200TextJson = {
+  data: PreviewDeviceNamingTemplateResponse
+  status: 200
+}
+
+export type previewDeviceNamingTemplateResponseSuccess = (previewDeviceNamingTemplateResponse200TextPlain | previewDeviceNamingTemplateResponse200ApplicationJson | previewDeviceNamingTemplateResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type previewDeviceNamingTemplateResponse = (previewDeviceNamingTemplateResponseSuccess)
+
+export const getPreviewDeviceNamingTemplateUrl = () => {
+
+
+
+
+  return `/api/devices/naming-template/preview`
+}
+
+export const previewDeviceNamingTemplate = async (previewDeviceNamingTemplateRequest: PreviewDeviceNamingTemplateRequest, options?: RequestInit): Promise<previewDeviceNamingTemplateResponse> => {
+
+  const res = await fetch(getPreviewDeviceNamingTemplateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(previewDeviceNamingTemplateRequest)
+  }
+)
+
+  const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: previewDeviceNamingTemplateResponse['data'] = body ? (contentType.includes('json') ? JSON.parse(body) : body) : {}
+  return { data, status: res.status, headers: res.headers } as previewDeviceNamingTemplateResponse
+}
+
+
+
+
+export const getPreviewDeviceNamingTemplateMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDeviceNamingTemplate>>, TError,{data: PreviewDeviceNamingTemplateRequest}, TContext>, fetch?: RequestInit}
+): UseMutationOptions<Awaited<ReturnType<typeof previewDeviceNamingTemplate>>, TError,{data: PreviewDeviceNamingTemplateRequest}, TContext> => {
+
+const mutationKey = ['previewDeviceNamingTemplate'];
+const {mutation: mutationOptions, fetch: fetchOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, fetch: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewDeviceNamingTemplate>>, {data: PreviewDeviceNamingTemplateRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewDeviceNamingTemplate(data,fetchOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewDeviceNamingTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof previewDeviceNamingTemplate>>>
+    export type PreviewDeviceNamingTemplateMutationBody = PreviewDeviceNamingTemplateRequest
+    export type PreviewDeviceNamingTemplateMutationError = unknown
+
+    export const usePreviewDeviceNamingTemplate = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewDeviceNamingTemplate>>, TError,{data: PreviewDeviceNamingTemplateRequest}, TContext>, fetch?: RequestInit}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof previewDeviceNamingTemplate>>,
+        TError,
+        {data: PreviewDeviceNamingTemplateRequest},
+        TContext
+      > => {
+      return useMutation(getPreviewDeviceNamingTemplateMutationOptions(options), queryClient);
+    }
+    export type postDevicesDeviceIdSyncSessionIdUploadResponse200TextPlain = {
   data: SyncUploadResponse
   status: 200
 }
@@ -1013,6 +1108,8 @@ export const getPutDevicesDeviceIdResponseMock = (overrideResponse: Partial<Extr
 
 export const getGetDeviceResponseMock = (overrideResponse: Partial<Extract<GetDeviceResponse, object>> = {}): GetDeviceResponse => (faker.helpers.arrayElement([{device: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), namingTemplate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), songCount: faker.number.int(), importOnPurchase: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), lastSyncAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined])}, ...overrideResponse}, {device: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), namingTemplate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), songCount: faker.number.int(), importOnPurchase: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), lastSyncAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined])}, ...overrideResponse}, {device: {id: faker.number.int(), name: faker.string.alpha({length: {min: 10, max: 20}}), icon: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), color: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), namingTemplate: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), songCount: faker.number.int(), importOnPurchase: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), lastSyncAt: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', null]), undefined])}, ...overrideResponse}]))
 
+export const getPreviewDeviceNamingTemplateResponseMock = (overrideResponse: Partial<Extract<PreviewDeviceNamingTemplateResponse, object>> = {}): PreviewDeviceNamingTemplateResponse => (faker.helpers.arrayElement([{defaultNamingTemplate: faker.string.alpha({length: {min: 10, max: 20}}), errors: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({message: faker.string.alpha({length: {min: 10, max: 20}}), line: faker.number.int(), column: faker.number.int(), endLine: faker.number.int(), endColumn: faker.number.int()})), total: faker.number.int(), renamed: faker.number.int(), songs: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({songDeviceId: faker.number.int(), songId: faker.number.int(), title: faker.string.alpha({length: {min: 10, max: 20}}), currentPath: faker.string.alpha({length: {min: 10, max: 20}}), newPath: faker.string.alpha({length: {min: 10, max: 20}}), changed: faker.datatype.boolean(), error: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), ...overrideResponse}, {defaultNamingTemplate: faker.string.alpha({length: {min: 10, max: 20}}), errors: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({message: faker.string.alpha({length: {min: 10, max: 20}}), line: faker.number.int(), column: faker.number.int(), endLine: faker.number.int(), endColumn: faker.number.int()})), total: faker.number.int(), renamed: faker.number.int(), songs: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({songDeviceId: faker.number.int(), songId: faker.number.int(), title: faker.string.alpha({length: {min: 10, max: 20}}), currentPath: faker.string.alpha({length: {min: 10, max: 20}}), newPath: faker.string.alpha({length: {min: 10, max: 20}}), changed: faker.datatype.boolean(), error: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), ...overrideResponse}, {defaultNamingTemplate: faker.string.alpha({length: {min: 10, max: 20}}), errors: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({message: faker.string.alpha({length: {min: 10, max: 20}}), line: faker.number.int(), column: faker.number.int(), endLine: faker.number.int(), endColumn: faker.number.int()})), total: faker.number.int(), renamed: faker.number.int(), songs: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({songDeviceId: faker.number.int(), songId: faker.number.int(), title: faker.string.alpha({length: {min: 10, max: 20}}), currentPath: faker.string.alpha({length: {min: 10, max: 20}}), newPath: faker.string.alpha({length: {min: 10, max: 20}}), changed: faker.datatype.boolean(), error: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])})), ...overrideResponse}]))
+
 export const getPostDevicesDeviceIdSyncSessionIdUploadResponseSyncRecordSongInfoMock = (overrideResponse: Partial<SyncRecordSongInfo> = {}): SyncRecordSongInfo => ({...{id: faker.number.int(), title: faker.string.alpha({length: {min: 10, max: 20}}), artistNames: faker.string.alpha({length: {min: 10, max: 20}}), coverId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined])}, ...overrideResponse});
 
 export const getPostDevicesDeviceIdSyncSessionIdUploadResponseMock = (overrideResponse: Partial<Extract<SyncUploadResponse, object>> = {}): SyncUploadResponse => (faker.helpers.arrayElement([{success: faker.datatype.boolean(), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdUploadResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {success: faker.datatype.boolean(), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdUploadResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}, {success: faker.datatype.boolean(), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), records: Array.from({ length: faker.number.int({min: 1, max: 10}) }, (_, i) => i + 1).map(() => ({id: faker.number.int(), filePath: faker.string.alpha({length: {min: 10, max: 20}}), action: faker.helpers.arrayElement(Object.values(SyncRecordAction)), songId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), data: faker.helpers.arrayElement([faker.helpers.arrayElement([null,]), undefined]), resolvesConflictRecordId: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.number.int(), null]), undefined]), songInfo: faker.helpers.arrayElement([faker.helpers.arrayElement([null,{...getPostDevicesDeviceIdSyncSessionIdUploadResponseSyncRecordSongInfoMock()},]), undefined]), reason: faker.helpers.arrayElement([faker.helpers.arrayElement([faker.string.alpha({length: {min: 10, max: 20}}), null]), undefined]), acknowledged: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]), processedAt: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + 'Z', undefined])})), counts: {createRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateRemoteCount: faker.helpers.arrayElement([faker.number.int(), undefined]), skippedCount: faker.helpers.arrayElement([faker.number.int(), undefined]), createLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), deleteLocalCount: faker.helpers.arrayElement([faker.number.int(), undefined]), linkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), unlinkCount: faker.helpers.arrayElement([faker.number.int(), undefined]), renameCount: faker.helpers.arrayElement([faker.number.int(), undefined]), conflictCount: faker.helpers.arrayElement([faker.number.int(), undefined]), updateTimestampCount: faker.helpers.arrayElement([faker.number.int(), undefined]), errorCount: faker.helpers.arrayElement([faker.number.int(), undefined])}, ...overrideResponse}]))
@@ -1080,6 +1177,18 @@ export const getGetDeviceMockHandler = (overrideResponse?: GetDeviceResponse | (
   }, options)
 }
 
+export const getPreviewDeviceNamingTemplateMockHandler = (overrideResponse?: PreviewDeviceNamingTemplateResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<PreviewDeviceNamingTemplateResponse> | PreviewDeviceNamingTemplateResponse), options?: RequestHandlerOptions) => {
+  return http.post('*/devices/naming-template/preview', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+
+
+    return HttpResponse.json(overrideResponse !== undefined
+    ? (typeof overrideResponse === "function" ? await overrideResponse(info) : overrideResponse)
+    : getPreviewDeviceNamingTemplateResponseMock(),
+      { status: 200
+      })
+  }, options)
+}
+
 export const getPostDevicesDeviceIdSyncSessionIdUploadMockHandler = (overrideResponse?: SyncUploadResponse | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<SyncUploadResponse> | SyncUploadResponse), options?: RequestHandlerOptions) => {
   return http.post('*/devices/:deviceId/sync/:sessionId/upload', async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
 
@@ -1121,6 +1230,7 @@ export const getDevicesMock = () => [
   getPutDevicesDeviceIdMockHandler(),
   getDeleteDevicesDeviceIdMockHandler(),
   getGetDeviceMockHandler(),
+  getPreviewDeviceNamingTemplateMockHandler(),
   getPostDevicesDeviceIdSyncSessionIdUploadMockHandler(),
   getGetDevicesFilterMetadataMockHandler(),
   getGetDevicesFilterValuesMockHandler()

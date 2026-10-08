@@ -60,28 +60,12 @@ export async function setDeviceId(id: number | null): Promise<void> {
     useConfigStore.getState().setDeviceId(id);
 }
 
-export function getImportOnPurchase(): boolean {
-    return useConfigStore.getState().importOnPurchase;
-}
-
-export async function setImportOnPurchase(value: boolean): Promise<void> {
-    useConfigStore.getState().setImportOnPurchase(value);
-}
-
 export function getRepositoryPath(): string {
     return useConfigStore.getState().repositoryPath;
 }
 
 export async function setRepositoryPath(path: string): Promise<void> {
     useConfigStore.getState().setRepositoryPath(path);
-}
-
-export function getNamingTemplate(): string {
-    return useConfigStore.getState().namingTemplate;
-}
-
-export async function setNamingTemplate(template: string): Promise<void> {
-    useConfigStore.getState().setNamingTemplate(template);
 }
 
 export function getMusicExtensions(): string[] {
@@ -157,9 +141,7 @@ export function getAllConfig() {
         deviceName: state.deviceName,
         deviceIcon: state.deviceIcon,
         deviceId: state.deviceId,
-        importOnPurchase: state.importOnPurchase,
         repositoryPath: state.repositoryPath,
-        namingTemplate: state.namingTemplate,
         excludePatterns: state.excludePatterns,
         chunkTuning: state.chunkTuning,
         fileModifiedAt: state.fileModifiedAt,
@@ -184,9 +166,7 @@ export async function resetConfig(): Promise<void> {
     useConfigStore.getState().setDeviceName('My Phone');
     useConfigStore.getState().setDeviceIcon(DEFAULT_DEVICE_TYPE.id);
     useConfigStore.getState().setDeviceId(null);
-    useConfigStore.getState().setImportOnPurchase(false);
     useConfigStore.getState().setRepositoryPath('');
-    useConfigStore.getState().setNamingTemplate('');
     useConfigStore.getState().setExcludePatterns(DEFAULT_EXCLUDE_PATTERNS);
     useConfigStore.getState().setChunkTuning(DEFAULT_CHUNK_TUNING);
     useConfigStore.getState().setFileModifiedAt('Now');

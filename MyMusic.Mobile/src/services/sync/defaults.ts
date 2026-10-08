@@ -25,8 +25,6 @@ import {
     setLastScanTotal,
     setLastSyncAt,
 } from '../configService';
-import { getDevice, updateDevice } from '../../api/devices';
-import { getLocalDeviceOptions } from '../deviceConfigService';
 import { getScanner } from '../scannerRegistry';
 import { resolveRepositoryPath } from '../repositoryPath';
 import { toFileUri } from '../pathUtils';
@@ -47,8 +45,6 @@ import type {
 
 export function createDefaultApiClient(): ISyncApiClient {
     return {
-        getDevice,
-        updateDevice,
         startSync,
         prepareDeduplicate,
         checkSync: async (deviceId, sessionId, request) => {
@@ -94,7 +90,6 @@ export function createDefaultApiClient(): ISyncApiClient {
 export function createDefaultConfig(): ISyncConfig {
     return {
         getDeviceId,
-        getDeviceOptions: getLocalDeviceOptions,
         getRepositoryPath,
         getMusicExtensions,
         getExcludePatterns,

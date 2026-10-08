@@ -5,7 +5,7 @@ import {ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View} from
 import {Button, ErrorDisplay, ProgressBar, SyncPromptDialog} from '../../src/components/ui';
 import type {ErrorDetails} from '../../src/components/ui/ErrorDisplay';
 import {useTheme} from '../../src/hooks/useTheme';
-import {saveDeviceConfig} from '../../src/services/deviceConfigService';
+import {findDevice} from '../../src/services/deviceConfigService';
 import {runSync, SyncCancelledError} from '../../src/services/syncService';
 import {useConfigStore} from '../../src/stores/configStore';
 import {useSyncStore} from '../../src/stores/syncStore';
@@ -42,7 +42,7 @@ export default function SyncProgressScreen() {
 
         const reacquireDeviceId = async (): Promise<boolean> => {
             try {
-                await saveDeviceConfig();
+                await findDevice();
                 return true;
             } catch (reacquireErr) {
                 console.error('Failed to re-acquire device ID:', reacquireErr);

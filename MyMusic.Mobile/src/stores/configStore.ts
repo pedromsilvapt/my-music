@@ -11,12 +11,12 @@ export const DEFAULT_EXCLUDE_PATTERNS = ['**/.*', '**/Thumbs.db', '**/*.tmp', '*
 interface ConfigState {
     isLoading: boolean;
     serverUrl: string;
+    /** The name of the server device this installation syncs with. */
     deviceName: string;
+    /** The icon of that device, as last seen on the server: the device options live there. */
     deviceIcon: string;
     deviceId: number | null;
-    importOnPurchase: boolean;
     repositoryPath: string;
-    namingTemplate: string;
     excludePatterns: string[];
     chunkTuning: SyncChunkTuning;
     fileModifiedAt: FileModifiedAtSource;
@@ -29,9 +29,7 @@ interface ConfigState {
     setDeviceName: (name: string) => void;
     setDeviceIcon: (icon: string) => void;
     setDeviceId: (id: number | null) => void;
-    setImportOnPurchase: (value: boolean) => void;
     setRepositoryPath: (path: string) => void;
-    setNamingTemplate: (template: string) => void;
     setExcludePatterns: (patterns: string[]) => void;
     setChunkTuning: (tuning: SyncChunkTuning) => void;
     setFileModifiedAt: (source: FileModifiedAtSource) => void;
@@ -49,9 +47,7 @@ export const useConfigStore = create<ConfigState>()(
             deviceName: 'My Phone',
             deviceIcon: DEFAULT_DEVICE_TYPE.id,
             deviceId: null,
-            importOnPurchase: false,
             repositoryPath: '',
-            namingTemplate: '',
             excludePatterns: DEFAULT_EXCLUDE_PATTERNS,
             chunkTuning: DEFAULT_CHUNK_TUNING,
             fileModifiedAt: 'Now',
@@ -64,9 +60,7 @@ export const useConfigStore = create<ConfigState>()(
             setDeviceName: (deviceName) => set({deviceName}),
             setDeviceIcon: (deviceIcon) => set({deviceIcon}),
             setDeviceId: (deviceId) => set({deviceId}),
-            setImportOnPurchase: (importOnPurchase) => set({importOnPurchase}),
             setRepositoryPath: (repositoryPath) => set({repositoryPath}),
-            setNamingTemplate: (namingTemplate) => set({namingTemplate}),
             setExcludePatterns: (excludePatterns) => set({excludePatterns}),
             setChunkTuning: (chunkTuning) => set({chunkTuning}),
             setFileModifiedAt: (fileModifiedAt) => set({fileModifiedAt}),
@@ -78,14 +72,19 @@ export const useConfigStore = create<ConfigState>()(
         {
             name: 'mymusic-config',
             storage: createJSONStorage(() => AsyncStorage),
+            version: 1,
+            migrate: (persistedState) => {
+                // Version 0 kept the naming template and import on purchase here: they now live on the server device
+                const {namingTemplate: _namingTemplate, importOnPurchase: _importOnPurchase, ...state} =
+                    (persistedState ?? {}) as Record<string, unknown>;
+                return state as unknown as ConfigState;
+            },
             partialize: (state) => ({
                 serverUrl: state.serverUrl,
                 deviceName: state.deviceName,
                 deviceIcon: state.deviceIcon,
                 deviceId: state.deviceId,
-                importOnPurchase: state.importOnPurchase,
                 repositoryPath: state.repositoryPath,
-                namingTemplate: state.namingTemplate,
                 excludePatterns: state.excludePatterns,
                 chunkTuning: state.chunkTuning,
                 fileModifiedAt: state.fileModifiedAt,

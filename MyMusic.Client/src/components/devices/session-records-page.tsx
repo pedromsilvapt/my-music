@@ -1,11 +1,11 @@
-import {useParams, Link} from "@tanstack/react-router";
+import {useParams} from "@tanstack/react-router";
 import {useEffect, useState, useCallback, useMemo} from "react";
 import {useTranslation} from "react-i18next";
-import {Anchor, Breadcrumbs, Text} from "@mantine/core";
 import {useGetDevice} from "../../client/devices.ts";
 import {useGetDevicesDeviceIdSessionsSessionId, useGetDevicesDeviceIdSessionsSessionIdRecords} from "../../client/device-sync-sessions.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
 import Collection from "../common/collection/collection.tsx";
+import DeviceBreadcrumbs from "./device-breadcrumbs.tsx";
 import {useSessionRecordsSchema} from "./useSessionRecordsSchema.tsx";
 import SessionActionPills from "./session-action-pills.tsx";
 import {useDebouncedValue} from "@mantine/hooks";
@@ -25,7 +25,6 @@ export default function SessionRecordsPage() {
     const deviceQuery = useGetDevice(deviceIdNum, {});
     const deviceResponse = useQueryData(deviceQuery, t("devices:recordsPage.fetchDeviceFailed"));
     const device = deviceResponse?.data?.device;
-    const deviceName = device?.name ?? t("devices:recordsPage.deviceFallback", {id: deviceId});
 
     const sessionQuery = useGetDevicesDeviceIdSessionsSessionId(deviceIdNum, sessionIdNum);
     const sessionResponse = useQueryData(sessionQuery, t("devices:recordsPage.fetchSessionFailed"));
@@ -80,26 +79,16 @@ export default function SessionRecordsPage() {
         setFilterQuery(filter);
     }, []);
     
-    const breadcrumbItems = [
-        {title: t("common:nav.devices"), href: '/devices', isLast: false},
-        {title: deviceName, href: `/devices/${deviceId}/sessions`, isLast: false},
-        {title: t("devices:recordsPage.session", {id: sessionId}), href: `/devices/${deviceId}/sessions/${sessionId}`, isLast: false},
-        {title: t("devices:recordsPage.records"), href: `/devices/${deviceId}/sessions/${sessionId}`, isLast: true},
-    ];
-    
     return (
         <div style={{height: 'var(--parent-height)', display: 'flex', flexDirection: 'column'}}>
-            <Breadcrumbs mb="md">
-                {breadcrumbItems.map((item) => (
-                    item.isLast ? (
-                        <Text key="current" fw={500}>{item.title}</Text>
-                    ) : (
-                        <Anchor key={item.href} component={Link} to={item.href}>
-                            {item.title}
-                        </Anchor>
-                    )
-                ))}
-            </Breadcrumbs>
+            <DeviceBreadcrumbs
+                deviceId={deviceId}
+                deviceName={device?.name}
+                items={[
+                    {title: t("devices:recordsPage.session", {id: sessionId}), href: `/devices/${deviceId}/sessions/${sessionId}`},
+                    {title: t("devices:recordsPage.records")},
+                ]}
+            />
 
             <SessionActionPills
                 session={session}

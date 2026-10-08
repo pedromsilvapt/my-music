@@ -23,8 +23,6 @@ jest.mock('../sync-actions-device', () => ({
 
 function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
     const mockApiClient: ISyncApiClient = {
-        getDevice: jest.fn().mockResolvedValue({device: {icon: 'IconDeviceMobile', color: '#10B981', namingTemplate: null, importOnPurchase: false}}),
-        updateDevice: jest.fn().mockResolvedValue({}),
         startSync: jest.fn().mockResolvedValue({sessionId: 1}),
         prepareDeduplicate: jest.fn().mockResolvedValue({total: 0, processed: 0, done: true}),
         checkSync: jest.fn().mockResolvedValue({
@@ -62,7 +60,6 @@ function createMockDeps(overrides: Partial<SyncDeps> = {}): SyncDeps {
 
     const mockConfig: ISyncConfig = {
         getDeviceId: jest.fn().mockReturnValue(1),
-        getDeviceOptions: jest.fn().mockReturnValue({icon: 'IconDeviceMobile', namingTemplate: null, importOnPurchase: false}),
         getRepositoryPath: jest.fn().mockReturnValue('/music'),
         getMusicExtensions: jest.fn().mockReturnValue(['.mp3']),
         getExcludePatterns: jest.fn().mockReturnValue([]),
@@ -138,16 +135,6 @@ describe('orchestrateSync', () => {
         expect(deps.config.setLastScanTotal).toHaveBeenCalled();
         expect(result.error).toBe(0);
         expect(result.sessionId).toBe(1);
-    });
-
-    test('saves the device options before the session starts', async () => {
-        const deps = createMockDeps();
-        (deps.config.getDeviceOptions as jest.Mock).mockReturnValue({icon: 'IconDeviceMobile', namingTemplate: '{{ simple_label }}.mp3', importOnPurchase: false});
-
-        await orchestrateSync(deps, jest.fn());
-
-        const order = (fn: unknown) => (fn as jest.Mock).mock.invocationCallOrder[0];
-        expect(order(deps.apiClient.updateDevice)).toBeLessThan(order(deps.apiClient.startSync));
     });
 
     test('deduplicate prepares the server library after the session starts and before the server actions', async () => {

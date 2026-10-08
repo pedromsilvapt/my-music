@@ -18,6 +18,9 @@ namespace MyMusic.IntegrationTests.Fixtures;
 
 public class MobileCliApplication : ISyncApplication
 {
+    private const string DeviceIcon = "IconDeviceMobile";
+    private const string DeviceColor = "#10B981";
+
     private readonly IConfiguration _configuration;
     private readonly IntegrationTestTelemetry _telemetry;
 
@@ -53,8 +56,8 @@ public class MobileCliApplication : ISyncApplication
             DataObject = new
             {
                 name = DeviceName,
-                icon = "IconDeviceMobile",
-                color = "#10B981",
+                icon = DeviceIcon,
+                color = DeviceColor,
             },
         });
 
@@ -117,27 +120,22 @@ public class MobileCliApplication : ISyncApplication
 
     public async Task SetNamingTemplateAsync(string namingTemplate)
     {
-        // Update the server device naming template
+        // The device options live on the server: the application only knows which device it is
         var response = await _api.PutWithTraceAsync($"/api/devices/{DeviceId}", new()
         {
             DataObject = new
             {
+                icon = DeviceIcon,
+                color = DeviceColor,
                 namingTemplate,
             },
         });
 
         response.Ok.ShouldBeTrue();
-
-        // Update the local config to match: a real sync saves the local device options to the server
-        await SetLocalNamingTemplateAsync(namingTemplate);
     }
 
-    public async Task SetLocalNamingTemplateAsync(string namingTemplate)
-    {
-        var config = JsonNode.Parse(await File.ReadAllTextAsync(_configPath))!;
-        config["namingTemplate"] = namingTemplate;
-        await File.WriteAllTextAsync(_configPath, config.ToJsonString());
-    }
+    public Task SetLocalNamingTemplateAsync(string namingTemplate)
+        => throw new NotSupportedException("The application cannot preview a naming template in a dry run yet: the device options live on the server.");
 
     public async Task SetChunkSizeAsync(int chunkSize)
     {
@@ -354,7 +352,6 @@ public class MobileCliApplication : ISyncApplication
         var config = new
         {
             deviceId = DeviceId,
-            deviceIcon = "IconDeviceMobile",
             repositoryPath = _repoPath,
             serverUrl,
             userId,

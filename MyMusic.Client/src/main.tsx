@@ -17,6 +17,7 @@ import VolumeInitializer from "./components/volume-initializer.tsx";
 import QueueInitializer from "./components/queue-initializer.tsx";
 import AlbumEditorModal from "./components/albums/album-editor-modal.tsx";
 import AlbumMergeModal from "./components/albums/album-merge-modal.tsx";
+import DeviceEditorModal from "./components/devices/device-editor-modal.tsx";
 import ArtistEditorModal from "./components/artists/artist-editor-modal.tsx";
 import ArtistMergeModal from "./components/artists/artist-merge-modal.tsx";
 import SongEditorContextModal from "./components/songs/song-editor-context-modal.tsx";
@@ -64,6 +65,7 @@ createRoot(document.getElementById('root')!).render(
                                 'artist-editor': ArtistEditorModal,
                                 'album-merge': AlbumMergeModal,
                                 'artist-merge': ArtistMergeModal,
+                                'device-editor': DeviceEditorModal,
                             }}>
                             <PlayerProvider>
                                 <QueueManagerProvider>

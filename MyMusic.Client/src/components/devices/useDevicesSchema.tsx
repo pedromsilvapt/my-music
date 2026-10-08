@@ -11,6 +11,7 @@ import type {CollectionSchema} from "../common/collection/collection.tsx";
 import TablerIcon from "../common/tabler-icon.tsx";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {TEXT_COLOR} from "../../utils/colors.ts";
+import {DEFAULT_DEVICE_ICON} from "./device-icons.ts";
 
 export function useDevicesSchema() {
     const {t} = useTranslation(["devices", "common"]);
@@ -76,7 +77,7 @@ export function useDevicesSchema() {
             {
                 name: 'icon',
                 displayName: '',
-                render: row => <TablerIcon icon={row.icon} defaultIcon="IconDeviceDesktop" size={20}
+                render: row => <TablerIcon icon={row.icon} defaultIcon={DEFAULT_DEVICE_ICON} size={20}
                                            color={row.color || 'gray'}/>,
                 width: 60,
             },
@@ -84,7 +85,7 @@ export function useDevicesSchema() {
                 name: 'name',
                 displayName: t("devices:schema.columns.name"),
                 render: row => (
-                    <Anchor component={Link} to={`/devices/${row.id}/sessions`} c={TEXT_COLOR}>
+                    <Anchor component={Link} to={`/devices/${row.id}`} data-testid="device-link" c={TEXT_COLOR}>
                         <Text fw={500}>{row.name}</Text>
                     </Anchor>
                 ),
@@ -141,7 +142,7 @@ export function useDevicesSchema() {
         estimateListRowHeight: () => 84,
         renderListArtwork: () => <TablerIcon icon="IconDevices" size={40} color="gray"/>,
         renderListTitle: (row) => (
-            <Anchor component={Link} to={`/devices/${row.id}/sessions`} c={TEXT_COLOR}>
+            <Anchor component={Link} to={`/devices/${row.id}`} data-testid="device-link" c={TEXT_COLOR}>
                 <Text fw={500}>{row.name}</Text>
             </Anchor>
         ),

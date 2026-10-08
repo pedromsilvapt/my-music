@@ -108,6 +108,7 @@ public static class HostBuilderExtensions
         builder.Services.AddScoped<IDeviceUpdateService, DeviceUpdateService>();
         builder.Services.AddScoped<IDeviceDeleteService, DeviceDeleteService>();
         builder.Services.AddScoped<IDeviceFilterValuesService, DeviceFilterValuesService>();
+        builder.Services.AddScoped<IDeviceNamingPreviewService, DeviceNamingPreviewService>();
 
         // Sync session services
         builder.Services.AddScoped<ISyncSessionLookupService, SyncSessionLookupService>();

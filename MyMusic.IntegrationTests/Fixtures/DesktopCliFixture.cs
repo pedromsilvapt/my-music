@@ -12,6 +12,9 @@ namespace MyMusic.IntegrationTests.Fixtures;
 
 public class DesktopCliFixture : IAsyncDisposable
 {
+    private const string DeviceIcon = "IconDeviceLaptop";
+    private const string DeviceColor = "#3B82F6";
+
     private readonly string _deviceName;
     private readonly string? _namingTemplate;
     private readonly string _tempDir;
@@ -51,8 +54,8 @@ public class DesktopCliFixture : IAsyncDisposable
             DataObject = new
             {
                 name = _deviceName,
-                icon = "IconDeviceLaptop",
-                color = "#3B82F6",
+                icon = DeviceIcon,
+                color = DeviceColor,
                 namingTemplate = _namingTemplate,
             },
         });
@@ -93,65 +96,18 @@ public class DesktopCliFixture : IAsyncDisposable
 
     public async Task SetNamingTemplateAsync(string namingTemplate)
     {
-        // Update the server device
+        // The device options live on the server: the CLI only knows the name of its device
         var response = await _api.PutWithTraceAsync($"/api/devices/{DeviceId}", new()
         {
             DataObject = new
             {
+                icon = DeviceIcon,
+                color = DeviceColor,
                 namingTemplate,
             },
         });
 
         response.Ok.ShouldBeTrue();
-
-        // Update the local CLI config to match
-        await SetLocalNamingTemplateAsync(namingTemplate);
-    }
-
-    public async Task SetLocalNamingTemplateAsync(string namingTemplate)
-    {
-        // Read existing config
-        var json = await File.ReadAllTextAsync(ConfigPath);
-        var config = JsonSerializer.Deserialize<JsonElement>(json);
-
-        // Build updated config with new naming template
-        var updatedConfig = new
-        {
-            MyMusic = new
-            {
-                Server = new
-                {
-                    BaseUrl = config.GetProperty("myMusic").GetProperty("server").GetProperty("baseUrl").GetString(),
-                    UserId = config.GetProperty("myMusic").GetProperty("server").GetProperty("userId").GetInt64(),
-                    UserName = config.GetProperty("myMusic").GetProperty("server").GetProperty("userName").GetString(),
-                },
-                Device = new
-                {
-                    Name = _deviceName,
-                    Icon = "IconDeviceLaptop",
-                    Color = "#3B82F6",
-                    NamingTemplate = namingTemplate,
-                },
-                Repository = new
-                {
-                    Path = RepositoryPath,
-                    ExcludePatterns = new[] { "**/.*", "**/Thumbs.db" },
-                    MusicExtensions = new[] { ".mp3" },
-                },
-                Logging = new
-                {
-                    EnableFileLogging = false,
-                },
-            },
-        };
-
-        var updatedJson = JsonSerializer.Serialize(updatedConfig, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-
-        await File.WriteAllTextAsync(ConfigPath, updatedJson);
     }
 
     public async Task<string> CreateSongAsync(SampleSong song, string? relativePath = null, int? contentVariant = null)
@@ -269,9 +225,6 @@ public class DesktopCliFixture : IAsyncDisposable
                 Device = new
                 {
                     Name = _deviceName,
-                    Icon = "IconDeviceLaptop",
-                    Color = "#3B82F6",
-                    NamingTemplate = _namingTemplate,
                 },
                 Repository = new
                 {

@@ -13,6 +13,8 @@ public interface IDeviceUpdateService
     /// Updates the editable fields of a device owned by the current user. Returns <c>null</c>
     /// when no such device exists (mirrors the previous controller <c>NotFound</c> path).
     /// </summary>
+    /// <exception cref="DeviceNameAlreadyExistsException">The user has another device with that name.</exception>
+    /// <exception cref="ValidationException">The name or the naming template is not valid.</exception>
     Task<DeviceUpdateResult?> UpdateAsync(
         long deviceId,
         DeviceUpdateInput input,
@@ -25,6 +27,8 @@ public interface IDeviceUpdateService
 /// </summary>
 public record DeviceUpdateInput
 {
+    /// <summary>The new name of the device; <c>null</c> keeps the current one.</summary>
+    public string? Name { get; init; }
     public string? Icon { get; init; }
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }

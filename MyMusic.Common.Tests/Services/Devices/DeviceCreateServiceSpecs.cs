@@ -129,4 +129,77 @@ public class DeviceCreateServiceSpecs
         stored.Owner.ShouldNotBeNull();
         stored.Owner.Id.ShouldBe(currentUser.Id);
     }
+
+    [Fact]
+    public async Task Create_NameOfExistingDevice_Throws()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        scenario.CreateDevice("Phone");
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<DeviceNameAlreadyExistsException>(
+            () => service.CreateAsync(new DeviceCreateInput { Name = " Phone " }, CancellationToken.None));
+        scenario.DbContext.Devices.Count(d => d.Name == "Phone").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Create_NameOfAnotherUsersDevice_CreatesDevice()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var otherUser = scenario.CreateUser("Other", "other");
+        scenario.CreateDevice("Phone", ownerId: otherUser.Id);
+        var (service, _) = CreateService(scenario);
+
+        // Act
+        var result = await service.CreateAsync(new DeviceCreateInput { Name = "Phone" }, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Device.Name.ShouldBe("Phone");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Create_BlankName_Throws(string name)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => service.CreateAsync(new DeviceCreateInput { Name = name }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Create_NameTooLong_Throws()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => service.CreateAsync(
+                new DeviceCreateInput { Name = new string('a', 257) }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Create_InvalidNamingTemplate_Throws()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => service.CreateAsync(
+                new DeviceCreateInput { Name = "Phone", NamingTemplate = "{{ if title }}" },
+                CancellationToken.None));
+        scenario.DbContext.Devices.Any(d => d.Name == "Phone").ShouldBeFalse();
+    }
 }

@@ -357,12 +357,11 @@ The list of `DeviceSyncSessionRecord` entries must be **identical** regardless o
 
 Paths are computed with the session's naming template, which is resolved once when the session starts and stored on `DeviceSyncSession.NamingTemplate`; check, resolve-conflicts and pending-actions all read it from there.
 
-- **Real sync** — The client saves its device options (naming template, icon, import on purchase) to the server device *before* starting the session, which then uses the device's template.
-- **Dry-run** — The client saves nothing. It sends its local template in `SyncStartRequest.DeviceOptions`, which overrides the device's template for that session only, so the preview shows what the real sync would do. A `DeviceOptions` with a `null` template previews the server default.
+The server owns the device options (naming template, icon, color, import on purchase). Clients neither save nor send them when syncing: a session, dry-run or not, uses the template of the server device. The options are edited in the web app (the device's details page) and in the device settings screen of the mobile app, which loads them from the server and saves them back.
 
-`DeviceOptions` is rejected on a real sync: files would be renamed with a template the device doesn't have, and the next sync would rename them back.
+The server still accepts `SyncStartRequest.DeviceOptions`, which overrides the device's template for a dry-run session only (a `null` template previews the server default) and is rejected on a real sync: files would be renamed with a template the device doesn't have, and the next sync would rename them back. No client sends it today; a template is previewed before saving with `POST /devices/naming-template/preview` instead, which lists the path every song of the device would get.
 
-Outside of a sync, the options are saved by `my-music device save` (CLI) and by saving the device settings screen (mobile).
+A template change alone does not move the files of a device: a file gets its new path when its song next changes.
 
 ## Server as Authority
 

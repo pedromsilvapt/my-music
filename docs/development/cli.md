@@ -79,13 +79,15 @@ Rules to keep the AOT build working:
 
 ## Device Options
 
-The device options in the `MyMusic:Device` configuration section (icon, color, naming template, import on purchase)
-are saved to the server device by `IDeviceConfigService`:
+The server owns the device options (icon, color, naming template, import on purchase): they are edited in the web app
+(the device's details page) and the CLI never creates a device nor saves options. The `MyMusic:Device` configuration
+section only has the device's `Name`; other keys left in existing config files are ignored.
 
-- `my-music sync` saves them before the session starts.
-- `my-music sync --dry-run` leaves the server device untouched and sends the naming template with the session instead,
-  so the dry run previews the local template (see "Device Options in a Dry-Run" in [sync.md](sync.md)).
-- `my-music device save` saves them without running a sync.
+- `IDeviceConfigService.ResolveAsync` finds the user's device by that name. When there is none it throws
+  `DeviceNotFoundException`, whose message tells the user to create the device in the web app (Devices > New device);
+  commands show it as is.
+- `my-music sync` (dry run or not) sends no options: the session uses the template of the server device.
+- `my-music device show` prints the options of the device, read-only.
 
 ## Exclusion Rules
 

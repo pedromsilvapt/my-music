@@ -28,10 +28,6 @@ export const SyncStartRequestSchema = z.object({
         path: z.string(),
         error: z.string(),
     })).optional(),
-    // Device options previewed by a dry run without saving them to the device
-    deviceOptions: z.object({
-        namingTemplate: z.string().nullable(),
-    }).optional(),
 });
 
 export type SyncStartRequest = z.infer<typeof SyncStartRequestSchema>;
@@ -291,37 +287,6 @@ export const AcknowledgeActionResponseSchema = z.object({
 });
 
 export type AcknowledgeActionResponse = z.infer<typeof AcknowledgeActionResponseSchema>;
-
-export const CreateDeviceRequestSchema = z.object({
-    name: z.string(),
-    icon: z.string().optional(),
-    color: z.string().optional(),
-    namingTemplate: z.string().optional(),
-    importOnPurchase: z.boolean().optional(),
-});
-
-export type CreateDeviceRequest = z.infer<typeof CreateDeviceRequestSchema>;
-
-export const CreateDeviceItemSchema = z.object({
-    id: z.number(),
-    name: z.string(),
-    icon: z.string().nullable(),
-    color: z.string().nullable(),
-    namingTemplate: z.string().nullable(),
-    importOnPurchase: z.boolean(),
-    ownerId: z.number(),
-    createdAt: z.string(),
-    lastSyncAt: z.string().nullable(),
-    songCount: z.number(),
-});
-
-export type CreateDeviceItem = z.infer<typeof CreateDeviceItemSchema>;
-
-export const CreateDeviceResponseSchema = z.object({
-    device: CreateDeviceItemSchema,
-});
-
-export type CreateDeviceResponse = z.infer<typeof CreateDeviceResponseSchema>;
 
 export const UpdateDeviceRequestSchema = z.object({
     icon: z.string().optional(),

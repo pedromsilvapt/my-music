@@ -1,45 +1,82 @@
-import {createDevice, getDevices, updateDevice} from '../api/devices';
-import {getDeviceTypeById, getDeviceTypeIdByLabel} from '../constants/deviceIcons';
-import {getDeviceIcon, getDeviceName, getImportOnPurchase, getNamingTemplate, setDeviceId} from './configService';
-import {saveDeviceOptions} from './sync/device-options';
-import type {DeviceOptions} from './sync/types';
+import {getDevices, updateDevice} from '../api/devices';
+import type {ListDeviceItem} from '../api/types';
+import {getDeviceName, setDeviceIcon, setDeviceId} from './configService';
+
+/** The options of the server device the app has a setting for. */
+export interface DeviceOptions {
+    icon: string | null;
+    namingTemplate: string | null;
+    importOnPurchase: boolean;
+}
+
+/** The options of a device as loaded from the server, with what is needed to save them back. */
+export interface LoadedDeviceOptions extends DeviceOptions {
+    deviceId: number;
+    /** The app has no setting for the color: it is sent back unchanged when the options are saved. */
+    color: string | null;
+}
+
+/** The server has no device with the configured name. Devices are created in the web app. */
+export class DeviceNotFoundError extends Error {
+    constructor(deviceName: string) {
+        super(`Device '${deviceName}' not found. Create it in the web app (Devices > New device)`);
+        this.name = 'DeviceNotFoundError';
+    }
+}
 
 /**
- * The device options configured in the app, in the shape the server stores them.
+ * Finds the server device that has the configured device name, and stores its id and icon. The app never
+ * creates devices: a missing one is an error.
  */
-export function getLocalDeviceOptions(): DeviceOptions {
-    const icon = getDeviceIcon();
+export async function findDevice(): Promise<ListDeviceItem> {
+    const name = getDeviceName();
+
+    const {devices} = await getDevices();
+    const device = devices.find(d => d.name === name);
+
+    if (!device) {
+        throw new DeviceNotFoundError(name);
+    }
+
+    await setDeviceId(device.id);
+    await storeDeviceIcon(device.icon);
+
+    return device;
+}
+
+/**
+ * Loads the options of the configured device from the server, their owner.
+ */
+export async function loadDeviceOptions(): Promise<LoadedDeviceOptions> {
+    const device = await findDevice();
 
     return {
-        icon: getDeviceTypeById(icon)?.id ?? getDeviceTypeIdByLabel(icon),
-        namingTemplate: getNamingTemplate() || null,
-        importOnPurchase: getImportOnPurchase(),
+        deviceId: device.id,
+        icon: device.icon,
+        color: device.color,
+        namingTemplate: device.namingTemplate,
+        importOnPurchase: device.importOnPurchase,
     };
 }
 
 /**
- * Saves the device configured in the app to the server: registers it when no device has its name,
- * otherwise saves the options that differ. Stores and returns the device id.
+ * Saves the options of a device to the server. The server replaces every option on update, so the color
+ * the options were loaded with is sent back; the name is left out, which keeps it.
  */
-export async function saveDeviceConfig(): Promise<number> {
-    const name = getDeviceName();
-    const options = getLocalDeviceOptions();
-
-    const {devices} = await getDevices();
-    const existingDevice = devices.find(d => d.name === name);
-
-    if (existingDevice) {
-        await saveDeviceOptions({updateDevice}, existingDevice.id, existingDevice, options);
-        await setDeviceId(existingDevice.id);
-        return existingDevice.id;
-    }
-
-    const {device} = await createDevice({
-        name,
+export async function saveDeviceOptions(loaded: LoadedDeviceOptions, options: DeviceOptions): Promise<void> {
+    await updateDevice(loaded.deviceId, {
         icon: options.icon ?? undefined,
+        color: loaded.color ?? undefined,
         namingTemplate: options.namingTemplate ?? undefined,
         importOnPurchase: options.importOnPurchase,
     });
-    await setDeviceId(device.id);
-    return device.id;
+
+    await storeDeviceIcon(options.icon);
+}
+
+/** The home and settings screens show the icon without asking the server. */
+async function storeDeviceIcon(icon: string | null): Promise<void> {
+    if (icon) {
+        await setDeviceIcon(icon);
+    }
 }

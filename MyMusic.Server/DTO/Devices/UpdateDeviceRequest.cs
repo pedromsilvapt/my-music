@@ -2,6 +2,8 @@ namespace MyMusic.Server.DTO.Devices;
 
 public record UpdateDeviceRequest
 {
+    /// <summary>The new name of the device. When omitted, the name is kept.</summary>
+    public string? Name { get; init; }
     public string? Icon { get; init; }
     public string? Color { get; init; }
     public string? NamingTemplate { get; init; }

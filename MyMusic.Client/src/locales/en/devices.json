@@ -1,7 +1,8 @@
 {
     "page": {
         "searchPlaceholder": "Search devices...",
-        "fetchFailed": "Failed to fetch devices"
+        "fetchFailed": "Failed to fetch devices",
+        "createDevice": "New device"
     },
     "manageDialog": {
         "title": "Manage Devices",
@@ -36,6 +37,66 @@
         "fetchSessionFailed": "Failed to fetch session",
         "actionPillsLabel": "Filter by action",
         "skippedNotRecorded": "Skipped records were not kept for this session. Sync with the record skipped option to keep them."
+    },
+    "detailPage": {
+        "fetchFailed": "Failed to fetch device",
+        "deviceFallback": "Device {{id}}",
+        "configuration": "Configuration",
+        "songs": "Songs",
+        "lastSync": "Last sync",
+        "importOnPurchase": "Import on purchase",
+        "namingTemplate": "Naming template",
+        "namingTemplateDefault": "Naming template (default)",
+        "sessions": "Sync sessions"
+    },
+    "editModal": {
+        "titleEdit": "Edit Device",
+        "titleCreate": "New Device",
+        "nameLabel": "Name",
+        "nameDescription": "The name the device is configured with in the CLI or mobile app, which find it by this name.",
+        "iconLabel": "Device type",
+        "iconPlaceholder": "Default",
+        "colorLabel": "Color",
+        "colorPlaceholder": "None",
+        "clearColor": "Clear color",
+        "importOnPurchaseLabel": "Import on purchase",
+        "importOnPurchaseDescription": "Purchased songs are added to this device.",
+        "saveFailed": "Failed to save the device"
+    },
+    "icons": {
+        "smartphone": "Smartphone",
+        "tablet": "Tablet",
+        "laptop": "Laptop",
+        "desktop": "Desktop",
+        "usb": "USB Drive",
+        "mp3Player": "MP3 Player"
+    },
+    "namingTemplate": {
+        "label": "Naming template",
+        "description": "The path each song is given on the device, as a Scriban template. It can span several lines: line breaks are ignored. Leave empty to use the default template. A file is moved to its new path when its song next changes.",
+        "error": "Line {{line}}, column {{column}}: {{message}}",
+        "summary_one": "{{renamed}} of {{count}} file would be renamed",
+        "summary_other": "{{renamed}} of {{count}} files would be renamed",
+        "changedOnly": "Changed only",
+        "empty": "No files to show",
+        "variables": {
+            "title": "Song title",
+            "albumName": "Album name",
+            "albumArtistName": "Name of the album artist",
+            "firstArtistName": "Name of the song's first artist",
+            "artistsLabel": "Every artist of the song, separated by commas",
+            "simpleLabel": "Title and artists",
+            "fullLabel": "Title, artists and album",
+            "genres": "Genres of the song (a list)",
+            "track": "Track number",
+            "year": "Year",
+            "duration": "Duration",
+            "explicit": "Whether the song is explicit",
+            "extension": "File extension, with the dot (e.g. .mp3)",
+            "originalFolder": "Folder the file is in now",
+            "originalName": "Name of the file now, without extension",
+            "id": "Song id"
+        }
     },
     "schema": {
         "manageGroup": "Manage",

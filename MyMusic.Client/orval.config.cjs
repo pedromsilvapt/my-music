@@ -66,6 +66,10 @@ module.exports = {
                             invalidates: ['getDevices'],
                         },
                         {
+                            onMutations: ['putDevicesDeviceId'],
+                            invalidates: ['getDevice'],
+                        },
+                        {
                             onMutations: ['triggerBatchFetch', 'requeueFailed', 'clearAllTasksAndMetadata'],
                             invalidates: ['getQueueStatus', 'getFailedTasks'],
                         },

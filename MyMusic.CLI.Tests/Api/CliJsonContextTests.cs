@@ -15,7 +15,7 @@ public class CliJsonContextTests
         var types = typeof(IMyMusicClient).GetMethods()
             .SelectMany(m => m.GetParameters().Select(p => p.ParameterType)
                 .Append(m.ReturnType.IsGenericType ? m.ReturnType.GetGenericArguments()[0] : m.ReturnType))
-            .Where(t => t.Namespace == typeof(CreateDeviceRequest).Namespace)
+            .Where(t => t.Namespace == typeof(ListDevicesResponse).Namespace)
             .Distinct();
         return new TheoryData<Type>(types);
     }

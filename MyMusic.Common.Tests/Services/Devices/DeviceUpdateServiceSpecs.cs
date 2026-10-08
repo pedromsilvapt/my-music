@@ -25,9 +25,11 @@ public class DeviceUpdateServiceSpecs
         string? icon = "newicon",
         string? color = "#000",
         string? namingTemplate = "{title}",
-        bool? importOnPurchase = true) =>
+        bool? importOnPurchase = true,
+        string? name = null) =>
         new()
         {
+            Name = name,
             Icon = icon,
             Color = color,
             NamingTemplate = namingTemplate,
@@ -186,5 +188,138 @@ public class DeviceUpdateServiceSpecs
         // Name is not part of the update request and must remain unchanged.
         var stored = scenario.DbContext.Devices.Single(d => d.Id == device.Id);
         stored.Name.ShouldBe("MyPhone");
+    }
+
+    [Fact]
+    public async Task Update_NewName_RenamesDevice()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var (service, _) = CreateService(scenario);
+
+        // Act
+        var result = await service.UpdateAsync(device.Id, Request(name: "  Pixel  "), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Device.Name.ShouldBe("Pixel");
+        scenario.DbContext.Devices.Single(d => d.Id == device.Id).Name.ShouldBe("Pixel");
+    }
+
+    [Fact]
+    public async Task Update_SameName_KeepsDevice()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var (service, _) = CreateService(scenario);
+
+        // Act
+        var result = await service.UpdateAsync(device.Id, Request(name: "Phone"), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Device.Name.ShouldBe("Phone");
+    }
+
+    [Fact]
+    public async Task Update_NameOfAnotherDevice_Throws()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        scenario.CreateDevice("Tablet");
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<DeviceNameAlreadyExistsException>(
+            () => service.UpdateAsync(device.Id, Request(name: "Tablet"), CancellationToken.None));
+        scenario.DbContext.Devices.Single(d => d.Id == device.Id).Name.ShouldBe("Phone");
+    }
+
+    [Fact]
+    public async Task Update_NameOfAnotherUsersDevice_RenamesDevice()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var otherUser = scenario.CreateUser("Other", "other");
+        scenario.CreateDevice("Tablet", ownerId: otherUser.Id);
+        var device = scenario.CreateDevice("Phone");
+        var (service, _) = CreateService(scenario);
+
+        // Act
+        var result = await service.UpdateAsync(device.Id, Request(name: "Tablet"), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Device.Name.ShouldBe("Tablet");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Update_BlankName_Throws(string name)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => service.UpdateAsync(device.Id, Request(name: name), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Update_InvalidNamingTemplate_ThrowsAndKeepsDevice()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone", namingTemplate: "{{ title }}");
+        var (service, _) = CreateService(scenario);
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => service.UpdateAsync(
+                device.Id, Request(name: "Pixel", namingTemplate: "{{ title | }}"), CancellationToken.None));
+
+        scenario.DbContext.ChangeTracker.Clear();
+        var stored = scenario.DbContext.Devices.Single(d => d.Id == device.Id);
+        stored.NamingTemplate.ShouldBe("{{ title }}");
+        stored.Name.ShouldBe("Phone");
+    }
+
+    [Fact]
+    public async Task Update_BlankNamingTemplate_ClearsStoredTemplate()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone", namingTemplate: "{{ title }}");
+        var (service, _) = CreateService(scenario);
+
+        // Act
+        var result = await service.UpdateAsync(device.Id, Request(namingTemplate: "  \n"), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Device.NamingTemplate.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Update_MultilineNamingTemplate_IsStoredAsTyped()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var device = scenario.CreateDevice("Phone");
+        var (service, _) = CreateService(scenario);
+        const string template = "{{ year }}/\n  {{ title }}{{ extension }}";
+
+        // Act
+        var result = await service.UpdateAsync(device.Id, Request(namingTemplate: template), CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.Device.NamingTemplate.ShouldBe(template);
     }
 }

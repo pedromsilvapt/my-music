@@ -61,34 +61,9 @@ export class NodeApiClient implements ISyncApiClient {
         return response.json();
     }
 
-    async getDevice(deviceId: number): Promise<{
-        device: { icon: string | null; color: string | null; namingTemplate: string | null; importOnPurchase: boolean };
-    }> {
-        return this._get(`/devices/${deviceId}`);
-    }
-
-    async updateDevice(
-        deviceId: number,
-        request: { icon?: string; color?: string; namingTemplate?: string; importOnPurchase?: boolean }
-    ): Promise<unknown> {
-        const endpoint = `/devices/${deviceId}`;
-        const response = await fetch(`${this._serverUrl}${endpoint}`, {
-            method: 'PUT',
-            headers: this._headers(),
-            body: JSON.stringify(request),
-        });
-
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(`API error ${response.status} on ${endpoint}: ${text}`);
-        }
-
-        return response.json();
-    }
-
     async startSync(
         deviceId: number,
-        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; recordSkipped?: boolean; scanErrors?: Array<{ path: string; error: string }>; deviceOptions?: { namingTemplate: string | null } }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; recordSkipped?: boolean; scanErrors?: Array<{ path: string; error: string }> }
     ): Promise<{ sessionId: number }> {
         return this._post(`/devices/${deviceId}/sync/start`, request);
     }

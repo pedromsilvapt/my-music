@@ -53,7 +53,7 @@ public abstract partial class SyncTestsBase
     //   When the CLI sync runs
     //   Then the changed template is saved on the server
     //   And the file is moved to the path the changed template gives it
-    [Fact]
+    [Fact(Skip = "Re-enable when the clients support previewing a naming template in a dry run. The device options live on the server now, so a client has no template of its own to preview.")]
     public async Task Sync_DryRun_ShouldPreviewChangedNamingTemplateWithoutSavingIt()
     {
         var savedTemplate = "Saved/{{ title }} - {{ artists_label }}{{ extension }}";

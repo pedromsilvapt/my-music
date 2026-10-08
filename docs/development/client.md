@@ -210,6 +210,17 @@ must not cap the number of items. Use `VirtualSelect` (`src/components/common/vi
 single-value select: it only renders the options inside the dropdown's viewport and precomputes each item's search
 text once per item list. `ArtistSelect` (`src/components/artists/artist-select.tsx`) is the artist picker built on it.
 
+## Scriban template editor
+
+`ScribanTemplateEditor` (`src/components/common/scriban-template-editor.tsx`) is the code editor for Scriban
+templates, built on Monaco (`@monaco-editor/react`, loaded on demand). It is generic: pass the `variables` to suggest
+and the `errors` (1-based line/column ranges) to mark; it knows nothing about devices.
+
+`NamingTemplateField` (`src/components/devices/naming-template-field.tsx`) is the device naming template field built
+on it: `useNamingTemplatePreview` debounces the template and asks the server
+(`POST /devices/naming-template/preview`) for its errors and for the path each song of the device would get, shown in
+a virtualized list. Validation always comes from the server; don't parse templates on the client.
+
 ## Translations (i18n)
 
 Translations are managed with `react-i18next`. Namespaces live under `src/locales/<lang>/<ns>.json` and are

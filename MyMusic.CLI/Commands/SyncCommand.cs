@@ -84,7 +84,7 @@ public class SyncCommand(ISyncService syncService, ITerminal terminal, ILogger<S
         catch (Exception ex)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[red]Error: {EscapeMarkup(ex.Message)}[/]");
             logger.LogError(ex, "Sync failed");
             return 1;
         }

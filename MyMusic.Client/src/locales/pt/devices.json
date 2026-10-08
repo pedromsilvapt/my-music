@@ -1,7 +1,8 @@
 {
     "page": {
         "searchPlaceholder": "Pesquisar dispositivos...",
-        "fetchFailed": "Falha ao obter os dispositivos"
+        "fetchFailed": "Falha ao obter os dispositivos",
+        "createDevice": "Novo dispositivo"
     },
     "manageDialog": {
         "title": "Gerir Dispositivos",
@@ -36,6 +37,66 @@
         "fetchSessionFailed": "Falha ao obter a sessão",
         "actionPillsLabel": "Filtrar por ação",
         "skippedNotRecorded": "Os registos ignorados não foram guardados nesta sessão. Sincronize com a opção de registar ignorados para os manter."
+    },
+    "detailPage": {
+        "fetchFailed": "Falha ao obter o dispositivo",
+        "deviceFallback": "Dispositivo {{id}}",
+        "configuration": "Configuração",
+        "songs": "Músicas",
+        "lastSync": "Última sincronização",
+        "importOnPurchase": "Importar ao comprar",
+        "namingTemplate": "Modelo de nomes",
+        "namingTemplateDefault": "Modelo de nomes (predefinido)",
+        "sessions": "Sessões de sincronização"
+    },
+    "editModal": {
+        "titleEdit": "Editar Dispositivo",
+        "titleCreate": "Novo Dispositivo",
+        "nameLabel": "Nome",
+        "nameDescription": "O nome com que o dispositivo está configurado na CLI ou na aplicação móvel, que o encontram por este nome.",
+        "iconLabel": "Tipo de dispositivo",
+        "iconPlaceholder": "Predefinido",
+        "colorLabel": "Cor",
+        "colorPlaceholder": "Nenhuma",
+        "clearColor": "Limpar cor",
+        "importOnPurchaseLabel": "Importar ao comprar",
+        "importOnPurchaseDescription": "As músicas compradas são adicionadas a este dispositivo.",
+        "saveFailed": "Falha ao guardar o dispositivo"
+    },
+    "icons": {
+        "smartphone": "Smartphone",
+        "tablet": "Tablet",
+        "laptop": "Portátil",
+        "desktop": "Computador",
+        "usb": "Pen USB",
+        "mp3Player": "Leitor MP3"
+    },
+    "namingTemplate": {
+        "label": "Modelo de nomes",
+        "description": "O caminho dado a cada música no dispositivo, como um modelo Scriban. Pode ocupar várias linhas: as quebras de linha são ignoradas. Deixe vazio para usar o modelo predefinido. Um ficheiro é movido para o novo caminho quando a sua música for alterada.",
+        "error": "Linha {{line}}, coluna {{column}}: {{message}}",
+        "summary_one": "{{renamed}} de {{count}} ficheiro seria renomeado",
+        "summary_other": "{{renamed}} de {{count}} ficheiros seriam renomeados",
+        "changedOnly": "Apenas alterados",
+        "empty": "Sem ficheiros para mostrar",
+        "variables": {
+            "title": "Título da música",
+            "albumName": "Nome do álbum",
+            "albumArtistName": "Nome do artista do álbum",
+            "firstArtistName": "Nome do primeiro artista da música",
+            "artistsLabel": "Todos os artistas da música, separados por vírgulas",
+            "simpleLabel": "Título e artistas",
+            "fullLabel": "Título, artistas e álbum",
+            "genres": "Géneros da música (uma lista)",
+            "track": "Número da faixa",
+            "year": "Ano",
+            "duration": "Duração",
+            "explicit": "Se a música é explícita",
+            "extension": "Extensão do ficheiro, com o ponto (ex.: .mp3)",
+            "originalFolder": "Pasta onde o ficheiro está agora",
+            "originalName": "Nome atual do ficheiro, sem extensão",
+            "id": "Id da música"
+        }
     },
     "schema": {
         "manageGroup": "Gerir",

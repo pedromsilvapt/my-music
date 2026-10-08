@@ -41,7 +41,7 @@ public class OrchestratorTests
 
     private void SetupDefaults()
     {
-        _config.GetDeviceIdAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<long?>(1L));
+        _config.GetDeviceIdAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<long?>(1L));
         _config.GetRepositoryPath().Returns("/music");
         _config.GetMusicExtensions().Returns([".mp3"]);
         _config.GetExcludePatterns().Returns(Array.Empty<string>());
@@ -101,22 +101,6 @@ public class OrchestratorTests
         await _apiClient.Received(1).CommitSyncAsync(1, 1, Arg.Any<CancellationToken>());
         await _apiClient.Received(1).CompleteSyncAsync(1, 1, Arg.Any<CancellationToken>());
         _keepAwake.Received(1).Deactivate();
-    }
-
-    [Theory]
-    [InlineData(false, true)]
-    // A dry run must not change the device on the server
-    [InlineData(true, false)]
-    public async Task Sync_SavesDeviceOptionsOnlyOnRealRuns(bool dryRun, bool expectedSaveOptions)
-    {
-        // Arrange
-        var orchestrator = CreateOrchestrator(CreatePhases());
-
-        // Act
-        await orchestrator.OrchestrateSyncAsync(new SyncOptions { DryRun = dryRun }, null);
-
-        // Assert
-        await _config.Received(1).GetDeviceIdAsync(expectedSaveOptions, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -204,7 +188,7 @@ public class OrchestratorTests
     public async Task MissingDeviceId_ReturnsErrorWithoutSyncing()
     {
         // Arrange
-        _config.GetDeviceIdAsync(Arg.Any<bool>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<long?>(null));
+        _config.GetDeviceIdAsync(Arg.Any<CancellationToken>()).Returns(Task.FromResult<long?>(null));
         var orchestrator = CreateOrchestrator(CreatePhases());
 
         // Act

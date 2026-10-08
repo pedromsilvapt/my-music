@@ -28,6 +28,7 @@ import { Route as PlaylistsPlaylistIdRouteImport } from './routes/playlists.$pla
 import { Route as AuditsAuditIdRouteImport } from './routes/audits.$auditId'
 import { Route as ArtistsArtistIdRouteImport } from './routes/artists.$artistId'
 import { Route as AlbumsAlbumIdRouteImport } from './routes/albums.$albumId'
+import { Route as DevicesDeviceIdIndexRouteImport } from './routes/devices.$deviceId.index'
 import { Route as SongsSharedOwnerIdRouteImport } from './routes/songs.shared.$ownerId'
 import { Route as DevicesDeviceIdSessionsIndexRouteImport } from './routes/devices.$deviceId.sessions.index'
 import { Route as DevicesDeviceIdSessionsSessionIdRouteImport } from './routes/devices.$deviceId.sessions.$sessionId'
@@ -127,6 +128,11 @@ const AlbumsAlbumIdRoute = AlbumsAlbumIdRouteImport.update({
   path: '/$albumId',
   getParentRoute: () => AlbumsRoute,
 } as any)
+const DevicesDeviceIdIndexRoute = DevicesDeviceIdIndexRouteImport.update({
+  id: '/devices/$deviceId/',
+  path: '/devices/$deviceId/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SongsSharedOwnerIdRoute = SongsSharedOwnerIdRouteImport.update({
   id: '/shared/$ownerId',
   path: '/shared/$ownerId',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
   '/songs/shared/$ownerId': typeof SongsSharedOwnerIdRoute
+  '/devices/$deviceId/': typeof DevicesDeviceIdIndexRoute
   '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
   '/devices/$deviceId/sessions/': typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -187,6 +194,7 @@ export interface FileRoutesByTo {
   '/playlists': typeof PlaylistsIndexRoute
   '/songs': typeof SongsIndexRoute
   '/songs/shared/$ownerId': typeof SongsSharedOwnerIdRoute
+  '/devices/$deviceId': typeof DevicesDeviceIdIndexRoute
   '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
   '/devices/$deviceId/sessions': typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -212,6 +220,7 @@ export interface FileRoutesById {
   '/playlists/': typeof PlaylistsIndexRoute
   '/songs/': typeof SongsIndexRoute
   '/songs/shared/$ownerId': typeof SongsSharedOwnerIdRoute
+  '/devices/$deviceId/': typeof DevicesDeviceIdIndexRoute
   '/devices/$deviceId/sessions/$sessionId': typeof DevicesDeviceIdSessionsSessionIdRoute
   '/devices/$deviceId/sessions/': typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -238,6 +247,7 @@ export interface FileRouteTypes {
     | '/playlists/'
     | '/songs/'
     | '/songs/shared/$ownerId'
+    | '/devices/$deviceId/'
     | '/devices/$deviceId/sessions/$sessionId'
     | '/devices/$deviceId/sessions/'
   fileRoutesByTo: FileRoutesByTo
@@ -259,6 +269,7 @@ export interface FileRouteTypes {
     | '/playlists'
     | '/songs'
     | '/songs/shared/$ownerId'
+    | '/devices/$deviceId'
     | '/devices/$deviceId/sessions/$sessionId'
     | '/devices/$deviceId/sessions'
   id:
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/playlists/'
     | '/songs/'
     | '/songs/shared/$ownerId'
+    | '/devices/$deviceId/'
     | '/devices/$deviceId/sessions/$sessionId'
     | '/devices/$deviceId/sessions/'
   fileRoutesById: FileRoutesById
@@ -301,6 +313,7 @@ export interface RootRouteChildren {
   AuditsIndexRoute: typeof AuditsIndexRoute
   DevicesIndexRoute: typeof DevicesIndexRoute
   PlaylistsIndexRoute: typeof PlaylistsIndexRoute
+  DevicesDeviceIdIndexRoute: typeof DevicesDeviceIdIndexRoute
   DevicesDeviceIdSessionsSessionIdRoute: typeof DevicesDeviceIdSessionsSessionIdRoute
   DevicesDeviceIdSessionsIndexRoute: typeof DevicesDeviceIdSessionsIndexRoute
 }
@@ -440,6 +453,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlbumsAlbumIdRouteImport
       parentRoute: typeof AlbumsRoute
     }
+    '/devices/$deviceId/': {
+      id: '/devices/$deviceId/'
+      path: '/devices/$deviceId'
+      fullPath: '/devices/$deviceId/'
+      preLoaderRoute: typeof DevicesDeviceIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/songs/shared/$ownerId': {
       id: '/songs/shared/$ownerId'
       path: '/shared/$ownerId'
@@ -518,6 +538,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuditsIndexRoute: AuditsIndexRoute,
   DevicesIndexRoute: DevicesIndexRoute,
   PlaylistsIndexRoute: PlaylistsIndexRoute,
+  DevicesDeviceIdIndexRoute: DevicesDeviceIdIndexRoute,
   DevicesDeviceIdSessionsSessionIdRoute: DevicesDeviceIdSessionsSessionIdRoute,
   DevicesDeviceIdSessionsIndexRoute: DevicesDeviceIdSessionsIndexRoute,
 }

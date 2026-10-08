@@ -22,12 +22,16 @@ public class DeviceCreateService(
         var user = await db.Users.FindAsync([ownerId], cancellationToken);
         if (user == null) return null;
 
+        var name = DeviceValidator.NormalizeName(input.Name);
+        var namingTemplate = DeviceValidator.NormalizeNamingTemplate(input.NamingTemplate);
+        await DeviceValidator.EnsureNameIsFreeAsync(db, ownerId, name, cancellationToken);
+
         var device = new Device
         {
-            Name = input.Name,
+            Name = name,
             Icon = input.Icon,
             Color = input.Color,
-            NamingTemplate = input.NamingTemplate,
+            NamingTemplate = namingTemplate,
             ImportOnPurchase = input.ImportOnPurchase,
             OwnerId = ownerId,
             Owner = user,

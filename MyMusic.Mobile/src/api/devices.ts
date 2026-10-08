@@ -1,20 +1,11 @@
 import {z} from 'zod';
 import {apiRequest} from './client';
-import type {CreateDeviceRequest, UpdateDeviceRequest} from './types';
+import type {UpdateDeviceRequest} from './types';
 import {
-    CreateDeviceResponseSchema,
     GetDeviceResponseSchema,
     ListDevicesResponseSchema,
     UpdateDeviceResponseSchema,
 } from './types';
-
-export async function createDevice(request: CreateDeviceRequest) {
-    return apiRequest('/devices', {
-        method: 'POST',
-        body: request,
-        schema: CreateDeviceResponseSchema,
-    });
-}
 
 export async function updateDevice(deviceId: number, request: UpdateDeviceRequest) {
     return apiRequest(`/devices/${deviceId}`, {

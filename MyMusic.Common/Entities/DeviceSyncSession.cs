@@ -39,7 +39,7 @@ public class DeviceSyncSession
     /// pending-actions) reads it from here so paths are always computed with a single template.
     /// <c>null</c> only for sessions started before this was recorded.
     /// </summary>
-    [MaxLength(512)]
+    [MaxLength(2048)]
     public string? NamingTemplate { get; set; }
 
     /// <summary>

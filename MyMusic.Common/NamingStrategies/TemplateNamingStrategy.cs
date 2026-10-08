@@ -1,11 +1,16 @@
+using System.Text.RegularExpressions;
 using MyMusic.Common.Metadata;
 using MyMusic.Common.Utilities;
 using Scriban;
 
 namespace MyMusic.Common.NamingStrategies;
 
-public class TemplateNamingStrategy(string template) : INamingStrategy
+public partial class TemplateNamingStrategy(string template) : INamingStrategy
 {
+    [GeneratedRegex(@"\r?\n[ \t]*")]
+    private static partial Regex LineBreaks();
+
+
     private readonly Template _compiledTemplate = Template.Parse(template);
 
     public string Generate(SongMetadata song, NamingMetadata? naming = null)
@@ -30,7 +35,9 @@ public class TemplateNamingStrategy(string template) : INamingStrategy
             original_name = naming?.OriginalName,
         };
 
-        var result = _compiledTemplate.Render(model);
+        // A template can be formatted over several lines: line breaks, and the indentation after them, are
+        // not part of the path
+        var result = LineBreaks().Replace(_compiledTemplate.Render(model), "");
 
         var segments = result.Split('/');
         var sanitizedSegments = segments.Select(FilenameUtils.SanitizeFilename);

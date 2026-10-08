@@ -1,7 +1,7 @@
 import type {SyncDeps, SyncResult, ProgressHandler} from './types';
 import {SyncCancelledError} from './errors';
 import {createEmptyResult, createSyncContext} from './context';
-import {scanPhase, saveDeviceOptionsPhase, startSessionPhase, prepareDeduplicatePhase, uploadPhase, serverActionsPhase, commitPhase, completePhase} from './phases';
+import {scanPhase, startSessionPhase, prepareDeduplicatePhase, uploadPhase, serverActionsPhase, commitPhase, completePhase} from './phases';
 
 // Partial results of syncs that failed with an unexpected error, keyed by the rethrown error
 const partialResults = new WeakMap<object, SyncResult>();
@@ -19,7 +19,7 @@ export async function orchestrateSync(
 ): Promise<SyncResult> {
     const deviceId = deps.config.getDeviceId();
     if (deviceId === null) {
-        console.error('Failed to get or create device');
+        console.error('Failed to get device');
         return {...createEmptyResult(), error: 1};
     }
 
@@ -46,8 +46,6 @@ export async function orchestrateSync(
 
         const previousScanTotal = await deps.config.getLastScanTotal();
         const scanResult = await scanPhase(deps, ctx, onProgress, previousScanTotal);
-
-        await saveDeviceOptionsPhase(deps, ctx);
 
         await startSessionPhase(deps, ctx, scanResult.errors, onProgress);
 

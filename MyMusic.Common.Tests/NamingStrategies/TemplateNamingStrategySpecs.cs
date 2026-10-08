@@ -31,6 +31,25 @@ public class TemplateNamingStrategySpecs
     }
 
     [Theory]
+    [InlineData("{{ year }}/\n{{ title }}\n{{ extension }}", "2024/Test Song.mp3")]
+    [InlineData("{{ year }}/\r\n    {{ title }}\r\n\t{{ extension }}", "2024/Test Song.mp3")]
+    [InlineData("{{ if explicit }}\n  [E] \n{{ end }}\n{{ title }}{{ extension }}\n", "Test Song.mp3")]
+    [InlineData("{{ title }} - \n  {{ artists_label }}{{ extension }}", "Test Song - Artist One, Artist Two.mp3")]
+    public void Generate_WithMultilineTemplate_ShouldDropLineBreaksAndIndentation(string template, string expectedPath)
+    {
+        // Arrange
+        var song = CreateTestSong();
+        var naming = new NamingMetadata { Extension = ".mp3" };
+        var strategy = new TemplateNamingStrategy(template);
+
+        // Act
+        var result = strategy.Generate(song, naming);
+
+        // Assert
+        result.ShouldBe(expectedPath);
+    }
+
+    [Theory]
     [InlineData("{{ original_folder ?? year }}/{{ title }}{{ extension }}", "2024/Test Song.mp3", null)]
     [InlineData("{{ original_folder ?? year }}/{{ title }}{{ extension }}", "Original/Path/Test Song.mp3", "Original/Path")]
     [InlineData("{{ original_name ?? title }}{{ extension }}", "Test Song.mp3", null)]

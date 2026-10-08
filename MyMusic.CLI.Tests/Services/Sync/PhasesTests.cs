@@ -178,41 +178,6 @@ public class PhasesTests
         await _apiClient.Received(1).StartSyncAsync(1, Arg.Is<StartSyncRequest>(r => r.RecordSkipped == recordSkipped), Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task StartSession_DryRun_SendsLocalNamingTemplateAsDeviceOptions()
-    {
-        // A dry run doesn't save the device options, so the session should preview the local template
-        _config.GetNamingTemplate().Returns("{{ year }}/{{ simple_label }}.mp3");
-        var phases = CreatePhases();
-        var ctx = CreateContext(options: new SyncOptions { DryRun = true });
-
-        _apiClient.StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new StartSyncResult { SessionId = 1 }));
-
-        await phases.StartSessionAsync(ctx, [], default);
-
-        await _apiClient.Received(1).StartSyncAsync(1,
-            Arg.Is<StartSyncRequest>(r => r.DeviceOptions != null && r.DeviceOptions.NamingTemplate == "{{ year }}/{{ simple_label }}.mp3"),
-            Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task StartSession_RealRun_DoesNotSendDeviceOptions()
-    {
-        // A real run saves the device options beforehand; the server rejects an override
-        _config.GetNamingTemplate().Returns("{{ year }}/{{ simple_label }}.mp3");
-        var phases = CreatePhases();
-        var ctx = CreateContext(options: new SyncOptions { DryRun = false });
-
-        _apiClient.StartSyncAsync(Arg.Any<long>(), Arg.Any<StartSyncRequest>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult(new StartSyncResult { SessionId = 1 }));
-
-        await phases.StartSessionAsync(ctx, [], default);
-
-        await _apiClient.Received(1).StartSyncAsync(1,
-            Arg.Is<StartSyncRequest>(r => r.DeviceOptions == null), Arg.Any<CancellationToken>());
-    }
-
     [Theory]
     [InlineData(false, SyncDirection.Both)]
     [InlineData(true, SyncDirection.Down)]

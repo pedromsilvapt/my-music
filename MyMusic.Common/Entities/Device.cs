@@ -18,7 +18,7 @@ public class Device
 
     [MaxLength(20)] public string? Color { get; set; }
 
-    [MaxLength(512)] public string? NamingTemplate { get; set; }
+    [MaxLength(2048)] public string? NamingTemplate { get; set; }
 
     public bool ImportOnPurchase { get; set; } = false;
 

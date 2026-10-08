@@ -66,8 +66,8 @@ app.Configure(config =>
     });
     config.AddBranch("device", device =>
     {
-        device.AddCommand<DeviceSaveCommand>("save")
-            .WithDescription("Save the configured device options (naming template, icon, ...) to the server");
+        device.AddCommand<DeviceShowCommand>("show")
+            .WithDescription("Show the server device this installation syncs with, and its options");
     });
     config.SetApplicationName("my-music");
     config.UseAssemblyInformationalVersion();
@@ -175,7 +175,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddTransient<HistoryListCommand>();
     services.AddTransient<HistoryRemoveCommand>();
     services.AddTransient<HistoryPruneCommand>();
-    services.AddTransient<DeviceSaveCommand>();
+    services.AddTransient<DeviceShowCommand>();
 
     services.AddTransient<AuthenticatedHttpClientHandler>();
     services.AddTransient<HttpLoggingHandler>();

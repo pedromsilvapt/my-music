@@ -17,12 +17,12 @@ public interface ISyncApplication : IAsyncDisposable
     Task<string> CreateUnreadableSongAsync(string relativePath);
     bool FileExists(string relativePath);
     string GetSongPath(string relativePath);
-    /// <summary>Sets the naming template both on the server device and in the application's settings.</summary>
+    /// <summary>Sets the naming template of the server device, where the device options live.</summary>
     Task SetNamingTemplateAsync(string namingTemplate);
 
     /// <summary>
-    /// Changes the naming template in the application's settings only, as a user editing it would:
-    /// the server device keeps its template until the application saves it.
+    /// Sets a naming template in the application only, to preview in a dry run without saving it to the server
+    /// device. Not supported by the clients yet.
     /// </summary>
     Task SetLocalNamingTemplateAsync(string namingTemplate);
     Task UpdateLocalFileMetadataAsync(string fileName, EditSongOptions options);

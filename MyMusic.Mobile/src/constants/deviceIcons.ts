@@ -11,15 +11,23 @@ export const DEVICE_TYPES: DeviceTypeInfo[] = [
     {id: 'IconDeviceTablet', label: 'Tablet', icon: 'tablet-portrait'},
     {id: 'IconDeviceLaptop', label: 'Laptop', icon: 'laptop'},
     {id: 'IconDevicesPc', label: 'Desktop', icon: 'desktop'},
-    {id: 'IconUSBDrive', label: 'USB Drive', icon: 'flash'},
-    {id: 'IconMP3Player', label: 'MP3 Player', icon: 'musical-notes'},
+    {id: 'IconUsb', label: 'USB Drive', icon: 'flash'},
+    {id: 'IconDeviceMp3', label: 'MP3 Player', icon: 'musical-notes'},
 ];
+
+// Ids saved by older versions of the app
+const LEGACY_DEVICE_TYPE_IDS: Record<string, string> = {
+    IconUSBDrive: 'IconUsb',
+    IconMP3Player: 'IconDeviceMp3',
+};
+
+const findDeviceType = (id: string | undefined) =>
+    DEVICE_TYPES.find(d => d.id === (id !== undefined ? LEGACY_DEVICE_TYPE_IDS[id] ?? id : id));
 
 export const DEFAULT_DEVICE_TYPE = DEVICE_TYPES[0]; // Smartphone
 
 export function getDeviceIcon(id: string | undefined): string {
-    const device = DEVICE_TYPES.find(d => d.id === id);
-    return device?.icon ?? 'phone-portrait';
+    return findDeviceType(id)?.icon ?? 'phone-portrait';
 }
 
 export function getDeviceOutlineIcon(id: string | undefined): string {
@@ -33,7 +41,7 @@ export function getDeviceTypeIcon(label: string): string {
 }
 
 export function getDeviceTypeById(id: string): DeviceTypeInfo | undefined {
-    return DEVICE_TYPES.find(d => d.id === id);
+    return findDeviceType(id);
 }
 
 export function getDeviceTypeIdByLabel(label: string): string {

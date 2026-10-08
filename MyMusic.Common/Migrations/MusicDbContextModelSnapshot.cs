@@ -394,8 +394,8 @@ namespace MyMusic.Common.Migrations
                         .HasColumnName("name");
 
                     b.Property<string>("NamingTemplate")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
                         .HasColumnName("naming_template");
 
                     b.Property<long>("OwnerId")
@@ -446,8 +446,8 @@ namespace MyMusic.Common.Migrations
                         .HasColumnName("is_dry_run");
 
                     b.Property<string>("NamingTemplate")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
                         .HasColumnName("naming_template");
 
                     b.Property<bool>("RecordSkipped")

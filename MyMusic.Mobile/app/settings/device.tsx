@@ -3,7 +3,7 @@ import {zodResolver} from '@hookform/resolvers/zod';
 import {pickDirectory} from '@react-native-documents/picker';
 import {useRouter} from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Controller, useFieldArray, useForm} from 'react-hook-form';
 import {z} from 'zod';
@@ -16,27 +16,30 @@ import {resolveRepositoryPath} from '../../src/services/repositoryPath';
 import {ensureRepositoryAccess} from '../../src/services/storageAccess';
 import {
     getDeviceIcon,
+    getDeviceId,
     getDeviceName,
     getExcludePatterns,
     getFileModifiedAt,
-    getImportOnPurchase,
-    getNamingTemplate,
     getRepositoryPath,
     getServerUrl,
     getUserName,
-    setDeviceIcon,
+    setDeviceId,
     setDeviceName,
     setExcludePatterns,
     setFileModifiedAt,
-    setImportOnPurchase,
     setIsConfigured,
     setLastSyncAt,
-    setNamingTemplate,
     setRepositoryPath,
     setServerUrl,
     setUserName
 } from '../../src/services/configService';
-import {saveDeviceConfig} from '../../src/services/deviceConfigService';
+import {
+    DeviceNotFoundError,
+    findDevice,
+    loadDeviceOptions,
+    saveDeviceOptions,
+    type LoadedDeviceOptions
+} from '../../src/services/deviceConfigService';
 import {splitRules} from '../../src/services/sync/exclusions';
 import {FILE_MODIFIED_AT_SOURCES, type FileModifiedAtSource} from '../../src/services/sync/types';
 
@@ -69,6 +72,10 @@ export default function DeviceConfigScreen() {
     const [step, setStep] = useState<'form' | 'registering' | 'done'>('form');
     const [connectionError, setConnectionError] = useState<ErrorDetails | null>(null);
     const [excludedFilesRule, setExcludedFilesRule] = useState<string | null>(null);
+    // The device options live on the server: they can only be edited once loaded from the device there
+    const [deviceOptionsState, setDeviceOptionsState] = useState<'loading' | 'loaded' | 'unavailable'>('loading');
+    const [deviceOptionsNotice, setDeviceOptionsNotice] = useState<string | null>(null);
+    const loadedOptions = useRef<{serverUrl: string; deviceName: string; options: LoadedDeviceOptions} | null>(null);
 
     const {control, handleSubmit, watch, setValue, formState: {errors}} = useForm<ConfigFormData>({
         resolver: zodResolver(configSchema),
@@ -77,8 +84,8 @@ export default function DeviceConfigScreen() {
             userName: getUserName() || '',
             deviceName: getDeviceName() || 'My Phone',
             deviceType: getDeviceTypeById(getDeviceIcon())?.label || 'Smartphone',
-            namingTemplate: getNamingTemplate() || '',
-            importOnPurchase: getImportOnPurchase(),
+            namingTemplate: '',
+            importOnPurchase: false,
             repositoryPath: getRepositoryPath() || '',
             excludePatterns: getExcludePatterns().map(value => ({value})),
             fileModifiedAt: getFileModifiedAt(),
@@ -86,6 +93,41 @@ export default function DeviceConfigScreen() {
     });
 
     const excludePatternFields = useFieldArray({control, name: 'excludePatterns'});
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const load = async () => {
+            const serverUrl = getServerUrl();
+            const deviceName = getDeviceName();
+
+            try {
+                const options = await loadDeviceOptions();
+                if (cancelled) return;
+
+                loadedOptions.current = {serverUrl, deviceName, options};
+                setValue('deviceType', getDeviceTypeById(options.icon ?? '')?.label || 'Smartphone');
+                setValue('namingTemplate', options.namingTemplate ?? '');
+                setValue('importOnPurchase', options.importOnPurchase);
+                setDeviceOptionsState('loaded');
+            } catch (error) {
+                if (cancelled) return;
+
+                setDeviceOptionsNotice(error instanceof DeviceNotFoundError
+                    ? `${error.message}. Its type, naming template and import on purchase can be set here once it exists.`
+                    : 'The server could not be reached, so the type, naming template and import on purchase of the device cannot be changed.');
+                setDeviceOptionsState('unavailable');
+            }
+        };
+
+        load();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [setValue]);
+
+    const deviceOptionsEditable = deviceOptionsState === 'loaded';
 
     const selectedType = watch('deviceType');
     const importOnPurchaseValue = watch('importOnPurchase');
@@ -184,10 +226,11 @@ export default function DeviceConfigScreen() {
 
             await SecureStore.setItemAsync('userName', data.userName || '');
             await setUserName(data.userName || '');
+            const previousServerUrl = getServerUrl();
+            const previousDeviceName = getDeviceName();
+            const previousDeviceId = getDeviceId();
+
             await setDeviceName(data.deviceName);
-            await setDeviceIcon(getDeviceTypeIdByLabel(data.deviceType));
-            await setNamingTemplate(data.namingTemplate || '');
-            await setImportOnPurchase(data.importOnPurchase);
             await setRepositoryPath(data.repositoryPath || '');
             await setExcludePatterns(data.excludePatterns.flatMap(p => splitRules(p.value)));
             await setFileModifiedAt(data.fileModifiedAt);
@@ -195,28 +238,49 @@ export default function DeviceConfigScreen() {
             const apiServerUrl = data.serverUrl.endsWith('/api') ? data.serverUrl : `${data.serverUrl}/api`;
             await setServerUrl(apiServerUrl);
 
-            // The settings are kept on the device even when the server can't be reached: the next
-            // sync saves them before it starts
-            let savedToServer = true;
+            // The name selects the device on the server, where devices are created: one that is missing,
+            // or that cannot be looked up, leaves the app unable to sync
+            let device;
             try {
-                await saveDeviceConfig();
-            } catch (apiError) {
-                console.error('Failed to save the device configuration to the server:', apiError);
-                savedToServer = false;
+                device = await findDevice();
+            } catch (findError: any) {
+                console.error('Failed to find the device on the server:', findError);
+
+                // Offline with the same server and name: the device found before is still the one to sync with
+                const sameDevice = !(findError instanceof DeviceNotFoundError)
+                    && previousDeviceId !== null
+                    && previousServerUrl === apiServerUrl
+                    && previousDeviceName === data.deviceName;
+
+                if (!sameDevice) {
+                    await setDeviceId(null);
+                    await setIsConfigured(false);
+                }
+
+                setStep('form');
+                Alert.alert(
+                    findError instanceof DeviceNotFoundError ? 'Device Not Found' : 'Saved on this device only',
+                    findError instanceof DeviceNotFoundError
+                        ? findError.message
+                        : 'The server could not be reached, so the device could not be looked up there. The settings of this app were saved.',
+                    [{text: 'OK', onPress: sameDevice ? () => router.back() : undefined}]
+                );
+                return;
+            }
+
+            // The type, naming template and import on purchase belong to the server device: they are only
+            // saved when they were loaded from the device that was just found
+            const loaded = loadedOptions.current;
+            if (loaded && loaded.serverUrl === apiServerUrl && loaded.options.deviceId === device.id) {
+                await saveDeviceOptions(loaded.options, {
+                    icon: getDeviceTypeIdByLabel(data.deviceType),
+                    namingTemplate: data.namingTemplate?.trim() ? data.namingTemplate : null,
+                    importOnPurchase: data.importOnPurchase,
+                });
             }
 
             await setIsConfigured(true);
             await setLastSyncAt(null);
-
-            if (!savedToServer) {
-                setStep('form');
-                Alert.alert(
-                    'Saved on this device only',
-                    'The server could not be reached, so the device settings were not saved there. They will be saved on the next sync; a dry run previews them without saving.',
-                    [{text: 'OK', onPress: () => router.back()}]
-                );
-                return;
-            }
 
             setStep('done');
 
@@ -329,6 +393,26 @@ export default function DeviceConfigScreen() {
                         />
                     )}
                 />
+                <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: -spacing.sm, marginBottom: spacing.md}]}>
+                    The name of the device on the server. Devices are created and renamed in the web app (Devices).
+                </Text>
+
+                {deviceOptionsState === 'loading' && (
+                    <View style={[styles.deviceOptionsNotice, {gap: spacing.sm, marginBottom: spacing.md}]}>
+                        <ActivityIndicator size="small" color={colors.primary}/>
+                        <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted}]}>Loading the device from the server...</Text>
+                    </View>
+                )}
+                {deviceOptionsNotice && (
+                    <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.warning, marginBottom: spacing.md}]}>
+                        {deviceOptionsNotice}
+                    </Text>
+                )}
+
+                <View
+                    pointerEvents={deviceOptionsEditable ? 'auto' : 'none'}
+                    style={!deviceOptionsEditable && styles.deviceOptionsDisabled}
+                >
 
                 <Text style={[styles.label, {fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.cardTextSecondary, marginBottom: spacing.xs}]}>Device Type</Text>
                 <View style={[styles.deviceTypeGrid, {gap: spacing.sm}]}>
@@ -378,10 +462,11 @@ export default function DeviceConfigScreen() {
                                 value={value}
                                 onChangeText={onChange}
                                 onBlur={onBlur}
+                                editable={deviceOptionsEditable}
                                 variant="card"
                             />
                             <Text style={[styles.hint, {fontSize: fontSize.sm, color: colors.cardTextMuted, marginTop: spacing.xs}]}>
-                                Template for downloaded file names. Variables: {'{{ album.artist.name }}'}, {'{{ album.name }}'}, {'{{ title }}'}, {'{{ artists }}'}, {'{{ track }}'}, {'{{ year }}'}, {'{{ simple_label }}'}, {'{{ full_label }}'}
+                                Template for downloaded file names, saved on the server device (it can also be edited, with a preview, in the web app). Variables: {'{{ album.artist.name }}'}, {'{{ album.name }}'}, {'{{ title }}'}, {'{{ artists }}'}, {'{{ track }}'}, {'{{ year }}'}, {'{{ simple_label }}'}, {'{{ full_label }}'}
                             </Text>
                         </View>
                     )}
@@ -403,10 +488,12 @@ export default function DeviceConfigScreen() {
                                 onValueChange={onChange}
                                 trackColor={{false: colors.cardBorder, true: colors.primary}}
                                 thumbColor={colors.cardText}
+                                disabled={!deviceOptionsEditable}
                             />
                         </View>
                     )}
                 />
+                </View>
             </Card>
 
             <Card>
@@ -647,6 +734,13 @@ const styles = StyleSheet.create({
     },
     toggleHint: {
         fontSize: 12,
+    },
+    deviceOptionsNotice: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    deviceOptionsDisabled: {
+        opacity: 0.5,
     },
     namingTemplateContainer: {
         marginTop: 16,

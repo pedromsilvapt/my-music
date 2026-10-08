@@ -11,8 +11,6 @@ namespace MyMusic.CLI.Api;
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(AcknowledgeActionRequest))]
 [JsonSerializable(typeof(AcknowledgeActionResponse))]
-[JsonSerializable(typeof(CreateDeviceRequest))]
-[JsonSerializable(typeof(CreateDeviceResponse))]
 [JsonSerializable(typeof(CreatePendingActionsResponse))]
 [JsonSerializable(typeof(DeleteSessionResponse))]
 [JsonSerializable(typeof(GetDeviceSongsResponse))]
@@ -35,6 +33,4 @@ namespace MyMusic.CLI.Api;
 [JsonSerializable(typeof(SyncStartRequest))]
 [JsonSerializable(typeof(SyncStartResponse))]
 [JsonSerializable(typeof(SyncUploadResponse))]
-[JsonSerializable(typeof(UpdateDeviceRequest))]
-[JsonSerializable(typeof(UpdateDeviceResponse))]
 public partial class CliJsonContext : JsonSerializerContext;

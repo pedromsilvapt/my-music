@@ -73,18 +73,21 @@ The configService provides:
 
 ## Device Options
 
-The device options set on the device settings screen (icon, naming template, import on purchase) live in
-`configService` and are saved to the server device in three places:
+The server owns the device options (icon, naming template, import on purchase): `configService` only keeps the
+device's name, its id and its icon (for display). The app never creates a device; `services/deviceConfigService.ts`
+has everything that touches the server device:
 
-- **Saving the settings screen** calls `saveDeviceConfig()` (`services/deviceConfigService.ts`), which registers the
-  device or saves the options that differ. If the server can't be reached, the settings are kept locally and the user is
-  told they were not saved to the server.
-- **A real sync** saves them before the session starts (`saveDeviceOptionsPhase`).
-- **A dry run** leaves the server device untouched and sends the naming template with the session instead, so the dry
-  run previews the local template (see "Device Options in a Dry-Run" in [sync.md](sync.md)).
+- `findDevice()` finds the user's device by the configured name and stores its id and icon. When there is none it
+  throws `DeviceNotFoundError`, telling the user to create the device in the web app. A sync calls it before starting.
+- `loadDeviceOptions()` reads the options of that device. The device settings screen calls it when it opens; while
+  they load, or when the server can't be reached, the option fields are disabled with a notice.
+- `saveDeviceOptions(loaded, options)` saves the options edited on the settings screen. The screen only calls it for
+  options that were loaded from that same device and server, so changing the server or the device name never writes
+  stale options to another device.
 
-The server replaces every option on update, so always send the full set; `saveDeviceOptions`
-(`services/sync/device-options.ts`) sends the server's color back, as the app has no setting for it.
+The server replaces every option on update, so `saveDeviceOptions` always sends the full set, with the server's
+color sent back as the app has no setting for it. A sync sends no options (see "Device Options in a
+Dry-Run" in [sync.md](sync.md)).
 
 ## Exclusion Rules
 

@@ -15,6 +15,7 @@ export interface SyncSessionItem {
   status: SyncSessionStatus;
   isDryRun: boolean;
   deduplicate?: boolean;
+  recordSkipped?: boolean;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
   createRemoteCount: number;
   /** @pattern ^-?(?:0|[1-9]\d*)$ */
@@ -41,7 +42,4 @@ export interface SyncSessionItem {
   errorCount: number;
   /** @nullable */
   repositoryPath?: string | null;
-  /** Whether the session keeps its `Skipped` records after completing. When `false`, a
-  completed session still reports them in int SyncSessionItem.SkippedCount but has none to list. */
-  recordSkipped?: boolean;
 }

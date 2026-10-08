@@ -12,83 +12,76 @@ using Xunit;
 
 public class DeviceConfigServiceTests
 {
-    private const string LocalTemplate = "{{ year }}/{{ simple_label }}.mp3";
-
     private readonly IMyMusicClient _client = Substitute.For<IMyMusicClient>();
 
-    private DeviceConfigService CreateService()
+    private DeviceConfigService CreateService(string deviceName = "Desktop")
     {
         var options = new MyMusicOptions();
-        options.Device.Name = "Desktop";
-        options.Device.Icon = "IconDevicesPc";
-        options.Device.NamingTemplate = LocalTemplate;
+        options.Device.Name = deviceName;
 
         return new DeviceConfigService(Options.Create(options), _client, Substitute.For<ILogger<DeviceConfigService>>());
     }
 
-    private void GivenServerDevice(string? namingTemplate)
+    private void GivenServerDevices(params ListDeviceItem[] devices)
     {
         _client.GetDevicesAsync(Arg.Any<CancellationToken>()).Returns(new ListDevicesResponse
         {
-            Devices =
-            [
-                new ListDeviceItem { Id = 7, Name = "Desktop", SongCount = 0, Icon = "IconDevicesPc", NamingTemplate = namingTemplate }
-            ]
+            Devices = [.. devices]
         });
     }
 
     [Fact]
-    public async Task Resolve_SaveOptions_UpdatesDeviceThatDiffers()
+    public async Task Resolve_DeviceWithConfiguredName_ReturnsIt()
     {
-        GivenServerDevice(namingTemplate: "{{ simple_label }}.mp3");
+        GivenServerDevices(
+            new ListDeviceItem { Id = 3, Name = "Laptop", SongCount = 0 },
+            new ListDeviceItem
+            {
+                Id = 7,
+                Name = "Desktop",
+                SongCount = 12,
+                Icon = "IconDevicesPc",
+                NamingTemplate = "{{ simple_label }}.mp3",
+                ImportOnPurchase = true,
+            });
 
-        var result = await CreateService().ResolveAsync(saveOptions: true);
+        var device = await CreateService().ResolveAsync();
 
-        result.DeviceId.ShouldBe(7);
-        result.Outcome.ShouldBe(DeviceConfigOutcome.Updated);
-        await _client.Received(1).UpdateDeviceAsync(7,
-            Arg.Is<UpdateDeviceRequest>(r => r.NamingTemplate == LocalTemplate && r.Icon == "IconDevicesPc"),
-            Arg.Any<CancellationToken>());
+        device.Id.ShouldBe(7);
+        device.Name.ShouldBe("Desktop");
+        device.Icon.ShouldBe("IconDevicesPc");
+        device.NamingTemplate.ShouldBe("{{ simple_label }}.mp3");
+        device.ImportOnPurchase.ShouldBeTrue();
+        device.SongCount.ShouldBe(12);
     }
 
     [Fact]
-    public async Task Resolve_WithoutSaveOptions_LeavesDeviceThatDiffersUntouched()
+    public async Task Resolve_NoDeviceWithConfiguredName_ThrowsTellingToCreateItOnTheWeb()
     {
-        GivenServerDevice(namingTemplate: "{{ simple_label }}.mp3");
+        GivenServerDevices(new ListDeviceItem { Id = 3, Name = "Laptop", SongCount = 0 });
 
-        var result = await CreateService().ResolveAsync(saveOptions: false);
+        var exception = await Should.ThrowAsync<DeviceNotFoundException>(() => CreateService().ResolveAsync());
 
-        result.DeviceId.ShouldBe(7);
-        result.Outcome.ShouldBe(DeviceConfigOutcome.Unchanged);
-        await _client.DidNotReceive().UpdateDeviceAsync(Arg.Any<long>(), Arg.Any<UpdateDeviceRequest>(), Arg.Any<CancellationToken>());
+        exception.Message.ShouldBe("Device 'Desktop' not found. Create it in the web app (Devices > New device)");
     }
 
     [Fact]
-    public async Task Resolve_SaveOptions_DeviceUpToDate_DoesNotUpdate()
+    public async Task Resolve_NameDiffersInCase_Throws()
     {
-        GivenServerDevice(namingTemplate: LocalTemplate);
+        // Device names are matched exactly, as the server stores them
+        GivenServerDevices(new ListDeviceItem { Id = 7, Name = "desktop", SongCount = 0 });
 
-        var result = await CreateService().ResolveAsync(saveOptions: true);
-
-        result.Outcome.ShouldBe(DeviceConfigOutcome.Unchanged);
-        await _client.DidNotReceive().UpdateDeviceAsync(Arg.Any<long>(), Arg.Any<UpdateDeviceRequest>(), Arg.Any<CancellationToken>());
+        await Should.ThrowAsync<DeviceNotFoundException>(() => CreateService().ResolveAsync());
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Resolve_MissingDevice_CreatesItWithTheConfiguredOptions(bool saveOptions)
+    [Fact]
+    public async Task Resolve_NeverChangesTheServer()
     {
-        _client.GetDevicesAsync(Arg.Any<CancellationToken>()).Returns(new ListDevicesResponse { Devices = [] });
-        _client.CreateDeviceAsync(Arg.Any<CreateDeviceRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new CreateDeviceResponse { Device = new CreateDeviceItem { Id = 9, Name = "Desktop" } });
+        GivenServerDevices(new ListDeviceItem { Id = 7, Name = "Desktop", SongCount = 0 });
 
-        var result = await CreateService().ResolveAsync(saveOptions);
+        await CreateService().ResolveAsync();
 
-        result.DeviceId.ShouldBe(9);
-        result.Outcome.ShouldBe(DeviceConfigOutcome.Created);
-        await _client.Received(1).CreateDeviceAsync(
-            Arg.Is<CreateDeviceRequest>(r => r.Name == "Desktop" && r.NamingTemplate == LocalTemplate),
-            Arg.Any<CancellationToken>());
+        // Devices are created and edited in the web app: the only call is the lookup
+        _client.ReceivedCalls().Count().ShouldBe(1);
     }
 }

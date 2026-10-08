@@ -11,6 +11,8 @@ public interface IDeviceCreateService
     /// Creates a device owned by the current user. Returns <c>null</c> when the current user
     /// does not exist (mirrors the previous controller <c>NotFound</c> path).
     /// </summary>
+    /// <exception cref="DeviceNameAlreadyExistsException">The user already has a device with that name.</exception>
+    /// <exception cref="ValidationException">The name or the naming template is not valid.</exception>
     Task<DeviceCreateResult?> CreateAsync(
         DeviceCreateInput input,
         CancellationToken cancellationToken);

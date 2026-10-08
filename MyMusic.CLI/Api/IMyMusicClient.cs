@@ -5,17 +5,6 @@ namespace MyMusic.CLI.Api;
 
 public interface IMyMusicClient
 {
-    [Post("/api/devices")]
-    Task<CreateDeviceResponse> CreateDeviceAsync(
-        [Body] CreateDeviceRequest request,
-        CancellationToken ct = default);
-
-    [Put("/api/devices/{deviceId}")]
-    Task<UpdateDeviceResponse> UpdateDeviceAsync(
-        long deviceId,
-        [Body] UpdateDeviceRequest request,
-        CancellationToken ct = default);
-
     [Get("/api/devices")]
     Task<ListDevicesResponse> GetDevicesAsync(
         CancellationToken ct = default);

@@ -150,26 +150,10 @@ export interface ScanError {
 }
 
 
-/** The device options the app has a setting for. */
-export interface DeviceOptions {
-    icon: string | null;
-    namingTemplate: string | null;
-    importOnPurchase: boolean;
-}
-
 export interface ISyncApiClient {
-    getDevice: (deviceId: number) => Promise<{
-        device: { icon: string | null; color: string | null; namingTemplate: string | null; importOnPurchase: boolean };
-    }>;
-
-    updateDevice: (
-        deviceId: number,
-        request: { icon?: string; color?: string; namingTemplate?: string; importOnPurchase?: boolean }
-    ) => Promise<unknown>;
-
     startSync: (
         deviceId: number,
-        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; recordSkipped?: boolean; scanErrors?: Array<{ path: string; error: string }>; deviceOptions?: { namingTemplate: string | null } }
+        request: { dryRun?: boolean; direction?: SyncDirection; repositoryPath?: string; deduplicate?: boolean; recordSkipped?: boolean; scanErrors?: Array<{ path: string; error: string }> }
     ) => Promise<{ sessionId: number }>;
 
     prepareDeduplicate: (
@@ -329,7 +313,6 @@ export const FILE_MODIFIED_AT_SOURCES: FileModifiedAtSource[] = ['Now', 'ServerM
 
 export interface ISyncConfig {
     getDeviceId: () => number | null;
-    getDeviceOptions: () => DeviceOptions;
     getRepositoryPath: () => string;
     getMusicExtensions: () => string[];
     getExcludePatterns: () => string[];

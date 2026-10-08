@@ -1,31 +1,22 @@
+using MyMusic.CLI.Api.Dtos;
+
 namespace MyMusic.CLI.Services.Devices;
 
 /// <summary>
-/// Resolves the server device matching the configured device name, registering it when it doesn't
-/// exist yet.
+/// Resolves the server device matching the configured device name. Devices, and their options (icon,
+/// color, naming template, import on purchase), are created and edited in the web app.
 /// </summary>
 public interface IDeviceConfigService
 {
     /// <summary>
-    /// Finds the configured device on the server, creating it when missing, and returns its ID.
+    /// Finds the server device that has the configured name.
     /// </summary>
-    /// <param name="saveOptions">
-    /// When set, the configured options (icon, color, naming template, import on purchase) are saved
-    /// to an existing device that differs from them. A device that has to be created always gets them.
-    /// </param>
-    Task<DeviceConfigResult> ResolveAsync(bool saveOptions, CancellationToken ct = default);
+    /// <exception cref="DeviceNotFoundException">The server has no device with that name.</exception>
+    Task<ListDeviceItem> ResolveAsync(CancellationToken ct = default);
 }
 
-public record DeviceConfigResult
-{
-    public required long DeviceId { get; init; }
-    public required DeviceConfigOutcome Outcome { get; init; }
-}
-
-public enum DeviceConfigOutcome
-{
-    /// <summary>The device exists and was left as is.</summary>
-    Unchanged,
-    Created,
-    Updated,
-}
+/// <summary>
+/// Thrown when the server has no device with the configured name.
+/// </summary>
+public class DeviceNotFoundException(string deviceName)
+    : Exception($"Device '{deviceName}' not found. Create it in the web app (Devices > New device)");

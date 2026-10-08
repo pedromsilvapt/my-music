@@ -277,17 +277,6 @@ public record StartSyncRequest
     public bool Deduplicate { get; init; }
     public bool RecordSkipped { get; init; }
     public List<ScanError>? ScanErrors { get; init; }
-
-    /// <summary>
-    /// Device options to preview in a dry run. They aren't saved to the device, so the server only
-    /// accepts them when <see cref="DryRun"/> is set.
-    /// </summary>
-    public StartSyncDeviceOptions? DeviceOptions { get; init; }
-}
-
-public record StartSyncDeviceOptions
-{
-    public string? NamingTemplate { get; init; }
 }
 
 public record StartSyncResult

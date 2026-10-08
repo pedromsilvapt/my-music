@@ -163,31 +163,17 @@ public class CliUserPrompt(ITerminal terminal) : IUserPrompt
 
 public class CliSyncConfig(
     IOptions<MyMusicOptions> options,
-    IDeviceConfigService deviceConfig,
-    ILogger<CliSyncConfig> logger) : ISyncConfig
+    IDeviceConfigService deviceConfig) : ISyncConfig
 {
     private long? _deviceId;
 
-    public async Task<long?> GetDeviceIdAsync(bool saveOptions, CancellationToken ct = default)
+    public async Task<long?> GetDeviceIdAsync(CancellationToken ct = default)
     {
-        if (_deviceId.HasValue)
-        {
-            return _deviceId.Value;
-        }
-
-        try
-        {
-            _deviceId = (await deviceConfig.ResolveAsync(saveOptions, ct)).DeviceId;
-            return _deviceId;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get or create device");
-            return null;
-        }
+        // A device that cannot be found fails the sync with the reason, which tells the user how to fix it
+        _deviceId ??= (await deviceConfig.ResolveAsync(ct)).Id;
+        return _deviceId;
     }
 
-    public string? GetNamingTemplate() => options.Value.Device.NamingTemplate;
     public string GetRepositoryPath() => options.Value.Repository.Path;
     public string[] GetMusicExtensions() => options.Value.Repository.MusicExtensions.ToArray();
     public string[] GetExcludePatterns() => options.Value.Repository.ExcludePatterns.ToArray();
@@ -225,10 +211,7 @@ public class CliSyncApiClient(IMyMusicClient client) : ISyncApiClient
             {
                 FilePath = e.Path,
                 ErrorMessage = e.Error
-            }).ToList(),
-            DeviceOptions = request.DeviceOptions is { } deviceOptions
-                ? new SyncStartDeviceOptions { NamingTemplate = deviceOptions.NamingTemplate }
-                : null
+            }).ToList()
         }, ct);
         return new StartSyncResult { SessionId = response.SessionId };
     }

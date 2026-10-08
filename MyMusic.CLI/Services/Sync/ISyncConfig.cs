@@ -5,11 +5,10 @@ using MyMusic.CLI.Services.Sync.Types;
 public interface ISyncConfig
 {
     /// <summary>
-    /// Resolves the server device for this installation, registering it when missing.
-    /// <paramref name="saveOptions"/> also saves the configured device options to an existing device.
+    /// Resolves the server device this installation syncs with. Devices are created in the web app: it
+    /// fails when the server has none with the configured name.
     /// </summary>
-    Task<long?> GetDeviceIdAsync(bool saveOptions, CancellationToken ct = default);
-    string? GetNamingTemplate();
+    Task<long?> GetDeviceIdAsync(CancellationToken ct = default);
     string GetRepositoryPath();
     string[] GetMusicExtensions();
     string[] GetExcludePatterns();

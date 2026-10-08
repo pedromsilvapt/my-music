@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.CLI.Api;
 using MyMusic.CLI.Configuration;
+using MyMusic.CLI.Services.Devices;
 using MyMusic.CLI.Services.Sync.Types;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -13,6 +14,7 @@ namespace MyMusic.CLI.Commands;
 
 public class HistoryListCommand(
     IMyMusicClient client,
+    IDeviceConfigService deviceConfig,
     IOptions<MyMusicOptions> options,
     ILogger<HistoryListCommand> logger) : AsyncCommand<HistoryListCommand.Settings>
 {
@@ -22,14 +24,9 @@ public class HistoryListCommand(
 
         try
         {
-            var deviceId = await GetDeviceIdAsync();
-            if (deviceId is null)
-            {
-                AnsiConsole.MarkupLine("[red]Error: Could not find device[/]");
-                return 1;
-            }
+            var device = await deviceConfig.ResolveAsync();
 
-            var response = await client.GetSessionsAsync(deviceId.Value, settings.Count);
+            var response = await client.GetSessionsAsync(device.Id, settings.Count);
 
             if (response.Sessions.Count == 0)
             {
@@ -98,24 +95,9 @@ public class HistoryListCommand(
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error: {ex.Message}[/]");
+            AnsiConsole.MarkupLine($"[red]Error: {ex.Message.EscapeMarkup()}[/]");
             logger.LogError(ex, "History ls command failed");
             return 1;
-        }
-    }
-
-    private async Task<long?> GetDeviceIdAsync()
-    {
-        try
-        {
-            var devicesResponse = await client.GetDevicesAsync();
-            var existingDevice = devicesResponse.Devices.FirstOrDefault(d => d.Name == options.Value.Device.Name);
-            return existingDevice?.Id;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get device");
-            return null;
         }
     }
 

@@ -13,13 +13,9 @@ export interface SyncStartRequest {
   direction?: null | SyncDirection;
   /** @nullable */
   repositoryPath?: string | null;
-  /** Match files that would be created on the server against the library (and the session's other
-  uploads) by acoustic fingerprint, linking soundalikes instead of importing them. */
   deduplicate?: boolean;
+  recordSkipped?: boolean;
   /** @nullable */
   scanErrors?: SyncScanErrorItem[] | null;
   deviceOptions?: null | SyncStartDeviceOptions;
-  /** Keep the session's `Skipped` records after it completes. By default they are deleted on
-  completion and only their count is kept. */
-  recordSkipped?: boolean;
 }

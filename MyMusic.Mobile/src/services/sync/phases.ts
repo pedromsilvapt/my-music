@@ -4,7 +4,6 @@ import type { RenameData } from '../../api/types';
 import { SyncCancelledError } from './errors';
 import { safeToIsoString, formatFilePath } from './utils';
 import { AdaptiveChunkSize } from './adaptive-chunk-size';
-import { saveDeviceOptions } from './device-options';
 import { actionCreateRemote, actionUpdateRemote, actionCreateLocal, actionUpdateLocal, actionDeleteLocal, actionUnlink, actionConflict, actionRename, reportFailure, getFileModifiedAt } from './sync-actions-device';
 
 const EMPTY_COUNTS: SyncActionCounts = {
@@ -92,27 +91,6 @@ export async function scanPhase (
     return { files, errors: scanErrors, estimatedTotal: currentEstimate };
 }
 
-/**
- * Saves the local device options (naming template, icon, ...) to the server before a real sync, so the
- * session runs with them. A dry run must leave the server untouched: it sends them with the session
- * instead (see `startSessionPhase`).
- */
-export async function saveDeviceOptionsPhase (
-    deps: SyncDeps,
-    ctx: SyncContext
-): Promise<void> {
-    if (ctx.options.dryRun) {
-        return;
-    }
-
-    const { device } = await deps.apiClient.getDevice(ctx.deviceId);
-    const saved = await saveDeviceOptions(deps.apiClient, ctx.deviceId, device, deps.config.getDeviceOptions());
-
-    if (saved) {
-        console.log('Saved device options to the server');
-    }
-}
-
 export async function startSessionPhase (
     deps: SyncDeps,
     ctx: SyncContext,
@@ -126,10 +104,6 @@ export async function startSessionPhase (
         deduplicate: ctx.options.deduplicate,
         recordSkipped: ctx.options.recordSkipped,
         scanErrors: scanErrors.map(e => ({ path: e.path, error: e.error })),
-        // A dry run doesn't save the device options, so the session previews the local ones
-        deviceOptions: ctx.options.dryRun
-            ? { namingTemplate: deps.config.getDeviceOptions().namingTemplate }
-            : undefined,
     });
     ctx.sessionId = startResponse.sessionId;
 

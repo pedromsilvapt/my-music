@@ -23,9 +23,21 @@ public class DeviceUpdateService(
         var device = await deviceLookup.FindDeviceAsync(db, deviceId, currentUser.Id, cancellationToken);
         if (device == null) return null;
 
+        var namingTemplate = DeviceValidator.NormalizeNamingTemplate(input.NamingTemplate);
+
+        if (input.Name != null)
+        {
+            var name = DeviceValidator.NormalizeName(input.Name);
+            if (name != device.Name)
+            {
+                await DeviceValidator.EnsureNameIsFreeAsync(db, currentUser.Id, name, cancellationToken);
+                device.Name = name;
+            }
+        }
+
         device.Icon = input.Icon;
         device.Color = input.Color;
-        device.NamingTemplate = input.NamingTemplate;
+        device.NamingTemplate = namingTemplate;
         if (input.ImportOnPurchase.HasValue)
         {
             device.ImportOnPurchase = input.ImportOnPurchase.Value;

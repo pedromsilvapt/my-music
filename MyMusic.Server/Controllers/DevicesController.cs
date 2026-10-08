@@ -54,16 +54,29 @@ public class DevicesController(
     public async Task<ActionResult<CreateDeviceResponse>> Create([FromBody] CreateDeviceRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await deviceCreateService.CreateAsync(
-            new DeviceCreateInput
-            {
-                Name = request.Name,
-                Icon = request.Icon,
-                Color = request.Color,
-                NamingTemplate = request.NamingTemplate,
-                ImportOnPurchase = request.ImportOnPurchase,
-            },
-            cancellationToken);
+        DeviceCreateResult? result;
+        try
+        {
+            result = await deviceCreateService.CreateAsync(
+                new DeviceCreateInput
+                {
+                    Name = request.Name,
+                    Icon = request.Icon,
+                    Color = request.Color,
+                    NamingTemplate = request.NamingTemplate,
+                    ImportOnPurchase = request.ImportOnPurchase,
+                },
+                cancellationToken);
+        }
+        catch (DeviceNameAlreadyExistsException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Device already exists");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Device cannot be created");
+        }
+
         if (result == null) return NotFound("User not found");
 
         return new CreateDeviceResponse
@@ -76,16 +89,30 @@ public class DevicesController(
     public async Task<ActionResult<UpdateDeviceResponse>> Update(long deviceId, [FromBody] UpdateDeviceRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await deviceUpdateService.UpdateAsync(
-            deviceId,
-            new DeviceUpdateInput
-            {
-                Icon = request.Icon,
-                Color = request.Color,
-                NamingTemplate = request.NamingTemplate,
-                ImportOnPurchase = request.ImportOnPurchase,
-            },
-            cancellationToken);
+        DeviceUpdateResult? result;
+        try
+        {
+            result = await deviceUpdateService.UpdateAsync(
+                deviceId,
+                new DeviceUpdateInput
+                {
+                    Name = request.Name,
+                    Icon = request.Icon,
+                    Color = request.Color,
+                    NamingTemplate = request.NamingTemplate,
+                    ImportOnPurchase = request.ImportOnPurchase,
+                },
+                cancellationToken);
+        }
+        catch (DeviceNameAlreadyExistsException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status409Conflict, title: "Device already exists");
+        }
+        catch (ValidationException ex)
+        {
+            return Problem(ex.Message, statusCode: StatusCodes.Status400BadRequest, title: "Device cannot be updated");
+        }
+
         if (result == null) return NotFound();
 
         var device = result.Device;
@@ -120,6 +147,19 @@ public class DevicesController(
         {
             Device = GetDeviceItem.FromEntity(result.Device, result.SongCount),
         };
+    }
+
+    [HttpPost("naming-template/preview", Name = "PreviewDeviceNamingTemplate")]
+    public async Task<ActionResult<PreviewDeviceNamingTemplateResponse>> PreviewNamingTemplate(
+        [FromBody] PreviewDeviceNamingTemplateRequest request,
+        [FromServices] IDeviceNamingPreviewService deviceNamingPreviewService,
+        CancellationToken cancellationToken)
+    {
+        var result = await deviceNamingPreviewService.PreviewAsync(
+            currentUser.Id, request.DeviceId, request.NamingTemplate, cancellationToken);
+        if (result == null) return NotFound();
+
+        return PreviewDeviceNamingTemplateResponse.FromResult(result);
     }
 
     [HttpPost("{deviceId:long}/sync/{sessionId:long}/upload")]

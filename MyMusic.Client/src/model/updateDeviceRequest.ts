@@ -7,6 +7,8 @@ OpenAPI spec version: 1.0.0
 */
 export interface UpdateDeviceRequest {
   /** @nullable */
+  name?: string | null;
+  /** @nullable */
   icon?: string | null;
   /** @nullable */
   color?: string | null;

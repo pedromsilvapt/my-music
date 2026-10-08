@@ -9,19 +9,6 @@ namespace MyMusic.CLI.Commands;
 
 public class InitCommand : Command<InitCommand.Settings>
 {
-    private static readonly Dictionary<string, string> DeviceIcons = new()
-    {
-        { "Desktop", "IconDevicesPc" },
-        { "Laptop", "IconDeviceLaptop" },
-        { "Smartphone", "IconDeviceMobile" },
-        { "Tablet", "IconDeviceTablet" },
-        { "USB Drive", "IconUsb" },
-        { "MP3 Player", "IconDeviceMp3" },
-    };
-
-    private static readonly Dictionary<string, string> DeviceIconsReverse =
-        DeviceIcons.ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
-
     public override int Execute(CommandContext context, Settings settings)
     {
         using var activity = CliActivitySource.Instance.StartActivity("init");
@@ -38,11 +25,12 @@ public class InitCommand : Command<InitCommand.Settings>
         var serverUrl = PromptBaseUrl(settings.Server, existing?.ServerUrl);
         var userName = PromptUserName(settings.UserName, existing?.UserName);
         var deviceName = PromptDeviceName(settings.DeviceName, existing?.DeviceName);
-        var deviceType = PromptDeviceType(settings.DeviceType, existing?.DeviceIcon);
-        var importOnPurchase = PromptImportOnPurchase(settings.ImportOnPurchase, existing?.ImportOnPurchase);
         var repositoryPath = PromptRepositoryPath(settings.Repository, existing?.RepositoryPath);
 
-        WriteConfig(configPath, serverUrl, userName, deviceName, deviceType, importOnPurchase, repositoryPath);
+        WriteConfig(configPath, serverUrl, userName, deviceName, repositoryPath);
+
+        AnsiConsole.MarkupLine(
+            $"[dim]If the server has no device named '{deviceName.EscapeMarkup()}' yet, create it in the web app (Devices > New device) before syncing.[/]");
 
         return 0;
     }
@@ -86,8 +74,6 @@ public class InitCommand : Command<InitCommand.Settings>
         string? serverUrl = null;
         string? userName = null;
         string? deviceName = null;
-        string? deviceIcon = null;
-        bool? importOnPurchase = null;
         string? repositoryPath = null;
 
         if (myMusic.TryGetProperty("Server", out var server))
@@ -109,16 +95,6 @@ public class InitCommand : Command<InitCommand.Settings>
             {
                 deviceName = name.GetString();
             }
-
-            if (device.TryGetProperty("Icon", out var icon))
-            {
-                deviceIcon = icon.GetString();
-            }
-
-            if (device.TryGetProperty("ImportOnPurchase", out var importOnPurchaseValue))
-            {
-                importOnPurchase = importOnPurchaseValue.GetBoolean();
-            }
         }
 
         if (myMusic.TryGetProperty("Repository", out var repository))
@@ -129,7 +105,7 @@ public class InitCommand : Command<InitCommand.Settings>
             }
         }
 
-        return new ExistingConfig(serverUrl, userName, deviceName, deviceIcon, importOnPurchase, repositoryPath);
+        return new ExistingConfig(serverUrl, userName, deviceName, repositoryPath);
     }
 
     private static bool PromptOverwrite(string configPath, bool yesFlag)
@@ -188,66 +164,16 @@ public class InitCommand : Command<InitCommand.Settings>
             "Device name:",
             defaultValue ?? "My Device");
 
-    private static string PromptDeviceType(string? cliValue, string? defaultIconValue)
-    {
-        string? resolvedDeviceType = null;
-
-        if (!string.IsNullOrEmpty(cliValue))
-        {
-            if (DeviceIcons.TryGetValue(cliValue, out var iconName))
-            {
-                resolvedDeviceType = cliValue;
-            }
-            else if (DeviceIconsReverse.TryGetValue(cliValue, out var displayName))
-            {
-                resolvedDeviceType = displayName;
-            }
-        }
-
-        var defaultDeviceType = resolvedDeviceType ?? (defaultIconValue != null &&
-                                                       DeviceIconsReverse.TryGetValue(defaultIconValue,
-                                                           out var existing)
-            ? existing
-            : DeviceIcons.Keys.First());
-
-        var selectionPrompt = new SelectionPrompt<string>()
-            .Title("Device type:");
-
-        foreach (var key in new[] { defaultDeviceType }.Concat(DeviceIcons.Keys).Distinct())
-        {
-            selectionPrompt.AddChoice(key);
-        }
-
-        var deviceType = AnsiConsole.Prompt(selectionPrompt);
-        AnsiConsole.MarkupLine($"[dim]Device type: {deviceType} ({DeviceIcons[deviceType]})[/]");
-
-        return deviceType;
-    }
-
     private static string PromptRepositoryPath(string? cliValue, string? defaultValue) =>
         cliValue ?? AnsiConsole.Ask<string>(
             "Repository path:",
             defaultValue ?? "");
-
-    private static bool PromptImportOnPurchase(bool? cliValue, bool? defaultValue)
-    {
-        var defaultAnswer = cliValue ?? defaultValue ?? false;
-        var answer = AnsiConsole.Prompt(
-            new ConfirmationPrompt("Auto-import purchased songs to this device?")
-            {
-                DefaultValue = defaultAnswer,
-            });
-
-        return answer;
-    }
 
     internal static void WriteConfig(
         string configPath,
         string serverUrl,
         string userName,
         string deviceName,
-        string deviceType,
-        bool importOnPurchase,
         string repositoryPath)
     {
         var config = new JsonObject
@@ -262,8 +188,6 @@ public class InitCommand : Command<InitCommand.Settings>
                 ["Device"] = new JsonObject
                 {
                     ["Name"] = deviceName,
-                    ["Icon"] = DeviceIcons[deviceType],
-                    ["ImportOnPurchase"] = importOnPurchase,
                 },
                 ["Repository"] = new JsonObject
                 {
@@ -294,8 +218,6 @@ public class InitCommand : Command<InitCommand.Settings>
         string? ServerUrl,
         string? UserName,
         string? DeviceName,
-        string? DeviceIcon,
-        bool? ImportOnPurchase,
         string? RepositoryPath
     );
 
@@ -306,10 +228,6 @@ public class InitCommand : Command<InitCommand.Settings>
         [CommandOption("-u|--username")] public string? UserName { get; init; }
 
         [CommandOption("-d|--device-name")] public string? DeviceName { get; init; }
-
-        [CommandOption("-t|--device-type")] public string? DeviceType { get; init; }
-
-        [CommandOption("--import-on-purchase")] public bool? ImportOnPurchase { get; init; }
 
         [CommandOption("-r|--repository")] public string? Repository { get; init; }
 

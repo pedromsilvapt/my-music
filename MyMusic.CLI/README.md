@@ -36,7 +36,6 @@ my-music init [OPTIONS]
 | `--server`      | `-s`     | Server URL                                                               |
 | `--username`    | `-u`     | User name                                                                |
 | `--device-name` | `-d`     | Device name                                                              |
-| `--device-type` | `-t`     | Device type (Desktop, Laptop, Smartphone, Tablet, USB Drive, MP3 Player) |
 | `--repository`  | `-r`     | Repository path                                                          |
 | `--yes`         | `-y`     | Skip overwrite confirmation                                              |
 
@@ -47,7 +46,20 @@ my-music init [OPTIONS]
 my-music init
 
 # Non-interactive (all options provided)
-my-music init -s http://localhost:5000/api -u pedro -d "My Laptop" -t Laptop -r /home/pedro/Music -y
+my-music init -s http://localhost:5000/api -u pedro -d "My Laptop" -r /home/pedro/Music -y
+```
+
+The device name must be the name of a device that exists on the server: create it in the web app (Devices > New
+device), where its type, color, naming template and other options are set. The CLI never creates devices.
+
+---
+
+### device show
+
+Shows the options of the configured device, as set on the server.
+
+```bash
+my-music device show
 ```
 
 ---

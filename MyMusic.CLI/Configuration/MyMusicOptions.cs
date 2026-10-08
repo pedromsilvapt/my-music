@@ -20,11 +20,11 @@ public class ServerOptions
 
 public class DeviceOptions
 {
+    /// <summary>
+    /// The name of the server device this installation syncs with. Its options (icon, color, naming
+    /// template, import on purchase) live on the server, and are edited in the web app.
+    /// </summary>
     public string Name { get; set; } = "My Device";
-    public string? Icon { get; set; }
-    public string? Color { get; set; }
-    public string? NamingTemplate { get; set; }
-    public bool ImportOnPurchase { get; set; } = false;
 }
 
 public class RepositoryOptions

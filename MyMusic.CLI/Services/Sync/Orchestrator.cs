@@ -15,11 +15,10 @@ public class Orchestrator(
         IProgress<SyncProgress>? progress,
         CancellationToken ct = default)
     {
-        // A dry run must leave the server untouched: the device options are sent with the session instead
-        var deviceId = await config.GetDeviceIdAsync(saveOptions: !options.DryRun, ct);
+        var deviceId = await config.GetDeviceIdAsync(ct);
         if (deviceId is null)
         {
-            logger.LogError("Failed to get or create device");
+            logger.LogError("Failed to get device");
             return new SyncResult { Error = 1 };
         }
 

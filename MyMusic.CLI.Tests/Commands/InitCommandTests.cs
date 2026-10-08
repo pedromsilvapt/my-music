@@ -67,7 +67,7 @@ public class InitCommandTests
     {
         using var file = new TempConfigFile();
 
-        InitCommand.WriteConfig(file.Path, "http://localhost:5000", "alice", "Alice's <PC>", "Laptop", true, "/music");
+        InitCommand.WriteConfig(file.Path, "http://localhost:5000", "alice", "Alice's <PC>", "/music");
 
         File.ReadAllText(file.Path).ReplaceLineEndings("\n").ShouldBe(
             """
@@ -78,9 +78,7 @@ public class InitCommandTests
                   "UserName": "alice"
                 },
                 "Device": {
-                  "Name": "{ESCAPED_NAME}",
-                  "Icon": "IconDeviceLaptop",
-                  "ImportOnPurchase": true
+                  "Name": "{ESCAPED_NAME}"
                 },
                 "Repository": {
                   "Path": "/music",
@@ -108,11 +106,22 @@ public class InitCommandTests
     {
         using var file = new TempConfigFile();
 
-        InitCommand.WriteConfig(file.Path, "https://music.example.com", "bob", "Bob's Phone", "Smartphone", false, "/sdcard/Music");
+        InitCommand.WriteConfig(file.Path, "https://music.example.com", "bob", "Bob's Phone", "/sdcard/Music");
         var config = InitCommand.ReadExistingConfig(file.Path);
 
         config.ShouldBe(new InitCommand.ExistingConfig(
-            "https://music.example.com", "bob", "Bob's Phone", "IconDeviceMobile", false, "/sdcard/Music"));
+            "https://music.example.com", "bob", "Bob's Phone", "/sdcard/Music"));
+    }
+
+    [Fact]
+    public void ReadExistingConfig_LeftoverDeviceOptions_AreIgnored()
+    {
+        // Config files written before the device options moved to the server still have them
+        using var file = new TempConfigFile(
+            """{ "MyMusic": { "Device": { "Name": "Phone", "Icon": "IconDeviceMobile", "ImportOnPurchase": true, "NamingTemplate": "{{ title }}" } } }""");
+
+        InitCommand.ReadExistingConfig(file.Path).ShouldBe(
+            new InitCommand.ExistingConfig(null, null, "Phone", null));
     }
 
     [Fact]
@@ -137,7 +146,7 @@ public class InitCommandTests
         using var file = new TempConfigFile("""{ "MyMusic": { "Server": { "BaseUrl": "http://server" } } }""");
 
         InitCommand.ReadExistingConfig(file.Path).ShouldBe(
-            new InitCommand.ExistingConfig("http://server", null, null, null, null, null));
+            new InitCommand.ExistingConfig("http://server", null, null, null));
     }
 
     private sealed class TempConfigFile : IDisposable
