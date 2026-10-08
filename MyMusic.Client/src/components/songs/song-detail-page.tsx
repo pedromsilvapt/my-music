@@ -29,6 +29,7 @@ import {SONG_EDITOR_MODAL_SIZE} from "../../consts.ts";
 import {useManageDevicesContext} from "../../contexts/manage-devices-context.tsx";
 import {useManagePlaylistsContext} from "../../contexts/manage-playlists-context.tsx";
 import {useQueueMutations} from "../../contexts/player-context.tsx";
+import {usePlayInNewQueue} from "../../hooks/use-play-in-new-queue.ts";
 import {useConfirmDelete} from "../../hooks/use-confirm-delete.ts";
 import {useToggleFavorite} from "../../hooks/use-favorites.ts";
 import {useQueryData} from "../../hooks/use-query-data.ts";
@@ -47,7 +48,8 @@ export default function SongDetailPage() {
     const songQuery = useGetLocalSong(Number(songId));
     const songResponse = useQueryData(songQuery, t("songs:detailPage.fetchFailed"));
     const song = songResponse?.data.song ?? null;
-    const {play, playNext, playLast} = useQueueMutations();
+    const {playNext, playLast} = useQueueMutations();
+    const playInNewQueue = usePlayInNewQueue();
     const toggleFavorite = useToggleFavorite();
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
@@ -164,7 +166,7 @@ export default function SongDetailPage() {
                         )}
                     </Group>
                     <Group gap="sm">
-                        <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => play([{...song, isShared: false}])}>
+                        <Button leftSection={<IconPlayerPlayFilled/>} onClick={() => playInNewQueue([{...song, isShared: false}])}>
                             {t("songs:schema.play")}
                         </Button>
                         <Group gap="xs">

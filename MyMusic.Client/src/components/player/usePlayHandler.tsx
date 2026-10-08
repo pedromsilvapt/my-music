@@ -2,8 +2,8 @@ import {useCallback, useRef} from 'react';
 import {usePlayerNavigation} from '../../hooks/use-player-navigation';
 import type {PlayableItem} from '../../hooks/use-queue';
 import {useQueueMutations} from '../../hooks/use-queue';
-import {useQueuesMutations} from '../../hooks/use-queues';
-import {generateQueueName, type QueueContext} from '../../utils/queue-name-generator';
+import {usePlayInNewQueue} from '../../hooks/use-play-in-new-queue';
+import type {QueueContext} from '../../utils/queue-name-generator';
 import {usePlaybackActions} from '../../stores/playback-store';
 import {useQueueManagerStore} from '../../stores/queue-manager-store';
 import {useQueryClient} from '@tanstack/react-query';
@@ -36,45 +36,14 @@ export function usePlayHandler(
     options?: UsePlayHandlerOptions
 ): PlayHandler {
     const {playNext, playLast} = useQueueMutations();
-    const {createQueue} = useQueuesMutations();
+    const playInNewQueue = usePlayInNewQueue();
     const {goTo} = usePlayerNavigation();
-    const {incrementPlaybackKey, setLoadingSong} = usePlaybackActions(s => ({
-        incrementPlaybackKey: s.incrementPlaybackKey,
-        setLoadingSong: s.setLoadingSong,
-    }));
+    const {setLoadingSong} = usePlaybackActions(s => ({setLoadingSong: s.setLoadingSong}));
     const setQueueCurrentSongByIdRef = useRef(useSetQueueCurrentSongById({}));
     const setCurrentQueueId = useQueueManagerStore((s) => s.setCurrentQueueId);
     const queryClient = useQueryClient();
 
     const {visibleQueueId, currentQueueId} = options ?? {visibleQueueId: null, currentQueueId: null};
-
-    const playAndCreateQueue = useCallback(async (
-        rows: PlayableItem[],
-        context?: QueueContext,
-        allItems?: PlayableItem[]
-    ) => {
-        if (rows.length === 0) return;
-
-        incrementPlaybackKey();
-
-        const queueItems = allItems ?? rows;
-        const clickedSong = rows[0];
-        const songIds = queueItems.map((s) => s.id);
-        const queueContext = context ?? {type: 'songs' as const};
-        const name = generateQueueName(queueContext);
-
-        const queueId = await createQueue(songIds, {name, currentSongId: clickedSong.id});
-
-        if (queueId === null) return;
-
-        const clickedIndex = queueItems.findIndex(s => s.id === clickedSong.id);
-        const songWithOrder: GetPlaylistSongItem = {
-            ...clickedSong,
-            order: clickedIndex + 1,
-            addedAtPlaylist: new Date().toISOString(),
-        } as GetPlaylistSongItem;
-        setLoadingSong(songWithOrder, true);
-    }, [createQueue, incrementPlaybackKey, setLoadingSong]);
 
     // Switch to the different queue and play the song in a single atomic request
     const switchQueueAndPlay = useCallback((
@@ -134,7 +103,7 @@ export function usePlayHandler(
         } else if (ev.shiftKey) {
             playNext(rows);
         } else {
-            playAndCreateQueue(rows, context, allItems);
+            playInNewQueue(rows, context, allItems);
         }
-    }, [nowPlaying, visibleQueueId, currentQueueId, switchQueueAndPlay, goTo, playAndCreateQueue, playNext, playLast]);
+    }, [nowPlaying, visibleQueueId, currentQueueId, switchQueueAndPlay, goTo, playInNewQueue, playNext, playLast]);
 }

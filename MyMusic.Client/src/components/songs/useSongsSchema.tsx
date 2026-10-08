@@ -31,6 +31,7 @@ import {useQueue, useQueueMutations} from "../../contexts/player-context";
 import {useConfirmDelete} from "../../hooks/use-confirm-delete";
 import {useToggleFavorites} from "../../hooks/use-favorites";
 import {useImportSharedSongWithSongsInvalidation} from "../../hooks/use-import-shared-song";
+import {usePlayInNewQueue} from "../../hooks/use-play-in-new-queue";
 import {useQueueList} from "../../hooks/use-queues";
 import type {GetPlaylistSongItem, ListSongItem} from "../../model";
 import {isPlaylistSong} from "../../utils/type-guards";
@@ -58,7 +59,7 @@ export interface UseSongsSchemaOptions {
 
 export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
     const {t} = useTranslation(["songs", "common"]);
-    const {play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback} = useQueueMutations();
+    const {playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback} = useQueueMutations();
     const {setIsFavorite} = usePlaybackActions(s => ({setIsFavorite: s.setIsFavorite}));
     const {queue, currentSongId: queueCurrentSongId} = useQueue();
     const {queues} = useQueueList();
@@ -108,6 +109,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
         options?.queueContext ?? {type: 'songs' as const}, 
         [options?.queueContext]
     );
+    const playInNewQueue = usePlayInNewQueue();
     const playHandler = usePlayHandler(nowPlaying, {visibleQueueId: effectiveVisibleQueueId, currentQueueId: effectiveCurrentQueueId});
     const {open: openManagePlaylists} = useManagePlaylistsContext();
     const {open: openManageDevices} = useManageDevicesContext();
@@ -332,7 +334,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                     name: "play",
                     renderIcon: () => <IconPlayerPlayFilled/>,
                     renderLabel: () => t("songs:schema.play"),
-                    onClick: (songs: ListSongItem[]) => play(songs),
+                    onClick: (songs: ListSongItem[]) => playInNewQueue(songs, queueContext),
                 },
                 {
                     name: "play-next",
@@ -420,5 +422,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                               lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [play, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, t]);
+    }) as CollectionSchema<ListSongItem>, [playInNewQueue, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, t]);
 }

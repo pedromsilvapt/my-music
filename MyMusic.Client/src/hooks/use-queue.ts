@@ -8,22 +8,18 @@ import {
     useGetQueue,
     useRemoveFromQueue,
     useReorderQueue,
-    useReplaceQueue,
     useSetQueueCurrentSong,
     useShuffleQueue,
 } from '../client/playlists';
-import { useUpdateCurrentUser } from '../client/users';
 import type { GetPlaylistItem, GetPlaylistSongItem } from '../model';
 import { AddToQueuePosition } from '../model';
 import { usePlaybackActions } from '../stores/playback-store';
-import { useQueueManagerStore } from '../stores/queue-manager-store';
 import {
     compactOrders,
     filterOutSongIds,
     playLastSongs,
     playNextSongs,
     reorderSongs,
-    toPlaylistSong,
 } from './queue-utils';
 import type { PlayableItem } from './queue-utils';
 
@@ -67,18 +63,12 @@ export function useQueueMutations () {
     const {
         setLoadingSong: setLoadingSongAction,
         clear: clearAction,
-        incrementPlaybackKey,
     } = usePlaybackActions((s) => ({
         setLoadingSong: s.setLoadingSong,
         clear: s.clear,
-        incrementPlaybackKey: s.incrementPlaybackKey,
     }));
-    const setCurrentQueueId = useQueueManagerStore((s) => s.setCurrentQueueId);
-    const visibleQueueId = useQueueManagerStore((s) => s.visibleQueueId);
 
     // Use refs for mutations to avoid unstable references in dependency arrays
-    const updateCurrentUserMutationRef = useRef(useUpdateCurrentUser({}));
-    const replaceQueueRef = useRef(useReplaceQueue({}));
     const addToQueueRef = useRef(useAddToQueue({}));
     const removeFromQueueRef = useRef(useRemoveFromQueue({}));
     const reorderQueueRef = useRef(useReorderQueue({}));
@@ -90,45 +80,6 @@ export function useQueueMutations () {
     const setLoadingSong = useCallback((song: GetPlaylistSongItem) => {
         setLoadingSongAction(song, true);
     }, [setLoadingSongAction]);
-
-    const play = useCallback(
-        async (songs: PlayableItem[]) => {
-            if (songs.length === 0) return;
-
-            incrementPlaybackKey();
-            setCurrentQueueId(visibleQueueId);
-
-            const songIds = songs.map((s) => s.id);
-            const firstSong = songs[0];
-            const songsToAdd = songs.map((song, i) => toPlaylistSong(song, i + 1));
-
-            setLoadingSong(songsToAdd[0]);
-
-            const optimisticQueue = songsToAdd;
-
-            queryClient.setQueryData(getGetQueueQueryKey(), {
-                data: {
-                    playlist: {
-                        id: 0,
-                        name: 'Queue',
-                        type: 1,
-                        currentSongId: firstSong.id,
-                        songs: optimisticQueue,
-                    },
-                },
-                status: 200,
-                headers: new Headers(),
-            });
-
-            // Persist currentQueueId to server
-            await updateCurrentUserMutationRef.current.mutateAsync({
-                data: { currentQueueId: visibleQueueId },
-            });
-
-            replaceQueueRef.current.mutate({ data: { songIds, currentSongId: firstSong.id } });
-        },
-        [queryClient, setLoadingSong, incrementPlaybackKey, setCurrentQueueId, visibleQueueId]
-    );
 
     const playNext = useCallback(
         (songs: PlayableItem[]) => {
@@ -489,7 +440,6 @@ export function useQueueMutations () {
     );
 
     return useMemo(() => ({
-        play,
         playNext,
         playLast,
         removeBySongIds,
@@ -501,5 +451,5 @@ export function useQueueMutations () {
         toggleStopAfterPlayback,
         toggleSkipNextPlayback,
         clearSkipNextPlayback,
-    }), [play, playNext, playLast, removeBySongIds, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, clearSkipNextPlayback]);
+    }), [playNext, playLast, removeBySongIds, removeByIndices, reorder, reorderBatch, updateCurrentSong, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, clearSkipNextPlayback]);
 }

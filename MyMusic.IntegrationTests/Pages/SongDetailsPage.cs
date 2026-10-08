@@ -230,6 +230,13 @@ public class SongDetailsPage(IPage page) : BasePage(page, "song-detail")
         return new ManagePlaylistsDialogComponent(dialog);
     }
 
+    /// <summary>
+    /// Clicks the Play button, which starts playing the song in a new queue.
+    /// </summary>
+    public async Task PlayAsync()
+    {
+        await Root.GetByRole(AriaRole.Button, new() { Name = "Play", Exact = true }).ClickAsync();
+    }
 
     public async Task DownloadAsync()
     {
