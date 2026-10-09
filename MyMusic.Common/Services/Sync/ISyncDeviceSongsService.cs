@@ -10,6 +10,15 @@ public record SyncDeviceSongItem
     public required string Path { get; init; }
 
     public string? Action { get; init; }
+
+    /// <summary>When the song's file last changed on the server (<c>Song.FileModifiedAt</c>, or <c>Song.ModifiedAt</c> when it has none).</summary>
+    public DateTime? ServerModifiedAt { get; init; }
+
+    /// <summary>When the song was created on the server.</summary>
+    public DateTime? ServerCreatedAt { get; init; }
+
+    /// <summary>The date the device's file had when it was last synced, or null when it never was.</summary>
+    public DateTime? LastSyncedModifiedAt { get; init; }
 }
 
 /// <summary>

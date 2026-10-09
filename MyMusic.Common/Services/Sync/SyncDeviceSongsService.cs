@@ -30,6 +30,9 @@ public class SyncDeviceSongsService(
                 SongId = sd.SongId,
                 Path = sd.DevicePath,
                 Action = sd.SyncAction != null ? sd.SyncAction.Value.ToString() : null,
+                ServerModifiedAt = sd.Song != null ? sd.Song.FileModifiedAt ?? sd.Song.ModifiedAt : null,
+                ServerCreatedAt = sd.Song != null ? sd.Song.CreatedAt : null,
+                LastSyncedModifiedAt = sd.LastSyncedModifiedAt,
             })
             .ToListAsync(cancellationToken);
 

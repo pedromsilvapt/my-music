@@ -131,6 +131,29 @@ public class DesktopCliApplication : ISyncApplication
         }
         if (options.AutoConfirm) args.Add("--yes");
 
+        var run = await RunCliAsync(args);
+
+        var result = SyncResult.ParseCliOutput(run.ExitCode, run.StandardOutput, run.StandardError);
+
+        var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
+            _api, _fixture.DeviceId, result.SessionId);
+
+        return result with { ApiRecordCounts = apiRecordCounts, RecordSkipped = options.RecordSkipped };
+    }
+
+    /// <summary>
+    /// Runs <c>my-music repair-dates</c>, which gives the files already on the device the configured date.
+    /// </summary>
+    public Task<CliRunResult> RepairDatesAsync(bool dryRun = false)
+    {
+        var args = new List<string> { "repair-dates" };
+        if (dryRun) args.Add("--dry-run");
+
+        return RunCliAsync(args);
+    }
+
+    private async Task<CliRunResult> RunCliAsync(List<string> args)
+    {
         // Spectre.Console requires global options AFTER the command name, not before.
         // E.g., "sync --loglevel Debug --verbose --yes" is valid, but
         // "--loglevel Debug --verbose sync --yes" causes CommandParseException.
@@ -196,12 +219,7 @@ public class DesktopCliApplication : ISyncApplication
         span?.SetTag("exit_code", process.ExitCode);
         span?.Stop();
 
-        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString(), stderr.ToString());
-
-        var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
-            _api, _fixture.DeviceId, result.SessionId);
-
-        return result with { ApiRecordCounts = apiRecordCounts, RecordSkipped = options.RecordSkipped };
+        return new CliRunResult(process.ExitCode, stdout.ToString(), stderr.ToString());
     }
 
     public bool SupportsSyncDirection() => true;

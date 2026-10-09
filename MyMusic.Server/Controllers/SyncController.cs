@@ -183,6 +183,9 @@ public class SyncController(
                 SongId = s.SongId,
                 Path = s.Path,
                 Action = s.Action,
+                ServerModifiedAt = s.ServerModifiedAt,
+                ServerCreatedAt = s.ServerCreatedAt,
+                LastSyncedModifiedAt = s.LastSyncedModifiedAt,
             }).ToList(),
         };
     }

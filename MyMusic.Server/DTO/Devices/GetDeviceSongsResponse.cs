@@ -10,4 +10,7 @@ public record DeviceSongItem
     public required long? SongId { get; init; }
     public required string Path { get; init; }
     public string? Action { get; init; }
+    public DateTime? ServerModifiedAt { get; init; }
+    public DateTime? ServerCreatedAt { get; init; }
+    public DateTime? LastSyncedModifiedAt { get; init; }
 }

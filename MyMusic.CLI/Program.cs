@@ -10,6 +10,7 @@ using MyMusic.CLI.Api;
 using MyMusic.CLI.Commands;
 using MyMusic.CLI.Configuration;
 using MyMusic.CLI.Services;
+using MyMusic.CLI.Services.Dates;
 using MyMusic.CLI.Services.Devices;
 using MyMusic.CLI.Services.Sync;
 using MyMusic.CLI.Services.Terminal;
@@ -69,6 +70,8 @@ app.Configure(config =>
         device.AddCommand<DeviceShowCommand>("show")
             .WithDescription("Show the server device this installation syncs with, and its options");
     });
+    config.AddCommand<RepairDatesCommand>("repair-dates")
+        .WithDescription("Give the files already synced to this device the date set in MyMusic:Sync:FileModifiedAt");
     config.SetApplicationName("my-music");
     config.UseAssemblyInformationalVersion();
     config.PropagateExceptions();
@@ -176,6 +179,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddTransient<HistoryRemoveCommand>();
     services.AddTransient<HistoryPruneCommand>();
     services.AddTransient<DeviceShowCommand>();
+    services.AddTransient<RepairDatesCommand>();
 
     services.AddTransient<AuthenticatedHttpClientHandler>();
     services.AddTransient<HttpLoggingHandler>();
@@ -198,6 +202,7 @@ static void ConfigureServices(IServiceCollection services, string[] args, LogLev
     services.AddSingleton<IDeviceConfigService, DeviceConfigService>();
     services.AddSingleton<ISyncConfig, CliSyncConfig>();
     services.AddSingleton<ISyncApiClient, CliSyncApiClient>();
+    services.AddSingleton<IRepairDatesService, RepairDatesService>();
 
     services.AddScoped<SyncActionsDevice>();
     services.AddScoped<Phases>();

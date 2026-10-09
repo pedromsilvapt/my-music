@@ -14,4 +14,10 @@ export interface DeviceSongItem {
   path: string;
   /** @nullable */
   action?: string | null;
+  /** @nullable */
+  serverModifiedAt?: string | null;
+  /** @nullable */
+  serverCreatedAt?: string | null;
+  /** @nullable */
+  lastSyncedModifiedAt?: string | null;
 }

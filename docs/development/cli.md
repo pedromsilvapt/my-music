@@ -152,6 +152,12 @@ In tests, `ChunkTunings.Fixed(...)` gives sizes that do not depend on how fast t
 `IFileOps.SetModificationTimeAsync` after the download. Like the rest of the `Sync` section, `my-music init` does
 not write it.
 
+The setting only applies to the files a sync downloads from then on. `my-music repair-dates` gives the files
+already synced the configured date, and `--dry-run` only counts them ("Repairing the Dates of Synced Files" in
+[sync.md](sync.md) has the rules on which files are left alone). `RepairDatesCommand` is a thin command over
+`RepairDatesService` (`Services/Dates/`), which reads the device's songs with `IMyMusicClient.GetDeviceSongsAsync`
+and compares the dates with `SyncDateComparison`, the CLI's copy of the server's `SyncComparisonHelper`.
+
 ## Sync Conflicts
 
 A file changed differently on the device and on the server is a real conflict (see "Resolving a Real Conflict" in

@@ -107,6 +107,50 @@ public class SyncDeviceSongsServiceSpecs
     }
 
     [Fact]
+    public async Task GetAsync_ReturnsTheDatesOfTheSongAndOfTheLastSync()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var fileModifiedAt = new DateTime(2024, 3, 1, 10, 0, 0, DateTimeKind.Utc);
+        var lastSyncedAt = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var song = scenario.CreateSong("Song", modifiedAt: fileModifiedAt.AddDays(1), fileModifiedAt: fileModifiedAt);
+        scenario.CreateSongDevice(device, song, "/music/song.mp3", lastSyncedModifiedAt: lastSyncedAt);
+
+        // Act
+        var result = await service.GetAsync(device.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var songItem = result.Songs.Single();
+        songItem.ServerModifiedAt.ShouldBe(fileModifiedAt);
+        songItem.ServerCreatedAt.ShouldBe(song.CreatedAt);
+        songItem.LastSyncedModifiedAt.ShouldBe(lastSyncedAt);
+    }
+
+    [Fact]
+    public async Task GetAsync_SongWithoutFileModifiedAt_ServerModifiedAtFallsBackToModifiedAt()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var device = scenario.CreateDevice();
+        var modifiedAt = new DateTime(2024, 3, 1, 10, 0, 0, DateTimeKind.Utc);
+        var song = scenario.CreateSong("Song", modifiedAt: modifiedAt);
+        scenario.CreateSongDevice(device, song, "/music/song.mp3");
+
+        // Act
+        var result = await service.GetAsync(device.Id, scenario.AdminUser.Id, CancellationToken.None);
+
+        // Assert
+        result.ShouldNotBeNull();
+        var songItem = result.Songs.Single();
+        songItem.ServerModifiedAt.ShouldBe(modifiedAt);
+        songItem.LastSyncedModifiedAt.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task GetAsync_DoesNotReturnOtherDevicesSongs()
     {
         // Arrange

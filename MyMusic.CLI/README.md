@@ -64,6 +64,23 @@ my-music device show
 
 ---
 
+### repair-dates
+
+Gives the files already synced to this device the date set in `MyMusic:Sync:FileModifiedAt` (`Now`,
+`ServerModifiedAt` or `ServerCreatedAt`), which a sync only gives to the files it downloads. Run it after changing
+the setting. Files edited on the device since the last sync, and files whose song changed on the server, are left
+alone.
+
+```bash
+my-music repair-dates [OPTIONS]
+```
+
+| Option      | Shortcut | Description                                                  |
+|-------------|----------|--------------------------------------------------------------|
+| `--dry-run` |          | Show how many files would be re-dated without changing any   |
+
+---
+
 ### sync
 
 Synchronizes the local music repository with the MyMusic server.
