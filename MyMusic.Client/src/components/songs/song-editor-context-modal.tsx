@@ -1162,6 +1162,7 @@ export default function SongEditorContextModal({
                     <Group gap="xs" align="flex-start">
                         <Box style={{flex: 1}}>
                             <CoverUploadField
+                                key={currentState.song.id}
                                 label={hasMetadata && currentState.metadata?.cover ? t("songs:editModal.fieldNew", {field: t("songs:editModal.fields.cover")}) : t("songs:editModal.fields.cover")}
                                 value={currentState.form.cover}
                                 onChange={(val, dimensions) => handleFormChange({cover: val, coverDimensions: dimensions, coverUrl: undefined})}
