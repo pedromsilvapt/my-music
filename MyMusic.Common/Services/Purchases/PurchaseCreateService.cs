@@ -28,7 +28,7 @@ public class PurchaseCreateService(
         var sourceSong = await source.GetSongAsync(externalId, cancellationToken);
 
         var artists = string.Join(", ", sourceSong.Artists.Select(a => a.Name));
-        var album = sourceSong.Album.Name;
+        string?[] subTitleParts = [artists, sourceSong.Album?.Name, sourceSong.Year?.ToString()];
 
         var purchasedSong = new PurchasedSong
         {
@@ -37,9 +37,7 @@ public class PurchaseCreateService(
             SourceId = sourceId,
             Cover = sourceSong.Cover?.Normal ?? sourceSong.Cover?.Smallest,
             Title = sourceSong.Title,
-            SubTitle = sourceSong.Year != null
-                ? $"{artists} • {album} • {sourceSong.Year.Value}"
-                : $"{artists} • {album}",
+            SubTitle = string.Join(" • ", subTitleParts.Where(part => !string.IsNullOrEmpty(part))),
             Status = PurchasedSongStatus.Queued,
             Progress = 0,
             UserId = userId,

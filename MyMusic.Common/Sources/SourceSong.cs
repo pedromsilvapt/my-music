@@ -6,7 +6,7 @@ public class SourceSong
 
     public required string Title { get; set; }
 
-    public SourceSongAlbum Album { get; set; } = null!;
+    public SourceSongAlbum? Album { get; set; }
 
     public SourceArtwork? Cover { get; set; }
 

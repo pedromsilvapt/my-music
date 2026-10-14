@@ -11,6 +11,7 @@ namespace MyMusic.Common.Tests.Services.Purchases;
 public class PurchaseCreateServiceSpecs
 {
     private const string ExternalId = "ext-1";
+    private const string ExternalIdWithoutAlbum = "ext-2";
 
     private readonly Scenario _scenario = new();
     private readonly ICurrentUser _currentUser = Substitute.For<ICurrentUser>();
@@ -29,6 +30,15 @@ public class PurchaseCreateServiceSpecs
             Id = ExternalId,
             Title = "Source Title",
             Album = new SourceSongAlbum { Id = "al1", Name = "Source Album", Artist = artist },
+            Artists = [artist],
+            Genres = [],
+            Year = 2001,
+        });
+        client.GetSongAsync(ExternalIdWithoutAlbum, Arg.Any<CancellationToken>()).Returns(new SourceSong
+        {
+            Id = ExternalIdWithoutAlbum,
+            Title = "Source Title",
+            Album = null,
             Artists = [artist],
             Genres = [],
             Year = 2001,
@@ -57,6 +67,21 @@ public class PurchaseCreateServiceSpecs
         stored.Progress.ShouldBe(0);
         stored.SongId.ShouldBeNull();
         stored.ReplacesSongFile.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task CreateAsync_SourceSongWithoutAlbum_QueuesPurchaseWithoutAlbumInSubTitle()
+    {
+        // Act
+        var purchase = await CreateService().CreateAsync(_source.Id, ExternalIdWithoutAlbum);
+
+        // Assert
+        purchase.ShouldNotBeNull();
+        var stored = _scenario.DbContext.PurchasedSongs.ShouldHaveSingleItem();
+        stored.ExternalId.ShouldBe(ExternalIdWithoutAlbum);
+        stored.Title.ShouldBe("Source Title");
+        stored.SubTitle.ShouldBe("Source Artist • 2001");
+        stored.Status.ShouldBe(PurchasedSongStatus.Queued);
     }
 
     [Fact]

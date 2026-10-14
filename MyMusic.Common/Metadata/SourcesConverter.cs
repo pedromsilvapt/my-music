@@ -8,7 +8,7 @@ public static class SourcesConverter
 
     public static SongMetadata ToSong(SourceSong song)
     {
-        var album = ToAlbum(song.Album, song.Cover);
+        var album = song.Album is null ? null : ToAlbum(song.Album, song.Cover);
         var artists = song.Artists.Select(ToArtist).ToList();
 
         return new SongMetadata(song.Id, song.Title)
