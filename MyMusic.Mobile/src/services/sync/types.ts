@@ -279,6 +279,19 @@ export interface ISyncApiClient {
     downloadSong: (songId: number, destinationPath: string) => Promise<void>;
 
     reportSyncError: (deviceId: number, sessionId: number, request: { filePath: string; errorMessage: string; songId?: number | null; recordId?: number | null }) => Promise<{ counts: SyncActionCounts }>;
+
+    /** The songs linked to the device, with their dates and the date of their last sync. */
+    getDeviceSongs: (deviceId: number) => Promise<{ songs: DeviceSongItem[] }>;
+}
+
+/** A song linked to the device, as `GET /devices/{deviceId}/sync/songs` returns it. */
+export interface DeviceSongItem {
+    songId: number | null;
+    path: string;
+    action?: string | null;
+    serverModifiedAt?: string | null;
+    serverCreatedAt?: string | null;
+    lastSyncedModifiedAt?: string | null;
 }
 
 /**
@@ -371,6 +384,16 @@ export interface IFileOps {
     computeChecksum: (path: string, algorithm: string) => Promise<string>;
     getModificationTime: (path: string) => Date | null;
     setModificationTime: (path: string, modifiedAt: Date) => Promise<void>;
+    /**
+     * The modified time of every file with one of the extensions (with the dot) under a folder, by its path
+     * relative to the folder with `/` separators, read in a single pass. What cannot be read is left out.
+     */
+    listModificationTimes: (rootPath: string, extensions: string[]) => Promise<Map<string, Date>>;
+    /**
+     * Sets the modified time of many files at once. Resolves with, in the same order, null for each file set
+     * and the error of each one that was not.
+     */
+    setModificationTimes: (files: Array<{ path: string; modifiedAt: Date }>) => Promise<Array<string | null>>;
     deleteEmptyDirectories: (filePath: string, basePath: string) => Promise<void>;
 }
 

@@ -8,6 +8,7 @@ import {
     completeSync,
     downloadSong,
     createPendingActions,
+    getDeviceSongs,
     reportSyncError,
     resolveConflicts,
     prepareDeduplicate,
@@ -84,6 +85,7 @@ export function createDefaultApiClient(): ISyncApiClient {
         },
         downloadSong,
         reportSyncError,
+        getDeviceSongs,
     };
 }
 
@@ -151,6 +153,14 @@ export function createDefaultFileOps(): IFileOps {
             return info.modificationTime ? new Date(info.modificationTime) : null;
         },
         setModificationTime: (path: string, modifiedAt: Date) => repoFiles.setModifiedTime(path, modifiedAt.getTime()),
+        listModificationTimes: async (rootPath: string, extensions: string[]) => {
+            const listed = await repoFiles.listFiles(rootPath, extensions);
+            return new Map(listed.files.map(file => [file.relativePath, new Date(file.modifiedAt)]));
+        },
+        setModificationTimes: (files) => repoFiles.setModifiedTimes(
+            files.map(file => file.path),
+            files.map(file => file.modifiedAt.getTime())
+        ),
         deleteEmptyDirectories: async (filePath: string, basePath: string) => {
             const file = new File(toFileUri(filePath));
             let dir = file.parentDirectory;

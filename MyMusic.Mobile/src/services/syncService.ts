@@ -12,6 +12,7 @@ import {
     createDefaultUserPrompt,
 } from './sync/defaults';
 import {orchestrateSync} from './sync/orchestrator';
+import {repairDates, type RepairDatesResult} from './sync/repair-dates';
 import {type SyncProgress, useSyncStore} from '../stores/syncStore';
 import {getDeviceId, getRepositoryPath} from './configService';
 import {ensureRepositoryAccess, MISSING_ALL_FILES_ACCESS_MESSAGE} from './storageAccess';
@@ -67,6 +68,39 @@ export async function runSync(
     };
 
     return orchestrateSync(deps, onProgress);
+}
+
+/**
+ * Gives the files already on the device the date set in "Date of Downloaded Files" (see "Repairing the Dates of
+ * Synced Files" in docs/development/sync.md). With `dryRun`, no file is changed and the result counts what would be.
+ */
+export async function runRepairDates(
+    dryRun: boolean,
+    onProgress?: (done: number, total: number) => void
+): Promise<RepairDatesResult> {
+    if (!getDeviceId() || !getRepositoryPath()) {
+        throw new Error('Device not configured');
+    }
+
+    // Even a dry run reads the dates of the files directly, which the folder grant alone does not allow
+    if (!(await ensureRepositoryAccess())) {
+        throw new Error(MISSING_ALL_FILES_ACCESS_MESSAGE);
+    }
+
+    const deps = {
+        apiClient: createDefaultApiClient(),
+        config: createDefaultConfig(),
+        fileOps: createDefaultFileOps(),
+    };
+
+    // Every file of the device is read, which takes a while on a large library
+    const keepAwake = createDefaultKeepAwake();
+    await keepAwake.activate();
+    try {
+        return await repairDates(deps, dryRun, onProgress);
+    } finally {
+        keepAwake.deactivate();
+    }
 }
 
 export async function fetchSyncHistory(deviceId: number, count: number = 10) {

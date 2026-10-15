@@ -1,17 +1,30 @@
 import {Ionicons} from '@expo/vector-icons';
 import {useRouter} from 'expo-router';
 import React from 'react';
-import {Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Card} from '../../src/components/ui';
 import {getDeviceOutlineIcon} from '../../src/constants/deviceIcons';
+import {useRepairDates, type RepairDatesStatus} from '../../src/hooks/useRepairDates';
 import {useTheme} from '../../src/hooks/useTheme';
 import {resetConfig} from '../../src/services/configService';
 import {useConfigStore} from '../../src/stores/configStore';
+
+function describeRepairDatesStatus(status: RepairDatesStatus): string | null {
+    if (status.state === 'idle') {
+        return null;
+    }
+
+    const progress = status.total > 0 ? ` ${status.done} / ${status.total}` : '';
+    return status.state === 'previewing' ? `Checking the files...${progress}` : `Re-dating the files...${progress}`;
+}
 
 export default function SettingsScreen() {
     const router = useRouter();
     const {colors, fontSize, fontWeight, spacing} = useTheme();
     const {serverUrl, deviceName, userName, deviceId, repositoryPath, isConfigured, deviceIcon, chunkTuning} = useConfigStore();
+    const repairDates = useRepairDates();
+    const repairDatesBusy = describeRepairDatesStatus(repairDates.status);
+    const canRepairDates = deviceId !== null && !!repositoryPath && repairDatesBusy === null;
 
     const handleReset = () => {
         Alert.alert(
@@ -105,6 +118,34 @@ export default function SettingsScreen() {
                 </View>
             </Card>
 
+            <Text style={[styles.sectionTitle, {fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm, marginLeft: spacing.xs}]}>Advanced Tools</Text>
+            <Card>
+                <TouchableOpacity
+                    style={styles.settingRow}
+                    onPress={repairDates.start}
+                    disabled={!canRepairDates}
+                    accessibilityRole="button"
+                    accessibilityState={{disabled: !canRepairDates, busy: repairDatesBusy !== null}}
+                >
+                    <View style={[styles.settingInfo, {gap: spacing.md}]}>
+                        {repairDatesBusy !== null
+                            ? <ActivityIndicator size="small" color={colors.primary} style={styles.toolIcon}/>
+                            : <Ionicons name="calendar-outline" size={24} color={canRepairDates ? colors.primary : colors.cardTextMuted}/>}
+                        <View style={styles.settingText}>
+                            <Text style={[styles.settingLabel, {fontSize: fontSize.md, fontWeight: fontWeight.medium, color: canRepairDates || repairDatesBusy !== null ? colors.cardText : colors.cardTextMuted}]}>
+                                Repair Dates of Synced Files
+                            </Text>
+                            <Text style={[styles.settingValue, {fontSize: fontSize.sm, color: colors.cardTextSecondary}]}>
+                                {repairDatesBusy
+                                    ?? (deviceId !== null && repositoryPath
+                                        ? 'Give the files already on the device the date set in "Date of Downloaded Files"'
+                                        : 'Configure the device first')}
+                            </Text>
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </Card>
+
             <Text style={[styles.sectionTitle, {fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm, marginLeft: spacing.xs}]}>Danger Zone</Text>
             <Card>
                 <TouchableOpacity style={[styles.dangerRow, {gap: spacing.md}]} onPress={handleReset}>
@@ -139,6 +180,9 @@ const styles = StyleSheet.create({
     },
     settingText: {
         flex: 1,
+    },
+    toolIcon: {
+        width: 24,
     },
     settingLabel: {
         fontSize: 14,

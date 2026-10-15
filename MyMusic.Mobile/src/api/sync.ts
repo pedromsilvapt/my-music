@@ -7,6 +7,7 @@ import {
     AcknowledgeActionResponseSchema,
     CreatePendingActionsResponseSchema,
     DeleteSessionResponseSchema,
+    GetDeviceSongsResponseSchema,
     ListSyncRecordsResponseSchema,
     ListSyncSessionsResponseSchema,
     PruneSessionsResponseSchema,
@@ -207,5 +208,12 @@ export async function reportSyncError(deviceId: number, sessionId: number, reque
         method: 'POST',
         body: request,
         schema: ReportSyncErrorResponseSchema,
+    });
+}
+
+/** The songs linked to the device, with the dates a date repair needs. */
+export async function getDeviceSongs(deviceId: number) {
+    return apiRequest(`/devices/${deviceId}/sync/songs`, {
+        schema: GetDeviceSongsResponseSchema,
     });
 }

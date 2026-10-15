@@ -332,16 +332,17 @@ which one, if any, the device uses.
 - An `UpdateLocal` that copies another file of the device (`localSourcePath`) has no song on the server yet, and
   keeps the time of the sync. An older server sends no dates, which has the same result.
 - Only the files a sync downloads are affected: files already on the device keep their dates, and so do renamed
-  ones. The CLI's `my-music repair-dates` gives them the configured date ("Repairing the Dates of Synced Files"
-  below).
+  ones. A date repair gives them the configured date ("Repairing the Dates of Synced Files" below).
 
 The logic is `SetFileModifiedAtAsync` in `MyMusic.CLI/Services/Sync/SyncActionsDevice.cs` and `setFileModifiedAt`
 in `MyMusic.Mobile/src/services/sync/sync-actions-device.ts`, and must stay the same in both.
 
 ### Repairing the Dates of Synced Files
 
-`my-music repair-dates [--dry-run]` (CLI only) gives the files already on the device the date the setting asks
-for, without running a sync: it is what applies a change of the setting to the files synced before it. It reads the
+A date repair gives the files already on the device the date the setting asks for, without running a sync: it is
+what applies a change of the setting to the files synced before it. The CLI runs it with
+`my-music repair-dates [--dry-run]`; the mobile app from "Repair Dates of Synced Files" in the "Advanced Tools" group
+of the Settings screen, which runs a dry run first, shows how many files would be re-dated and asks to go on. It reads the
 device's songs (`GET /api/devices/{deviceId}/sync/songs`, which sends `serverModifiedAt`, `serverCreatedAt` and
 `lastSyncedModifiedAt` for each) and sets the date of each file to `serverModifiedAt`, `serverCreatedAt` or, for
 `Now`, `lastSyncedModifiedAt` (the time the sync wrote the file). Nothing is sent to the server.
@@ -357,9 +358,17 @@ A file is left alone, and counted in the summary, when:
 - it already has the date.
 
 The dates are compared like the server compares them (`SyncComparisonHelper.IsNewerThan`, mirrored by
-`SyncDateComparison` in the CLI: both are pinned by the same test vectors). A date that cannot be set is a warning,
-as in a sync. The command covers every file linked to the device, including the ones uploaded from it: the server
-does not record which were downloaded.
+`SyncDateComparison` in the CLI and `isNewerThan` in `MyMusic.Mobile/src/services/sync/sync-date-comparison.ts`:
+all are pinned by the same test vectors). The mobile app compares milliseconds, the precision of a JavaScript
+`Date`, instead of the database's microseconds. A date that cannot be set is a warning, as in a sync. The repair
+covers every file linked to the device, including the ones uploaded from it: the server does not record which were
+downloaded.
+
+The logic is `RepairDatesService` in `MyMusic.CLI/Services/Dates/RepairDatesService.cs` and `repairDates` in
+`MyMusic.Mobile/src/services/sync/repair-dates.ts`, and must stay the same in both, down to the summary they print
+("3 re-dated, 3 skipped (2 edited locally, 1 missing)"), which the shared integration tests check. Only how the
+files are read and written differs: the mobile app reads the dates of the folder in one native listing and sets them
+in chunks ("Downloaded File Dates" in [mobile.md](mobile.md)).
 
 ## Dry-Run Mode
 

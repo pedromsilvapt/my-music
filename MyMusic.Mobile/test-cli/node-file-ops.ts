@@ -59,6 +59,47 @@ export class NodeFileOps implements IFileOps {
         fs.utimesSync(filePath, fs.statSync(filePath).atime, modifiedAt);
     }
 
+    async listModificationTimes(rootPath: string, extensions: string[]): Promise<Map<string, Date>> {
+        const wanted = new Set(extensions.map(extension => extension.toLowerCase()));
+        const times = new Map<string, Date>();
+
+        const walk = (directory: string, relativeDirectory: string) => {
+            let entries: fs.Dirent[];
+            try {
+                entries = fs.readdirSync(directory, { withFileTypes: true });
+            } catch {
+                return;
+            }
+
+            for (const entry of entries) {
+                const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+                const fullPath = path.join(directory, entry.name);
+                if (entry.isDirectory()) {
+                    walk(fullPath, relativePath);
+                } else if (entry.isFile() && wanted.has(path.extname(entry.name).toLowerCase())) {
+                    const mtime = this.getModificationTime(fullPath);
+                    if (mtime) {
+                        times.set(relativePath, mtime);
+                    }
+                }
+            }
+        };
+
+        walk(rootPath, '');
+        return times;
+    }
+
+    async setModificationTimes(files: Array<{ path: string; modifiedAt: Date }>): Promise<Array<string | null>> {
+        return Promise.all(files.map(async file => {
+            try {
+                await this.setModificationTime(file.path, file.modifiedAt);
+                return null;
+            } catch (error) {
+                return error instanceof Error ? error.message : String(error);
+            }
+        }));
+    }
+
     async moveFile(fromPath: string, toPath: string): Promise<void> {
         const dir = path.dirname(toPath);
         if (!fs.existsSync(dir)) {

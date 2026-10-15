@@ -42,6 +42,12 @@ public interface ISyncApplication : IAsyncDisposable
     /// <summary>The modified date of a local file, in UTC.</summary>
     DateTime GetFileModifiedAt(string relativePath);
 
+    /// <summary>
+    /// Runs the client's date repair, which gives the files already on the device the configured date
+    /// (<c>my-music repair-dates</c> in the CLI).
+    /// </summary>
+    Task<CliRunResult> RepairDatesAsync(bool dryRun = false);
+
     /// <summary>Bumps a local file's modification time without changing its content.</summary>
     void TouchLocalFile(string relativePath);
 

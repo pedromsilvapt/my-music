@@ -3,6 +3,7 @@
 import type { SyncDeps, SyncResult, IKeepAwake, IUserPrompt, ConflictResolution, SyncDirection } from '../src/services/sync/types';
 import { createEmptyResult } from '../src/services/sync/context';
 import { orchestrateSync, getPartialSyncResult } from '../src/services/sync/orchestrator';
+import { buildRepairDatesSummary, repairDates } from '../src/services/sync/repair-dates';
 import { NodeSyncConfig } from './node-config';
 import { NodeApiClient } from './node-api-client';
 import { nodeScanner } from './node-scanner';
@@ -130,9 +131,10 @@ function printResults(result: SyncResult): void {
 async function main(): Promise<number> {
     const args = parseArgs(process.argv);
 
-    if (args.command !== 'sync') {
+    if (args.command !== 'sync' && args.command !== 'repair-dates') {
         console.error(`Unknown command: ${args.command}`);
         console.error('Usage: npx tsx sync-cli.ts sync [--force] [--dry-run] [--deduplicate] [--record-skipped] [--yes] [--direction up|down|both] [--conflicts upload|download|skip]');
+        console.error('       npx tsx sync-cli.ts repair-dates [--dry-run]');
         return 1;
     }
 
@@ -145,6 +147,10 @@ async function main(): Promise<number> {
     const config = new NodeSyncConfig(configPath);
     const apiClient = new NodeApiClient(config.getServerUrl(), config.getUserId(), config.getUserName());
     const fileOps = new NodeFileOps();
+
+    if (args.command === 'repair-dates') {
+        return runRepairDates({apiClient, config, fileOps}, args.dryRun);
+    }
 
     const state = {
         isCancelled: false,
@@ -196,6 +202,27 @@ async function main(): Promise<number> {
     } catch (error) {
         console.error('Sync failed:', error instanceof Error ? error.message : String(error));
         printResults(getPartialSyncResult(error) ?? {...createEmptyResult(), error: 1});
+        return 1;
+    }
+}
+
+/** Prints the same output as the CLI's `my-music repair-dates`. */
+async function runRepairDates(deps: Parameters<typeof repairDates>[0], dryRun: boolean): Promise<number> {
+    if (dryRun) {
+        console.log('Dry run mode - no changes will be made');
+    }
+
+    try {
+        const result = await repairDates(deps, dryRun);
+
+        console.log(buildRepairDatesSummary(result));
+        if (result.failed > 0) {
+            console.log(`${result.failed} could not be re-dated (see the log)`);
+        }
+
+        return 0;
+    } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 }

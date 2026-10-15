@@ -504,3 +504,21 @@ export const ReportSyncErrorResponseSchema = z.object({
 });
 
 export type ReportSyncErrorResponse = z.infer<typeof ReportSyncErrorResponseSchema>;
+
+export const DeviceSongItemSchema = z.object({
+    songId: z.number().nullable(),
+    path: z.string(),
+    action: z.string().nullable().optional(),
+    serverModifiedAt: z.string().nullable().optional(),
+    serverCreatedAt: z.string().nullable().optional(),
+    // When the device last wrote or uploaded the file, as acknowledged in a sync
+    lastSyncedModifiedAt: z.string().nullable().optional(),
+});
+
+export type DeviceSongItem = z.infer<typeof DeviceSongItemSchema>;
+
+export const GetDeviceSongsResponseSchema = z.object({
+    songs: z.array(DeviceSongItemSchema),
+});
+
+export type GetDeviceSongsResponse = z.infer<typeof GetDeviceSongsResponseSchema>;

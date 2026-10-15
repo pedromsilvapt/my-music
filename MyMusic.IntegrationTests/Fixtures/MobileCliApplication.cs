@@ -260,10 +260,33 @@ public class MobileCliApplication : ISyncApplication
             args.Add(options.Conflicts.Value.ToString().ToLowerInvariant());
         }
 
+        var run = await RunCliAsync(args);
+
+        var result = SyncResult.ParseCliOutput(run.ExitCode, run.StandardOutput, run.StandardError);
+
+        var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
+            _api, DeviceId, result.SessionId);
+
+        return result with { ApiRecordCounts = apiRecordCounts, RecordSkipped = options.RecordSkipped };
+    }
+
+    /// <summary>
+    /// Runs <c>repair-dates</c>, which gives the files already on the device the configured date.
+    /// </summary>
+    public Task<CliRunResult> RepairDatesAsync(bool dryRun = false)
+    {
+        var args = new List<string> { "repair-dates" };
+        if (dryRun) args.Add("--dry-run");
+
+        return RunCliAsync(args);
+    }
+
+    private async Task<CliRunResult> RunCliAsync(List<string> args)
+    {
         var cliPath = FindCliPath();
         var argsString = string.Join(" ", args);
 
-        using var span = _telemetry.StartProcessSpan("mymusic-mobile-sync", argsString);
+        using var span = _telemetry.StartProcessSpan($"mymusic-mobile-{args[0]}", argsString);
 
         var traceparent = Activity.Current?.Id;
 
@@ -327,12 +350,7 @@ public class MobileCliApplication : ISyncApplication
                 "Mobile CLI", process.ExitCode, stdout.ToString(), stderr.ToString());
         }
 
-        var result = SyncResult.ParseCliOutput(process.ExitCode, stdout.ToString(), stderr.ToString());
-
-        var apiRecordCounts = await SessionRecordHelper.FetchApiRecordCountsAsync(
-            _api, DeviceId, result.SessionId);
-
-        return result with { ApiRecordCounts = apiRecordCounts, RecordSkipped = options.RecordSkipped };
+        return new CliRunResult(process.ExitCode, stdout.ToString(), stderr.ToString());
     }
 
     public bool SupportsSyncDirection() => true;

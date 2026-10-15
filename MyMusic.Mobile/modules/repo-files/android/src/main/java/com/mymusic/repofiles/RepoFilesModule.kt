@@ -133,6 +133,23 @@ class RepoFilesModule : Module() {
       }
     }
 
+    // Sets the modified time of many files in one call: two lists of the same length. Returns, in the
+    // same order, null for each file set and the error of each one that was not
+    AsyncFunction("setModifiedTimes") { paths: List<String>, modifiedAts: List<Double> ->
+      if (paths.size != modifiedAts.size) {
+        throw RepoFilesException("Got ${paths.size} paths and ${modifiedAts.size} times")
+      }
+
+      paths.mapIndexed { index, path ->
+        val file = toFile(path)
+        try {
+          if (file.setLastModified(modifiedAts[index].toLong())) null else "Unable to set the modified time of '$file'"
+        } catch (e: SecurityException) {
+          e.message ?: "Unable to set the modified time of '$file'"
+        }
+      }
+    }
+
     AsyncFunction("listFiles") { rootPath: String, extensions: List<String> ->
       val root = toFile(rootPath)
       if (!root.isDirectory) {

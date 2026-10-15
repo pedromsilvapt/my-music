@@ -3,6 +3,7 @@ import type {
     SyncRecordItem,
     SyncActionCounts,
     SyncDirection,
+    DeviceSongItem,
 } from '../src/services/sync/types';
 import {SyncRecordItemSchema} from '../src/api/types';
 
@@ -253,5 +254,9 @@ export class NodeApiClient implements ISyncApiClient {
         request: { filePath: string; errorMessage: string; songId?: number | null; recordId?: number | null }
     ): Promise<{ counts: SyncActionCounts }> {
         return this._post(`/devices/${deviceId}/sync/${sessionId}/error`, request);
+    }
+
+    async getDeviceSongs(deviceId: number): Promise<{ songs: DeviceSongItem[] }> {
+        return this._get(`/devices/${deviceId}/sync/songs`);
     }
 }

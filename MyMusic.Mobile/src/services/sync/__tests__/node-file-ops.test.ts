@@ -54,3 +54,44 @@ describe('NodeFileOps.setModificationTime', () => {
         }
     });
 });
+
+describe('NodeFileOps batch dates', () => {
+    let directory: string;
+
+    beforeEach(() => {
+        directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mymusic-batch-'));
+    });
+
+    afterEach(() => {
+        fs.rmSync(directory, { recursive: true, force: true });
+    });
+
+    test('listModificationTimes lists the music files under the folder by relative path', async () => {
+        const date = new Date('2020-01-02T03:04:05Z');
+        fs.mkdirSync(path.join(directory, 'Artist'));
+        for (const name of ['Artist/a.MP3', 'b.mp3', 'notes.txt']) {
+            fs.writeFileSync(path.join(directory, name), 'abc');
+            fs.utimesSync(path.join(directory, name), date, date);
+        }
+
+        const times = await new NodeFileOps().listModificationTimes(directory, ['.mp3']);
+
+        expect(times).toEqual(new Map([['Artist/a.MP3', date], ['b.mp3', date]]));
+    });
+
+    test('setModificationTimes sets each date and reports the files it could not change', async () => {
+        const filePath = path.join(directory, 'song.mp3');
+        fs.writeFileSync(filePath, 'abc');
+        const date = new Date('2020-01-02T03:04:05Z');
+        const fileOps = new NodeFileOps();
+
+        const errors = await fileOps.setModificationTimes([
+            { path: filePath, modifiedAt: date },
+            { path: path.join(directory, 'missing.mp3'), modifiedAt: date },
+        ]);
+
+        expect(errors[0]).toBeNull();
+        expect(errors[1]).toEqual(expect.any(String));
+        expect(fileOps.getModificationTime(filePath)).toEqual(date);
+    });
+});

@@ -52,6 +52,7 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         chooseConflicts: jest.fn(),
         downloadSong: jest.fn().mockResolvedValue(undefined),
         reportSyncError: jest.fn().mockResolvedValue({ counts: { createRemoteCount: 0, updateRemoteCount: 0, skippedCount: 0, createLocalCount: 0, updateLocalCount: 0, deleteLocalCount: 0, linkCount: 0, unlinkCount: 0, renameCount: 0, conflictCount: 0, updateTimestampCount: 0, errorCount: 1 } }),
+        getDeviceSongs: jest.fn().mockResolvedValue({ songs: [] }),
     };
 
     const mockConfig: ISyncConfig = {
@@ -85,6 +86,8 @@ function createMockDeps (overrides: Partial<SyncDeps> = {}): SyncDeps {
         computeChecksum: jest.fn().mockResolvedValue('checksum'),
         getModificationTime: jest.fn().mockReturnValue(new Date('2024-01-01')),
         setModificationTime: jest.fn().mockResolvedValue(undefined),
+        listModificationTimes: jest.fn().mockResolvedValue(new Map()),
+        setModificationTimes: jest.fn().mockResolvedValue([]),
         deleteEmptyDirectories: jest.fn().mockResolvedValue(undefined),
     };
 

@@ -118,6 +118,21 @@ sets it through `fileOps.setModificationTime`, which is `setModifiedTime` of the
 expo-file-system cannot change the date of a file. The test CLI reads the setting from the `fileModifiedAt` key
 of its JSON configuration.
 
+The setting only applies to the files a sync downloads from then on. "Repair Dates of Synced Files", in the
+"Advanced Tools" group of the Settings screen (`app/settings/index.tsx`, above "Danger Zone"), gives the files
+already on the device the configured date ("Repairing the Dates of Synced Files" in [sync.md](sync.md)), using the
+saved configuration; it is disabled until the device and its music folder are configured. The logic is
+`repairDates` (`services/sync/repair-dates.ts`); `runRepairDates` (`services/syncService.ts`) wires the default
+dependencies and keeps the screen awake, and `useRepairDates` (`hooks/useRepairDates.ts`) runs a dry run, asks to
+go on with its summary, then re-dates the files.
+
+A library can hold tens of thousands of files, and each read of a date through expo-file-system is a blocking call
+into native code on the JavaScript thread. So, unlike the CLI, which reads and sets each date in turn, `repairDates`
+reads the dates of the whole folder in one `listFiles` walk (`fileOps.listModificationTimes`; a file the walk leaves
+out is looked up on its own), decides every file in JavaScript, then sets the new dates with `setModifiedTimes` in
+chunks of `REPAIR_DATES_WRITE_CHUNK_SIZE`, reporting the progress after each. The decisions are the same as the CLI's. The test CLI runs it with `repair-dates [--dry-run]`, printing the
+same summary as the CLI.
+
 ## Request Chunk Sizes
 
 The "Sync Performance" settings screen (`app/settings/sync.tsx`) sets how many files a check or a conflict
@@ -246,7 +261,8 @@ npx expo run:android
   (`android/src/main/cpp/xxhash_jni.cpp`), exposed through `XxhashModule.kt`. Android only.
 
 - **`modules/repo-files`** — the file operations that write to the music repository: `downloadFile`, `ensureDirectory`,
-  `moveFile`, `copyFile`, `deleteFile`, `setModifiedTime`, plus `hasAllFilesAccess` / `requestAllFilesAccess`, `listFiles`, which
+  `moveFile`, `copyFile`, `deleteFile`, `setModifiedTime`, `setModifiedTimes` (many files in one call, for the date
+  repair), plus `hasAllFilesAccess` / `requestAllFilesAccess`, `listFiles`, which
   lists the music files of the repository in a single call, and `resolveDirectoryPath`, which gives the filesystem
   path of a picked folder (see "Scanners"). The repository lives in
   shared storage (e.g. `/storage/emulated/0/Music`), where expo-file-system cannot write: it decides permissions with
