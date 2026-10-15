@@ -2,6 +2,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MyMusic.Common.Filters;
 using MyMusic.Common.Sources;
+using MyMusic.Common.Sources.Queries;
 
 namespace MyMusic.Common.Services;
 
@@ -46,22 +47,28 @@ public class PurchasesSearchService : IPurchasesSearchService
             "Source returned {RawCount} raw results for query '{Query}' from source {SourceId}",
             rawCount, query, sourceId);
 
-        // Apply fuzzy matching if enabled
-        if (fuzzyMatch)
+        // Apply fuzzy matching if enabled, ignoring the source-specific key:value modifiers no song's text contains
+        var freeText = QueryParser.RemoveModifiers(query);
+
+        if (!fuzzyMatch)
+        {
+            _logger.LogDebug("Fuzzy matching skipped (fuzzyMatch=false)");
+        }
+        else if (freeText.Length == 0)
+        {
+            _logger.LogDebug("Fuzzy matching skipped (query has no free text)");
+        }
+        else
         {
             results = InMemoryFilterBuilder.ApplyFuzzySearch(
                 results,
-                query,
+                freeText,
                 s => s.SearchableText).ToList();
 
             var fuzzyCount = results.Count;
             _logger.LogDebug(
-                "After fuzzy matching: {FuzzyCount} results (filtered {Filtered} songs)",
-                fuzzyCount, rawCount - fuzzyCount);
-        }
-        else
-        {
-            _logger.LogDebug("Fuzzy matching skipped (fuzzyMatch=false)");
+                "After fuzzy matching on '{FreeText}': {FuzzyCount} results (filtered {Filtered} songs)",
+                freeText, fuzzyCount, rawCount - fuzzyCount);
         }
 
         // Apply filter DSL if provided

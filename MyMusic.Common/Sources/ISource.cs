@@ -11,6 +11,10 @@ public interface ISource
     // /// <returns></returns>
     // public Task<string> ReverseSearch(string url);
 
+    /// <summary>
+    ///     Searches the source for songs. Tokens of the form <c>key:value</c> in the query are reserved for
+    ///     source-specific modifiers, and my-music ignores them when fuzzy matching the results.
+    /// </summary>
     [Get("/songs/search/{query}")]
     public Task<List<SourceSong>> SearchSongsAsync(string query, CancellationToken cancellationToken = default);
 
