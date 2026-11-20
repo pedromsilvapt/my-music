@@ -17,6 +17,7 @@ public record ListSongItem
     public required IEnumerable<ListSongsGenre> Genres { get; set; }
     public required int? Year { get; set; }
     public required string Duration { get; set; }
+    public decimal? Rating { get; set; }
     public required IEnumerable<ListSongsDevice> Devices { get; set; }
     public required bool IsFavorite { get; set; }
     public required bool IsExplicit { get; set; }
@@ -47,6 +48,7 @@ public record ListSongItem
             Genres = genres,
             Year = song.Year,
             Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
+            Rating = song.Rating,
             Devices = devices,
             IsFavorite = song.IsFavorite,
             IsExplicit = song.Explicit,

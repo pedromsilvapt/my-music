@@ -19,10 +19,11 @@ public class EditSongModalComponent(ILocator locator) : BaseComponent(locator)
         await Root.GetByTestId("edit-song-lyrics").FillAsync(lyrics);
     }
 
-    public async Task SetRatingAsync(int rating)
+    public RatingComponent Rating => new(Root.GetByTestId("edit-song-rating"));
+
+    public async Task SetRatingAsync(decimal rating)
     {
-        var ratingInput = Root.GetByTestId("edit-song-rating").Locator("input[type='range']");
-        await ratingInput.FillAsync(rating.ToString());
+        await Rating.SetAsync(rating);
     }
 
     public async Task SetExplicitAsync(bool isExplicit)

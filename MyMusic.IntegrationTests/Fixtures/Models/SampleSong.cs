@@ -11,4 +11,5 @@ public record SampleSong(
     long[]? DeviceIds = null,
     int VersionsCount = 0,
     DateTime? CreatedAt = null,
-    DateTime? FileModifiedAt = null);
+    DateTime? FileModifiedAt = null,
+    decimal? Rating = null);

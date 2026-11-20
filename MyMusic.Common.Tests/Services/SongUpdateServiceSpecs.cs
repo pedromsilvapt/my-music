@@ -63,6 +63,63 @@ public class SongUpdateServiceSpecs
     }
 
     [Fact]
+    public async Task UpdateSong_RatingOnly_PersistsRatingAndMarksDeviceForDownload()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var (checksum, algo) = SetupMusicFile(scenario.FileSystem, $"/data/My Song.mp3", scenario.AdminUser.Username);
+        var song = scenario.CreateSong("My Song", checksum: checksum, checksumAlgorithm: algo, repositoryPath: $"/data/My Song.mp3");
+        var device = scenario.CreateDevice("Phone");
+        AddSongToDevice(scenario.DbContext, song, device, "/music/My Song.mp3");
+
+        var update = new SongUpdateModel { Rating = new StructValueUpdate<decimal>(4.5m) };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        scenario.DbContext.Songs.AsNoTracking().First(s => s.Id == song.Id).Rating.ShouldBe(4.5m);
+        scenario.DbContext.SongDevices.First(sd => sd.SongId == song.Id).SyncAction.ShouldBe(SongSyncAction.Download);
+    }
+
+    [Fact]
+    public async Task UpdateSong_ClearRating_SetsRatingToNull()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+        song.Rating = 3m;
+        scenario.DbContext.SaveChanges();
+
+        var update = new SongUpdateModel { Rating = new StructValueUpdate<decimal>(null) };
+
+        // Act
+        await service.UpdateSong(scenario.DbContext, song.Id, update);
+
+        // Assert
+        scenario.DbContext.Songs.AsNoTracking().First(s => s.Id == song.Id).Rating.ShouldBeNull();
+    }
+
+    [Theory]
+    [InlineData(-0.5)]
+    [InlineData(5.5)]
+    public async Task UpdateSong_RatingOutOfRange_ThrowsValidationException(double rating)
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var service = CreateService(scenario);
+        var song = CreateSongWithFile(scenario, "My Song");
+
+        var update = new SongUpdateModel { Rating = new StructValueUpdate<decimal>((decimal)rating) };
+
+        // Act & Assert
+        await Should.ThrowAsync<ValidationException>(
+            () => service.UpdateSong(scenario.DbContext, song.Id, update));
+    }
+
+    [Fact]
     public async Task UpdateSong_SongOnMultipleDevices_SetsSyncActionToDownloadForAll()
     {
         // Arrange

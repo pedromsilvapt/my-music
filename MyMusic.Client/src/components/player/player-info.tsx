@@ -1,4 +1,4 @@
-import {Box, Group, Text, UnstyledButton} from '@mantine/core';
+import {Box, Group, Rating, Text, UnstyledButton} from '@mantine/core';
 import {Link, useNavigate} from '@tanstack/react-router';
 import {useTranslation} from 'react-i18next';
 import Artwork from "../common/artwork.tsx";
@@ -13,6 +13,7 @@ import {useSongsSchema} from '../songs/useSongsSchema';
 import CollectionActions from '../common/collection/collection-actions';
 import type {CollectionSchemaAction} from '../common/collection/collection-schema.tsx';
 import {getFooterSongActions} from './player-info-actions';
+import {useSetSongRating} from '../../hooks/use-set-song-rating';
 
 export interface PlayerInfoProps {
     song: GetPlaylistSongItem;
@@ -40,6 +41,7 @@ export default function PlayerInfo(props: PlayerInfoProps) {
     const song = (queue.find(s => s.id === props.song.id) ?? props.song) as ListSongItem;
 
     const schema = useSongsSchema(true, {queueId});
+    const setSongRating = useSetSongRating();
     const goToDetails: CollectionSchemaAction<ListSongItem> = {
         name: 'go-to-details',
         renderIcon: () => <IconInfoCircle/>,
@@ -67,6 +69,14 @@ export default function PlayerInfo(props: PlayerInfoProps) {
                     </Group>
                 </UnstyledButton>
             </Link>
+            <Rating
+                data-testid="footer-rating"
+                aria-label={t("songs:schema.columns.rating")}
+                size="sm"
+                fractions={2}
+                value={song.rating ?? 0}
+                onChange={value => setSongRating.mutate(song.id, value)}
+            />
             <CollectionActions selection={[song]} actions={actions} size="lg" />
         </Group>
     </>;

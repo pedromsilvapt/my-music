@@ -223,6 +223,10 @@ public class SongUpdateService(
 
         if (update.Rating is not null)
         {
+            if (update.Rating.NewValue is < 0 or > 5)
+            {
+                throw new ValidationException($"Rating must be between 0 and 5, got {update.Rating.NewValue}");
+            }
             song.Rating = update.Rating.NewValue;
         }
 

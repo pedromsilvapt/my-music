@@ -73,6 +73,44 @@ public class SongsCollectionComponent(ILocator root) : CollectionComponent(root)
         }).First;
 
     /// <summary>
+    /// Returns the rating shown in the row of the song with the given title (e.g. "3.5 ★").
+    /// </summary>
+    public ILocator GetRatingByTitle(string title) =>
+        GetRowByTitle(title).Locator("[data-testid^='song-rating-']");
+
+    /// <summary>
+    /// Changes the rating of the song with the given title straight from its row, picking a number of stars,
+    /// or clearing it when <paramref name="rating"/> is null.
+    /// </summary>
+    public async Task SetRatingAsync(string title, decimal? rating)
+    {
+        await GetRatingByTitle(title).ClickAsync();
+
+        // The stars picker is rendered in a portal, outside the collection
+        var picker = Root.Page.Locator("[data-testid^='song-rating-picker-']");
+        await picker.WaitForAsync(new() { State = WaitForSelectorState.Visible });
+
+        if (rating is null)
+            await picker.GetByRole(AriaRole.Button, new() { Name = "Clear rating" }).ClickAsync();
+        else
+            await new RatingComponent(picker).SetAsync(rating.Value);
+
+        await picker.WaitForAsync(new() { State = WaitForSelectorState.Hidden });
+    }
+
+    /// <summary>
+    /// Returns the titles of all the rows, in the order they are shown.
+    /// </summary>
+    public async Task<List<string>> GetTitlesAsync()
+    {
+        var titles = new List<string>();
+        var rowCount = await GetRowCountAsync();
+        for (var i = 0; i < rowCount; i++)
+            titles.Add(await GetCellValueAsync(i, "title"));
+        return titles;
+    }
+
+    /// <summary>
     /// Starts playing the song with the given title by clicking its artwork.
     /// </summary>
     public async Task PlaySongByTitleAsync(string title)

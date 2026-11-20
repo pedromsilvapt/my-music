@@ -41,4 +41,9 @@ export interface GetPlaylistSongItem {
   createdAt: string;
   /** @nullable */
   addedAt?: string | null;
+  /**
+     * @nullable
+     * @pattern ^-?(?:0|[1-9]\d*)(?:\.\d+)?$
+     */
+  rating?: number | null;
 }

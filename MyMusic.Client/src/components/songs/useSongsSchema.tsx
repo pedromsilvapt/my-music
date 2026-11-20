@@ -47,6 +47,8 @@ import SongTitle from "../common/fields/song-title";
 import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {usePlayHandler} from "../player/usePlayHandler";
 import {SongDevicesCell} from "./song-devices-cell";
+import {SongRatingCell} from "./song-rating-cell";
+import {useSetSongRating} from "../../hooks/use-set-song-rating";
 import type {QueueContext} from "../../utils/queue-name-generator";
 import {getPositionColumnWidth} from "./position-column";
 
@@ -89,6 +91,8 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
     }, [setIsFavorite]);
 
     const toggleFavorites = useToggleFavorites(toggleFavoritesOnSuccess);
+
+    const setSongRating = useSetSongRating();
 
     const deleteSongs = useDeleteSongs();
     const confirmDelete = useConfirmDelete();
@@ -227,6 +231,15 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                 render: row => row.duration,
                 align: 'right',
                 width: 80,
+                sortable: true,
+            },
+            {
+                name: 'rating',
+                displayName: t("songs:schema.columns.rating"),
+                render: row => <SongRatingCell songId={row.id} rating={row.rating} onChange={setSongRating.mutate}/>,
+                getValue: song => song.rating ?? null,
+                align: 'center',
+                width: 75,
                 sortable: true,
             },
             {
@@ -430,5 +443,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                               lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [playInNewQueue, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, positionDigits, t]);
+    }) as CollectionSchema<ListSongItem>, [playInNewQueue, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, setSongRating, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, positionDigits, t]);
 }

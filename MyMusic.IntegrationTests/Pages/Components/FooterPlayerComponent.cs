@@ -13,6 +13,11 @@ public class FooterPlayerComponent(ILocator root) : BaseComponent(root)
     private ILocator NextButton => Root.GetByRole(AriaRole.Button, new() { Name = "Play Next Track in Queue" });
 
     /// <summary>
+    /// The stars rating of the current song.
+    /// </summary>
+    public RatingComponent Rating => new(Root.GetByTestId("footer-rating"));
+
+    /// <summary>
     /// Waits until the footer player shows the song with the given title.
     /// </summary>
     public async Task WaitForSongAsync(string title)

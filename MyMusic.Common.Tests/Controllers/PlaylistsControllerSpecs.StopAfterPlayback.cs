@@ -21,6 +21,25 @@ public class PlaylistsControllerStopAfterPlaybackSpecs
         return new PlaylistsController(currentUser, playlistSongSkipService);
     }
 
+    [Fact]
+    public async Task Get_SongWithRating_ReturnsRating()
+    {
+        // Arrange
+        var scenario = new Scenario();
+        var controller = CreateController(scenario);
+        var song = scenario.CreateSong("Rated Song");
+        song.Rating = 4.5m;
+        scenario.DbContext.SaveChanges();
+        var playlist = scenario.CreatePlaylist("Test Playlist");
+        scenario.AddSongToPlaylist(playlist, song, 1);
+
+        // Act
+        var result = await controller.Get(playlist.Id, scenario.DbContext, CancellationToken.None);
+
+        // Assert
+        result.Value!.Playlist.Songs[0].Rating.ShouldBe(4.5m);
+    }
+
     #region SetStopAfterPlayback
 
     [Fact]

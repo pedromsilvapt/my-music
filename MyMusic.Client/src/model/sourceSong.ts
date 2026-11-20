@@ -11,7 +11,7 @@ import type { SourceSongArtist } from './sourceSongArtist';
 export interface SourceSong {
   id: string;
   title: string;
-  album?: SourceSongAlbum;
+  album?: null | SourceSongAlbum;
   cover?: null | SourceArtwork;
   /**
      * @nullable

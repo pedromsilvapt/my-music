@@ -71,6 +71,7 @@ public record GetPlaylistSongItem : ListSongItem
             Genres = song.Genres.Select(g => ListSongsGenre.FromEntity(g.Genre)).ToList(),
             Year = song.Year,
             Duration = $"{Convert.ToInt32(song.Duration.TotalMinutes)}:{song.Duration.Seconds:00}",
+            Rating = song.Rating,
             Devices = song.Devices.Select(d => ListSongsDevice.FromEntity(d.Device)).DistinctBy(d => d.Id).ToList(),
             IsFavorite = false,
             IsExplicit = song.Explicit,

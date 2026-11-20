@@ -180,6 +180,16 @@ public class SongsFixture
     /// </summary>
     public static SampleSong[] LyricsSearchSongs { get; } = [SongWithLyrics, SongTitledLikeLyrics];
 
+    public static SampleSong FiveStarsSong { get; } = new("Starlight Ferry", "Starlight Ferry", ["Northbound Choir"], [], 2021, Rating: 5);
+    public static SampleSong FourStarsSong { get; } = new("Quiet Meridian", "Quiet Meridian", ["Hollow Pines"], [], 2022, Rating: 4);
+    public static SampleSong TwoAndAHalfStarsSong { get; } = new("Copper Lanes", "Copper Lanes", ["The Tin Kites"], [], 2023, Rating: 2.5m);
+    public static SampleSong UnratedSong { get; } = new("Unrated Hollow", "Unrated Hollow", ["Fable Engine"], [], 2024);
+
+    /// <summary>
+    /// Songs with different ratings, from five stars down to unrated, listed in a shuffled order.
+    /// </summary>
+    public static SampleSong[] RatedSongs { get; } = [TwoAndAHalfStarsSong, UnratedSong, FiveStarsSong, FourStarsSong];
+
     public async Task<List<SongData>> SeedAsync(IAPIRequestContext api, long userId, SampleSong[]? songs = null, ILogger? logger = null)
     {
         var sampleSongs = songs ?? DefaultSongs;
@@ -226,6 +236,11 @@ public class SongsFixture
 
             var songId = json?.GetProperty("songId").GetInt64()
                 ?? throw new InvalidOperationException("Failed to get song ID from response");
+
+            if (song.Rating is not null)
+            {
+                await SetRatingAsync(api, songId, song.Rating.Value);
+            }
 
             if (song.VersionsCount > 0)
             {
@@ -299,6 +314,20 @@ public class SongsFixture
     {
         var songs = await SeedAsync(api, userId, [song], logger);
         return songs[0];
+    }
+
+    private static async Task SetRatingAsync(IAPIRequestContext api, long songId, decimal rating)
+    {
+        var response = await api.PutWithTraceAsync($"/api/songs/{songId}", new()
+        {
+            DataObject = new
+            {
+                songId,
+                rating = new { newValue = rating },
+            },
+        });
+
+        response.Ok.ShouldBeTrue($"Failed to rate song {songId}: {response.Status} {response.StatusText}");
     }
 
     /// <summary>

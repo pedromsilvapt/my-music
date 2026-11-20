@@ -205,8 +205,11 @@
             "duration": "Duration",
             "devices": "Devices",
             "createdAt": "Created At",
-            "addedAt": "Added At"
-        }
+            "addedAt": "Added At",
+            "rating": "Rating"
+        },
+        "clearRating": "Clear rating",
+        "ratingFailed": "Failed to change the rating: {{error}}"
     },
     "merge": {
         "title": "Merge Songs",

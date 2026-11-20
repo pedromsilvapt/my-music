@@ -52,6 +52,46 @@ public class SongsControllerSpecs
         SharingTestHelpers.ShareSongs(db, recipient, song);
 
     [Fact]
+    public async Task List_SongWithRating_ReturnsRating()
+    {
+        // Arrange — one rated song and one unrated song
+        var scenario = new Scenario();
+        var rated = scenario.CreateSong("Rated Song");
+        scenario.CreateSong("Unrated Song");
+        rated.Rating = 3.5m;
+        scenario.DbContext.SaveChanges();
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None);
+
+        // Assert — the list items carry the song rating (null when unrated)
+        response.Songs.Single(s => s.Title == "Rated Song").Rating.ShouldBe(3.5m);
+        response.Songs.Single(s => s.Title == "Unrated Song").Rating.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task List_FilterByMinimumRating_ReturnsOnlyHighlyRatedSongs()
+    {
+        // Arrange — songs rated 5, 4, 2.5 and one unrated
+        var scenario = new Scenario();
+        scenario.CreateSong("Five").Rating = 5m;
+        scenario.CreateSong("Four").Rating = 4m;
+        scenario.CreateSong("Two And A Half").Rating = 2.5m;
+        scenario.CreateSong("Unrated");
+        scenario.DbContext.SaveChanges();
+
+        var controller = CreateController(scenario);
+
+        // Act
+        var response = await controller.List(scenario.DbContext, CancellationToken.None, filter: "rating >= 4");
+
+        // Assert — only the songs rated 4 or more are returned
+        response.Songs.Select(s => s.Title).OrderBy(t => t).ShouldBe(["Five", "Four"]);
+    }
+
+    [Fact]
     public async Task List_NoOwnerId_ReturnsOwnSongs()
     {
         // Arrange — current user owns two songs; another user owns one (not shared)
