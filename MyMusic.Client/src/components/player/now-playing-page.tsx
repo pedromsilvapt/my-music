@@ -10,7 +10,8 @@ import {useSongsSchema} from "../songs/useSongsSchema";
 import {QueueSwitcher} from "../queue/queue-switcher";
 import {PlayingDot} from "../queue/playing-dot";
 import {useDisclosure} from "@mantine/hooks";
-import {useMemo} from "react";
+import {useMemo, useState} from "react";
+import {countDigits} from "../songs/position-column";
 
 export default function NowPlayingPage() {
     const {t} = useTranslation(["player", "queue", "common"]);
@@ -20,7 +21,19 @@ export default function NowPlayingPage() {
     const {viewQueue} = useQueuesMutations();
     const {queues, visibleQueueId, currentQueueId, isFetching: queuesFetching} = useQueueList();
 
-    const songsSchema = useSongsSchema(true, {visibleQueueId, currentQueueId, visibleQueueCurrentSongId, queueId});
+    // The position column fits the largest position shown so far, and never shrinks while the page is open,
+    // so switching to a shorter queue doesn't re-layout the table. Tracking digits (not positions) keeps the
+    // schema stable unless the column actually has to grow.
+    const queueDigits = useMemo(
+        () => countDigits(queue.reduce((max, song) => Math.max(max, song.order), 0)),
+        [queue]
+    );
+    const [positionDigits, setPositionDigits] = useState(queueDigits);
+    if (queueDigits > positionDigits) {
+        setPositionDigits(queueDigits);
+    }
+
+    const songsSchema = useSongsSchema(true, {visibleQueueId, currentQueueId, visibleQueueCurrentSongId, queueId, positionDigits});
 
     // A track change is a new request too (new key), so the list keeps following the current song
     const scrollRequest = useMemo(() => visibleQueueCurrentSongId != null

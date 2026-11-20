@@ -25,6 +25,7 @@ import {isArtworkPreviewElement, isInteractiveElement} from "../../../../utils/e
 import {cls} from "../../../../utils/react-utils.tsx";
 import type {ScrollTarget} from "../scroll-request.ts";
 import {useScrollToTarget} from "./use-scroll-to-target.ts";
+import {useClientWidth} from "./use-client-width.ts";
 import {RowActionsContainer} from "../collection-actions.tsx";
 import {
     type CollectionSchema,
@@ -61,7 +62,6 @@ export interface CollectionTableProps<M> {
 export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const {onContextMenuTrigger, items: propItems, schema: propSchema, selectionStore, onToggle, onScrollPositionChange, initialScrollPosition, sortable, sortableFields, height, onReorderBatch, onReorder, scrollTarget, onScrolled, highlightKey, onSort, sort: propSort, autoHeight} = props;
     const {t} = useTranslation(["collection", "common"]);
-    const {ref: tableRef, width: tableWidth} = useElementSize();
     const {ref: tableHeaderRef, height: tableHeaderHeight} = useElementSize();
     const [activeId, setActiveId] = useState<string | number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -90,12 +90,16 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
         useSensor(KeyboardSensor),
     );
 
-    const columns = useMemo(
-        () => computeColumnWidths(propSchema.columns, tableWidth),
-        [propSchema.columns, tableWidth]
-    );
-
     const parentRef = useRef<HTMLDivElement>(null)
+
+    // Measure the scroll area, not the table: the table is as wide as its columns, so measuring it would keep
+    // the columns from shrinking when a vertical scroll bar appears, overflowing sideways by the bar's width
+    const availableWidth = useClientWidth(parentRef);
+
+    const columns = useMemo(
+        () => computeColumnWidths(propSchema.columns, availableWidth),
+        [propSchema.columns, availableWidth]
+    );
 
     const virtualizer = useVirtualizer({
         count: propItems.length,
@@ -221,7 +225,7 @@ export default function CollectionTable<M>(props: CollectionTableProps<M>) {
     const tableContent = (
         <Box style={autoHeight ? undefined : {height: `${Math.max(height ?? 0, virtualizer.getTotalSize() + tableHeaderHeight)}px`}}>
             {/* Fixed layout: widths come from the header only, so they don't shift as virtualized rows swap */}
-            <Table highlightOnHover ref={tableRef} style={{
+            <Table highlightOnHover style={{
                 borderCollapse: 'separate',
                 tableLayout: 'fixed',
             }}>

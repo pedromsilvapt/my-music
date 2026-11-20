@@ -37,4 +37,26 @@ public class CollectionTableTests(ITestOutputHelper output) : IntegrationTestBas
         var widthsAtBottom = await songsPage.Collection.GetColumnHeaderWidthsAsync();
         widthsAtBottom.ShouldBe(widthsAtTop);
     }
+
+    // Scenario: A collection table shrinks with the window, instead of scrolling sideways
+    //   Given a library with many songs
+    //   And the user opened the songs table
+    //   When the window gets narrower, while still leaving room for every column
+    //   Then the table fits the page width, without a horizontal scroll bar
+    [Fact]
+    public async Task Table_ShouldNotOverflowHorizontally_WhenTheWindowShrinks()
+    {
+        // Seed a few pages of songs
+        await _songs.SeedAsync(RequestContext, UserId);
+
+        // Open the songs table at the default window size
+        var songsPage = await new HomePage(Page).Navbar.GoToSongsAsync();
+        await songsPage.Collection.WaitForLoadedAsync();
+
+        // Make the window narrower: the columns should shrink to fit, so nothing overflows sideways.
+        // A vertical scroll bar appearing after the table is laid out narrows it the same way
+        await Page.SetViewportSizeAsync(1100, Page.ViewportSize!.Height);
+        var overflow = await songsPage.Collection.GetTableHorizontalOverflowAsync();
+        overflow.ShouldBeLessThanOrEqualTo(0);
+    }
 }

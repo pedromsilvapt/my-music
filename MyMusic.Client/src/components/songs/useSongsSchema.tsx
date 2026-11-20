@@ -48,6 +48,7 @@ import {useFilterMetadata} from "../filters/use-filter-metadata.ts";
 import {usePlayHandler} from "../player/usePlayHandler";
 import {SongDevicesCell} from "./song-devices-cell";
 import type {QueueContext} from "../../utils/queue-name-generator";
+import {getPositionColumnWidth} from "./position-column";
 
 export interface UseSongsSchemaOptions {
     visibleQueueId?: number | null;
@@ -55,6 +56,8 @@ export interface UseSongsSchemaOptions {
     visibleQueueCurrentSongId?: number | null;
     queueContext?: QueueContext;
     queueId?: number | null;
+    /** Digits of the largest position the position column (now playing only) must fit. */
+    positionDigits?: number;
 }
 
 export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSchemaOptions): CollectionSchema<ListSongItem> {
@@ -68,6 +71,7 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
     const effectiveCurrentQueueId = options?.currentQueueId ?? null;
     const effectiveVisibleQueueCurrentSongId = options?.visibleQueueCurrentSongId ?? null;
     const effectiveQueueId = options?.queueId ?? null;
+    const positionDigits = options?.positionDigits ?? 1;
 
     const visibleQueue = useMemo(() =>
             queues.find(q => q.id === effectiveVisibleQueueId),
@@ -139,9 +143,13 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
             ...(nowPlaying ? [{
                 name: 'position',
                 displayName: '',
-                render: (row: ListSongItem & { order?: number }) => <Text c="dimmed">#{row.order ?? 1}</Text>,
+                render: (row: ListSongItem & { order?: number }) => (
+                    <Text c="dimmed" style={{fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap'}}>
+                        #{row.order ?? 1}
+                    </Text>
+                ),
                 align: 'center',
-                width: 40,
+                width: getPositionColumnWidth(positionDigits),
             }] : []),
             {
                 name: 'artwork',
@@ -422,5 +430,5 @@ export function useSongsSchema(nowPlaying: boolean = false, options?: UseSongsSc
                               lineClamp={lineClamp} stopAfterPlayback={stopAfterPlayback} skipNextPlayback={skipNextPlayback}/>;
         },
         renderListSubTitle: (row) => <SongSubTitle c="gray" {...row} />,
-    }) as CollectionSchema<ListSongItem>, [playInNewQueue, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, t]);
+    }) as CollectionSchema<ListSongItem>, [playInNewQueue, playNext, playLast, removeBySongIds, shuffleByIndices, toggleStopAfterPlayback, toggleSkipNextPlayback, queue, nowPlaying, visibleQueue?.currentSongId, isViewingActiveQueue, isPlaying, playHandler, openManagePlaylists, openManageDevices, importSharedSong, toggleFavorites, handleDelete, queueCurrentSongId, filterMetadata, fetchFilterValues, allDevices, queueContext, effectiveVisibleQueueCurrentSongId, effectiveQueueId, positionDigits, t]);
 }

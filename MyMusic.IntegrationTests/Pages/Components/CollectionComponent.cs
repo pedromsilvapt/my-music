@@ -79,6 +79,17 @@ public class CollectionComponent(ILocator root) : BaseComponent(root)
     }
 
     /// <summary>
+    /// How many pixels the table view is wider than its visible area: positive when it can be scrolled
+    /// sideways, zero (or less) when it fits.
+    /// </summary>
+    public async Task<double> GetTableHorizontalOverflowAsync()
+    {
+        // Give the table time to settle after its last resize (resize observers run on the next frames)
+        await Root.Page.WaitForTimeoutAsync(500);
+        return await TableScrollArea.EvaluateAsync<double>("area => area.scrollWidth - area.clientWidth");
+    }
+
+    /// <summary>
     /// Scrolls the table view all the way down, waiting for the last of <paramref name="totalRows"/> rows
     /// to be rendered by the virtualizer.
     /// </summary>
