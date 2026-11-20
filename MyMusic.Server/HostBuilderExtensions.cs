@@ -38,6 +38,7 @@ public static class HostBuilderExtensions
         builder.Logging.AddSimpleConsole(c => c.SingleLine = true);
         builder.Services.AddMyMusicOpenTelemetry(builder.Configuration, "MyMusic.Server");
         builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("MyMusicServer"));
+        builder.Services.Configure<FeedbackConfig>(builder.Configuration.GetSection("Feedback"));
 
         // JSON, MVC and OpenAPI
         builder.Services.Configure<JsonOptions>(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));

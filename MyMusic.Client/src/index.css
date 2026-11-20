@@ -1,0 +1,23 @@
+/* Feedbox feedback widget: follow the Mantine theme (and its light/dark scheme) */
+:root {
+    --feedbox-bg: var(--mantine-color-body);
+    --feedbox-fg: var(--mantine-color-text);
+    --feedbox-muted: var(--mantine-color-dimmed);
+    --feedbox-accent: var(--mantine-primary-color-filled);
+    --feedbox-accent-fg: var(--mantine-color-white);
+    --feedbox-danger: var(--mantine-color-error);
+    --feedbox-border: var(--mantine-color-default-border);
+    --feedbox-radius: var(--mantine-radius-md);
+    --feedbox-font: var(--mantine-font-family);
+    --feedbox-shadow: var(--mantine-shadow-md);
+    /* Label dot colors (the "-text" variants are tuned for each color scheme) */
+    --feedbox-label-red: var(--mantine-color-red-text);
+    --feedbox-label-orange: var(--mantine-color-orange-text);
+    --feedbox-label-yellow: var(--mantine-color-yellow-text);
+    --feedbox-label-green: var(--mantine-color-green-text);
+    --feedbox-label-teal: var(--mantine-color-teal-text);
+    --feedbox-label-blue: var(--mantine-color-blue-text);
+    --feedbox-label-purple: var(--mantine-color-violet-text);
+    --feedbox-label-pink: var(--mantine-color-pink-text);
+    --feedbox-label-gray: var(--mantine-color-gray-text);
+}

@@ -22,6 +22,7 @@ import {useIsPlayerActive} from "../contexts/player-context.tsx";
 import {usePlayerQueueInitializer} from "../hooks/use-player-queue-initializer";
 import {useSharers} from "../hooks/use-sharers";
 import {useUserPreferences} from "../hooks/use-user-preferences";
+import FeedbackButton from "./common/feedback-button.tsx";
 import ThemeToggle from "./common/theme-toggle.tsx";
 import Player from "./player/player.tsx";
 import PurchasesQueueIndicator from "./purchases/purchases-queue-indicator.tsx";
@@ -56,6 +57,7 @@ function App() {
                             <IconUser size={16}/>
                         </Avatar>
                     </Group>
+                    <FeedbackButton/>
                     <ThemeToggle/>
                     <PurchasesQueueIndicator/>
                 </Group>

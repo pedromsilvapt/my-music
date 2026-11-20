@@ -14,6 +14,9 @@
         "purchases": "Purchases",
         "settings": "Settings"
     },
+    "feedback": {
+        "open": "Send feedback"
+    },
     "theme": {
         "toggle": "Toggle color scheme",
         "light": "Light",
