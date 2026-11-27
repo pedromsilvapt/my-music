@@ -433,8 +433,8 @@ These files contain information related to the creating and running automatic te
 
 ## Active Technologies
 
-- .NET 10.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit (003-metadata-auto-fetch)
-- PostgreSQL with EF Core, JsonElement for metadata patch storage (003-metadata-auto-fetch)
+- .NET 10.0 (backend), TypeScript/React (frontend) + Entity Framework Core, PostgreSQL, TanStack Query, Zustand, Refit
+- PostgreSQL with EF Core, JsonElement for metadata patch storage
 - OpenTelemetry with Otelite for distributed tracing and log aggregation (opt-in via `OpenTelemetry__Enabled=true`)
 
 ## OpenTelemetry (Observability)
