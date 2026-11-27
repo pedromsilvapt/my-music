@@ -1,0 +1,70 @@
+name: release
+
+# Publishes the server and client images and the CLI .deb to gitea.home on version tag pushes (vX.Y.Z,
+# pushed by `make patch|minor|major`). Manual dispatches release the version in the VERSION file.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GITEA_CI_USERNAME: ci-account
+      GITEA_CI_PASSWORD: ${{ secrets.CI_PASSWORD }}
+      REGISTRY: 'gitea.home'
+      FORCE_COLOR: 1
+      # Repository of the prebuilt base images (see base-images.yml); when empty, everything is built from scratch
+      BASE_IMAGES: ${{ vars.BASE_IMAGES }}
+    steps:
+      - uses: earthly/actions/setup-earthly@v1
+        with:
+          version: v0.8.16
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Compute version
+        run: |
+          # Tag pushes take the version from the tag (v1.2.3 -> 1.2.3);
+          # manual dispatches fall back to the VERSION file.
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION=$(tr -d '[:space:]' < VERSION)
+          fi
+          echo "Detected version: $VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Gitea Packages Login
+        run: docker login --username "$GITEA_CI_USERNAME" --password "$GITEA_CI_PASSWORD" "$REGISTRY"
+
+      - name: Build and push Server image
+        run: |
+          earthly --ci --push +docker \
+            --TAG="$VERSION" \
+            --REGISTRY="$REGISTRY" \
+            --BASE_IMAGES="$BASE_IMAGES"
+
+      - name: Build and push Client image
+        run: |
+          earthly --ci --push ./MyMusic.Client+docker \
+            --TAG="$VERSION" \
+            --REGISTRY="$REGISTRY"
+
+      - name: Build CLI package
+        run: |
+          earthly --ci --artifact './MyMusic.CLI+package/*' ./dist/ \
+            --VERSION="$VERSION" \
+            --BASE_IMAGES="$BASE_IMAGES"
+          ls -la dist/
+
+      - name: Push CLI package to Gitea Debian registry
+        run: |
+          curl --fail-with-body \
+            -u "$GITEA_CI_USERNAME:$GITEA_CI_PASSWORD" \
+            --upload-file "./dist/my-music-cli_${VERSION}_amd64.deb" \
+            "https://$REGISTRY/api/packages/Silvas/debian/pool/stable/main/upload"
